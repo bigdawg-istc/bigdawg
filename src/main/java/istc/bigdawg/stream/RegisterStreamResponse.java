@@ -1,9 +1,11 @@
-package istc.bigdawg;
+package istc.bigdawg.stream;
 
 public class RegisterStreamResponse {
+	
 	private String message;
 	private int responseCode;
 	private String statusURL;
+	
 	public String getMessage() {
 		return message;
 	}

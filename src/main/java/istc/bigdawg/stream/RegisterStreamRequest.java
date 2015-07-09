@@ -1,4 +1,6 @@
-package istc.bigdawg;
+package istc.bigdawg.stream;
+
+import istc.bigdawg.AuthorizationRequest;
 
 public class RegisterStreamRequest {
 	private boolean oneTime;
