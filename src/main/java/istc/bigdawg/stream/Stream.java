@@ -38,7 +38,6 @@ public class Stream {
 					"statusurl");
 			return Response.status(200).entity(mapper.writeValueAsString(resp))
 					.build();
-
 		} catch (UnrecognizedPropertyException e) {
 			e.printStackTrace();
 			return Response.status(500).entity(e.getMessage()).build();
