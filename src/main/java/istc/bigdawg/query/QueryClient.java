@@ -17,6 +17,7 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -34,9 +35,9 @@ import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
 /**
  * @author Adam Dziedzic
  * tests: 
- * 1) curl -v -H "Content-Type: application/json" -X POST -d '{"query":"Select version()","authorization":{},"tuplesPerPage":1,"pageNumber":1,"timestamp":"2012-04-23T18:25:43.511Z"}' http://localhost:8080/bigdawg/query
+ * 1) curl -v -H "Content-Type: application/json" -X POST -d '{"query":"this is a query","authorization":{},"tuplesPerPage":1,"pageNumber":1,"timestamp":"2012-04-23T18:25:43.511Z"}' http://localhost:8080/bigdawg/query
  * 2) curl -v -H "Content-Type: application/json" -X POST -d '{"query":"select version()","authorization":{},"tuplesPerPage":1,"pageNumber":1,"timestamp":"2012-04-23T18:25:43.511Z"}' http://localhost:8080/bigdawg/query
- * 3) 
+ * 3) curl -v -H "Content-Type: application/json" -X POST -d '{"query":"select * from authors","authorization":{},"tuplesPerPage":1,"pageNumber":1,"timestamp":"2012-04-23T18:25:43.511Z"}' http://localhost:8080/bigdawg/query
  */
 @Path("/")
 public class QueryClient {
@@ -94,19 +95,19 @@ public class QueryClient {
 	            //rs = st.executeQuery("SELECT VERSION()");
 	            rs = st.executeQuery(query);
 
-	            while (rs.next()) {
-	                System.out.println(rs.getString(1));
-	            }
-//	            ArrayList<Row> table = new ArrayList<Row>();
-//	            Row.formTable(rs, table);
-//	            for (Row row : table)
-//	            {
-//	                for (Object data : row.row.keySet())
-//	                {
-//	                    System.out.print(" > " + ((row.row.get(data).cast(data))));
-//	                }
-//	                System.out.println();
+//	            while (rs.next()) {
+//	                System.out.println(rs.getString(1));
 //	            }
+	            List<Row> table = new ArrayList<Row>();
+	            Row.formTable(rs, table);
+	            for (Row row : table)
+	            {
+	                for (Entry<Object, Class> col: row.row)
+	                {
+	                    System.out.print(" > " + ((col.getValue()).cast(col.getKey())));
+	                }
+	                System.out.println();
+	            }
 	        } catch (SQLException ex) {
 	            Logger lgr = Logger.getLogger(QueryClient.class.getName());
 	            lgr.log(Level.SEVERE, ex.getMessage(), ex);
@@ -160,6 +161,6 @@ public class QueryClient {
 		
 		public static void main (String[] args) {
 			QueryClient qClient = new QueryClient();
-			qClient.executeQueryPostgres("Select * from authors");
+			qClient.executeQueryPostgres("Select * from books");
 		}
 }
