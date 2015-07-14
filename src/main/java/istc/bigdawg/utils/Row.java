@@ -19,6 +19,8 @@ import java.util.Map.Entry;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.glassfish.grizzly.utils.StringEncoder;
+
 /**
  * @author Adam Dziedzic
  * 
@@ -46,8 +48,8 @@ public class Row {
 		TYPE.put("DATE", Date.class);
 		TYPE.put("TIME", Time.class);
 		TYPE.put("TIMESTAMP", Timestamp.class);
-		TYPE.put("SERIAL",Integer.class);
-		TYPE.put("INT4",Integer.class);
+		TYPE.put("SERIAL", Integer.class);
+		TYPE.put("INT4", Integer.class);
 		// ...
 	}
 
@@ -56,7 +58,8 @@ public class Row {
 	}
 
 	public <T> void add(T data) {
-		row.add(new AbstractMap.SimpleImmutableEntry<Object,Class>(data, data.getClass()));
+		row.add(new AbstractMap.SimpleImmutableEntry<Object, Class>(data, data
+				.getClass()));
 	}
 
 	public void add(Object data, String sqlType) {
@@ -66,12 +69,13 @@ public class Row {
 		} catch (NullPointerException e) {
 			e.printStackTrace();
 			Logger lgr = Logger.getLogger(Row.class.getName());
-			lgr.log(Level.SEVERE, e.getMessage()+" Add the type "+sqlType+" to the TYPE hash map in the Row class.", e);
+			lgr.log(Level.SEVERE, e.getMessage() + " Add the type " + sqlType
+					+ " to the TYPE hash map in the Row class.", e);
 			throw e;
 		}
 	}
 
-	public static void formTable(ResultSet rs, List<Row> table)
+	public static void formTable(final ResultSet rs, List<Row> table)
 			throws SQLException {
 		if (rs == null)
 			return;
@@ -79,7 +83,6 @@ public class Row {
 		ResultSetMetaData rsmd;
 		try {
 			rsmd = rs.getMetaData();
-
 			int NumOfCol = rsmd.getColumnCount();
 
 			while (rs.next()) {
@@ -94,5 +97,16 @@ public class Row {
 		} catch (SQLException e) {
 			throw e;
 		}
+	}
+
+	public static List<String> getColumnNames(final ResultSet rs) throws SQLException {
+		List<String> columnNames = new ArrayList<String>();
+		if (rs == null)
+			return null;
+		ResultSetMetaData rsmd = rs.getMetaData();
+		for (int i = 1; i <= rsmd.getColumnCount(); ++i) {
+			columnNames.add(rsmd.getColumnLabel(i));
+		}
+		return columnNames;
 	}
 }
