@@ -77,5 +77,7 @@ public abstract class StreamDAO {
   public abstract ClientAlert createClientAlert(int dbAlertId, boolean push, boolean oneTime, String pushURL) throws AlertException;
   public abstract List<Integer> addAlertEvent(int dbAlertId, String body);
   public abstract List<String> updatePullsAndGetPushURLS(List<Integer> clientAlertIds) throws AlertException;
+  public abstract List<DBAlert> getDBAlerts();
+  public abstract List<ClientAlert> getActiveClientAlerts();
 
 }

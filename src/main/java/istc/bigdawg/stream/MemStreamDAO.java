@@ -24,7 +24,11 @@ public class MemStreamDAO extends StreamDAO {
 		clientAlerts = new Vector<>();
 		dbAlerts = new Vector<>();
 		events = new Vector<>();
+		clientCounter = new AtomicInteger();
+		dbCounter = new AtomicInteger();
+		eventCounter = new AtomicInteger();
 	}
+	
 	
 	@Override
 	public DBAlert createOrGetDBAlert(String storedProc, boolean oneTime) {
@@ -51,7 +55,7 @@ public class MemStreamDAO extends StreamDAO {
 			throw new AlertException("Missing DB alert " + dbAlertId);
 		}
 		for (ClientAlert a : this.clientAlerts){
-			if (a.pushURL.equalsIgnoreCase(pushURL) && a.active){
+			if ((a.pushURL != null && a.pushURL.equalsIgnoreCase(pushURL)) && a.active){
 				a.push = push;
 				a.oneTime = oneTime;
 				return a;
@@ -82,7 +86,7 @@ public class MemStreamDAO extends StreamDAO {
 		List<String> urls = new ArrayList<>();
 
 		for (ClientAlert a : this.clientAlerts){
-			if (clientAlertIds.contains(a.dbAlertID)){
+			if (clientAlertIds.contains(a.clientAlertID)){
 				//found a match
 				if (a.push){
 					urls.add(a.pushURL);
@@ -111,6 +115,24 @@ public class MemStreamDAO extends StreamDAO {
 			}
 		}
 		return false;
+	}
+
+
+	@Override
+	public List<DBAlert> getDBAlerts() {
+		return dbAlerts;
+	}
+
+
+	@Override
+	public List<ClientAlert> getActiveClientAlerts() {
+		List<ClientAlert> cas = new ArrayList<>();
+		for (ClientAlert a: this.clientAlerts){
+			if (a.active){
+				cas.add(a);
+			}
+		}
+		return cas;
 	}
 	
 	
