@@ -1,8 +1,8 @@
 package istc.bigdawg.query;
 
-import istc.bigdawg.BDConstants.Island;
 import istc.bigdawg.BDConstants.Operator;
 import istc.bigdawg.BDConstants.Shim;
+import istc.bigdawg.Island;
 
 import java.util.ArrayList;
 import java.util.List;
