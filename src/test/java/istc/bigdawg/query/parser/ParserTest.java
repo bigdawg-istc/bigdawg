@@ -17,7 +17,7 @@ public class ParserTest {
     
     
     /**
-     * Test to see that the message "Got it!" is sent in the response.
+     * Test to see that the simple single node relation is selected
      */
     @Test
     public void testSingleRelational() {
@@ -34,4 +34,19 @@ public class ParserTest {
         //ASTNode parsed = parser.parseQueryIntoTree(query);
         //assertEquals(expected, parsed);
     }
+    
+    /**
+     * Test to see that the simple single node relation is selected with nested parens
+     */
+    @Test
+    public void testSingleRelationalNestedParens() {
+        String query = "RELATION(select min(age) from tableX)";
+        ASTNode expected = new ASTNode("select min(age) from tableX", Island.RELATION, Shim.PSQLRELATION, Operator.SCOPE);
+        
+        Parser parser = null; //TODO add parser IMPL
+                
+        ASTNode parsed = parser.parseQueryIntoTree(query);
+        assertEquals(expected, parsed);
+    }
+    
 }
