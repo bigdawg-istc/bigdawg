@@ -175,10 +175,15 @@ public class QueryClient {
 			}
 		}
 	}
+	
+	public void executeQueryAccumulo() {
+		
+	}
 
 	public static void main(String[] args) {
 		QueryClient qClient = new QueryClient();
 		// qClient.executeQueryPostgres("Select * from books");
-		qClient.query("{\"query\":\"select * from authors\",\"authorization\":{},\"tuplesPerPage\":1,\"pageNumber\":1,\"timestamp\":\"2012-04-23T18:25:43.511Z\"}");
+		//qClient.query("{\"query\":\"select * from authors\",\"authorization\":{},\"tuplesPerPage\":1,\"pageNumber\":1,\"timestamp\":\"2012-04-23T18:25:43.511Z\"}");
+		qClient.executeQueryAccumulo();
 	}
 }
