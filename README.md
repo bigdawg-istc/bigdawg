@@ -37,7 +37,8 @@ mvn exec:java
 
 test CURL post register a push alert
 ---------
-curl -H "Content-Type: application/json" -X POST -d '{"query":"checkHeartRate","authorization":{}, "notifyURL":"http://localthost/notify"}' http://localhost:8080/bigdawg/registeralert
+curl -H "Content-Type: application/json" -X POST -d '{"query":"checkHeartRate","authorization":{}, "notifyURL":"http://localthost/notify2", "pushNotify":"true"}' http://localhost:8080/bigdawg/registeralert
+
 
 test CURL post register a pull alert
 ----------
