@@ -26,9 +26,11 @@ public class ParserTest {
         ASTNode expected2 = new ASTNode("select * from tableX", Island.RELATION, Shim.PSQLRELATION, Operator.SCOPE);
         
         Parser parser = null; //TODO add parser IMPL
+        
+        //DUMMY test
         assertEquals(expected, expected2);
         
-        //TODO
+        //TODO real test
         ASTNode parsed = parser.parseQueryIntoTree(query);
         assertEquals(expected, parsed);
     }
