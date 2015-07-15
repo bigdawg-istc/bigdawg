@@ -38,6 +38,7 @@ public class ASTNode {
 	}
 	
 	
+	
 	public List<ASTNode> getChildren() {
 		return children;
 	}
@@ -76,6 +77,51 @@ public class ASTNode {
 	}
 	public void setOp(Operator op) {
 		this.op = op;
+	}
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result
+				+ ((children == null) ? 0 : children.hashCode());
+		result = prime * result + ((island == null) ? 0 : island.hashCode());
+		result = prime * result + ((op == null) ? 0 : op.hashCode());
+		result = prime * result + ((parent == null) ? 0 : parent.hashCode());
+		result = prime * result + ((shim == null) ? 0 : shim.hashCode());
+		result = prime * result + ((target == null) ? 0 : target.hashCode());
+		return result;
+	}
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		ASTNode other = (ASTNode) obj;
+		if (children == null) {
+			if (other.children != null)
+				return false;
+		} else if (!children.equals(other.children))
+			return false;
+		if (island != other.island)
+			return false;
+		if (op != other.op)
+			return false;
+		if (parent == null) {
+			if (other.parent != null)
+				return false;
+		} else if (!parent.equals(other.parent))
+			return false;
+		if (shim != other.shim)
+			return false;
+		if (target == null) {
+			if (other.target != null)
+				return false;
+		} else if (!target.equalsIgnoreCase(other.target))
+			return false;
+		return true;
 	}
 	
 	
