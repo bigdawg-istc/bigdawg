@@ -36,6 +36,23 @@ public class ParserTest {
     }
     
     /**
+     * Test to see that the simple single node relation is selected
+     * @throws NotSupportIslandException 
+     */
+    @Test
+    public void testSingleARRAY() throws NotSupportIslandException {
+        String query = "ARRAY(select * from tableX)";
+        ASTNode expected = new ASTNode("select * from tableX", Island.ARRAY, Shim.PSQLARRAY, Operator.SCOPE);
+        
+        Parser parser =new simpleParser(); //TODO add parser IMPL
+        
+        ASTNode parsed = parser.parseQueryIntoTree(query);
+        assertEquals(expected.getIsland(), parsed.getIsland());
+        assertEquals(expected.getShim(),parsed.getShim());
+        assertEquals(expected.getTarget(),parsed.getTarget());
+    }
+    
+    /**
      * Test to see that the simple single node relation is selected with nested parens
      * @throws NotSupportIslandException 
      */
