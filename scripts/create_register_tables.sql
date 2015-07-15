@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS dbalert (
   stroredProc varchar(250),
   oneTime boolean default false,
   receiveURL varchar(250),
-  create timestamp default now()
+  created timestamp default now()
 );
 
 
@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS clientalert (
   pulled boolean default false,
   lastPullTime timestamp,
   pushURL varchar(250),
-  create timestamp default now()
+  created timestamp default now()
 );
 
 CREATE TABLE IF NOT EXISTS alertevent (
