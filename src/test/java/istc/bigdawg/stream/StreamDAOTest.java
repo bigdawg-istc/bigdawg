@@ -48,6 +48,7 @@ public class StreamDAOTest {
 
     @Test
     public void testAddDBAlert() throws AlertException {
+    	dao.reset();
     	DBAlert dba = dao.createOrGetDBAlert("stored1", false);
     	//New ID
     	assertEquals(0, dba.dbAlertID);
@@ -63,7 +64,7 @@ public class StreamDAOTest {
     
     @Test
     public void testOneTimeAlert() throws AlertException {
-    	
+    	dao.reset();
     	//Create db alert events
     	DBAlert dba = dao.createOrGetDBAlert("stored1", false);
     	assertEquals(0, dba.dbAlertID);
@@ -107,7 +108,54 @@ public class StreamDAOTest {
     	assertEquals(0, dao.getActiveClientAlerts().size());
     	assertEquals(1, urls.size());
     	assertEquals("pushURL2", urls.get(0));
-
     	
     }
+    
+    
+    @Test
+    public void testMultiTimeAlert() throws AlertException {
+    	dao.reset();
+    	//Create db alert events
+    	DBAlert dba = dao.createOrGetDBAlert("stored1", false);
+    	assertEquals(0, dba.dbAlertID);
+    	DBAlert dba3 = dao.createOrGetDBAlert("stored2", false);
+    	assertEquals(1, dba3.dbAlertID);
+    	//Create client alers
+    	ClientAlert caOneTimePull = dao.createClientAlert(0, false, false, null);
+    	ClientAlert caOneTimePush = dao.createClientAlert(0, true, false, "pushURL1");
+    	ClientAlert caOneTimePush2 = dao.createClientAlert(1, true, false, "pushURL2"); // no alert
+    	//Make sure we have one tme allerts
+    	assertEquals(0,caOneTimePull.clientAlertID);
+    	assertEquals(1,caOneTimePush.clientAlertID);
+    	assertEquals(0,caOneTimePush.dbAlertID);
+    	assertEquals(2,caOneTimePush2.clientAlertID);
+    	assertEquals(1,caOneTimePush2.dbAlertID);
+    	//Add alert
+    	List<Integer> alertsToUpdate = dao.addAlertEvent(0, "");
+    	System.out.println(StringUtils.join(alertsToUpdate, ','));
+
+    	//check that we have matched alerts
+    	assertEquals(2, alertsToUpdate.size());
+    	//update alerts
+    	List<String> urls = dao.updatePullsAndGetPushURLS(alertsToUpdate);
+    	System.out.println(StringUtils.join(urls, ','));
+    	assertEquals(1, urls.size());
+    	assertEquals("pushURL1", urls.get(0));
+    	
+    	alertsToUpdate = dao.addAlertEvent(0, "");
+    	assertEquals(2, alertsToUpdate.size());
+    	
+    	dao.checkForNewPull(caOneTimePull.clientAlertID);
+    	alertsToUpdate = dao.addAlertEvent(0, "");
+    	assertEquals(2, alertsToUpdate.size());
+    	
+    	assertEquals(3, dao.getActiveClientAlerts().size());
+    	alertsToUpdate = dao.addAlertEvent(1, "");
+    	urls = dao.updatePullsAndGetPushURLS(alertsToUpdate);
+    	assertEquals(3, dao.getActiveClientAlerts().size());
+    	assertEquals(1, urls.size());
+    	assertEquals("pushURL2", urls.get(0));
+    	
+    }
+    
 }

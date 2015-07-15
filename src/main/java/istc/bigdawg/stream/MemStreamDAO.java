@@ -30,6 +30,15 @@ public class MemStreamDAO extends StreamDAO {
 	}
 	
 	
+	public void reset(){
+		clientAlerts = new Vector<>();
+		dbAlerts = new Vector<>();
+		events = new Vector<>();
+		clientCounter = new AtomicInteger();
+		dbCounter = new AtomicInteger();
+		eventCounter = new AtomicInteger();
+	}
+	
 	@Override
 	public DBAlert createOrGetDBAlert(String storedProc, boolean oneTime) {
 		for (DBAlert a : this.dbAlerts) {
