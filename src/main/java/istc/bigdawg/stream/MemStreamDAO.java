@@ -117,9 +117,12 @@ public class MemStreamDAO extends StreamDAO {
 	@Override
 	public boolean checkForNewPull(int clientAlertId) {
 		for (ClientAlert a : this.clientAlerts){
-			if (a.active && !a.push && a.unseenPull){
+			if (a.clientAlertID==clientAlertId && a.active && !a.push && a.unseenPull){
+				//disable if onetime
 				if (a.oneTime)
 					a.active = false;
+				//We have seen it
+				a.unseenPull = false;
 				return true;
 			}
 		}

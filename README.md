@@ -35,11 +35,20 @@ run test server
 ---------
 mvn exec:java
 
-test CURL post register
+test CURL post register a push alert
 ---------
-curl -H "Content-Type: application/json" -X POST -d '{"query":"check heart rate","authorization":{}, "notifyURL":"http://localthost/notify"}' http://localhost:8080/bigdawg/registeralert
+curl -H "Content-Type: application/json" -X POST -d '{"query":"checkHeartRate","authorization":{}, "notifyURL":"http://localthost/notify"}' http://localhost:8080/bigdawg/registeralert
+
+test CURL post register a pull alert
+----------
+curl -H "Content-Type: application/json" -X POST -d '{"query":"checkHeartRate","authorization":{}}' http://localhost:8080/bigdawg/registeralert
 
 
 test CURL get status
 --------
 curl  http://localhost:8080/bigdawg/status/x 
+
+
+invoke a new alert event from DB engine
+--------
+curl http://localhost:8080/bigdawg/alert/0

@@ -1,6 +1,9 @@
 package istc.bigdawg.stream;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import istc.bigdawg.Main;
 import istc.bigdawg.exceptions.AlertException;
 import istc.bigdawg.stream.StreamDAO.ClientAlert;
@@ -9,6 +12,7 @@ import istc.bigdawg.stream.StreamDAO.DBAlert;
 import java.util.Arrays;
 import java.util.List;
 
+import javax.validation.constraints.AssertFalse;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.WebTarget;
@@ -110,7 +114,26 @@ public class StreamDAOTest {
     	assertEquals("pushURL2", urls.get(0));
     	
     }
+  
     
+    @Test
+    public void testMultiTimePull() throws AlertException {
+    	dao.reset();
+    	//Create db alert events
+    	DBAlert dba = dao.createOrGetDBAlert("stored1", false);
+    	ClientAlert pull = dao.createClientAlert(dba.dbAlertID, false, false, null);
+    	ClientAlert pull2 = dao.createClientAlert(dba.dbAlertID, false, false, null);
+    	assertFalse(dao.checkForNewPull(pull.clientAlertID));
+    	assertFalse(dao.checkForNewPull(pull2.clientAlertID));
+
+    	List<Integer> clientAlertIds = dao.addAlertEvent(dba.dbAlertID, "");
+    	dao.updatePullsAndGetPushURLS(clientAlertIds);
+    	assertTrue(dao.checkForNewPull(pull.clientAlertID));
+    	assertFalse(dao.checkForNewPull(pull.clientAlertID));
+    	assertTrue(dao.checkForNewPull(pull2.clientAlertID));
+    	
+    	
+    }
     
     @Test
     public void testMultiTimeAlert() throws AlertException {
