@@ -27,16 +27,17 @@ import org.apache.accumulo.core.client.Scanner;
 
 /**
  * @author Adam Dziedzic
- *
+ * 
  */
 public class AccumuloTest {
-	
+
 	@Test
 	public void testMockInstance() {
 		Instance instance = new MockInstance();
 		try {
-			Connector conn = instance.getConnector("root", new PasswordToken(""));
-			TableOperations tabOp=conn.tableOperations();
+			Connector conn = instance.getConnector("root",
+					new PasswordToken(""));
+			TableOperations tabOp = conn.tableOperations();
 			try {
 				tabOp.create("testTable");
 			} catch (TableExistsException e1) {
@@ -55,34 +56,39 @@ public class AccumuloTest {
 			mutation.put(colFam, colQual, colVis, timestamp, value);
 			// BatchWriterConfig has reasonable defaults
 			BatchWriterConfig config = new BatchWriterConfig();
-			config.setMaxMemory(10000000L); // bytes available to batchwriter for buffering mutations
+			config.setMaxMemory(10000L); // bytes available to batchwriter for
+											// buffering mutations
 			BatchWriter writer;
 			try {
 				writer = conn.createBatchWriter("testTable", config);
 				writer.addMutation(mutation);
 				writer.close();
 			} catch (TableNotFoundException e) {
-				System.out.println("Problem with creating BatchWrite, table not foun.");
+				System.out
+						.println("Problem with creating BatchWrite, table not foun.");
 				e.printStackTrace();
 			}
 			Authorizations auths = new Authorizations("public");
 			try {
-				Scanner scan=conn.createScanner("testTable", auths);
+				Scanner scan = conn.createScanner("testTable", auths);
 				scan.fetchColumnFamily(new Text("myColFam"));
 
-				for(Entry<Key, Value> entry : scan) {
+				for (Entry<Key, Value> entry : scan) {
 					Key keyResultKey = entry.getKey();
-					Text rowIdResult=entry.getKey().getRow();
-				    Text colFamResult = entry.getKey().getColumnFamily();
-				    Text colKeyResult=entry.getKey().getColumnQualifier();
-				    Value valueResult = entry.getValue();
-				    System.out.println("_Key_:"+keyResultKey+" _Row_:"+rowIdResult+" _ColFam_:"+colFamResult+" _ColQual_:"+colKeyResult+" _Value_:"+valueResult);
+					Text rowIdResult = entry.getKey().getRow();
+					Text colFamResult = entry.getKey().getColumnFamily();
+					Text colKeyResult = entry.getKey().getColumnQualifier();
+					Value valueResult = entry.getValue();
+					System.out.println("_Key_:" + keyResultKey + " _Row_:"
+							+ rowIdResult + " _ColFam_:" + colFamResult
+							+ " _ColQual_:" + colKeyResult + " _Value_:"
+							+ valueResult);
 				}
 			} catch (TableNotFoundException e) {
 				System.out.println("Table for scanner not found!");
 				e.printStackTrace();
 			}
-			
+
 		} catch (AccumuloException e) {
 			e.printStackTrace();
 		} catch (AccumuloSecurityException e) {

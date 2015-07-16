@@ -60,8 +60,8 @@ public class QueryClient {
 	private ResultSet rs = null;
 	private PreparedStatement pst = null;
 
-	private String url = "jdbc:postgresql://localhost/testdb";
-	private String user = "test";
+	private String url = "jdbc:postgresql://localhost/mimic2";
+	private String user = "pguser";
 	private String password = "test";
 
 	/**
