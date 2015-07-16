@@ -11,6 +11,7 @@ public class RegisterQueryResponse {
 	private int pageNumber;
 	private int totalPages;
 	private List<String> schema;
+	private List<String> types;
 	private Timestamp cacheTimestamp;
 
 	/**
@@ -20,11 +21,12 @@ public class RegisterQueryResponse {
 	 * @param pageNumber
 	 * @param totalPages
 	 * @param schema
+	 * @param types
 	 * @param timeStamp
 	 */
 	public RegisterQueryResponse(String message, int responseCode,
 			List<List<String>> tuples, int pageNumber, int totalPages,
-			List<String> schema, Timestamp cacheTimestamp) {
+			List<String> schema, List<String> types, Timestamp cacheTimestamp) {
 		super();
 		this.message = message;
 		this.responseCode = responseCode;
@@ -32,6 +34,7 @@ public class RegisterQueryResponse {
 		this.pageNumber = pageNumber;
 		this.totalPages = totalPages;
 		this.schema = schema;
+		this.types=types;
 		this.cacheTimestamp = cacheTimestamp;
 	}
 	
@@ -109,6 +112,20 @@ public class RegisterQueryResponse {
 
 	public void setMessage(String message) {
 		this.message = message;
+	}
+
+	/**
+	 * @return the types
+	 */
+	public List<String> getTypes() {
+		return types;
+	}
+
+	/**
+	 * @param types the types to set
+	 */
+	public void setTypes(List<String> types) {
+		this.types = types;
 	}
 
 }

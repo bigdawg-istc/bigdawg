@@ -99,14 +99,19 @@ public class Row {
 		}
 	}
 
-	public static List<String> getColumnNames(final ResultSet rs) throws SQLException {
+	public static List<String> getColumnNames(final ResultSetMetaData rsmd) throws SQLException {
 		List<String> columnNames = new ArrayList<String>();
-		if (rs == null)
-			return null;
-		ResultSetMetaData rsmd = rs.getMetaData();
 		for (int i = 1; i <= rsmd.getColumnCount(); ++i) {
 			columnNames.add(rsmd.getColumnLabel(i));
 		}
 		return columnNames;
+	}
+	
+	public static List<String> getColumnTypes(final ResultSetMetaData rsmd) throws SQLException {
+		List<String> columnTypes= new ArrayList<String>();
+		for (int i = 1; i <= rsmd.getColumnCount(); ++i) {
+			columnTypes.add(rsmd.getColumnTypeName(i));
+		}
+		return columnTypes;
 	}
 }

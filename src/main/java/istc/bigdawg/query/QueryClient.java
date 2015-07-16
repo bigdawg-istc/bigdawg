@@ -5,26 +5,24 @@
 package istc.bigdawg.query;
 
 import istc.bigdawg.utils.Row;
+import istc.bigdawg.utils.Tuple;
+import istc.bigdawg.utils.Tuple.Tuple3;
 
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
-import java.util.AbstractMap;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javassist.expr.NewArray;
-
-import javax.swing.ListModel;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -32,15 +30,15 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-import com.fasterxml.jackson.annotation.JsonFormat.Value;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
 
 /**
- * @author Adam Dziedzic tests: 1) curl -v -H "Content-Type: application/json"
- *         -X POST -d '{"query":"this is a
- *         query","authorization":{},"tuplesPerPage
+ * @author Adam Dziedzic
+ * 
+ *         tests: 1) curl -v -H "Content-Type: application/json" -X POST -d
+ *         '{"query":"this is a query","authorization":{},"tuplesPerPage
  *         ":1,"pageNumber":1,"timestamp":"2012-04-23T18:25:43.511Z"}'
  *         http://localhost:8080/bigdawg/query 2) curl -v -H
  *         "Content-Type: application/json" -X POST -d '{"query":"select
@@ -80,12 +78,13 @@ public class QueryClient {
 			RegisterQueryRequest st = mapper.readValue(istream,
 					RegisterQueryRequest.class);
 			System.out.println(mapper.writeValueAsString(st));
-			Entry<List<String>, List<List<String>>> result = executeQueryPostgres(st
+			Tuple.Tuple3<List<String>, List<String>, List<List<String>>> result = executeQueryPostgres(st
 					.getQuery());
-			List<String> colNames = result.getKey();
-			List<List<String>> rows = result.getValue();
+			List<String> colNames = result.getT1();
+			List<String> colTypes = result.getT2();
+			List<List<String>> rows = result.getT3();
 			RegisterQueryResponse resp = new RegisterQueryResponse("OK", 200,
-					rows, 1, 1, colNames, new Timestamp(0));
+					rows, 1, 1, colNames, colTypes, new Timestamp(0));
 			String responseResult = mapper.writeValueAsString(resp);
 			return Response.status(200).entity(responseResult).build();
 		} catch (UnrecognizedPropertyException e) {
@@ -100,15 +99,20 @@ public class QueryClient {
 		}
 	}
 
-	private Entry<List<String>, List<List<String>>> executeQueryPostgres(
+	private Tuple.Tuple3<List<String>, List<String>, List<List<String>>> executeQueryPostgres(
 			final String query) {
 		List<String> colNames = null;
+		List<String> colTypes = null;
 		List<List<String>> rows = new ArrayList<List<String>>();
 		try {
 			con = DriverManager.getConnection(url, user, password);
 			st = con.createStatement();
 			rs = st.executeQuery(query);
-			colNames = Row.getColumnNames(rs);
+			if (rs == null)
+				return null;
+			final ResultSetMetaData rsmd = rs.getMetaData();
+			colNames = Row.getColumnNames(rsmd);
+			colTypes = Row.getColumnTypes(rsmd);
 			List<Row> table = new ArrayList<Row>();
 			Row.formTable(rs, table);
 			for (Row row : table) {
@@ -141,8 +145,8 @@ public class QueryClient {
 				lgr.log(Level.WARNING, ex.getMessage(), ex);
 			}
 		}
-		Entry<List<String>, List<List<String>>> result = new AbstractMap.SimpleEntry<List<String>, List<List<String>>>(
-				colNames, rows);
+		Tuple.Tuple3<List<String>, List<String>, List<List<String>>> result = new Tuple.Tuple3<List<String>, List<String>, List<List<String>>>(
+				colNames, colTypes, rows);
 		return result;
 	}
 
@@ -175,15 +179,17 @@ public class QueryClient {
 			}
 		}
 	}
-	
+
 	public void executeQueryAccumulo() {
-		
+
 	}
 
 	public static void main(String[] args) {
 		QueryClient qClient = new QueryClient();
 		// qClient.executeQueryPostgres("Select * from books");
-		//qClient.query("{\"query\":\"select * from authors\",\"authorization\":{},\"tuplesPerPage\":1,\"pageNumber\":1,\"timestamp\":\"2012-04-23T18:25:43.511Z\"}");
-		qClient.executeQueryAccumulo();
+		Response response = qClient
+				.query("{\"query\":\"select * from mimic2v26.d_patients limit 5\",\"authorization\":{},\"tuplesPerPage\":1,\"pageNumber\":1,\"timestamp\":\"2012-04-23T18:25:43.511Z\"}");
+		System.out.println(response.getEntity());
+		// qClient.executeQueryAccumulo();
 	}
 }
