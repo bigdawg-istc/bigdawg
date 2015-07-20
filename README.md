@@ -53,3 +53,7 @@ curl  http://localhost:8080/bigdawg/status/x
 invoke a new alert event from DB engine
 --------
 curl http://localhost:8080/bigdawg/alert/0
+
+test CURL post query against PostgreSQL
+--------
+curl -v -H "Content-Type: application/json" -X POST -d '{"query":"select * from mimic2v26.d_patients limit 5","authorization":{},"tuplesPerPage":1,"pageNumber":1,"timestamp":"2012-04-23T18:25:43.511Z"}' http://localhost:8080/bigdawg/query
