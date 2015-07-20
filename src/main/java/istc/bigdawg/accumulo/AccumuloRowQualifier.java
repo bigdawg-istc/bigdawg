@@ -7,7 +7,8 @@ import org.apache.accumulo.core.data.Value;
 import org.apache.hadoop.io.Text;
 
 /**
- * @author adam
+ * @author Adam Dziedzic 
+ * 
  *
  */
 public class AccumuloRowQualifier {
