@@ -1,0 +1,36 @@
+<html>
+<head>
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js"></script>
+<script type="text/javascript">
+  function postquery() {
+
+   url="http://128.52.183.245:8070/bigdawg/query"
+   data= {"query": $('#bdquery').val()}
+
+   $.ajax({
+      type: 'POST',
+      url: url, //- action form
+      crossDomain: true,
+      contentType: 'application/json',
+      processData: false,
+      data: JSON.stringify(data),
+      success: function(data ){
+        alert(data);
+        console.log(data);
+      },
+      error: function(err) {
+        alert("err");
+        console.log(err);
+      }
+    });
+    return false;
+  }
+</script>
+</head>
+<body>
+  <!-- onload="javascript:document.myform.submit()">-->
+<form action="http://128.52.183.245:8070/bigdawg/query" method="post" name="myform" onsubmit="return postquery()">
+<input name="bdquery" id='bdquery' value="RELATION(select * from mimic2v26.d_patients limit 5)" />
+<input type="submit" name="Submit" value="Submit"/>
+</form>
+</html>

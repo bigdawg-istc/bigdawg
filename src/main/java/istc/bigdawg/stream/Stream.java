@@ -125,7 +125,15 @@ public class Stream {
 			List<Integer> clientAlertIds = dao.addAlertEvent(streamInt, "");
 			List<String> urls = dao.updatePullsAndGetPushURLS(clientAlertIds);
 			AlertManager.PushEvents(urls);
-			return "Pushing\n" + StringUtils.join(urls, ",");
+			if (urls.isEmpty()){
+				if (clientAlertIds.isEmpty()){
+					return "Alert received but no one listening";
+				}
+				else {
+					return "Alert received, no pushes only pulls";
+				}
+			}
+			return "Pushing:\n" + StringUtils.join(urls, ",");
 		} catch (Exception ex){
 			return ex.getMessage();
 		}

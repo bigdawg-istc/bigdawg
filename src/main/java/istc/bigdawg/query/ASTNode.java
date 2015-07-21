@@ -8,15 +8,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ASTNode {
-	
+
 	private List<ASTNode> children;
 	private ASTNode parent;
 	private String target; //object or query
 	private Island island;
 	private Shim shim;
 	private Operator op;
-	
-	
+
+
 	public ASTNode(String target, Island island, Shim shim, Operator op) {
 		super();
 		this.target = target;
@@ -24,7 +24,7 @@ public class ASTNode {
 		this.shim = shim;
 		this.op = op;
 		this.parent = null;
-		this.children = null;;
+		this.children = null;
 	}
 	public ASTNode(ASTNode parent, String target, Island island, Shim shim,
 			Operator op) {
@@ -36,9 +36,9 @@ public class ASTNode {
 		this.shim = shim;
 		this.op = op;
 	}
-	
-	
-	
+
+
+
 	public List<ASTNode> getChildren() {
 		return children;
 	}
@@ -123,7 +123,7 @@ public class ASTNode {
 			return false;
 		return true;
 	}
-	
-	
+
+
 
 }
