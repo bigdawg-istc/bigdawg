@@ -4,7 +4,7 @@
 <script type="text/javascript">
   function postquery() {
 
-   url="http://128.52.183.245:8070/bigdawg/query"
+   url="http://128.52.183.245:8080/bigdawg/query"
    data= {"query": $('#bdquery').val()}
 
    $.ajax({
@@ -30,7 +30,7 @@
 <body>
   <!-- onload="javascript:document.myform.submit()">-->
 <form action="http://128.52.183.245:8070/bigdawg/query" method="post" name="myform" onsubmit="return postquery()">
-<input name="bdquery" id='bdquery' value="RELATION(select * from mimic2v26.d_patients limit 5)" />
+<input name="bdquery" id='bdquery' value="RELATION(select * from mimic2v26.d_patients limit 5)" size="160" />
 <input type="submit" name="Submit" value="Submit"/>
 </form>
 </html>

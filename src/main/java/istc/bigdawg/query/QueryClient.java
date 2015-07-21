@@ -1,6 +1,6 @@
 /**
 
- * 
+ *
  */
 package istc.bigdawg.query;
 
@@ -51,7 +51,7 @@ import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
 
 /**
  * @author Adam Dziedzic
- * 
+ *
  *         tests: 1) curl -v -H "Content-Type: application/json" -X POST -d
  *         '{"query":"this is a query","authorization":{},"tuplesPerPage
  *         ":1,"pageNumber":1,"timestamp":"2012-04-23T18:25:43.511Z"}'
@@ -82,7 +82,7 @@ public class QueryClient {
 
 	/**
 	 * Answer a query from a client.
-	 * 
+	 *
 	 * @param istream
 	 * @return
 	 */
@@ -216,20 +216,20 @@ public class QueryClient {
 		}
 	}
 
-	public void executeQueryAccumulo(String table)
-			throws TableNotFoundException, AccumuloException,
-			AccumuloSecurityException {
-		// specify which visibilities we are allowed to see
-		Authorizations auths = new Authorizations("public");
-		Connector conn = AccumuloInstance.getMiniCluster().getConnector();
-		Scanner scan = conn.createScanner(table, auths);
-		scan.setRange(new Range("0", null));
-		scan.fetchColumnFamily(new Text(""));
-		for (Entry<Key, Value> entry : scan) {
-			System.out.println(entry.getKey());
-			System.out.println(entry.getValue());
-		}
-	}
+	// public void executeQueryAccumulo(String table)
+	// 		throws TableNotFoundException, AccumuloException,
+	// 		AccumuloSecurityException {
+	// 	// specify which visibilities we are allowed to see
+	// 	Authorizations auths = new Authorizations("public");
+	// 	Connector conn = AccumuloInstance.getMiniCluster().getConnector();
+	// 	Scanner scan = conn.createScanner(table, auths);
+	// 	scan.setRange(new Range("0", null));
+	// 	scan.fetchColumnFamily(new Text(""));
+	// 	for (Entry<Key, Value> entry : scan) {
+	// 		System.out.println(entry.getKey());
+	// 		System.out.println(entry.getValue());
+	// 	}
+	// }
 
 	public static void main(String[] args) {
 		QueryClient qClient = new QueryClient();

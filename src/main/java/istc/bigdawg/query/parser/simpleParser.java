@@ -24,10 +24,10 @@ public class simpleParser implements Parser{
 		keywords.add("MYRIA");
 		Stack<Character> e=new Stack<Character>();
 		String subQuery="";
-		Island island=Island.ARRAY;
+		Island island=Island.RELATION;
 		Shim shim=Shim.PSQLRELATION;
 		SimpleShimSelector shimSelector=new SimpleShimSelector();
-		
+
 		for(int i=0; i<text.length();i++){
 			char a=text.charAt(i);
 			switch(a){
@@ -54,7 +54,7 @@ public class simpleParser implements Parser{
 			default:
 				break;
 			}
-			
+
 		}
 
 		shim=shimSelector.selectShim(subQuery, island);
@@ -62,4 +62,3 @@ public class simpleParser implements Parser{
 		return node;
 	}
 }
-
