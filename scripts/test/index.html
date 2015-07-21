@@ -5,16 +5,18 @@
   function postquery() {
 
    url="http://128.52.183.245:8070/bigdawg/query"
-   //    data: {query:$('#query').val(), },
+   data= {"query": $('#bdquery').val()}
 
    $.ajax({
       type: 'POST',
       url: url, //- action form
       crossDomain: true,
-      contentType: 'text/plain',
-      data: '',
+      contentType: 'application/json',
+      processData: false,
+      data: JSON.stringify(data),
       success: function(data ){
-        alert('success');
+        alert(data);
+        console.log(data);
       },
       error: function(err) {
         alert("err");
@@ -28,7 +30,7 @@
 <body>
   <!-- onload="javascript:document.myform.submit()">-->
 <form action="http://128.52.183.245:8070/bigdawg/query" method="post" name="myform" onsubmit="return postquery()">
-<input name="query" value="select * from test" />
+<input name="bdquery" id='bdquery' value="select * from mimic2v26.d_patients limit 5" />
 <input type="submit" name="Submit" value="Submit"/>
 </form>
 </html>
