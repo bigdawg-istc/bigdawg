@@ -65,6 +65,9 @@ curl -v -H "Content-Type: application/json" -X POST -d '{"query":"RELATION(selec
 LOGS
 --------
 create database as pguser:
+
 $psql -U pguser -d mimic2
+
 **create database logs**
+
 **create logs table** (current version is in the script folder)
