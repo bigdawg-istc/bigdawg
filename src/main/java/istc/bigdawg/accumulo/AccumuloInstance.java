@@ -22,11 +22,27 @@ public class AccumuloInstance {
 
 	private Connector conn;
 
+	private AccumuloInstance(Connector conn) {
+		this.conn = conn;
+	}
+
 	/**
 	 * 
 	 */
 	public AccumuloInstance(Parameters params) {
 
+	}
+
+	public static AccumuloInstance getMiniCluster() throws AccumuloException, AccumuloSecurityException {
+		Instance inst = new ZooKeeperInstance("miniInstance", "localhost:37266");
+		try {
+			Connector conn = inst.getConnector("root", new PasswordToken("secret"));
+			return new AccumuloInstance(conn);
+		} catch (AccumuloSecurityException e) {
+			System.out.println("Security exception: this should not happen!");
+			e.printStackTrace();
+			throw e;
+		}
 	}
 
 	public AccumuloInstance(String instanceName, String zooServers,
