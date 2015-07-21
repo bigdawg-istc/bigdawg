@@ -75,7 +75,8 @@ public class DataLoader {
 		AccumuloInstance acc = null;
 		int lineCounter = 0;
 		try {
-			acc=new AccumuloInstance(instanceName,zooKeepers,userName,pass);
+			//acc=new AccumuloInstance(instanceName,zooKeepers,userName,pass);
+			acc = AccumuloInstance.getMiniCluster();
 			acc.createTable(tableName);
 			acc.createTable(tableName2);
 			DataLoader loader = new DataLoader(acc);

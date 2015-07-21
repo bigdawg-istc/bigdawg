@@ -6,7 +6,7 @@ public class BDConstants {
 
 	
 	public enum Shim {
-		PSQLRELATION, PSQLARRAY, ACCUMULOTEXT
+		PSQLRELATION, PSQLARRAY, ACCUMULOTEXT;
 	}
 	
 	public enum Operator {
