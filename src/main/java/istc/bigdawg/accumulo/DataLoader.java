@@ -61,7 +61,7 @@ public class DataLoader {
 		String userName = "root";
 		String pass = "mypassw";
 		String delimiter = ";";
-
+		
 		AccumuloRowQualifier accQual = new AccumuloRowQualifier(true, false,
 				true, true);
 		
