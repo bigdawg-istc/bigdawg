@@ -4,9 +4,13 @@
  */
 package istc.bigdawg.query;
 
+import istc.bigdawg.BDConstants;
+import istc.bigdawg.accumulo.AccumuloInstance;
+import istc.bigdawg.exceptions.NotSupportIslandException;
+import istc.bigdawg.query.parser.Parser;
+import istc.bigdawg.query.parser.simpleParser;
 import istc.bigdawg.utils.Row;
 import istc.bigdawg.utils.Tuple;
-import istc.bigdawg.utils.Tuple.Tuple3;
 
 import java.io.IOException;
 import java.sql.Connection;
@@ -29,6 +33,18 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+
+import org.apache.accumulo.core.client.AccumuloException;
+import org.apache.accumulo.core.client.AccumuloSecurityException;
+import org.apache.accumulo.core.client.Connector;
+import org.apache.accumulo.core.client.Scanner;
+import org.apache.accumulo.core.client.TableNotFoundException;
+import org.apache.accumulo.core.data.Key;
+import org.apache.accumulo.core.data.Range;
+import org.apache.accumulo.core.data.Value;
+import org.apache.accumulo.core.security.Authorizations;
+import org.apache.hadoop.io.Text;
+import org.apache.taglibs.standard.tag.common.fmt.ParseDateSupport;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -78,8 +94,25 @@ public class QueryClient {
 			RegisterQueryRequest st = mapper.readValue(istream,
 					RegisterQueryRequest.class);
 			System.out.println(mapper.writeValueAsString(st));
-			Tuple.Tuple3<List<String>, List<String>, List<List<String>>> result = executeQueryPostgres(st
-					.getQuery());
+			Parser parser = new simpleParser();
+			String queryString = null;
+			try {
+				ASTNode parsed = parser.parseQueryIntoTree(st.getQuery());
+				if (parsed.getShim() != BDConstants.Shim.PSQLRELATION) {
+					RegisterQueryResponse resp = new RegisterQueryResponse(
+							"ERROR: Unrecognized shim "
+									+ parsed.getShim().toString(), 412, null,
+							1, 1, null, null, new Timestamp(0));
+					String responseResult = mapper.writeValueAsString(resp);
+					return Response.status(412).entity(responseResult).build();
+				}
+				queryString = parsed.getTarget();
+			} catch (NotSupportIslandException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+			Tuple.Tuple3<List<String>, List<String>, List<List<String>>> result = executeQueryPostgres(queryString);
 			List<String> colNames = result.getT1();
 			List<String> colTypes = result.getT2();
 			List<List<String>> rows = result.getT3();
@@ -180,16 +213,39 @@ public class QueryClient {
 		}
 	}
 
-	public void executeQueryAccumulo() {
-
+	public void executeQueryAccumulo(String table)
+			throws TableNotFoundException, AccumuloException,
+			AccumuloSecurityException {
+		// specify which visibilities we are allowed to see
+		Authorizations auths = new Authorizations("public");
+		Connector conn = AccumuloInstance.getMiniCluster().getConnector();
+		Scanner scan = conn.createScanner(table, auths);
+		scan.setRange(new Range("0", null));
+		scan.fetchColumnFamily(new Text(""));
+		for (Entry<Key, Value> entry : scan) {
+			System.out.println(entry.getKey());
+			System.out.println(entry.getValue());
+		}
 	}
 
 	public static void main(String[] args) {
 		QueryClient qClient = new QueryClient();
 		// qClient.executeQueryPostgres("Select * from books");
 		Response response = qClient
-				.query("{\"query\":\"select * from mimic2v26.d_patients limit 5\",\"authorization\":{},\"tuplesPerPage\":1,\"pageNumber\":1,\"timestamp\":\"2012-04-23T18:25:43.511Z\"}");
+				.query("{\"query\":\"RELATION(select * from mimic2v26.d_patients limit 5)\",\"authorization\":{},\"tuplesPerPage\":1,\"pageNumber\":1,\"timestamp\":\"2012-04-23T18:25:43.511Z\"}");
 		System.out.println(response.getEntity());
+		// try {
+		// qClient.executeQueryAccumulo("note_events_TedgeTxt");
+		// } catch (TableNotFoundException e) {
+		// // TODO Auto-generated catch block
+		// e.printStackTrace();
+		// } catch (AccumuloException e) {
+		// // TODO Auto-generated catch block
+		// e.printStackTrace();
+		// } catch (AccumuloSecurityException e) {
+		// // TODO Auto-generated catch block
+		// e.printStackTrace();
+		// }
 		// qClient.executeQueryAccumulo();
 	}
 }
