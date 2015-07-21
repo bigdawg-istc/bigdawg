@@ -44,7 +44,6 @@ import org.apache.accumulo.core.data.Range;
 import org.apache.accumulo.core.data.Value;
 import org.apache.accumulo.core.security.Authorizations;
 import org.apache.hadoop.io.Text;
-import org.apache.taglibs.standard.tag.common.fmt.ParseDateSupport;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -69,6 +68,9 @@ import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
  */
 @Path("/")
 public class QueryClient {
+	
+	static org.apache.log4j.Logger log =org.apache.log4j.Logger.getLogger(QueryClient.class.getName());			
+	
 	private Connection con = null;
 	private Statement st = null;
 	private ResultSet rs = null;
@@ -89,6 +91,7 @@ public class QueryClient {
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response query(String istream) {
+		log.info("istream: "+istream);
 		ObjectMapper mapper = new ObjectMapper();
 		try {
 			RegisterQueryRequest st = mapper.readValue(istream,
