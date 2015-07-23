@@ -3,16 +3,13 @@ package istc.bigdawg.stream;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-
 import istc.bigdawg.Main;
 import istc.bigdawg.exceptions.AlertException;
 import istc.bigdawg.stream.StreamDAO.ClientAlert;
 import istc.bigdawg.stream.StreamDAO.DBAlert;
 
-import java.util.Arrays;
 import java.util.List;
 
-import javax.validation.constraints.AssertFalse;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.WebTarget;

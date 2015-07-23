@@ -83,7 +83,71 @@
 		</dependency>
 	</dependencies>
 
+	<!-- Profiles configuration -->
+	<profiles>
+		<!-- The configuration of the development profile -->
+		<profile>
+			<id>dev</id>
+			<!-- The development profile is active by default -->
+			<activation>
+				<property>
+					<name>environment.type</name>
+					<value>dev</value>
+				</property>
+			</activation>
+			<properties>
+				<!-- Specifies the build.profile.id property that must be equal than 
+					the name of the directory that contains the profile specific configuration 
+					file. Because the name of the directory that contains the configuration file 
+					of the development profile is dev, we must set the value of the build.profile.id 
+					property to dev. -->
+				<build.profile.id>dev</build.profile.id>
+			</properties>
+		</profile>
+		<!-- The configuration of the production profile -->
+		<profile>
+			<id>prod</id>
+			<activation>
+				<property>
+					<name>environment.type</name>
+					<value>prod</value>
+				</property>
+			</activation>
+			<properties>
+				<!-- Specifies the build.profile.id property that must be equal than 
+					the name of the directory that contains the profile specific configuration 
+					file. Because the name of the directory that contains the configuration file 
+					of the production profile is prod, we must set the value of the build.profile.id 
+					property to prod. -->
+				<build.profile.id>prod</build.profile.id>
+			</properties>
+		</profile>
+		<!-- The configuration of the testing profile -->
+		<profile>
+			<id>test</id>
+			<activation>
+				<property>
+					<name>environment.type</name>
+					<value>test</value>
+				</property>
+			</activation>
+			<properties>
+				<!-- Specifies the build.profile.id property that must be equal than 
+					the name of the directory that contains the profile specific configuration 
+					file. Because the name of the directory that contains the configuration file 
+					of the testing profile is test, we must set the value of the build.profile.id 
+					property to test. -->
+				<build.profile.id>test</build.profile.id>
+			</properties>
+		</profile>
+	</profiles>
+
 	<build>
+		<filters>
+			<!-- Ensures that the config.properties file is always loaded from the 
+				configuration directory of the active Maven profile. -->
+			<filter>profiles/${build.profile.id}/${build.profile.id}-config.properties</filter>
+		</filters>
 		<plugins>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -110,20 +174,44 @@
 					<mainClass>istc.bigdawg.Main</mainClass>
 				</configuration>
 			</plugin>
+			<plugin>
+				<!-- NOTE: We don't need a groupId specification because the group is 
+					org.apache.maven.plugins ...which is assumed by default. -->
+				<artifactId>maven-assembly-plugin</artifactId>
+				<version>2.5.5</version>
+				<configuration>
+					<descriptorRefs>
+						<descriptorRef>jar-with-dependencies</descriptorRef>
+					</descriptorRefs>
+					<archive>
+						<manifest>
+							<mainClass>istc.bigdawg.Main</mainClass>
+						</manifest>
+						<manifestEntries>
+							<Class-Path>.</Class-Path>
+						</manifestEntries>
+					</archive>
+				</configuration>
+				<executions>
+					<execution>
+						<id>make-assembly</id> <!-- this is used for inheritance merges -->
+						<phase>package</phase> <!-- bind to the packaging phase -->
+						<goals>
+							<goal>single</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 		</plugins>
-    <resources>
-        <resource>
-            <directory>src/main/resources</directory>
-            <filtering>true</filtering>
-             <!--  <targetPath>${project.build.directory}</targetPath> -->
-            <!-- 
-            <includes>
-                <include>log4j.properties</include>
-            </includes>
-            -->
-        </resource>
-    </resources>
-</build>
+		<resources>
+			<resource>
+				<directory>src/main/resources</directory>
+				<filtering>true</filtering>
+				<!-- <targetPath>${project.build.directory}</targetPath> -->
+				<!-- <includes> <include>log4j.properties</include> </includes> -->
+			</resource>
+		</resources>
+	</build>
 
 	<properties>
 		<jersey.version>2.19</jersey.version>

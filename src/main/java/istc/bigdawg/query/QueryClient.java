@@ -216,20 +216,20 @@ public class QueryClient {
 		}
 	}
 
-	// public void executeQueryAccumulo(String table)
-	// 		throws TableNotFoundException, AccumuloException,
-	// 		AccumuloSecurityException {
-	// 	// specify which visibilities we are allowed to see
-	// 	Authorizations auths = new Authorizations("public");
-	// 	Connector conn = AccumuloInstance.getMiniCluster().getConnector();
-	// 	Scanner scan = conn.createScanner(table, auths);
-	// 	scan.setRange(new Range("0", null));
-	// 	scan.fetchColumnFamily(new Text(""));
-	// 	for (Entry<Key, Value> entry : scan) {
-	// 		System.out.println(entry.getKey());
-	// 		System.out.println(entry.getValue());
-	// 	}
-	// }
+	 public void executeQueryAccumulo(String table)
+	 		throws TableNotFoundException, AccumuloException,
+	 		AccumuloSecurityException {
+	 	// specify which visibilities we are allowed to see
+	 	Authorizations auths = new Authorizations("public");
+	 	Connector conn = AccumuloInstance.getMiniCluster().getConnector();
+	 	Scanner scan = conn.createScanner(table, auths);
+	 	scan.setRange(new Range("0", null));
+	 	scan.fetchColumnFamily(new Text(""));
+	 	for (Entry<Key, Value> entry : scan) {
+	 		System.out.println(entry.getKey());
+	 		System.out.println(entry.getValue());
+	 	}
+	 }
 
 	public static void main(String[] args) {
 		QueryClient qClient = new QueryClient();

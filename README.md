@@ -61,3 +61,23 @@ curl -v -H "Content-Type: application/json" -X POST -d '{"query":"select * from 
 test CURL post against test server
 --------
 curl -v -H "Content-Type: application/json" -X POST -d '{"query":"RELATION(select * from mimic2v26.d_patients limit 5)","authorization":{},"tuplesPerPage":1,"pageNumber":1,"timestamp":"2012-04-23T18:25:43.511Z"}' http://128.52.183.245:8080/bigdawg/query
+
+maven profiles
+--------
+Building jar for test (big2: ssh ubuntu@128.52.183.84) and prod (big: ssh ubuntu@128.52.183.245) environemnts.
+To run your local development environment run: mvn clean compile -P dev
+If you are bothered by an error for pom.xml in Eclipse, then you can go to Project->Properties->Maven and fill in the Active Maven Profiles (comma separated) field with "dev" word but then you won't be able to build the packages for the test and prod environments (the default dev profile will overwrite all the settings).
+
+Building packages for test and prod environments:
+First run the packaging with tests (this is to check if everything is correct): mvn clean package -P dev
+
+To build package for test environment run: mvn clean package -P test -DskipTests
+go to project_dir/bigdawgmiddle/target and run: scp istc.bigdawg-1.0-SNAPSHOT-jar-with-dependencies.jar ubuntu@128.52.183.84:/home/ubuntu/jars
+
+To build package for prod environment run: mvn clean package -P prod -DskipTests
+go to project_dir/bigdawgmiddle/target and run: scp istc.bigdawg-1.0-SNAPSHOT-jar-with-dependencies.jar ubuntu@128.52.183.245:/home/ubuntu/jars
+
+and finally run the application on the server:
+java -jar /home/ubuntu/jars/istc.bigdawg-1.0-SNAPSHOT-jar-with-dependencies.jar
+
+

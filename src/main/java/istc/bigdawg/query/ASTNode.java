@@ -37,8 +37,6 @@ public class ASTNode {
 		this.op = op;
 	}
 
-
-
 	public List<ASTNode> getChildren() {
 		return children;
 	}
