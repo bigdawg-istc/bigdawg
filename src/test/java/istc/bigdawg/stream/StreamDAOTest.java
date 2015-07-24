@@ -39,7 +39,7 @@ public class StreamDAOTest {
         // c.configuration().enable(new org.glassfish.jersey.media.json.JsonJaxbFeature());
 
         target = c.target(Main.BASE_URI);
-        dao = Main.getStreamDAO();
+        dao = MemStreamDAO.getStreamDAO();
     }
     
     @After

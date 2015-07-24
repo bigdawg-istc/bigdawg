@@ -13,26 +13,32 @@ import java.util.concurrent.atomic.AtomicInteger;
  *         objects.
  */
 public class MemStreamDAO extends StreamDAO {
-	List<ClientAlert> clientAlerts;
-	List<DBAlert> dbAlerts;
-	List<AlertEvent> events;
-	AtomicInteger clientCounter = new AtomicInteger();
-	AtomicInteger dbCounter = new AtomicInteger();
-	AtomicInteger eventCounter = new AtomicInteger();
+	private List<ClientAlert> clientAlerts;
+	private List<DBAlert> dbAlerts;
+	private List<AlertEvent> events;
+	private AtomicInteger clientCounter = new AtomicInteger();
+	private AtomicInteger dbCounter = new AtomicInteger();
+	private AtomicInteger eventCounter = new AtomicInteger();
 
-	public MemStreamDAO() {
-		clientAlerts = new Vector<>();
-		dbAlerts = new Vector<>();
-		events = new Vector<>();
+	public static final MemStreamDAO INSTANCE = new MemStreamDAO(); 
+	
+	public static StreamDAO getStreamDAO() {
+		return INSTANCE;
+	}
+	
+	private MemStreamDAO() {
+		clientAlerts = new Vector<ClientAlert>();
+		dbAlerts = new Vector<DBAlert>();
+		events = new Vector<AlertEvent>();
 		clientCounter = new AtomicInteger();
 		dbCounter = new AtomicInteger();
 		eventCounter = new AtomicInteger();
 	}
 
 	public void reset() {
-		clientAlerts = new Vector<>();
-		dbAlerts = new Vector<>();
-		events = new Vector<>();
+		clientAlerts = new Vector<ClientAlert>();
+		dbAlerts = new Vector<DBAlert>();
+		events = new Vector<AlertEvent>();
 		clientCounter = new AtomicInteger();
 		dbCounter = new AtomicInteger();
 		eventCounter = new AtomicInteger();
@@ -82,7 +88,7 @@ public class MemStreamDAO extends StreamDAO {
 		AlertEvent event = new AlertEvent(eventCounter.getAndIncrement(),
 				dbAlertId, body);
 		events.add(event);
-		List<Integer> clientsToNotify = new ArrayList<>();
+		List<Integer> clientsToNotify = new ArrayList<Integer>();
 		for (ClientAlert a : this.clientAlerts) {
 			if (a.dbAlertID == dbAlertId && a.active) {
 				// found a match
@@ -95,7 +101,7 @@ public class MemStreamDAO extends StreamDAO {
 
 	@Override
 	public List<String> updatePullsAndGetPushURLS(List<Integer> clientAlertIds) {
-		List<String> urls = new ArrayList<>();
+		List<String> urls = new ArrayList<String>();
 
 		for (ClientAlert a : this.clientAlerts) {
 			if (clientAlertIds.contains(a.clientAlertID)) {
@@ -140,7 +146,7 @@ public class MemStreamDAO extends StreamDAO {
 
 	@Override
 	public List<ClientAlert> getActiveClientAlerts() {
-		List<ClientAlert> cas = new ArrayList<>();
+		List<ClientAlert> cas = new ArrayList<ClientAlert>();
 		for (ClientAlert a : this.clientAlerts) {
 			if (a.active) {
 				cas.add(a);

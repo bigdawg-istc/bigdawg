@@ -3,6 +3,8 @@
  */
 package istc.bigdawg;
 
+import istc.bigdawg.accumulo.AccumuloInstance;
+
 import java.util.Map.Entry;
 
 import org.apache.accumulo.core.client.AccumuloException;
@@ -34,6 +36,7 @@ public class AccumuloTest {
 	@Test
 	public void testMockInstance() {
 		Instance instance = new MockInstance();
+		//Instance instance = AccumuloInstance.getMiniCluster();
 		try {
 			Connector conn = instance.getConnector("root",
 					new PasswordToken(""));

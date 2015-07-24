@@ -3,6 +3,8 @@
  */
 package istc.bigdawg.accumulo;
 
+import istc.bigdawg.properties.BigDawgConfigProperties;
+
 import org.apache.accumulo.core.client.AccumuloException;
 import org.apache.accumulo.core.client.AccumuloSecurityException;
 import org.apache.accumulo.core.client.Connector;
@@ -19,9 +21,45 @@ import org.eclipse.jdt.core.dom.ThisExpression;
  * 
  */
 public class AccumuloInstance {
-
+	
 	private Connector conn;
+	private String username;
+	private String instanceName;
+	private String zooKeepers;
+	private String passwordToken;
 
+	/**
+	 * @return the conn
+	 */
+	public Connector getConn() {
+		return conn;
+	}
+
+	/**
+	 * @return the username
+	 */
+	public String getUsername() {
+		return username;
+	}
+
+	/**
+	 * @return the instanceName
+	 */
+	public String getInstanceName() {
+		return instanceName;
+	}
+
+	/**
+	 * @return the zooKeepers
+	 */
+	public String getZooKeepers() {
+		return zooKeepers;
+	}
+
+	private AccumuloInstance() {
+		
+	}
+	
 	private AccumuloInstance(Connector conn) {
 		this.conn = conn;
 	}
@@ -33,11 +71,17 @@ public class AccumuloInstance {
 
 	}
 
-	public static AccumuloInstance getMiniCluster() throws AccumuloException, AccumuloSecurityException {
-		Instance inst = new ZooKeeperInstance("miniInstance", "localhost:37266");
+	public static AccumuloInstance getInstance() throws AccumuloException, AccumuloSecurityException {
+		AccumuloInstance accInst=new AccumuloInstance();
+		accInst.instanceName=BigDawgConfigProperties.INSTANCE.getAccumuloIstance();
+		accInst.zooKeepers=BigDawgConfigProperties.INSTANCE.getAccumuloZooKeepers();
+		accInst.username=BigDawgConfigProperties.INSTANCE.getAccumuloUser();
+		accInst.passwordToken=BigDawgConfigProperties.INSTANCE.getAccumuloPasswordToken();
+		Instance inst = new ZooKeeperInstance(accInst.instanceName, accInst.zooKeepers);
 		try {
-			Connector conn = inst.getConnector("root", new PasswordToken("secret"));
-			return new AccumuloInstance(conn);
+			Connector conn = inst.getConnector(accInst.username, new PasswordToken(accInst.passwordToken));
+			accInst.conn=conn;
+			return accInst;
 		} catch (AccumuloSecurityException e) {
 			System.out.println("Security exception: this should not happen!");
 			e.printStackTrace();

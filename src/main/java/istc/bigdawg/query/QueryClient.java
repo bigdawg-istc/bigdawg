@@ -7,6 +7,7 @@ package istc.bigdawg.query;
 import istc.bigdawg.BDConstants;
 import istc.bigdawg.accumulo.AccumuloInstance;
 import istc.bigdawg.exceptions.NotSupportIslandException;
+import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.query.parser.Parser;
 import istc.bigdawg.query.parser.simpleParser;
 import istc.bigdawg.utils.Row;
@@ -51,7 +52,7 @@ import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
 
 /**
  * @author Adam Dziedzic
- *
+ * 
  *         tests: 1) curl -v -H "Content-Type: application/json" -X POST -d
  *         '{"query":"this is a query","authorization":{},"tuplesPerPage
  *         ":1,"pageNumber":1,"timestamp":"2012-04-23T18:25:43.511Z"}'
@@ -68,30 +69,46 @@ import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
  */
 @Path("/")
 public class QueryClient {
-	
-	static org.apache.log4j.Logger log =org.apache.log4j.Logger.getLogger(QueryClient.class.getName());			
-	
+
+	static org.apache.log4j.Logger log = org.apache.log4j.Logger
+			.getLogger(QueryClient.class.getName());
+
 	private Connection con = null;
 	private Statement st = null;
 	private ResultSet rs = null;
 	private PreparedStatement pst = null;
 
-	private String url = "jdbc:postgresql://localhost/mimic2";
-	private String user = "pguser";
-	private String password = "test";
+	private String url;
+	private String user;
+	private String password;
+	
+	public QueryClient() {
+		String database=BigDawgConfigProperties.INSTANCE.getPostgreSQLDatabase();
+		String host=BigDawgConfigProperties.INSTANCE.getPostgreSQLHost();
+		String port=BigDawgConfigProperties.INSTANCE.getPostgreSQLPort();
+		this.url="jdbc:postgresql://"+host+":"+port+"/"+database;
+		if (port == null) {
+			this.url="jdbc:postgresql://"+host+"/"+database;
+		}
+		this.user=BigDawgConfigProperties.INSTANCE.getPostgreSQLUser();
+		this.password=BigDawgConfigProperties.INSTANCE.getPostgreSQLPassword();
+	}
 
 	/**
 	 * Answer a query from a client.
-	 *
+	 * 
 	 * @param istream
 	 * @return
+	 * @throws AccumuloSecurityException 
+	 * @throws AccumuloException 
+	 * @throws TableNotFoundException 
 	 */
 	@Path("query")
 	@POST
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response query(String istream) {
-		log.info("istream: "+istream);
+	public Response query(String istream) throws TableNotFoundException, AccumuloException, AccumuloSecurityException {
+		log.info("istream: " + istream);
 		ObjectMapper mapper = new ObjectMapper();
 		try {
 			RegisterQueryRequest st = mapper.readValue(istream,
@@ -101,6 +118,10 @@ public class QueryClient {
 			String queryString = null;
 			try {
 				ASTNode parsed = parser.parseQueryIntoTree(st.getQuery());
+				System.out.println(parsed.getShim());
+				if (parsed.getShim() == BDConstants.Shim.ACCUMULOTEXT) {
+					return Response.status(200).entity(executeQueryAccumulo("note_events_TedgeTxt")).build();
+				}
 				if (parsed.getShim() != BDConstants.Shim.PSQLRELATION) {
 					RegisterQueryResponse resp = new RegisterQueryResponse(
 							"ERROR: Unrecognized shim "
@@ -210,45 +231,70 @@ public class QueryClient {
 				}
 
 			} catch (SQLException ex) {
+				
 				Logger lgr = Logger.getLogger(QueryClient.class.getName());
 				lgr.log(Level.SEVERE, ex.getMessage(), ex);
 			}
 		}
 	}
 
-	 public void executeQueryAccumulo(String table)
-	 		throws TableNotFoundException, AccumuloException,
-	 		AccumuloSecurityException {
-	 	// specify which visibilities we are allowed to see
-	 	Authorizations auths = new Authorizations("public");
-	 	Connector conn = AccumuloInstance.getMiniCluster().getConnector();
-	 	Scanner scan = conn.createScanner(table, auths);
-	 	scan.setRange(new Range("0", null));
-	 	scan.fetchColumnFamily(new Text(""));
-	 	for (Entry<Key, Value> entry : scan) {
-	 		System.out.println(entry.getKey());
-	 		System.out.println(entry.getValue());
-	 	}
-	 }
+	public String executeQueryAccumulo(String table)
+			throws TableNotFoundException, AccumuloException,
+			AccumuloSecurityException, JsonProcessingException {
+		// specify which visibilities we are allowed to see
+		Authorizations auths = new Authorizations("public");
+		AccumuloInstance accInst = AccumuloInstance.getInstance();
+		Connector conn = accInst.getConnector();
+		conn.securityOperations().changeUserAuthorizations(
+				accInst.getUsername(), auths);
+		Scanner scan = conn.createScanner(table, auths);
+		scan.setRange(new Range("0", null));
+		scan.fetchColumnFamily(new Text(""));
+		List<List<String>> allRows = new ArrayList<List<String>>();
+		for (Entry<Key, Value> entry : scan) {
+			System.out.println(entry.getKey());
+			System.out.println(entry.getValue());
+			List<String> oneRow = new ArrayList<String>();
+			Text rowIdResult = entry.getKey().getRow();
+			Text colFamResult = entry.getKey().getColumnFamily();
+			Text colKeyResult = entry.getKey().getColumnQualifier();
+			Text visibility = entry.getKey().getColumnVisibility();
+			Value valueResult = entry.getValue();
+			oneRow.add(rowIdResult.toString());
+			oneRow.add(colFamResult.toString());
+			oneRow.add(colKeyResult.toString());
+			oneRow.add(visibility.toString());
+			oneRow.add(valueResult.toString());
+			allRows.add(oneRow);
+		}
+		RegisterQueryResponse resp= new RegisterQueryResponse("OK", 200,
+					allRows, 1, 1, new ArrayList<String>(), new ArrayList<String>(), new Timestamp(0));
+		ObjectMapper mapper = new ObjectMapper();
+		return mapper.writeValueAsString(resp);
+	}
 
 	public static void main(String[] args) {
 		QueryClient qClient = new QueryClient();
 		// qClient.executeQueryPostgres("Select * from books");
-		Response response = qClient
-				.query("{\"query\":\"RELATION(select * from mimic2v26.d_patients limit 5)\",\"authorization\":{},\"tuplesPerPage\":1,\"pageNumber\":1,\"timestamp\":\"2012-04-23T18:25:43.511Z\"}");
-		System.out.println(response.getEntity());
-		// try {
-		// qClient.executeQueryAccumulo("note_events_TedgeTxt");
-		// } catch (TableNotFoundException e) {
-		// // TODO Auto-generated catch block
-		// e.printStackTrace();
-		// } catch (AccumuloException e) {
-		// // TODO Auto-generated catch block
-		// e.printStackTrace();
-		// } catch (AccumuloSecurityException e) {
-		// // TODO Auto-generated catch block
-		// e.printStackTrace();
-		// }
-		// qClient.executeQueryAccumulo();
+		// Response response = qClient
+		// .query("{\"query\":\"RELATION(select * from mimic2v26.d_patients limit 5)\",\"authorization\":{},\"tuplesPerPage\":1,\"pageNumber\":1,\"timestamp\":\"2012-04-23T18:25:43.511Z\"}");
+		// System.out.println(response.getEntity());
+		try {
+			try {
+				qClient.executeQueryAccumulo("note_events_TedgeTxt");
+			} catch (JsonProcessingException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		} catch (TableNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (AccumuloException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (AccumuloSecurityException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 }

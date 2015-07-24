@@ -65,7 +65,10 @@ curl -v -H "Content-Type: application/json" -X POST -d '{"query":"RELATION(selec
 maven profiles
 --------
 Building jar for test (big2: ssh ubuntu@128.52.183.84) and prod (big: ssh ubuntu@128.52.183.245) environemnts.
-To run your local development environment run: mvn clean compile -P dev
+To run your local development environment run: 
+
+mvn clean compile test -P dev
+
 If you are bothered by an error for pom.xml in Eclipse, then you can go to Project->Properties->Maven and fill in the Active Maven Profiles (comma separated) field with "dev" word but then you won't be able to build the packages for the test and prod environments (the default dev profile will overwrite all the settings).
 
 Building packages for test and prod environments:
@@ -95,3 +98,11 @@ $psql -U pguser -d mimic2
 **create database logs**
 
 **create logs table** (current version is in the script folder)
+
+
+RUN THE APP
+--------
+java -classpath "bigdawg-conf/:istc.bigdawg-1.0-SNAPSHOT-jar-with-dependencies.jar" istc.bigdawg.Main
+
+# bigdawg-conf contains the configuration files that should be adjusted to the current environment
+

@@ -45,7 +45,7 @@ public class Stream {
 			RegisterStreamRequest st = mapper.readValue(istream,
 					RegisterStreamRequest.class);
 			System.out.println(mapper.writeValueAsString(st));
-			StreamDAO dao = Main.getStreamDAO();
+			StreamDAO dao = MemStreamDAO.getStreamDAO();
 			DBAlert dbalert = dao.createOrGetDBAlert(st.getQuery(), st.isOneTime());
 			dbalert.receiveURL = Main.BASE_URI+ALERT+"/"+dbalert.dbAlertID;
 			System.out.println("DB Alert created: " + dbalert.receiveURL);
@@ -99,7 +99,7 @@ public class Stream {
 	@Produces(MediaType.TEXT_PLAIN)
 	public String status(@PathParam("stream") String stream) {
 		System.out.println("looking up stream status for " + stream);
-		StreamDAO dao = Main.getStreamDAO();
+		StreamDAO dao = MemStreamDAO.getStreamDAO();
 		try{
 			boolean hit = dao.checkForNewPull(Integer.parseInt(stream));
 			return ""+hit;
@@ -119,7 +119,7 @@ public class Stream {
 	@Produces(MediaType.TEXT_PLAIN)
 	public String alert(@PathParam("stream") String stream) {
 		System.out.println("registering stream event:" + stream);
-		StreamDAO dao = Main.getStreamDAO();
+		StreamDAO dao = MemStreamDAO.getStreamDAO();
 		try{
 			int streamInt = Integer.parseInt(stream);
 			List<Integer> clientAlertIds = dao.addAlertEvent(streamInt, "");

@@ -42,7 +42,7 @@ public class ASTNode {
 	}
 	public void addChild(ASTNode child) {
 		if (this.children == null){
-			this.children = new ArrayList<>();
+			this.children = new ArrayList<ASTNode>();
 		}
 		this.children.add(child);
 	}

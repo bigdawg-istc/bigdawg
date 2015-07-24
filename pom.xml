@@ -33,7 +33,6 @@
 		<dependency>
 			<groupId>org.glassfish.jersey.media</groupId>
 			<artifactId>jersey-media-json-jackson</artifactId>
-			<version>2.19</version>
 		</dependency>
 		<dependency>
 			<groupId>junit</groupId>
@@ -84,6 +83,11 @@
 	</dependencies>
 
 	<!-- Profiles configuration -->
+	<!-- Each profile has its own definition of resource, in this case configuration 
+		files. For the dev profile the configuration files are stored in the target/classes 
+		folder, whereas for the prod and test environments the configuration files 
+		are stored in an external folder (bigdawg-conf/) which is external to the 
+		final jar file. Thanks to this the application can be easily configured. -->
 	<profiles>
 		<!-- The configuration of the development profile -->
 		<profile>
@@ -103,6 +107,18 @@
 					property to dev. -->
 				<build.profile.id>dev</build.profile.id>
 			</properties>
+			<build>
+				<resources>
+					<resource>
+						<directory>src/main/resources</directory>
+						<!-- filtering - replaces variables, denoted by the ${...} with values -->
+						<filtering>true</filtering>
+						<includes>
+							<include>*.properties</include>
+						</includes>
+					</resource>
+				</resources>
+			</build>
 		</profile>
 		<!-- The configuration of the production profile -->
 		<profile>
@@ -121,6 +137,23 @@
 					property to prod. -->
 				<build.profile.id>prod</build.profile.id>
 			</properties>
+			<build>
+				<resources>
+					<resource>
+						<directory>src/main/resources</directory>
+						<!-- ${project.build.directory} refers to the output directory of the 
+							project -->
+						<targetPath>${project.build.directory}/bigdawg-conf/</targetPath>
+						<!-- filtering - replaces variables, denoted by the ${...} with values -->
+						<filtering>true</filtering>
+						<includes>
+							<include>*.properties</include>
+						</includes>
+						<!-- <targetPath>${project.build.directory}</targetPath> -->
+						<!-- <includes> <include>log4j.properties</include> </includes> -->
+					</resource>
+				</resources>
+			</build>
 		</profile>
 		<!-- The configuration of the testing profile -->
 		<profile>
@@ -139,6 +172,57 @@
 					property to test. -->
 				<build.profile.id>test</build.profile.id>
 			</properties>
+			<build>
+				<resources>
+					<resource>
+						<directory>src/main/resources</directory>
+						<!-- ${project.build.directory} refers to the output directory of the 
+							project -->
+						<targetPath>${project.build.directory}/bigdawg-conf/</targetPath>
+						<!-- filtering - replaces variables, denoted by the ${...} with values -->
+						<filtering>true</filtering>
+						<includes>
+							<include>*.properties</include>
+						</includes>
+						<!-- <targetPath>${project.build.directory}</targetPath> -->
+						<!-- <includes> <include>log4j.properties</include> </includes> -->
+					</resource>
+				</resources>
+			</build>
+		</profile>
+		<profile>
+			<id>mit</id>
+			<activation>
+				<property>
+					<name>environment.type</name>
+					<value>mit</value>
+				</property>
+			</activation>
+			<properties>
+				<!-- Specifies the build.profile.id property that must be equal than 
+					the name of the directory that contains the profile specific configuration 
+					file. Because the name of the directory that contains the configuration file 
+					of the testing profile is test, we must set the value of the build.profile.id 
+					property to test. -->
+				<build.profile.id>mit</build.profile.id>
+			</properties>
+			<build>
+				<resources>
+					<resource>
+						<directory>src/main/resources</directory>
+						<!-- ${project.build.directory} refers to the output directory of the 
+							project -->
+						<targetPath>${project.build.directory}/bigdawg-conf/</targetPath>
+						<!-- filtering - replaces variables, denoted by the ${...} with values -->
+						<filtering>true</filtering>
+						<includes>
+							<include>*.properties</include>
+						</includes>
+						<!-- <targetPath>${project.build.directory}</targetPath> -->
+						<!-- <includes> <include>log4j.properties</include> </includes> -->
+					</resource>
+				</resources>
+			</build>
 		</profile>
 	</profiles>
 
@@ -154,10 +238,12 @@
 				<artifactId>maven-compiler-plugin</artifactId>
 				<version>2.5.1</version>
 				<inherited>true</inherited>
+				<!-- 
 				<configuration>
 					<source>1.7</source>
 					<target>1.7</target>
 				</configuration>
+				-->
 			</plugin>
 			<plugin>
 				<groupId>org.codehaus.mojo</groupId>
@@ -178,6 +264,7 @@
 				<!-- NOTE: We don't need a groupId specification because the group is 
 					org.apache.maven.plugins ...which is assumed by default. -->
 				<artifactId>maven-assembly-plugin</artifactId>
+				<!-- type: mvn package -P <your-profile> -->
 				<version>2.5.5</version>
 				<configuration>
 					<descriptorRefs>
@@ -187,9 +274,6 @@
 						<manifest>
 							<mainClass>istc.bigdawg.Main</mainClass>
 						</manifest>
-						<manifestEntries>
-							<Class-Path>.</Class-Path>
-						</manifestEntries>
 					</archive>
 				</configuration>
 				<executions>
@@ -203,14 +287,6 @@
 				</executions>
 			</plugin>
 		</plugins>
-		<resources>
-			<resource>
-				<directory>src/main/resources</directory>
-				<filtering>true</filtering>
-				<!-- <targetPath>${project.build.directory}</targetPath> -->
-				<!-- <includes> <include>log4j.properties</include> </includes> -->
-			</resource>
-		</resources>
 	</build>
 
 	<properties>

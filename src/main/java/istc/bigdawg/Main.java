@@ -1,16 +1,18 @@
 package istc.bigdawg;
 
+import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.stream.MemStreamDAO;
+import istc.bigdawg.stream.Stream;
 import istc.bigdawg.stream.StreamDAO;
 
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.Properties;
 
-import org.apache.accumulo.core.client.impl.thrift.ThriftTest.AsyncProcessor.throwsError;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 import org.glassfish.grizzly.http.server.HttpServer;
@@ -23,10 +25,11 @@ import org.glassfish.jersey.server.ResourceConfig;
  */
 public class Main {
 
-	// Base URI the Grizzly HTTP server will listen on
-	public static String BASE_URI;
-
-	public static StreamDAO streamDAO = null;
+	public static StreamDAO streamDAO ;
+	public static final String BASE_URI;
+	static {
+		BASE_URI = BigDawgConfigProperties.INSTANCE.getBaseURI();
+	}
 
 	/**
 	 * Starts Grizzly HTTP server exposing JAX-RS resources defined in this
@@ -43,31 +46,11 @@ public class Main {
 
 		// create and start a new instance of grizzly http server
 		// exposing the Jersey application at BASE_URI
-		streamDAO = getStreamDAO();
-		Properties prop = new Properties();
-		String propFileName = "config.properties";
-		InputStream inputStream = Main.class.getClassLoader()
-				.getResourceAsStream(propFileName);
-		if (inputStream != null) {
-			prop.load(inputStream);
-		} else {
-			throw new FileNotFoundException("property file '" + propFileName
-					+ "' not found in the classpath");
-		}
-		String grizzlyIpaddress = prop.getProperty("main.grizzly.ipaddress");
-		String grizzlyPort = prop.getProperty("main.grizzly.port");
-		BASE_URI = "http://" + grizzlyIpaddress + ":" + grizzlyPort
-				+ "/bigdawg/";
-		System.out.println("base uri: " + BASE_URI);
+		streamDAO = MemStreamDAO.INSTANCE;
+		
+		System.out.println("base uri: "+BASE_URI);
 		return GrizzlyHttpServerFactory.createHttpServer(URI.create(BASE_URI),
 				rc);
-	}
-
-	public static StreamDAO getStreamDAO() {
-		if (streamDAO == null) {
-			streamDAO = new MemStreamDAO();
-		}
-		return streamDAO;
 	}
 
 	private static void setLogging() throws IOException {
@@ -93,6 +76,15 @@ public class Main {
 	 * @throws IOException
 	 */
 	public static void main(String[] args) throws IOException {
+		// show current classpath
+		ClassLoader cl = ClassLoader.getSystemClassLoader();
+		URL[] urls = ((URLClassLoader) cl).getURLs();
+		System.out.println("Class-paths:");
+		for (URL url : urls) {
+			System.out.println(url.getFile());
+		}
+		System.out.println("The end of class-paths.");
+
 		setLogging();
 		final HttpServer server = startServer();
 		System.out.println(String.format(
