@@ -1,6 +1,7 @@
 package istc.bigdawg;
 
 import istc.bigdawg.properties.BigDawgConfigProperties;
+import istc.bigdawg.query.QueryClient;
 import istc.bigdawg.stream.MemStreamDAO;
 import istc.bigdawg.stream.Stream;
 import istc.bigdawg.stream.StreamDAO;
@@ -42,7 +43,7 @@ public class Main {
 		// create a resource config that scans for JAX-RS resources and
 		// providers
 		// in istc.bigdawg package
-		final ResourceConfig rc = new ResourceConfig().packages("istc.bigdawg");
+		final ResourceConfig rc = new ResourceConfig().packages("istc.bigdawg").register(QueryClient.class).register(Stream.class);
 
 		// create and start a new instance of grizzly http server
 		// exposing the Jersey application at BASE_URI

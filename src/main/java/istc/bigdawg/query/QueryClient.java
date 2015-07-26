@@ -45,10 +45,13 @@ import org.apache.accumulo.core.data.Range;
 import org.apache.accumulo.core.data.Value;
 import org.apache.accumulo.core.security.Authorizations;
 import org.apache.hadoop.io.Text;
+import org.codehaus.jackson.JsonProcessingException;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.map.exc.UnrecognizedPropertyException;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
+//import com.fasterxml.jackson.core.JsonProcessingException;
+//import com.fasterxml.jackson.databind.ObjectMapper;
+//import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
 
 /**
  * @author Adam Dziedzic
@@ -81,17 +84,19 @@ public class QueryClient {
 	private String url;
 	private String user;
 	private String password;
-	
+
 	public QueryClient() {
-		String database=BigDawgConfigProperties.INSTANCE.getPostgreSQLDatabase();
-		String host=BigDawgConfigProperties.INSTANCE.getPostgreSQLHost();
-		String port=BigDawgConfigProperties.INSTANCE.getPostgreSQLPort();
-		this.url="jdbc:postgresql://"+host+":"+port+"/"+database;
+		String database = BigDawgConfigProperties.INSTANCE
+				.getPostgreSQLDatabase();
+		String host = BigDawgConfigProperties.INSTANCE.getPostgreSQLHost();
+		String port = BigDawgConfigProperties.INSTANCE.getPostgreSQLPort();
+		this.url = "jdbc:postgresql://" + host + ":" + port + "/" + database;
 		if (port == null) {
-			this.url="jdbc:postgresql://"+host+"/"+database;
+			this.url = "jdbc:postgresql://" + host + "/" + database;
 		}
-		this.user=BigDawgConfigProperties.INSTANCE.getPostgreSQLUser();
-		this.password=BigDawgConfigProperties.INSTANCE.getPostgreSQLPassword();
+		this.user = BigDawgConfigProperties.INSTANCE.getPostgreSQLUser();
+		this.password = BigDawgConfigProperties.INSTANCE
+				.getPostgreSQLPassword();
 	}
 
 	/**
@@ -99,15 +104,16 @@ public class QueryClient {
 	 * 
 	 * @param istream
 	 * @return
-	 * @throws AccumuloSecurityException 
-	 * @throws AccumuloException 
-	 * @throws TableNotFoundException 
+	 * @throws AccumuloSecurityException
+	 * @throws AccumuloException
+	 * @throws TableNotFoundException
 	 */
 	@Path("query")
 	@POST
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response query(String istream) throws TableNotFoundException, AccumuloException, AccumuloSecurityException {
+	public Response query(String istream) throws TableNotFoundException,
+			AccumuloException, AccumuloSecurityException {
 		log.info("istream: " + istream);
 		ObjectMapper mapper = new ObjectMapper();
 		try {
@@ -120,7 +126,10 @@ public class QueryClient {
 				ASTNode parsed = parser.parseQueryIntoTree(st.getQuery());
 				System.out.println(parsed.getShim());
 				if (parsed.getShim() == BDConstants.Shim.ACCUMULOTEXT) {
-					return Response.status(200).entity(executeQueryAccumulo("note_events_TedgeTxt")).build();
+					return Response
+							.status(200)
+							.entity(executeQueryAccumulo("note_events_TedgeTxt"))
+							.build();
 				}
 				if (parsed.getShim() != BDConstants.Shim.PSQLRELATION) {
 					RegisterQueryResponse resp = new RegisterQueryResponse(
@@ -231,7 +240,7 @@ public class QueryClient {
 				}
 
 			} catch (SQLException ex) {
-				
+
 				Logger lgr = Logger.getLogger(QueryClient.class.getName());
 				lgr.log(Level.SEVERE, ex.getMessage(), ex);
 			}
@@ -240,7 +249,7 @@ public class QueryClient {
 
 	public String executeQueryAccumulo(String table)
 			throws TableNotFoundException, AccumuloException,
-			AccumuloSecurityException, JsonProcessingException {
+			AccumuloSecurityException, IOException {
 		// specify which visibilities we are allowed to see
 		Authorizations auths = new Authorizations("public");
 		AccumuloInstance accInst = AccumuloInstance.getInstance();
@@ -267,8 +276,9 @@ public class QueryClient {
 			oneRow.add(valueResult.toString());
 			allRows.add(oneRow);
 		}
-		RegisterQueryResponse resp= new RegisterQueryResponse("OK", 200,
-					allRows, 1, 1, new ArrayList<String>(), new ArrayList<String>(), new Timestamp(0));
+		RegisterQueryResponse resp = new RegisterQueryResponse("OK", 200,
+				allRows, 1, 1, new ArrayList<String>(),
+				new ArrayList<String>(), new Timestamp(0));
 		ObjectMapper mapper = new ObjectMapper();
 		return mapper.writeValueAsString(resp);
 	}
@@ -280,20 +290,16 @@ public class QueryClient {
 		// .query("{\"query\":\"RELATION(select * from mimic2v26.d_patients limit 5)\",\"authorization\":{},\"tuplesPerPage\":1,\"pageNumber\":1,\"timestamp\":\"2012-04-23T18:25:43.511Z\"}");
 		// System.out.println(response.getEntity());
 		try {
-			try {
-				qClient.executeQueryAccumulo("note_events_TedgeTxt");
-			} catch (JsonProcessingException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+			qClient.executeQueryAccumulo("note_events_TedgeTxt");
+		} catch (JsonProcessingException e) {
+			e.printStackTrace();
 		} catch (TableNotFoundException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (AccumuloException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (AccumuloSecurityException e) {
-			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}

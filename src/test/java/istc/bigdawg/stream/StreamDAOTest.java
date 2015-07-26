@@ -44,7 +44,7 @@ public class StreamDAOTest {
     
     @After
     public void tearDown() throws Exception {
-        server.stop();
+        server.shutdownNow();
     }
 
     @Test

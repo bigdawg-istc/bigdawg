@@ -18,9 +18,9 @@ public class AlertException extends Exception {
 		super(message, cause);
 	}
 
-	public AlertException(String message, Throwable cause,
-			boolean enableSuppression, boolean writableStackTrace) {
-		super(message, cause, enableSuppression, writableStackTrace);
-	}
+//	public AlertException(String message, Throwable cause,
+//			boolean enableSuppression, boolean writableStackTrace) {
+//		super(message, cause, enableSuppression, writableStackTrace);
+//	}
 
 }
