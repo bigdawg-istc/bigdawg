@@ -45,42 +45,47 @@ public class Relay {
 	@POST
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response query(@Context HttpHeaders headers, String istream) throws HttpException, IOException {
+	public Response query(@Context HttpHeaders headers, String istream)
+			throws HttpException, IOException {
 		log.info("istream: " + istream);
 		JSONObject object = (JSONObject) JSONValue.parse(istream.toString());
-		String uri=object.get(RELAY_URL).toString();
+		String uri = object.get(RELAY_URL).toString();
 		object.remove(RELAY_URL);
 		PostMethod post = new PostMethod(uri);
-		StringRequestEntity requestEntity = new StringRequestEntity(object.toString(), "application/json", "UTF-8");
+		StringRequestEntity requestEntity = new StringRequestEntity(
+				object.toString(), "application/json", "UTF-8");
 		post.setRequestEntity(requestEntity);
-		String response;
 		HttpClient client = new HttpClient();
 		int returnCode = client.executeMethod(post);
 		try {
-			response = post.getResponseBodyAsString();
+			String response = post.getResponseBodyAsString();
+			return Response.status(returnCode).entity(response).build();
 		} catch (IOException e) {
 			e.printStackTrace();
-			return Response.status(returnCode).entity("No body returned!").build();
+			return Response.status(returnCode).entity("No body returned!")
+					.build();
 		}
-		return Response.status(returnCode).entity(response).build();
 	}
-	
+
 	public void addHeaderParameters(PostMethod post, HttpHeaders headers) {
-		MultivaluedMap<String, String> headerKeyValues = headers.getRequestHeaders();
+		MultivaluedMap<String, String> headerKeyValues = headers
+				.getRequestHeaders();
 		System.out.println("Header");
-		for (java.util.Map.Entry<String, List<String>> entry : headerKeyValues.entrySet()) {
-			System.out.println("key:"+entry.getKey()+" value:"+entry.getValue().get(0));
-			post.addRequestHeader(entry.getKey(),entry.getValue().get(0));
+		for (java.util.Map.Entry<String, List<String>> entry : headerKeyValues
+				.entrySet()) {
+			System.out.println("key:" + entry.getKey() + " value:"
+					+ entry.getValue().get(0));
+			post.addRequestHeader(entry.getKey(), entry.getValue().get(0));
 		}
 	}
-	
-	public void showParameters(PostMethod post, JSONObject object ) {
+
+	public void showParameters(PostMethod post, JSONObject object) {
 		Set<String> keySet = object.keySet();
 		System.out.println("Body");
 		for (String key : keySet) {
 			Object value = object.get(key);
-			System.out.printf("%s=%s (%s)\n", key, value.toString(), value.getClass()
-					.getSimpleName());
+			System.out.printf("%s=%s (%s)\n", key, value.toString(), value
+					.getClass().getSimpleName());
 		}
 	}
 
@@ -94,62 +99,62 @@ public class Relay {
 		String jsonString = "{\"Query\":\"checkHeartRate\",\"Authorization\":{}, \"NotifyURL\":\"http://localhost:8008/results\", \"OneTime\":\"True\",\"RelayURL\":\"http://cambridge.cs.pdx.edu:8080/test\"}";
 		Relay relay = new Relay();
 		HttpHeaders headers = new HttpHeaders() {
-			
+
 			@Override
 			public MultivaluedMap<String, String> getRequestHeaders() {
 				MultivaluedMap<String, String> map = new MultivaluedHashMap<String, String>();
 				map.add("Content-Type", "application/json");
 				return map;
 			}
-			
+
 			@Override
 			public List<String> getRequestHeader(String name) {
 				// TODO Auto-generated method stub
 				return null;
 			}
-			
+
 			@Override
 			public MediaType getMediaType() {
 				// TODO Auto-generated method stub
 				return null;
 			}
-			
+
 			@Override
 			public int getLength() {
 				// TODO Auto-generated method stub
 				return 0;
 			}
-			
+
 			@Override
 			public Locale getLanguage() {
 				// TODO Auto-generated method stub
 				return null;
 			}
-			
+
 			@Override
 			public String getHeaderString(String name) {
 				// TODO Auto-generated method stub
 				return null;
 			}
-			
+
 			@Override
 			public Date getDate() {
 				// TODO Auto-generated method stub
 				return null;
 			}
-			
+
 			@Override
 			public Map<String, Cookie> getCookies() {
 				// TODO Auto-generated method stub
 				return null;
 			}
-			
+
 			@Override
 			public List<MediaType> getAcceptableMediaTypes() {
 				// TODO Auto-generated method stub
 				return null;
 			}
-			
+
 			@Override
 			public List<Locale> getAcceptableLanguages() {
 				// TODO Auto-generated method stub
