@@ -1,8 +1,6 @@
 package istc.bigdawg;
 
 import istc.bigdawg.properties.BigDawgConfigProperties;
-import istc.bigdawg.query.QueryClient;
-import istc.bigdawg.stream.Stream;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;

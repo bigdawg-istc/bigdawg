@@ -39,17 +39,18 @@ public class DataLoader {
 		config.setMaxMemory(100000L);
 		BatchWriter writer = acc.getConnector().createBatchWriter(tableName,
 				config);
-		ColumnVisibility colVis = new ColumnVisibility("public");
+		//ColumnVisibility colVis = new ColumnVisibility();
 		int lineCounter = 0;
 		for (String line; (line = br.readLine()) != null;) {
 			String[] tokens = line.split(delimiter);
 			AccumuloRowQualifier.AccumuloRow row = accQual
 					.getAccumuloRow(tokens);
 			Mutation mutation = new Mutation(row.getRowId());
-			mutation.put(row.getColFam(), row.getColQual(), colVis,
-					row.getValue());
-//			mutation.put(row.getColFam(), row.getColQual(),
+//			mutation.put(row.getColFam(), row.getColQual(), colVis,
 //					row.getValue());
+			// code below for the case without the column visibility
+			mutation.put(row.getColFam(), row.getColQual(),
+					row.getValue());
 			writer.addMutation(mutation);
 			++lineCounter;
 		}

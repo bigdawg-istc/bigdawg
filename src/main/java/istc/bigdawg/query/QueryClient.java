@@ -92,6 +92,7 @@ public class QueryClient {
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response query(String istream) throws TableNotFoundException,
 			AccumuloException, AccumuloSecurityException {
+		//System.out.println(istream);
 		log.info("istream: " + istream);
 		ObjectMapper mapper = new ObjectMapper();
 		try {
@@ -99,38 +100,33 @@ public class QueryClient {
 					RegisterQueryRequest.class);
 			System.out.println(mapper.writeValueAsString(st));
 			Parser parser = new simpleParser();
-			String queryString = null;
-			try {
-				ASTNode parsed = parser.parseQueryIntoTree(st.getQuery());
-				System.out.println(parsed.getShim());
-				if (parsed.getShim() == BDConstants.Shim.ACCUMULOTEXT) {
-					return Response
-							.status(200)
-							.entity(executeQueryAccumulo("note_events_TedgeTxt"))
-							.build();
-				}
-				if (parsed.getShim() != BDConstants.Shim.PSQLRELATION) {
-					RegisterQueryResponse resp = new RegisterQueryResponse(
-							"ERROR: Unrecognized shim "
-									+ parsed.getShim().toString(), 412, null,
-							1, 1, null, null, new Timestamp(0));
-					String responseResult = mapper.writeValueAsString(resp);
-					return Response.status(412).entity(responseResult).build();
-				}
-				queryString = parsed.getTarget();
-			} catch (NotSupportIslandException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+			ASTNode parsed = parser.parseQueryIntoTree(st.getQuery());
+			System.out.println(parsed.getShim());
+			String queryString = parsed.getTarget();
+			if (parsed.getShim() == BDConstants.Shim.ACCUMULOTEXT) {
+				return Response.status(200)
+						.entity(executeQueryAccumulo(queryString))
+						.build();
+			} else if (parsed.getShim() == BDConstants.Shim.PSQLRELATION) {
+				Tuple.Tuple3<List<String>, List<String>, List<List<String>>> result = executeQueryPostgres(queryString);
+				List<String> colNames = result.getT1();
+				List<String> colTypes = result.getT2();
+				List<List<String>> rows = result.getT3();
+				RegisterQueryResponse resp = new RegisterQueryResponse("OK",
+						200, rows, 1, 1, colNames, colTypes, new Timestamp(0));
+				String responseResult = mapper.writeValueAsString(resp);
+				return Response.status(200).entity(responseResult).build();
+			} else {
+				RegisterQueryResponse resp = new RegisterQueryResponse(
+						"ERROR: Unrecognized shim "
+								+ parsed.getShim().toString(), 412, null, 1, 1,
+						null, null, new Timestamp(0));
+				String responseResult = mapper.writeValueAsString(resp);
+				return Response.status(412).entity(responseResult).build();
 			}
-
-			Tuple.Tuple3<List<String>, List<String>, List<List<String>>> result = executeQueryPostgres(queryString);
-			List<String> colNames = result.getT1();
-			List<String> colTypes = result.getT2();
-			List<List<String>> rows = result.getT3();
-			RegisterQueryResponse resp = new RegisterQueryResponse("OK", 200,
-					rows, 1, 1, colNames, colTypes, new Timestamp(0));
-			String responseResult = mapper.writeValueAsString(resp);
-			return Response.status(200).entity(responseResult).build();
+		} catch (NotSupportIslandException e) {
+			e.printStackTrace();
+			return Response.status(412).entity(e.getMessage()).build();
 		} catch (UnrecognizedPropertyException e) {
 			e.printStackTrace();
 			return Response.status(500).entity(e.getMessage()).build();
@@ -175,6 +171,7 @@ public class QueryClient {
 			}
 		} catch (SQLException ex) {
 			Logger lgr = Logger.getLogger(QueryClient.class.getName());
+			ex.printStackTrace();
 			lgr.log(Level.SEVERE, ex.getMessage(), ex);
 			throw ex;
 		} finally {
@@ -190,6 +187,7 @@ public class QueryClient {
 				}
 			} catch (SQLException ex) {
 				Logger lgr = Logger.getLogger(QueryClient.class.getName());
+				ex.printStackTrace();
 				lgr.log(Level.WARNING, ex.getMessage(), ex);
 				throw ex;
 			}
@@ -234,18 +232,19 @@ public class QueryClient {
 			throws TableNotFoundException, AccumuloException,
 			AccumuloSecurityException, IOException {
 		// specify which visibilities we are allowed to see
-		Authorizations auths = new Authorizations("public");
+		// Authorizations auths = new Authorizations("public");
+		Authorizations auths = new Authorizations();
 		AccumuloInstance accInst = AccumuloInstance.getInstance();
 		Connector conn = accInst.getConnector();
 		conn.securityOperations().changeUserAuthorizations(
 				accInst.getUsername(), auths);
 		Scanner scan = conn.createScanner(table, auths);
-		scan.setRange(new Range("0", null));
+		scan.setRange(new Range("", null));
 		scan.fetchColumnFamily(new Text(""));
 		List<List<String>> allRows = new ArrayList<List<String>>();
 		for (Entry<Key, Value> entry : scan) {
-			System.out.println(entry.getKey());
-			System.out.println(entry.getValue());
+			//System.out.println(entry.getKey());
+			//System.out.println(entry.getValue());
 			List<String> oneRow = new ArrayList<String>();
 			Text rowIdResult = entry.getKey().getRow();
 			Text colFamResult = entry.getKey().getColumnFamily();
@@ -260,8 +259,8 @@ public class QueryClient {
 			allRows.add(oneRow);
 		}
 		RegisterQueryResponse resp = new RegisterQueryResponse("OK", 200,
-				allRows, 1, 1, new ArrayList<String>(),
-				new ArrayList<String>(), new Timestamp(0));
+				allRows, 1, 1, AccumuloInstance.schema,
+				AccumuloInstance.types, new Timestamp(0));
 		ObjectMapper mapper = new ObjectMapper();
 		return mapper.writeValueAsString(resp);
 	}
@@ -273,7 +272,7 @@ public class QueryClient {
 		// .query("{\"query\":\"RELATION(select * from mimic2v26.d_patients limit 5)\",\"authorization\":{},\"tuplesPerPage\":1,\"pageNumber\":1,\"timestamp\":\"2012-04-23T18:25:43.511Z\"}");
 		// System.out.println(response.getEntity());
 		try {
-			qClient.executeQueryAccumulo("note_events_TedgeTxt");
+			qClient.executeQueryAccumulo("note_events_TedgeDeg");
 		} catch (JsonProcessingException e) {
 			e.printStackTrace();
 		} catch (TableNotFoundException e) {

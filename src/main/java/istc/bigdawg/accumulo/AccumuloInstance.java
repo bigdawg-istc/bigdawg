@@ -3,6 +3,9 @@
  */
 package istc.bigdawg.accumulo;
 
+import java.util.Arrays;
+import java.util.List;
+
 import istc.bigdawg.properties.BigDawgConfigProperties;
 
 import org.apache.accumulo.core.client.AccumuloException;
@@ -25,6 +28,9 @@ public class AccumuloInstance {
 	private String instanceName;
 	private String zooKeepers;
 	private String passwordToken;
+	
+	public static final List<String> schema = Arrays.asList("rowId","colFam","colKey","visibility","value");
+	public static final List<String> types = Arrays.asList("Text","Text","Text","Text","Value");
 
 	/**
 	 * @return the conn
