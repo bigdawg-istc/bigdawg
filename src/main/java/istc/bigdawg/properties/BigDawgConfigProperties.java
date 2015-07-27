@@ -11,9 +11,7 @@ public enum BigDawgConfigProperties {
 	private String grizzlyIpAddress;
 	private String grizzlyPort;
 
-	private String postgreSQLDatabase;
-	private String postgreSQLHost;
-	private String postgreSQLPort;
+	private String postgreSQLURL;
 	private String postgreSQLUser;
 	private String postgreSQLPassword;
 	
@@ -49,13 +47,8 @@ public enum BigDawgConfigProperties {
 		this.grizzlyIpAddress = prop.getProperty("main.grizzly.ipaddress");
 		this.grizzlyPort = prop.getProperty("main.grizzly.port");
 
-		this.postgreSQLDatabase = prop.getProperty("main.postgresql.database");
-		this.postgreSQLHost = prop.getProperty("main.postgresql.host");
-		this.postgreSQLPort = prop.getProperty("main.postgresql.port");
-		if (this.postgreSQLPort.equals("notApply")) {
-			this.postgreSQLPort=null;
-		}
-		this.postgreSQLUser = prop.getProperty("main.postgresq.user");
+		this.postgreSQLURL = prop.getProperty("main.postgresql.url");
+		this.postgreSQLUser = prop.getProperty("main.postgresql.user");
 		this.postgreSQLPassword = prop.getProperty("main.postgresql.password");
 		
 		this.accumuloIstance=prop.getProperty("main.accumulo.instanceName");
@@ -133,27 +126,10 @@ public enum BigDawgConfigProperties {
 		return postgreSQLPassword;
 	}
 
-	/**
-	 * @return the postgreSQLDatabase
-	 */
-	public String getPostgreSQLDatabase() {
-		return postgreSQLDatabase;
+	public String getPostgreSQLURL(){
+		return postgreSQLURL;
 	}
-
-	/**
-	 * @return the postgreSQLHost
-	 */
-	public String getPostgreSQLHost() {
-		return postgreSQLHost;
-	}
-
-	/**
-	 * @return the postgreSQLPort
-	 */
-	public String getPostgreSQLPort() {
-		return postgreSQLPort;
-	}
-
+	
 	/**
 	 * @return the grizzlyIpAddress
 	 */

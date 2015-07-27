@@ -1,0 +1,1 @@
+scp istc.bigdawg-1.0-SNAPSHOT-jar-with-dependencies.jar ssh adziedzic@txe1-login.mit.edu:/home/gridsan/adziedzic/jars/first_try_external_config_files2015-07-24

@@ -7,7 +7,7 @@ package istc.bigdawg.query;
 import istc.bigdawg.BDConstants;
 import istc.bigdawg.accumulo.AccumuloInstance;
 import istc.bigdawg.exceptions.NotSupportIslandException;
-import istc.bigdawg.properties.BigDawgConfigProperties;
+import istc.bigdawg.postgresql.PostgreSQLInstance;
 import istc.bigdawg.query.parser.Parser;
 import istc.bigdawg.query.parser.simpleParser;
 import istc.bigdawg.utils.Row;
@@ -15,7 +15,6 @@ import istc.bigdawg.utils.Tuple;
 
 import java.io.IOException;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -81,24 +80,6 @@ public class QueryClient {
 	private ResultSet rs = null;
 	private PreparedStatement pst = null;
 
-	private String url;
-	private String user;
-	private String password;
-
-	public QueryClient() {
-		String database = BigDawgConfigProperties.INSTANCE
-				.getPostgreSQLDatabase();
-		String host = BigDawgConfigProperties.INSTANCE.getPostgreSQLHost();
-		String port = BigDawgConfigProperties.INSTANCE.getPostgreSQLPort();
-		this.url = "jdbc:postgresql://" + host + ":" + port + "/" + database;
-		if (port == null) {
-			this.url = "jdbc:postgresql://" + host + "/" + database;
-		}
-		this.user = BigDawgConfigProperties.INSTANCE.getPostgreSQLUser();
-		this.password = BigDawgConfigProperties.INSTANCE
-				.getPostgreSQLPassword();
-	}
-
 	/**
 	 * Answer a query from a client.
 	 * 
@@ -162,16 +143,19 @@ public class QueryClient {
 		} catch (IOException e) {
 			e.printStackTrace();
 			return Response.status(500).entity("yikes").build();
+		} catch (SQLException e) {
+			e.printStackTrace();
+			return Response.status(500).entity(e.getMessage()).build();
 		}
 	}
 
 	private Tuple.Tuple3<List<String>, List<String>, List<List<String>>> executeQueryPostgres(
-			final String query) {
+			final String query) throws SQLException {
 		List<String> colNames = null;
 		List<String> colTypes = null;
 		List<List<String>> rows = new ArrayList<List<String>>();
 		try {
-			con = DriverManager.getConnection(url, user, password);
+			con = PostgreSQLInstance.getConnection();
 			st = con.createStatement();
 			rs = st.executeQuery(query);
 			if (rs == null)
@@ -195,6 +179,7 @@ public class QueryClient {
 		} catch (SQLException ex) {
 			Logger lgr = Logger.getLogger(QueryClient.class.getName());
 			lgr.log(Level.SEVERE, ex.getMessage(), ex);
+			throw ex;
 		} finally {
 			try {
 				if (rs != null) {
@@ -209,6 +194,7 @@ public class QueryClient {
 			} catch (SQLException ex) {
 				Logger lgr = Logger.getLogger(QueryClient.class.getName());
 				lgr.log(Level.WARNING, ex.getMessage(), ex);
+				throw ex;
 			}
 		}
 		Tuple.Tuple3<List<String>, List<String>, List<List<String>>> result = new Tuple.Tuple3<List<String>, List<String>, List<List<String>>>(
@@ -218,7 +204,7 @@ public class QueryClient {
 
 	private void createAuthor(final String author) {
 		try {
-			con = DriverManager.getConnection(url, user, password);
+			con = PostgreSQLInstance.getConnection();
 
 			String stm = "INSERT INTO authors(name) VALUES(?)";
 			pst = con.prepareStatement(stm);

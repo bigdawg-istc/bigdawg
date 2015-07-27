@@ -2,9 +2,7 @@ package istc.bigdawg;
 
 import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.query.QueryClient;
-import istc.bigdawg.stream.MemStreamDAO;
 import istc.bigdawg.stream.Stream;
-import istc.bigdawg.stream.StreamDAO;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -26,7 +24,6 @@ import org.glassfish.jersey.server.ResourceConfig;
  */
 public class Main {
 
-	public static StreamDAO streamDAO ;
 	public static final String BASE_URI;
 	static {
 		BASE_URI = BigDawgConfigProperties.INSTANCE.getBaseURI();
@@ -47,7 +44,6 @@ public class Main {
 
 		// create and start a new instance of grizzly http server
 		// exposing the Jersey application at BASE_URI
-		streamDAO = MemStreamDAO.INSTANCE;
 		
 		System.out.println("base uri: "+BASE_URI);
 		return GrizzlyHttpServerFactory.createHttpServer(URI.create(BASE_URI),
