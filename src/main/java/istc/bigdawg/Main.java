@@ -40,12 +40,12 @@ public class Main {
 		// create a resource config that scans for JAX-RS resources and
 		// providers
 		// in istc.bigdawg package
-		final ResourceConfig rc = new ResourceConfig().packages("istc.bigdawg").register(QueryClient.class).register(Stream.class);
+		final ResourceConfig rc = new ResourceConfig().packages("istc.bigdawg");
 
 		// create and start a new instance of grizzly http server
 		// exposing the Jersey application at BASE_URI
-		
-		System.out.println("base uri: "+BASE_URI);
+
+		System.out.println("base uri: " + BASE_URI);
 		return GrizzlyHttpServerFactory.createHttpServer(URI.create(BASE_URI),
 				rc);
 	}

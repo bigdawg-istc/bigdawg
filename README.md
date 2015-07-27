@@ -62,6 +62,10 @@ test CURL post against test server
 --------
 curl -v -H "Content-Type: application/json" -X POST -d '{"query":"RELATION(select * from mimic2v26.d_patients limit 5)","authorization":{},"tuplesPerPage":1,"pageNumber":1,"timestamp":"2012-04-23T18:25:43.511Z"}' http://128.52.183.245:8080/bigdawg/query
 
+test CURL mit server @txe1-login.mit.edu
+--------
+curl -v -H "Content-Type: application/json" -X POST -d '{"query":"RELATION(select * from mimic2v26.d_patients limit 5)","authorization":{},"tuplesPerPage":1,"pageNumber":1,"timestamp":"2012-04-23T18:25:43.511Z"}' http://172.16.4.62:8080/bigdawg/query?ssl=true&sslfactory=org.postgresql.ssl.NonValidatingFactory
+
 maven profiles
 --------
 Building jar for test (big2: ssh ubuntu@128.52.183.84) and prod (big: ssh ubuntu@128.52.183.245) environemnts.
@@ -102,7 +106,7 @@ $psql -U pguser -d mimic2
 
 RUN THE APP
 --------
-java -classpath "bigdawg-conf/:istc.bigdawg-1.0-SNAPSHOT-jar-with-dependencies.jar" istc.bigdawg.Main
+/usr/lib/jvm/java-1.7.0-openjdk/jre/bin/java -classpath "bigdawg-conf/:istc.bigdawg-1.0-SNAPSHOT-jar-with-dependencies.jar" istc.bigdawg.Main
 
 # bigdawg-conf contains the configuration files that should be adjusted to the current environment
 

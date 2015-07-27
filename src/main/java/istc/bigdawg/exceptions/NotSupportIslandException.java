@@ -22,9 +22,9 @@ public class NotSupportIslandException extends Exception {
 		super(message, cause);
 	}
 
-//	public NotSupportIslandException(String message, Throwable cause,
-//			boolean enableSuppression, boolean writableStackTrace) {
-//		super(message, cause, enableSuppression, writableStackTrace);
-//			}
+	public NotSupportIslandException(String message, Throwable cause,
+			boolean enableSuppression, boolean writableStackTrace) {
+		super(message, cause, enableSuppression, writableStackTrace);
+			}
 
 }
