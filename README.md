@@ -98,7 +98,7 @@ curl -H "Content-Type: application/json" -X POST -d '{"Query":"checkHeartRate","
 
 Gives: {"Response Code":200,"Status URL":"http://localhost:8888/success"}
 
-The main input data is in RelayURL. We simply take the address from this attribute send similar http request (the same data) but with the RelayURL attribute removed.
+The main input data (for us) is in RelayURL. We simply take the address from this attribute send a similar http request (the same data) but with the RelayURL attribute removed.
 
 LOGS
 --------
