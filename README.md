@@ -92,6 +92,13 @@ test: curl -v -H "Content-Type: application/json" -X POST -d '{"query":"RELATION
 
 prod: curl -v -H "Content-Type: application/json" -X POST -d '{"query":"RELATION(select * from mimic2v26.d_patients limit 5)","authorization":{},"tuplesPerPage":1,"pageNumber":1,"timestamp":"2012-04-23T18:25:43.511Z"}' http://128.52.183.245:8080/bigdawg/query    
 
+relay requests
+--------
+curl -H "Content-Type: application/json" -X POST -d '{"Query":"checkHeartRate","Authorization":"{}", "NotifyURL":"http://localhost:8008/results", "OneTime":"True","RelayURL":"http://cambridge.cs.pdx.edu:8080/test"}' http://localhost:8080/bigdawg/from
+
+Gives: {"Response Code":200,"Status URL":"http://localhost:8888/success"}
+
+The main input data (for us) is in RelayURL. We simply take the address from this attribute send a similar http request (the same data) but with the RelayURL attribute removed.
 
 LOGS
 --------
@@ -109,4 +116,3 @@ RUN THE APP
 /usr/lib/jvm/java-1.7.0-openjdk/jre/bin/java -classpath "bigdawg-conf/:istc.bigdawg-1.0-SNAPSHOT-jar-with-dependencies.jar" istc.bigdawg.Main
 
 # bigdawg-conf contains the configuration files that should be adjusted to the current environment
-
