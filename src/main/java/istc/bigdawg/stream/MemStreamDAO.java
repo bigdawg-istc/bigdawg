@@ -122,10 +122,7 @@ public class MemStreamDAO extends StreamDAO {
 						}
 					} else {
 						// pull
-						System.out.println("TODO merge requests");
-						//TODO two arrays that should be joined
 						a.unseenPulls.add(event.body);
-						System.out.println(StringUtils.join(a.unseenPulls,","));
 						a.lastPullTime = new Date();
 	
 					}
