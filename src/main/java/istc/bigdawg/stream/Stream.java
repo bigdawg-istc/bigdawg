@@ -32,6 +32,8 @@ import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
 public class Stream {
 	public static final String STATUS = "status";
 	public static final String ALERT = "alert";
+	public static final String GETALERT = "getalert";
+
 	public static final String GETSTREAM = "getstream";
 	public static final String REGISTER = "registeralert";
 	/**
@@ -138,7 +140,7 @@ public class Stream {
 	 * @param stream
 	 * @return
 	 */
-	@Path(ALERT+"/{stream}")
+	@Path(GETALERT+"/{stream}")
 	@GET
 	@Produces(MediaType.TEXT_PLAIN)
 	public String alert(@PathParam("stream") String stream) {
@@ -169,12 +171,12 @@ public class Stream {
 	 * @param stream
 	 * @return
 	 */
-	@Path(ALERT+"/{stream}")
+	@Path(ALERT+"/{stream_id}")
 	@POST
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.TEXT_PLAIN)
-	public String postAlert(@PathParam("stream") String stream) {
-		System.out.println("registering stream event:" + stream);
+	public String postAlert(@PathParam("stream_id") int stream_id, String stream) {
+		System.out.println("registering stream event post:" + stream_id);
 		try{
 			JSONObject json = (JSONObject)new JSONParser().parse(stream);
 			if (json != null){
@@ -186,6 +188,7 @@ public class Stream {
 			}
 			return "BAD";
 		} catch (Exception ex){
+			ex.printStackTrace();
 			return ex.getMessage();
 		}
 	}
