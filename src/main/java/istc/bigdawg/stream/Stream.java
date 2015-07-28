@@ -2,8 +2,10 @@ package istc.bigdawg.stream;
 
 import istc.bigdawg.Main;
 import istc.bigdawg.exceptions.AlertException;
+import istc.bigdawg.stream.StreamDAO.AlertEvent;
 import istc.bigdawg.stream.StreamDAO.ClientAlert;
 import istc.bigdawg.stream.StreamDAO.DBAlert;
+import istc.bigdawg.stream.StreamDAO.PushNotify;
 
 import java.io.IOException;
 import java.util.List;
@@ -18,6 +20,10 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.StringUtils;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
@@ -26,7 +32,9 @@ import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
 public class Stream {
 	public static final String STATUS = "status";
 	public static final String ALERT = "alert";
+	public static final String GETALERT = "getalert";
 
+	public static final String GETSTREAM = "getstream";
 	public static final String REGISTER = "registeralert";
 	/**
 	 * Register a stream alert
@@ -43,11 +51,11 @@ public class Stream {
 		try {
 			RegisterStreamRequest st = mapper.readValue(istream,
 					RegisterStreamRequest.class);
-			System.out.println(mapper.writeValueAsString(st));
+//			System.out.println(mapper.writeValueAsString(st));
 			StreamDAO dao = MemStreamDAO.getStreamDAO();
 			DBAlert dbalert = dao.createOrGetDBAlert(st.getQuery(), st.isOneTime());
 			dbalert.receiveURL = Main.BASE_URI+ALERT+"/"+dbalert.dbAlertID;
-			System.out.println("DB Alert created: " + dbalert.receiveURL);
+//			System.out.println("DB Alert created: " + dbalert.receiveURL);
 			//TODO should we only do this once? de-dup?
 			AlertManager.RegisterDBEvent(dbalert);
 			ClientAlert clientAlert = dao.createClientAlert(dbalert.dbAlertID, st.isPushNotify(), st.isOneTime(), st.getNotifyURL());
@@ -87,21 +95,21 @@ public class Stream {
 		return "Please provide the status stream ID status/XXX!";
 	}
 
+	
 	/**
 	 * Check if a registered alert has fired.
 	 * 
 	 * @param stream
 	 * @return
 	 */
-	@Path(STATUS+"/{stream}")
+	@Path(GETSTREAM+"/{stream_name}")
 	@GET
 	@Produces(MediaType.TEXT_PLAIN)
-	public String status(@PathParam("stream") String stream) {
-		System.out.println("looking up stream status for " + stream);
-		StreamDAO dao = MemStreamDAO.getStreamDAO();
+	public String getStream(@PathParam("stream_name") String stream) {
+		System.out.println("looking up stream socket for " + stream);
 		try{
-			boolean hit = dao.checkForNewPull(Integer.parseInt(stream));
-			return ""+hit;
+			String streamSocket = "TODO";
+			return streamSocket;
 		} catch (Exception ex){
 			return ex.getMessage();
 		}
@@ -113,7 +121,25 @@ public class Stream {
 	 * @param stream
 	 * @return
 	 */
-	@Path(ALERT+"/{stream}")
+	@Path(STATUS+"/{stream}")
+	@GET
+	@Produces(MediaType.TEXT_PLAIN)
+	public String status(@PathParam("stream") String stream) {
+		StreamDAO dao = MemStreamDAO.getStreamDAO();
+		try{
+			return dao.checkForNewPull(Integer.parseInt(stream));
+		} catch (Exception ex){
+			return ex.getMessage();
+		}
+	}
+	
+	/**
+	 * Check if a registered alert has fired.
+	 * 
+	 * @param stream
+	 * @return
+	 */
+	@Path(GETALERT+"/{stream}")
 	@GET
 	@Produces(MediaType.TEXT_PLAIN)
 	public String alert(@PathParam("stream") String stream) {
@@ -121,8 +147,8 @@ public class Stream {
 		StreamDAO dao = MemStreamDAO.getStreamDAO();
 		try{
 			int streamInt = Integer.parseInt(stream);
-			List<Integer> clientAlertIds = dao.addAlertEvent(streamInt, "");
-			List<String> urls = dao.updatePullsAndGetPushURLS(clientAlertIds);
+			List<AlertEvent> clientAlertIds = dao.addAlertEvent(streamInt, "");
+			List<PushNotify> urls = dao.updatePullsAndGetPushURLS(clientAlertIds);
 			AlertManager.PushEvents(urls);
 			if (urls.isEmpty()){
 				if (clientAlertIds.isEmpty()){
@@ -134,6 +160,38 @@ public class Stream {
 			}
 			return "Pushing:\n" + StringUtils.join(urls, ",");
 		} catch (Exception ex){
+			return ex.getMessage();
+		}
+	}
+	
+	/**
+	 * Check if a registered alert has fired.
+	 * 
+	 * @param stream
+	 * @return
+	 */
+	@Path(ALERT+"/{stream_id}")
+	@POST
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces(MediaType.TEXT_PLAIN)
+	public String postAlert(@PathParam("stream_id") int stream_id, String stream) {
+		System.out.println("registering stream event post:" + stream_id);
+		try{
+			JSONObject json = (JSONObject)new JSONParser().parse(stream);
+			if (json != null){
+				JSONArray data = (JSONArray) json.get("data");
+				if (data != null){
+					System.out.println("alert:" + data.toString());
+					StreamDAO dao = MemStreamDAO.getStreamDAO();
+					List<AlertEvent> events = dao.addAlertEvent(stream_id, data.toString());
+					List<PushNotify> pushes = dao.updatePullsAndGetPushURLS(events);
+					AlertManager.PushEvents(pushes);
+					return "OK";
+				}
+			}
+			return "BAD";
+		} catch (Exception ex){
+			ex.printStackTrace();
 			return ex.getMessage();
 		}
 	}

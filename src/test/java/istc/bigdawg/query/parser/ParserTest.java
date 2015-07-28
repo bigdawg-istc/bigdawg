@@ -85,5 +85,16 @@ public class ParserTest {
         assertEquals(expected.getIsland(), parsed.getIsland());
         assertEquals(expected.getShim(),parsed.getShim());
         assertEquals(expected.getTarget(),parsed.getTarget());
+        
+        String query2 ="RELATION(select sex,count(*) from mimic2v26.d_patients group by sex)";
+        ASTNode expected2 = new ASTNode("select sex,count(*) from mimic2v26.d_patients group by sex", Island.RELATION, Shim.PSQLRELATION, Operator.SCOPE);
+        
+        
+                
+        ASTNode parsed2 = parser.parseQueryIntoTree(query2);
+        assertEquals(expected2.getIsland(), parsed2.getIsland());
+        assertEquals(expected2.getShim(), parsed2.getShim());
+        assertEquals(expected2.getTarget(),parsed2.getTarget());
+
     }
 }

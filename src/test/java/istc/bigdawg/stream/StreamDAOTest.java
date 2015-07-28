@@ -5,8 +5,10 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import istc.bigdawg.Main;
 import istc.bigdawg.exceptions.AlertException;
+import istc.bigdawg.stream.StreamDAO.AlertEvent;
 import istc.bigdawg.stream.StreamDAO.ClientAlert;
 import istc.bigdawg.stream.StreamDAO.DBAlert;
+import istc.bigdawg.stream.StreamDAO.PushNotify;
 
 import java.util.List;
 
@@ -82,16 +84,16 @@ public class StreamDAOTest {
     	assertEquals(2,caOneTimePush2.clientAlertID);
     	assertEquals(1,caOneTimePush2.dbAlertID);
     	//Add alert
-    	List<Integer> alertsToUpdate = dao.addAlertEvent(0, "");
+    	List<AlertEvent> alertsToUpdate = dao.addAlertEvent(0, "");
     	System.out.println(StringUtils.join(alertsToUpdate, ','));
 
     	//check that we have matched alerts
     	assertEquals(2, alertsToUpdate.size());
     	//update alerts
-    	List<String> urls = dao.updatePullsAndGetPushURLS(alertsToUpdate);
+    	List<PushNotify> urls = dao.updatePullsAndGetPushURLS(alertsToUpdate);
     	System.out.println(StringUtils.join(urls, ','));
     	assertEquals(1, urls.size());
-    	assertEquals("pushURL1", urls.get(0));
+    	assertEquals("pushURL1", urls.get(0).url);
     	
     	//we havent pulled yet so one should still be active
     	alertsToUpdate = dao.addAlertEvent(0, "");
@@ -108,7 +110,7 @@ public class StreamDAOTest {
     	urls = dao.updatePullsAndGetPushURLS(alertsToUpdate);
     	assertEquals(0, dao.getActiveClientAlerts().size());
     	assertEquals(1, urls.size());
-    	assertEquals("pushURL2", urls.get(0));
+    	assertEquals("pushURL2", urls.get(0).url);
     	
     }
   
@@ -120,14 +122,14 @@ public class StreamDAOTest {
     	DBAlert dba = dao.createOrGetDBAlert("stored1", false);
     	ClientAlert pull = dao.createClientAlert(dba.dbAlertID, false, false, null);
     	ClientAlert pull2 = dao.createClientAlert(dba.dbAlertID, false, false, null);
-    	assertFalse(dao.checkForNewPull(pull.clientAlertID));
-    	assertFalse(dao.checkForNewPull(pull2.clientAlertID));
+    	assertTrue("None".equals(dao.checkForNewPull(pull.clientAlertID)));
+    	assertTrue("None".equals(dao.checkForNewPull(pull2.clientAlertID)));
 
-    	List<Integer> clientAlertIds = dao.addAlertEvent(dba.dbAlertID, "");
+    	List<AlertEvent> clientAlertIds = dao.addAlertEvent(dba.dbAlertID, "");
     	dao.updatePullsAndGetPushURLS(clientAlertIds);
-    	assertTrue(dao.checkForNewPull(pull.clientAlertID));
-    	assertFalse(dao.checkForNewPull(pull.clientAlertID));
-    	assertTrue(dao.checkForNewPull(pull2.clientAlertID));
+    	assertFalse("None".equals(dao.checkForNewPull(pull.clientAlertID)));
+    	assertTrue("None".equals(dao.checkForNewPull(pull.clientAlertID)));
+    	assertFalse("None".equals(dao.checkForNewPull(pull2.clientAlertID)));
     	
     	
     }
@@ -151,16 +153,16 @@ public class StreamDAOTest {
     	assertEquals(2,caOneTimePush2.clientAlertID);
     	assertEquals(1,caOneTimePush2.dbAlertID);
     	//Add alert
-    	List<Integer> alertsToUpdate = dao.addAlertEvent(0, "");
+    	List<AlertEvent> alertsToUpdate = dao.addAlertEvent(0, "");
     	System.out.println(StringUtils.join(alertsToUpdate, ','));
 
     	//check that we have matched alerts
     	assertEquals(2, alertsToUpdate.size());
     	//update alerts
-    	List<String> urls = dao.updatePullsAndGetPushURLS(alertsToUpdate);
+    	List<PushNotify> urls = dao.updatePullsAndGetPushURLS(alertsToUpdate);
     	System.out.println(StringUtils.join(urls, ','));
     	assertEquals(1, urls.size());
-    	assertEquals("pushURL1", urls.get(0));
+    	assertEquals("pushURL1", urls.get(0).url);
     	
     	alertsToUpdate = dao.addAlertEvent(0, "");
     	assertEquals(2, alertsToUpdate.size());
@@ -174,7 +176,7 @@ public class StreamDAOTest {
     	urls = dao.updatePullsAndGetPushURLS(alertsToUpdate);
     	assertEquals(3, dao.getActiveClientAlerts().size());
     	assertEquals(1, urls.size());
-    	assertEquals("pushURL2", urls.get(0));
+    	assertEquals("pushURL2", urls.get(0).url);
     	
     }
     

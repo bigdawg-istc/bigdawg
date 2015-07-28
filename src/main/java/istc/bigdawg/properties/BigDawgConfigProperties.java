@@ -25,6 +25,8 @@ public enum BigDawgConfigProperties {
 	private String scidbUser;
 	private String scidbPassword;
 
+	private String sStoreURL;
+	
 	private BigDawgConfigProperties() throws AssertionError {
 		Properties prop = new Properties();
 		String propFileName = "bigdawg-config.properties";
@@ -55,6 +57,7 @@ public enum BigDawgConfigProperties {
 		this.accumuloZooKeepers=prop.getProperty("main.accumulo.zooKeepers");
 		this.accumuloUser=prop.getProperty("main.accumulo.user");
 		this.accumuloPasswordToken=prop.getProperty("main.accumulo.passwordToken");
+		this.sStoreURL=prop.getProperty("main.sstore.alerturl");
 	}
 	/**
 	 * @return the accumuloIstance
@@ -150,6 +153,9 @@ public enum BigDawgConfigProperties {
 				+ BigDawgConfigProperties.INSTANCE.getGrizzlyPort()
 				+ "/bigdawg/";
 		return baseURI;
+	}
+	public String getsStoreURL() {
+		return sStoreURL;
 	}
 
 }

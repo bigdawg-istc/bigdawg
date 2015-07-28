@@ -2,6 +2,7 @@ package istc.bigdawg.stream;
 
 import istc.bigdawg.exceptions.AlertException;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -13,7 +14,7 @@ public abstract class StreamDAO {
 		public boolean push;
 		public boolean oneTime;
 		public boolean active;
-		public boolean unseenPull;
+		public List<String> unseenPulls;
 		public Date lastPullTime;
 		public String pushURL;
 		public Date created;
@@ -26,7 +27,7 @@ public abstract class StreamDAO {
 			this.push = push;
 			this.oneTime = oneTime;
 			this.active = active;
-			this.unseenPull = pulled;
+			this.unseenPulls = new ArrayList<String>();
 			this.pushURL = pushURL;
 			this.created = new Date();
 			this.lastPullTime = null;
@@ -52,6 +53,11 @@ public abstract class StreamDAO {
 		}
 
 	}
+	public class ClientNotifyEvent {
+		public int alertID;
+		public int clientAlertID;
+		public String body;
+	}
 
 	public class AlertEvent {
 		public int alertID;
@@ -68,8 +74,18 @@ public abstract class StreamDAO {
 		}
 
 	}
+	
+	public class PushNotify {
+		public String url;
+		public String body;
+		public PushNotify(String url, String body) {
+			super();
+			this.url = url;
+			this.body = body;
+		}		
+	}
 
-	public abstract boolean checkForNewPull(int clientAlertId);
+	public abstract String checkForNewPull(int clientAlertId);
 
 	public abstract DBAlert createOrGetDBAlert(String storedProc,
 			boolean oneTime);
@@ -77,10 +93,10 @@ public abstract class StreamDAO {
 	public abstract ClientAlert createClientAlert(int dbAlertId, boolean push,
 			boolean oneTime, String pushURL) throws AlertException;
 
-	public abstract List<Integer> addAlertEvent(int dbAlertId, String body);
+	public abstract List<AlertEvent> addAlertEvent(int dbAlertId, String body);
 
-	public abstract List<String> updatePullsAndGetPushURLS(
-			List<Integer> clientAlertIds) throws AlertException;
+	public abstract List<PushNotify> updatePullsAndGetPushURLS(
+			List<AlertEvent> clientAlertIds) throws AlertException;
 
 	public abstract List<DBAlert> getDBAlerts();
 

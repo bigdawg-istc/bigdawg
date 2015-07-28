@@ -8,6 +8,14 @@ import java.util.List;
 import java.util.Vector;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import javax.json.JsonException;
+
+import org.apache.commons.lang.StringUtils;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
+
 /**
  * @author aelmore A dead simple in memory class for storing stream data
  *         objects.
@@ -84,15 +92,15 @@ public class MemStreamDAO extends StreamDAO {
 	}
 
 	@Override
-	public List<Integer> addAlertEvent(int dbAlertId, String body) {
+	public List<AlertEvent> addAlertEvent(int dbAlertId, String body) {
 		AlertEvent event = new AlertEvent(eventCounter.getAndIncrement(),
 				dbAlertId, body);
 		events.add(event);
-		List<Integer> clientsToNotify = new ArrayList<Integer>();
+		List<AlertEvent> clientsToNotify = new ArrayList<AlertEvent>();
 		for (ClientAlert a : this.clientAlerts) {
 			if (a.dbAlertID == dbAlertId && a.active) {
 				// found a match
-				clientsToNotify.add(a.clientAlertID);
+				clientsToNotify.add(new AlertEvent(a.clientAlertID, dbAlertId, body));
 
 			}
 		}
@@ -100,43 +108,65 @@ public class MemStreamDAO extends StreamDAO {
 	}
 
 	@Override
-	public List<String> updatePullsAndGetPushURLS(List<Integer> clientAlertIds) {
-		List<String> urls = new ArrayList<String>();
+	public List<PushNotify> updatePullsAndGetPushURLS(List<AlertEvent> alerts) {
+		List<PushNotify> urls = new ArrayList<PushNotify>();
 
-		for (ClientAlert a : this.clientAlerts) {
-			if (clientAlertIds.contains(a.clientAlertID)) {
-				// found a match
-				if (a.push) {
-					urls.add(a.pushURL);
-					if (a.oneTime) {
-						a.active = false;
+		for (AlertEvent event : alerts) {
+			for (ClientAlert a: this.clientAlerts)
+				if (a.clientAlertID == event.alertID) {
+					// found a match
+					if (a.push) {
+						urls.add(new PushNotify(a.pushURL, event.body));
+						if (a.oneTime) {
+							a.active = false;
+						}
+					} else {
+						// pull
+						a.unseenPulls.add(event.body);
+						a.lastPullTime = new Date();
+	
 					}
-				} else {
-					// pull
-					a.unseenPull = true;
-					a.lastPullTime = new Date();
-
+	
 				}
-
-			}
 		}
 		return urls;
 	}
 
 	@Override
-	public boolean checkForNewPull(int clientAlertId) {
+	public String checkForNewPull(int clientAlertId) {
 		for (ClientAlert a : this.clientAlerts) {
 			if (a.clientAlertID == clientAlertId && a.active && !a.push
-					&& a.unseenPull) {
+					&& !a.unseenPulls.isEmpty()) {
 				// disable if onetime
 				if (a.oneTime)
 					a.active = false;
 				// We have seen it
-				a.unseenPull = false;
-				return true;
+				String ret = null;
+				if (a.unseenPulls.size()==1)
+					ret = a.unseenPulls.toString();
+				else if (a.unseenPulls.size()>1){
+					JSONArray data = null;
+					for (String e : a.unseenPulls){
+						try{
+							if (data == null){
+								data = (JSONArray)new JSONParser().parse(e);
+							} else {
+								data.addAll((JSONArray)new JSONParser().parse(e));
+							}
+						} catch (ParseException e1) {
+							e1.printStackTrace();
+							return e1.toString();
+						}
+					}
+					JSONObject obj = new JSONObject();
+					obj.put("data", data);
+					ret =obj.toString();
+				}
+				a.unseenPulls.clear();
+				return ret;
 			}
 		}
-		return false;
+		return "None";
 	}
 
 	@Override
