@@ -92,7 +92,7 @@ public class QueryClient {
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response query(String istream) throws TableNotFoundException,
 			AccumuloException, AccumuloSecurityException {
-		//System.out.println(istream);
+		// System.out.println(istream);
 		log.info("istream: " + istream);
 		ObjectMapper mapper = new ObjectMapper();
 		try {
@@ -105,8 +105,7 @@ public class QueryClient {
 			String queryString = parsed.getTarget();
 			if (parsed.getShim() == BDConstants.Shim.ACCUMULOTEXT) {
 				return Response.status(200)
-						.entity(executeQueryAccumulo(queryString))
-						.build();
+						.entity(executeQueryAccumulo(queryString)).build();
 			} else if (parsed.getShim() == BDConstants.Shim.PSQLRELATION) {
 				Tuple.Tuple3<List<String>, List<String>, List<List<String>>> result = executeQueryPostgres(queryString);
 				List<String> colNames = result.getT1();
@@ -158,15 +157,16 @@ public class QueryClient {
 			colTypes = Row.getColumnTypes(rsmd);
 			List<Row> table = new ArrayList<Row>();
 			Row.formTable(rs, table);
+			showRows(table);
 			for (Row row : table) {
 				List<String> resultRowList = new ArrayList<String>();
 				for (Entry<Object, Class> col : row.row) {
-					System.out.print(" > "
-							+ ((col.getValue()).cast(col.getKey())));
+//					System.out.print(" > "
+//							+ ((col.getValue()).cast(col.getKey())));
 					resultRowList.add(col.getValue().cast(col.getKey())
 							.toString());
 				}
-				System.out.println();
+//				System.out.println();
 				rows.add(resultRowList);
 			}
 		} catch (SQLException ex) {
@@ -195,6 +195,10 @@ public class QueryClient {
 		Tuple.Tuple3<List<String>, List<String>, List<List<String>>> result = new Tuple.Tuple3<List<String>, List<String>, List<List<String>>>(
 				colNames, colTypes, rows);
 		return result;
+	}
+	
+	private void showRows(List<Row> table) {
+		
 	}
 
 	private void createAuthor(final String author) {
@@ -243,8 +247,8 @@ public class QueryClient {
 		scan.fetchColumnFamily(new Text(""));
 		List<List<String>> allRows = new ArrayList<List<String>>();
 		for (Entry<Key, Value> entry : scan) {
-			//System.out.println(entry.getKey());
-			//System.out.println(entry.getValue());
+			// System.out.println(entry.getKey());
+			// System.out.println(entry.getValue());
 			List<String> oneRow = new ArrayList<String>();
 			Text rowIdResult = entry.getKey().getRow();
 			Text colFamResult = entry.getKey().getColumnFamily();
@@ -259,8 +263,8 @@ public class QueryClient {
 			allRows.add(oneRow);
 		}
 		RegisterQueryResponse resp = new RegisterQueryResponse("OK", 200,
-				allRows, 1, 1, AccumuloInstance.schema,
-				AccumuloInstance.types, new Timestamp(0));
+				allRows, 1, 1, AccumuloInstance.schema, AccumuloInstance.types,
+				new Timestamp(0));
 		ObjectMapper mapper = new ObjectMapper();
 		return mapper.writeValueAsString(resp);
 	}
@@ -268,11 +272,17 @@ public class QueryClient {
 	public static void main(String[] args) {
 		QueryClient qClient = new QueryClient();
 		// qClient.executeQueryPostgres("Select * from books");
-		// Response response = qClient
-		// .query("{\"query\":\"RELATION(select * from mimic2v26.d_patients limit 5)\",\"authorization\":{},\"tuplesPerPage\":1,\"pageNumber\":1,\"timestamp\":\"2012-04-23T18:25:43.511Z\"}");
-		// System.out.println(response.getEntity());
+		// Response response =
+		// qClient.query("{\"query\":\"RELATION(select * from mimic2v26.d_patients limit 5)\",\"authorization\":{},\"tuplesPerPage\":1,\"pageNumber\":1,\"timestamp\":\"2012-04-23T18:25:43.511Z\"}");
 		try {
-			qClient.executeQueryAccumulo("note_events_TedgeDeg");
+			Response response = qClient
+					.query("{\"query\":\"RELATION(SELECT * FROM pg_catalog.pg_tables)\",\"authorization\":{},\"tuplesPerPage\":1,\"pageNumber\":1,\"timestamp\":\"2012-04-23T18:25:43.511Z\"}");
+			// Response response =
+			// qClient.query("{\"query\":\"RELATION(SELECT * FROM test2)\",\"authorization\":{},\"tuplesPerPage\":1,\"pageNumber\":1,\"timestamp\":\"2012-04-23T18:25:43.511Z\"}");
+			System.out.println(response.getEntity());
+			String accumuloData = qClient
+					.executeQueryAccumulo("note_events_TedgeDeg");
+			System.out.println(accumuloData);
 		} catch (JsonProcessingException e) {
 			e.printStackTrace();
 		} catch (TableNotFoundException e) {
