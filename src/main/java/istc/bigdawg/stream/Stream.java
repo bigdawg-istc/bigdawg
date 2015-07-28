@@ -2,8 +2,10 @@ package istc.bigdawg.stream;
 
 import istc.bigdawg.Main;
 import istc.bigdawg.exceptions.AlertException;
+import istc.bigdawg.stream.StreamDAO.AlertEvent;
 import istc.bigdawg.stream.StreamDAO.ClientAlert;
 import istc.bigdawg.stream.StreamDAO.DBAlert;
+import istc.bigdawg.stream.StreamDAO.PushNotify;
 
 import java.io.IOException;
 import java.util.List;
@@ -18,6 +20,10 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.StringUtils;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
@@ -26,7 +32,7 @@ import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
 public class Stream {
 	public static final String STATUS = "status";
 	public static final String ALERT = "alert";
-
+	public static final String GETSTREAM = "getstream";
 	public static final String REGISTER = "registeralert";
 	/**
 	 * Register a stream alert
@@ -87,6 +93,26 @@ public class Stream {
 		return "Please provide the status stream ID status/XXX!";
 	}
 
+	
+	/**
+	 * Check if a registered alert has fired.
+	 * 
+	 * @param stream
+	 * @return
+	 */
+	@Path(GETSTREAM+"/{stream_name}")
+	@GET
+	@Produces(MediaType.TEXT_PLAIN)
+	public String getStream(@PathParam("stream_name") String stream) {
+		System.out.println("looking up stream socket for " + stream);
+		try{
+			String streamSocket = "TODO";
+			return streamSocket;
+		} catch (Exception ex){
+			return ex.getMessage();
+		}
+	}
+	
 	/**
 	 * Check if a registered alert has fired.
 	 * 
@@ -100,8 +126,7 @@ public class Stream {
 		System.out.println("looking up stream status for " + stream);
 		StreamDAO dao = MemStreamDAO.getStreamDAO();
 		try{
-			boolean hit = dao.checkForNewPull(Integer.parseInt(stream));
-			return ""+hit;
+			return dao.checkForNewPull(Integer.parseInt(stream));
 		} catch (Exception ex){
 			return ex.getMessage();
 		}
@@ -121,8 +146,8 @@ public class Stream {
 		StreamDAO dao = MemStreamDAO.getStreamDAO();
 		try{
 			int streamInt = Integer.parseInt(stream);
-			List<Integer> clientAlertIds = dao.addAlertEvent(streamInt, "");
-			List<String> urls = dao.updatePullsAndGetPushURLS(clientAlertIds);
+			List<AlertEvent> clientAlertIds = dao.addAlertEvent(streamInt, "");
+			List<PushNotify> urls = dao.updatePullsAndGetPushURLS(clientAlertIds);
 			AlertManager.PushEvents(urls);
 			if (urls.isEmpty()){
 				if (clientAlertIds.isEmpty()){
@@ -133,6 +158,33 @@ public class Stream {
 				}
 			}
 			return "Pushing:\n" + StringUtils.join(urls, ",");
+		} catch (Exception ex){
+			return ex.getMessage();
+		}
+	}
+	
+	/**
+	 * Check if a registered alert has fired.
+	 * 
+	 * @param stream
+	 * @return
+	 */
+	@Path(ALERT+"/{stream}")
+	@POST
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces(MediaType.TEXT_PLAIN)
+	public String postAlert(@PathParam("stream") String stream) {
+		System.out.println("registering stream event:" + stream);
+		try{
+			JSONObject json = (JSONObject)new JSONParser().parse(stream);
+			if (json != null){
+				JSONArray data = (JSONArray) json.get("data");
+				if (data != null){
+					System.out.println("alert:" + data.toString());
+					return "OK";
+				}
+			}
+			return "BAD";
 		} catch (Exception ex){
 			return ex.getMessage();
 		}

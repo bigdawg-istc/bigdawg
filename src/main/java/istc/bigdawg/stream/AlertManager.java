@@ -4,6 +4,7 @@ import istc.bigdawg.AuthorizationRequest;
 import istc.bigdawg.exceptions.AlertException;
 import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.stream.StreamDAO.DBAlert;
+import istc.bigdawg.stream.StreamDAO.PushNotify;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -48,13 +49,15 @@ public class AlertManager {
 		}
 		
 	}
-	public static void PushEvents(List<String> urls){
+	public static void PushEvents(List<PushNotify> urls){
 
 		HttpClient client = new HttpClient();
-		for (String u: urls){
-			GetMethod get = new GetMethod(u);
+		for (PushNotify u: urls){
+			GetMethod get = new GetMethod(u.url);
 			try {
-				System.out.println("Calling : "+u);
+				//TODO post method
+				
+				System.out.println("Calling : "+u + " need to add: " + u.body);
 				int returnCode = client.executeMethod(get);
 				System.out.println(returnCode);
 			} catch (IOException e) {

@@ -84,15 +84,15 @@ public class MemStreamDAO extends StreamDAO {
 	}
 
 	@Override
-	public List<Integer> addAlertEvent(int dbAlertId, String body) {
+	public List<AlertEvent> addAlertEvent(int dbAlertId, String body) {
 		AlertEvent event = new AlertEvent(eventCounter.getAndIncrement(),
 				dbAlertId, body);
 		events.add(event);
-		List<Integer> clientsToNotify = new ArrayList<Integer>();
+		List<AlertEvent> clientsToNotify = new ArrayList<AlertEvent>();
 		for (ClientAlert a : this.clientAlerts) {
 			if (a.dbAlertID == dbAlertId && a.active) {
 				// found a match
-				clientsToNotify.add(a.clientAlertID);
+				clientsToNotify.add(new AlertEvent(a.clientAlertID, dbAlertId, body));
 
 			}
 		}
@@ -100,43 +100,47 @@ public class MemStreamDAO extends StreamDAO {
 	}
 
 	@Override
-	public List<String> updatePullsAndGetPushURLS(List<Integer> clientAlertIds) {
-		List<String> urls = new ArrayList<String>();
+	public List<PushNotify> updatePullsAndGetPushURLS(List<AlertEvent> alerts) {
+		List<PushNotify> urls = new ArrayList<PushNotify>();
 
-		for (ClientAlert a : this.clientAlerts) {
-			if (clientAlertIds.contains(a.clientAlertID)) {
-				// found a match
-				if (a.push) {
-					urls.add(a.pushURL);
-					if (a.oneTime) {
-						a.active = false;
+		for (AlertEvent event : alerts) {
+			for (ClientAlert a: this.clientAlerts)
+				if (a.clientAlertID == event.alertID) {
+					// found a match
+					if (a.push) {
+						urls.add(new PushNotify(a.pushURL, event.body));
+						if (a.oneTime) {
+							a.active = false;
+						}
+					} else {
+						// pull
+						System.out.println("TODO merge requests");
+						//TODO two arrays that should be joined
+						a.unseenPulls.add(event.body);
+						a.lastPullTime = new Date();
+	
 					}
-				} else {
-					// pull
-					a.unseenPull = true;
-					a.lastPullTime = new Date();
-
+	
 				}
-
-			}
 		}
 		return urls;
 	}
 
 	@Override
-	public boolean checkForNewPull(int clientAlertId) {
+	public String checkForNewPull(int clientAlertId) {
 		for (ClientAlert a : this.clientAlerts) {
 			if (a.clientAlertID == clientAlertId && a.active && !a.push
-					&& a.unseenPull) {
+					&& !a.unseenPulls.isEmpty()) {
 				// disable if onetime
 				if (a.oneTime)
 					a.active = false;
 				// We have seen it
-				a.unseenPull = false;
-				return true;
+				String ret = a.unseenPulls.toString();
+				a.unseenPulls.clear();
+				return ret;
 			}
 		}
-		return false;
+		return "None";
 	}
 
 	@Override
