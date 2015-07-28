@@ -31,15 +31,14 @@ public class AlertManager {
 			sStoreRequest.setOneTime(alert.oneTime);
 			sStoreRequest.setQuery(alert.stroredProc);
 			String reqString = mapper.writeValueAsString(sStoreRequest);
-			System.out.println("REQ: "+ reqString);
+//			System.out.println("REQ: "+ reqString);
 			PostMethod post = new PostMethod(BigDawgConfigProperties.INSTANCE.getsStoreURL());
-			System.out.println("Post to" + post.toString());
+//			System.out.println("Post to" + post.toString());
 			StringRequestEntity requestEntity = new StringRequestEntity(
 					reqString, "application/json", "UTF-8");
 			post.setRequestEntity(requestEntity);
 			HttpClient client = new HttpClient();
 			int returnCode = client.executeMethod(post);
-			System.out.println("RESP : " + returnCode);
 			if (returnCode != 200){
 				throw new AlertException();
 			}

@@ -51,11 +51,11 @@ public class Stream {
 		try {
 			RegisterStreamRequest st = mapper.readValue(istream,
 					RegisterStreamRequest.class);
-			System.out.println(mapper.writeValueAsString(st));
+//			System.out.println(mapper.writeValueAsString(st));
 			StreamDAO dao = MemStreamDAO.getStreamDAO();
 			DBAlert dbalert = dao.createOrGetDBAlert(st.getQuery(), st.isOneTime());
 			dbalert.receiveURL = Main.BASE_URI+ALERT+"/"+dbalert.dbAlertID;
-			System.out.println("DB Alert created: " + dbalert.receiveURL);
+//			System.out.println("DB Alert created: " + dbalert.receiveURL);
 			//TODO should we only do this once? de-dup?
 			AlertManager.RegisterDBEvent(dbalert);
 			ClientAlert clientAlert = dao.createClientAlert(dbalert.dbAlertID, st.isPushNotify(), st.isOneTime(), st.getNotifyURL());
@@ -125,7 +125,6 @@ public class Stream {
 	@GET
 	@Produces(MediaType.TEXT_PLAIN)
 	public String status(@PathParam("stream") String stream) {
-		System.out.println("looking up stream status for " + stream);
 		StreamDAO dao = MemStreamDAO.getStreamDAO();
 		try{
 			return dao.checkForNewPull(Integer.parseInt(stream));
