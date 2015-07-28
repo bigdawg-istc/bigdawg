@@ -8,7 +8,12 @@ import java.util.List;
 import java.util.Vector;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import javax.json.JsonException;
+
 import org.apache.commons.lang.StringUtils;
+import org.json.simple.JSONArray;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 
 /**
  * @author aelmore A dead simple in memory class for storing stream data
@@ -138,8 +143,24 @@ public class MemStreamDAO extends StreamDAO {
 				if (a.oneTime)
 					a.active = false;
 				// We have seen it
-				
-				String ret = a.unseenPulls.toString();
+				String ret = null;
+				if (a.unseenPulls.size()==1)
+					ret = a.unseenPulls.toString();
+				else if (a.unseenPulls.size()>1){
+					JSONArray data = null;
+					for (String e : a.unseenPulls){
+						try{
+							if (data == null){
+								data = (JSONArray)new JSONParser().parse(e);
+							} else {
+								data.addAll((JSONArray)new JSONParser().parse(e));
+							}
+						} catch (ParseException e1) {
+							e1.printStackTrace();
+							return e1.toString();
+						}
+					}
+				}
 				a.unseenPulls.clear();
 				return ret;
 			}
