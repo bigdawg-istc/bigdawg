@@ -12,6 +12,7 @@ import javax.json.JsonException;
 
 import org.apache.commons.lang.StringUtils;
 import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
@@ -160,6 +161,9 @@ public class MemStreamDAO extends StreamDAO {
 							return e1.toString();
 						}
 					}
+					JSONObject obj = new JSONObject();
+					obj.put("data", data);
+					ret =obj.toString();
 				}
 				a.unseenPulls.clear();
 				return ret;
