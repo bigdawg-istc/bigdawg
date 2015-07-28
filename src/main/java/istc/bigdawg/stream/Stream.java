@@ -183,6 +183,10 @@ public class Stream {
 				JSONArray data = (JSONArray) json.get("data");
 				if (data != null){
 					System.out.println("alert:" + data.toString());
+					StreamDAO dao = MemStreamDAO.getStreamDAO();
+					List<AlertEvent> events = dao.addAlertEvent(stream_id, data.toString());
+					List<PushNotify> pushes = dao.updatePullsAndGetPushURLS(events);
+					AlertManager.PushEvents(pushes);
 					return "OK";
 				}
 			}

@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Vector;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.commons.lang.StringUtils;
+
 /**
  * @author aelmore A dead simple in memory class for storing stream data
  *         objects.
@@ -117,6 +119,7 @@ public class MemStreamDAO extends StreamDAO {
 						System.out.println("TODO merge requests");
 						//TODO two arrays that should be joined
 						a.unseenPulls.add(event.body);
+						System.out.println(StringUtils.join(a.unseenPulls,","));
 						a.lastPullTime = new Date();
 	
 					}
@@ -135,6 +138,7 @@ public class MemStreamDAO extends StreamDAO {
 				if (a.oneTime)
 					a.active = false;
 				// We have seen it
+				
 				String ret = a.unseenPulls.toString();
 				a.unseenPulls.clear();
 				return ret;
