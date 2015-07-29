@@ -8,9 +8,6 @@ import java.util.List;
 import java.util.Vector;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import javax.json.JsonException;
-
-import org.apache.commons.lang.StringUtils;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -142,10 +139,16 @@ public class MemStreamDAO extends StreamDAO {
 					a.active = false;
 				// We have seen it
 				String ret = null;
+				JSONArray data = null;
 				if (a.unseenPulls.size()==1)
-					ret = a.unseenPulls.toString();
+					try {
+						data = (JSONArray)new JSONParser().parse(a.unseenPulls.get(0));
+						
+					} catch (ParseException e2) {
+						e2.printStackTrace();
+					}
 				else if (a.unseenPulls.size()>1){
-					JSONArray data = null;
+					
 					for (String e : a.unseenPulls){
 						try{
 							if (data == null){
@@ -158,10 +161,10 @@ public class MemStreamDAO extends StreamDAO {
 							return e1.toString();
 						}
 					}
-					JSONObject obj = new JSONObject();
-					obj.put("data", data);
-					ret =obj.toString();
 				}
+				JSONObject obj = new JSONObject();
+				obj.put("data", data);
+				ret =obj.toString();
 				a.unseenPulls.clear();
 				return ret;
 			}
