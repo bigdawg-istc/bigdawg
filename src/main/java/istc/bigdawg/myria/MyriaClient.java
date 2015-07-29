@@ -62,10 +62,9 @@ public class MyriaClient {
 				Constants.ENCODING);
 		post.setRequestEntity(requestEntity);
 		HttpClient client = new HttpClient();
-		int returnCode;
 		try {
-			returnCode = client.executeMethod(post);
-			if (returnCode != 200 || returnCode != 201) {
+			int returnCode = client.executeMethod(post);
+			if (returnCode != 200 && returnCode != 201) {
 				String message = "Myria. Start of the query failed!";
 				log.info(message);
 				throw new MyriaException(message);
