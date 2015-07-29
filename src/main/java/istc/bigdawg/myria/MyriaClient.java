@@ -4,7 +4,7 @@ import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.utils.Constants;
 
 import java.io.IOException;
-
+import java.net.URLEncoder;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.methods.PostMethod;
 import org.apache.commons.httpclient.methods.StringRequestEntity;
@@ -23,7 +23,8 @@ public class MyriaClient {
 
 	public static String getResult(String query) throws IOException {
 		System.out.println("Execute Myria query.");
-		PostMethod post = new PostMethod(URI);
+		String finalURI=String.format("%s?language=myrial&query=%s",URI,URLEncoder.encode(query));
+		PostMethod post = new PostMethod(finalURI);
 		StringRequestEntity requestEntity = new StringRequestEntity(query,
 				CONTENT_TYPE, Constants.ENCODING);
 		post.setRequestEntity(requestEntity);
