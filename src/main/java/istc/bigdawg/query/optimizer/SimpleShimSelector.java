@@ -15,7 +15,7 @@ public class SimpleShimSelector implements ShimSelector {
 		} else if (island == Island.D4M) {
 			throw new NotSupportIslandException("Unsupported Island impl " + island.toString());
 		} else if (island == Island.MYRIA) {
-			throw new NotSupportIslandException("Unsupported Island impl " + island.toString());
+			return Shim.MYRIA;
 		} else if (island == Island.TEXT) {
 			return Shim.ACCUMULOTEXT;
 		} else {

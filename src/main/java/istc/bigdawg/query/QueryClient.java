@@ -8,6 +8,7 @@ import istc.bigdawg.BDConstants;
 import istc.bigdawg.accumulo.AccumuloInstance;
 import istc.bigdawg.exceptions.NotSupportIslandException;
 import istc.bigdawg.exceptions.ShellScriptException;
+import istc.bigdawg.myria.MyriaClient;
 import istc.bigdawg.postgresql.PostgreSQLInstance;
 import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.query.parser.Parser;
@@ -129,7 +130,10 @@ public class QueryClient {
 						200, rows, 1, 1, colNames, colTypes, new Timestamp(0));
 				String responseResult = mapper.writeValueAsString(resp);
 				return Response.status(200).entity(responseResult).build();
-			} else {
+			} else if (parsed.getShim() == BDConstants.Shim.MYRIA) {
+				return Response.status(200)
+						.entity(MyriaClient.getResult(queryString)).build();
+			}else {
 				RegisterQueryResponsePostgreSQL resp = new RegisterQueryResponsePostgreSQL(
 						"ERROR: Unrecognized shim "
 								+ parsed.getShim().toString(), 412, null, 1, 1,
@@ -252,7 +256,7 @@ public class QueryClient {
 		InputStream scriptResultInStream= RunShellScript.run(accumuloScriptPath,database,table,query);
 		String scriptResult = IOUtils.toString(scriptResultInStream, Constants.ENCODING); 
 		System.out.println("Accumulo script result: "+scriptResult);
-		RegisterQueryResponseAccumulo resp = new RegisterQueryResponseAccumulo("OK", 200,
+		RegisterQueryResponseGeneral resp = new RegisterQueryResponseGeneral("OK", 200,
 				scriptResult, 1, 1, AccumuloInstance.schema, AccumuloInstance.types,
 				new Timestamp(0));
 		ObjectMapper mapper = new ObjectMapper();
@@ -291,7 +295,7 @@ public class QueryClient {
 		}
 		ObjectMapper mapper = new ObjectMapper();
 		String allRowsString = mapper.writeValueAsString(allRows);
-		RegisterQueryResponseAccumulo resp = new RegisterQueryResponseAccumulo("OK", 200,
+		RegisterQueryResponseGeneral resp = new RegisterQueryResponseGeneral("OK", 200,
 				allRowsString, 1, 1, AccumuloInstance.fullSchema, AccumuloInstance.fullTypes,
 				new Timestamp(0));
 		return mapper.writeValueAsString(resp);
@@ -313,6 +317,8 @@ public class QueryClient {
 //			System.out.println(accumuloData);
 			String accumuloScript = qClient.executeAccumuloShellScript("database", "table", "query");
 			System.out.println(accumuloScript);
+			qClient.
+			
 		} catch (JsonProcessingException e) {
 			e.printStackTrace();
 		} catch (TableNotFoundException e) {

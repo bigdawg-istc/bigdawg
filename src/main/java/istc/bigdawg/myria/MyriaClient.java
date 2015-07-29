@@ -22,6 +22,7 @@ public class MyriaClient {
 	}
 
 	public static String getResult(String query) throws IOException {
+		System.out.println("Execute Myria query.");
 		PostMethod post = new PostMethod(URI);
 		StringRequestEntity requestEntity = new StringRequestEntity(query,
 				CONTENT_TYPE, Constants.ENCODING);
