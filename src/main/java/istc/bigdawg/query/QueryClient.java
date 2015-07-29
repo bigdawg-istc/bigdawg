@@ -93,15 +93,16 @@ public class QueryClient {
 	 * @throws AccumuloSecurityException
 	 * @throws AccumuloException
 	 * @throws TableNotFoundException
-	 * @throws ShellScriptException 
-	 * @throws InterruptedException 
+	 * @throws ShellScriptException
+	 * @throws InterruptedException
 	 */
 	@Path("query")
 	@POST
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response query(String istream) throws TableNotFoundException,
-			AccumuloException, AccumuloSecurityException, InterruptedException, ShellScriptException {
+			AccumuloException, AccumuloSecurityException, InterruptedException,
+			ShellScriptException {
 		// System.out.println(istream);
 		log.info("istream: " + istream);
 		ObjectMapper mapper = new ObjectMapper();
@@ -115,29 +116,29 @@ public class QueryClient {
 			String queryString = parsed.getTarget();
 			if (parsed.getShim() == BDConstants.Shim.ACCUMULOTEXT) {
 				String[] params = queryString.split(" ");
-				String database=params[0];
+				String database = params[0];
 				String table = params[1];
 				String query = params[2];
-				System.out.println("databse: "+database+" table: "+table+" query: "+query);
-				return Response.status(200)
-						.entity(executeAccumuloShellScript(database, table, query)).build();
+				System.out.println("databse: " + database + " table: " + table
+						+ " query: " + query);
+				return Response
+						.status(200)
+						.entity(executeAccumuloShellScript(database, table,
+								query)).build();
 			} else if (parsed.getShim() == BDConstants.Shim.PSQLRELATION) {
 				Tuple.Tuple3<List<String>, List<String>, List<List<String>>> result = executeQueryPostgres(queryString);
 				List<String> colNames = result.getT1();
 				List<String> colTypes = result.getT2();
 				List<List<String>> rows = result.getT3();
-				RegisterQueryResponsePostgreSQL resp = new RegisterQueryResponsePostgreSQL("OK",
-						200, rows, 1, 1, colNames, colTypes, new Timestamp(0));
+				RegisterQueryResponsePostgreSQL resp = new RegisterQueryResponsePostgreSQL(
+						"OK", 200, rows, 1, 1, colNames, colTypes,
+						new Timestamp(0));
 				String responseResult = mapper.writeValueAsString(resp);
 				return Response.status(200).entity(responseResult).build();
 			} else if (parsed.getShim() == BDConstants.Shim.MYRIA) {
-				try {
-					return Response.status(200)
-							.entity(MyriaClient.execute(queryString)).build();
-				} catch (MyriaException e) {
-					return Response.status(200).entity(e.getMessage()).build();
-				}
-			}else {
+				String resultMyria = getMyriaData(queryString);
+				return Response.status(200).entity(resultMyria).build();
+			} else {
 				RegisterQueryResponsePostgreSQL resp = new RegisterQueryResponsePostgreSQL(
 						"ERROR: Unrecognized shim "
 								+ parsed.getShim().toString(), 412, null, 1, 1,
@@ -179,16 +180,15 @@ public class QueryClient {
 			colTypes = Row.getColumnTypes(rsmd);
 			List<Row> table = new ArrayList<Row>();
 			Row.formTable(rs, table);
-			showRows(table);
 			for (Row row : table) {
 				List<String> resultRowList = new ArrayList<String>();
 				for (Entry<Object, Class> col : row.row) {
-//					System.out.print(" > "
-//							+ ((col.getValue()).cast(col.getKey())));
+					// System.out.print(" > "
+					// + ((col.getValue()).cast(col.getKey())));
 					resultRowList.add(col.getValue().cast(col.getKey())
 							.toString());
 				}
-//				System.out.println();
+				// System.out.println();
 				rows.add(resultRowList);
 			}
 		} catch (SQLException ex) {
@@ -217,10 +217,6 @@ public class QueryClient {
 		Tuple.Tuple3<List<String>, List<String>, List<List<String>>> result = new Tuple.Tuple3<List<String>, List<String>, List<List<String>>>(
 				colNames, colTypes, rows);
 		return result;
-	}
-	
-	private void showRows(List<Row> table) {
-		
 	}
 
 	private void createAuthor(final String author) {
@@ -253,16 +249,44 @@ public class QueryClient {
 			}
 		}
 	}
-	
-	public String executeAccumuloShellScript(String database, String table, String query) throws IOException, InterruptedException, ShellScriptException {
-		String accumuloScriptPath = BigDawgConfigProperties.INSTANCE.getAccumuloShellScript();
-		System.out.println("accumuloScriptPath: "+accumuloScriptPath);
-		InputStream scriptResultInStream= RunShellScript.run(accumuloScriptPath,database,table,query);
-		String scriptResult = IOUtils.toString(scriptResultInStream, Constants.ENCODING); 
-		System.out.println("Accumulo script result: "+scriptResult);
-		RegisterQueryResponseGeneral resp = new RegisterQueryResponseGeneral("OK", 200,
-				scriptResult, 1, 1, AccumuloInstance.schema, AccumuloInstance.types,
-				new Timestamp(0));
+
+	public String getMyriaData(String query) {
+		String myriaResult;
+		try {
+			myriaResult = MyriaClient.execute(query);
+		} catch (MyriaException e) {
+			return e.getMessage();
+		}
+		RegisterQueryResponseGeneral resp = new RegisterQueryResponseGeneral(
+				"OK", 200, myriaResult, 1, 1, new ArrayList<String>(),
+				new ArrayList<String>(), new Timestamp(0));
+		ObjectMapper mapper = new ObjectMapper();
+		String responseResult;
+		try {
+			responseResult = mapper.writeValueAsString(resp).replace("\\", "");
+			return responseResult;
+		} catch (JsonProcessingException e) {
+			e.printStackTrace();
+			String message = "JSON processing error for Myria.";
+			log.error(message);
+			return message;
+		}
+	}
+
+	public String executeAccumuloShellScript(String database, String table,
+			String query) throws IOException, InterruptedException,
+			ShellScriptException {
+		String accumuloScriptPath = BigDawgConfigProperties.INSTANCE
+				.getAccumuloShellScript();
+		System.out.println("accumuloScriptPath: " + accumuloScriptPath);
+		InputStream scriptResultInStream = RunShellScript.run(
+				accumuloScriptPath, database, table, query);
+		String scriptResult = IOUtils.toString(scriptResultInStream,
+				Constants.ENCODING);
+		System.out.println("Accumulo script result: " + scriptResult);
+		RegisterQueryResponseGeneral resp = new RegisterQueryResponseGeneral(
+				"OK", 200, scriptResult, 1, 1, AccumuloInstance.schema,
+				AccumuloInstance.types, new Timestamp(0));
 		ObjectMapper mapper = new ObjectMapper();
 		return mapper.writeValueAsString(resp).replace("\\", "");
 	}
@@ -299,9 +323,9 @@ public class QueryClient {
 		}
 		ObjectMapper mapper = new ObjectMapper();
 		String allRowsString = mapper.writeValueAsString(allRows);
-		RegisterQueryResponseGeneral resp = new RegisterQueryResponseGeneral("OK", 200,
-				allRowsString, 1, 1, AccumuloInstance.fullSchema, AccumuloInstance.fullTypes,
-				new Timestamp(0));
+		RegisterQueryResponseGeneral resp = new RegisterQueryResponseGeneral(
+				"OK", 200, allRowsString, 1, 1, AccumuloInstance.fullSchema,
+				AccumuloInstance.fullTypes, new Timestamp(0));
 		return mapper.writeValueAsString(resp);
 	}
 
@@ -316,10 +340,11 @@ public class QueryClient {
 			// Response response =
 			// qClient.query("{\"query\":\"RELATION(SELECT * FROM test2)\",\"authorization\":{},\"tuplesPerPage\":1,\"pageNumber\":1,\"timestamp\":\"2012-04-23T18:25:43.511Z\"}");
 			System.out.println(response.getEntity());
-//			String accumuloData = qClient
-//					.executeQueryAccumuloPure("note_events_TedgeDeg");
-//			System.out.println(accumuloData);
-			String accumuloScript = qClient.executeAccumuloShellScript("database", "table", "query");
+			// String accumuloData = qClient
+			// .executeQueryAccumuloPure("note_events_TedgeDeg");
+			// System.out.println(accumuloData);
+			String accumuloScript = qClient.executeAccumuloShellScript(
+					"database", "table", "query");
 			System.out.println(accumuloScript);
 		} catch (JsonProcessingException e) {
 			e.printStackTrace();
@@ -331,9 +356,9 @@ public class QueryClient {
 			e.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();
-		} catch(ShellScriptException e) {
+		} catch (ShellScriptException e) {
 			e.printStackTrace();
-		} catch(InterruptedException e) {
+		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
 	}
