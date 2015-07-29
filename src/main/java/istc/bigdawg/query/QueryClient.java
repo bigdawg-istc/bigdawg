@@ -317,8 +317,6 @@ public class QueryClient {
 //			System.out.println(accumuloData);
 			String accumuloScript = qClient.executeAccumuloShellScript("database", "table", "query");
 			System.out.println(accumuloScript);
-			qClient.
-			
 		} catch (JsonProcessingException e) {
 			e.printStackTrace();
 		} catch (TableNotFoundException e) {
