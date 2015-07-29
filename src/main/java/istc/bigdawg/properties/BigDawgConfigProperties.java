@@ -14,19 +14,20 @@ public enum BigDawgConfigProperties {
 	private String postgreSQLURL;
 	private String postgreSQLUser;
 	private String postgreSQLPassword;
-	
+
 	private String accumuloIstance;
 	private String accumuloZooKeepers;
 	private String accumuloUser;
 	private String accumuloPasswordToken;
-	
+
 	private String scidbHost;
 	private String scidbPort;
 	private String scidbUser;
 	private String scidbPassword;
 
 	private String sStoreURL;
-	
+	private String accumuloShellScript;
+
 	private BigDawgConfigProperties() throws AssertionError {
 		Properties prop = new Properties();
 		String propFileName = "bigdawg-config.properties";
@@ -52,12 +53,16 @@ public enum BigDawgConfigProperties {
 		this.postgreSQLURL = prop.getProperty("main.postgresql.url");
 		this.postgreSQLUser = prop.getProperty("main.postgresql.user");
 		this.postgreSQLPassword = prop.getProperty("main.postgresql.password");
+
+		this.accumuloIstance = prop.getProperty("main.accumulo.instanceName");
+		this.accumuloZooKeepers = prop.getProperty("main.accumulo.zooKeepers");
+		this.accumuloUser = prop.getProperty("main.accumulo.user");
+		this.accumuloPasswordToken = prop
+				.getProperty("main.accumulo.passwordToken");
+		this.accumuloShellScript=prop.getProperty("main.accumulo.shell.script");
 		
-		this.accumuloIstance=prop.getProperty("main.accumulo.instanceName");
-		this.accumuloZooKeepers=prop.getProperty("main.accumulo.zooKeepers");
-		this.accumuloUser=prop.getProperty("main.accumulo.user");
-		this.accumuloPasswordToken=prop.getProperty("main.accumulo.passwordToken");
-		this.sStoreURL=prop.getProperty("main.sstore.alerturl");
+		this.sStoreURL = prop.getProperty("main.sstore.alerturl");
+		
 	}
 	/**
 	 * @return the accumuloIstance
@@ -129,10 +134,10 @@ public enum BigDawgConfigProperties {
 		return postgreSQLPassword;
 	}
 
-	public String getPostgreSQLURL(){
+	public String getPostgreSQLURL() {
 		return postgreSQLURL;
 	}
-	
+
 	/**
 	 * @return the grizzlyIpAddress
 	 */
@@ -154,8 +159,16 @@ public enum BigDawgConfigProperties {
 				+ "/bigdawg/";
 		return baseURI;
 	}
+
 	public String getsStoreURL() {
 		return sStoreURL;
+	}
+
+	/**
+	 * @return the accumuloShellScript
+	 */
+	public String getAccumuloShellScript() {
+		return accumuloShellScript;
 	}
 
 }

@@ -4,9 +4,11 @@
 package istc.bigdawg.utils;
 
 import istc.bigdawg.exceptions.ShellScriptException;
+import istc.bigdawg.properties.BigDawgConfigProperties;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
 
 import org.apache.commons.io.IOUtils;
 
@@ -16,8 +18,8 @@ import org.apache.commons.io.IOUtils;
  */
 public class RunShellScript {
 	
-	public static InputStream run(String filePath) throws IOException, InterruptedException, ShellScriptException {
-		Process prop = new ProcessBuilder(filePath).start();
+	public static InputStream run(String filePath, String database, String table, String query) throws IOException, InterruptedException, ShellScriptException {
+		Process prop = new ProcessBuilder(filePath,database,table,query).start();
 		prop.waitFor();
 		int exitVal=prop.exitValue();
 		if (exitVal != 0) {
@@ -33,8 +35,11 @@ public class RunShellScript {
 		System.out.println("Present Project Directory : "+ System.getProperty("user.dir"));
 		try {
 			//InputStream inStream=run(System.getProperty("user.dir")+"/scripts/test_script/echo_script.sh");
-			InputStream inStream=run(System.getProperty("user.dir")+"/scripts/test_script/vijay_query.sh");
-			String result = IOUtils.toString(inStream, "UTF-8"); 
+			//InputStream inStream=run(System.getProperty("user.dir")+"/scripts/test_script/vijay_query.sh");
+			System.out.println(BigDawgConfigProperties.INSTANCE.getAccumuloShellScript());
+			InputStream inStream=run(BigDawgConfigProperties.INSTANCE.getAccumuloShellScript(),"classdb01","note_events_Tedge","Tedge('16965_recordTime_2697-08-04-00:00:00.0_recordNum_1_recordType_DISCHARGE_SUMMARY.txt,',:)");
+			//InputStream inStream=run("/home/adam/Chicago/bigdawgmiddle/scripts/test_script/vijay_query.sh");
+			String result = IOUtils.toString(inStream, Constants.ENCODING); 
 			System.out.println(result);
 		} catch (IOException e) {
 			e.printStackTrace();

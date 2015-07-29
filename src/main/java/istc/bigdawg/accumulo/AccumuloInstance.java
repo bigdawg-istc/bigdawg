@@ -29,8 +29,11 @@ public class AccumuloInstance {
 	private String zooKeepers;
 	private String passwordToken;
 	
-	public static final List<String> schema = Arrays.asList("rowId","colFam","colKey","visibility","value");
-	public static final List<String> types = Arrays.asList("Text","Text","Text","Text","Value");
+	public static final List<String> fullSchema = Arrays.asList("rowId","colFam","colKey","visibility","value");
+	public static final List<String> fullTypes = Arrays.asList("Text","Text","Text","Text","Value");
+	
+	public static final List<String> schema = Arrays.asList("rowId","colKey","value");
+	public static final List<String> types = Arrays.asList("Text","Text","Value");
 
 	/**
 	 * @return the conn

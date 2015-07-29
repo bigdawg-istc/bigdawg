@@ -7,13 +7,18 @@ package istc.bigdawg.query;
 import istc.bigdawg.BDConstants;
 import istc.bigdawg.accumulo.AccumuloInstance;
 import istc.bigdawg.exceptions.NotSupportIslandException;
+import istc.bigdawg.exceptions.ShellScriptException;
 import istc.bigdawg.postgresql.PostgreSQLInstance;
+import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.query.parser.Parser;
 import istc.bigdawg.query.parser.simpleParser;
+import istc.bigdawg.utils.Constants;
 import istc.bigdawg.utils.Row;
+import istc.bigdawg.utils.RunShellScript;
 import istc.bigdawg.utils.Tuple;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -43,7 +48,9 @@ import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Range;
 import org.apache.accumulo.core.data.Value;
 import org.apache.accumulo.core.security.Authorizations;
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.Mapper;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -85,13 +92,15 @@ public class QueryClient {
 	 * @throws AccumuloSecurityException
 	 * @throws AccumuloException
 	 * @throws TableNotFoundException
+	 * @throws ShellScriptException 
+	 * @throws InterruptedException 
 	 */
 	@Path("query")
 	@POST
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response query(String istream) throws TableNotFoundException,
-			AccumuloException, AccumuloSecurityException {
+			AccumuloException, AccumuloSecurityException, InterruptedException, ShellScriptException {
 		// System.out.println(istream);
 		log.info("istream: " + istream);
 		ObjectMapper mapper = new ObjectMapper();
@@ -104,19 +113,24 @@ public class QueryClient {
 			System.out.println(parsed.getShim());
 			String queryString = parsed.getTarget();
 			if (parsed.getShim() == BDConstants.Shim.ACCUMULOTEXT) {
+				String[] params = queryString.split(" ");
+				String database=params[0];
+				String table = params[1];
+				String query = params[2];
+				System.out.println("databse: "+database+" table: "+table+" query: "+query);
 				return Response.status(200)
-						.entity(executeQueryAccumulo(queryString)).build();
+						.entity(executeAccumuloShellScript(database, table, query)).build();
 			} else if (parsed.getShim() == BDConstants.Shim.PSQLRELATION) {
 				Tuple.Tuple3<List<String>, List<String>, List<List<String>>> result = executeQueryPostgres(queryString);
 				List<String> colNames = result.getT1();
 				List<String> colTypes = result.getT2();
 				List<List<String>> rows = result.getT3();
-				RegisterQueryResponse resp = new RegisterQueryResponse("OK",
+				RegisterQueryResponsePostgreSQL resp = new RegisterQueryResponsePostgreSQL("OK",
 						200, rows, 1, 1, colNames, colTypes, new Timestamp(0));
 				String responseResult = mapper.writeValueAsString(resp);
 				return Response.status(200).entity(responseResult).build();
 			} else {
-				RegisterQueryResponse resp = new RegisterQueryResponse(
+				RegisterQueryResponsePostgreSQL resp = new RegisterQueryResponsePostgreSQL(
 						"ERROR: Unrecognized shim "
 								+ parsed.getShim().toString(), 412, null, 1, 1,
 						null, null, new Timestamp(0));
@@ -231,8 +245,21 @@ public class QueryClient {
 			}
 		}
 	}
+	
+	public String executeAccumuloShellScript(String database, String table, String query) throws IOException, InterruptedException, ShellScriptException {
+		String accumuloScriptPath = BigDawgConfigProperties.INSTANCE.getAccumuloShellScript();
+		System.out.println("accumuloScriptPath: "+accumuloScriptPath);
+		InputStream scriptResultInStream= RunShellScript.run(accumuloScriptPath,database,table,query);
+		String scriptResult = IOUtils.toString(scriptResultInStream, Constants.ENCODING); 
+		System.out.println("Accumulo script result: "+scriptResult);
+		RegisterQueryResponseAccumulo resp = new RegisterQueryResponseAccumulo("OK", 200,
+				scriptResult, 1, 1, AccumuloInstance.schema, AccumuloInstance.types,
+				new Timestamp(0));
+		ObjectMapper mapper = new ObjectMapper();
+		return mapper.writeValueAsString(resp).replace("\\", "");
+	}
 
-	public String executeQueryAccumulo(String table)
+	public String executeQueryAccumuloPure(String table)
 			throws TableNotFoundException, AccumuloException,
 			AccumuloSecurityException, IOException {
 		// specify which visibilities we are allowed to see
@@ -262,10 +289,11 @@ public class QueryClient {
 			oneRow.add(valueResult.toString());
 			allRows.add(oneRow);
 		}
-		RegisterQueryResponse resp = new RegisterQueryResponse("OK", 200,
-				allRows, 1, 1, AccumuloInstance.schema, AccumuloInstance.types,
-				new Timestamp(0));
 		ObjectMapper mapper = new ObjectMapper();
+		String allRowsString = mapper.writeValueAsString(allRows);
+		RegisterQueryResponseAccumulo resp = new RegisterQueryResponseAccumulo("OK", 200,
+				allRowsString, 1, 1, AccumuloInstance.fullSchema, AccumuloInstance.fullTypes,
+				new Timestamp(0));
 		return mapper.writeValueAsString(resp);
 	}
 
@@ -280,9 +308,11 @@ public class QueryClient {
 			// Response response =
 			// qClient.query("{\"query\":\"RELATION(SELECT * FROM test2)\",\"authorization\":{},\"tuplesPerPage\":1,\"pageNumber\":1,\"timestamp\":\"2012-04-23T18:25:43.511Z\"}");
 			System.out.println(response.getEntity());
-			String accumuloData = qClient
-					.executeQueryAccumulo("note_events_TedgeDeg");
-			System.out.println(accumuloData);
+//			String accumuloData = qClient
+//					.executeQueryAccumuloPure("note_events_TedgeDeg");
+//			System.out.println(accumuloData);
+			String accumuloScript = qClient.executeAccumuloShellScript("database", "table", "query");
+			System.out.println(accumuloScript);
 		} catch (JsonProcessingException e) {
 			e.printStackTrace();
 		} catch (TableNotFoundException e) {
@@ -292,6 +322,10 @@ public class QueryClient {
 		} catch (AccumuloSecurityException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
+			e.printStackTrace();
+		} catch(ShellScriptException e) {
+			e.printStackTrace();
+		} catch(InterruptedException e) {
 			e.printStackTrace();
 		}
 	}

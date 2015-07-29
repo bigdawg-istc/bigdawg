@@ -3,11 +3,10 @@ package istc.bigdawg.query;
 import java.sql.Timestamp;
 import java.util.List;
 
-public class RegisterQueryResponse {
+public abstract class RegisterQueryResponse {
 	
 	private String message;
 	private int responseCode;
-	private List<List<String>> tuples;
 	private int pageNumber;
 	private int totalPages;
 	private List<String> schema;
@@ -17,7 +16,6 @@ public class RegisterQueryResponse {
 	/**
 	 * @param message
 	 * @param responseCode
-	 * @param tuples
 	 * @param pageNumber
 	 * @param totalPages
 	 * @param schema
@@ -25,12 +23,11 @@ public class RegisterQueryResponse {
 	 * @param timeStamp
 	 */
 	public RegisterQueryResponse(String message, int responseCode,
-			List<List<String>> tuples, int pageNumber, int totalPages,
+			int pageNumber, int totalPages,
 			List<String> schema, List<String> types, Timestamp cacheTimestamp) {
 		super();
 		this.message = message;
 		this.responseCode = responseCode;
-		this.tuples = tuples;
 		this.pageNumber = pageNumber;
 		this.totalPages = totalPages;
 		this.schema = schema;
@@ -45,18 +42,6 @@ public class RegisterQueryResponse {
 		this.responseCode = responseCode;
 	}
 	
-	/**
-	 * @return the tuples
-	 */
-	public List<List<String>> getTuples() {
-		return tuples;
-	}
-	/**
-	 * @param tuples the tuples to set
-	 */
-	public void setTuples(List<List<String>> tuples) {
-		this.tuples = tuples;
-	}
 	/**
 	 * @return the pageNumber
 	 */
