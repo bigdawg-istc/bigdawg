@@ -6,6 +6,7 @@ package istc.bigdawg.query;
 
 import istc.bigdawg.BDConstants;
 import istc.bigdawg.accumulo.AccumuloInstance;
+import istc.bigdawg.exceptions.MyriaException;
 import istc.bigdawg.exceptions.NotSupportIslandException;
 import istc.bigdawg.exceptions.ShellScriptException;
 import istc.bigdawg.myria.MyriaClient;
@@ -131,8 +132,12 @@ public class QueryClient {
 				String responseResult = mapper.writeValueAsString(resp);
 				return Response.status(200).entity(responseResult).build();
 			} else if (parsed.getShim() == BDConstants.Shim.MYRIA) {
-				return Response.status(200)
-						.entity(MyriaClient.getResult(queryString)).build();
+				try {
+					return Response.status(200)
+							.entity(MyriaClient.execute(queryString)).build();
+				} catch (MyriaException e) {
+					return Response.status(200).entity(e.getMessage()).build();
+				}
 			}else {
 				RegisterQueryResponsePostgreSQL resp = new RegisterQueryResponsePostgreSQL(
 						"ERROR: Unrecognized shim "

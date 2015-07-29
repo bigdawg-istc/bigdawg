@@ -28,7 +28,8 @@ public enum BigDawgConfigProperties {
 	private String sStoreURL;
 	private String accumuloShellScript;
 
-	private String myriaURL;
+	private String myriaHost;
+	private String myriaPort;
 	private String myriaContentType;
 
 	private BigDawgConfigProperties() throws AssertionError {
@@ -66,7 +67,8 @@ public enum BigDawgConfigProperties {
 		
 		this.sStoreURL = prop.getProperty("main.sstore.alerturl");
 		
-		this.myriaURL=prop.getProperty("main.myria.url");
+		this.myriaHost=prop.getProperty("main.myria.host");
+		this.myriaPort=prop.getProperty("main.myria.port");
 		this.myriaContentType=prop.getProperty("main.myria.content.type");
 		
 	}
@@ -176,11 +178,18 @@ public enum BigDawgConfigProperties {
 	public String getAccumuloShellScript() {
 		return accumuloShellScript;
 	}
-		/**
-	 * @return the myriaURL
+
+	/**
+	 * @return the myriaHost
 	 */
-	public String getMyriaURL() {
-		return myriaURL;
+	public String getMyriaHost() {
+		return myriaHost;
+	}
+	/**
+	 * @return the myriaPort
+	 */
+	public String getMyriaPort() {
+		return myriaPort;
 	}
 	/**
 	 * @return the myriaContentType
