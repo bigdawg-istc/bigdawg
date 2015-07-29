@@ -16,6 +16,10 @@ import org.apache.commons.httpclient.methods.StringRequestEntity;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import org.json.simple.JSONObject;
+import org.json.simple.JSONException;
+import org.json.simple.JSONArray;
+
 public class MyriaClient {
 
 	public static final String HOST;
@@ -51,6 +55,7 @@ public class MyriaClient {
 			finalURI = String.format(
 					"http://%s:%s/execute?language=myrial&query=%s", HOST,
 					PORT, URLEncoder.encode(query, Constants.ENCODING));
+			System.out.println(finalURI);
 		} catch (UnsupportedEncodingException e) {
 			e.printStackTrace();
 			log.error("unsupported exception: " + Constants.ENCODING);
@@ -62,16 +67,17 @@ public class MyriaClient {
 				Constants.ENCODING);
 		post.setRequestEntity(requestEntity);
 		HttpClient client = new HttpClient();
-		int returnCode;
 		try {
-			returnCode = client.executeMethod(post);
-			if (returnCode != 200 || returnCode != 201) {
+			int returnCode = client.executeMethod(post);
+			System.out.println("return code in startQuery: "+returnCode);
+			if (returnCode != 200 && returnCode != 201) {
 				String message = "Myria. Start of the query failed!";
 				log.info(message);
 				throw new MyriaException(message);
 			}
 			System.out.println("Return code: " + returnCode);
 			String response = post.getResponseBodyAsString();
+			System.out.println("Myria response from the start query: "+response);
 			return response;
 		} catch (HttpException e) {
 			e.printStackTrace();
@@ -84,18 +90,36 @@ public class MyriaClient {
 		}
 	}
 
+    public boolean isJSONValid(String test) {
+	try {
+	    new JSONObject(test);
+	} catch (Exception ex) {
+	    try {
+		new JSONArray(test);
+	    } catch (Exception ex1) {
+		return false;
+	    }
+	}
+	return true;
+    }
+
 	public static String waitForCompletion(String jsonData)
 			throws IOException {
 		String status;
+		System.out.println("json data in waitForCompletion: "+jsonData);
+		System.out.println("is json valid: "+isJSONValid);
 		String url = new ObjectMapper().readTree(jsonData).path("url").asText();
+		System.out.println("Myria url for waitForCompletion: "+url);
 		url = url.replace("localhost", HOST);
 		do {
 			GetMethod getMethod = new GetMethod(url);
 			HttpClient client = new HttpClient();
 			int returnCode = client.executeMethod(getMethod);
+			System.out.println("Return code for waitForCompletion: "+returnCode);
 			String response = getMethod.getResponseBodyAsString();
 			status = new ObjectMapper().readTree(response).path("status")
 					.asText();
+			System.out.println("Status of the query in waitForCompletion:"+status);
 			try {
 				Thread.sleep(1000);
 			} catch (InterruptedException e) {
