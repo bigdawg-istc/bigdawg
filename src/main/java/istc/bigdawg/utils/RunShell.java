@@ -30,7 +30,7 @@ public class RunShell {
 	
     public static InputStream runSciDB(String host, String query) throws IOException, InterruptedException, SciDBException {
 	query=query.replace("^^","'");
-	Process prop = new ProcessBuilder("iquery","--host",host,"-aq",query,"-o","csv").start();
+	Process prop = new ProcessBuilder("iquery","--host",host,"-aq",query,"-o","tsv").start();
 		prop.waitFor();
 		int exitVal=prop.exitValue();
 		if (exitVal != 0) {
