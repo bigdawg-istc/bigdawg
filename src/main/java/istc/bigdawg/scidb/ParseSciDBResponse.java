@@ -23,21 +23,14 @@ public class ParseSciDBResponse {
 	}
 	
 	public static Tuple2<List<String>, List<List<String>>> parse(String sciDBResponse) {
-		String csvSeparator=",";
+		String csvSeparator="\t";
 		String[] lines = sciDBResponse.split(System.getProperty("line.separator"));
 		String[] colNamesRaw=lines[0].split(csvSeparator);
 		List<String> colNames = Arrays.asList(colNamesRaw);
 		List<List<String>> tuples = new ArrayList<List<String>>();
 		for (int i=1; i<lines.length;++i) {
 			String line = lines[i];
-//			line=line.replace("',", "");
-//			System.out.println(line);
-//			line=line.replace(",'","##");
-//			System.out.println(line);
-//			line=line.replace("'", "");
-//			line=line.replace(",","##");
-//			System.out.println(line);
-			List<String> tuple = Arrays.asList(line.split("\t"));
+			List<String> tuple = Arrays.asList(line.split(csvSeparator));
 			tuples.add(tuple);
 		}
 		return new Tuple2<List<String>, List<List<String>>>(colNames, tuples);
