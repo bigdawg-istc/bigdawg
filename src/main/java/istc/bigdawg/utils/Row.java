@@ -60,6 +60,8 @@ public class Row {
 		TYPE.put("DOBULE PRECISION", Double.class);
 		TYPE.put("FLOAT8", Double.class);
 		TYPE.put("INT", Integer.class);
+		TYPE.put("TEXT", String.class);
+		TYPE.put("BPCHAR", String.class);
 
 		// ...
 	}
