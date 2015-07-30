@@ -20,8 +20,7 @@ public enum BigDawgConfigProperties {
 	private String accumuloUser;
 	private String accumuloPasswordToken;
 
-	private String scidbHost;
-	private String scidbPort;
+	private String scidbHostname;
 	private String scidbUser;
 	private String scidbPassword;
 
@@ -71,6 +70,10 @@ public enum BigDawgConfigProperties {
 		this.myriaPort=prop.getProperty("main.myria.port");
 		this.myriaContentType=prop.getProperty("main.myria.content.type");
 		
+		this.scidbHostname=prop.getProperty("main.scidb.hostname");
+		this.scidbPassword=prop.getProperty("main.scidb.password");
+		this.scidbUser=prop.getProperty("main.scidb.user");
+		
 	}
 	/**
 	 * @return the accumuloIstance
@@ -103,15 +106,8 @@ public enum BigDawgConfigProperties {
 	/**
 	 * @return the scidbHost
 	 */
-	public String getScidbHost() {
-		return scidbHost;
-	}
-
-	/**
-	 * @return the scidbPort
-	 */
-	public String getScidbPort() {
-		return scidbPort;
+	public String getScidbHostname() {
+		return scidbHostname;
 	}
 
 	/**

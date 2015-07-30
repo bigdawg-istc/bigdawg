@@ -8,6 +8,7 @@ import istc.bigdawg.BDConstants;
 import istc.bigdawg.accumulo.AccumuloInstance;
 import istc.bigdawg.exceptions.MyriaException;
 import istc.bigdawg.exceptions.NotSupportIslandException;
+import istc.bigdawg.exceptions.SciDBException;
 import istc.bigdawg.exceptions.ShellScriptException;
 import istc.bigdawg.myria.MyriaClient;
 import istc.bigdawg.postgresql.PostgreSQLInstance;
@@ -16,7 +17,7 @@ import istc.bigdawg.query.parser.Parser;
 import istc.bigdawg.query.parser.simpleParser;
 import istc.bigdawg.utils.Constants;
 import istc.bigdawg.utils.Row;
-import istc.bigdawg.utils.RunShellScript;
+import istc.bigdawg.utils.RunShell;
 import istc.bigdawg.utils.Tuple;
 
 import java.io.IOException;
@@ -140,8 +141,16 @@ public class QueryClient {
 				return Response.status(200).entity(resultMyria).build();
 			} else if (parsed.getShim() == BDConstants.Shim.PSQLARRAY) {
 				System.out.println("run query for SciDB");
-				String resultSciDB = "";
-				return Response.status(200).entity(resultSciDB).build();
+				String resultSciDB;
+				try {
+					resultSciDB = executeQueryScidb(queryString);
+					return Response.status(200).entity(resultSciDB).build();
+				} catch (SciDBException e) {
+					e.printStackTrace();
+					String messageSciDB = "Problem with SciDB: "+e.getMessage();
+					log.error(messageSciDB);
+					return Response.status(200).entity(messageSciDB).build();
+				}
 			} else {
 				RegisterQueryResponsePostgreSQL resp = new RegisterQueryResponsePostgreSQL(
 						"ERROR: Unrecognized shim "
@@ -166,6 +175,20 @@ public class QueryClient {
 			e.printStackTrace();
 			return Response.status(500).entity(e.getMessage()).build();
 		}
+	}
+	
+	private String executeQueryScidb(String queryString) throws IOException, InterruptedException, SciDBException {
+		String sciDBHostname = BigDawgConfigProperties.INSTANCE.getScidbHostname();
+		String sciDBUser = BigDawgConfigProperties.INSTANCE.getScidbUser();
+		String sciDBPassword = BigDawgConfigProperties.INSTANCE.getScidbPassword();
+		System.out.println("sciDBHostname: "+sciDBHostname);
+		System.out.println("sciDBUser: "+sciDBUser);
+		System.out.println("sciDBPassword: "+sciDBPassword);
+		String params = "--host "+sciDBHostname+" -aq "+queryString;
+		InputStream resultInStream=RunShell.runSciDB(params);
+		String resultString = IOUtils.toString(resultInStream,
+				Constants.ENCODING);
+		return resultString;
 	}
 
 	private Tuple.Tuple3<List<String>, List<String>, List<List<String>>> executeQueryPostgres(
@@ -283,7 +306,7 @@ public class QueryClient {
 		String accumuloScriptPath = BigDawgConfigProperties.INSTANCE
 				.getAccumuloShellScript();
 		System.out.println("accumuloScriptPath: " + accumuloScriptPath);
-		InputStream scriptResultInStream = RunShellScript.run(
+		InputStream scriptResultInStream = RunShell.run(
 				accumuloScriptPath, database, table, query);
 		String scriptResult = IOUtils.toString(scriptResultInStream,
 				Constants.ENCODING);
@@ -341,15 +364,22 @@ public class QueryClient {
 		try {
 			Response response = qClient
 					.query("{\"query\":\"RELATION(SELECT * FROM pg_catalog.pg_tables)\",\"authorization\":{},\"tuplesPerPage\":1,\"pageNumber\":1,\"timestamp\":\"2012-04-23T18:25:43.511Z\"}");
-			// Response response =
+			System.out.println("Postgresql response: "+response.getEntity());
 			// qClient.query("{\"query\":\"RELATION(SELECT * FROM test2)\",\"authorization\":{},\"tuplesPerPage\":1,\"pageNumber\":1,\"timestamp\":\"2012-04-23T18:25:43.511Z\"}");
-			System.out.println(response.getEntity());
+//			System.out.println(response.getEntity());
 			// String accumuloData = qClient
 			// .executeQueryAccumuloPure("note_events_TedgeDeg");
 			// System.out.println(accumuloData);
 			String accumuloScript = qClient.executeAccumuloShellScript(
 					"database", "table", "query");
 			System.out.println(accumuloScript);
+			String resultSciDB;
+			try {
+				resultSciDB = qClient.executeQueryScidb("adam");
+				System.out.println(resultSciDB);
+			} catch (SciDBException e) {
+				e.printStackTrace();
+			}
 		} catch (JsonProcessingException e) {
 			e.printStackTrace();
 		} catch (TableNotFoundException e) {

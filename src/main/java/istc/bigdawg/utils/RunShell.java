@@ -3,12 +3,12 @@
  */
 package istc.bigdawg.utils;
 
+import istc.bigdawg.exceptions.SciDBException;
 import istc.bigdawg.exceptions.ShellScriptException;
 import istc.bigdawg.properties.BigDawgConfigProperties;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.List;
 
 import org.apache.commons.io.IOUtils;
 
@@ -16,7 +16,7 @@ import org.apache.commons.io.IOUtils;
  * @author adam
  *
  */
-public class RunShellScript {
+public class RunShell {
 	
 	public static InputStream run(String filePath, String database, String table, String query) throws IOException, InterruptedException, ShellScriptException {
 		Process prop = new ProcessBuilder(filePath,database,table,query).start();
@@ -24,6 +24,16 @@ public class RunShellScript {
 		int exitVal=prop.exitValue();
 		if (exitVal != 0) {
 			throw new ShellScriptException("Problem with the shell script: "+filePath+". Process returned value: "+exitVal);
+		}
+		return prop.getInputStream();
+	}
+	
+		public static InputStream runSciDB(String params) throws IOException, InterruptedException, SciDBException {
+		Process prop = new ProcessBuilder("iquery",params).start();
+		prop.waitFor();
+		int exitVal=prop.exitValue();
+		if (exitVal != 0) {
+			throw new SciDBException("Problem iquery and parameters: "+params+". Process returned value: "+exitVal);
 		}
 		return prop.getInputStream();
 	}
