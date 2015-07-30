@@ -66,6 +66,18 @@ test CURL mit server @txe1-login.mit.edu
 --------
 curl -v -H "Content-Type: application/json" -X POST -d '{"query":"RELATION(select * from mimic2v26.d_patients limit 5)","authorization":{},"tuplesPerPage":1,"pageNumber":1,"timestamp":"2012-04-23T18:25:43.511Z"}' http://172.16.4.62:8080/bigdawg/query?ssl=true&sslfactory=org.postgresql.ssl.NonValidatingFactory
 
+Myria query example
+--------
+curl -v -H "Content-Type: application/json" -X POST -d '{"query":"MYRIA(T1 = empty(x:int); T2 = [from T1 emit $0 as x]; store(T2, JustX);)","authorization":{},"tuplesPerPage":1,"pageNumber":1,"timestamp":"2012-04-23T18:25:43.511Z"}' http://localhost:8080/bigdawg/query
+
+or
+
+curl -v -H "Content-Type: application/json" -X POST -d '{"query":"MYRIA(T1 = empty(x:int); T2 = [from T1 emit $0 as x]; store(T2, JustX);)","authorization":{},"tuplesPerPage":1,"pageNumber":1,"timestamp":"2012-04-23T18:25:43.511Z"}' http://node-037:8090/bigdawg/query
+
+D4M example
+--------
+curl -v -H "Content-Type: application/json" -X POST -d '{"query":"TEXT(classdb01 note_events_Tw T(^^patientID|01369,^^,:))","authorization":{},"tuplesPerPage":1,"pageNumber":1,"timestamp":"2012-04-23T18:25:43.511Z"}' http://172.16.4.139:8080/bigdawg/query
+
 maven profiles
 --------
 Building jar for test (big2: ssh ubuntu@128.52.183.84) and prod (big: ssh ubuntu@128.52.183.245) environemnts.
