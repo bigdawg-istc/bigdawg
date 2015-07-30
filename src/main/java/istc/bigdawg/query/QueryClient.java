@@ -138,6 +138,10 @@ public class QueryClient {
 			} else if (parsed.getShim() == BDConstants.Shim.MYRIA) {
 				String resultMyria = getMyriaData(queryString);
 				return Response.status(200).entity(resultMyria).build();
+			} else if (parsed.getShim() == BDConstants.Shim.PSQLARRAY) {
+				System.out.println("run query for SciDB");
+				String resultSciDB = "";
+				return Response.status(200).entity(resultSciDB).build();
 			} else {
 				RegisterQueryResponsePostgreSQL resp = new RegisterQueryResponsePostgreSQL(
 						"ERROR: Unrecognized shim "
