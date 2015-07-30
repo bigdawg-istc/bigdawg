@@ -15,10 +15,12 @@ import istc.bigdawg.postgresql.PostgreSQLInstance;
 import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.query.parser.Parser;
 import istc.bigdawg.query.parser.simpleParser;
+import istc.bigdawg.scidb.ParseSciDBResponse;
 import istc.bigdawg.utils.Constants;
 import istc.bigdawg.utils.Row;
 import istc.bigdawg.utils.RunShell;
 import istc.bigdawg.utils.Tuple;
+import istc.bigdawg.utils.Tuple.Tuple2;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -131,7 +133,7 @@ public class QueryClient {
 				List<String> colNames = result.getT1();
 				List<String> colTypes = result.getT2();
 				List<List<String>> rows = result.getT3();
-				RegisterQueryResponsePostgreSQL resp = new RegisterQueryResponsePostgreSQL(
+				RegisterQueryResponseTupleList resp = new RegisterQueryResponseTupleList(
 						"OK", 200, rows, 1, 1, colNames, colTypes,
 						new Timestamp(0));
 				String responseResult = mapper.writeValueAsString(resp);
@@ -153,7 +155,7 @@ public class QueryClient {
 					return Response.status(200).entity(messageSciDB).build();
 				}
 			} else {
-				RegisterQueryResponsePostgreSQL resp = new RegisterQueryResponsePostgreSQL(
+				RegisterQueryResponseTupleList resp = new RegisterQueryResponseTupleList(
 						"ERROR: Unrecognized shim "
 								+ parsed.getShim().toString(), 412, null, 1, 1,
 						null, null, new Timestamp(0));
@@ -188,7 +190,14 @@ public class QueryClient {
 		InputStream resultInStream=RunShell.runSciDB(sciDBHostname,queryString);
 		String resultString = IOUtils.toString(resultInStream,
 				Constants.ENCODING);
-		return resultString;
+		Tuple2<List<String>, List<List<String>>> parsedData = ParseSciDBResponse.parse(resultString);
+				List<String> colNames = parsedData.getT1();
+				List<List<String>> tuples = parsedData.getT2();
+				RegisterQueryResponseTupleList resp = new RegisterQueryResponseTupleList(
+						"OK", 200, tuples, 1, 1, colNames, new ArrayList<String>(),
+						new Timestamp(0));
+				String responseResult =new ObjectMapper().writeValueAsString(resp);
+		return responseResult;
 	}
 
 	private Tuple.Tuple3<List<String>, List<String>, List<List<String>>> executeQueryPostgres(
@@ -284,7 +293,7 @@ public class QueryClient {
 		} catch (MyriaException e) {
 			return e.getMessage();
 		}
-		RegisterQueryResponseGeneral resp = new RegisterQueryResponseGeneral(
+		RegisterQueryResponseTupleString resp = new RegisterQueryResponseTupleString(
 				"OK", 200, myriaResult, 1, 1, new ArrayList<String>(),
 				new ArrayList<String>(), new Timestamp(0));
 		ObjectMapper mapper = new ObjectMapper();
@@ -311,7 +320,7 @@ public class QueryClient {
 		String scriptResult = IOUtils.toString(scriptResultInStream,
 				Constants.ENCODING);
 		System.out.println("Accumulo script result: " + scriptResult);
-		RegisterQueryResponseGeneral resp = new RegisterQueryResponseGeneral(
+		RegisterQueryResponseTupleString resp = new RegisterQueryResponseTupleString(
 				"OK", 200, scriptResult, 1, 1, AccumuloInstance.schema,
 				AccumuloInstance.types, new Timestamp(0));
 		ObjectMapper mapper = new ObjectMapper();
@@ -350,7 +359,7 @@ public class QueryClient {
 		}
 		ObjectMapper mapper = new ObjectMapper();
 		String allRowsString = mapper.writeValueAsString(allRows);
-		RegisterQueryResponseGeneral resp = new RegisterQueryResponseGeneral(
+		RegisterQueryResponseTupleString resp = new RegisterQueryResponseTupleString(
 				"OK", 200, allRowsString, 1, 1, AccumuloInstance.fullSchema,
 				AccumuloInstance.fullTypes, new Timestamp(0));
 		return mapper.writeValueAsString(resp);
