@@ -28,12 +28,13 @@ public class RunShell {
 		return prop.getInputStream();
 	}
 	
-		public static InputStream runSciDB(String params) throws IOException, InterruptedException, SciDBException {
-		Process prop = new ProcessBuilder("iquery",params).start();
+    public static InputStream runSciDB(String host, String query) throws IOException, InterruptedException, SciDBException {
+	query=query.replace("^^","'");
+	Process prop = new ProcessBuilder("iquery","--host",host,"-aq",query).start();
 		prop.waitFor();
 		int exitVal=prop.exitValue();
 		if (exitVal != 0) {
-			throw new SciDBException("Problem iquery and parameters: "+params+". Process returned value: "+exitVal);
+			throw new SciDBException("Problem iquery and parameters: "+host+" "+query+". Process returned value: "+exitVal);
 		}
 		return prop.getInputStream();
 	}

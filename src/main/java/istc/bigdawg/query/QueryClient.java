@@ -141,6 +141,7 @@ public class QueryClient {
 				return Response.status(200).entity(resultMyria).build();
 			} else if (parsed.getShim() == BDConstants.Shim.PSQLARRAY) {
 				System.out.println("run query for SciDB");
+				System.out.println("SciDB queryString: "+queryString);
 				String resultSciDB;
 				try {
 					resultSciDB = executeQueryScidb(queryString);
@@ -184,8 +185,7 @@ public class QueryClient {
 		System.out.println("sciDBHostname: "+sciDBHostname);
 		System.out.println("sciDBUser: "+sciDBUser);
 		System.out.println("sciDBPassword: "+sciDBPassword);
-		String params = "--host "+sciDBHostname+" -aq "+queryString;
-		InputStream resultInStream=RunShell.runSciDB(params);
+		InputStream resultInStream=RunShell.runSciDB(sciDBHostname,queryString);
 		String resultString = IOUtils.toString(resultInStream,
 				Constants.ENCODING);
 		return resultString;
