@@ -10,7 +10,7 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * @author adam
+ * @author Adam Dziedzic
  *
  */
 public class ParseSciDBResponse {
@@ -18,8 +18,7 @@ public class ParseSciDBResponse {
 	/**
 	 * 
 	 */
-	public ParseSciDBResponse() {
-		// TODO Auto-generated constructor stub
+	private ParseSciDBResponse() {
 	}
 	
 	public static Tuple2<List<String>, List<List<String>>> parse(String sciDBResponse) {
@@ -46,7 +45,7 @@ public class ParseSciDBResponse {
 				"ABP_s00124_wave_325553800032	449	449	ABP_s00124_wave_325553800032<obs:double> [timestamp=0:*,1250000,0]	true	false\n"+
 				"ABP_s01158_wave_306308400011	410	410	ABP_s01158_wave_306308400011<obs:double> [timestamp=0:*,1250000,0]	true	false\n"+
 				"ABP_s03386_wave_398294300061	413	413	ABP_s03386_wave_398294300061<obs:double> [timestamp=0:*,1250000,0]	true	false";
-;
+
 		System.out.println("example response: "+response);
 		Tuple2<List<String>,List<List<String>>> parsedData = parse(response);
 		List<String> colNames = parsedData.getT1();
