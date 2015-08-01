@@ -1,0 +1,1 @@
+echo "Load data to SciDB"
