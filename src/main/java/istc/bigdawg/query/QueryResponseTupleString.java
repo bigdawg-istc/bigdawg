@@ -10,7 +10,7 @@ import java.util.List;
  * @author adam
  * 
  */
-public class RegisterQueryResponseTupleString extends RegisterQueryResponse {
+public class QueryResponseTupleString extends QueryResponse {
 
 	private String tuples;
 
@@ -24,7 +24,7 @@ public class RegisterQueryResponseTupleString extends RegisterQueryResponse {
 	 * @param types
 	 * @param cacheTimestamp
 	 */
-	public RegisterQueryResponseTupleString(String message, int responseCode,
+	public QueryResponseTupleString(String message, int responseCode,
 			String tuples, int pageNumber, int totalPages, List<String> schema,
 			List<String> types, Timestamp cacheTimestamp) {
 		super(message, responseCode, pageNumber, totalPages, schema, types,

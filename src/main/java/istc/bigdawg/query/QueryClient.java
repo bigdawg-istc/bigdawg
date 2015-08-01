@@ -110,8 +110,8 @@ public class QueryClient {
 		log.info("istream: " + istream);
 		ObjectMapper mapper = new ObjectMapper();
 		try {
-			RegisterQueryRequest st = mapper.readValue(istream,
-					RegisterQueryRequest.class);
+			QueryRequest st = mapper.readValue(istream,
+					QueryRequest.class);
 			System.out.println(mapper.writeValueAsString(st));
 			Parser parser = new simpleParser();
 			ASTNode parsed = parser.parseQueryIntoTree(st.getQuery());
@@ -133,7 +133,7 @@ public class QueryClient {
 				List<String> colNames = result.getT1();
 				List<String> colTypes = result.getT2();
 				List<List<String>> rows = result.getT3();
-				RegisterQueryResponseTupleList resp = new RegisterQueryResponseTupleList(
+				QueryResponseTupleList resp = new QueryResponseTupleList(
 						"OK", 200, rows, 1, 1, colNames, colTypes,
 						new Timestamp(0));
 				String responseResult = mapper.writeValueAsString(resp);
@@ -155,7 +155,7 @@ public class QueryClient {
 					return Response.status(200).entity(messageSciDB).build();
 				}
 			} else {
-				RegisterQueryResponseTupleList resp = new RegisterQueryResponseTupleList(
+				QueryResponseTupleList resp = new QueryResponseTupleList(
 						"ERROR: Unrecognized shim "
 								+ parsed.getShim().toString(), 412, null, 1, 1,
 						null, null, new Timestamp(0));
@@ -193,7 +193,7 @@ public class QueryClient {
 		Tuple2<List<String>, List<List<String>>> parsedData = ParseSciDBResponse.parse(resultString);
 				List<String> colNames = parsedData.getT1();
 				List<List<String>> tuples = parsedData.getT2();
-				RegisterQueryResponseTupleList resp = new RegisterQueryResponseTupleList(
+				QueryResponseTupleList resp = new QueryResponseTupleList(
 						"OK", 200, tuples, 1, 1, colNames, new ArrayList<String>(),
 						new Timestamp(0));
 				String responseResult =new ObjectMapper().writeValueAsString(resp);
@@ -293,7 +293,7 @@ public class QueryClient {
 		} catch (MyriaException e) {
 			return e.getMessage();
 		}
-		RegisterQueryResponseTupleString resp = new RegisterQueryResponseTupleString(
+		QueryResponseTupleString resp = new QueryResponseTupleString(
 				"OK", 200, myriaResult, 1, 1, new ArrayList<String>(),
 				new ArrayList<String>(), new Timestamp(0));
 		ObjectMapper mapper = new ObjectMapper();
@@ -320,7 +320,7 @@ public class QueryClient {
 		String scriptResult = IOUtils.toString(scriptResultInStream,
 				Constants.ENCODING);
 		System.out.println("Accumulo script result: " + scriptResult);
-		RegisterQueryResponseTupleString resp = new RegisterQueryResponseTupleString(
+		QueryResponseTupleString resp = new QueryResponseTupleString(
 				"OK", 200, scriptResult, 1, 1, AccumuloInstance.schema,
 				AccumuloInstance.types, new Timestamp(0));
 		ObjectMapper mapper = new ObjectMapper();
@@ -359,7 +359,7 @@ public class QueryClient {
 		}
 		ObjectMapper mapper = new ObjectMapper();
 		String allRowsString = mapper.writeValueAsString(allRows);
-		RegisterQueryResponseTupleString resp = new RegisterQueryResponseTupleString(
+		QueryResponseTupleString resp = new QueryResponseTupleString(
 				"OK", 200, allRowsString, 1, 1, AccumuloInstance.fullSchema,
 				AccumuloInstance.fullTypes, new Timestamp(0));
 		return mapper.writeValueAsString(resp);

@@ -1,8 +1,9 @@
 package istc.bigdawg.stream;
 
 import istc.bigdawg.AuthorizationRequest;
+import istc.bigdawg.interfaces.Request;
 
-public class RegisterStreamRequest {
+public class RegisterStreamRequest implements Request {
 	private boolean oneTime;
 	private String notifyURL;
 	private String query;

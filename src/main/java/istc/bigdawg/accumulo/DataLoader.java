@@ -65,10 +65,6 @@ public class DataLoader {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		String instanceName = "adam";
-		String zooKeepers = "localhost";
-		String userName = "root";
-		String pass = "mypassw";
 
 		AccumuloRowQualifier accQual = new AccumuloRowQualifier(true, false,
 				true, true);

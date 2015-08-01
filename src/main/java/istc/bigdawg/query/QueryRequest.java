@@ -1,10 +1,11 @@
 package istc.bigdawg.query;
 
 import istc.bigdawg.AuthorizationRequest;
+import istc.bigdawg.interfaces.Request;
 
 import java.sql.Timestamp;
 
-public class RegisterQueryRequest {
+public class QueryRequest implements Request{
 	
 	private String query;
 	private AuthorizationRequest authorization;
