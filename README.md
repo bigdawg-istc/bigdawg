@@ -78,6 +78,10 @@ D4M example
 --------
 curl -v -H "Content-Type: application/json" -X POST -d '{"query":"TEXT(classdb01 note_events_Tw T(^^patientID|01369,^^,:))","authorization":{},"tuplesPerPage":1,"pageNumber":1,"timestamp":"2012-04-23T18:25:43.511Z"}' http://172.16.4.139:8080/bigdawg/query
 
+SciDB data loading
+--------
+curl  -H "Content-Type: application/json" -X POST -d '{"script":"/home/adam/Chicago/bigdawgmiddle/scripts/test_script/scidbLoad.sh","authorization":{},"dataLocation":"/home/gridsan/groups/istcdata/pipeline/scidb/data/ABP_0_1","flatArrayName":"ABP_0_1_flat","arrayName":"ABP_0"}' http://localhost:8080/bigdawg/load/scidb
+
 maven profiles
 --------
 Building jar for test (big2: ssh ubuntu@128.52.183.84) and prod (big: ssh ubuntu@128.52.183.245) environemnts.
