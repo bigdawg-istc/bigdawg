@@ -25,15 +25,17 @@ mvn eclipse:eclipse
 
 download dependencies
 ----------
-mvn install
+mvn install -P XXX  
+
+where XXX is [dev/test/prod] 
 
 build jar
 ----------
-mvn package
+mvn package -P XXX
 
 run test server
 ---------
-mvn exec:java
+mvn exec:java -P XXX
 
 test CURL post register a push alert
 ---------
