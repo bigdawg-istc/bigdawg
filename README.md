@@ -138,8 +138,13 @@ RUN THE APP
 SciDB on big2 VM
 --------
 sudo passwd scidb
+
 su scidb
+
 cd /opt/scidb/14.12/bin
+
 ./scidb.py status single_server
+
 ./scidb.py stop_all single_server
+
 ./scidb.py start_all single_server
