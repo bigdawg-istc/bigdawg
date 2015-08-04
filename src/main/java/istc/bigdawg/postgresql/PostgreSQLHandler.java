@@ -1,15 +1,16 @@
 /**
  * 
  */
-package istc.bigdawg.query;
+package istc.bigdawg.postgresql;
 
 import istc.bigdawg.BDConstants.Shim;
-import istc.bigdawg.postgresql.PostgreSQLInstance;
+import istc.bigdawg.query.DBHandler;
+import istc.bigdawg.query.QueryClient;
+import istc.bigdawg.query.QueryResponseTupleList;
 import istc.bigdawg.utils.Row;
 import istc.bigdawg.utils.Tuple;
 
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -36,18 +37,6 @@ public class PostgreSQLHandler implements DBHandler {
 	Logger log = org.apache.log4j.Logger.getLogger(PostgreSQLHandler.class
 			.getName());
 
-	private Connection con = null;
-	private Statement st = null;
-	private ResultSet rs = null;
-	private PreparedStatement pst = null;
-
-	/**
-	 * 
-	 */
-	public PostgreSQLHandler() {
-		// TODO Auto-generated constructor stub
-	}
-
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -60,19 +49,24 @@ public class PostgreSQLHandler implements DBHandler {
 			result = executeQueryPostgres(queryString);
 		} catch (SQLException e1) {
 			e1.printStackTrace();
-			return Response.status(200).entity("SQLException in PostgreSQL: "+e1.getMessage()).build();
+			return Response.status(200)
+					.entity("SQLException in PostgreSQL: " + e1.getMessage())
+					.build();
 		}
 		List<String> colNames = result.getT1();
 		List<String> colTypes = result.getT2();
 		List<List<String>> rows = result.getT3();
-		QueryResponseTupleList resp = new QueryResponseTupleList(
-				"OK", 200, rows, 1, 1, colNames, colTypes, new Timestamp(0));
+		QueryResponseTupleList resp = new QueryResponseTupleList("OK", 200,
+				rows, 1, 1, colNames, colTypes, new Timestamp(0));
 		String responseResult;
 		try {
 			responseResult = new ObjectMapper().writeValueAsString(resp);
 		} catch (JsonProcessingException e) {
 			e.printStackTrace();
-			return Response.status(200).entity("Problem with JSON Parsing for PostgreSQL: "+e.getMessage()).build();
+			return Response
+					.status(200)
+					.entity("Problem with JSON Parsing for PostgreSQL: "
+							+ e.getMessage()).build();
 		}
 		return Response.status(200).entity(responseResult).build();
 	}
@@ -82,10 +76,15 @@ public class PostgreSQLHandler implements DBHandler {
 		List<String> colNames = null;
 		List<String> colTypes = null;
 		List<List<String>> rows = new ArrayList<List<String>>();
+
+		Connection con = null;
+		Statement st = null;
+		ResultSet rs = null;
 		try {
 			con = PostgreSQLInstance.getConnection();
 			st = con.createStatement();
 			rs = st.executeQuery(query);
+
 			if (rs == null)
 				return null;
 			final ResultSetMetaData rsmd = rs.getMetaData();

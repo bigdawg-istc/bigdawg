@@ -44,7 +44,8 @@ public class SciDBDataLoader {
 					SciDBLoadRequest.class);
 			System.out.println(mapper.writeValueAsString(requestData));
 		} catch (IOException e1) {
-			String message = "The request could not be processed. Check your input data.";
+			String message = "The request could not be processed. Check your input data."
+					+ " " + e1.getMessage()+"\n";
 			e1.printStackTrace();
 			log.error("istream: "+istream+" message: "+message);
 			return Response.status(HttpStatus.SC_BAD_REQUEST).entity(message).build();
@@ -54,11 +55,11 @@ public class SciDBDataLoader {
 					requestData.getDataLocation(), requestData.getFlatArrayName(),
 					requestData.getArrayName());
 			String result = IOUtils.toString(inStream, Constants.ENCODING);
-			String responseMessage = "Scripte executed. Returned message: "+result;
+			String responseMessage = "Script executed. Returned message: "+result;
 			return Response.status(HttpStatus.SC_OK).entity(responseMessage).build();
 		} catch (IOException | InterruptedException | SciDBLoaderException e) {
 			e.printStackTrace();
-			String message = "The data loading to SciDB failed.";
+			String message = "The data loading to SciDB failed."+" "+e.getMessage()+"\n";
 			log.error(message);
 			return Response.status(HttpStatus.SC_OK).entity(message).build();
 		}
