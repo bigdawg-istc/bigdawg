@@ -134,3 +134,12 @@ RUN THE APP
 /usr/lib/jvm/java-1.7.0-openjdk/jre/bin/java -classpath "bigdawg-conf/:istc.bigdawg-1.0-SNAPSHOT-jar-with-dependencies.jar" istc.bigdawg.Main
 
 # bigdawg-conf contains the configuration files that should be adjusted to the current environment
+
+SciDB on big2 VM
+--------
+sudo passwd scidb
+su scidb
+cd /opt/scidb/14.12/bin
+./scidb.py status single_server
+./scidb.py stop_all single_server
+./scidb.py start_all single_server
