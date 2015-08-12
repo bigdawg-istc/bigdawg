@@ -12,6 +12,7 @@ import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.query.parser.Parser;
 import istc.bigdawg.query.parser.simpleParser;
 import istc.bigdawg.scidb.SciDBHandler;
+import istc.bigdawg.utils.ObjectMapperResource;
 
 import java.io.IOException;
 import java.sql.Timestamp;
@@ -82,16 +83,16 @@ public class QueryClient {
 	public Response query(String istream) {
 		// System.out.println(istream);
 		log.info("istream: " + istream);
-		ObjectMapper mapper = new ObjectMapper();
 		QueryRequest st;
 		try {
-			st = mapper.readValue(istream, QueryRequest.class);
-			System.out.println(mapper.writeValueAsString(st));
+			st = ObjectMapperResource.INSTANCE.getObjectMapper().readValue(
+					istream, QueryRequest.class);
+			// System.out.println(mapper.writeValueAsString(st));
 			Parser parser = new simpleParser();
 			ASTNode parsed;
 			parsed = parser.parseQueryIntoTree(st.getQuery());
 
-			System.out.println(parsed.getShim());
+			// System.out.println(parsed.getShim());
 			String queryString = parsed.getTarget();
 
 			for (DBHandler handler : registeredDbHandlers) {
@@ -104,7 +105,8 @@ public class QueryClient {
 					"ERROR: Unrecognized island"
 							+ parsed.getIsland().toString(), 412, null, 1, 1,
 					null, null, new Timestamp(0));
-			String responseResult = mapper.writeValueAsString(resp);
+			String responseResult = ObjectMapperResource.INSTANCE
+					.getObjectMapper().writeValueAsString(resp);
 			return Response.status(412).entity(responseResult).build();
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -123,9 +125,28 @@ public class QueryClient {
 		// qClient.executeQueryPostgres("Select * from books");
 		// Response response =
 		// qClient.query("{\"query\":\"RELATION(select * from mimic2v26.d_patients limit 5)\",\"authorization\":{},\"tuplesPerPage\":1,\"pageNumber\":1,\"timestamp\":\"2012-04-23T18:25:43.511Z\"}");
-		Response response = qClient
-				.query("{\"query\":\"RELATION(SELECT * FROM pg_catalog.pg_tables)\",\"authorization\":{},\"tuplesPerPage\":1,\"pageNumber\":1,\"timestamp\":\"2012-04-23T18:25:43.511Z\"}");
-		System.out.println("Postgresql response: " + response.getEntity());
+		int[] limit_tab = { 100000 };
+		int max_limit = 10000;
+		for (int limit = 1; limit <= max_limit; limit = limit * 2) {
+			System.out.print("limit: " + limit + ",");
+			long lStartTime = System.nanoTime();
+			// Response response = qClient
+			// .query("{\"query\":\"RELATION(SELECT * FROM pg_catalog.pg_tables)\",\"authorization\":{},\"tuplesPerPage\":1,\"pageNumber\":1,\"timestamp\":\"2012-04-23T18:25:43.511Z\"}");
+			// Response response = qClient
+			// .query("{\"query\":\"RELATION(select * from mimic2v26.d_patients limit "
+			// + limit
+			// +
+			// ")\",\"authorization\":{},\"tuplesPerPage\":1,\"pageNumber\":1,\"timestamp\":\"2012-04-23T18:25:43.511Z\"}");
+			Response response = qClient
+					.query("{\"query\":\"RELATION(select * from mimic2v26.chartevents limit "
+							+ limit
+							+ ")\",\"authorization\":{},\"tuplesPerPage\":1,\"pageNumber\":1,\"timestamp\":\"2012-04-23T18:25:43.511Z\"}");
+
+			// System.out.println("Postgresql response: " +
+			// response.getEntity());
+			System.out.println("Elapsed total time milliseconds: "
+					+ (System.nanoTime() - lStartTime) / 1000000);
+		}
 		// qClient.query("{\"query\":\"RELATION(SELECT * FROM test2)\",\"authorization\":{},\"tuplesPerPage\":1,\"pageNumber\":1,\"timestamp\":\"2012-04-23T18:25:43.511Z\"}");
 		// System.out.println(response.getEntity());
 		// String accumuloData = qClient

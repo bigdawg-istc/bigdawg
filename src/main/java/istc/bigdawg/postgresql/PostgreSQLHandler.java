@@ -7,8 +7,7 @@ import istc.bigdawg.BDConstants.Shim;
 import istc.bigdawg.query.DBHandler;
 import istc.bigdawg.query.QueryClient;
 import istc.bigdawg.query.QueryResponseTupleList;
-import istc.bigdawg.utils.Row;
-import istc.bigdawg.utils.Tuple;
+import istc.bigdawg.utils.ObjectMapperResource;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -18,7 +17,6 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map.Entry;
 
 import javax.ws.rs.core.Response;
 
@@ -37,6 +35,47 @@ public class PostgreSQLHandler implements DBHandler {
 	Logger log = org.apache.log4j.Logger.getLogger(PostgreSQLHandler.class
 			.getName());
 
+	public class QueryResult {
+		private List<List<String>> rows;
+		private List<String> types;
+		private List<String> colNames;
+
+		/**
+		 * @return the rows
+		 */
+		public List<List<String>> getRows() {
+			return rows;
+		}
+
+		/**
+		 * @return the types
+		 */
+		public List<String> getTypes() {
+			return types;
+		}
+
+		/**
+		 * @return the colNames
+		 */
+		public List<String> getColNames() {
+			return colNames;
+		}
+
+		/**
+		 * @param rows
+		 * @param types
+		 * @param colNames
+		 */
+		public QueryResult(List<List<String>> rows, List<String> types,
+				List<String> colNames) {
+			super();
+			this.rows = rows;
+			this.types = types;
+			this.colNames = colNames;
+		}
+
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -44,39 +83,51 @@ public class PostgreSQLHandler implements DBHandler {
 	 */
 	@Override
 	public Response executeQuery(String queryString) {
-		Tuple.Tuple3<List<String>, List<String>, List<List<String>>> result = null;
+		long lStartTime = System.nanoTime();
+		QueryResult queryResult = null;
 		try {
-			result = executeQueryPostgres(queryString);
-		} catch (SQLException e1) {
-			e1.printStackTrace();
-			return Response.status(200)
-					.entity("SQLException in PostgreSQL: " + e1.getMessage())
+			queryResult = executeQueryPostgreSQL(queryString);
+		} catch (SQLException e) {
+			return Response
+					.status(500)
+					.entity("Problem with query execution in Postgresql: "
+							+ e.getMessage() + "; query: " + queryString)
 					.build();
 		}
-		List<String> colNames = result.getT1();
-		List<String> colTypes = result.getT2();
-		List<List<String>> rows = result.getT3();
+		System.out.print("PostgreSQL query execution time milliseconds: "
+				+ (System.nanoTime() - lStartTime) / 1000000 + ",");
 		QueryResponseTupleList resp = new QueryResponseTupleList("OK", 200,
-				rows, 1, 1, colNames, colTypes, new Timestamp(0));
-		String responseResult;
+				queryResult.getRows(), 1, 1, queryResult.getColNames(),
+				queryResult.getTypes(), new Timestamp(0));
 		try {
-			responseResult = new ObjectMapper().writeValueAsString(resp);
+			lStartTime = System.nanoTime();
+			String jsonResult = getJSONString(resp);
+			System.out.print("format JSON Java time milliseconds: "
+					+ (System.nanoTime() - lStartTime) / 1000000 + ",");
+			return Response.status(200).entity(jsonResult).build();
 		} catch (JsonProcessingException e) {
-			e.printStackTrace();
 			return Response
 					.status(200)
 					.entity("Problem with JSON Parsing for PostgreSQL: "
 							+ e.getMessage()).build();
 		}
-		return Response.status(200).entity(responseResult).build();
 	}
 
-	private Tuple.Tuple3<List<String>, List<String>, List<List<String>>> executeQueryPostgres(
-			final String query) throws SQLException {
-		List<String> colNames = null;
-		List<String> colTypes = null;
-		List<List<String>> rows = new ArrayList<List<String>>();
+	private String getJSONString(QueryResponseTupleList resp)
+			throws JsonProcessingException {
+		String responseResult;
+		try {
+			responseResult = ObjectMapperResource.INSTANCE.getObjectMapper()
+					.writeValueAsString(resp);
+			return responseResult;
+		} catch (JsonProcessingException e) {
+			e.printStackTrace();
+			throw e;
+		}
+	}
 
+	private QueryResult executeQueryPostgreSQL(final String query)
+			throws SQLException {
 		Connection con = null;
 		Statement st = null;
 		ResultSet rs = null;
@@ -84,29 +135,15 @@ public class PostgreSQLHandler implements DBHandler {
 			con = PostgreSQLInstance.getConnection();
 			st = con.createStatement();
 			rs = st.executeQuery(query);
-
-			if (rs == null)
-				return null;
-			final ResultSetMetaData rsmd = rs.getMetaData();
-			colNames = Row.getColumnNames(rsmd);
-			colTypes = Row.getColumnTypes(rsmd);
-			List<Row> table = new ArrayList<Row>();
-			Row.formTable(rs, table);
-			for (Row row : table) {
-				List<String> resultRowList = new ArrayList<String>();
-				for (Entry<Object, Class> col : row.row) {
-					// System.out.print(" > "
-					// + ((col.getValue()).cast(col.getKey())));
-					resultRowList.add(col.getValue().cast(col.getKey())
-							.toString());
-				}
-				// System.out.println();
-				rows.add(resultRowList);
-			}
+			ResultSetMetaData rsmd = rs.getMetaData();
+			List<String> colNames = getColumnNames(rsmd);
+			List<String> types = getColumnTypes(rsmd);
+			List<List<String>> rows = getRows(rs);
+			return new QueryResult(rows, types, colNames);
 		} catch (SQLException ex) {
 			Logger lgr = Logger.getLogger(QueryClient.class.getName());
 			ex.printStackTrace();
-			lgr.log(Level.ERROR, ex.getMessage(), ex);
+			lgr.log(Level.ERROR, ex.getMessage() + "; query: " + query, ex);
 			throw ex;
 		} finally {
 			try {
@@ -122,20 +159,55 @@ public class PostgreSQLHandler implements DBHandler {
 			} catch (SQLException ex) {
 				Logger lgr = Logger.getLogger(QueryClient.class.getName());
 				ex.printStackTrace();
-				lgr.log(Level.INFO, ex.getMessage(), ex);
+				lgr.log(Level.INFO, ex.getMessage() + "; query: " + query, ex);
 				throw ex;
 			}
 		}
-		Tuple.Tuple3<List<String>, List<String>, List<List<String>>> result = new Tuple.Tuple3<List<String>, List<String>, List<List<String>>>(
-				colNames, colTypes, rows);
-		return result;
 	}
 
-	/**
-	 * @param args
-	 */
-	public static void main(String[] args) {
+	public static List<List<String>> getRows(final ResultSet rs)
+			throws SQLException {
+		if (rs == null) {
+			return null;
+		}
+		List<List<String>> rows = new ArrayList<>();
+		try {
+			ResultSetMetaData rsmd = rs.getMetaData();
+			int NumOfCol = rsmd.getColumnCount();
+			while (rs.next()) {
+				List<String> current_row = new ArrayList<String>();
+				for (int i = 1; i <= NumOfCol; i++) {
+					Object value = rs.getObject(i);
+					if (value == null) {
+						current_row.add("null");
+					} else {
+						current_row.add(value.toString());
+					}
+				}
+				rows.add(current_row);
+			}
+			return rows;
+		} catch (SQLException e) {
+			throw e;
+		}
+	}
 
+	public static List<String> getColumnNames(final ResultSetMetaData rsmd)
+			throws SQLException {
+		List<String> columnNames = new ArrayList<String>();
+		for (int i = 1; i <= rsmd.getColumnCount(); ++i) {
+			columnNames.add(rsmd.getColumnLabel(i));
+		}
+		return columnNames;
+	}
+
+	public static List<String> getColumnTypes(final ResultSetMetaData rsmd)
+			throws SQLException {
+		List<String> columnTypes = new ArrayList<String>();
+		for (int i = 1; i <= rsmd.getColumnCount(); ++i) {
+			columnTypes.add(rsmd.getColumnTypeName(i));
+		}
+		return columnTypes;
 	}
 
 	@Override
