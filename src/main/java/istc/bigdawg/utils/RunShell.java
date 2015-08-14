@@ -13,7 +13,7 @@ import java.io.InputStream;
 import org.apache.commons.io.IOUtils;
 
 /**
- * @author adam
+ * @author Adam Dziedzic
  * 
  */
 public class RunShell {
@@ -35,7 +35,7 @@ public class RunShell {
 	public static InputStream runSciDB(String host, String query)
 			throws IOException, InterruptedException, SciDBException {
 		query = query.replace("^^", "'");
-		Process prop = new ProcessBuilder("iquery", "--host", host, "-aq",
+		Process prop = new ProcessBuilder("/opt/scidb/14.12/bin/iquery", "--host", host, "-aq",
 				query, "-o", "tsv+").start();
 		prop.waitFor();
 		int exitVal = prop.exitValue();

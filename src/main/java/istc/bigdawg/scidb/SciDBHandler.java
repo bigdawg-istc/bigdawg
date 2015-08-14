@@ -10,6 +10,7 @@ import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.query.DBHandler;
 import istc.bigdawg.query.QueryResponseTupleList;
 import istc.bigdawg.utils.Constants;
+import istc.bigdawg.utils.ObjectMapperResource;
 import istc.bigdawg.utils.RunShell;
 import istc.bigdawg.utils.Tuple.Tuple2;
 
@@ -70,16 +71,20 @@ public class SciDBHandler implements DBHandler {
 			InterruptedException, SciDBException {
 		String sciDBHostname = BigDawgConfigProperties.INSTANCE
 				.getScidbHostname();
-		String sciDBUser = BigDawgConfigProperties.INSTANCE.getScidbUser();
-		String sciDBPassword = BigDawgConfigProperties.INSTANCE
-				.getScidbPassword();
-		System.out.println("sciDBHostname: " + sciDBHostname);
-		System.out.println("sciDBUser: " + sciDBUser);
-		System.out.println("sciDBPassword: " + sciDBPassword);
-		InputStream resultInStream = RunShell.runSciDB(sciDBHostname,
-				queryString);
-		String resultString = IOUtils.toString(resultInStream,
-				Constants.ENCODING);
+//		String sciDBUser = BigDawgConfigProperties.INSTANCE.getScidbUser();
+//		String sciDBPassword = BigDawgConfigProperties.INSTANCE
+//				.getScidbPassword();
+//		System.out.println("sciDBHostname: " + sciDBHostname);
+//		System.out.println("sciDBUser: " + sciDBUser);
+//		System.out.println("sciDBPassword: " + sciDBPassword);
+		
+		long lStartTime = System.nanoTime();
+		String resultString = getDataFromSciDB(queryString,sciDBHostname);
+		System.out.print("SciDB query execution time milliseconds: "
+				+ (System.nanoTime() - lStartTime) / 1000000 + ",");
+		//System.out.println("result_string: "+resultString);
+		
+		lStartTime=System.nanoTime();
 		Tuple2<List<String>, List<List<String>>> parsedData = ParseSciDBResponse
 				.parse(resultString);
 		List<String> colNames = parsedData.getT1();
@@ -87,8 +92,23 @@ public class SciDBHandler implements DBHandler {
 		QueryResponseTupleList resp = new QueryResponseTupleList("OK", 200,
 				tuples, 1, 1, colNames, new ArrayList<String>(), new Timestamp(
 						0));
-		String responseResult = new ObjectMapper().writeValueAsString(resp);
+		System.out.print("Parsing data time milliseconds: "
+				+ (System.nanoTime() - lStartTime) / 1000000 + ",");
+		
+		lStartTime=System.nanoTime();
+		String responseResult = ObjectMapperResource.INSTANCE.getObjectMapper().writeValueAsString(resp);
+		System.out.print("JSON formatting time milliseconds: "
+				+ (System.nanoTime() - lStartTime) / 1000000 + ",");
+		
 		return responseResult;
+	}
+	
+	private String getDataFromSciDB(final String queryString, final String sciDBHostname) throws IOException, InterruptedException, SciDBException {
+		InputStream resultInStream = RunShell.runSciDB(sciDBHostname,
+				queryString);
+		String resultString = IOUtils.toString(resultInStream,
+				Constants.ENCODING);
+		return resultString;
 	}
 
 	/**
@@ -96,8 +116,9 @@ public class SciDBHandler implements DBHandler {
 	 */
 	public static void main(String[] args) {
 		try {
-			String resultSciDB = new SciDBHandler().executeQueryScidb("adam");
-			System.out.println(resultSciDB);
+			//String resultSciDB = new SciDBHandler().executeQueryScidb("list(^^arrays^^)");
+			String resultSciDB = new SciDBHandler().executeQueryScidb("scan(waveform_test_1GB)");
+			//System.out.println(resultSciDB);
 		} catch (IOException | InterruptedException | SciDBException e) {
 			e.printStackTrace();
 		}
