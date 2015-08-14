@@ -4,16 +4,6 @@
  */
 package istc.bigdawg.query;
 
-import istc.bigdawg.accumulo.AccumuloHandler;
-import istc.bigdawg.exceptions.NotSupportIslandException;
-import istc.bigdawg.exceptions.ShellScriptException;
-import istc.bigdawg.myria.MyriaHandler;
-import istc.bigdawg.postgresql.PostgreSQLHandler;
-import istc.bigdawg.query.parser.Parser;
-import istc.bigdawg.query.parser.simpleParser;
-import istc.bigdawg.scidb.SciDBHandler;
-import istc.bigdawg.utils.ObjectMapperResource;
-
 import java.io.IOException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -30,7 +20,15 @@ import org.apache.accumulo.core.client.AccumuloException;
 import org.apache.accumulo.core.client.AccumuloSecurityException;
 import org.apache.accumulo.core.client.TableNotFoundException;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import istc.bigdawg.accumulo.AccumuloHandler;
+import istc.bigdawg.exceptions.NotSupportIslandException;
+import istc.bigdawg.exceptions.ShellScriptException;
+import istc.bigdawg.myria.MyriaHandler;
+import istc.bigdawg.postgresql.PostgreSQLHandler;
+import istc.bigdawg.query.parser.Parser;
+import istc.bigdawg.query.parser.simpleParser;
+import istc.bigdawg.scidb.SciDBHandler;
+import istc.bigdawg.utils.ObjectMapperResource;
 
 /**
  * @author Adam Dziedzic
@@ -123,9 +121,10 @@ public class QueryClient {
 	public static void main(String[] args) {
 		QueryClient qClient = new QueryClient();
 		// qClient.executeQueryPostgres("Select * from books");
-		// Response response =
-		// qClient.query("{\"query\":\"RELATION(select * from mimic2v26.d_patients limit 5)\",\"authorization\":{},\"tuplesPerPage\":1,\"pageNumber\":1,\"timestamp\":\"2012-04-23T18:25:43.511Z\"}");
-		int[] limit_tab = { 100000 };
+		Response response1 =
+		qClient.query("{\"query\":\"RELATION(select * from mimic2v26.d_patients limit 5)\",\"authorization\":{},\"tuplesPerPage\":1,\"pageNumber\":1,\"timestamp\":\"2012-04-23T18:25:43.511Z\"}");
+		System.out.println(response1.getEntity());
+
 		int max_limit = 10000;
 		for (int limit = 1; limit <= max_limit; limit = limit * 2) {
 			System.out.print("limit: " + limit + ",");

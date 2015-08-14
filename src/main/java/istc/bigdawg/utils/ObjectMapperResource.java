@@ -6,7 +6,7 @@ package istc.bigdawg.utils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
- * @author adam
+ * @author Adam Dziedzic
  * 
  */
 public enum ObjectMapperResource {

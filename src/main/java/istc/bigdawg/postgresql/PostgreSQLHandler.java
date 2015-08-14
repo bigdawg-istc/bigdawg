@@ -3,12 +3,6 @@
  */
 package istc.bigdawg.postgresql;
 
-import istc.bigdawg.BDConstants.Shim;
-import istc.bigdawg.query.DBHandler;
-import istc.bigdawg.query.QueryClient;
-import istc.bigdawg.query.QueryResponseTupleList;
-import istc.bigdawg.utils.ObjectMapperResource;
-
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -24,7 +18,12 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+
+import istc.bigdawg.BDConstants.Shim;
+import istc.bigdawg.query.DBHandler;
+import istc.bigdawg.query.QueryClient;
+import istc.bigdawg.query.QueryResponseTupleList;
+import istc.bigdawg.utils.ObjectMapperResource;
 
 /**
  * @author Adam Dziedzic
