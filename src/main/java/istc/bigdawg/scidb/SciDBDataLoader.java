@@ -72,14 +72,14 @@ public class SciDBDataLoader {
 				arrayName).start();
 		prop.waitFor();
 		int exitVal = prop.exitValue();
-		if (exitVal != 0) {
-			throw new SciDBLoaderException(
+		//if (exitVal != 0) {
+		throw new SciDBLoaderException(
 					"Problem with the data loading script: " + script
 							+ " data path: " + dataLocation + " flatArrayName: "
 							+ flatArrayName + " arrayName: " + arrayName
 							+ ". Process returned value: " + exitVal);
-		}
-		return prop.getInputStream();
+		//}
+		//return prop.getInputStream();
 	}
 
 	/**

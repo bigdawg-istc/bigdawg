@@ -34,6 +34,7 @@ public class RunShell {
 
 	public static InputStream runSciDB(String host, String query)
 			throws IOException, InterruptedException, SciDBException {
+		System.out.println("query in runSciDB: "+query);
 		query = query.replace("^^", "'");
 		Process prop = new ProcessBuilder("/opt/scidb/14.12/bin/iquery", "--host", host, "-aq",
 				query, "-o", "tsv+").start();
