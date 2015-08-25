@@ -150,3 +150,23 @@ cd /opt/scidb/14.12/bin
 ./scidb.py stop_all single_server
 
 ./scidb.py start_all single_server
+
+
+Dealing with the MIT TXE servre
+--------
+
+# password for the database: mimic01
+
+cd /home/gridsan/groups/databases/mimic01
+
+# folder where the server is running
+
+cd /home/gridsan/groups/istcdata/technology/bigdawg
+
+curl -v -H "Content-Type: application/json" -X POST -d '{"query":"RELATION(select * from mimic2v26.d_patients limit 5)","authorization":{},"tuplesPerPage":1,"pageNumber":1,"timestamp":"2012-04-23T18:25:43.511Z"}' http://172.16.4.61:8080/bigdawg/query
+
+curl -H "Content-Type: application/json" -X POST -d '{"query":"checkHeartRate","authorization":{}, "pushNotify":"true"}' http://172.16.4.61:8080/bigdawg/registeralert
+
+# run code from the BigDAWG bitbucket repo on the txe server
+
+nohup mvn exec:java 2>&1 > bigdawg.log &
