@@ -16,11 +16,14 @@ import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.httpclient.methods.PostMethod;
 import org.apache.commons.httpclient.methods.StringRequestEntity;
 
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class AlertManager {
-	Logger log = org.apache.log4j.Logger.getLogger(AlertManager.class
+	private static Logger log = org.apache.log4j.Logger.getLogger(AlertManager.class
 			.getName());
 
 	public static void RegisterDBEvent(DBAlert alert) throws AlertException{
