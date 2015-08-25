@@ -93,16 +93,20 @@ public class PostgreSQLHandler implements DBHandler {
 							+ e.getMessage() + "; query: " + queryString)
 					.build();
 		}
-		System.out.print("PostgreSQL query execution time milliseconds: "
-				+ (System.nanoTime() - lStartTime) / 1000000 + ",");
+		String messageQuery = "PostgreSQL query execution time milliseconds: "
+				+ (System.nanoTime() - lStartTime) / 1000000 + ",";
+		System.out.print(messageQuery);
+		log.info(messageQuery);
 		QueryResponseTupleList resp = new QueryResponseTupleList("OK", 200,
 				queryResult.getRows(), 1, 1, queryResult.getColNames(),
 				queryResult.getTypes(), new Timestamp(0));
 		try {
 			lStartTime = System.nanoTime();
 			String jsonResult = getJSONString(resp);
-			System.out.print("format JSON Java time milliseconds: "
-					+ (System.nanoTime() - lStartTime) / 1000000 + ",");
+			String messageJSON="format JSON Java time milliseconds: "
+					+ (System.nanoTime() - lStartTime) / 1000000 + ",";
+			System.out.print(messageJSON);
+			log.info(messageJSON);
 			return Response.status(200).entity(jsonResult).build();
 		} catch (JsonProcessingException e) {
 			return Response

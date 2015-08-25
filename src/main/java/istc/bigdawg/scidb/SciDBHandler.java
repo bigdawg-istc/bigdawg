@@ -80,8 +80,10 @@ public class SciDBHandler implements DBHandler {
 		
 		long lStartTime = System.nanoTime();
 		String resultString = getDataFromSciDB(queryString,sciDBHostname);
-		System.out.print("SciDB query execution time milliseconds: "
-				+ (System.nanoTime() - lStartTime) / 1000000 + ",");
+		String messageGetData="SciDB query execution time milliseconds: "
+				+ (System.nanoTime() - lStartTime) / 1000000 + ",";
+		System.out.print(messageGetData);
+		log.info(messageGetData);
 		//System.out.println("result_string: "+resultString);
 		
 		lStartTime=System.nanoTime();
@@ -92,13 +94,17 @@ public class SciDBHandler implements DBHandler {
 		QueryResponseTupleList resp = new QueryResponseTupleList("OK", 200,
 				tuples, 1, 1, colNames, new ArrayList<String>(), new Timestamp(
 						0));
-		System.out.print("Parsing data time milliseconds: "
-				+ (System.nanoTime() - lStartTime) / 1000000 + ",");
+		String messageParsing = "Parsing data time milliseconds: "
+				+ (System.nanoTime() - lStartTime) / 1000000 + ","; 
+		System.out.print(messageParsing);
+		log.info(messageParsing);
 		
 		lStartTime=System.nanoTime();
 		String responseResult = ObjectMapperResource.INSTANCE.getObjectMapper().writeValueAsString(resp);
-		System.out.print("JSON formatting time milliseconds: "
-				+ (System.nanoTime() - lStartTime) / 1000000 + ",");
+		String messageJSON="JSON formatting time milliseconds: "
+				+ (System.nanoTime() - lStartTime) / 1000000 + ",";
+		System.out.print(messageJSON);
+		log.info(messageJSON);
 		
 		return responseResult;
 	}
