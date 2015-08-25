@@ -23,7 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class AlertManager {
-	private static Logger log = org.apache.log4j.Logger.getLogger(AlertManager.class
+	static org.apache.log4j.Logger log = org.apache.log4j.Logger.getLogger(AlertManager.class
 			.getName());
 
 	public static void RegisterDBEvent(DBAlert alert) throws AlertException{
