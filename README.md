@@ -155,11 +155,11 @@ cd /opt/scidb/14.12/bin
 Dealing with the MIT TXE servre
 --------
 
-# password for the database: mimic01
+// password for the database: mimic01
 
 cd /home/gridsan/groups/databases/mimic01
 
-# folder where the server is running
+// folder where the server is running
 
 cd /home/gridsan/groups/istcdata/technology/bigdawg
 
@@ -167,6 +167,6 @@ curl -v -H "Content-Type: application/json" -X POST -d '{"query":"RELATION(selec
 
 curl -H "Content-Type: application/json" -X POST -d '{"query":"checkHeartRate","authorization":{}, "pushNotify":"true"}' http://172.16.4.61:8080/bigdawg/registeralert
 
-# run code from the BigDAWG bitbucket repo on the txe server
+// run code from the BigDAWG bitbucket repo on the txe server
 
 nohup mvn exec:java 2>&1 > bigdawg.log &
