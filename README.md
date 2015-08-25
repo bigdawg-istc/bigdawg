@@ -8,6 +8,8 @@ in maven repository (~/.m2/repository) edit
  org/glassfish/jersey/project/2.19/project-2.19.pom
  to have [1.7,) instead of [1.7,
 
+Might need maven3 on ubuntu 14+. See http://sysads.co.uk/2014/05/install-apache-maven-3-2-1-ubuntu-14-04/
+
 Requires
 ----------
 Java 7
