@@ -20,7 +20,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class AlertManager {
-
+	Logger log = org.apache.log4j.Logger.getLogger(AlertManager.class
+			.getName());
 
 	public static void RegisterDBEvent(DBAlert alert) throws AlertException{
 		ObjectMapper mapper = new ObjectMapper();
@@ -40,13 +41,14 @@ public class AlertManager {
 			HttpClient client = new HttpClient();
 			int returnCode = client.executeMethod(post);
 			if (returnCode != 200){
+				log.info(String.format("Bad response  Return Code:%s  Post:%s",returnCode,post ));
 				throw new AlertException();
 			}
 		} catch (Exception ex){
 			ex.printStackTrace();
 			throw new AlertException(ex);
 		}
-		
+
 	}
 	public static void PushEvents(List<PushNotify> urls){
 
@@ -55,7 +57,7 @@ public class AlertManager {
 			GetMethod get = new GetMethod(u.url);
 			try {
 				//TODO post method
-				
+
 				System.out.println("Calling : "+u + " need to add: " + u.body);
 				int returnCode = client.executeMethod(get);
 				System.out.println(returnCode);
