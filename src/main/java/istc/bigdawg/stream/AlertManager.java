@@ -74,11 +74,10 @@ public class AlertManager {
 				e.printStackTrace();
 			}
 			String message = "Bad response. Return Code: " + returnCode + " Post: " + post.toString() + " Body: "
-					+ body;
+					+ body + " URL: "+BigDawgConfigProperties.INSTANCE.getsStoreURL();
 			log.error(message);
 			throw new AlertException(message);
 		}
-
 	}
 
 	public static void PushEvents(List<PushNotify> urls) {

@@ -3,15 +3,6 @@
  */
 package istc.bigdawg.accumulo;
 
-import istc.bigdawg.BDConstants;
-import istc.bigdawg.BDConstants.Shim;
-import istc.bigdawg.exceptions.ShellScriptException;
-import istc.bigdawg.properties.BigDawgConfigProperties;
-import istc.bigdawg.query.DBHandler;
-import istc.bigdawg.query.QueryResponseTupleString;
-import istc.bigdawg.utils.Constants;
-import istc.bigdawg.utils.RunShell;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.sql.Timestamp;
@@ -34,6 +25,15 @@ import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.io.Text;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import istc.bigdawg.BDConstants;
+import istc.bigdawg.BDConstants.Shim;
+import istc.bigdawg.exceptions.ShellScriptException;
+import istc.bigdawg.properties.BigDawgConfigProperties;
+import istc.bigdawg.query.DBHandler;
+import istc.bigdawg.query.QueryResponseTupleString;
+import istc.bigdawg.utils.Constants;
+import istc.bigdawg.utils.RunShell;
 
 /**
  * @author adam

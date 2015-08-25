@@ -68,7 +68,6 @@ public class Stream {
 			return Response.status(200).entity(mapper.writeValueAsString(resp))
 					.build();
 		} catch (AlertException e) {
-			e.printStackTrace();
 			return Response.status(500).entity(e.getMessage()).build();
 		} catch (UnrecognizedPropertyException e) {
 			e.printStackTrace();
@@ -78,7 +77,7 @@ public class Stream {
 			return Response.status(500).entity(e.getMessage()).build();
 		} catch (IOException e) {
 			e.printStackTrace();
-			return Response.status(500).entity("yikes").build();
+			return Response.status(500).entity(e.getMessage()).build();
 		}
 	}
 
