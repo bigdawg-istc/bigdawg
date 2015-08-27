@@ -152,7 +152,7 @@ cd /opt/scidb/14.12/bin
 ./scidb.py start_all single_server
 
 
-Dealing with the MIT TXE servre
+Dealing with the MIT TXE server
 --------
 
 // password for the database: mimic01
