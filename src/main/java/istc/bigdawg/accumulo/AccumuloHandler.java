@@ -28,6 +28,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import istc.bigdawg.BDConstants;
 import istc.bigdawg.BDConstants.Shim;
+import istc.bigdawg.exceptions.AccumuloBigDawgException;
 import istc.bigdawg.exceptions.ShellScriptException;
 import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.query.DBHandler;
@@ -95,7 +96,7 @@ public class AccumuloHandler implements DBHandler {
 
 	private String executeQueryAccumuloPure(String table)
 			throws TableNotFoundException, AccumuloException,
-			AccumuloSecurityException, IOException {
+			AccumuloSecurityException, IOException, AccumuloBigDawgException {
 		// specify which visibilities we are allowed to see
 		// Authorizations auths = new Authorizations("public");
 		Authorizations auths = new Authorizations();

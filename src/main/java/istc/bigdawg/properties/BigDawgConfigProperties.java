@@ -15,7 +15,8 @@ public enum BigDawgConfigProperties {
 	private String postgreSQLUser;
 	private String postgreSQLPassword;
 
-	private String accumuloIstance;
+	private String accumuloIstanceType;
+	private String accumuloIstanceName;
 	private String accumuloZooKeepers;
 	private String accumuloUser;
 	private String accumuloPasswordToken;
@@ -57,7 +58,8 @@ public enum BigDawgConfigProperties {
 		this.postgreSQLUser = prop.getProperty("main.postgresql.user");
 		this.postgreSQLPassword = prop.getProperty("main.postgresql.password");
 
-		this.accumuloIstance = prop.getProperty("main.accumulo.instanceName");
+		this.accumuloIstanceType = prop.getProperty("main.accumulo.instanceType");
+		this.accumuloIstanceName = prop.getProperty("main.accumulo.instanceName");
 		this.accumuloZooKeepers = prop.getProperty("main.accumulo.zooKeepers");
 		this.accumuloUser = prop.getProperty("main.accumulo.user");
 		this.accumuloPasswordToken = prop
@@ -76,10 +78,17 @@ public enum BigDawgConfigProperties {
 		
 	}
 	/**
-	 * @return the accumuloIstance
+	 * @return the accumuloIstanceType
 	 */
-	public String getAccumuloIstance() {
-		return accumuloIstance;
+	public String getAccumuloIstanceType() {
+		return accumuloIstanceType;
+	}
+	
+	/**
+	 * @return the accumuloIstanceType
+	 */
+	public String getAccumuloIstanceName() {
+		return accumuloIstanceName;
 	}
 
 	/**
