@@ -1,0 +1,84 @@
+Hadoop is installed in: /home/adam/Chicago/Installs/hadoop-2.6.0
+
+according to this recipe: https://www.digitalocean.com/community/tutorials/how-to-install-the-big-data-friendly-apache-accumulo-nosql-database-on-ubuntu-14-04
+
+# check what nodes are running with jps
+jps #- Java Virtual Machine Process Status Tool
+
+Nodes in hadoop:
+DataNode
+NameNode
+SecondaryNameNode
+
+Installs/hadoop-2.6.0/sbin/start-dfs.sh # to start hadoop nodes
+Installs/hadoop-2.6.0/sbin/stop-dfs.sh # Stop Hadoop's nodes
+
+adam@gefion:~/Chicago/Installs/hadoop-2.6.0/bin$ ./hadoop fs -rm -R hdfs://localhost:9000/accumulo
+15/07/12 21:20:33 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+15/07/12 21:20:35 INFO fs.TrashPolicyDefault: Namenode trash configuration: Deletion interval = 0 minutes, Emptier interval = 0 minutes.
+Deleted hdfs://localhost:9000/accumulo
+
+# if there is a problem with a data node then remove is and then restart the datanode deamon
+# check where the data node is: 
+adam@gefion:~/Chicago/Installs/hadoop-2.6.0$ cat etc/hadoop/hdfs-site.xml 
+
+remove the name node folder: adam@gefion:~/Chicago/Installs/hadoop-2.6.0$ rm -r hdfs_storage/name/
+remove the data node folder: adam@gefion:~/Chicago/Installs/hadoop-2.6.0$ rm -r hdfs_storage/data/
+
+format the file system: adam@gefion:~/Chicago/Installs/hadoop-2.6.0$ bin/hdfs namenode -format
+Start NameNode daemon and DataNode daemon: sbin/start-dfs.sh
+adam@gefion:~/Chicago/Installs/hadoop-2.6.0$ ./sbin/start-dfs.sh 
+
+cat etc/hadoop/core-site.xml:
+<configuration>
+    <property>
+        <name>fs.defaultFS</name>
+        <value>hdfs://localhost:9000</value>
+    </property>
+</configuration>
+
+cat etc/hadoop/hdfs-site.xml 
+<configuration>
+  <property>
+    <name>dfs.replication</name>
+    <value>1</value>
+  </property>
+  <property>
+    <name>dfs.name.dir</name>
+    <value>hdfs_storage/name</value>
+  </property>
+  <property>
+    <name>dfs.data.dir</name>
+    <value>hdfs_storage/data</value>
+  </property>
+</configuration>
+
+check logs in the web browser: NameNode - http://localhost:50070/
+
+run MapReduce on YARN resource manager:
+
+sbin/stop-dfs.sh
+adam@francisco ~/Chicago/Installs/hadoop-2.6.0 $ ./sbin/stop-dfs.sh
+
+etc/hadoop/mapred-site.xml
+<configuration>
+    <property>
+        <name>mapreduce.framework.name</name>
+        <value>yarn</value>
+    </property>
+</configuration>
+
+cat etc/hadoop/yarn-site.xml
+<configuration>
+    <property>
+        <name>yarn.nodemanager.aux-services</name>
+        <value>mapreduce_shuffle</value>
+    </property>
+</configuration>
+
+adam@francisco ~/Chicago/Installs/hadoop-2.6.0 $ ./sbin/start-yarn.sh 
+starting yarn daemons
+starting resourcemanager, logging to /home/adam/Chicago/Installs/hadoop-2.6.0/logs/yarn-adam-resourcemanager-francisco.out
+localhost: starting nodemanager, logging to /home/adam/Chicago/Installs/hadoop-2.6.0/logs/yarn-adam-nodemanager-francisco.out
+
+

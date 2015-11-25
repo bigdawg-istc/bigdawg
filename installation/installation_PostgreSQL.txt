@@ -1,0 +1,235 @@
+ttps://wiki.postgresql.org/wiki/YUM_Installation
+
+0. System description
+-bash-4.1$ uname -a
+Linux diascld27 2.6.32-431.29.2.el6.x86_64 #1 SMP Sun Jul 27 15:55:46 EDT 2014 x86_64 x86_64 x86_64 GNU/Linux
+
+-bash-4.1$ lsb_release -a
+LSB Version:	:base-4.0-amd64:base-4.0-noarch:core-4.0-amd64:core-4.0-noarch:graphics-4.0-amd64:graphics-4.0-noarch:printing-4.0-amd64:printing-4.0-noarch
+Distributor ID:	RedHatEnterpriseServer
+Description:	Red Hat Enterprise Linux Server release 6.5 (Santiago)
+Release:	6.5
+Codename:	Santiago
+
+1. On Red Hat: /etc/yum/pluginconf.d/rhnplugin.conf [main] section 
+append a line (otherwise dependencies might resolve to the postgresql supplied by the base repository):
+exclude=postgresql*
+
+2. A PGDG RPM (RedHat Package Manager) file is available for each distribution/architecture/database version combination. Browse http://yum.postgresql.org and find your correct RPM. For example, to install PostgreSQL 9.3 on RedHat 6 64-bit: 
+
+sudo yum localinstall http://yum.postgresql.org/9.3/redhat/rhel-6-x86_64/pgdg-redhat93-9.3-1.noarch.rpm
+
+## installation from the source files
+3. wget  ftp://ftp.postgresql.org/pub/source/v9.3.2/postgresql-9.3.2.tar.bz2
+unpack: tar -vxjf postgresql-9.3.2.tar.bz2 
+
+https://wiki.postgresql.org/wiki/Compile_and_Install_from_source_code
+4. sudo yum install -y bison-devel readline-devel zlib-devel openssl-devel wget
+5. sudo yum groupinstall -y 'Development Tools'
+6. sudo yum install -y yum-fastestmirror
+7. ./configure --prefix=/cloud_store/dziedzic/databases/PostgreSQL/pgsql CFLAGS="$CFLAGS -O2"
+or ./configure --prefix=/cloud_store/dziedzic/databases/PostgreSQL/pgsql CFLAGS="$CFLAGS -O0"
+8. gmake world # build everything that can be built, including the documentation (HTML and man pages), and the additional modules (contrib)
+gmake install-world
+
+9. in .bash_profile (for only console access e.g. via ssh) or in .bashrc (if you login graphically): 
+export LD_LIBRARY_PATH=/home/dziedzic/cloud_store/databases/PostgreSQL/pgsql/lib:$LD_LIBRARY
+export PATH=/home/dziedzic/cloud_store/databases/PostgreSQL/pgsql/bin:$PATH
+export MANPATH=/home/dziedzic/cloud_store/databases/PostgreSQL/pgsql/share/man:$MANPATH
+export PGDATA=/home/dziedzic/cloud_store/databases/PostgreSQL/pgsql/data
+
+10. Next steps: http://www.postgresql.org/docs/9.3/interactive/postgres-user.html
+
+11. in the folder: /home/dziedzic/cloud_store/databases/PostgreSQL/pgsql/bin
+run command: initdb /cloud_store/dziedzic/databases/PostgreSQL/pgsql/data -W # create space for data files
+superuser pass: postgres
+
+initdb /dev/shm/PostgreSQL/pgsql/data -W
+
+pg_ctl start -D /cloud_store/dziedzic/databases/PostgreSQL/pgsql/data -l logfile start # start database 
+pg_ctl start -D /dev/shm/PostgreSQL/pgsql/data start
+
+pg_ctl start -w -s -l /dev/null # to discard logging info, s stands for silent, w - waiting for the server to accept connections
+pg_ctl start -w -s -l /dev/null -D /dev/shm/PostgreSQL/pgsql/data -l logfile
+
+$ createuser -d --interactive -s --replication dziedzic # dziedzic or another user's name
+$ psql -U dziedzic -d postgres # postgres is a default database that already exists
+
+createdb -h 127.0.0.1 -p 5432 -U dziedzic -O dziedzic loadDB # create a database, by user dziedzic -U, owner -O dziedzic, name of the database: loadDB
+
+# by default there are two databases: postgres and template1
+createdb -h 127.0.0.1 -p 5432 -U dziedzic -O dziedzic mydb # create database for initial tests
+
+sources: https://access.redhat.com/documentation/en-US/JBoss_Operations_Network/2.1/html/Installation_Guide/Installation_Guide-Database-PostgreSQL_Quick_Start_Installation.html
+
+# for user dziedzic
+psql mydb # connect to the mydb database
+
+# stop the postgres database server (deamon)
+pg_ctl stop # it is worth checking that there are no other connections to the database - if so the server will wait for their quit to stop
+
+000000010000001400000099
+find -L /pgdata/pg_xlog -not -newer 000000010000001400000099 | sort | less
+
+du ../pg_xlog/
+0  ../pg_xlog/archive_status
+1671168	../pg_xlog/
+-bash-4.1$ ls | wc -l
+103
+
+echo 3 | sudo tee /proc/sys/vm/drop_caches && time ./pcopy /dev/shm/data10_1.csv 128
+3
+
+real	1m38.561s
+user	0m2.681s
+sys	0m37.469s
+after parallel-copy:
+0     ../pg_xlog/archive_status
+2310144	../pg_xlog/
+-bash-4.1$ ls | wc -l
+142
+
+increase: about: 640 MB
+
+
+000000010000001500000089
+pg_controldata path_to_data
+pg_archivecleanup ../pg_xlog 000000010000001500000089
+
+du ../pg_xlog/
+0  ../pg_xlog/archive_status
+1671168	../pg_xlog/
+after: echo 3 | sudo tee /proc/sys/vm/drop_caches && time ./pparse -i /dev/shm/data10_1.csv -t 128 -p bulkload
+
+3
+input file /dev/shm/data10_1.csv
+using 128 threads
+Finished wirting 104857600 bytes
+Finished wirting 209715200 bytes
+Finished wirting 314572800 bytes
+Finished wirting 419430400 bytes
+Finished wirting 524288000 bytes
+Finished wirting 629145600 bytes
+Finished wirting 734003200 bytes
+Finished wirting 838860800 bytes
+Finished wirting 943718400 bytes
+Finished wirting 1048576000 bytes
+Finished wirting 1153433600 bytes
+Finished wirting 1258291200 bytes
+Finished wirting 1363148800 bytes
+Finished wirting 1468006400 bytes
+Finished wirting 1572864000 bytes
+Finished wirting 1677721600 bytes
+Finished wirting 1782579200 bytes
+Finished wirting 1887436800 bytes
+Finished wirting 1992294400 bytes
+Finished wirting 2097152000 bytes
+Finished wirting 2202009600 bytes
+Finished wirting 2306867200 bytes
+Finished wirting 2411724800 bytes
+Finished wirting 2516582400 bytes
+Finished wirting 2621440000 bytes
+Finished wirting 2726297600 bytes
+Finished wirting 2831155200 bytes
+Finished wirting 2936012800 bytes
+Finished wirting 3040870400 bytes
+Finished wirting 3145728000 bytes
+Finished wirting 3250585600 bytes
+Finished wirting 3355443200 bytes
+Finished wirting 3460300800 bytes
+Finished wirting 3565158400 bytes
+Finished wirting 3670016000 bytes
+Finished wirting 3774873600 bytes
+Finished wirting 3879731200 bytes
+Finished wirting 3984588800 bytes
+Finished wirting 4089446400 bytes
+Finished wirting 4194304000 bytes
+Finished wirting 4299161600 bytes
+Finished wirting 4404019200 bytes
+Finished wirting 4508876800 bytes
+Finished wirting 4613734400 bytes
+Finished wirting 4718592000 bytes
+Finished wirting 4823449600 bytes
+Finished wirting 4928307200 bytes
+Finished wirting 5033164800 bytes
+Finished wirting 5138022400 bytes
+Finished wirting 5242880000 bytes
+Finished wirting 5347737600 bytes
+Finished wirting 5452595200 bytes
+Finished wirting 5557452800 bytes
+Finished wirting 5662310400 bytes
+Finished wirting 5767168000 bytes
+Finished wirting 5872025600 bytes
+Finished wirting 5976883200 bytes
+Finished wirting 6081740800 bytes
+Finished wirting 6186598400 bytes
+Finished wirting 6291456000 bytes
+Finished wirting 6396313600 bytes
+Finished wirting 6501171200 bytes
+Finished wirting 6606028800 bytes
+Finished wirting 6710886400 bytes
+Finished wirting 6815744000 bytes
+Finished wirting 6920601600 bytes
+Finished wirting 7025459200 bytes
+Finished wirting 7130316800 bytes
+Finished wirting 7235174400 bytes
+Finished wirting 7340032000 bytes
+Finished wirting 7444889600 bytes
+Finished wirting 7549747200 bytes
+Finished wirting 7654604800 bytes
+Finished wirting 7759462400 bytes
+Finished wirting 7864320000 bytes
+Finished wirting 7969177600 bytes
+Finished wirting 8074035200 bytes
+Finished wirting 8178892800 bytes
+Finished wirting 8283750400 bytes
+Finished wirting 8388608000 bytes
+Finished wirting 8493465600 bytes
+Finished wirting 8598323200 bytes
+Finished wirting 8703180800 bytes
+Finished wirting 8808038400 bytes
+Finished wirting 8912896000 bytes
+Finished wirting 9017753600 bytes
+Finished wirting 9122611200 bytes
+Finished wirting 9227468800 bytes
+Finished wirting 9332326400 bytes
+Finished wirting 9437184000 bytes
+Finished wirting 9542041600 bytes
+Finished wirting 9646899200 bytes
+Finished wirting 9751756800 bytes
+Finished wirting 9856614400 bytes
+Finished wirting 9961472000 bytes
+Finished wirting 10066329600 bytes
+Finished wirting 10171187200 bytes
+Finished wirting 10276044800 bytes
+Finished wirting 10380902400 bytes
+Finished wirting 10485760000 bytes
+Finished wirting 10590617600 bytes
+Finished wirting 10695475200 bytes
+Finished wirting 10737408000 bytes
+
+real	 2m50.749s
+user	 3m37.068s
+sys	 28m47.902s
+
+-bash-4.1$ ls | wc -l
+103
+-bash-4.1$ du ../pg_xlog/
+0	   ../pg_xlog/archive_status
+1671168	   ../pg_xlog/
+
+echo 3 | sudo tee /proc/sys/vm/drop_caches && time pg_bulkload -d test test_filein.ctl
+
+###########################################################################################
+
+adam home: -D /home/adam/Chicago/PostgreSQL/instance
+
+ubuntu VM servers: -D /home/ubuntu/data/PostgreSQL
+start postgres: ./pg_ctl -D /home/ubuntu/data/PostgreSQL/ -l /home/ubuntu/lologfile start
+
+scidb on ubuntu@big2: -D /var/lib/postgresql/9.3/main
+
+postgresql logs for mimic2: /home/ubuntu/logs_postgres
+
+psql -U pguser -d mimic2 -h localhost
+

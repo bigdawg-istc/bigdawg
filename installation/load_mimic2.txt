@@ -1,0 +1,13 @@
+find the mimic.pgd or mimic2.pgs file (around 179 MB)
+
+psql -c "create database mimic2" -d postgres -U pguser
+user psql -f mimic.pgd pguser # or another user, pass for pguser is test
+
+psql -d mimic2 -U pguser -c "select count(*) from mimic2v26.d_patients";
+
+should give:
+ count 
+-------
+   143
+(1 row)
+

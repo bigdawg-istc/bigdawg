@@ -1,0 +1,6 @@
+setauths -s public -u root # set for root to be able to read data with "public" security label
+
+insert row f1 q1 v1 -l A # after -l is the name of the authorization
+
+
+

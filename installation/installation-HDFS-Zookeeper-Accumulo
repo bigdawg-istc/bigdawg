@@ -1,0 +1,197 @@
+we have 5 machines:
+
+madison-master: master + slave
+addison-slave: slave
+division-slave: slave
+francisco-slave: slave
+wellington-slave: slave
+
+in ~/.bashrc
+
+#java environment varariable: start
+export JAVA_HOME=/usr/lib/jvm/java-7-openjdk-amd64
+export JAVA_BIN=$JAVA_HOME/bin
+export PATH=$JAVA_HOME:$JAVA_BIN:$PATH
+export CLASSPATH=.:/usr/java/lib/*.jar
+# end java
+
+$ sudo addgroup hadoop 
+$ sudo adduser --ingroup hadoop hduser
+
+user@ubuntu:~$ su - hduser
+hduser@ubuntu:~$ ssh-keygen -t rsa -P "" -b 4096
+
+hduser@ubuntu:~$ cat $HOME/.ssh/id_rsa.pub >> $HOME/.ssh/authorized_keys
+
+in /etc/sysctl.conf
+
+# disable ipv6
+net.ipv6.conf.all.disable_ipv6 = 1
+net.ipv6.conf.default.disable_ipv6 = 1
+net.ipv6.conf.lo.disable_ipv6 = 1
+
+sudo reboot
+
+check: cat /proc/sys/net/ipv6/conf/all/disable_ipv6
+A return value of 0 means IPv6 is enabled, a value of 1 means disabled (that’s what we want).
+
+## Create Hadoop directories for Namenode and Datanode
+sudo mkdir -p /usr/local/hadoop_tmp/hdfs/namenode
+sudo mkdir -p /usr/local/hadoop_tmp/hdfs/datanode
+
+## assign ownership of this Hadoop temp folder to Hadoop user
+sudo chown hduser:hadoop -R /usr/local/hadoop_tmp/
+sudo chmod 750 /usr/local/hadoop_tmp/
+
+sudo chown hduser:hadoop -R /usr/local/hadoop
+
+# -- HADOOP ENVIRONMENT VARIABLES START -- #
+export HADOOP_HOME=/usr/local/hadoop/hadoop/hadoop-2.6.0
+export PATH=$PATH:$HADOOP_HOME/bin
+export PATH=$PATH:$HADOOP_HOME/sbin
+export HADOOP_MAPRED_HOME=$HADOOP_HOME
+export HADOOP_COMMON_HOME=$HADOOP_HOME
+export HADOOP_HDFS_HOME=$HADOOP_HOME
+export YARN_HOME=$HADOOP_HOME
+export HADOOP_COMMON_LIB_NATIVE_DIR=$HADOOP_HOME/lib/native
+export HADOOP_OPTS="-Djava.library.path=$HADOOP_HOME/lib"
+# -- HADOOP ENVIRONMENT VARIABLES END -- #
+
+# Zookeeper environment variables
+export ZOOKEEPER_HOME=/usr/local/hadoop/zookeeper-3.4.6
+
+# accumulo                                                                                  
+export ACCUMULO_HOME=/usr/local/hadoop/accumulo-1.7.0
+
+hdfs namenode -format
+
+# start all nodes
+start-dfs.sh
+start-yarn.sh
+
+#stop
+stop-dfs.sh
+stop-yarn.sh
+
+# stop all
+$ /usr/local/hadoop/hadoop-2.6.0/bin/stop-all.sh (deprecated)
+
+graphical interface
+
+sudo service lightdm start
+sudo apt-get install xauth
+sudo apt-get install xorg
+sudo apt-get install openbox
+
+in the webbrowser:
+http://madison:8088/cluster/nodes
+
+hdfs dfsadmin -report
+
+sudo rsync -avxP /usr/local/hadoop/ hduser@francisco:/usr/local/hadoop/
+sudo rscyn sync_all.sh
+
+hduser@madison:~$ hadoop fs -mkdir /tpch
+hduser@madison:~$ hadoop fs -put /home/adam/data/tpch/tpch1G/csv/lineitem.csv /tpch/lineitem.csv
+hduser@madison:~$ hadoop fs -ls /tpch
+15/11/15 23:40:22 WARN util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+Found 1 items
+-rw-r--r--   1 hduser supergroup  753862072 2015-11-15 23:39 /tpch/lineitem.csv
+
+for a new node:
+scripts in /usr/local/hadoop/hadoop-2.6.0/sbin
+run sync_all.sh from adam
+run etc_hosts_sync.sh from root on madison
+
+# to update /etc/hosts on all nodes run on adam@madison:
+
+bash /usr/local/hadoop/hadoop-2.6.0/sbin/etc_hosts_sync.sh
+
+# to update hdfs settings on all nodes: 
+adam@madison:/usr/local/hadoop/hadoop-2.6.0/sbin$ sudo bash sync_all.sh 
+
+# this is the code to update /etc/hosts for all nodes
+adam@madison:/usr/local/hadoop/hadoop-2.6.0/sbin$ cat etc_hosts_sync.sh
+ #!/bin/bash  
+ for slave in addison division francisco wellington;
+ do  
+   scp /etc/hosts adam@${slave}:/etc/hosts  
+ done  
+# end of the code
+
+# Adam's local settings:
+
+# hadoop
+export HADOOP_HOME=/home/adam/Chicago/Installs/hadoop-2.6.0/
+export PATH=/home/adam/Chicago/Installs/hadoop-2.6.0/bin/:$PATH
+
+# zookeeper
+export ZOOKEEPER_HOME=/home/adam/Chicago/Installs/zookeeper-3.4.6/
+
+# accumulo                                                                                  
+export ACCUMULO_HOME=/home/adam/Chicago/Installs/accumulo-1.7.0/
+
+# java max heap size is set to: 4 GB
+
+adam@madison:~/Chicago/Installs/zookeeper-3.4.6/conf$ java -XX:+PrintFlagsFinal -version | grep -iE 'HeapSize|PermSize|ThreadStackSize'
+    uintx AdaptivePermSizeWeight                    = 20              {product}           
+     intx CompilerThreadStackSize                   = 0               {pd product}        
+    uintx ErgoHeapSizeLimit                         = 0               {product}           
+    uintx HeapSizePerGCThread                       = 87241520        {product}           
+    uintx InitialHeapSize                          := 261084608       {product}           
+    uintx LargePageHeapSizeThreshold                = 134217728       {product}           
+    uintx MaxHeapSize                              := 4177526784      {product}           
+    uintx MaxPermSize                               = 174063616       {pd product}        
+    uintx PermSize                                  = 21757952        {pd product}        
+     intx ThreadStackSize                           = 1024            {pd product}        
+     intx VMThreadStackSize                         = 1024            {pd product}        
+java version "1.7.0_79"
+
+
+# set up zookeeper myid files
+sudo mkdir /var/lib/zookeeper
+sudo echo "number from 1 to 5" | sudo tee /var/lib/zookeeper/myid
+sudo chown -R hduser:hadoop /var/lib/zookeeper
+
+# zookeeper - show what is the mode of the current server
+hduser@wellington ~ $ echo srvr | nc localhost 2181 | grep Mode
+Mode: follower
+
+# to start zookeeper on all the nodes:
+hduser@madison:/usr/local/hadoop/zookeeper-3.4.6/bin$ ./start_all_nodes.sh
+
+# remove directory for accumulo
+hadoop fs -rm -r hdfs://madison:9000/accumulo2
+
+hduser@madison:/usr/local/hadoop/accumulo-1.7.0/bin$ hadoop fs -ls /
+
+
+# configure accumulo
+hduser@madison:/usr/local/hadoop/accumulo-1.7.0/conf$ ../bin/accumulo init
+
+instance name: fullInstance
+pass: adam123
+
+# start accumulo:
+hduser@madison:/usr/local/hadoop/accumulo-1.7.0/bin$ ./start-all.sh 
+
+# links:
+http://pingax.com/install-hadoop2-6-0-on-ubuntu/
+
+# zookeeper
+https://zookeeper.apache.org/doc/r3.3.3/zookeeperStarted.html#sc_ConnectingToZooKeeper
+# connect
+adam@madison:~/Chicago/Installs/zookeeper-3.4.6/bin$ ./zkCli.sh -server 127.0.0.1:2181
+adam@madison:~/Chicago/Installs/zookeeper-3.4.6/bin$ ./zkCli.sh -server madison-master:2181
+
+# some basic operations
+[zk: 127.0.0.1:2181(CONNECTED) 2] create /zk_test my-data
+Created /zk_test
+[zk: 127.0.0.1:2181(CONNECTED) 3] ls /
+[accumulo, zookeeper, zk_test]
+
+madison.cs.uchicago.edu:8088/cluster/nodes
+
+Accumulo reports this whereas there is no such property in the hdfs-site.xml for hadoop 2.6.0:
+2015-11-25 17:19:26,126 [fs.VolumeManagerImpl] WARN : dfs.datanode.synconclose set to false in hdfs-site.xml: data loss is possible on hard system reset or power loss
+
