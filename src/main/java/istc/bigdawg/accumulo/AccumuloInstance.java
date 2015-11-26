@@ -3,13 +3,8 @@
  */
 package istc.bigdawg.accumulo;
 
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
-
-import istc.bigdawg.exceptions.AccumuloBigDawgException;
-import istc.bigdawg.properties.BigDawgConfigProperties;
 
 import org.apache.accumulo.core.client.AccumuloException;
 import org.apache.accumulo.core.client.AccumuloSecurityException;
@@ -20,7 +15,9 @@ import org.apache.accumulo.core.client.ZooKeeperInstance;
 import org.apache.accumulo.core.client.admin.TableOperations;
 import org.apache.accumulo.core.client.mock.MockInstance;
 import org.apache.accumulo.core.client.security.tokens.PasswordToken;
-import org.apache.hadoop.security.authentication.server.AuthenticationToken;
+
+import istc.bigdawg.exceptions.AccumuloBigDawgException;
+import istc.bigdawg.properties.BigDawgConfigProperties;
 
 /**
  * @author Adam Dziedzic

@@ -3,20 +3,28 @@
  */
 package istc.bigdawg.accumulo;
 
-import istc.bigdawg.exceptions.AccumuloBigDawgException;
-
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.Iterator;
+import java.util.Map.Entry;
 
 import org.apache.accumulo.core.client.AccumuloException;
 import org.apache.accumulo.core.client.AccumuloSecurityException;
 import org.apache.accumulo.core.client.BatchWriter;
 import org.apache.accumulo.core.client.BatchWriterConfig;
 import org.apache.accumulo.core.client.MutationsRejectedException;
+import org.apache.accumulo.core.client.Scanner;
 import org.apache.accumulo.core.client.TableNotFoundException;
+import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Mutation;
+import org.apache.accumulo.core.data.Range;
+import org.apache.accumulo.core.data.Value;
+import org.apache.accumulo.core.security.Authorizations;
+import org.apache.hadoop.io.Text;
+
+import istc.bigdawg.exceptions.AccumuloBigDawgException;
 
 /**
  * @author Adam Dziedzic
@@ -90,6 +98,22 @@ public class DataLoader {
 				acc.createTable(tableName2);
 				loader.loadFileToTable(fileName2, delimiter2, tableName2,
 						accQual);
+				
+				// Read data: http://bit.ly/1Hoyeqa
+				Range r = new Range();
+				Authorizations authorizations = new Authorizations();
+				Scanner scan = acc.getConn().createScanner(tableName, authorizations);
+				scan.setRange(r);
+				Iterator<Entry<Key,Value>> iter = scan.iterator();
+
+			    while (iter.hasNext()) {
+			      Entry<Key,Value> e = iter.next();
+			      Text colf = e.getKey().getColumnFamily();
+			      Text colq = e.getKey().getColumnQualifier();
+			      System.out.print("row: " + e.getKey().getRow() + ", colf: " + colf + ", colq: " + colq);
+			      System.out.println(", value: " + e.getValue().toString());
+			    }
+				
 
 			} catch (FileNotFoundException e) {
 				e.printStackTrace();

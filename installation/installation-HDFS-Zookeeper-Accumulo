@@ -161,7 +161,7 @@ Mode: follower
 hduser@madison:/usr/local/hadoop/zookeeper-3.4.6/bin$ ./start_all_nodes.sh
 
 # remove directory for accumulo
-hadoop fs -rm -r hdfs://madison:9000/accumulo2
+hadoop fs -rm -r hdfs://madison:9000/accumulo
 
 hduser@madison:/usr/local/hadoop/accumulo-1.7.0/bin$ hadoop fs -ls /
 
@@ -194,4 +194,34 @@ madison.cs.uchicago.edu:8088/cluster/nodes
 
 Accumulo reports this whereas there is no such property in the hdfs-site.xml for hadoop 2.6.0:
 2015-11-25 17:19:26,126 [fs.VolumeManagerImpl] WARN : dfs.datanode.synconclose set to false in hdfs-site.xml: data loss is possible on hard system reset or power loss
+
+hduser@madison:/usr/local/hadoop/accumulo-1.6.4$ ./bin/accumulo shell -u root -p adam123
+2015-11-25 20:20:04,550 [client.ClientConfiguration] WARN : Found no client.conf in default paths. Using default client configuration values.
+2015-11-25 20:20:04,646 [conf.ConfigSanityCheck] WARN : BAD CONFIG unrecognized property key (tservser.sort.buffer.size)
+
+Shell - Apache Accumulo Interactive Shell
+-
+- version: 1.6.4
+- instance name: fullInstance
+- instance id: e941ffcf-eb36-4ef0-a6fb-7f5005c0938c
+-
+- type 'help' for a list of available commands
+-
+root@fullInstance> 
+
+for accumulo it's amazingly difficult to get it running:
+
+log4j.properties - changed from INFO to DEBUG
+#  by default, log everything at INFO or higher to the console
+log4j.rootLogger=DEBUG,A1
+
+the master has to be spcified as localhost in masters!!!! yes, as LOCALHOST
+the master who also acts as slave has to be spcified once again as localhost
+
+it seems to me that slaves can be spcified normally
+
+# things to remember:
+synchronize the stuff: adam@madison:/usr/local/hadoop/hadoop-2.6.0/sbin$ ./sync_all.sh
+
+if somebody would like to search for bugs then accumulo is probably the best candidate - there are many of them
 
