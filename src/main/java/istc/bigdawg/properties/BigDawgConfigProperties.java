@@ -34,7 +34,7 @@ public enum BigDawgConfigProperties {
 
 	private BigDawgConfigProperties() throws AssertionError {
 		Properties prop = new Properties();
-		String propFileName = "bigdawg-config.properties";
+		String propFileName = "bigdawg-config.properties
 		InputStream inputStream = BigDawgConfigProperties.class
 				.getClassLoader().getResourceAsStream(propFileName);
 		if (inputStream != null) {
