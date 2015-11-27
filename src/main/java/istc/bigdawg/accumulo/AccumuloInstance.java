@@ -3,21 +3,30 @@
  */
 package istc.bigdawg.accumulo;
 
+import istc.bigdawg.exceptions.AccumuloBigDawgException;
+import istc.bigdawg.properties.BigDawgConfigProperties;
+
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map.Entry;
 
 import org.apache.accumulo.core.client.AccumuloException;
 import org.apache.accumulo.core.client.AccumuloSecurityException;
 import org.apache.accumulo.core.client.Connector;
 import org.apache.accumulo.core.client.Instance;
+import org.apache.accumulo.core.client.Scanner;
 import org.apache.accumulo.core.client.TableExistsException;
+import org.apache.accumulo.core.client.TableNotFoundException;
 import org.apache.accumulo.core.client.ZooKeeperInstance;
 import org.apache.accumulo.core.client.admin.TableOperations;
 import org.apache.accumulo.core.client.mock.MockInstance;
 import org.apache.accumulo.core.client.security.tokens.PasswordToken;
-
-import istc.bigdawg.exceptions.AccumuloBigDawgException;
-import istc.bigdawg.properties.BigDawgConfigProperties;
+import org.apache.accumulo.core.data.Key;
+import org.apache.accumulo.core.data.Range;
+import org.apache.accumulo.core.data.Value;
+import org.apache.accumulo.core.security.Authorizations;
+import org.apache.hadoop.io.Text;
 
 /**
  * @author Adam Dziedzic
@@ -145,7 +154,7 @@ public class AccumuloInstance {
 		AccumuloInstance accInst = new AccumuloInstance();
 		String instanceRawType = BigDawgConfigProperties.INSTANCE
 				.getAccumuloIstanceType();
-		System.out.println("instanceRawType:"+instanceRawType);
+		System.out.println("instanceRawType:" + instanceRawType);
 		accInst.instanceType = InstanceType.valueOf(instanceRawType);
 		accInst.instanceName = BigDawgConfigProperties.INSTANCE
 				.getAccumuloIstanceName();
@@ -189,6 +198,43 @@ public class AccumuloInstance {
 			System.out.println("Table " + tableName + " already exists.");
 		}
 		return false;
+	}
+
+	public Iterator<Entry<Key, Value>> getTableIterator(String table)
+			throws TableNotFoundException {
+		// Read data: http://bit.ly/1Hoyeqa
+		Range r = new Range();
+		Authorizations authorizations = new Authorizations();
+		Scanner scan = conn.createScanner(table, authorizations);
+		scan.setRange(r);
+		Iterator<Entry<Key, Value>> iter = scan.iterator();
+		return iter;
+	}
+	
+		public int countRows(final String tableName)
+			throws TableNotFoundException {
+		Iterator<Entry<Key, Value>> iter = this.getTableIterator(tableName);
+		int counter=0;
+		while (iter.hasNext()) {
+			++counter;
+		}
+		return counter;
+	}
+
+	public int readAllData(final String tableName)
+			throws TableNotFoundException {
+		Iterator<Entry<Key, Value>> iter = this.getTableIterator(tableName);
+		int counter=0;
+		while (iter.hasNext()) {
+			++counter;
+			Entry<Key, Value> e = iter.next();
+			Text colf = e.getKey().getColumnFamily();
+			Text colq = e.getKey().getColumnQualifier();
+			System.out.print("row: " + e.getKey().getRow() + ", colf: " + colf
+					+ ", colq: " + colq);
+			System.out.println(", value: " + e.getValue().toString());
+		}
+		return counter;
 	}
 
 	/**
