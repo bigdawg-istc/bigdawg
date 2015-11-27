@@ -203,18 +203,17 @@ public class AccumuloInstance {
 	public Iterator<Entry<Key, Value>> getTableIterator(String table)
 			throws TableNotFoundException {
 		// Read data: http://bit.ly/1Hoyeqa
-		Range r = new Range();
 		Authorizations authorizations = new Authorizations();
 		Scanner scan = conn.createScanner(table, authorizations);
-		scan.setRange(r);
+		scan.setRange(new Range()); // get all data sorted - we want to recover rows
 		Iterator<Entry<Key, Value>> iter = scan.iterator();
 		return iter;
 	}
 	
-		public int countRows(final String tableName)
+		public long countRows(final String tableName)
 			throws TableNotFoundException {
 		Iterator<Entry<Key, Value>> iter = this.getTableIterator(tableName);
-		int counter=0;
+		long counter=0;
 		while (iter.hasNext()) {
 			++counter;
 		}
