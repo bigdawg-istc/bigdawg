@@ -215,15 +215,16 @@ public class AccumuloInstance {
 		Iterator<Entry<Key, Value>> iter = this.getTableIterator(tableName);
 		long counter=0;
 		while (iter.hasNext()) {
+			iter.next();
 			++counter;
 		}
 		return counter;
 	}
 
-	public int readAllData(final String tableName)
+	public long readAllData(final String tableName)
 			throws TableNotFoundException {
 		Iterator<Entry<Key, Value>> iter = this.getTableIterator(tableName);
-		int counter=0;
+		long counter=0;
 		while (iter.hasNext()) {
 			++counter;
 			Entry<Key, Value> e = iter.next();

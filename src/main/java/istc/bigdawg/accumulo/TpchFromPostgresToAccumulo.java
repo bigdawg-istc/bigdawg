@@ -55,11 +55,11 @@ public class TpchFromPostgresToAccumulo {
 
 	// parameters
 	private int postgreSQLFetchSize = 1000;
-	private long AccumuloBatchWriterMaxMemory = 1000000L;
+	private long AccumuloBatchWriterMaxMemory = 10000L;
 	private int AccumuloBatchWriterMaxWriteThreads = 4;
 	private int postgreSQLWritebatchSize = 1000;
 	private int postgreSQLReaderCharSize = 1000000;
-	private char delimiter;
+	private char delimiter = '|';
 
 	public TpchFromPostgresToAccumulo() throws AccumuloException,
 			AccumuloSecurityException, AccumuloBigDawgException {
@@ -158,7 +158,7 @@ public class TpchFromPostgresToAccumulo {
 	public void createNewRowForPostgres(String[] row, StringBuilder sBuilder) {
 		// we finished a new row;
 		String rowString = ListConncatenator.joinList(row, delimiter, "\n");
-		System.out.println(rowString);
+		// System.out.println(rowString);
 		sBuilder.append(rowString);
 	}
 
@@ -168,10 +168,10 @@ public class TpchFromPostgresToAccumulo {
 		StringBuilder copyString = new StringBuilder();
 		copyString.append("COPY ");
 		copyString.append(postgresTable);
-		copyString.append(" FROM STDIN WITH (DELIMITER '|");
-		//copyString.append(delimiter);
+		copyString.append(" FROM STDIN WITH (DELIMITER '");
+		copyString.append(delimiter);
 		copyString.append("')");
-		System.out.println(copyString);
+		// System.out.println(copyString);
 		reader.unread(sBuilder.toString().toCharArray());
 		cpManager.copyIn(copyString.toString(), reader);
 		sBuilder.delete(0, sBuilder.length());
@@ -188,7 +188,7 @@ public class TpchFromPostgresToAccumulo {
 			if (rs == null) {
 				String message = "No results were fetched for the table: "
 						+ postgresTable;
-				System.out.println(message);
+				// System.out.println(message);
 				lgr.log(Level.INFO, message);
 				return;
 			}
@@ -211,13 +211,14 @@ public class TpchFromPostgresToAccumulo {
 			while (iter.hasNext()) {
 				Entry<Key, Value> e = iter.next();
 				Text thisRowId = e.getKey().getRow();
-				System.out.println(thisRowId);
+				// System.out.println(thisRowId);
 				// omit first initialization of rowId
 				if (rowId != null && !rowId.equals(thisRowId)) {
 					++fullCounter;
 					createNewRowForPostgres(row, sBuilder);
 					if (fullCounter % postgreSQLWritebatchSize == 0) {
-						flushRowsToPostgreSQL(sBuilder, reader, cpManager, postgresTable);
+						flushRowsToPostgreSQL(sBuilder, reader, cpManager,
+								postgresTable);
 					}
 					row = new String[numOfCol];
 				}
@@ -225,7 +226,7 @@ public class TpchFromPostgresToAccumulo {
 				Text colq = e.getKey().getColumnQualifier();
 				int thisColNum = Integer.valueOf(colq.toString());
 				String value = e.getValue().toString();
-				System.out.println(value);
+				// System.out.println(value);
 				// list is numbered from 0 (columns in postgresql are numbered
 				// from 1)
 				row[thisColNum - 1] = value;
@@ -269,7 +270,7 @@ public class TpchFromPostgresToAccumulo {
 			if (rs == null) {
 				String message = "No results were fetched for the table: "
 						+ postgresTable;
-				System.out.println(message);
+				// System.out.println(message);
 				lgr.log(Level.INFO, message);
 				return;
 			}
@@ -318,28 +319,22 @@ public class TpchFromPostgresToAccumulo {
 			return;
 		}
 		List<String> tables = new ArrayList<String>();
+//		tables.add("orders");
 		tables.add("region");
-		// tables.add("nation");
-		// tables.add("customer");
-		// tables.add("orders");
-		// tables.add("part");
-		// tables.add("partsupp");
-		// tables.add("supplier");
-		// tables.add("lineitem");
+//		tables.add("nation");
+//		tables.add("customer");
+//		tables.add("part");
+//		tables.add("partsupp");
+//		tables.add("supplier");
+//		tables.add("lineitem");
 
+		long lStartTime = System.nanoTime();
 		for (String table : tables) {
 			try {
 				try {
-					long lStartTime = System.nanoTime();
 					tpch.fromPostgresToAccumulo(table, table);
-					String message = "From Postgres to Accumulo execution time in seconds: "
-							+ (System.nanoTime() - lStartTime) / 1000000000L;
-					System.out.println(message);
-					lStartTime = System.nanoTime();
-					tpch.fromAccumuloToPostgres(table, table + "fromaccumulo");
-					message = "From Accumulo to Postgres execution time in seconds: "
-							+ (System.nanoTime() - lStartTime) / 1000000000L;
-					System.out.println(message);
+					// tpch.fromAccumuloToPostgres(table, table +
+					// "fromaccumulo");
 				} catch (AccumuloException e) {
 					e.printStackTrace();
 				} catch (AccumuloSecurityException e) {
@@ -353,13 +348,17 @@ public class TpchFromPostgresToAccumulo {
 				e.printStackTrace();
 			}
 		}
+		String message = "From Postgres to Accumulo execution time in seconds: "
+				+ (System.nanoTime() - lStartTime) / 1000000000L;
+		System.out.println(message);
+
 		for (String table : tables) {
 			try {
-				AccumuloInstance.getInstance().readAllData(table);
-				// int rowNumber =
-				// AccumuloInstance.getInstance().countRows(table);
-				// System.out.println("row number for table " + table +
-				// ": "rowNumber);
+				// AccumuloInstance.getInstance().readAllData(table);
+				long rowNumber = AccumuloInstance.getInstance()
+						.countRows(table);
+				System.out.println("row number for table " + table + ": "
+						+ rowNumber);
 			} catch (TableNotFoundException | AccumuloException
 					| AccumuloSecurityException | AccumuloBigDawgException e) {
 				e.printStackTrace();

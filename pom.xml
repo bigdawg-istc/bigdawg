@@ -300,7 +300,8 @@
 		<jersey.version>2.19</jersey.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<!-- <bigDawg.main.class>istc.bigdawg.Main</bigDawg.main.class> -->
-		<bigDawg.main.class>istc.bigdawg.accumulo.DataLoader</bigDawg.main.class> 
+		<!-- <bigDawg.main.class>istc.bigdawg.accumulo.DataLoader</bigDawg.main.class> -->
+		<bigDawg.main.class>istc.bigdawg.accumulo.TpchFromPostgresToAccumulo</bigDawg.main.class>
 	</properties>
 
 
