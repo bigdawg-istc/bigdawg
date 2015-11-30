@@ -4,6 +4,7 @@
 package istc.bigdawg.postgresql;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -33,6 +34,11 @@ public class PostgreSQLHandler implements DBHandler {
 
 	Logger log = org.apache.log4j.Logger.getLogger(PostgreSQLHandler.class
 			.getName());
+	
+	private Connection con = null;
+	private Statement st = null;
+	private PreparedStatement preparedSt=null;
+	private ResultSet rs = null;
 
 	public class QueryResult {
 		private List<List<String>> rows;
@@ -128,12 +134,24 @@ public class PostgreSQLHandler implements DBHandler {
 			throw e;
 		}
 	}
+	
+	private  void cleanPostgreSQLResources() throws SQLException {
+		if (rs != null) {
+			rs.close();
+		}
+		if (st != null) {
+			st.close();
+		}
+		if (preparedSt != null) {
+			preparedSt.close();
+		}
+		if (con != null) {
+			con.close();
+		}
+	}
 
-	private QueryResult executeQueryPostgreSQL(final String query)
+	public QueryResult executeQueryPostgreSQL(final String query)
 			throws SQLException {
-		Connection con = null;
-		Statement st = null;
-		ResultSet rs = null;
 		try {
 			con = PostgreSQLInstance.getConnection();
 			st = con.createStatement();
@@ -150,15 +168,7 @@ public class PostgreSQLHandler implements DBHandler {
 			throw ex;
 		} finally {
 			try {
-				if (rs != null) {
-					rs.close();
-				}
-				if (st != null) {
-					st.close();
-				}
-				if (con != null) {
-					con.close();
-				}
+				this.cleanPostgreSQLResources();
 			} catch (SQLException ex) {
 				Logger lgr = Logger.getLogger(QueryClient.class.getName());
 				ex.printStackTrace();
@@ -211,6 +221,32 @@ public class PostgreSQLHandler implements DBHandler {
 			columnTypes.add(rsmd.getColumnTypeName(i));
 		}
 		return columnTypes;
+	}
+	
+	public List<Integer> getPrimaryColumns(final String table)
+			throws SQLException {
+		List<Integer> primaryColNum = new ArrayList<Integer>();
+		String query = "SELECT pg_attribute.attnum "
+				+ "FROM pg_index, pg_class, pg_attribute, pg_namespace "
+				+ "WHERE " + "pg_class.oid = ?::regclass AND "
+				+ "indrelid = pg_class.oid AND nspname = 'public' AND "
+				+ "pg_class.relnamespace = pg_namespace.oid AND "
+				+ "pg_attribute.attrelid = pg_class.oid AND "
+				+ "pg_attribute.attnum = any(pg_index.indkey) AND indisprimary";
+		// System.out.println(query);
+		try {
+			con = PostgreSQLInstance.getConnection();
+			preparedSt = con.prepareStatement(query);
+			preparedSt.setString(1, table);
+			rs = preparedSt.executeQuery();
+			while (rs.next()) {
+				// System.out.println("Primary column number: "+rs.getInt(1));
+				primaryColNum.add(new Integer(rs.getInt(1)));
+			}
+		} finally {
+			cleanPostgreSQLResources();
+		}
+		return primaryColNum;
 	}
 
 	@Override

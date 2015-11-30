@@ -5,7 +5,7 @@ ARRAY=${ARRAY_TPCH[*]}
 dbgen_dir=/home/adam/Chicago/tpch-generator/dbgen/
 scripts_dir=/home/adam/data-loading/scripts/
 
-currentDir=$(pwd)
+current_dir=$(pwd)
 for size in 0.05; do
     cd ${dbgen_dir}
     rm *.csv

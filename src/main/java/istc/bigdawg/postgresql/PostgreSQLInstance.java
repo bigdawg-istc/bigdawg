@@ -39,7 +39,7 @@ public enum PostgreSQLInstance {
 		props.setProperty("password", PASSWORD);
 		// do not cache queries
 		props.setProperty("preparedStatementCacheQueries", "0");
-		props.setProperty("preparedStatementCacheSizeMiB", "50");
+		props.setProperty("preparedStatementCacheSizeMiB", "10");
 		return  DriverManager.getConnection(URL, props);
 	}
 
