@@ -2,13 +2,20 @@ javaArgs="-XX:-UseConcMarkSweepGC -Xmx3g -Xms1g"
 dbname=tpch
 ARRAY_TPCH=(region nation supplier customer part partsupp orders lineitem)
 ARRAY=${ARRAY_TPCH[*]}
+dbgen_dir=/home/adam/Chicago/tpch-generator/dbgen/
+dbgen="dbgen"
 
 currentDir=$(pwd)
-for size in 0.05 0.1 0.5 1; do
+for size in 0.02; do
+    cd ${dbgen_dir}
+    rm *.csv
+    rm *.tbl
+    ./dbgen -vf -s ${size}
+    ./rename_from_tbl_to_csv.sh 
     cd /home/adam/data-loading/scripts/
-    bash run_benchmarks.sh ${size}
+    bash run_benchmarks.sh ${size} ${dbgen}
     cd /home/adam/bigdawgmiddle
-    mvn exec:java -Dexec.mainClass=istc.bigdawg.accumulo.TpchFromPostgresToAccumulo -Dexec.args="fromPostgresToAccumulo ${size} ${javaArgs}"
+    mvn exec:java -Dexec.mainClass=istc.bigdawg.migration.TpchTpchPostgresAccumulo -Dexec.args="all ${size} ${javaArgs}"
     #mvn exec:java -Dexec.mainClass=istc.bigdawg.accumulo.TpchFromPostgresToAccumulo -Dexec.args="countRowsAccumulo ${size} ${javaArgs}"
     cd ${currentDir}
     for table in ${ARRAY[*]}; do

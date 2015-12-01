@@ -3,13 +3,11 @@
  */
 package istc.bigdawg.accumulo;
 
-import istc.bigdawg.exceptions.AccumuloBigDawgException;
-import istc.bigdawg.properties.BigDawgConfigProperties;
-
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.accumulo.core.client.AccumuloException;
 import org.apache.accumulo.core.client.AccumuloSecurityException;
@@ -28,6 +26,9 @@ import org.apache.accumulo.core.data.Value;
 import org.apache.accumulo.core.security.Authorizations;
 import org.apache.hadoop.io.Text;
 
+import istc.bigdawg.exceptions.AccumuloBigDawgException;
+import istc.bigdawg.properties.BigDawgConfigProperties;
+
 /**
  * @author Adam Dziedzic
  * 
@@ -44,6 +45,8 @@ public class AccumuloInstance {
 	private String instanceName;
 	private String zooKeepers;
 	private String passwordToken;
+	private long scanTimeout=2000; // 2000 ms = 2 seconds
+	private int batchSize=1000;
 
 	public static final List<String> fullSchema = Arrays.asList("rowId",
 			"colFam", "colKey", "visibility", "value");
@@ -91,10 +94,6 @@ public class AccumuloInstance {
 
 	}
 
-	private AccumuloInstance(Connector conn) {
-		this.conn = conn;
-	}
-
 	/**
 	 * 
 	 */
@@ -132,12 +131,12 @@ public class AccumuloInstance {
 				accInst.zooKeepers);
 
 		try {
-			System.out.println("username: " + accInst.username);
-			System.out.println("password: " + accInst.passwordToken);
+			//System.out.println("username: " + accInst.username);
+			//System.out.println("password: " + accInst.passwordToken);
 
 			Connector conn = inst.getConnector(accInst.username,
 					new PasswordToken(accInst.passwordToken));
-			System.out.println("Connection to Accumulo accepted.");
+			//System.out.println("Connection to Accumulo accepted.");
 			// Connector conn = inst.getConnector( "root",new
 			// AuthenticationToken("root", "pass", null));
 			accInst.conn = conn;
@@ -199,12 +198,29 @@ public class AccumuloInstance {
 		}
 		return false;
 	}
+	
+	public boolean deleteTable(String tableName) {
+		TableOperations tabOp = getConnector().tableOperations();
+		try {
+			tabOp.delete(tableName);
+			return true;
+		} catch (AccumuloException e) {
+			e.printStackTrace();
+		} catch (AccumuloSecurityException e) {
+			e.printStackTrace();
+		} catch (TableNotFoundException e1) {
+			System.out.println("Table " + tableName + " does not exist.");
+		}
+		return false;
+	}
 
 	public Iterator<Entry<Key, Value>> getTableIterator(String table)
 			throws TableNotFoundException {
 		// Read data: http://bit.ly/1Hoyeqa
 		Authorizations authorizations = new Authorizations();
 		Scanner scan = conn.createScanner(table, authorizations);
+		scan.setBatchSize(batchSize);
+		scan.setTimeout(scanTimeout,TimeUnit.MILLISECONDS);
 		scan.setRange(new Range()); // get all data sorted - we want to recover rows
 		Iterator<Entry<Key, Value>> iter = scan.iterator();
 		return iter;
