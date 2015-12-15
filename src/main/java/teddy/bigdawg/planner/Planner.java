@@ -59,7 +59,7 @@ public class Planner {
 	 * @param userinput
 	 * @return 0 if no error; otherwise incomplete
 	 */
-	public int getAlternativeSubqueriesAndSendToMonitor (String userinput) {
+	public static int getAlternativeSubqueriesAndSendToMonitor (String userinput) {
 		// calls a monitor function
 		
 		try {
