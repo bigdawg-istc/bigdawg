@@ -3,6 +3,7 @@ package teddy.bigdawg.planner;
 import java.util.ArrayList;
 import java.util.LinkedList;
 
+import istc.bigdawg.monitoring.Monitor;
 import teddy.bigdawg.catalog.Catalog;
 import teddy.bigdawg.catalog.CatalogInitiator;
 import teddy.bigdawg.parsers.UserQueryParser;
@@ -62,7 +63,8 @@ public class Planner {
 			permuted.add(sigAndCasts);
 			
 			// now call the corresponding monitor function to deliver permuted. Today there are no multiple plans
-		
+			Monitor.getBenchmarkPerformance(permuted);
+			
 		} catch  (Exception e) {
 			e.printStackTrace();
 			return 1;
@@ -86,7 +88,7 @@ public class Planner {
 		
 		// does some magic to pick out the best query, store it to the query plan queue
 		maxSerial += 1;
-		queryQueue.addLast(query.get(0));
+		queryQueue.addLast(query.get(0)); // TODO change this.
 		serialQueue.addLast(maxSerial);
 		
 		executeOneSubquery(querySerial, subqueryPos);
