@@ -46,11 +46,11 @@ public class Planner {
 		queryQueue 		= new LinkedList<ArrayList<String>>();
 		serialQueue 	= new LinkedList<Integer>();
 		catalog 		= new Catalog();
-		CatalogInitiator.connect(catalog, address, username, password);
+		//CatalogInitiator.connect(catalog, address, username, password);
 	}
 	
 	public static void terminate() throws Exception {
-		CatalogInitiator.close(catalog);
+		//CatalogInitiator.close(catalog);
 	}
 	
 	/**

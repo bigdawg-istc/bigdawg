@@ -86,12 +86,15 @@ public class RelationalSignatureBuilder {
 			return "";
 		}
 		
+		return stringBuffer.append("\t").append(dawgtags).toString();
+		/*
 		String result = CatalogViewer.getObjectsFromList(cc, stringBuffer.toString());
 		if (result.length() == 0) {
 			return dawgtags.toString();
 		} else {
 			return result.concat("\t"+dawgtags.toString());
 		}
+		*/
 	}
 	
 	public static String sig3(String input) throws Exception {
