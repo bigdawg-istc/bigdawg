@@ -35,9 +35,9 @@ public class Planner {
 
 	//*/
 	
-	private static LinkedList<ArrayList<String>> 	queryQueue;  // queries to be executed
-	private static LinkedList<Integer>				serialQueue; // used to store serial number
-	private static Integer							maxSerial;
+	private static LinkedList<ArrayList<String>> 	queryQueue = new LinkedList<ArrayList<String>>();  // queries to be executed
+	private static LinkedList<Integer>				serialQueue = new LinkedList<Integer>(); // used to store serial number
+	private static Integer							maxSerial = 0;
 	private static Catalog 							catalog;
 
 	
@@ -91,15 +91,16 @@ public class Planner {
 	 */
 	public static int deliverPerformanceInformation(ArrayList<ArrayList<String>> query, ArrayList<Object> perfInfo) {
 		// integrate p
+		maxSerial += 1;
 		int subqueryPos = 0;
-		int querySerial = 0;
+		int querySerial = maxSerial;
 		
 		System.out.printf("[BigDAWG] PLANNER: Performance information delivered from monitor. Next step: execute a sub-query.\n");
 		
 		// does some magic to pick out the best query, store it to the query plan queue
 		maxSerial += 1;
 		queryQueue.addLast(query.get(0)); // TODO change this.
-		serialQueue.addLast(maxSerial);
+		serialQueue.addLast(querySerial);
 		
 		executeOneSubquery(querySerial, subqueryPos);
 		
@@ -111,19 +112,20 @@ public class Planner {
 	 */
 	private static int executeOneSubquery(int querySerial, int subqueryPos){ 
 		// call either an executor or migrator function
-		System.out.printf("[BigDAWG] PLANNER: Sub-query %d dispatched.\n", subqueryPos);
+		//System.out.printf("[BigDAWG] PLANNER: Sub-query %d dispatched.\n", subqueryPos);
 		
 		// call them
 		int queryPosition 	= serialQueue.indexOf(querySerial);
-		Object obj			= queryQueue.get(queryPosition).get(subqueryPos);
-		if (obj.getClass().equals(Signature.class)){
+		/*Object*/String obj			= queryQueue.get(queryPosition).get(subqueryPos);
+		//if (obj.getClass().equals(Signature.class)){
 			try {
-				Executor.executeDSA(querySerial, (Signature)obj);
+				System.out.printf("[BigDAWG] PLANNER: dispatching sub-query %d...\n", subqueryPos);
+				Executor.executeDSA(querySerial, /*(Signature)*/obj);
 			} catch (Exception e) {
 				e.printStackTrace();
 				return 1;
 			}
-		};
+		//} else System.out.printf("ERROR: class %s received.\n", obj.getClass().toString());
 		return 0;
 	}
 

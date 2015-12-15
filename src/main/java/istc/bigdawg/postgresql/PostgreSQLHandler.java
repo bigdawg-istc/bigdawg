@@ -92,6 +92,7 @@ public class PostgreSQLHandler implements DBHandler {
 					.entity("Problem with query execution in Postgresql: "
 							+ e.getMessage() + "; query: " + queryString)
 					.build();
+			//return "Problem with query execution in PostgreSQL: " + queryString;
 		}
 		String messageQuery = "PostgreSQL query execution time milliseconds: "
 				+ (System.nanoTime() - lStartTime) / 1000000 + ",";
@@ -108,11 +109,28 @@ public class PostgreSQLHandler implements DBHandler {
 			System.out.print(messageJSON);
 			log.info(messageJSON);
 			return Response.status(200).entity(jsonResult).build();
+			
+			/*String out = "";
+			for (String name : queryResult.getColNames()) {
+				out = out + "\t" + name;
+			}
+			out = out + "\n";
+			Integer rowCounter = 1;
+			for (List<String> row : queryResult.getRows()) {
+				out = out + rowCounter.toString() + ".";
+				for (String s : row) {
+					out = out + "\t" + s;
+				}
+				out = out + "\n";
+				rowCounter += 1;
+			}
+			return out;*/
 		} catch (JsonProcessingException e) {
 			return Response
 					.status(200)
 					.entity("Problem with JSON Parsing for PostgreSQL: "
 							+ e.getMessage()).build();
+			//return "Problem with JSON Parsing for PostgreSQL: " + e.getMessage();
 		}
 	}
 

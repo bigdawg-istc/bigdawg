@@ -85,10 +85,10 @@ public class Monitor {
                     // TODO match to nearest existing benchmark
                     queries.add(((Signature) currentQuery).getQuery());
 
-                    PostgreSQLHandler handler = new PostgreSQLHandler();
-                    Parser parser = new simpleParser();
-                    ASTNode node = parser.parseQueryIntoTree(((Signature) currentQuery).getQuery());
-                    perfInfo.add(handler.executeQuery(String.format(RETRIEVE, node.getIsland().name(), node.getTarget())));
+                    //PostgreSQLHandler handler = new PostgreSQLHandler();
+                    //Parser parser = new simpleParser();
+                    //ASTNode node = parser.parseQueryIntoTree(((Signature) currentQuery).getQuery());
+                    //perfInfo.add(handler.executeQuery(String.format(RETRIEVE, node.getIsland().name(), node.getTarget())));
                 }
             }
         }
@@ -122,7 +122,7 @@ public class Monitor {
                 if (currentQuery instanceof Signature) {
                     // TODO match to nearest existing benchmark
                     long lStartTime = System.nanoTime();
-                    QueryClient client = new QueryClient();
+                    /*QueryClient client = new QueryClient();
                     Response response = client.query(((Signature) currentQuery).getQuery());
                     long execTimeMillis = (System.nanoTime() - lStartTime) / 100000;
                     if (response.getStatus() == 200) {
@@ -130,7 +130,7 @@ public class Monitor {
                         handler.executeQuery(String.format(UPDATE, lStartTime, execTimeMillis, ((Signature) currentQuery).getIsland(), ((Signature) currentQuery).getQuery()));
                     } else {
                         delete(((Signature) currentQuery).getQuery());
-                    }
+                    }*/
                 }
             }
         }

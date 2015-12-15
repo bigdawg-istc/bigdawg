@@ -37,12 +37,12 @@ public class Executor {
         throw new UnsupportedOperationException();
     }
 
-    public static void executeDSA(int querySerial, Signature dsa) throws SQLException {
-        String island = dsa.getIsland().toLowerCase();
+    public static void executeDSA(int querySerial, /*Signature*/String dsa) throws SQLException {
+        //String island = dsa.getIsland().toLowerCase();
 
-        assert(island.equals("relational")); // TODO: support other Islands
+        //assert(island.equals("relational")); // TODO: support other Islands
 
-        Planner.receiveResult(querySerial, ((PostgreSQLHandler) registeredDbHandlers.get(island)).executeQueryPostgreSQL(dsa.getQuery()));
+        Planner.receiveResult(querySerial, ((PostgreSQLHandler) registeredDbHandlers.get(/*island*/"relational")).executeQueryPostgreSQL(dsa/*.getQuery()*/));
         
         //return ((PostgreSQLHandler) registeredDbHandlers.get(island)).executeQueryPostgreSQL(dsa.getQuery());
     }
