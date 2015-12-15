@@ -172,8 +172,3 @@ curl -H "Content-Type: application/json" -X POST -d '{"query":"checkHeartRate","
 nohup mvn exec:java 2>&1 > bigdawg.log &
 
 
-
-
-----------
-
-If you cannot compile try this: mvn clean compile test -P dev
