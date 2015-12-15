@@ -2,10 +2,13 @@ package teddy.bigdawg.planner;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.List;
 
 import istc.bigdawg.monitoring.Monitor;
+import istc.bigdawg.postgresql.PostgreSQLHandler.QueryResult;
 import teddy.bigdawg.catalog.Catalog;
 import teddy.bigdawg.catalog.CatalogInitiator;
+import teddy.bigdawg.executor.Executor;
 import teddy.bigdawg.parsers.UserQueryParser;
 import teddy.bigdawg.signature.Signature;
 
@@ -22,6 +25,13 @@ public class Planner {
 	* if a query engine or a migrator is down and beyond localized recovery, executor and migrator should report to user. 
 	
 	Note: Let's assume that each query has a serial number or identifier associated with it.
+
+	UPDATE, IMPORTANT:
+	To have this thing going, we need a PostgreSQL database named "bigdawg" to house the Catalog.
+	Also, to make it work, we'll need to run CatalogInitiator.createSchemaAndRelations(Catalog cc) to create the schema, relation, etc.
+	Only then we can start using this Planner.
+	
+	Also, currently we assume that the query we run is wrapped in "bdrel(...)", and runs on a single query, and no intermediate result. 
 
 	//*/
 	
@@ -104,12 +114,22 @@ public class Planner {
 		System.out.printf("[BigDAWG] PLANNER: Sub-query %d dispatched.\n", subqueryPos);
 		
 		// call them
-		
+		int queryPosition 	= serialQueue.indexOf(querySerial);
+		Object obj			= queryQueue.get(queryPosition).get(subqueryPos);
+		if (obj.getClass().equals(Signature.class)){
+			try {
+				Executor.executeDSA(querySerial, (Signature)obj);
+			} catch (Exception e) {
+				e.printStackTrace();
+				return 1;
+			}
+		};
 		return 0;
 	}
 
 	/**
 	 * CALLED BY EXECUTOR OR MIGRATOR: acknowledge completion of a sub-query; remove the sub-query from the query in queryQueue. 
+	 * NOTE: CURRENTLY THIS FUNCTION IS NOT IN USE. THE EXECUTOR DIRECTLY CALLS THE RECEIVE RESULT FUNCTION TO DO DELIVERY AND PRINTING.
 	 * @param subquerySerial
 	 * @param querySerial
 	 * @return 0 if no error; otherwise incomplete
@@ -133,7 +153,7 @@ public class Planner {
 	}
 
 	/**
-	 * CALL EXECUTOR: ask for the final result of a query. Is this function necessary?
+	 * CALL EXECUTOR: ask for the final result of a query. Is this function necessary? Jack: NO. We only run one thing.
 	 * @param querySerial
 	 * @return 0 if no error; otherwise incomplete
 	 */
@@ -152,7 +172,7 @@ public class Planner {
 	 * @param result
 	 * @return 0 if no error; otherwise incomplete
 	 */
-	public static int receiveResult(int querySerial, ArrayList<String> result) {
+	public static int receiveResult(int querySerial, QueryResult result) {// ArrayList<String> result) {
 		System.out.printf("[BigDAWG] PLANNER: Query %d is completed. Result:\n", querySerial);
 
 		// remove corresponding elements in the two queues
@@ -160,6 +180,23 @@ public class Planner {
 		serialQueue.remove((Integer)querySerial);
 		
 		// print the result;
+		List<List<String>> rows = result.getRows();
+		List<String> cols = result.getColNames();
+		
+		for (String name : cols) {
+			System.out.print("\t" + name);
+		}
+		System.out.print("\n");
+		int rowCounter = 1;
+		for (List<String> row : rows) {
+			System.out.print(rowCounter + ".");
+			for (String s : row) {
+				System.out.print("\t" + s);
+			}
+			System.out.print("\n");
+			rowCounter += 1;
+		}
+		
 		return 0;
 	}
 

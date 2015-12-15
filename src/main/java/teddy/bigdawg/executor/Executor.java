@@ -6,6 +6,7 @@ import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.query.DBHandler;
 import istc.bigdawg.query.QueryClient;
 import istc.bigdawg.scidb.SciDBHandler;
+import teddy.bigdawg.planner.Planner;
 import teddy.bigdawg.signature.Signature;
 
 import java.sql.SQLException;
@@ -36,12 +37,14 @@ public class Executor {
         throw new UnsupportedOperationException();
     }
 
-    public Object executeDSA(Signature dsa) throws SQLException {
+    public static void executeDSA(int querySerial, Signature dsa) throws SQLException {
         String island = dsa.getIsland().toLowerCase();
 
         assert(island.equals("relational")); // TODO: support other Islands
 
-        return ((PostgreSQLHandler) registeredDbHandlers.get(island)).executeQueryPostgreSQL(dsa.getQuery());
+        Planner.receiveResult(querySerial, ((PostgreSQLHandler) registeredDbHandlers.get(island)).executeQueryPostgreSQL(dsa.getQuery()));
+        
+        //return ((PostgreSQLHandler) registeredDbHandlers.get(island)).executeQueryPostgreSQL(dsa.getQuery());
     }
 
     public Object migrateData(Object source, Object dest, Object data) {
