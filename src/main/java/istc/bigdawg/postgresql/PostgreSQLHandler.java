@@ -129,7 +129,7 @@ public class PostgreSQLHandler implements DBHandler {
 		}
 	}
 
-	private QueryResult executeQueryPostgreSQL(final String query)
+	public QueryResult executeQueryPostgreSQL(final String query)
 			throws SQLException {
 		Connection con = null;
 		Statement st = null;
