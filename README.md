@@ -190,6 +190,6 @@ INSERT INTO d_patients VALUES(2, "Jane Smith");
 CREATE USER pguser PASSWORD 'test';
 GRANT ALL ON ALL TABLES IN SCHEMA mimic2v26 TO pguser;
 
-To run a query with on bdrel(...) layer: 
+To run a query with one bdrel(...) layer: 
 
 curl -v -H "Content-Type: application/json" -X POST -d '{"query":"RELATION(bdrel(select * from mimic2v26.d_patients limit 5);)","authorization":{},"tuplesPerPage":1,"pageNumber":1,"timestamp":"2012-04-23T18:25:43.511Z"}' http://localhost:8080/bigdawg/query
