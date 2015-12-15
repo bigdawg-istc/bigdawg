@@ -1,0 +1,49 @@
+CREATE TABLE islands (
+       iid integer PRIMARY KEY,
+       scope_name varchar(15), -- e.g., RELATIONAL, ARRAY                                                                                                                                 
+       access_method varchar(30) -- how do we bring up the parser to validate statements in the island language?                                                                   
+);
+
+
+-- underlying databases                                                                                                                                                             
+CREATE TABLE engines (
+       eid integer PRIMARY KEY,
+       name varchar(15),
+       url varchar(40),
+       port integer,
+       connection_properties varchar(30)
+);
+
+
+CREATE TABLE shims (
+       shim_id integer PRIMARY KEY,
+       island_id integer REFERENCES islands(iid),
+       engine_id integer REFERENCES engines(eid),
+       access_method varchar(30)
+);
+
+
+CREATE TABLE casts (
+       src_eid integer REFERENCES engines(eid),
+       dst_eid integer REFERENCES engines(eid),
+       access_method varchar(30)
+);
+
+-- sometimes once we get to an engine, we may have to connect to a specific db created in it                                                                                        
+CREATE TABLE databases (
+       dbid integer PRIMARY KEY,
+       engine_id integer REFERENCES engines(eid),
+       name varchar(15), 
+       userid varchar(15),
+       password varchar(15) -- may be hash of pwd
+);
+
+-- we need to model objects in terms of where they were created and their present storage site                                                                                      
+-- e.g., if we created an array with dimensions X,Y and then we migrate it over to psql, we don't want to lose its initial dimensions                                               
+CREATE TABLE objects (
+       oid integer PRIMARY KEY,
+       name varchar(15), -- name of the object
+       fields varchar(300), -- csv of the field names, e.g. "dbid,\"engine id\",name,userid,password"
+       logical_db integer REFERENCES databases(dbid), -- how was the object created                                                                                               
+       physical_db integer REFERENCES databases(dbid) -- where is it located now?                                                                                                 
+);
