@@ -96,8 +96,16 @@ public class QueryClient {
 
 			for (DBHandler handler : registeredDbHandlers) {
 				if (handler.getShim() == parsed.getShim()) {
-					Planner.getAlternativeSubqueriesAndSendToMonitor(queryString);
-					return handler.executeQuery(queryString.substring(6,queryString.length()-2));
+					try {
+						
+						return Planner.processQuery(queryString.substring(6,queryString.length()-2));
+						
+						
+					} catch (Exception e) {
+						// TODO Auto-generated catch block
+						return Response.status(412).entity(e.getMessage()).build();
+					}
+					//return handler.executeQuery(queryString.substring(6,queryString.length()-2));
 				}
 			}
 			// no handler found
@@ -121,37 +129,39 @@ public class QueryClient {
 	}
 
 	public static void main(String[] args) {
+		/*
 		QueryClient qClient = new QueryClient();
-		// qClient.executeQueryPostgres("Select * from books");
-		//Response response1 =
-		//qClient.query("{\"query\":\"RELATION(select * from mimic2v26.d_patients limit 5)\",\"authorization\":{},\"tuplesPerPage\":1,\"pageNumber\":1,\"timestamp\":\"2012-04-23T18:25:43.511Z\"}");
-		//System.out.println(response1.getEntity());
+		 qClient.executeQueryPostgres("Select * from books");
+		Response response1 =
+		qClient.query("{\"query\":\"RELATION(select * from mimic2v26.d_patients limit 5)\",\"authorization\":{},\"tuplesPerPage\":1,\"pageNumber\":1,\"timestamp\":\"2012-04-23T18:25:43.511Z\"}");
+		System.out.println(response1.getEntity());
 
 		int max_limit = 10000;
 		for (int limit = 1; limit <= max_limit; limit = limit * 2) {
 			System.out.print("limit: " + limit + ",");
 			long lStartTime = System.nanoTime();
-			// Response response = qClient
-			// .query("{\"query\":\"RELATION(SELECT * FROM pg_catalog.pg_tables)\",\"authorization\":{},\"tuplesPerPage\":1,\"pageNumber\":1,\"timestamp\":\"2012-04-23T18:25:43.511Z\"}");
-			// Response response = qClient
-			// .query("{\"query\":\"RELATION(select * from mimic2v26.d_patients limit "
-			// + limit
-			// +
-			// ")\",\"authorization\":{},\"tuplesPerPage\":1,\"pageNumber\":1,\"timestamp\":\"2012-04-23T18:25:43.511Z\"}");
-			//Response response = qClient
-			//		.query("{\"query\":\"RELATION(select * from mimic2v26.chartevents limit "
-			//				+ limit
-			//				+ ")\",\"authorization\":{},\"tuplesPerPage\":1,\"pageNumber\":1,\"timestamp\":\"2012-04-23T18:25:43.511Z\"}");
+			 Response response = qClient
+			 .query("{\"query\":\"RELATION(SELECT * FROM pg_catalog.pg_tables)\",\"authorization\":{},\"tuplesPerPage\":1,\"pageNumber\":1,\"timestamp\":\"2012-04-23T18:25:43.511Z\"}");
+			 Response response = qClient
+			 .query("{\"query\":\"RELATION(select * from mimic2v26.d_patients limit "
+			 + limit
+			 +
+			 ")\",\"authorization\":{},\"tuplesPerPage\":1,\"pageNumber\":1,\"timestamp\":\"2012-04-23T18:25:43.511Z\"}");
+			Response response = qClient
+					.query("{\"query\":\"RELATION(select * from mimic2v26.chartevents limit "
+							+ limit
+							+ ")\",\"authorization\":{},\"tuplesPerPage\":1,\"pageNumber\":1,\"timestamp\":\"2012-04-23T18:25:43.511Z\"}");
 
-			// System.out.println("Postgresql response: " +
-			// response.getEntity());
-			//System.out.println("Elapsed total time milliseconds: "
-			//		+ (System.nanoTime() - lStartTime) / 1000000);
+			 System.out.println("Postgresql response: " +
+			 response.getEntity());
+			System.out.println("Elapsed total time milliseconds: "
+					+ (System.nanoTime() - lStartTime) / 1000000);
 		}
-		// qClient.query("{\"query\":\"RELATION(SELECT * FROM test2)\",\"authorization\":{},\"tuplesPerPage\":1,\"pageNumber\":1,\"timestamp\":\"2012-04-23T18:25:43.511Z\"}");
-		// System.out.println(response.getEntity());
-		// String accumuloData = qClient
-		// .executeQueryAccumuloPure("note_events_TedgeDeg");
-		// System.out.println(accumuloData);
+		 qClient.query("{\"query\":\"RELATION(SELECT * FROM test2)\",\"authorization\":{},\"tuplesPerPage\":1,\"pageNumber\":1,\"timestamp\":\"2012-04-23T18:25:43.511Z\"}");
+		 System.out.println(response.getEntity());
+		 String accumuloData = qClient
+		 .executeQueryAccumuloPure("note_events_TedgeDeg");
+		 System.out.println(accumuloData);
+		 */
 	}
 }

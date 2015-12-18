@@ -7,6 +7,7 @@ import istc.bigdawg.query.ASTNode;
 import istc.bigdawg.query.QueryClient;
 import istc.bigdawg.query.parser.Parser;
 import istc.bigdawg.query.parser.simpleParser;
+import teddy.bigdawg.packages.QueriesAndPerformanceInformation;
 import teddy.bigdawg.planner.Planner;
 import teddy.bigdawg.signature.Signature;
 
@@ -74,8 +75,10 @@ public class Monitor {
         }
         return true;
     }
+    
+    
 
-    public static void getBenchmarkPerformance(ArrayList<ArrayList<Object>> permuted) throws NotSupportIslandException {
+    public static QueriesAndPerformanceInformation getBenchmarkPerformance(ArrayList<ArrayList<Object>> permuted) throws NotSupportIslandException {
         ArrayList<String> queries = new ArrayList<>();
         ArrayList<Object> perfInfo = new ArrayList<>();
 
@@ -94,8 +97,8 @@ public class Monitor {
         }
         ArrayList<ArrayList<String>> queryList = new ArrayList();
         queryList.add(queries);
-
-        Planner.deliverPerformanceInformation(queryList, perfInfo);
+        System.out.printf("[BigDAWG] MONITOR: Performance information generated.\n");
+        return new QueriesAndPerformanceInformation(queryList, perfInfo);
     }
 
     private static boolean insert(String query) throws NotSupportIslandException {

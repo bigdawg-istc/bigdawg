@@ -3,6 +3,7 @@ package teddy.bigdawg.executor;
 import istc.bigdawg.accumulo.AccumuloHandler;
 import istc.bigdawg.myria.MyriaHandler;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
+import istc.bigdawg.postgresql.PostgreSQLHandler.QueryResult;
 import istc.bigdawg.query.DBHandler;
 import istc.bigdawg.query.QueryClient;
 import istc.bigdawg.scidb.SciDBHandler;
@@ -14,6 +15,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import javax.ws.rs.core.Response;
 
 public class Executor {
 
@@ -37,14 +40,12 @@ public class Executor {
         throw new UnsupportedOperationException();
     }
 
-    public static void executeDSA(int querySerial, /*Signature*/String dsa) throws SQLException {
+    public static QueryResult executeDSA(int querySerial, int subqueryPos, String dsa) throws SQLException {
         //String island = dsa.getIsland().toLowerCase();
-
         //assert(island.equals("relational")); // TODO: support other Islands
 
-        Planner.receiveResult(querySerial, ((PostgreSQLHandler) registeredDbHandlers.get(/*island*/"relational")).executeQueryPostgreSQL(dsa/*.getQuery()*/));
-        
-        //return ((PostgreSQLHandler) registeredDbHandlers.get(island)).executeQueryPostgreSQL(dsa.getQuery());
+        System.out.printf("[BigDAWG] EXECUTOR: executing sub-query %d of query %d...\n", subqueryPos, querySerial);
+        return ((PostgreSQLHandler) registeredDbHandlers.get("relational")).executeQueryPostgreSQL(dsa);
     }
 
     public Object migrateData(Object source, Object dest, Object data) {

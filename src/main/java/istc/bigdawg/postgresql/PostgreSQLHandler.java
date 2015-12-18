@@ -98,40 +98,44 @@ public class PostgreSQLHandler implements DBHandler {
 				+ (System.nanoTime() - lStartTime) / 1000000 + ",";
 		System.out.print(messageQuery);
 		log.info(messageQuery);
+		
+		/*
 		QueryResponseTupleList resp = new QueryResponseTupleList("OK", 200,
 				queryResult.getRows(), 1, 1, queryResult.getColNames(),
 				queryResult.getTypes(), new Timestamp(0));
-		try {
-			lStartTime = System.nanoTime();
-			String jsonResult = getJSONString(resp);
-			String messageJSON="format JSON Java time milliseconds: "
-					+ (System.nanoTime() - lStartTime) / 1000000 + ",";
-			System.out.print(messageJSON);
-			log.info(messageJSON);
-			return Response.status(200).entity(jsonResult).build();
-			
-			/*String out = "";
-			for (String name : queryResult.getColNames()) {
-				out = out + "\t" + name;
+		
+		lStartTime = System.nanoTime();
+		String jsonResult = getJSONString(resp);
+		String messageJSON="format JSON Java time milliseconds: "
+				+ (System.nanoTime() - lStartTime) / 1000000 + ",";
+		System.out.print(messageJSON);
+		log.info(messageJSON);
+		return Response.status(200).entity(jsonResult).build();
+		*/
+		
+		lStartTime = System.nanoTime();
+		
+		String out = "";
+		for (String name : queryResult.getColNames()) {
+			out = out + "\t" + name;
+		}
+		out = out + "\n";
+		Integer rowCounter = 1;
+		for (List<String> row : queryResult.getRows()) {
+			out = out + rowCounter.toString() + ".";
+			for (String s : row) {
+				out = out + "\t" + s;
 			}
 			out = out + "\n";
-			Integer rowCounter = 1;
-			for (List<String> row : queryResult.getRows()) {
-				out = out + rowCounter.toString() + ".";
-				for (String s : row) {
-					out = out + "\t" + s;
-				}
-				out = out + "\n";
-				rowCounter += 1;
-			}
-			return out;*/
-		} catch (JsonProcessingException e) {
-			return Response
-					.status(200)
-					.entity("Problem with JSON Parsing for PostgreSQL: "
-							+ e.getMessage()).build();
-			//return "Problem with JSON Parsing for PostgreSQL: " + e.getMessage();
+			rowCounter += 1;
 		}
+		
+		String messageTABLE="format TABLE Java time milliseconds: "
+				+ (System.nanoTime() - lStartTime) / 1000000 + ",";
+		System.out.print(messageTABLE);
+		log.info(messageTABLE);
+		
+		return Response.status(200).entity(out).build();
 	}
 
 	private String getJSONString(QueryResponseTupleList resp)
