@@ -172,8 +172,24 @@ curl -H "Content-Type: application/json" -X POST -d '{"query":"checkHeartRate","
 nohup mvn exec:java 2>&1 > bigdawg.log &
 
 
+----------------
 
+For demo of Phase 0.1:
 
-----------
+Setting up PostgreSQL on local host, not for Catalog:
 
-If you cannot compile try this: mvn clean compile test -P dev
+CREATE DATABASE mimic2;
+\c mimic2
+CREATE SCHEMA mimic2v26;
+CREATE TABLE d_patients (
+pid integer primary key,
+name archer(10)
+);
+INSERT INTO d_patients VALUES(1, "John Smith");
+INSERT INTO d_patients VALUES(2, "Jane Smith");
+CREATE USER pguser PASSWORD 'test';
+GRANT ALL ON ALL TABLES IN SCHEMA mimic2v26 TO pguser;
+
+To run a query with one bdrel(...) layer: 
+
+curl -v -H "Content-Type: application/json" -X POST -d '{"query":"RELATION(bdrel(select * from mimic2v26.d_patients limit 5);)","authorization":{},"tuplesPerPage":1,"pageNumber":1,"timestamp":"2012-04-23T18:25:43.511Z"}' http://localhost:8080/bigdawg/query
