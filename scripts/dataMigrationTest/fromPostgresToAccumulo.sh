@@ -6,6 +6,7 @@ dbgen_dir=/home/adam/Chicago/tpch-generator/dbgen/
 dbgen="dbgen"
 
 currentDir=$(pwd)
+#for size in 0.07 0.08 0.09 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0 3.0 4.0 5.0; do
 for size in 0.02; do
     cd ${dbgen_dir}
     rm *.csv

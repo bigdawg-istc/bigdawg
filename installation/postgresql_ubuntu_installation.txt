@@ -1,0 +1,7 @@
+sudo pg_ctlcluster 9.3 main stop
+sudo pg_ctlcluster 9.3 main start
+
+go to: 
+/etc/postgresql/9.3/main/start.conf
+set manual instead of auto (to disable autostart)
+
