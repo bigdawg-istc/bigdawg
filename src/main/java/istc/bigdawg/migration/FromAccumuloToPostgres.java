@@ -26,6 +26,7 @@ import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Value;
 import org.apache.hadoop.io.Text;
 import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.postgresql.copy.CopyManager;
 import org.postgresql.core.BaseConnection;
 
@@ -47,7 +48,7 @@ import istc.bigdawg.utils.ListConncatenator;
  */
 public class FromAccumuloToPostgres {
 
-	private static org.apache.log4j.Logger lgr = org.apache.log4j.Logger.getLogger(FromAccumuloToPostgres.class);
+	private static Logger lgr = Logger.getLogger(FromAccumuloToPostgres.class);
 
 	private Connection con = null;
 	private PreparedStatement st = null;

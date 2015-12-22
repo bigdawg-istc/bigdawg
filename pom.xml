@@ -245,9 +245,10 @@
 				<artifactId>maven-compiler-plugin</artifactId>
 				<version>2.5.1</version>
 				<inherited>true</inherited>
+				<!-- source and target of the java compiler -->
 				<configuration>
-					<source>1.7</source>
-					<target>1.7</target>
+					<source>1.8</source>
+					<target>1.8</target>
 				</configuration>
 			</plugin>
 			<plugin>
@@ -302,6 +303,7 @@
 		<bigDawg.main.class>istc.bigdawg.Main</bigDawg.main.class>
 		<!-- <bigDawg.main.class>istc.bigdawg.accumulo.DataLoader</bigDawg.main.class> -->
 		<!-- <bigDawg.main.class>istc.bigdawg.migration.TestTpchPostgresAccumulo</bigDawg.main.class> -->
+		<!--<bigDawg.main.class>istc.bigdawg.accumulo.DataLoader</bigDawg.main.class> -->
 	</properties>
 
 

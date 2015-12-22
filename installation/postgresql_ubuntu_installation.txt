@@ -5,3 +5,8 @@ go to:
 /etc/postgresql/9.3/main/start.conf
 set manual instead of auto (to disable autostart)
 
+commands:
+# show all schemas
+select schema_name from information_schema.schemata;
+
+

@@ -1,20 +1,16 @@
 package istc.bigdawg;
 
-import istc.bigdawg.properties.BigDawgConfigProperties;
-
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URI;
-import java.net.URL;
-import java.net.URLClassLoader;
-import java.util.Properties;
 
 import org.apache.log4j.Logger;
-import org.apache.log4j.PropertyConfigurator;
 import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
 import org.glassfish.jersey.server.ResourceConfig;
+
+import istc.bigdawg.properties.BigDawgConfigProperties;
+import teddy.bigdawg.catalog.Catalog;
+import teddy.bigdawg.catalog.CatalogInstance;
 
 /**
  * Main class.
@@ -23,6 +19,9 @@ import org.glassfish.jersey.server.ResourceConfig;
 public class Main {
 
 	public static final String BASE_URI;
+	private static Logger logger;
+	public static Catalog catalog;
+
 	static {
 		BASE_URI = BigDawgConfigProperties.INSTANCE.getBaseURI();
 	}
@@ -44,24 +43,7 @@ public class Main {
 		// exposing the Jersey application at BASE_URI
 
 		System.out.println("base uri: " + BASE_URI);
-		return GrizzlyHttpServerFactory.createHttpServer(URI.create(BASE_URI),
-				rc);
-	}
-
-	private static void setLogging() throws IOException {
-		Logger logger = Logger.getLogger(Main.class);
-		String log4JPropertyFile = "bigdawg-log4j.properties";
-		Properties prop = new Properties();
-		InputStream inputStream = Main.class.getClassLoader()
-				.getResourceAsStream(log4JPropertyFile);
-		if (inputStream != null) {
-			prop.load(inputStream);
-		} else {
-			throw new FileNotFoundException("log4j property file '"
-					+ log4JPropertyFile + "' not found in the classpath");
-		}
-		PropertyConfigurator.configure(prop);
-		logger.info("Starting application. Logging was configured!");
+		return GrizzlyHttpServerFactory.createHttpServer(URI.create(BASE_URI), rc);
 	}
 
 	/**
@@ -72,21 +54,22 @@ public class Main {
 	 */
 	public static void main(String[] args) throws IOException {
 		// show current classpath
-		ClassLoader cl = ClassLoader.getSystemClassLoader();
-		URL[] urls = ((URLClassLoader) cl).getURLs();
-		System.out.println("Class-paths:");
-		for (URL url : urls) {
-			System.out.println(url.getFile());
-		}
-		System.out.println("The end of class-paths.");
-
-		setLogging();
+		// ClassLoader cl = ClassLoader.getSystemClassLoader();
+		// URL[] urls = ((URLClassLoader) cl).getURLs();
+		// System.out.println("Class-paths:");
+		// for (URL url : urls) {
+		// System.out.println(url.getFile());
+		// }
+		// System.out.println("The end of class-paths.");
+		LoggerSetup.setLogging();
+		CatalogInstance.INSTANCE.getCatalog();
 		final HttpServer server = startServer();
+		logger.info("Server started");
 		System.out.println(String.format(
-				"Jersey app started with WADL available at "
-						+ "%sapplication.wadl\nHit enter to stop it...",
+				"Jersey app started with WADL available at " + "%sapplication.wadl\nHit enter to stop it...",
 				BASE_URI));
 		System.in.read();
 		server.shutdownNow();
+		CatalogInstance.INSTANCE.closeCatalog();
 	}
 }

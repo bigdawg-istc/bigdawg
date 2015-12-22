@@ -19,6 +19,7 @@ import javax.ws.rs.core.Response;
 import org.apache.accumulo.core.client.AccumuloException;
 import org.apache.accumulo.core.client.AccumuloSecurityException;
 import org.apache.accumulo.core.client.TableNotFoundException;
+import org.apache.log4j.Logger;
 
 import istc.bigdawg.accumulo.AccumuloHandler;
 import istc.bigdawg.exceptions.NotSupportIslandException;
@@ -29,7 +30,7 @@ import istc.bigdawg.query.parser.Parser;
 import istc.bigdawg.query.parser.simpleParser;
 import istc.bigdawg.scidb.SciDBHandler;
 import istc.bigdawg.utils.ObjectMapperResource;
-
+import teddy.bigdawg.catalog.CatalogInstance;
 /**
  * @author Adam Dziedzic
  * 
@@ -50,14 +51,24 @@ import istc.bigdawg.utils.ObjectMapperResource;
 @Path("/")
 public class QueryClient {
 
-	static org.apache.log4j.Logger log = org.apache.log4j.Logger
+	private static Logger log = Logger
 			.getLogger(QueryClient.class.getName());
 
 	private static List<DBHandler> registeredDbHandlers;
 
 	static {
 		registeredDbHandlers = new ArrayList<DBHandler>();
-		registeredDbHandlers.add(new PostgreSQLHandler());
+		int postgreSQLMimic2=2;
+		int mimic2DB=2;
+		try {
+			registeredDbHandlers.add(new PostgreSQLHandler(postgreSQLMimic2,mimic2DB));
+		} catch (Exception e) {
+			e.printStackTrace();
+			String msg = "Could not register PostgreSQL handler!";
+			System.err.println(msg);
+			log.error(msg);
+			System.exit(1);
+		}
 		registeredDbHandlers.add(new AccumuloHandler());
 		registeredDbHandlers.add(new MyriaHandler());
 		registeredDbHandlers.add(new SciDBHandler());
@@ -96,6 +107,14 @@ public class QueryClient {
 			for (DBHandler handler : registeredDbHandlers) {
 				if (handler.getShim() == parsed.getShim()) {
 					return handler.executeQuery(queryString);
+//					try {
+//						// this 6 here is a magic number but I can see that it omits bdrel
+//						return Planner.processQuery(queryString.substring(6,queryString.length()-2));
+//					} catch (Exception e) {
+//						// TODO Auto-generated catch block
+//						return Response.status(412).entity(e.getMessage()).build();
+//					}
+					//return handler.executeQuery(queryString.substring(6,queryString.length()-2));
 				}
 			}
 			// no handler found
@@ -119,8 +138,9 @@ public class QueryClient {
 	}
 
 	public static void main(String[] args) {
+		/*
 		QueryClient qClient = new QueryClient();
-		// qClient.executeQueryPostgres("Select * from books");
+		 qClient.executeQueryPostgres("Select * from books");
 		Response response1 =
 		qClient.query("{\"query\":\"RELATION(select * from mimic2v26.d_patients limit 5)\",\"authorization\":{},\"tuplesPerPage\":1,\"pageNumber\":1,\"timestamp\":\"2012-04-23T18:25:43.511Z\"}");
 		System.out.println(response1.getEntity());
@@ -129,27 +149,28 @@ public class QueryClient {
 		for (int limit = 1; limit <= max_limit; limit = limit * 2) {
 			System.out.print("limit: " + limit + ",");
 			long lStartTime = System.nanoTime();
-			// Response response = qClient
-			// .query("{\"query\":\"RELATION(SELECT * FROM pg_catalog.pg_tables)\",\"authorization\":{},\"tuplesPerPage\":1,\"pageNumber\":1,\"timestamp\":\"2012-04-23T18:25:43.511Z\"}");
-			// Response response = qClient
-			// .query("{\"query\":\"RELATION(select * from mimic2v26.d_patients limit "
-			// + limit
-			// +
-			// ")\",\"authorization\":{},\"tuplesPerPage\":1,\"pageNumber\":1,\"timestamp\":\"2012-04-23T18:25:43.511Z\"}");
+			 Response response = qClient
+			 .query("{\"query\":\"RELATION(SELECT * FROM pg_catalog.pg_tables)\",\"authorization\":{},\"tuplesPerPage\":1,\"pageNumber\":1,\"timestamp\":\"2012-04-23T18:25:43.511Z\"}");
+			 Response response = qClient
+			 .query("{\"query\":\"RELATION(select * from mimic2v26.d_patients limit "
+			 + limit
+			 +
+			 ")\",\"authorization\":{},\"tuplesPerPage\":1,\"pageNumber\":1,\"timestamp\":\"2012-04-23T18:25:43.511Z\"}");
 			Response response = qClient
 					.query("{\"query\":\"RELATION(select * from mimic2v26.chartevents limit "
 							+ limit
 							+ ")\",\"authorization\":{},\"tuplesPerPage\":1,\"pageNumber\":1,\"timestamp\":\"2012-04-23T18:25:43.511Z\"}");
 
-			// System.out.println("Postgresql response: " +
-			// response.getEntity());
+			 System.out.println("Postgresql response: " +
+			 response.getEntity());
 			System.out.println("Elapsed total time milliseconds: "
 					+ (System.nanoTime() - lStartTime) / 1000000);
 		}
-		// qClient.query("{\"query\":\"RELATION(SELECT * FROM test2)\",\"authorization\":{},\"tuplesPerPage\":1,\"pageNumber\":1,\"timestamp\":\"2012-04-23T18:25:43.511Z\"}");
-		// System.out.println(response.getEntity());
-		// String accumuloData = qClient
-		// .executeQueryAccumuloPure("note_events_TedgeDeg");
-		// System.out.println(accumuloData);
+		 qClient.query("{\"query\":\"RELATION(SELECT * FROM test2)\",\"authorization\":{},\"tuplesPerPage\":1,\"pageNumber\":1,\"timestamp\":\"2012-04-23T18:25:43.511Z\"}");
+		 System.out.println(response.getEntity());
+		 String accumuloData = qClient
+		 .executeQueryAccumuloPure("note_events_TedgeDeg");
+		 System.out.println(accumuloData);
+		 */
 	}
 }

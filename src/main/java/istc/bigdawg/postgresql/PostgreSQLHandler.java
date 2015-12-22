@@ -4,12 +4,12 @@
 package istc.bigdawg.postgresql;
 
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,6 +25,8 @@ import istc.bigdawg.query.DBHandler;
 import istc.bigdawg.query.QueryClient;
 import istc.bigdawg.query.QueryResponseTupleList;
 import istc.bigdawg.utils.ObjectMapperResource;
+import teddy.bigdawg.catalog.CatalogInstance;
+import teddy.bigdawg.catalog.CatalogViewer;
 
 /**
  * @author Adam Dziedzic
@@ -32,13 +34,40 @@ import istc.bigdawg.utils.ObjectMapperResource;
  */
 public class PostgreSQLHandler implements DBHandler {
 
-	Logger log = org.apache.log4j.Logger.getLogger(PostgreSQLHandler.class
-			.getName());
-	
+	private static Logger log = Logger.getLogger(PostgreSQLHandler.class.getName());
 	private Connection con = null;
+	private CatalogViewer.ConnectionInfo conInfo = null;
 	private Statement st = null;
-	private PreparedStatement preparedSt=null;
+	private PreparedStatement preparedSt = null;
 	private ResultSet rs = null;
+
+	public PostgreSQLHandler(int engineId, int dbId) throws Exception {
+		try {
+			conInfo = CatalogViewer.getConnection(CatalogInstance.INSTANCE.getCatalog(), engineId, dbId);
+		} catch (Exception e) {
+			String msg = "Catalog chosen connection: " + conInfo.getHost() + " " + conInfo.getPort() + " "
+					+ conInfo.getDatabase() + " " + conInfo.getUser() + " " + conInfo.getPassword() + ".";
+			log.error(msg);
+			e.printStackTrace();
+			throw e;
+		}
+	}
+
+	public PostgreSQLHandler() {
+		String msg = "Default handler. PostgreSQL parameters from a file.";
+		System.out.println(msg);
+		log.info(msg);
+	}
+
+	private void getConnection() throws SQLException {
+		if (conInfo != null) {
+			con = DriverManager.getConnection(
+					"jdbc:postgresql://" + conInfo.getHost() + ":" + conInfo.getPort() + "/" + conInfo.getDatabase(),
+					conInfo.getUser(), conInfo.getPassword());
+		} else {
+			con = PostgreSQLInstance.getConnection();
+		}
+	}
 
 	public class QueryResult {
 		private List<List<String>> rows;
@@ -71,8 +100,7 @@ public class PostgreSQLHandler implements DBHandler {
 		 * @param types
 		 * @param colNames
 		 */
-		public QueryResult(List<List<String>> rows, List<String> types,
-				List<String> colNames) {
+		public QueryResult(List<List<String>> rows, List<String> types, List<String> colNames) {
 			super();
 			this.rows = rows;
 			this.types = types;
@@ -93,49 +121,67 @@ public class PostgreSQLHandler implements DBHandler {
 		try {
 			queryResult = executeQueryPostgreSQL(queryString);
 		} catch (SQLException e) {
-			return Response
-					.status(500)
-					.entity("Problem with query execution in Postgresql: "
-							+ e.getMessage() + "; query: " + queryString)
+			return Response.status(500)
+					.entity("Problem with query execution in Postgresql: " + e.getMessage() + "; query: " + queryString)
 					.build();
+			// return "Problem with query execution in PostgreSQL: " +
+			// queryString;
 		}
 		String messageQuery = "PostgreSQL query execution time milliseconds: "
 				+ (System.nanoTime() - lStartTime) / 1000000 + ",";
 		System.out.print(messageQuery);
 		log.info(messageQuery);
-		QueryResponseTupleList resp = new QueryResponseTupleList("OK", 200,
-				queryResult.getRows(), 1, 1, queryResult.getColNames(),
-				queryResult.getTypes(), new Timestamp(0));
-		try {
-			lStartTime = System.nanoTime();
-			String jsonResult = getJSONString(resp);
-			String messageJSON="format JSON Java time milliseconds: "
-					+ (System.nanoTime() - lStartTime) / 1000000 + ",";
-			System.out.print(messageJSON);
-			log.info(messageJSON);
-			return Response.status(200).entity(jsonResult).build();
-		} catch (JsonProcessingException e) {
-			return Response
-					.status(200)
-					.entity("Problem with JSON Parsing for PostgreSQL: "
-							+ e.getMessage()).build();
+
+		/*
+		 * QueryResponseTupleList resp = new QueryResponseTupleList("OK", 200,
+		 * queryResult.getRows(), 1, 1, queryResult.getColNames(),
+		 * queryResult.getTypes(), new Timestamp(0));
+		 * 
+		 * lStartTime = System.nanoTime(); String jsonResult =
+		 * getJSONString(resp); String messageJSON=
+		 * "format JSON Java time milliseconds: " + (System.nanoTime() -
+		 * lStartTime) / 1000000 + ","; System.out.print(messageJSON);
+		 * log.info(messageJSON); return
+		 * Response.status(200).entity(jsonResult).build();
+		 */
+
+		lStartTime = System.nanoTime();
+
+		String out = "";
+		for (String name : queryResult.getColNames()) {
+			out = out + "\t" + name;
 		}
+		out = out + "\n";
+		Integer rowCounter = 1;
+		for (List<String> row : queryResult.getRows()) {
+			out = out + rowCounter.toString() + ".";
+			for (String s : row) {
+				out = out + "\t" + s;
+			}
+			out = out + "\n";
+			rowCounter += 1;
+		}
+
+		String messageTABLE = "format TABLE Java time milliseconds: " + (System.nanoTime() - lStartTime) / 1000000
+				+ ",";
+		System.out.print(messageTABLE);
+		log.info(messageTABLE);
+
+		return Response.status(200).entity(out).build();
 	}
 
-	private String getJSONString(QueryResponseTupleList resp)
-			throws JsonProcessingException {
+	private String getJSONString(QueryResponseTupleList resp) throws JsonProcessingException {
 		String responseResult;
 		try {
-			responseResult = ObjectMapperResource.INSTANCE.getObjectMapper()
-					.writeValueAsString(resp);
+			responseResult = ObjectMapperResource.INSTANCE.getObjectMapper().writeValueAsString(resp);
 			return responseResult;
 		} catch (JsonProcessingException e) {
 			e.printStackTrace();
 			throw e;
 		}
 	}
-	
-	private  void cleanPostgreSQLResources() throws SQLException {
+
+	private void cleanPostgreSQLResources() throws SQLException {
 		if (rs != null) {
 			rs.close();
 		}
@@ -150,10 +196,9 @@ public class PostgreSQLHandler implements DBHandler {
 		}
 	}
 
-	public QueryResult executeQueryPostgreSQL(final String query)
-			throws SQLException {
+	public QueryResult executeQueryPostgreSQL(final String query) throws SQLException {
 		try {
-			con = PostgreSQLInstance.getConnection();
+			this.getConnection();
 			st = con.createStatement();
 			rs = st.executeQuery(query);
 			ResultSetMetaData rsmd = rs.getMetaData();
@@ -178,8 +223,7 @@ public class PostgreSQLHandler implements DBHandler {
 		}
 	}
 
-	public static List<List<String>> getRows(final ResultSet rs)
-			throws SQLException {
+	public static List<List<String>> getRows(final ResultSet rs) throws SQLException {
 		if (rs == null) {
 			return null;
 		}
@@ -205,8 +249,7 @@ public class PostgreSQLHandler implements DBHandler {
 		}
 	}
 
-	public static List<String> getColumnNames(final ResultSetMetaData rsmd)
-			throws SQLException {
+	public static List<String> getColumnNames(final ResultSetMetaData rsmd) throws SQLException {
 		List<String> columnNames = new ArrayList<String>();
 		for (int i = 1; i <= rsmd.getColumnCount(); ++i) {
 			columnNames.add(rsmd.getColumnLabel(i));
@@ -214,28 +257,23 @@ public class PostgreSQLHandler implements DBHandler {
 		return columnNames;
 	}
 
-	public static List<String> getColumnTypes(final ResultSetMetaData rsmd)
-			throws SQLException {
+	public static List<String> getColumnTypes(final ResultSetMetaData rsmd) throws SQLException {
 		List<String> columnTypes = new ArrayList<String>();
 		for (int i = 1; i <= rsmd.getColumnCount(); ++i) {
 			columnTypes.add(rsmd.getColumnTypeName(i));
 		}
 		return columnTypes;
 	}
-	
-	public List<Integer> getPrimaryColumns(final String table)
-			throws SQLException {
+
+	public List<Integer> getPrimaryColumns(final String table) throws SQLException {
 		List<Integer> primaryColNum = new ArrayList<Integer>();
-		String query = "SELECT pg_attribute.attnum "
-				+ "FROM pg_index, pg_class, pg_attribute, pg_namespace "
-				+ "WHERE " + "pg_class.oid = ?::regclass AND "
-				+ "indrelid = pg_class.oid AND nspname = 'public' AND "
-				+ "pg_class.relnamespace = pg_namespace.oid AND "
-				+ "pg_attribute.attrelid = pg_class.oid AND "
+		String query = "SELECT pg_attribute.attnum " + "FROM pg_index, pg_class, pg_attribute, pg_namespace " + "WHERE "
+				+ "pg_class.oid = ?::regclass AND " + "indrelid = pg_class.oid AND nspname = 'public' AND "
+				+ "pg_class.relnamespace = pg_namespace.oid AND " + "pg_attribute.attrelid = pg_class.oid AND "
 				+ "pg_attribute.attnum = any(pg_index.indkey) AND indisprimary";
 		// System.out.println(query);
 		try {
-			con = PostgreSQLInstance.getConnection();
+			this.getConnection();
 			preparedSt = con.prepareStatement(query);
 			preparedSt.setString(1, table);
 			rs = preparedSt.executeQuery();
