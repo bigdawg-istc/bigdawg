@@ -2,6 +2,8 @@ package istc.bigdawg;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URL;
+import java.net.URLClassLoader;
 
 import org.apache.log4j.Logger;
 import org.glassfish.grizzly.http.server.HttpServer;
@@ -20,7 +22,6 @@ public class Main {
 
 	public static final String BASE_URI;
 	private static Logger logger;
-	public static Catalog catalog;
 
 	static {
 		BASE_URI = BigDawgConfigProperties.INSTANCE.getBaseURI();
@@ -35,13 +36,11 @@ public class Main {
 	 */
 	public static HttpServer startServer() throws IOException {
 		// create a resource config that scans for JAX-RS resources and
-		// providers
-		// in istc.bigdawg package
+		// providers in istc.bigdawg package
 		final ResourceConfig rc = new ResourceConfig().packages("istc.bigdawg");
 
 		// create and start a new instance of grizzly http server
 		// exposing the Jersey application at BASE_URI
-
 		System.out.println("base uri: " + BASE_URI);
 		return GrizzlyHttpServerFactory.createHttpServer(URI.create(BASE_URI), rc);
 	}
@@ -62,6 +61,7 @@ public class Main {
 		// }
 		// System.out.println("The end of class-paths.");
 		LoggerSetup.setLogging();
+		logger = Logger.getLogger(Main.class);
 		CatalogInstance.INSTANCE.getCatalog();
 		final HttpServer server = startServer();
 		logger.info("Server started");

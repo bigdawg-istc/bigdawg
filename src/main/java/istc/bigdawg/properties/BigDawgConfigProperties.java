@@ -57,7 +57,6 @@ public enum BigDawgConfigProperties {
 		this.postgreSQLURL = prop.getProperty("main.postgresql.url");
 		this.postgreSQLUser = prop.getProperty("main.postgresql.user");
 		this.postgreSQLPassword = prop.getProperty("main.postgresql.password");
-		System.out.println("PostgreSQL password: "+this.postgreSQLPassword);
 
 		this.accumuloIstanceType = prop.getProperty("main.accumulo.instanceType");
 		this.accumuloIstanceName = prop.getProperty("main.accumulo.instanceName");
