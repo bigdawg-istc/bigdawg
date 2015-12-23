@@ -58,10 +58,10 @@ public class QueryClient {
 
 	static {
 		registeredDbHandlers = new ArrayList<DBHandler>();
-		int postgreSQLMimic2=2;
+		int postgreSQL1Engine=1;
 		int mimic2DB=2;
 		try {
-			registeredDbHandlers.add(new PostgreSQLHandler(postgreSQLMimic2,mimic2DB));
+			registeredDbHandlers.add(new PostgreSQLHandler(postgreSQL1Engine,mimic2DB));
 		} catch (Exception e) {
 			e.printStackTrace();
 			String msg = "Could not register PostgreSQL handler!";
