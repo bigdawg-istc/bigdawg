@@ -195,19 +195,25 @@ To run a query with one bdrel(...) layer:
 curl -v -H "Content-Type: application/json" -X POST -d '{"query":"RELATION(bdrel(select * from mimic2v26.d_patients limit 5);)","authorization":{},"tuplesPerPage":1,"pageNumber":1,"timestamp":"2012-04-23T18:25:43.511Z"}' http://localhost:8080/bigdawg/query
 
 
-##For demo of Phase 0.2:
+## For demo of Phase 0.2:
 
-The current working version can be tested here:
+### The current working version can be tested here:
+
+```
+#!bash
+
 curl -v -H "Content-Type: application/json" -X POST -d '{"query":"RELATION(select * from mimic2v26.d_patients limit 6);","authorization":{},"tuplesPerPage":1,"pageNumber":1,"timestamp":"2012-04-23T18:25:43.511Z"}' http://madison.cs.uchicago.edu:8080/bigdawg/query
+```
 
-Prepare environment with 2 PostgreSQL instances:
+
+### Prepare environment with 2 PostgreSQL instances:
 - go to bigdawgmiddle/installation
 - mkdir data
 - cd data
 - download mimic2.pgd to the data directory from https://app.box.com/s/8by2c36m8bwxl9654bwf3mttdt25uu4k
 - run script: bash setup.sh
 
-Alternatively, you can change pom.xml and try migrating data from postgres1 to postgres2:
+### Additionally, you can change pom.xml and try migrating data from postgres1 to postgres2:
 - uncomment: <bigDawg.main.class>istc.bigdawg.migration.FromPostgresToPostgres</bigDawg.main.class>
 - comment: <bigDawg.main.class>istc.bigdawg.Main</bigDawg.main.class>
 - go to bigdawgmiddle/
@@ -239,8 +245,3 @@ You can access a few databases in this way:
 - go to bigdawgmiddle/installation/Downloads/postgres2/bin
 - ./psql -p 5430 -d mimic2_copy
 - select * from mimic2v26.d_patients limit 6;
-
-
-
-
-
