@@ -303,6 +303,7 @@
 		<bigDawg.main.class>istc.bigdawg.Main</bigDawg.main.class>
 		<!-- <bigDawg.main.class>istc.bigdawg.accumulo.DataLoader</bigDawg.main.class> -->
 		<!-- <bigDawg.main.class>istc.bigdawg.migration.TestTpchPostgresAccumulo</bigDawg.main.class> -->
+		<!-- <bigDawg.main.class>istc.bigdawg.migration.FromPostgresToPostgres</bigDawg.main.class> -->
 		<!--<bigDawg.main.class>istc.bigdawg.accumulo.DataLoader</bigDawg.main.class> -->
 	</properties>
 

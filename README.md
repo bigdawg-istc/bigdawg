@@ -193,3 +193,54 @@ GRANT ALL ON ALL TABLES IN SCHEMA mimic2v26 TO pguser;
 To run a query with one bdrel(...) layer: 
 
 curl -v -H "Content-Type: application/json" -X POST -d '{"query":"RELATION(bdrel(select * from mimic2v26.d_patients limit 5);)","authorization":{},"tuplesPerPage":1,"pageNumber":1,"timestamp":"2012-04-23T18:25:43.511Z"}' http://localhost:8080/bigdawg/query
+
+
+##For demo of Phase 0.2:
+
+The current working version can be tested here:
+curl -v -H "Content-Type: application/json" -X POST -d '{"query":"RELATION(select * from mimic2v26.d_patients limit 6);","authorization":{},"tuplesPerPage":1,"pageNumber":1,"timestamp":"2012-04-23T18:25:43.511Z"}' http://madison.cs.uchicago.edu:8080/bigdawg/query
+
+Prepare environment with 2 PostgreSQL instances:
+- go to bigdawgmiddle/installation
+- mkdir data
+- cd data
+- download mimic2.pgd to the data directory from https://app.box.com/s/8by2c36m8bwxl9654bwf3mttdt25uu4k
+- run script: bash setup.sh
+
+Alternatively, you can change pom.xml and try migrating data from postgres1 to postgres2:
+- uncomment: <bigDawg.main.class>istc.bigdawg.migration.FromPostgresToPostgres</bigDawg.main.class>
+- comment: <bigDawg.main.class>istc.bigdawg.Main</bigDawg.main.class>
+- go to bigdawgmiddle/
+- run: mvn clean compile -P dev
+- run: mvn exec:java
+
+The last script will create 2 PostgreSQL instances:
+- postgres1 port: 5431 in bigdawgmiddle/installation/Downloads/postgres1
+- postgres2 port: 5430 in bigdawgmiddle/installation/Downloads/postgres2
+
+You can access a few databases in this way:
+### logs: 
+- go to bigdawgmiddle/installation/Downloads/postgres1/bin
+- ./psql -p 5431 -d logs
+- select * from logs order by time desc;
+
+### bigdawg_catalog:
+- go to bigdawgmiddle/installation/Downloads/postgres1/bin
+- ./psql -p 5431 -d bigdawg_catalog
+- select * from catalog.engines;
+- select * from catalog.databases;
+
+### mimic2:
+- go to bigdawgmiddle/installation/Downloads/postgres1/bin
+- ./psql -p 5431 -d mimic2
+- select * from mimic2v26.d_patients limit 6;
+
+### mimic2_copy:
+- go to bigdawgmiddle/installation/Downloads/postgres2/bin
+- ./psql -p 5430 -d mimic2_copy
+- select * from mimic2v26.d_patients limit 6;
+
+
+
+
+
