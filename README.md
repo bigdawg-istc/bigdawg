@@ -210,10 +210,10 @@ curl -v -H "Content-Type: application/json" -X POST -d '{"query":"RELATION(selec
 - go to bigdawgmiddle/installation (there are the scripts that we will use)
 - mkdir data
 - cd data
-- download mimic2.pgd to the data directory from https://app.box.com/s/8by2c36m8bwxl9654bwf3mttdt25uu4k
-- run script: bash setup.sh (this script should be executed only once)
+- download mimic2.pgd to the data directory from [https://app.box.com/s/8by2c36m8bwxl9654bwf3mttdt25uu4k](Link URL)
+- run script: **bash setup.sh** (this script should be executed only once)
 - to stop the PostgreSQL instances run: bash stop_postgres.sh
-- to start the PostgreSQL instances run: bash start_postgres.sh 
+- to start the PostgreSQL instances run: bash start_postgres.sh
 
 ### Additionally, you can change pom.xml and try migrating data from postgres1 to postgres2:
 - uncomment: <bigDawg.main.class>istc.bigdawg.migration.FromPostgresToPostgres</bigDawg.main.class>
@@ -242,13 +242,42 @@ Migrating data from PostgreSQL to PostgreSQL
 - ./psql -p 5431 -d logs
 - select * from logs order by time desc;
 
+
+```
+#!sql
+
+ user_id |          time           |                    logger                     | level |                                                                                message                    
+                                                            
+---------+-------------------------+-----------------------------------------------+-------+-----------------------------------------------------------------------------------------------------------
+------------------------------------------------------------
+         | 2015-12-23 12:17:24.358 | istc.bigdawg.migration.FromPostgresToPostgres | DEBUG | Number of extracted rows: 143 Number of loaded rows: 143
+         | 2015-12-23 12:17:24.215 | istc.bigdawg.LoggerSetup                      | INFO  | Starting application. Logging was configured!
+         | 2015-12-23 11:39:39.607 | istc.bigdawg.postgresql.PostgreSQLHandler     | INFO  | format TABLE Java time milliseconds: 0,
+         | 2015-12-23 11:39:39.604 | istc.bigdawg.postgresql.PostgreSQLHandler     | INFO  | PostgreSQL query execution time milliseconds: 21,
+         | 2015-12-23 11:39:39.577 | istc.bigdawg.query.QueryClient                | INFO  | istream: {"query":"RELATION(select * from mimic2v26.d_patients limit 6);","authorization":{},"tuplesPerPag
+e":1,"pageNumber":1,"timestamp":"2012-04-23T18:25:43.511Z"}
+(5 rows)
+
+```
+
+
 ### bigdawg_catalog:
 - go to bigdawgmiddle/installation/Downloads/postgres1/bin
 - ./psql -p 5431 -d bigdawg_catalog
 - select * from catalog.engines;
+
+```
+#!sql
+
+ eid |   name    |   host    | port |              connection_properties              
+-----+-----------+-----------+------+-------------------------------------------------
+   1 | postgres1 | localhost | 5431 | engine for bigdawg catalog data and mimic2 data
+   2 | postgres2 | localhost | 5430 | main engine for mimic2_copy data
+(2 rows)
+```
+
+
 - select * from catalog.databases;
-
-
 ```
 #!sql
 
