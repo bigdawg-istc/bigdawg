@@ -2,8 +2,6 @@ package istc.bigdawg;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.URL;
-import java.net.URLClassLoader;
 
 import org.apache.log4j.Logger;
 import org.glassfish.grizzly.http.server.HttpServer;
@@ -11,7 +9,6 @@ import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
 import org.glassfish.jersey.server.ResourceConfig;
 
 import istc.bigdawg.properties.BigDawgConfigProperties;
-import teddy.bigdawg.catalog.Catalog;
 import teddy.bigdawg.catalog.CatalogInstance;
 
 /**

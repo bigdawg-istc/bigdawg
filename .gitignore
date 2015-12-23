@@ -1,6 +1,8 @@
 *.class
 
 target/
+installation/Downloads
+installation/data
 
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/

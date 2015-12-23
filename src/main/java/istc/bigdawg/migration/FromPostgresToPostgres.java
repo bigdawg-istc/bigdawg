@@ -222,7 +222,7 @@ public class FromPostgresToPostgres {
 		FromPostgresToPostgres migrator = new FromPostgresToPostgres();
 		PostgreSQLConnectionInfo conInfoFrom = new PostgreSQLConnectionInfo("localhost", "5431", "mimic2", "pguser",
 				"test");
-		PostgreSQLConnectionInfo conInfoTo = new PostgreSQLConnectionInfo("localhost", "5432", "mimic2_copy", "pguser",
+		PostgreSQLConnectionInfo conInfoTo = new PostgreSQLConnectionInfo("localhost", "5430", "mimic2_copy", "pguser",
 				"test");
 		try {
 			MigrationResult result = migrator.migrate(conInfoFrom, "mimic2v26.d_patients", conInfoTo,
