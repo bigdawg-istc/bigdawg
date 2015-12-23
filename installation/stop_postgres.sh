@@ -1,3 +1,4 @@
+# Adam Dziedzic
 downloads_dir=$(pwd)/Downloads
 
 stop() {

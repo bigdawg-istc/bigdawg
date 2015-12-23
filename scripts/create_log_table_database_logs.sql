@@ -1,4 +1,4 @@
-u-- create database logs
+-- create database logs
 CREATE TABLE LOGS
    (USER_ID VARCHAR(20)    NOT NULL,
     TIME   TIMESTAMP	   NOT NULL,

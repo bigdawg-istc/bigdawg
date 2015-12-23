@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# Adam Dziedzic
 
 import sys
 import getopt

@@ -1,4 +1,5 @@
 # go to bigdawgmiddle directory
+# Adam Dziedzic
 
 initial_dir=$(pwd)
 mkdir Downloads
