@@ -195,7 +195,7 @@ To run a query with one bdrel(...) layer:
 curl -v -H "Content-Type: application/json" -X POST -d '{"query":"RELATION(bdrel(select * from mimic2v26.d_patients limit 5);)","authorization":{},"tuplesPerPage":1,"pageNumber":1,"timestamp":"2012-04-23T18:25:43.511Z"}' http://localhost:8080/bigdawg/query
 
 
-## For demo of Phase 0.2:
+# For demo of Phase 0.2:
 
 ### The current working version can be tested here:
 
@@ -220,11 +220,11 @@ curl -v -H "Content-Type: application/json" -X POST -d '{"query":"RELATION(selec
 - run: mvn clean compile -P dev
 - run: mvn exec:java
 
-The last script will create 2 PostgreSQL instances:
+### The last script will create 2 PostgreSQL instances:
 - postgres1 port: 5431 in bigdawgmiddle/installation/Downloads/postgres1
 - postgres2 port: 5430 in bigdawgmiddle/installation/Downloads/postgres2
 
-You can access a few databases in this way:
+## You can access a few databases in the following way:
 ### logs: 
 - go to bigdawgmiddle/installation/Downloads/postgres1/bin
 - ./psql -p 5431 -d logs
