@@ -32,6 +32,10 @@ or ./configure --prefix=/cloud_store/dziedzic/databases/PostgreSQL/pgsql CFLAGS=
 8. gmake world # build everything that can be built, including the documentation (HTML and man pages), and the additional modules (contrib)
 gmake install-world
 
+or simply:
+make
+make install
+
 9. in .bash_profile (for only console access e.g. via ssh) or in .bashrc (if you login graphically): 
 export LD_LIBRARY_PATH=/home/dziedzic/cloud_store/databases/PostgreSQL/pgsql/lib:$LD_LIBRARY
 export PATH=/home/dziedzic/cloud_store/databases/PostgreSQL/pgsql/bin:$PATH

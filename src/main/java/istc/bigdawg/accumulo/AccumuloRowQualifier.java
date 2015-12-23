@@ -118,12 +118,4 @@ public class AccumuloRowQualifier {
 		return new AccumuloRow(rowId,colFam,colQual,value);
 	}
 
-	/**
-	 * @param args
-	 */
-	public static void main(String[] args) {
-		// TODO Auto-generated method stub
-
-	}
-
 }

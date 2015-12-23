@@ -5,6 +5,7 @@ sudo emacs /etc/apt/sources.list.d/scidb.list
 deb https://downloads.paradigm4.com/ ubuntu14.04/14.12/
 deb-src https://downloads.paradigm4.com/ ubuntu14.04/14.12/
 
+sudo apt-get update
 and run: sudo apt-get install scidb-14.12-installer
 
 
@@ -115,4 +116,28 @@ PostgreSQL and SciDB:
 
 
 
+
+postgres 13387  0.0  0.0 251952 16180 ?        S    22:58   0:00 /usr/lib/postgresql/9.3/bin/postgres -D /var/lib/postgresql/9.3/main -c config_file=/etc/postgresql/9.3/main/postgresql.conf
+postgres 13389  0.0  0.0 251952  1892 ?        Ss   22:58   0:00 postgres: checkpointer process                                                                                              
+postgres 13390  0.0  0.0 251952  2424 ?        Ss   22:58   0:00 postgres: writer process                                                                                                    
+postgres 13391  0.0  0.0 251952  1680 ?        Ss   22:58   0:00 postgres: wal writer process                                                                                                
+postgres 13392  0.0  0.0 252812  3032 ?        Ss   22:58   0:00 postgres: autovacuum launcher process                                                                                       
+postgres 13393  0.0  0.0 107628  1788 ?        Ss   22:58   0:00 postgres: stats collector process                                                                                           
+adam     13687  0.0  0.0  15944   948 pts/23   R+   23:00   0:00 grep --color=auto postgres
+
+ln -s /etc/postgresql/9.3/main/postgresql.conf /var/lib/postgresql/9.3/main/postgresql.conf
+/opt/scidb/14.12/bin/init-db.sh scidb_pg_user single_server scidb_pg_user_pasw 5432
+
+postgres@gaia:/usr/lib/postgresql/9.3/bin$ /opt/scidb/14.12/bin/init-db.sh scidb_pg_user single_server scidb_pg_user_pasw 5432
+single_server is the result
+Deleting single_server...
+DROP DATABASE
+UPDATE 1
+GRANT
+Sample of connection string:
+host=localhost port=5432 dbname=single_server user=scidb_pg_user password=scidb_pg_user_pasw
+
+Run it from SciDB account !!!:
+scidb@gaia:/home/adam$ /opt/scidb/14.12/bin/scidb.py startall single_server
+scidb@gaia:/opt/scidb/14.12/bin$ iquery -aq "build(<v:string>[i=0:0,1,0], 'hello world')"
 

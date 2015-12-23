@@ -8,6 +8,7 @@ import istc.bigdawg.properties.BigDawgConfigProperties;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.Properties;
 
 /**
  * @author Adam Dziedzic
@@ -32,7 +33,14 @@ public enum PostgreSQLInstance {
 	}
 	
 	public static Connection getConnection() throws SQLException {
-		return  DriverManager.getConnection(URL, USER, PASSWORD);
+		// https://jdbc.postgresql.org/documentation/head/connect.htlm
+		Properties props = new Properties();
+		props.setProperty("user", USER);
+		props.setProperty("password", PASSWORD);
+		// do not cache queries
+		props.setProperty("preparedStatementCacheQueries", "0");
+		props.setProperty("preparedStatementCacheSizeMiB", "10");
+		return  DriverManager.getConnection(URL, props);
 	}
 
 }

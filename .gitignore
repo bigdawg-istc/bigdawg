@@ -1,6 +1,8 @@
 *.class
 
 target/
+installation/Downloads
+installation/data
 
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/
@@ -21,3 +23,5 @@ target/
 
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
+
+.idea
