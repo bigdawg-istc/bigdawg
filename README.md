@@ -220,6 +220,16 @@ curl -v -H "Content-Type: application/json" -X POST -d '{"query":"RELATION(selec
 - run: mvn clean compile -P dev
 - run: mvn exec:java
 
+```
+#!bash
+
+
+0    [main] INFO  istc.bigdawg.LoggerSetup  - Starting application. Logging was configured!
+Migrating data from PostgreSQL to PostgreSQL
+143  [main] DEBUG istc.bigdawg.migration.FromPostgresToPostgres  - Number of extracted rows: 143 Number of loaded rows: 143
+```
+
+
 ### The last script will create 2 PostgreSQL instances:
 - postgres1 port: 5431 in bigdawgmiddle/installation/Downloads/postgres1
 - postgres2 port: 5430 in bigdawgmiddle/installation/Downloads/postgres2
@@ -235,6 +245,20 @@ curl -v -H "Content-Type: application/json" -X POST -d '{"query":"RELATION(selec
 - ./psql -p 5431 -d bigdawg_catalog
 - select * from catalog.engines;
 - select * from catalog.databases;
+
+
+```
+#!sql
+
+ dbid | engine_id |      name       |  userid  | password 
+------+-----------+-----------------+----------+----------
+    1 |         1 | bigdawg_catalog | postgres | test
+    2 |         1 | mimic2          | pguser   | test
+    3 |         2 | mimic2_copy     | pguser   | test
+(3 rows)
+
+```
+
 
 ### mimic2:
 - go to bigdawgmiddle/installation/Downloads/postgres1/bin
