@@ -216,9 +216,9 @@ curl -v -H "Content-Type: application/json" -X POST -d '{"query":"RELATION(selec
 - to start the PostgreSQL instances run: bash start_postgres.sh
 
 ### Additionally, you can change pom.xml and try migrating data from postgres1 to postgres2:
-- uncomment: <bigDawg.main.class>istc.bigdawg.migration.FromPostgresToPostgres</bigDawg.main.class>
-- comment: <bigDawg.main.class>istc.bigdawg.Main</bigDawg.main.class>
 - go to bigdawgmiddle/
+- in pom.xml uncomment: <bigDawg.main.class>istc.bigdawg.migration.FromPostgresToPostgres</bigDawg.main.class>
+- in pom.xml comment: <bigDawg.main.class>istc.bigdawg.Main</bigDawg.main.class>
 - run: mvn clean compile -P dev
 - run: mvn exec:java
 
