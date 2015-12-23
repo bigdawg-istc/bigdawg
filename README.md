@@ -207,11 +207,13 @@ curl -v -H "Content-Type: application/json" -X POST -d '{"query":"RELATION(selec
 
 
 ### Prepare environment with 2 PostgreSQL instances:
-- go to bigdawgmiddle/installation
+- go to bigdawgmiddle/installation (there are the scripts that we will use)
 - mkdir data
 - cd data
 - download mimic2.pgd to the data directory from https://app.box.com/s/8by2c36m8bwxl9654bwf3mttdt25uu4k
-- run script: bash setup.sh
+- run script: bash setup.sh (this script should be executed only once)
+- to stop the PostgreSQL instances run: bash stop_postgres.sh
+- to start the PostgreSQL instances run: bash start_postgres.sh 
 
 ### Additionally, you can change pom.xml and try migrating data from postgres1 to postgres2:
 - uncomment: <bigDawg.main.class>istc.bigdawg.migration.FromPostgresToPostgres</bigDawg.main.class>
