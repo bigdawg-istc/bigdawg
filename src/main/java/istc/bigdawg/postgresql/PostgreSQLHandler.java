@@ -18,13 +18,9 @@ import javax.ws.rs.core.Response;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-
 import istc.bigdawg.BDConstants.Shim;
 import istc.bigdawg.query.DBHandler;
 import istc.bigdawg.query.QueryClient;
-import istc.bigdawg.query.QueryResponseTupleList;
-import istc.bigdawg.utils.ObjectMapperResource;
 import teddy.bigdawg.catalog.CatalogInstance;
 import teddy.bigdawg.catalog.CatalogViewer;
 
@@ -36,7 +32,7 @@ public class PostgreSQLHandler implements DBHandler {
 
 	private static Logger log = Logger.getLogger(PostgreSQLHandler.class.getName());
 	private Connection con = null;
-	private CatalogViewer.ConnectionInfo conInfo = null;
+	private PostgreSQLConnectionInfo conInfo = null;
 	private Statement st = null;
 	private PreparedStatement preparedSt = null;
 	private ResultSet rs = null;
@@ -168,17 +164,6 @@ public class PostgreSQLHandler implements DBHandler {
 		log.info(messageTABLE);
 
 		return Response.status(200).entity(out).build();
-	}
-
-	private String getJSONString(QueryResponseTupleList resp) throws JsonProcessingException {
-		String responseResult;
-		try {
-			responseResult = ObjectMapperResource.INSTANCE.getObjectMapper().writeValueAsString(resp);
-			return responseResult;
-		} catch (JsonProcessingException e) {
-			e.printStackTrace();
-			throw e;
-		}
 	}
 
 	private void cleanPostgreSQLResources() throws SQLException {

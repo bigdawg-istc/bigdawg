@@ -7,6 +7,8 @@ import java.util.ArrayList;
 
 import org.apache.log4j.Logger;
 
+import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
+
 public class CatalogViewer {
 
 	private static Logger logger = Logger.getLogger(CatalogViewer.class.getName());
@@ -601,63 +603,6 @@ public class CatalogViewer {
 		return extraction;
 	}
 
-	public static class ConnectionInfo {
-		private String host;
-		private String port;
-		private String database;
-		private String user;
-		private String password;
-
-		public ConnectionInfo(String host, String port, String database, String user, String password) {
-			this.host = host;
-			this.port = port;
-			this.database = database;
-			this.user = user;
-			this.password = password;
-		}
-
-		public String getHost() {
-			return host;
-		}
-
-		public void setHost(String host) {
-			this.host = host;
-		}
-
-		public String getPort() {
-			return port;
-		}
-
-		public void setPort(String port) {
-			this.port = port;
-		}
-
-		public String getDatabase() {
-			return database;
-		}
-
-		public void setDatabase(String database) {
-			this.database = database;
-		}
-
-		public String getUser() {
-			return user;
-		}
-
-		public void setUser(String user) {
-			this.user = user;
-		}
-
-		public String getPassword() {
-			return password;
-		}
-
-		public void setPassword(String password) {
-			this.password = password;
-		}
-
-	}
-
 	/**
 	 * author: Adam Dziedzic
 	 * 
@@ -675,7 +620,7 @@ public class CatalogViewer {
 	 *             problem with the connection to the catalog or no data for the
 	 *             arguments in the catalog
 	 */
-	public static ConnectionInfo getConnection(Catalog cc, int engineId, int dbId) throws Exception {
+	public static PostgreSQLConnectionInfo getConnection(Catalog cc, int engineId, int dbId) throws Exception {
 		// TODO add cache for the connections (done by Adam)
 		CatalogUtilities.checkConnection(cc);
 		PreparedStatement stmt = cc.connection
@@ -700,7 +645,7 @@ public class CatalogViewer {
 			logger.error(msg);
 			throw new Exception(msg);
 		}
-		ConnectionInfo conInfo = new ConnectionInfo(rs.getString("host"), rs.getString("port"), rs.getString("name"),
+		PostgreSQLConnectionInfo conInfo = new PostgreSQLConnectionInfo(rs.getString("host"), rs.getString("port"), rs.getString("name"),
 				rs.getString("userid"), rs.getString("password"));
 		return conInfo;
 	}
