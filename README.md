@@ -93,7 +93,7 @@ To run your local development environment run:
 
 mvn clean compile test -P dev
 
-If you are bothered by an error for pom.xml in Eclipse, then you can go to Project->Properties->Maven and fill in the Active Maven Profiles (comma separated) field with "dev" word but then you won't be able to build the packages for the test and prod environments (the default dev profile will overwrite all the settings).
+If you are bothered by an error for pom.xml in Eclipse, then you can go to Project->Properties->Maven and fill in the Active Maven Profiles (comma separated) field with "dev" word but then you won't be able to build the packages for the test and prod environments (the default dev profile overwrites all the settings).
 
 Building packages for test and prod environments:
 First run the packaging with tests (this is to check if everything is correct): mvn clean package -P dev
@@ -197,6 +197,8 @@ curl -v -H "Content-Type: application/json" -X POST -d '{"query":"RELATION(bdrel
 
 # For demo of Phase 0.2:
 
+The main question is how we can handle many database instances. The idea is to store the meta-information (instance host, port, datbase name, etc.) in the catalog. The only connection information stored in the config file: bigdawgmiddle/src/main/resources/bigdawg-config.properties pertain to the PostgreSQL instance where the data for the catalog is stored. Additionally, the config file: bigdawgmiddle/src/main/resources/bigdawg-log4j.properties contains information about PostgreSQL instance where the logs are stored. 
+
 ### The current working version can be tested here:
 
 ```
@@ -232,7 +234,7 @@ Migrating data from PostgreSQL to PostgreSQL
 ```
 
 
-### The last script will create 2 PostgreSQL instances:
+### The last script creates 2 PostgreSQL instances:
 - postgres1 port: 5431 in bigdawgmiddle/installation/Downloads/postgres1
 - postgres2 port: 5430 in bigdawgmiddle/installation/Downloads/postgres2
 
