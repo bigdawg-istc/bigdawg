@@ -30,7 +30,7 @@ import istc.bigdawg.query.parser.Parser;
 import istc.bigdawg.query.parser.simpleParser;
 import istc.bigdawg.scidb.SciDBHandler;
 import istc.bigdawg.utils.ObjectMapperResource;
-import teddy.bigdawg.catalog.CatalogInstance;
+import teddy.bigdawg.planner.Planner;
 /**
  * @author Adam Dziedzic
  * 
@@ -106,14 +106,14 @@ public class QueryClient {
 
 			for (DBHandler handler : registeredDbHandlers) {
 				if (handler.getShim() == parsed.getShim()) {
-					return handler.executeQuery(queryString);
-//					try {
-//						// this 6 here is a magic number but I can see that it omits bdrel
-//						return Planner.processQuery(queryString.substring(6,queryString.length()-2));
-//					} catch (Exception e) {
-//						// TODO Auto-generated catch block
-//						return Response.status(412).entity(e.getMessage()).build();
-//					}
+					//return handler.executeQuery(queryString);
+					try {
+						// this 6 here is a magic number but I can see that it omits bdrel
+						return Planner.processQuery(queryString.substring(6,queryString.length()-2));
+					} catch (Exception e) {
+						// TODO Auto-generated catch block
+						return Response.status(412).entity(e.getMessage()).build();
+					}
 					//return handler.executeQuery(queryString.substring(6,queryString.length()-2));
 				}
 			}

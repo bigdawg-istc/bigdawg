@@ -9,6 +9,7 @@ import java.io.PipedOutputStream;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
@@ -100,7 +101,7 @@ public class FromPostgresToPostgres {
 		public Long call() {
 			Long countLoadedRows = 0L;
 			try {
-				countLoadedRows=cpFrom.copyOut(copyFromString, output);
+				countLoadedRows = cpFrom.copyOut(copyFromString, output);
 				output.close();
 			} catch (IOException e) {
 				String msg = "Problem with thread for PostgreSQL copy manager " + "while copying data from PostgreSQL.";
@@ -164,6 +165,9 @@ public class FromPostgresToPostgres {
 			conFrom = getConnection(connectionFrom);
 			conTo = getConnection(connectionTo);
 
+			//Statement st = conTo.createStatement();
+			//st.execute("CREATE temporary TABLE d_patients (subject_id integer NOT NULL,sex character varying(1),dob timestamp without time zone NOT NULL,dod timestamp without time zone,hospital_expire_flg character varying(1) DEFAULT 'N'::character varying)");
+
 			CopyManager cpFrom = new CopyManager((BaseConnection) conFrom);
 			CopyManager cpTo = new CopyManager((BaseConnection) conTo);
 
@@ -225,8 +229,7 @@ public class FromPostgresToPostgres {
 		PostgreSQLConnectionInfo conInfoTo = new PostgreSQLConnectionInfo("localhost", "5430", "mimic2_copy", "pguser",
 				"test");
 		try {
-			MigrationResult result = migrator.migrate(conInfoFrom, "mimic2v26.d_patients", conInfoTo,
-					"mimic2v26.d_patients");
+			MigrationResult result = migrator.migrate(conInfoFrom, "mimic2v26.d_patients", conInfoTo, "d_patients");
 			logger.debug("Number of extracted rows: " + result.getCountExtractedRows() + " Number of loaded rows: "
 					+ result.getCountLoadedRows());
 		} catch (SQLException | IOException e) {
