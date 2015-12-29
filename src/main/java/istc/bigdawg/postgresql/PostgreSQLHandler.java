@@ -39,7 +39,7 @@ public class PostgreSQLHandler implements DBHandler {
 
 	public PostgreSQLHandler(int engineId, int dbId) throws Exception {
 		try {
-			conInfo = CatalogViewer.getConnection(CatalogInstance.INSTANCE.getCatalog(), engineId, dbId);
+			this.conInfo = CatalogViewer.getConnection(CatalogInstance.INSTANCE.getCatalog(), engineId, dbId);
 		} catch (Exception e) {
 			String msg = "Catalog chosen connection: " + conInfo.getHost() + " " + conInfo.getPort() + " "
 					+ conInfo.getDatabase() + " " + conInfo.getUser() + " " + conInfo.getPassword() + ".";
@@ -47,6 +47,10 @@ public class PostgreSQLHandler implements DBHandler {
 			e.printStackTrace();
 			throw e;
 		}
+	}
+
+	public PostgreSQLHandler(PostgreSQLConnectionInfo conInfo) {
+		this.conInfo = conInfo;
 	}
 
 	public PostgreSQLHandler() {
@@ -178,6 +182,28 @@ public class PostgreSQLHandler implements DBHandler {
 		}
 		if (con != null) {
 			con.close();
+		}
+	}
+
+	public void executeNotQueryPostgreSQL(String statement) throws SQLException {
+		try {
+			this.getConnection();
+			st = con.createStatement();
+			st.execute(statement);
+		} catch (SQLException ex) {
+			Logger lgr = Logger.getLogger(QueryClient.class.getName());
+			ex.printStackTrace();
+			lgr.log(Level.ERROR, ex.getMessage() + "; query: " + statement, ex);
+			throw ex;
+		} finally {
+			try {
+				this.cleanPostgreSQLResources();
+			} catch (SQLException ex) {
+				Logger lgr = Logger.getLogger(QueryClient.class.getName());
+				ex.printStackTrace();
+				lgr.log(Level.INFO, ex.getMessage() + "; query: " + statement, ex);
+				throw ex;
+			}
 		}
 	}
 
