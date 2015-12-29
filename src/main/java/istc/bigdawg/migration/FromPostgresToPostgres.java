@@ -9,7 +9,6 @@ import java.io.PipedOutputStream;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
@@ -229,7 +228,7 @@ public class FromPostgresToPostgres {
 		PostgreSQLConnectionInfo conInfoTo = new PostgreSQLConnectionInfo("localhost", "5430", "mimic2_copy", "pguser",
 				"test");
 		try {
-			MigrationResult result = migrator.migrate(conInfoFrom, "mimic2v26.d_patients", conInfoTo, "d_patients");
+			MigrationResult result = migrator.migrate(conInfoFrom, "mimic2v26.d_patients", conInfoTo, "mimic2v26.d_patients");
 			logger.debug("Number of extracted rows: " + result.getCountExtractedRows() + " Number of loaded rows: "
 					+ result.getCountLoadedRows());
 		} catch (SQLException | IOException e) {

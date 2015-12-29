@@ -3,12 +3,14 @@
  */
 package istc.bigdawg.postgresql;
 
+import istc.bigdawg.query.ConnectionInfo;
+
 /**
  * @author Adam Dziedzic
  * 
  *
  */
-public class PostgreSQLConnectionInfo {
+public class PostgreSQLConnectionInfo implements ConnectionInfo {
 
 	private String host;
 	private String port;
@@ -23,49 +25,78 @@ public class PostgreSQLConnectionInfo {
 		this.user = user;
 		this.password = password;
 	}
-	
-	public String getUrl() {
-		return "jdbc:postgresql://"+getHost()+":"+getPort()+"/"+getDatabase();
-	}
 
-	public String getHost() {
-		return host;
+	public String getUrl() {
+		return "jdbc:postgresql://" + getHost() + ":" + getPort() + "/" + getDatabase();
 	}
 
 	public void setHost(String host) {
 		this.host = host;
 	}
 
-	public String getPort() {
-		return port;
-	}
-
 	public void setPort(String port) {
 		this.port = port;
-	}
-
-	public String getDatabase() {
-		return database;
 	}
 
 	public void setDatabase(String database) {
 		this.database = database;
 	}
 
-	public String getUser() {
-		return user;
-	}
-
 	public void setUser(String user) {
 		this.user = user;
 	}
 
-	public String getPassword() {
-		return password;
-	}
-
 	public void setPassword(String password) {
 		this.password = password;
+	}
+
+	/**
+	 * This is a specific property for PostgreSQL database.
+	 * 
+	 * @return the database name to which the connection should be established
+	 */
+	public String getDatabase() {
+		return database;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see istc.bigdawg.query.ConnectionInfo#getHost()
+	 */
+	@Override
+	public String getHost() {
+		return host;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see istc.bigdawg.query.ConnectionInfo#getPort()
+	 */
+	@Override
+	public String getPort() {
+		return port;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see istc.bigdawg.query.ConnectionInfo#getUser()
+	 */
+	@Override
+	public String getUser() {
+		return user;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see istc.bigdawg.query.ConnectionInfo#getPassword()
+	 */
+	@Override
+	public String getPassword() {
+		return password;
 	}
 
 }

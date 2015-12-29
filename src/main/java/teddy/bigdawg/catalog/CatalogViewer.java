@@ -606,7 +606,7 @@ public class CatalogViewer {
 	/**
 	 * author: Adam Dziedzic
 	 * 
-	 * Get connection to a datbase based on engineId and dbId.
+	 * Get connection to a database based on engineId and dbId.
 	 * 
 	 * 
 	 * @param cc
