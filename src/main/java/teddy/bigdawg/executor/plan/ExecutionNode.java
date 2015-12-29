@@ -2,6 +2,8 @@ package teddy.bigdawg.executor.plan;
 
 import java.util.Optional;
 
+import istc.bigdawg.query.ConnectionInfo;
+
 /**
  * Represents a task to be completed by the Executor in order to execute a
  * query.
@@ -14,7 +16,7 @@ public interface ExecutionNode {
      * @return int representing the database engine where the node should be
      *         executed
      */
-    public int getEngineId();
+    public ConnectionInfo getEngine();
 
     /**
      * @return table name for where the result will be stored. If empty, then

@@ -2,6 +2,8 @@ package teddy.bigdawg.executor.plan;
 
 import java.util.Optional;
 
+import istc.bigdawg.query.ConnectionInfo;
+
 /**
  * Represents a cross-engine Join.
  * 
@@ -21,8 +23,7 @@ public class BinaryJoinExecutionNode implements ExecutionNode {
      * @see teddy.bigdawg.executor.plan.ExecutionNode#getEngineId()
      */
     @Override
-    public int getEngineId() {
-        // TODO(ankush) Auto-generated method stub
+    public ConnectionInfo getEngine() {
         throw new UnsupportedOperationException();
     }
 
@@ -33,7 +34,6 @@ public class BinaryJoinExecutionNode implements ExecutionNode {
      */
     @Override
     public Optional<String> getTableName() {
-        // TODO(ankush) Auto-generated method stub
         throw new UnsupportedOperationException();
     }
 
@@ -44,7 +44,6 @@ public class BinaryJoinExecutionNode implements ExecutionNode {
      */
     @Override
     public Optional<String> getQueryString() {
-        // TODO(ankush) Auto-generated method stub
         throw new UnsupportedOperationException();
     }
 

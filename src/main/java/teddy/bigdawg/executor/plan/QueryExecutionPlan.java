@@ -1,7 +1,8 @@
 package teddy.bigdawg.executor.plan;
 
-import java.util.Iterator;
+import java.util.Collection;
 
+import org.jgrapht.Graphs;
 import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
 import org.jgrapht.graph.DefaultEdge;
 
@@ -11,12 +12,34 @@ import org.jgrapht.graph.DefaultEdge;
  * 
  * @author ankushg
  */
-public class QueryExecutionPlan {
-    private DirectedAcyclicGraph<ExecutionNode, DefaultEdge> graph = new DirectedAcyclicGraph<>(DefaultEdge.class);
+public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, DefaultEdge>
+        implements Iterable<ExecutionNode> {
+
+    private static final long serialVersionUID = 7704709501946249185L;
 
     public QueryExecutionPlan() {
-        // TODO: add any instance variables needed to be passed from Planner to
-        // Executor here (rather than passing as method parameters)
+        super(DefaultEdge.class);
+        // TODO add any variables needed from Planner
+    }
+
+    /**
+     * @param node
+     *            the ExecutionNode to get the dependencies of
+     * @return a collection of the nodes that are the <b>immediate</b>
+     *         dependencies of the specified node
+     */
+    public Collection<ExecutionNode> getDependencies(ExecutionNode node) {
+        return Graphs.predecessorListOf(this, node);
+    }
+
+    /**
+     * @param node
+     *            the ExecutionNode to get the dependents of
+     * @return a collection of the nodes that are the <b>immediate</b>
+     *         dependents of the specified node
+     */
+    public Collection<ExecutionNode> getDependents(ExecutionNode node) {
+        return Graphs.successorListOf(this, node);
     }
 
     /**
@@ -27,7 +50,7 @@ public class QueryExecutionPlan {
      * @return true if this plan did not already contain the specified node.
      */
     public boolean addNode(ExecutionNode node) {
-        return graph.addVertex(node);
+        return this.addVertex(node);
     }
 
     /**
@@ -49,18 +72,7 @@ public class QueryExecutionPlan {
             this.addNode(dep);
 
             // adds an edge from the dependency to the node
-            graph.addDagEdge(dep, node);
+            this.addDagEdge(dep, node);
         }
-    }
-
-    /**
-     * iterator will traverse the nodes in topological order, meaning that if
-     * node a depends on node b, then node a is guaranteed to come before node b
-     * in the iteration order
-     * 
-     * @return an iterator that will traverse the graph in topological order
-     */
-    public Iterator<ExecutionNode> iterator() {
-        return graph.iterator();
     }
 }
