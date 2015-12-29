@@ -2,13 +2,15 @@ package teddy.bigdawg.executor.plan;
 
 import java.util.Optional;
 
+import istc.bigdawg.query.ConnectionInfo;
+
 /**
  * Represents a single table on a given engine.
  * 
  * @author ankushg
  */
 public class TableExecutionNode implements ExecutionNode {
-    private final int engineId;
+    private final ConnectionInfo engine;
     private final String tableName;
 
     /**
@@ -20,8 +22,8 @@ public class TableExecutionNode implements ExecutionNode {
      *            the name of the table on the specified database engine (must
      *            be unique across all engines)
      */
-    public TableExecutionNode(int engineId, String tableName) {
-        this.engineId = engineId;
+    public TableExecutionNode(ConnectionInfo engine, String tableName) {
+        this.engine = engine;
         this.tableName = tableName;
     }
 
@@ -31,8 +33,8 @@ public class TableExecutionNode implements ExecutionNode {
      * @see teddy.bigdawg.executor.plan.ExecutionNode#getEngineId()
      */
     @Override
-    public int getEngineId() {
-        return this.engineId;
+    public ConnectionInfo getEngine() {
+        return this.engine;
     }
 
     /*
