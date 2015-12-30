@@ -68,8 +68,7 @@ public class FromPostgresToPostgresTest {
 			String currentString = row.get(2);
 			System.out.println("string value: " + currentString);
 			assertTrue(stringValue.equals(currentString));
-			
-			
+
 		} catch (SQLException | IOException e) {
 			String msg = "Problem with data migration.";
 			System.err.print(msg);

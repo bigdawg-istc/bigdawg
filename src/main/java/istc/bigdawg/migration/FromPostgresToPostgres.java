@@ -67,7 +67,7 @@ public class FromPostgresToPostgres {
 		return copyFromStringBuf.toString();
 	}
 
-	Connection getConnection(PostgreSQLConnectionInfo conInfo) throws SQLException {
+	private Connection getConnection(PostgreSQLConnectionInfo conInfo) throws SQLException {
 		Connection con;
 		String url = conInfo.getUrl();
 		String user = conInfo.getUser();
