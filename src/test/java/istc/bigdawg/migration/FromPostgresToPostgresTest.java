@@ -12,7 +12,6 @@ import java.util.List;
 
 import org.junit.Test;
 
-import istc.bigdawg.migration.FromPostgresToPostgres.MigrationResult;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.postgresql.PostgreSQLHandler.QueryResult;

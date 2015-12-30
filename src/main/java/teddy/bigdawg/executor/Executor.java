@@ -1,13 +1,14 @@
 package teddy.bigdawg.executor;
 
-import java.io.IOException;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import istc.bigdawg.migration.FromPostgresToPostgres;
+import org.apache.log4j.Logger;
+
+import istc.bigdawg.migration.Migrator;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.postgresql.PostgreSQLHandler.QueryResult;
@@ -18,77 +19,69 @@ import teddy.bigdawg.executor.plan.QueryExecutionPlan;
 
 public class Executor {
 
-    static org.apache.log4j.Logger log = org.apache.log4j.Logger.getLogger(Executor.class.getName());
+	static Logger log = Logger.getLogger(Executor.class.getName());
 
-    /**
-     * Execute a given query plan, and return the result
-     *
-     * @param plan
-     *            a data structure of the queries to be run and their ordering,
-     *            with edges pointing to dependencies
-     */
-    public static QueryResult executePlan(QueryExecutionPlan plan) throws SQLException {
-        // TODO(ankush) proper logging for query plan executions
-        
-        // maps nodes to a list of all engines on which they are stored
-        Map<ExecutionNode, Set<ConnectionInfo>> mapping = new HashMap<>();
+	/**
+	 * Execute a given query plan, and return the result
+	 *
+	 * @param plan
+	 *            a data structure of the queries to be run and their ordering,
+	 *            with edges pointing to dependencies
+	 */
+	public static QueryResult executePlan(QueryExecutionPlan plan) throws SQLException {
+		// TODO(ankush) proper logging for query plan executions
 
-        // Iterate through the plan in topological order
-        for (ExecutionNode node : plan) {
-            if (node instanceof LocalQueryExecutionNode) {
-                // migrate dependencies to the proper engine
-                plan.getDependencies(node).stream()
-                        // filter out dependencies already on proper engine
-                        .filter(d -> !mapping.get(d).contains(node.getEngine()))
-                        .forEach(m -> {
-                            // migrate to node.getEngineId()
-                            try {
-                                migrateData(m.getEngine(), node.getEngine(), m.getTableName().get());
-                            } catch (Exception e) {
-                                // TODO handle errors in migration properly
-                                e.printStackTrace();
-                            }
-                            // update mapping for future nodes with the same dependencies
-                            mapping.putIfAbsent(m, new HashSet<>());
-                            mapping.get(m).add(node.getEngine());
-                        });
+		// maps nodes to a list of all engines on which they are stored
+		Map<ExecutionNode, Set<ConnectionInfo>> mapping = new HashMap<>();
 
-                QueryResult result = null;
-                
-                if (node.getQueryString().isPresent()) {
-                    if (node.getEngine() instanceof PostgreSQLConnectionInfo) {
-                        PostgreSQLHandler handler = new PostgreSQLHandler((PostgreSQLConnectionInfo) node.getEngine());
-                        result = handler.executeQueryPostgreSQL(node.getQueryString().get());
-                    } else {
-                        throw new IllegalArgumentException("Node engine was not PostgreSQL");
-                    }
-                }
+		// Iterate through the plan in topological order
+		for (ExecutionNode node : plan) {
+			if (node instanceof LocalQueryExecutionNode) {
+				// migrate dependencies to the proper engine
+				plan.getDependencies(node).stream()
+						// filter out dependencies already on proper engine
+						.filter(d -> !mapping.get(d).contains(node.getEngine())).forEach(m -> {
+							// migrate to node.getEngineId()
+							try {
+								Migrator.migrate(m.getEngine(), m.getTableName().get(), node.getEngine(),
+										m.getTableName().get());
+							} catch (Exception e) {
+								// TODO handle errors in migration properly
+								e.printStackTrace();
+							}
+							// update mapping for future nodes with the same
+							// dependencies
+							mapping.putIfAbsent(m, new HashSet<>());
+							mapping.get(m).add(node.getEngine());
+						});
 
-                // if no output table, must be the final result node
-                if (!node.getTableName().isPresent()) {
-                    // TODO(ankush) clean up all old temporary tables
-                    return result;
-                }
-            }
-            
-            mapping.putIfAbsent(node, new HashSet<>());
-            mapping.get(node).add(node.getEngine());
-        }
-        
-        return null;
-    }
+				QueryResult result = null;
 
-    public static QueryResult executeDSA(int querySerial, int subqueryPos, String dsa) throws SQLException {
-        System.out.printf("[BigDAWG] EXECUTOR: executing sub-query %d of query %d...\n", subqueryPos, querySerial);
-        return (new PostgreSQLHandler()).executeQueryPostgreSQL(dsa);
-    }
+				if (node.getQueryString().isPresent()) {
+					if (node.getEngine() instanceof PostgreSQLConnectionInfo) {
+						PostgreSQLHandler handler = new PostgreSQLHandler((PostgreSQLConnectionInfo) node.getEngine());
+						result = handler.executeQueryPostgreSQL(node.getQueryString().get());
+					} else {
+						throw new IllegalArgumentException("Node engine was not PostgreSQL");
+					}
+				}
 
-    public static FromPostgresToPostgres.MigrationResult migrateData(ConnectionInfo from, ConnectionInfo to, String table) throws SQLException, IOException {
-        if (from instanceof PostgreSQLConnectionInfo && from instanceof PostgreSQLConnectionInfo) {
-            FromPostgresToPostgres migrator = new FromPostgresToPostgres();
-            return migrator.migrate((PostgreSQLConnectionInfo) from, table, (PostgreSQLConnectionInfo) to, table);
-        }
-        
-        throw new IllegalArgumentException("Both ConnectionInfos were not PostgreSQLConnectionInfo");
-    }
+				// if no output table, must be the final result node
+				if (!node.getTableName().isPresent()) {
+					// TODO(ankush) clean up all old temporary tables
+					return result;
+				}
+			}
+
+			mapping.putIfAbsent(node, new HashSet<>());
+			mapping.get(node).add(node.getEngine());
+		}
+
+		return null;
+	}
+
+	public static QueryResult executeDSA(int querySerial, int subqueryPos, String dsa) throws SQLException {
+		System.out.printf("[BigDAWG] EXECUTOR: executing sub-query %d of query %d...\n", subqueryPos, querySerial);
+		return (new PostgreSQLHandler()).executeQueryPostgreSQL(dsa);
+	}
 }
