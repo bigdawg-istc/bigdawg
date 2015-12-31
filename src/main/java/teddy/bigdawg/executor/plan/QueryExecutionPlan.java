@@ -19,6 +19,9 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
 
     private static final long serialVersionUID = 7704709501946249185L;
 
+    private String queryId = "";
+    private String island = "";
+
     public QueryExecutionPlan() {
         super(DefaultEdge.class);
         // TODO add any variables needed from Planner
@@ -76,5 +79,21 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
             // adds an edge from the dependency to the node
             this.addDagEdge(dep, node);
         }
+    }
+
+    public void setQueryId(String queryId){
+        this.queryId = queryId;
+    }
+
+    public String getQueryId(){
+        return this.queryId;
+    }
+
+    public void setIsland(String island) {
+        this.island = island;
+    }
+
+    public String getIsland() {
+        return this.island;
     }
 }
