@@ -10,6 +10,8 @@ import java.util.Map;
 
 import javax.ws.rs.core.Response;
 
+import org.apache.log4j.Logger;
+
 import istc.bigdawg.monitoring.Monitor;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.postgresql.PostgreSQLHandler.QueryResult;
@@ -34,7 +36,7 @@ public class Planner {
 	/*
 	 * 
 	 */
-
+	private static Logger logger = Logger.getLogger(Planner.class.getName());
 	private static LinkedHashMap<Integer, ArrayList<String>> queryQueue = new LinkedHashMap<Integer, ArrayList<String>>(); // queries
 																									// to
 																									// be
@@ -51,12 +53,12 @@ public class Planner {
 		
 		
 		// UNROLLING
-		System.out.printf("[BigDAWG] PLANNER: User query received. Parsing...\n");
+		logger.debug("User query received. Parsing...");
 		ArrayList<String> crossIslandQuery = UserQueryParser.getUnwrappedQueriesByIslands(userinput, "BIGDAWGTAG_");
 		
 		
 		// GET SIGNATURE AND CASTS
-		System.out.printf("[BigDAWG] PLANNER: generating signatures and casts...\n");
+		logger.debug("Generating signatures and casts...");
 		Map<String, Object> sigAndCasts = UserQueryParser.getSignaturesAndCasts(CatalogInstance.INSTANCE.getCatalog(), crossIslandQuery);
 		
 		
@@ -68,7 +70,7 @@ public class Planner {
 
 		
 		// generating query tree 
-		System.out.printf("[BigDAWG] PLANNER: generating query execution tree...\n");
+		logger.debug("Generating query execution tree...");
 		QueryExecutionPlan qep = new QueryExecutionPlan();
 		populateQueryExecutionPlan(qep, psqlh, sigAndCasts, maxSerial);
 		
@@ -79,7 +81,7 @@ public class Planner {
 		
 		
 		// EXECUTE TEH RESULT
-		System.out.printf("[BigDAWG] PLANNER: executing query execution tree...\n");
+		logger.debug("Executing query execution tree...");
 		return compileResults(querySerial, Executor.executePlan(qep));
 	}
 
@@ -144,9 +146,8 @@ public class Planner {
 		// TODO DON'T CHEAT; ACTUALLY PICK; CHANGE THIS 0
 		maxSerial += 1;
 		queryQueue.put(maxSerial, qnp.qList.get(0)); 
-
-		System.out.printf("[BigDAWG] PLANNER: Performance information received; serial number: %d\n", maxSerial);
-		System.out.println("[BigDAWG] PLANNER: Query chosen: "+queryQueue.get(maxSerial).toString() + "\n");
+		
+		logger.debug("Performance information received; serial number: "+maxSerial);
 	};
 
 	/**

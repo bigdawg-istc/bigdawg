@@ -581,9 +581,9 @@ public class SQLExpressionHandler implements ExpressionVisitor, ItemsListVisitor
         buffer.append(")");
     }
     
-    @Override
-    public void visit(OracleHint hint) {
-        buffer.append(hint.toString());
-    }
+//    @Override
+//    public void visit(OracleHint hint) {
+//        buffer.append(hint.toString());
+//    }
     
 }

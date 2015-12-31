@@ -87,7 +87,6 @@ public class RelationalSignatureBuilder {
 		}
 		
 		stringBuffer.append("\t").append(dawgtags);
-		System.out.println(stringBuffer.toString());
 		String result = CatalogViewer.getObjectsFromList(cc, stringBuffer.toString());
 		if (result.length() == 0) {
 			return dawgtags.toString();

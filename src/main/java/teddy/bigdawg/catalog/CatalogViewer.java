@@ -15,7 +15,14 @@ public class CatalogViewer {
 
 	private static Logger logger = Logger.getLogger(CatalogViewer.class.getName());
 
-	
+	/**
+	 * takes a integer DBID, returns a 5-field ArrayList<String> that tells host, port, dbname, userid and password
+	 * 
+	 * @param cc
+	 * @param db_id
+	 * @return
+	 * @throws Exception
+	 */
 	public static ArrayList<String> getConnectionInfo(Catalog cc, int db_id) throws Exception {
 		// input check
 		CatalogUtilities.checkConnection(cc);
@@ -39,13 +46,19 @@ public class CatalogViewer {
 		return extraction;
 	}
 	
-	
-	public static HashMap<String,ArrayList<String>> getDBMappingByDB (Catalog cc, ArrayList<String> inputs) throws Exception {
+	/**
+	 * For each dbid, provide a CSV String of names of objects that reside on the database. 
+	 * @param cc
+	 * @param inputs
+	 * @return HashMap<Integer, ArrayList<String>>
+	 * @throws Exception
+	 */
+	public static HashMap<Integer, ArrayList<String>> getDBMappingByDB (Catalog cc, ArrayList<String> inputs) throws Exception {
 		CatalogUtilities.checkConnection(cc);
 		if (inputs.size() == 0) throw new Exception("Empty inputs from getDBMapping");
 		
 		int len = inputs.size();
-		HashMap<String, ArrayList<String>> extraction = new HashMap<>();
+		HashMap<Integer, ArrayList<String>> extraction = new HashMap<>();
 		
 		String wherePred = new String(" lower(o.name) = lower(\'"+ inputs.get(0) + "\') ");
 		for (int i = 1; i < len; i++) {
@@ -56,15 +69,22 @@ public class CatalogViewer {
 				+ "from (select * from catalog.objects o where " + wherePred + " order by name, physical_db) as objs "
 				+ "group by physical_db order by c desc, physical_db;");
 		
-		if (rs.next()) extraction.put(rs.getString("db"), new ArrayList<String>(Arrays.asList(rs.getString("obj").split(","))));
+		if (rs.next()) extraction.put(rs.getInt("db"), new ArrayList<String>(Arrays.asList(rs.getString("obj").split(","))));
 		while (rs.next()) {
-			extraction.put(rs.getString("db"), new ArrayList<String>(Arrays.asList(rs.getString("obj").split(","))));
+			extraction.put(rs.getInt("db"), new ArrayList<String>(Arrays.asList(rs.getString("obj").split(","))));
 		}
 		rs.close();
 		
 		return extraction;
 	};
 	
+	/**
+	 * For each named object, provide a CSV String of dbid of databases that holds its copy.
+	 * @param cc
+	 * @param inputs
+	 * @return HashMap<String,ArrayList<String>>
+	 * @throws Exception
+	 */
 	public static HashMap<String,ArrayList<String>> getDBMappingByObj (Catalog cc, ArrayList<String> inputs) throws Exception {
 		CatalogUtilities.checkConnection(cc);
 		if (inputs.size() == 0) throw new Exception("Empty inputs from getDBMapping");

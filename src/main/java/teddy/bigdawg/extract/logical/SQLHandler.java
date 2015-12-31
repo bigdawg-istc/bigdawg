@@ -78,10 +78,10 @@ public class SQLHandler implements SelectVisitor, OrderByVisitor, SelectItemVisi
         }
         buffer.append("SELECT ");
         
-        OracleHint hint = plainSelect.getOracleHint();
-        if (hint != null) {
-            buffer.append(hint).append(" ");
-        }
+//        OracleHint hint = plainSelect.getOracleHint();
+//        if (hint != null) {
+//            buffer.append(hint).append(" ");
+//        }
         
         Skip skip = plainSelect.getSkip();
         if (skip != null) {
