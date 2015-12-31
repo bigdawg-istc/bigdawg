@@ -130,4 +130,52 @@ public class PostgreSQLConnectionInfo implements ConnectionInfo {
         return new PostgreSQLHandler(this);
     }
 
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + ((database == null) ? 0 : database.hashCode());
+        result = prime * result + ((host == null) ? 0 : host.hashCode());
+        result = prime * result + ((password == null) ? 0 : password.hashCode());
+        result = prime * result + ((port == null) ? 0 : port.hashCode());
+        result = prime * result + ((user == null) ? 0 : user.hashCode());
+        return result;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (!(obj instanceof PostgreSQLConnectionInfo))
+            return false;
+        PostgreSQLConnectionInfo other = (PostgreSQLConnectionInfo) obj;
+        if (database == null) {
+            if (other.database != null)
+                return false;
+        } else if (!database.equals(other.database))
+            return false;
+        if (host == null) {
+            if (other.host != null)
+                return false;
+        } else if (!host.equals(other.host))
+            return false;
+        if (password == null) {
+            if (other.password != null)
+                return false;
+        } else if (!password.equals(other.password))
+            return false;
+        if (port == null) {
+            if (other.port != null)
+                return false;
+        } else if (!port.equals(other.port))
+            return false;
+        if (user == null) {
+            if (other.user != null)
+                return false;
+        } else if (!user.equals(other.user))
+            return false;
+        return true;
+    }
 }
