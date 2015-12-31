@@ -73,7 +73,6 @@ public class ExecutionNodeFactory {
 			
 			dependentNodes.put(statementName, new LocalQueryExecutionNode(sel, psqlInfo, statementName));
 			
-			
 			// dependences
 			for (String s : dependency_map.get(statementName)) {
 
@@ -91,7 +90,6 @@ public class ExecutionNodeFactory {
 				}
 				
 				psqlInfo = getConnectionInfo(Integer.parseInt(i));
-				
 				o 	= withNSelect.get(s);
 				put = null; if (o instanceof CommonSQLTableExpressionScan) put = s;
 				sel = o.generateSelectForExecutionTree(srcSTMT, put);
@@ -102,14 +100,12 @@ public class ExecutionNodeFactory {
 			}
 			
 		}
-		
 		for (String s : dependentNodes.keySet()) {
 			qep.addVertex(dependentNodes.get(s));
 		}
 		for (int i = 0; i < edgesFrom.size() ; i ++) {
 			qep.addDagEdge(dependentNodes.get(edgesFrom.get(i)), dependentNodes.get(edgesTo.get(i)));
 		}
-			
 	}
 	
 	// not using it for now

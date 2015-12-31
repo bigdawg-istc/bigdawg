@@ -23,6 +23,7 @@ public class SQLTable {
 	
 	private CreateTable tableDefinition; // whole provenance
 	private String name; // table name
+	private String schema; // schema name
 	private LinkedHashMap<String, SQLAttribute> attributes; // name, vals
 //	private boolean isReplicated;  // does this appear on all data sources with records pertaining to it or not?
 	// isReplicated e.g., demographics - if a person has an encounter at a hospital, then they have a demographics entry for that patient
@@ -40,6 +41,7 @@ public class SQLTable {
 		tableDefinition = aTable;
 		alias = "";
 		name = aTable.getTable().getName();
+		schema = aTable.getTable().getSchemaName();
 
 		attributes = new LinkedHashMap<String, SQLAttribute>();
 		
@@ -54,12 +56,14 @@ public class SQLTable {
 	
 	public SQLTable() {
 		name = "anonymous";
+		schema = null;
 		alias = null;
 		attributes = new LinkedHashMap<String, SQLAttribute>();
 	}
 	
 	public SQLTable(SQLTable src) {
 		this.name = new String(src.name);
+		this.schema = new String(src.schema);
 		if(src.alias != null) {
 			alias = new String(src.alias);
 		}
@@ -81,6 +85,10 @@ public class SQLTable {
 	
 	public String getName() {
 		return name;
+	}
+	
+	public String getSchemaName() {
+		return schema;
 	}
 	
 	public String getColumnSQLType(String colname) {

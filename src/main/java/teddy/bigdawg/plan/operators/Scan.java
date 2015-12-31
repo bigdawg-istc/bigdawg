@@ -48,6 +48,7 @@ public class Scan extends Operator {
 		}
 		
 		table = new Table(srcTable); // new one to accommodate aliasing
+		if (parameters.get("Schema") != null) table.setSchemaName(parameters.get("Schema"));
 
 		if(tableAlias != null && !tableAlias.equalsIgnoreCase(srcTable)) {
 			table.setAlias(new Alias(tableAlias));
@@ -102,7 +103,9 @@ public class Scan extends Operator {
 			for (Operator o : children)
 				result.putAll(o.getTableLocations(locations));
 		}
-		result.put(table.getName(), locations.get(table.getName()));
+		String schemaAndName = table.getName();
+		if (table.getSchemaName() != null) schemaAndName = table.getSchemaName() + "." +schemaAndName;
+		result.put(schemaAndName, locations.get(schemaAndName));
 		return result;
 	}
 

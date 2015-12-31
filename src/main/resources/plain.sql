@@ -1,3 +1,9 @@
+create table mimic2v26.d_patients (
+	id integer,
+	lastname varchar(30),
+	firstname varchar(30)
+);
+
 CREATE TABLE demographics (
        patient_id integer,
        birth_year integer,

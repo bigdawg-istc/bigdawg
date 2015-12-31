@@ -46,7 +46,8 @@ public class Planner {
 		
 		PostgreSQLHandler psqlh = new PostgreSQLHandler(0, 3);
 		SQLDatabaseSingleton.getInstance().setDatabase("bigdawg_schemas", "src/main/resources/plain.sql");
-		// TODO need to find a way to get rid of this ^ dependency
+		// WE CURRENTLY NEED TO DOCUMENT WHICH TABLES ARE CREATED IN THIS FILE. 
+		// NEXT VERSION I'LL REMOVE THIS CONSTRAINT. TODO
 		
 		
 		// UNROLLING
@@ -64,29 +65,12 @@ public class Planner {
 
 		// now the serial number of query is added;
 		int querySerial = maxSerial; // THIS IS A STRONG ASSUMPTION IN MULTI-THREAD. NOT A PROBLEM AT THE MOMENT TODO
-		int subqueryPos = 0;
 
-		
 		
 		// generating query tree 
 		System.out.printf("[BigDAWG] PLANNER: generating query execution tree...\n");
-		SQLQueryPlan queryPlan = SQLPlanParser.extractDirect(psqlh, ((Signature)sigAndCasts.get("OUTPUT")).getQuery());
-		Operator root = queryPlan.getRootNode();
-		
-		ArrayList<String> objs = new ArrayList<>(Arrays.asList(((Signature) sigAndCasts.get("OUTPUT")).getSig2().split("\t")));
-		Map<String, ArrayList<String>> map = CatalogViewer.getDBMappingByObj(CatalogInstance.INSTANCE.getCatalog(), objs);
-		
-		ArrayList<String> root_dep = new ArrayList<String>();
-		root_dep.addAll(root.getTableLocations(map).keySet());
-		map.put("BIGDAWG_MAIN", root_dep);
-		
-		String sql = root.generatePlaintext(queryPlan.getStatement()); // the production of AST should be root
-		
 		QueryExecutionPlan qep = new QueryExecutionPlan();
-		Map<String, Operator> out =  ExecutionNodeFactory.traverseAndPickOutWiths(root, queryPlan);
-		
-		ExecutionNodeFactory.addNodesAndEdges(qep, map, out, queryPlan.getStatement());
-		
+		populateQueryExecutionPlan(qep, psqlh, sigAndCasts);
 		
 //		System.out.println("QueryExecutionPlan:: ");
 //		for (ExecutionNode v : qep.vertexSet()) {
@@ -99,6 +83,38 @@ public class Planner {
 		return compileResults(querySerial, Executor.executePlan(qep));
 	}
 
+	/**
+	 * Populate the query execution plan
+	 * @param qep
+	 * @param psqlh
+	 * @param sigAndCasts
+	 * @throws Exception
+	 */
+	public static void populateQueryExecutionPlan(QueryExecutionPlan qep, PostgreSQLHandler psqlh, Map<String, Object> sigAndCasts) throws Exception {
+		
+		SQLQueryPlan queryPlan = SQLPlanParser.extractDirect(psqlh, ((Signature)sigAndCasts.get("OUTPUT")).getQuery());
+		Operator root = queryPlan.getRootNode();
+		
+		
+		
+		ArrayList<String> objs = new ArrayList<>(Arrays.asList(((Signature) sigAndCasts.get("OUTPUT")).getSig2().split("\t")));
+		Map<String, ArrayList<String>> map = CatalogViewer.getDBMappingByObj(CatalogInstance.INSTANCE.getCatalog(), objs);
+		
+		
+		
+		ArrayList<String> root_dep = new ArrayList<String>();
+		root_dep.addAll(root.getTableLocations(map).keySet());
+		map.put("BIGDAWG_MAIN", root_dep);
+		root.generatePlaintext(queryPlan.getStatement()); // the production of AST should be root
+		
+		
+		Map<String, Operator> out =  ExecutionNodeFactory.traverseAndPickOutWiths(root, queryPlan);
+		
+		
+		ExecutionNodeFactory.addNodesAndEdges(qep, map, out, queryPlan.getStatement());
+	};
+	
+	
 	/**
 	 * CALL MONITOR: Parses the userinput, generate alternative join plans, and
 	 * GIVE IT TO MONITOR Note: this generates the result

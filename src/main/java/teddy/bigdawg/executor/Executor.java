@@ -40,14 +40,14 @@ public class Executor {
 	 */
 	public static QueryResult executePlan(QueryExecutionPlan plan) throws SQLException {
 		// TODO(ankush) proper logging for query plan executions
-       System.out.printf("[BigDAWG] EXECUTOR: executing query %s...", plan);
+       System.out.printf("[BigDAWG] EXECUTOR: executing query %s...\n", plan);
 
 		// maps nodes to a list of all engines on which they are stored
 		Map<ExecutionNode, Set<ConnectionInfo>> mapping = new HashMap<>();
 
 		// Iterate through the plan in topological order
 		for (ExecutionNode node : plan) {
-	       System.out.printf("[BigDAWG] EXECUTOR: examining query node %s...", node);
+	       System.out.printf("[BigDAWG] EXECUTOR: examining query node %s...\n", node);
 			if (node instanceof LocalQueryExecutionNode) {
 				// migrate dependencies to the proper engine
 				plan.getDependencies(node).stream()
@@ -56,7 +56,7 @@ public class Executor {
 						.forEach(m -> {
 							// migrate to node.getEngine()
 							try {
-						        System.out.printf("[BigDAWG] EXECUTOR: migrating dependency %s from %s to %s...", m, m.getEngine(), node.getEngine());
+						        System.out.printf("[BigDAWG] EXECUTOR: migrating dependency %s from %s to %s...\n", m, m.getEngine(), node.getEngine());
 								Migrator.migrate(m.getEngine(), m.getTableName().get(), node.getEngine(),
 										m.getTableName().get());
 								
@@ -74,7 +74,7 @@ public class Executor {
 
 				if (node.getQueryString().isPresent()) {
 					if (node.getEngine() instanceof PostgreSQLConnectionInfo) {
-					    System.out.printf("[BigDAWG] EXECUTOR: executing query node %s...", node);
+					    System.out.printf("[BigDAWG] EXECUTOR: executing query node %s...\n", node);
 						PostgreSQLHandler handler = new PostgreSQLHandler((PostgreSQLConnectionInfo) node.getEngine());
 						result = handler.executeQueryPostgreSQL(node.getQueryString().get());
 					} else {
@@ -94,11 +94,11 @@ public class Executor {
 				    }
 				    
 				    for(ConnectionInfo c : oldTables.keySet()) {
-                        System.out.printf("[BigDAWG] EXECUTOR: cleaning up %s by removing %s...", c, oldTables.get(c));
+                        System.out.printf("[BigDAWG] EXECUTOR: cleaning up %s by removing %s...\n", c, oldTables.get(c));
 				        ((PostgreSQLHandler) c.getHandler()).executeQueryPostgreSQL(c.getCleanupQuery(oldTables.get(c)));
 				    }
 				    
-                    System.out.printf("[BigDAWG] EXECUTOR: finished executing %s...", plan);
+                    System.out.printf("[BigDAWG] EXECUTOR: finished executing %s...\n", plan);
 					return result;
 				}
 			}

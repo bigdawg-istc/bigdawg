@@ -69,9 +69,18 @@ public class SQLGenerationTest  extends TestCase {
 		CatalogModifier.addObject(cc, "site", "id", 1, 1);
 //		CatalogModifier.addObject(cc, "site", "id", 1, 0);
 //*/		
-		setupFourWayOne();
+//		setupFourWayOne();
+		setupMimicBasic();
 	}
 
+	private void setupMimicBasic() {
+		String testName = "mimic_basic";
+		final String inputPlaintext    = "bdrel(select * from mimic2v26.d_patients LIMIT 5);";
+		final String expectedPlaintext = "SELECT * FROM mimic2v26.d_patients LIMIT 5";
+		inputPlaintexts.put(testName, inputPlaintext);
+		expectedPlaintexts.put(testName, expectedPlaintext);
+	}
+	
 	private void setupFourWayOne() {
 		String testName = "four_way_one";
 		final String inputPlaintext    = "bdrel(WITH diag AS (SELECT * FROM diagnoses WHERE icd9 LIKE '410%'), dnd AS (SELECT d.patient_id, race, count(type_) AS ct FROM diag AS d JOIN demographics AS dm ON d.patient_id = dm.patient_id GROUP BY race, d.patient_id), v AS (SELECT * FROM vitals WHERE pulse > 80) SELECT dnd.race, m.medication, dnd.ct, v.patient_id FROM dnd JOIN medications AS m ON dnd.patient_id = m.patient_id JOIN v ON v.patient_id = dnd.patient_id);";
@@ -102,7 +111,12 @@ public class SQLGenerationTest  extends TestCase {
 		
 	}
 //*/
+	@Test
+	public void testMimicBasic() throws Exception {
+			testCaseDirect("mimic_basic");
+	}
 	
+	/*
 	@Test
 	public void testFourWayOneDirect() throws Exception {
 			testCaseDirect("four_way_one");
