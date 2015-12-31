@@ -4,6 +4,7 @@
 package istc.bigdawg.migration;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.sql.SQLException;
@@ -11,7 +12,6 @@ import java.util.List;
 
 import org.junit.Test;
 
-import istc.bigdawg.migration.FromPostgresToPostgres.MigrationResult;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.postgresql.PostgreSQLHandler.QueryResult;
@@ -24,7 +24,7 @@ import istc.bigdawg.postgresql.PostgreSQLHandler.QueryResult;
 public class FromPostgresToPostgresTest {
 
 	@Test
-	public void testFromPostgresToPostgres() {
+	public void testFromPostgresToPostgres() throws SQLException, IOException {
 		System.out.println("Migrating data from PostgreSQL to PostgreSQL");
 		FromPostgresToPostgres migrator = new FromPostgresToPostgres();
 		PostgreSQLConnectionInfo conInfoFrom = new PostgreSQLConnectionInfo("localhost", "5431", "mimic2", "pguser",
@@ -33,44 +33,51 @@ public class FromPostgresToPostgresTest {
 				"test");
 		PostgreSQLHandler postgres1 = new PostgreSQLHandler(conInfoFrom);
 		PostgreSQLHandler postgres2 = new PostgreSQLHandler(conInfoTo);
-		String tableName="test1_from_postgres_to_postgres_";
+		String tableName = "test1_from_postgres_to_postgres_";
 		try {
 			int intValue = 14;
 			double doubleValue = 1.2;
 			String stringValue = "adamdziedzic";
-			String createTable = "create table "+tableName+"(a int,b double precision,c varchar)";
+			String createTable = "create table " + tableName + "(a int,b double precision,c varchar)";
 			postgres1.executeNotQueryPostgreSQL(createTable);
-			postgres1.executeNotQueryPostgreSQL(
-					"insert into test1 values(" + intValue + "," + doubleValue + ",'" + stringValue + "')");
+
+			String insertInto = "insert into " + tableName + " values(" + intValue + "," + doubleValue + ",'"
+					+ stringValue + "')";
+			System.out.println(insertInto);
+			postgres1.executeNotQueryPostgreSQL(insertInto);
 
 			postgres2.executeNotQueryPostgreSQL(createTable);
 
-			MigrationResult result = migrator.migrate(conInfoFrom, "test1", conInfoTo, "test1");
+			MigrationResult result = migrator.migrate(conInfoFrom, tableName, conInfoTo, tableName);
 
 			assertEquals(result.getCountExtractedRows(), Long.valueOf(1L));
 			assertEquals(result.getCountLoadedRows(), Long.valueOf(1L));
-			QueryResult qresult = postgres2.executeQueryPostgreSQL("select * from test1;");
+
+			QueryResult qresult = postgres2.executeQueryPostgreSQL("select * from " + tableName);
 			List<List<String>> rows = qresult.getRows();
 			List<String> row = rows.get(0);
-			assertEquals(row.get(0), intValue);
-			assertEquals(row.get(1), doubleValue);
-			assertEquals(row.get(2), stringValue);
-			
+			int currentInt = Integer.parseInt(row.get(0));
+			System.out.println("int value: " + currentInt);
+			assertEquals(intValue, currentInt);
+
+			double currentDouble = Double.parseDouble(row.get(1));
+			System.out.println("double value: " + currentDouble);
+			assertEquals(doubleValue, currentDouble, 0);
+
+			String currentString = row.get(2);
+			System.out.println("string value: " + currentString);
+			assertTrue(stringValue.equals(currentString));
+
 		} catch (SQLException | IOException e) {
 			String msg = "Problem with data migration.";
 			System.err.print(msg);
 			e.printStackTrace();
-			try {
-				postgres1.executeNotQueryPostgreSQL("drop table "+tableName);
-			} catch (SQLException e1) {
-				e1.printStackTrace();
-			}
-			try {
-				postgres2.executeNotQueryPostgreSQL("drop table "+tableName);
-			} catch (SQLException e1) {
-				e1.printStackTrace();
-			}
+			throw e;
+		} finally {
+			postgres1.executeNotQueryPostgreSQL("drop table " + tableName);
+			postgres2.executeNotQueryPostgreSQL("drop table " + tableName);
 		}
+
 	}
 
 }

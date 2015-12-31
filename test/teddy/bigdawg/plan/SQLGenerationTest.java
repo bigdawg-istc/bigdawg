@@ -22,6 +22,7 @@ import teddy.bigdawg.plan.extract.SQLPlanParser;
 import teddy.bigdawg.plan.operators.CommonSQLTableExpressionScan;
 import teddy.bigdawg.plan.operators.Join;
 import teddy.bigdawg.plan.operators.Operator;
+import teddy.bigdawg.planner.Planner;
 import teddy.bigdawg.signature.Signature;
 import teddy.bigdawg.signature.builder.RelationalSignatureBuilder;
 import junit.framework.TestCase;
@@ -129,7 +130,7 @@ public class SQLGenerationTest  extends TestCase {
 		
 		
 		
-		
+		/*
 		
 		
 		// UNROLLING
@@ -164,12 +165,13 @@ public class SQLGenerationTest  extends TestCase {
 
 		
 		
-		Map<String, String> out =  ExecutionNodeFactory.traverseAndPickOutWiths(root, queryPlan);
+		Map<String, Operator> out =  ExecutionNodeFactory.traverseAndPickOutWiths(root, queryPlan);
 		for (String s : out.keySet()){
-			System.out.println("---->>>> " + s +"; " + out.get(s));
+			System.out.println("---->>>> " + s +"; " + out.get(s).generatePlaintext(queryPlan.getStatement()));
 		}
-
+		*/
 		
+		System.out.println("RESULT: \n"+ Planner.processQuery(sqlQuery));
 		
 		
 		/*

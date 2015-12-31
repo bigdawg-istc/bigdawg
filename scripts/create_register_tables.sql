@@ -28,3 +28,11 @@ CREATE TABLE IF NOT EXISTS alertevent (
   ts timestamp default now(),
   body varchar(250)
 );
+
+CREATE TABLE IF NOT EXISTS monitoring (
+  monitorID serial PRIMARY KEY,
+  island varchar(250),
+  query varchar(250),
+  lastRan int,
+  duration int
+);

@@ -2,6 +2,8 @@ package teddy.bigdawg.executor.plan;
 
 import java.util.Optional;
 
+import istc.bigdawg.query.ConnectionInfo;
+
 /**
  * Represents a query execution on a single engine into a destination table on
  * the same engine
@@ -10,7 +12,7 @@ import java.util.Optional;
  */
 public class LocalQueryExecutionNode implements ExecutionNode {
     private final String query;
-    private final int engineId;
+    private final ConnectionInfo engine;
     private final String resultsTable;
 
     /**
@@ -19,16 +21,16 @@ public class LocalQueryExecutionNode implements ExecutionNode {
      * 
      * @param query
      *            the query to be evaluated
-     * @param engineId
+     * @param engine
      *            the database engine where the query is to be executed
      * @param resultsTable
      *            the name of the table on the specified database engine where
      *            the query results will be stored (must be unique across all
      *            engines)
      */
-    public LocalQueryExecutionNode(String query, int engineId, String resultsTable) {
+    public LocalQueryExecutionNode(String query, ConnectionInfo engine, String resultsTable) {
         this.query = query;
-        this.engineId = engineId;
+        this.engine = engine;
         this.resultsTable = resultsTable;
     }
 
@@ -38,8 +40,8 @@ public class LocalQueryExecutionNode implements ExecutionNode {
      * @see teddy.bigdawg.executor.plan.ExecutionNode#getEngineId()
      */
     @Override
-    public int getEngineId() {
-        return this.engineId;
+    public ConnectionInfo getEngine() {
+        return this.engine;
     }
 
     /*

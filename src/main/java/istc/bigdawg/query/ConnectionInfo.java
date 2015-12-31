@@ -37,5 +37,5 @@ public interface ConnectionInfo {
 	 * @return password for the user
 	 */
 	public String getPassword();
-
+	
 }

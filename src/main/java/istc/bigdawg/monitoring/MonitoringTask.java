@@ -22,7 +22,7 @@ import static istc.bigdawg.postgresql.PostgreSQLHandler.getRows;
  * Created by chenp on 11/17/2015.
  */
 public class MonitoringTask implements Runnable {
-    private static final String RETRIEVE = "SELECT query FROM monitoring WHERE time=(SELECT min(time) FROM monitoring) AND island='%s' ORDER BY RAND() LIMIT 1";
+    private static final String RETRIEVE = "SELECT query FROM monitoring WHERE lastRan=(SELECT min(lastRan) FROM monitoring) AND island='%s' ORDER BY RAND() LIMIT 1";
     private static final float MAX_CPU = 50;
 
     private final String island;

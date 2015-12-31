@@ -15,6 +15,31 @@ public class CatalogViewer {
 
 	private static Logger logger = Logger.getLogger(CatalogViewer.class.getName());
 
+	
+	public static ArrayList<String> getConnectionInfo(Catalog cc, int db_id) throws Exception {
+		// input check
+		CatalogUtilities.checkConnection(cc);
+
+		ArrayList<String> extraction = new ArrayList<>();
+
+		ResultSet rs = cc.execRet(
+				"select dbid, eid, host, port, db.name as dbname, userid, password "
+				+ "from catalog.databases db join catalog.engines e on db.engine_id = e.eid where dbid = "+db_id);
+		if (rs.next())
+			extraction.add(rs.getString("host"));
+			extraction.add(rs.getString("port"));
+			extraction.add(rs.getString("dbname"));
+			extraction.add(rs.getString("userid"));
+			extraction.add(rs.getString("password"));
+		if (rs.next()) {
+			throw new Exception("Non-unique DBID: "+db_id);
+		}
+		rs.close();
+
+		return extraction;
+	}
+	
+	
 	public static HashMap<String,ArrayList<String>> getDBMappingByDB (Catalog cc, ArrayList<String> inputs) throws Exception {
 		CatalogUtilities.checkConnection(cc);
 		if (inputs.size() == 0) throw new Exception("Empty inputs from getDBMapping");

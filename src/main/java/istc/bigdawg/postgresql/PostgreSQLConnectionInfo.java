@@ -98,5 +98,21 @@ public class PostgreSQLConnectionInfo implements ConnectionInfo {
 	public String getPassword() {
 		return password;
 	}
+	
+	@Override
+	public String toString() {
+		StringBuilder result = new StringBuilder();
+    String NEW_LINE = System.getProperty("line.separator");
+
+    result.append(this.getClass().getName() + " Object {" + NEW_LINE);
+    result.append(" Host: " + this.getHost() + NEW_LINE);
+    result.append(" Port: " + this.getPort() + NEW_LINE);
+    result.append(" Database: " + this.getDatabase() + NEW_LINE );
+    result.append(" User: " + this.getUser() + NEW_LINE);
+    result.append(" Password: secret" + NEW_LINE);
+    result.append("}");
+
+    return result.toString();
+	}
 
 }

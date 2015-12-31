@@ -116,7 +116,7 @@ public class FromPostgresToAccumulo {
 		return new Text(rowIdInit.toString());
 	}
 
-	public void fromPostgresToAccumulo(final String postgresTable, String accumuloTable) throws SQLException,
+	public void fromPostgresToAccumulo(final String postgresTable, final String accumuloTable) throws SQLException,
 			AccumuloException, AccumuloSecurityException, AccumuloBigDawgException, TableNotFoundException {
 		BatchWriter writer = null;
 		try {
