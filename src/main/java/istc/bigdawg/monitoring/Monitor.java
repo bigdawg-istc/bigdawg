@@ -154,7 +154,7 @@ public class Monitor {
                     qep.setQueryId(((Signature) currentQuery).getQuery());
                     qep.setIsland(((Signature) currentQuery).getIsland());
 
-                    Executor.executePlan(qep, true);
+                    Executor.executePlan(qep);
                 }
             }
         }

@@ -70,7 +70,7 @@ public class Planner {
 		// generating query tree 
 		System.out.printf("[BigDAWG] PLANNER: generating query execution tree...\n");
 		QueryExecutionPlan qep = new QueryExecutionPlan();
-		populateQueryExecutionPlan(qep, psqlh, sigAndCasts);
+		populateQueryExecutionPlan(qep, psqlh, sigAndCasts, maxSerial);
 		
 //		System.out.println("QueryExecutionPlan:: ");
 //		for (ExecutionNode v : qep.vertexSet()) {
@@ -90,7 +90,7 @@ public class Planner {
 	 * @param sigAndCasts
 	 * @throws Exception
 	 */
-	public static void populateQueryExecutionPlan(QueryExecutionPlan qep, PostgreSQLHandler psqlh, Map<String, Object> sigAndCasts) throws Exception {
+	public static void populateQueryExecutionPlan(QueryExecutionPlan qep, PostgreSQLHandler psqlh, Map<String, Object> sigAndCasts, int queryId) throws Exception {
 		
 		SQLQueryPlan queryPlan = SQLPlanParser.extractDirect(psqlh, ((Signature)sigAndCasts.get("OUTPUT")).getQuery());
 		Operator root = queryPlan.getRootNode();
@@ -112,6 +112,8 @@ public class Planner {
 		
 		
 		ExecutionNodeFactory.addNodesAndEdges(qep, map, out, queryPlan.getStatement());
+		qep.setQueryId(String.valueOf(queryId));
+		qep.setIsland(((Signature)sigAndCasts.get("OUTPUT")).getIsland());
 	};
 	
 	
