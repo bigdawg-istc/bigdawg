@@ -3,6 +3,8 @@
  */
 package istc.bigdawg.query;
 
+import java.util.Collection;
+
 /**
  * @author Adam Dziedzic
  * 
@@ -37,5 +39,13 @@ public interface ConnectionInfo {
 	 * @return password for the user
 	 */
 	public String getPassword();
+	
+	/**
+	 * @param objects a Collection of objects to be removed 
+	 * @return a query that when run on the instance, removes all of the given objects.
+	 */
+	public String getCleanupQuery(Collection<String> objects);
+	
+	public DBHandler getHandler();
 	
 }

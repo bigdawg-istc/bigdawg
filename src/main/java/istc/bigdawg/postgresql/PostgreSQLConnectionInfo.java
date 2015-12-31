@@ -3,7 +3,10 @@
  */
 package istc.bigdawg.postgresql;
 
+import java.util.Collection;
+
 import istc.bigdawg.query.ConnectionInfo;
+import istc.bigdawg.query.DBHandler;
 
 /**
  * @author Adam Dziedzic
@@ -17,6 +20,8 @@ public class PostgreSQLConnectionInfo implements ConnectionInfo {
 	private String database;
 	private String user;
 	private String password;
+	
+	private static final String CLEANUP_STRING = "DROP TABLE %s;";
 
 	public PostgreSQLConnectionInfo(String host, String port, String database, String user, String password) {
 		this.host = host;
@@ -114,5 +119,15 @@ public class PostgreSQLConnectionInfo implements ConnectionInfo {
 
     return result.toString();
 	}
+
+    @Override
+    public String getCleanupQuery(Collection<String> objects) {
+        return String.format(CLEANUP_STRING, String.join(", ", objects));
+    }
+
+    @Override
+    public DBHandler getHandler() {
+        return new PostgreSQLHandler(this);
+    }
 
 }

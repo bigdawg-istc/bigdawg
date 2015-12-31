@@ -8,6 +8,7 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.migration.Migrator;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
@@ -17,6 +18,15 @@ import teddy.bigdawg.executor.plan.ExecutionNode;
 import teddy.bigdawg.executor.plan.LocalQueryExecutionNode;
 import teddy.bigdawg.executor.plan.QueryExecutionPlan;
 
+/**
+ * TODO:
+ *  communicate with Monitor about performance details
+ *  parallel/asynchronous query/migration execution
+ *  fully abstracted DbHandlers instead of casting to PostgreSQL*
+ *  handle errors better
+ * @author ankush
+ *
+ */
 public class Executor {
 
 	static Logger log = Logger.getLogger(Executor.class.getName());
@@ -30,35 +40,41 @@ public class Executor {
 	 */
 	public static QueryResult executePlan(QueryExecutionPlan plan) throws SQLException {
 		// TODO(ankush) proper logging for query plan executions
+       System.out.printf("[BigDAWG] EXECUTOR: executing query %s...", plan);
 
 		// maps nodes to a list of all engines on which they are stored
 		Map<ExecutionNode, Set<ConnectionInfo>> mapping = new HashMap<>();
 
 		// Iterate through the plan in topological order
 		for (ExecutionNode node : plan) {
+	       System.out.printf("[BigDAWG] EXECUTOR: examining query node %s...", node);
 			if (node instanceof LocalQueryExecutionNode) {
 				// migrate dependencies to the proper engine
 				plan.getDependencies(node).stream()
 						// filter out dependencies already on proper engine
-						.filter(d -> !mapping.get(d).contains(node.getEngine())).forEach(m -> {
-							// migrate to node.getEngineId()
+						.filter(d -> !mapping.get(d).contains(node.getEngine()))
+						.forEach(m -> {
+							// migrate to node.getEngine()
 							try {
+						        System.out.printf("[BigDAWG] EXECUTOR: migrating dependency %s from %s to %s...", m, m.getEngine(), node.getEngine());
 								Migrator.migrate(m.getEngine(), m.getTableName().get(), node.getEngine(),
 										m.getTableName().get());
-							} catch (Exception e) {
+								
+	                            // update mapping for future nodes with the same
+	                            // dependencies
+	                            mapping.putIfAbsent(m, new HashSet<>());
+	                            mapping.get(m).add(node.getEngine());
+							} catch (MigrationException e) {
 								// TODO handle errors in migration properly
 								e.printStackTrace();
 							}
-							// update mapping for future nodes with the same
-							// dependencies
-							mapping.putIfAbsent(m, new HashSet<>());
-							mapping.get(m).add(node.getEngine());
 						});
 
 				QueryResult result = null;
 
 				if (node.getQueryString().isPresent()) {
 					if (node.getEngine() instanceof PostgreSQLConnectionInfo) {
+					    System.out.printf("[BigDAWG] EXECUTOR: executing query node %s...", node);
 						PostgreSQLHandler handler = new PostgreSQLHandler((PostgreSQLConnectionInfo) node.getEngine());
 						result = handler.executeQueryPostgreSQL(node.getQueryString().get());
 					} else {
@@ -68,7 +84,21 @@ public class Executor {
 
 				// if no output table, must be the final result node
 				if (!node.getTableName().isPresent()) {
-					// TODO(ankush) clean up all old temporary tables
+				    Map<ConnectionInfo, Set<String>> oldTables = new HashMap<>();
+				    
+				    for(ExecutionNode oldTable : mapping.keySet()) {
+				        for(ConnectionInfo c : mapping.get(oldTable)) {
+				            oldTables.putIfAbsent(c, new HashSet<>());
+				            oldTable.getTableName().ifPresent(oldTables.get(c)::add);
+				        }
+				    }
+				    
+				    for(ConnectionInfo c : oldTables.keySet()) {
+                        System.out.printf("[BigDAWG] EXECUTOR: cleaning up %s by removing %s...", c, oldTables.get(c));
+				        ((PostgreSQLHandler) c.getHandler()).executeQueryPostgreSQL(c.getCleanupQuery(oldTables.get(c)));
+				    }
+				    
+                    System.out.printf("[BigDAWG] EXECUTOR: finished executing %s...", plan);
 					return result;
 				}
 			}
