@@ -45,7 +45,8 @@ public class Executor {
         //assert(island.equals("relational")); // TODO: support other Islands
 
         System.out.printf("[BigDAWG] EXECUTOR: executing sub-query %d of query %d...\n", subqueryPos, querySerial);
-        return ((PostgreSQLHandler) registeredDbHandlers.get("relational")).executeQueryPostgreSQL(dsa);
+        System.out.printf("CURRENT DATABASE :: %s\n\n", ((PostgreSQLHandler) registeredDbHandlers.get("relational")).executeQueryPostgreSQL("select current_database();").getRows().toArray());
+        return ((PostgreSQLHandler) registeredDbHandlers.get("relational")).executeQueryPostgreSQL(dsa+";");
     }
 
     public Object migrateData(Object source, Object dest, Object data) {

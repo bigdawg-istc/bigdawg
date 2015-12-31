@@ -38,7 +38,7 @@ setDB postgres2 ${port_2}
 
 postgres_bin=${downloads_dir}/postgres1/bin
 cd ${postgres_bin}
-database=bigdawg_catalog
+database=bigdawg
 ./psql -p ${port_1} -c "create database ${database}" -d template1
 
 ./psql -p ${port_1} -f ${initial_dir}/../src/main/resources/bigdawg_ddl.sql -d ${database}

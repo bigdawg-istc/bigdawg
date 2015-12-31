@@ -109,7 +109,7 @@ public class QueryClient {
 					//return handler.executeQuery(queryString);
 					try {
 						// this 6 here is a magic number but I can see that it omits bdrel
-						return Planner.processQuery(queryString.substring(6,queryString.length()-2));
+						return Planner.processQuery(queryString);
 					} catch (Exception e) {
 						// TODO Auto-generated catch block
 						return Response.status(412).entity(e.getMessage()).build();

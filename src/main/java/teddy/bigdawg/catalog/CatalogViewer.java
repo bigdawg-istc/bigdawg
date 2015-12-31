@@ -4,6 +4,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 
 import org.apache.log4j.Logger;
 
@@ -13,6 +15,56 @@ public class CatalogViewer {
 
 	private static Logger logger = Logger.getLogger(CatalogViewer.class.getName());
 
+	public static HashMap<String,ArrayList<String>> getDBMappingByDB (Catalog cc, ArrayList<String> inputs) throws Exception {
+		CatalogUtilities.checkConnection(cc);
+		if (inputs.size() == 0) throw new Exception("Empty inputs from getDBMapping");
+		
+		int len = inputs.size();
+		HashMap<String, ArrayList<String>> extraction = new HashMap<>();
+		
+		String wherePred = new String(" lower(o.name) = lower(\'"+ inputs.get(0) + "\') ");
+		for (int i = 1; i < len; i++) {
+			wherePred = wherePred + "or lower(o.name) = lower(\'" + inputs.get(i) + "\') ";
+		}
+		
+		ResultSet rs = cc.execRet("select physical_db db, string_agg(cast(name as varchar), ',') obj, count(name) c "
+				+ "from (select * from catalog.objects o where " + wherePred + " order by name, physical_db) as objs "
+				+ "group by physical_db order by c desc, physical_db;");
+		
+		if (rs.next()) extraction.put(rs.getString("db"), new ArrayList<String>(Arrays.asList(rs.getString("obj").split(","))));
+		while (rs.next()) {
+			extraction.put(rs.getString("db"), new ArrayList<String>(Arrays.asList(rs.getString("obj").split(","))));
+		}
+		rs.close();
+		
+		return extraction;
+	};
+	
+	public static HashMap<String,ArrayList<String>> getDBMappingByObj (Catalog cc, ArrayList<String> inputs) throws Exception {
+		CatalogUtilities.checkConnection(cc);
+		if (inputs.size() == 0) throw new Exception("Empty inputs from getDBMapping");
+		
+		int len = inputs.size();
+		HashMap<String, ArrayList<String>> extraction = new HashMap<>();
+		
+		String wherePred = new String(" lower(o.name) = lower(\'"+ inputs.get(0) + "\') ");
+		for (int i = 1; i < len; i++) {
+			wherePred = wherePred + "or lower(o.name) = lower(\'" + inputs.get(i) + "\') ";
+		}
+		
+		ResultSet rs = cc.execRet("select name obj, string_agg(cast(physical_db as varchar), ',') db, count(name) c "
+				+ "from (select * from catalog.objects o where " + wherePred + " order by physical_db, name) as objs "
+				+ "group by name order by c desc, name;");
+		
+		if (rs.next()) extraction.put(rs.getString("obj"), new ArrayList<String>(Arrays.asList(rs.getString("db").split(","))));
+		while (rs.next()) {
+			extraction.put(rs.getString("obj"), new ArrayList<String>(Arrays.asList(rs.getString("db").split(","))));
+		}
+		rs.close();
+		
+		return extraction;
+	};
+	
 	/**
 	 * With a CSV String of terms, fetch those that stands for an object. Used
 	 * in within-island parser.

@@ -9,4 +9,8 @@ public class QueriesAndPerformanceInformation {
 		qList = q;
 		pInfo = p;
 	}
+	
+	public String toString() {
+		return "{"+qList.toString()+" | "+pInfo.toString()+"}";
+	}
 }

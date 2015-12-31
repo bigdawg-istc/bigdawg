@@ -1,6 +1,8 @@
 package teddy.bigdawg.parsers;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Stack;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -10,7 +12,6 @@ import teddy.bigdawg.catalog.Catalog;
 import teddy.bigdawg.signature.Signature;
 
 public class UserQueryParser {
-	
 			
 	/**
 	 * Unrolling island calls and data casts.
@@ -78,14 +79,15 @@ public class UserQueryParser {
 	
 	/**
 	 * Takes the unwrapped queries and turn them into signatures and casts.
+	 * Currently, it's a TSV string of operators, a TSV string of of objects, and a TSV string  
 	 * @param cc
 	 * @param qs, or queries
 	 * @return ArrayList of Signatures and casts
 	 * @throws Exception
 	 */
-	public static ArrayList<Object> getSignaturesAndCasts(Catalog cc, ArrayList<String> qs) throws Exception {
+	public static Map<String, Object> getSignaturesAndCasts (Catalog cc, ArrayList<String> qs) throws Exception {
 		
-		ArrayList<Object> output	= new ArrayList<Object>();
+		Map<String, Object> output	= new HashMap<String, Object>();
 		Pattern islandStart 		= Pattern.compile("^(bdrel\\(|bdarray\\(|bdtext\\(|bdgraph\\(|bdstream\\(|bdcast\\()");
 		Pattern dawgtag 			= Pattern.compile("[;]|([A-Z]+_[0-9_]+)$");
 		
@@ -106,7 +108,7 @@ public class UserQueryParser {
 				tagString    = q.substring(mEnd.start(), mEnd.end());
 				
 				if (!tagString.startsWith(";")) {
-					query	  = q.substring(mStart.end(), mEnd.start()-3);
+					query	  = q.substring(mStart.end(), mEnd.start()-3); // only executable query left in there
 				} else {
 					query     = q.substring(mStart.end(), mEnd.start()-1);
 					tagString = "OUTPUT";					
@@ -114,10 +116,10 @@ public class UserQueryParser {
 				
 				switch (islandString.toLowerCase()) {
 					case "bdrel(":
-						output.add(new Signature(cc, query, "RELATIONAL", tagString));
+						output.put(tagString, new Signature(cc, query, "RELATIONAL", tagString));
 						break;
 					case "bdarray(":
-						output.add(new Signature(cc, query, "ARRAY", tagString));
+						output.put(tagString, new Signature(cc, query, "ARRAY", tagString));
 						break;
 					case "bdtext(":
 						System.out.print  ("[Unsupported]\tTEXT\t");
@@ -136,7 +138,7 @@ public class UserQueryParser {
 						break;
 					case "bdcast(":
 						String[] temp = query.replace(" ", "").split(",");
-						output.add(new Cast(temp[0], temp[1], temp[2], tagString));
+						output.put(tagString, new Cast(temp[0], temp[1], temp[2], tagString));
 						break;
 					default:
 						throw new Exception("Invalid Signature island input: "+islandString);
