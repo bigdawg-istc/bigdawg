@@ -7,12 +7,22 @@ import istc.bigdawg.query.ASTNode;
 import istc.bigdawg.query.QueryClient;
 import istc.bigdawg.query.parser.Parser;
 import istc.bigdawg.query.parser.simpleParser;
+import teddy.bigdawg.catalog.CatalogInstance;
+import teddy.bigdawg.catalog.CatalogViewer;
+import teddy.bigdawg.executor.Executor;
+import teddy.bigdawg.executor.plan.ExecutionNodeFactory;
+import teddy.bigdawg.executor.plan.QueryExecutionPlan;
 import teddy.bigdawg.packages.QueriesAndPerformanceInformation;
+import teddy.bigdawg.plan.SQLQueryPlan;
+import teddy.bigdawg.plan.extract.SQLPlanParser;
+import teddy.bigdawg.plan.operators.Operator;
 import teddy.bigdawg.planner.Planner;
 import teddy.bigdawg.signature.Signature;
 
 import javax.ws.rs.core.Response;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Map;
 
 public class Monitor {
     private static final String INSERT = "INSERT INTO monitoring(island, query) VALUES (%s, %s)";
@@ -45,7 +55,7 @@ public class Monitor {
         if (!lean) {
             try {
                 runBenchmark(permuted);
-            } catch (NotSupportIslandException e) {
+            } catch (Exception e) {
                 e.printStackTrace();
             }
         }
@@ -119,23 +129,39 @@ public class Monitor {
         return response.getStatus() == 200;
     }
 
-    public static void runBenchmark(ArrayList<ArrayList<Object>> permuted) throws NotSupportIslandException {
+    public static void runBenchmark(ArrayList<ArrayList<Object>> permuted) throws Exception {
         for (ArrayList<Object> currentList: permuted) {
             for (Object currentQuery: currentList) {
                 if (currentQuery instanceof Signature) {
                     // TODO match to nearest existing benchmark
-                    long lStartTime = System.nanoTime();
-                    /*QueryClient client = new QueryClient();
-                    Response response = client.query(((Signature) currentQuery).getQuery());
-                    long execTimeMillis = (System.nanoTime() - lStartTime) / 100000;
-                    if (response.getStatus() == 200) {
-                        PostgreSQLHandler handler = new PostgreSQLHandler();
-                        handler.executeQuery(String.format(UPDATE, lStartTime, execTimeMillis, ((Signature) currentQuery).getIsland(), ((Signature) currentQuery).getQuery()));
-                    } else {
-                        delete(((Signature) currentQuery).getQuery());
-                    }*/
+
+                    // This is from the Planner's processQuery function
+                    PostgreSQLHandler psqlh = new PostgreSQLHandler(0, 3);
+                    SQLQueryPlan queryPlan = SQLPlanParser.extractDirect(psqlh, (((Signature) currentQuery).getQuery()));
+                    Operator root = queryPlan.getRootNode();
+
+                    ArrayList<String> objs = new ArrayList<>(Arrays.asList(((Signature) currentQuery).getSig2().split("\t")));
+                    Map<String, ArrayList<String>> map = CatalogViewer.getDBMappingByObj(CatalogInstance.INSTANCE.getCatalog(), objs);
+
+                    ArrayList<String> root_dep = new ArrayList<String>();
+                    root_dep.addAll(root.getTableLocations(map).keySet());
+                    map.put("BIGDAWG_MAIN", root_dep);
+
+                    QueryExecutionPlan qep = new QueryExecutionPlan();
+                    Map<String, Operator> out =  ExecutionNodeFactory.traverseAndPickOutWiths(root, queryPlan);
+                    ExecutionNodeFactory.addNodesAndEdges(qep, map, out, queryPlan.getStatement());
+
+                    qep.setQueryId(((Signature) currentQuery).getQuery());
+                    qep.setIsland(((Signature) currentQuery).getIsland());
+
+                    Executor.executePlan(qep, true);
                 }
             }
         }
+    }
+
+    public void finishedBenchmark(QueryExecutionPlan plan, long startTime, long endTime) {
+        PostgreSQLHandler handler = new PostgreSQLHandler();
+        handler.executeQuery(String.format(UPDATE, endTime, endTime-startTime, plan.getIsland(), plan.getQueryId()));
     }
 }
