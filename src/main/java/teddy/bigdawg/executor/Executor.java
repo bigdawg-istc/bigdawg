@@ -10,6 +10,7 @@ import org.apache.log4j.Logger;
 
 import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.migration.Migrator;
+import istc.bigdawg.monitoring.Monitor;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.postgresql.PostgreSQLHandler.QueryResult;
@@ -20,7 +21,6 @@ import teddy.bigdawg.executor.plan.QueryExecutionPlan;
 
 /**
  * TODO:
- *  communicate with Monitor about performance details
  *  parallel/asynchronous query/migration execution
  *  fully abstracted DbHandlers instead of casting to PostgreSQL*
  *  handle errors better
@@ -30,6 +30,7 @@ import teddy.bigdawg.executor.plan.QueryExecutionPlan;
 public class Executor {
 
 	static Logger log = Logger.getLogger(Executor.class.getName());
+	static final Monitor monitor = new Monitor();
 
 	/**
 	 * Execute a given query plan, and return the result
@@ -40,7 +41,9 @@ public class Executor {
 	 */
 	public static QueryResult executePlan(QueryExecutionPlan plan) throws SQLException {
 		// TODO(ankush) proper logging for query plan executions
-       System.out.printf("[BigDAWG] EXECUTOR: executing query %s...\n", plan);
+	    long start = System.currentTimeMillis();
+	    
+	    System.out.printf("[BigDAWG] EXECUTOR: executing query %s...\n", plan);
 
 		// maps nodes to a list of all engines on which they are stored
 		Map<ExecutionNode, Set<ConnectionInfo>> mapping = new HashMap<>();
@@ -98,7 +101,13 @@ public class Executor {
 				        ((PostgreSQLHandler) c.getHandler()).executeQueryPostgreSQL(c.getCleanupQuery(oldTables.get(c)));
 				    }
 				    
-                    System.out.printf("[BigDAWG] EXECUTOR: finished executing %s...\n", plan);
+				    long end = System.currentTimeMillis();
+                    
+				    System.out.printf("[BigDAWG] EXECUTOR: finished executing %s, in %d seconds.\n", plan, (start - end)/1000);
+				    System.out.printf("[BigDAWG] EXECUTOR: sending timing to monitor...");
+				    monitor.finishedBenchmark(plan, start, end);
+				    
+				    System.out.printf("[BigDAWG] EXECUTOR: Returning result to planner...");
 					return result;
 				}
 			}
