@@ -20,15 +20,17 @@ import teddy.bigdawg.planner.Planner;
 import teddy.bigdawg.signature.Signature;
 
 import javax.ws.rs.core.Response;
+
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map;
 
 public class Monitor {
     private static final String INSERT = "INSERT INTO monitoring(island, query) VALUES (%s, %s)";
-    private static final String DELETE = "DELETE FROM monitoring WHERE island='%s', query='%s'";
-    private static final String UPDATE = "UPDATE monitoring SET lastRan=%d, duration=%d WHERE island='%s', query='%s'";
-    private static final String RETRIEVE = "SELECT * FROM monitoring WHERE island=%s, query='%s'";
+    private static final String DELETE = "DELETE FROM monitoring WHERE island='%s' AND query='%s'";
+    private static final String UPDATE = "UPDATE monitoring SET lastRan=%d, duration=%d WHERE island='%s' AND query='%s'";
+    private static final String RETRIEVE = "SELECT * FROM monitoring WHERE island=%s AND query='%s'";
 
     public static boolean addBenchmark(ArrayList<ArrayList<Object>> permuted, boolean lean) {
         BDConstants.Shim[] shims = BDConstants.Shim.values();
@@ -160,8 +162,8 @@ public class Monitor {
         }
     }
 
-    public void finishedBenchmark(QueryExecutionPlan plan, long startTime, long endTime) {
+    public void finishedBenchmark(QueryExecutionPlan plan, long startTime, long endTime) throws SQLException {
         PostgreSQLHandler handler = new PostgreSQLHandler();
-        handler.executeQuery(String.format(UPDATE, endTime, endTime-startTime, plan.getIsland(), plan.getQueryId()));
+        handler.executeNotQueryPostgreSQL(String.format(UPDATE, endTime, endTime-startTime, plan.getIsland(), plan.getQueryId()));
     }
 }

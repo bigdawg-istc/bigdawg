@@ -43,14 +43,14 @@ public class Executor {
 		// TODO(ankush) proper logging for query plan executions
 	    long start = System.currentTimeMillis();
 	    
-	    System.out.printf("[BigDAWG] EXECUTOR: executing query %s...\n", plan);
-
+	    log.debug(String.format("Executing query %s...", plan));
+	    
 		// maps nodes to a list of all engines on which they are stored
 		Map<ExecutionNode, Set<ConnectionInfo>> mapping = new HashMap<>();
 
 		// Iterate through the plan in topological order
 		for (ExecutionNode node : plan) {
-	       System.out.printf("[BigDAWG] EXECUTOR: examining query node %s...\n", node);
+	       log.debug(String.format("Examining query node %s...", node));
 			if (node instanceof LocalQueryExecutionNode) {
 				// migrate dependencies to the proper engine
 				plan.getDependencies(node).stream()
@@ -59,8 +59,8 @@ public class Executor {
 						.forEach(m -> {
 							// migrate to node.getEngine()
 							try {
-						        System.out.printf("[BigDAWG] EXECUTOR: migrating dependency %s from %s to %s...\n", m, m.getEngine(), node.getEngine());
-								Migrator.migrate(m.getEngine(), m.getTableName().get(), node.getEngine(),
+						        log.debug(String.format("Migrating dependency %s from %s to %s...", m, m.getEngine(), node.getEngine()));
+						        Migrator.migrate(m.getEngine(), m.getTableName().get(), node.getEngine(),
 										m.getTableName().get());
 								
 	                            // update mapping for future nodes with the same
@@ -77,7 +77,7 @@ public class Executor {
 
 				if (node.getQueryString().isPresent()) {
 					if (node.getEngine() instanceof PostgreSQLConnectionInfo) {
-					    System.out.printf("[BigDAWG] EXECUTOR: executing query node %s...\n", node);
+					    log.debug(String.format("Executing query node %s...", node));
 						PostgreSQLHandler handler = new PostgreSQLHandler((PostgreSQLConnectionInfo) node.getEngine());
 						result = handler.executeQueryPostgreSQL(node.getQueryString().get());
 					} else {
@@ -86,7 +86,7 @@ public class Executor {
 				}
 
 				// if no output table, must be the final result node
-				if (!node.getTableName().isPresent()) {
+				if (node.getTableName().get().equals("BIGDAWG_MAIN")) {
 				    Map<ConnectionInfo, Set<String>> oldTables = new HashMap<>();
 				    
 				    for(ExecutionNode oldTable : mapping.keySet()) {
@@ -95,19 +95,20 @@ public class Executor {
 				            oldTable.getTableName().ifPresent(oldTables.get(c)::add);
 				        }
 				    }
+				    oldTables.remove(node.getEngine());
 				    
 				    for(ConnectionInfo c : oldTables.keySet()) {
-                        System.out.printf("[BigDAWG] EXECUTOR: cleaning up %s by removing %s...\n", c, oldTables.get(c));
+                        log.debug(String.format("Cleaning up %s by removing %s...", c, oldTables.get(c)));
 				        ((PostgreSQLHandler) c.getHandler()).executeQueryPostgreSQL(c.getCleanupQuery(oldTables.get(c)));
 				    }
 				    
 				    long end = System.currentTimeMillis();
                     
-				    System.out.printf("[BigDAWG] EXECUTOR: finished executing %s, in %d seconds.\n", plan, (start - end)/1000);
-				    System.out.printf("[BigDAWG] EXECUTOR: sending timing to monitor...");
+				    log.debug(String.format("Finished executing %s, in %d seconds.", plan, (start - end)/1000));
+		    		log.debug(String.format("Sending timing to monitor..."));
 				    monitor.finishedBenchmark(plan, start, end);
 				    
-				    System.out.printf("[BigDAWG] EXECUTOR: Returning result to planner...");
+				    log.debug(String.format("Returning result to planner..."));
 					return result;
 				}
 			}
@@ -120,7 +121,7 @@ public class Executor {
 	}
 
 	public static QueryResult executeDSA(int querySerial, int subqueryPos, String dsa) throws SQLException {
-		System.out.printf("[BigDAWG] EXECUTOR: executing sub-query %d of query %d...\n", subqueryPos, querySerial);
+		log.debug(String.format("Executing sub-query %d of query %d...", subqueryPos, querySerial));
 		return (new PostgreSQLHandler()).executeQueryPostgreSQL(dsa);
 	}
 }

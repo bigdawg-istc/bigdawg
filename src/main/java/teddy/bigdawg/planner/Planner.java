@@ -197,7 +197,7 @@ public class Planner {
 			out.append("\n");
 			rowCounter += 1;
 		}
-
+		System.out.println(out);
 		return Response.status(200).entity(out.toString()).build();
 	}
 

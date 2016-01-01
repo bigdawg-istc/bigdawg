@@ -40,6 +40,8 @@ public enum PostgreSQLInstance {
 		// do not cache queries
 		props.setProperty("preparedStatementCacheQueries", "0");
 		props.setProperty("preparedStatementCacheSizeMiB", "10");
+//		System.out.println("Connection URL: "+URL);
+		
 		return  DriverManager.getConnection(URL, props);
 	}
 
