@@ -63,7 +63,9 @@ public class SQLTable {
 	
 	public SQLTable(SQLTable src) {
 		this.name = new String(src.name);
-		this.schema = new String(src.schema);
+		if (this.schema != null) {
+			this.schema = new String(src.schema);
+		}
 		if(src.alias != null) {
 			alias = new String(src.alias);
 		}

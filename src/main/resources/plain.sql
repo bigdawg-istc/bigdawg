@@ -1,7 +1,19 @@
+create table monitoring (
+	lastRan bigint,
+	duration integer,
+	island varchar(30),
+	query varchar(200)
+);
+
 create table mimic2v26.d_patients (
 	id integer,
 	lastname varchar(30),
 	firstname varchar(30)
+);
+
+create table ailment (
+	id integer,
+	disease_name varchar(50)
 );
 
 CREATE TABLE demographics (

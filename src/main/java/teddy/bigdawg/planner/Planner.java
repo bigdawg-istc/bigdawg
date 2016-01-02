@@ -78,7 +78,7 @@ public class Planner {
 //		for (ExecutionNode v : qep.vertexSet()) {
 //			System.out.print(v.getTableName()+"\t\t----- "+ v.getQueryString()+"\n");
 //		};
-		
+//		
 		
 		// EXECUTE TEH RESULT
 		logger.debug("Executing query execution tree...");
@@ -93,7 +93,7 @@ public class Planner {
 	 * @throws Exception
 	 */
 	public static void populateQueryExecutionPlan(QueryExecutionPlan qep, PostgreSQLHandler psqlh, Map<String, Object> sigAndCasts, int queryId) throws Exception {
-		
+		try {
 		SQLQueryPlan queryPlan = SQLPlanParser.extractDirect(psqlh, ((Signature)sigAndCasts.get("OUTPUT")).getQuery());
 		Operator root = queryPlan.getRootNode();
 		
@@ -116,6 +116,10 @@ public class Planner {
 		ExecutionNodeFactory.addNodesAndEdges(qep, map, out, queryPlan.getStatement());
 		qep.setQueryId(String.valueOf(queryId));
 		qep.setIsland(((Signature)sigAndCasts.get("OUTPUT")).getIsland());
+		} catch (Exception e) {
+			e.printStackTrace();
+			throw e;
+		}
 	};
 	
 	
