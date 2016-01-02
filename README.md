@@ -263,9 +263,9 @@ e":1,"pageNumber":1,"timestamp":"2012-04-23T18:25:43.511Z"}
 ```
 
 
-### bigdawg (catalog):
+### bigdawg_catalog:
 - go to bigdawgmiddle/installation/Downloads/postgres1/bin
-- ./psql -p 5431 -d bigdawg
+- ./psql -p 5431 -d bigdawg_catalog
 - select * from catalog.engines;
 
 ```
@@ -285,7 +285,7 @@ e":1,"pageNumber":1,"timestamp":"2012-04-23T18:25:43.511Z"}
 
  dbid | engine_id |      name       |  userid  | password 
 ------+-----------+-----------------+----------+----------
-    1 |         1 | bigdawg         | postgres | test
+    1 |         1 | bigdawg_catalog | postgres | test
     2 |         1 | mimic2          | pguser   | test
     3 |         2 | mimic2_copy     | pguser   | test
 (3 rows)

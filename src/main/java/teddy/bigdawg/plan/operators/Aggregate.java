@@ -4,7 +4,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import org.jcp.xml.dsig.internal.dom.Utils;
+
+
+import org.apache.jcp.xml.dsig.internal.dom.Utils;
 import teddy.bigdawg.schema.SQLAttribute;
 import teddy.bigdawg.extract.logical.SQLTableExpression;
 import teddy.bigdawg.plan.SQLQueryPlan;

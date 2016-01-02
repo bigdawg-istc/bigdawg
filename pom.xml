@@ -54,12 +54,12 @@
 			<artifactId>postgresql</artifactId>
 			<version>9.1-901-1.jdbc4</version>
 		</dependency>
-		
+
 		<!-- SQL parsing library -->
 		<dependency>
-		    <groupId>com.github.jsqlparser</groupId>
-		    <artifactId>jsqlparser</artifactId>
-		    <version>0.9.4</version>
+			<groupId>com.github.jsqlparser</groupId>
+			<artifactId>jsqlparser</artifactId>
+			<version>0.9.4</version>
 		</dependency>
 
 		<!-- Log4j -->
@@ -96,6 +96,14 @@
 			<artifactId>jgrapht-core</artifactId>
 			<version>0.9.1</version>
 		</dependency>
+
+		<!-- For: org.jcp.xml.dsig.internal.dom.Utils -->
+		<dependency>
+			<groupId>org.apache.santuario</groupId>
+			<artifactId>xmlsec</artifactId>
+			<version>1.5.1</version>
+		</dependency>
+
 
 		<!-- For scidb4j : it requires java 1.6 <dependency> <groupId>org.scidb</groupId> 
 			<artifactId>jdbc</artifactId> <version>1.0</version> </dependency> -->
