@@ -38,14 +38,19 @@ setDB postgres2 ${port_2}
 
 postgres_bin=${downloads_dir}/postgres1/bin
 cd ${postgres_bin}
-database=bigdawg
-./psql -p ${port_1} -c "create database ${database}" -d template1
 
-./psql -p ${port_1} -f ${initial_dir}/../src/main/resources/bigdawg_ddl.sql -d ${database}
+# get catalog resource 
+catalog_resource=../src/main/resources/catalog/
+current_dir=$(pwd)
+cd $catalog_resource
+catalog_resource=$(pwd)
+cd ${current_dir}
+bash ${catalog_resource}/recreate_catalog.sh ${catalog_resource} ${downloads_dir} ${port_1} ${postgres_bin}
+cd ${current_dir}
 
 ./createuser -p ${port_1} -s -e -d postgres
 ./psql -p ${port_1} -c "alter role postgres with password 'test'" -d ${database}
-./psql -p ${port_1} -f ${initial_dir}/../src/main/resources/catalog_data/inserts.sql -d ${database}
+./psql -p ${port_1} -f ${initial_dir}/../src/main/resources/catalog/inserts.sql -d ${database}
 
 ./createuser -p ${port_1} -s -e -d pguser
 ./psql -p ${port_1} -c "alter role pguser with password 'test'" -d ${database}
