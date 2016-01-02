@@ -45,7 +45,7 @@ database=bigdawg
 
 ./createuser -p ${port_1} -s -e -d postgres
 ./psql -p ${port_1} -c "alter role postgres with password 'test'" -d ${database}
-./psql -p ${port_1} -f ${initial_dir}/../src/main/resources/bigdawg_catalog_data.sql -d ${database}
+./psql -p ${port_1} -f ${initial_dir}/../src/main/resources/catalog_data/inserts.sql -d ${database}
 
 ./createuser -p ${port_1} -s -e -d pguser
 ./psql -p ${port_1} -c "alter role pguser with password 'test'" -d ${database}
