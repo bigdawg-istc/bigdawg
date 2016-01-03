@@ -18,6 +18,7 @@ import istc.bigdawg.query.ConnectionInfo;
 import teddy.bigdawg.executor.plan.ExecutionNode;
 import teddy.bigdawg.executor.plan.LocalQueryExecutionNode;
 import teddy.bigdawg.executor.plan.QueryExecutionPlan;
+import teddy.bigdawg.executor.plan.TableExecutionNode;
 
 /**
  * TODO:
@@ -47,10 +48,15 @@ public class Executor {
 	    
 		// maps nodes to a list of all engines on which they are stored
 		Map<ExecutionNode, Set<ConnectionInfo>> mapping = new HashMap<>();
+		Map<ExecutionNode, Set<ConnectionInfo>> permObjects = new HashMap<>();
 
 		// Iterate through the plan in topological order
 		for (ExecutionNode node : plan) {
 	       log.debug(String.format("Examining query node %s...", node));
+	       if (node instanceof TableExecutionNode) {
+	    	   permObjects.putIfAbsent(node, new HashSet<>());
+	    	   permObjects.get(node).add(node.getEngine());
+	       }
 			if (node instanceof LocalQueryExecutionNode) {
 				// migrate dependencies to the proper engine
 				plan.getDependencies(node).stream()
@@ -87,19 +93,35 @@ public class Executor {
 
 				// if no output table, must be the final result node
 				if (node.getTableName().get().equals("BIGDAWG_MAIN")) {
-				    Map<ConnectionInfo, Set<String>> oldTables = new HashMap<>();
+				    Map<ConnectionInfo, Set<String>> removingTables = new HashMap<>();
 				    
-				    for(ExecutionNode oldTable : mapping.keySet()) {
-				        for(ConnectionInfo c : mapping.get(oldTable)) {
-				            oldTables.putIfAbsent(c, new HashSet<>());
-				            oldTable.getTableName().ifPresent(oldTables.get(c)::add);
+				    
+				    
+				    
+				    for(ExecutionNode aTable : mapping.keySet()) {
+				        for(ConnectionInfo c : mapping.get(aTable)) {
+				        	
+				        	if (permObjects.get(aTable) != null && permObjects.get(aTable).contains(c)) 
+				        		continue;
+				        	
+				        	removingTables.putIfAbsent(c, new HashSet<>());
+				            aTable.getTableName().ifPresent(removingTables.get(c)::add);
 				        }
 				    }
-				    oldTables.remove(node.getEngine());
 				    
-				    for(ConnectionInfo c : oldTables.keySet()) {
-                        log.debug(String.format("Cleaning up %s by removing %s...", c, oldTables.get(c)));
-				        ((PostgreSQLHandler) c.getHandler()).executeQueryPostgreSQL(c.getCleanupQuery(oldTables.get(c)));
+//				    for(ExecutionNode oldTable : mapping.keySet()) {
+//				        for(ConnectionInfo c : mapping.get(oldTable)) {
+//				            oldTables.putIfAbsent(c, new HashSet<>());
+//				            oldTable.getTableName().ifPresent(oldTables.get(c)::add);
+//				        }
+//				    }
+//				    oldTables.remove(node.getEngine());
+				    
+				    
+				    for(ConnectionInfo c : removingTables.keySet()) {
+                        log.debug(String.format("Cleaning up %s by removing %s...", c, removingTables.get(c)));
+//				        ((PostgreSQLHandler) c.getHandler()).executeQueryPostgreSQL(c.getCleanupQuery(removingTables.get(c)));
+				        ((PostgreSQLHandler) c.getHandler()).executeNotQueryPostgreSQL(c.getCleanupQuery(removingTables.get(c)));
 				    }
 				    
 				    long end = System.currentTimeMillis();
