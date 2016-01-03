@@ -48,7 +48,8 @@ public class Scan extends Operator {
 		}
 		
 		table = new Table(srcTable); // new one to accommodate aliasing
-		if (!parameters.get("Schema").equals("public")) table.setSchemaName(parameters.get("Schema"));
+		if (parameters.get("Schema") != null && (!parameters.get("Schema").equals("public"))) 
+			table.setSchemaName(parameters.get("Schema"));
 
 		if(tableAlias != null && !tableAlias.equalsIgnoreCase(srcTable)) {
 			table.setAlias(new Alias(tableAlias));

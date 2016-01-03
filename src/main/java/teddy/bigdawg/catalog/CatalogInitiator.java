@@ -32,6 +32,9 @@ public class CatalogInitiator {
 		cc.initiated  = true;
 		cc.connected  = true;
 		cc.connection.setAutoCommit(false);
+		cc.setLastURL(url);
+		cc.setLastUsername(username);
+		cc.setLastPassword(password);
 	};
 	
 	public static void close(Catalog cc) throws Exception {

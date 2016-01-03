@@ -16,6 +16,9 @@ public class Catalog {
 	protected Statement stmt;
 	protected boolean initiated;
 	protected boolean connected;
+	private String lastURL			= null;
+	private String lastUsername		= null;
+	private String lastPassword		= null;
 	
 	/**
 	 * This constructor doesn't do much. Catalog requires explicit call to 
@@ -44,5 +47,29 @@ public class Catalog {
 	
 	public boolean isInitiated() {
 		return this.initiated;
+	}
+
+	public String getLastURL() {
+		return lastURL;
+	}
+
+	public void setLastURL(String lastURL) {
+		this.lastURL = lastURL;
+	}
+
+	public String getLastUsername() {
+		return lastUsername;
+	}
+
+	public void setLastUsername(String lastUsername) {
+		this.lastUsername = lastUsername;
+	}
+
+	public String getLastPassword() {
+		return lastPassword;
+	}
+
+	public void setLastPassword(String lastPassword) {
+		this.lastPassword = lastPassword;
 	}
 }

@@ -72,7 +72,7 @@ public class ExecutionNodeFactory {
 			String sel = o.generateSelectForExecutionTree(srcSTMT, put);
 			
 			dependentNodes.put(statementName, new LocalQueryExecutionNode(sel, psqlInfo, statementName));
-			
+//			System.out.printf("Adding node: %s; %s\n", statementName, sel);
 			// dependences
 			for (String s : dependency_map.get(statementName)) {
 

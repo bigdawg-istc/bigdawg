@@ -32,7 +32,7 @@ public class Join extends Operator {
 	public enum JoinType  {Left, Natural, Right};
 	
 	
-	
+	private boolean lhsHasJoinPred;
 	private JoinType joinType = null;
 	private String joinPredicate = null;
 	private String joinFilter; 
@@ -47,14 +47,6 @@ public class Join extends Operator {
 
 		isBlocking = false;
 		
-		// if lhs or rhs is replicated, then isLocal = true
-//		if(isReplicated(lhs) || isReplicated(rhs)) {
-//			isLocal = true;
-//		}
-//		else {
-//			isLocal = false;
-//		}
-		
 	
 		// if hash join
 		joinPredicate = parameters.get("Hash-Cond");
@@ -62,23 +54,19 @@ public class Join extends Operator {
 		joinFilter = parameters.get("Join-Filter");
 		joinFilter = SQLUtilities.parseString(joinFilter);
 
-//		System.out.print("\n@@---> RHS "+rhs.getClass().toString() +" ++++++ ");
-//		if (rhs instanceof Scan)
-//			System.out.println(((Scan)rhs).getTable().getFullyQualifiedName());
-//		else if (rhs instanceof CommonSQLTableExpressionScan)
-//			System.out.println(((CommonSQLTableExpressionScan)rhs).getTable().getFullyQualifiedName());
-//		else if (rhs instanceof Join) {
-//			System.out.println(((Join)rhs).getChildren().get(0).toString() + " xxxx " + ((Join)rhs).getChildren().get(1).toString());
-//		}
+		
 		
 		if(rhs instanceof Scan) {
 			Table t = ((Scan) rhs).getTable();
 			parsedJoin = supplement.getJoin(t);
+			lhsHasJoinPred = false;
 		} 
 		
 		if (parsedJoin == null && lhs instanceof Scan) {
 			Table t = ((Scan) lhs).getTable();
 			parsedJoin = supplement.getJoin(t);
+			lhsHasJoinPred = true;
+			
 		}
 		
 		if(parsedJoin == null){
@@ -123,42 +111,8 @@ public class Join extends Operator {
 				
 		}
 
-//		inferSecureCoordination();
-		
 	}
 	
-//    private void inferSecureCoordination() throws JSQLParserException {
-//    	Expression joinOn = parsedJoin.getOnExpression(); 
-//    	List<String> attrs = new ArrayList<String>();
-//    	if(joinOn != null) {
-//    		 attrs = SQLExpressionUtils.getAttributes(joinOn);
-//    	}
-//    	
-//    	if(joinFilter != null) {
-//    		Expression filterExpr = CCJSqlParserUtil.parseCondExpression(joinFilter);
-//    		attrs.addAll(SQLExpressionUtils.getAttributes(filterExpr));
-//    	}
-//    	
-//    	for(String a : attrs) {
-//    		SQLAttribute sa = srcSchema.get(a);
-//    		updateSecurityPolicy(sa);
-//    		
-//     	}
-//    	
-//    	
-//    }
-    
-    
-//    private boolean isReplicated(Operator o) {
-//    	for(SQLAttribute s : o.outSchema.values()) {
-//    		if(s.getReplicated() == false) {
-//    			return false;
-//    		}
-//    	}
-//    	
-//    	return true;
-//    	
-//    }
     
     @Override
 	public List<SQLAttribute> getSliceKey() throws JSQLParserException {
@@ -170,9 +124,7 @@ public class Join extends Operator {
 		
 			for(String k : candidateKeys) {
 				SQLAttribute a = srcSchema.get(k);
-//				if(a.getSecurityPolicy().equals(SQLAttribute.SecurityPolicy.Public)) {
-					sliceKey.add(a);
-//				}
+				sliceKey.add(a);
 			}
 		}
 		return sliceKey;
@@ -185,16 +137,25 @@ public class Join extends Operator {
     	Set<String> filterSet = new HashSet<String>();
     	PlainSelect ps = null;
     	
-		for(int i = 0; i < children.size(); ++i) {
+    	int i = 0;
+    	int terminal = children.size();
+    	int i_inc = 1;
+    	
+    	if (lhsHasJoinPred) {
+    		i = children.size() - 1;
+    		terminal = -1;
+    		i_inc = -1;
+    	}
+    	
+		for(; (i - terminal) * (i - terminal) > 0; i += i_inc) {
 			dstStatement = children.get(i).generatePlaintext(srcStatement, dstStatement); // ?
 			
 			ps = (PlainSelect) dstStatement.getSelectBody();
 			if (ps.getWhere() != null) filterSet.add(ps.getWhere().toString());
 		}
 		
-//		PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
 		List<net.sf.jsqlparser.statement.select.Join> joins = ps.getJoins();
-
+		
 		if(joins == null) {
 			joins = new ArrayList<net.sf.jsqlparser.statement.select.Join>();
 		}

@@ -31,14 +31,15 @@ public class SQLGenerationTest  extends TestCase {
 
 	private Map<String, String> expectedPlaintexts;
 	private Map<String, String> inputPlaintexts;
-	public static PostgreSQLHandler psqlh;
+	public static PostgreSQLHandler psqlh = null;
 	
 	protected void setUp() throws Exception {
 		expectedPlaintexts  = new HashMap<String, String>();
 		inputPlaintexts  = new HashMap<String, String>();
 		
 		CatalogInstance.INSTANCE.getCatalog();
-		psqlh = new PostgreSQLHandler(0, 3);
+		if (psqlh == null) psqlh = new PostgreSQLHandler(0, 3);
+		
 		
 		SQLDatabaseSingleton.getInstance().setDatabase("bigdawg_schemas", "src/main/resources/plain.sql");
 		
@@ -71,12 +72,13 @@ public class SQLGenerationTest  extends TestCase {
 //*/		
 //		setupFourWayOne();
 		setupMimicBasic();
+		setupFourWayOne();
 	}
 
 	private void setupMimicBasic() {
 		String testName = "mimic_basic";
-		final String inputPlaintext    = "bdrel(select * from mimic2v26.d_patients LIMIT 5);";
-		final String expectedPlaintext = "SELECT * FROM mimic2v26.d_patients LIMIT 5";
+		final String inputPlaintext    = "bdrel(select * from ailment join mimic2v26.d_patients on ailment.id = mimic2v26.d_patients.id);";
+		final String expectedPlaintext = "SELECT ailment.id, ailment.disease_name, d_patients.id, d_patients.lastname, d_patients.firstname FROM ailment JOIN mimic2v26.d_patients ON ailment.id = mimic2v26.d_patients.id";
 		inputPlaintexts.put(testName, inputPlaintext);
 		expectedPlaintexts.put(testName, expectedPlaintext);
 	}
@@ -116,7 +118,7 @@ public class SQLGenerationTest  extends TestCase {
 			testCaseDirect("mimic_basic");
 	}
 	
-	/*
+	
 	@Test
 	public void testFourWayOneDirect() throws Exception {
 			testCaseDirect("four_way_one");
@@ -144,7 +146,7 @@ public class SQLGenerationTest  extends TestCase {
 		
 		
 		
-		/*
+	
 		
 		
 		// UNROLLING
@@ -174,7 +176,8 @@ public class SQLGenerationTest  extends TestCase {
 		
 		
 		String sql = root.generatePlaintext(queryPlan.getStatement()); // the production of AST should be root
-//		System.out.println("Plaintext: " + sql);
+		System.out.println("statement: " + queryPlan.getStatement());
+		System.out.println("generatedPlaintext: " + sql);
 		assertEquals(expectedPlaintexts.get(testName), sql);
 
 		
@@ -183,12 +186,12 @@ public class SQLGenerationTest  extends TestCase {
 		for (String s : out.keySet()){
 			System.out.println("---->>>> " + s +"; " + out.get(s).generatePlaintext(queryPlan.getStatement()));
 		}
-		*/
+		//*/
 		
-		System.out.println("RESULT: \n"+ Planner.processQuery(sqlQuery));
+		//System.out.println("RESULT: \n"+ Planner.processQuery(sqlQuery));
 		
 		
-		/*
+		
 		// demo calculating partial plans
 		int level = 0;
 		System.out.println("\nLEVEL " + level + " :: "+ root.toString() + " :: \n==>\n" + root.generatePlaintext(queryPlan.getStatement()));
