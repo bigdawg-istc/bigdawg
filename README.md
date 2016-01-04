@@ -14,30 +14,206 @@ Requires
 ----------
 Java 7
 
-Mvn 2
+Mvn -- version 3
 
 PostgreSQL
 
+
+Eclipse GUI guide
+-------------------
+
+Prepare:
+-- Import with Eclipse, then right click the project 'istc.bigdawg [...]' -> property -> Maven -> Active Maven Profile -> put down the word 'dev';
+
+Run: 
+-- follow the Phase specific guides to set up the databases, make sure you could access each of which BigDAWG uses  
+-- In Eclipse, right click Main.java under istc.bigdawg, and do "Run as" -> "Java Application" (or on OS X press "shift + fn + command + F11")
+
+
+
+Command Line guide
+-----------------
+
 Prepare Eclipse (may need eclipse restart)
-----------------
-mvn -Declipse.workspace=[path to workspace] eclipse:add-maven-repo
+-> mvn -Declipse.workspace=[path to workspace] eclipse:add-maven-repo
+-> mvn eclipse:eclipse
 
-
-mvn eclipse:eclipse
 
 download dependencies
-----------
-mvn install -P XXX  
-
-where XXX is [dev/test/prod] 
+-> mvn install -P XXX  
+  (note: XXX is the word 'dev', 'test', or 'prod') 
 
 build jar
-----------
-mvn package -P XXX
+-> mvn package -P XXX
 
 run test server
----------
-mvn exec:java -P XXX
+-- follow the Phase specific guides to set up the databases, make sure you could access each of which BigDAWG uses
+-> mvn exec:java -P XXX
+
+
+
+
+
+
+
+
+# For demo of Phase 0.2:
+
+The main question is how we can handle many database instances. The idea is to store the meta-information (instance host, port, datbase name, etc.) in the catalog. The only connection information stored in the config file: bigdawgmiddle/src/main/resources/bigdawg-config.properties pertain to the PostgreSQL instance where the data for the catalog is stored. Additionally, the config file: bigdawgmiddle/src/main/resources/bigdawg-log4j.properties contains information about PostgreSQL instance where the logs are stored. 
+
+
+### Prepare environment with 2 PostgreSQL instances:
+- go to bigdawgmiddle/installation (there are the scripts that we will use)
+- mkdir data
+- cd data
+- download mimic2.pgd to the data directory from [https://app.box.com/s/8by2c36m8bwxl9654bwf3mttdt25uu4k](Link URL)
+- run script: **bash setup.sh** (this script should be executed only once)
+- to stop the PostgreSQL instances run: bash stop_postgres.sh
+- to start the PostgreSQL instances run: bash start_postgres.sh
+
+### Additionally, you can change pom.xml and try migrating data from postgres1 to postgres2:
+- go to bigdawgmiddle/
+- in pom.xml uncomment: <bigDawg.main.class>istc.bigdawg.migration.FromPostgresToPostgres</bigDawg.main.class>
+- in pom.xml comment: <bigDawg.main.class>istc.bigdawg.Main</bigDawg.main.class>
+- run: mvn clean compile -P dev
+- run: mvn exec:java
+
+```
+#!bash
+
+
+0    [main] INFO  istc.bigdawg.LoggerSetup  - Starting application. Logging was configured!
+Migrating data from PostgreSQL to PostgreSQL
+143  [main] DEBUG istc.bigdawg.migration.FromPostgresToPostgres  - Number of extracted rows: 143 Number of loaded rows: 143
+```
+
+
+### The last script creates 2 PostgreSQL instances:
+- postgres1 port: 5431 in bigdawgmiddle/installation/Downloads/postgres1
+- postgres2 port: 5430 in bigdawgmiddle/installation/Downloads/postgres2
+
+
+
+### Setup bigdawg_schemas database manually
+-- access `postgres1` and create a database called `bigdawg_schema`
+-- run `bigdawg_schemas_setup.sql` on `bigdawg_schema`
+
+
+
+## You can access a few databases in the following way:
+### logs: 
+- go to bigdawgmiddle/installation/Downloads/postgres1/bin
+- ./psql -p 5431 -d logs
+- select * from logs order by time desc;
+
+
+```
+#!sql
+
+ user_id |          time           |                    logger                     | level |                                                                                message                    
+                                                            
+---------+-------------------------+-----------------------------------------------+-------+-----------------------------------------------------------------------------------------------------------
+------------------------------------------------------------
+         | 2015-12-23 12:17:24.358 | istc.bigdawg.migration.FromPostgresToPostgres | DEBUG | Number of extracted rows: 143 Number of loaded rows: 143
+         | 2015-12-23 12:17:24.215 | istc.bigdawg.LoggerSetup                      | INFO  | Starting application. Logging was configured!
+         | 2015-12-23 11:39:39.607 | istc.bigdawg.postgresql.PostgreSQLHandler     | INFO  | format TABLE Java time milliseconds: 0,
+         | 2015-12-23 11:39:39.604 | istc.bigdawg.postgresql.PostgreSQLHandler     | INFO  | PostgreSQL query execution time milliseconds: 21,
+         | 2015-12-23 11:39:39.577 | istc.bigdawg.query.QueryClient                | INFO  | istream: {"query":"bdrel(select * from mimic2v26.d_patients limit 6);","authorization":{},"tuplesPerPag
+e":1,"pageNumber":1,"timestamp":"2012-04-23T18:25:43.511Z"}
+(5 rows)
+
+```
+
+
+### bigdawg_catalog:
+- go to bigdawgmiddle/installation/Downloads/postgres1/bin
+- ./psql -p 5431 -d bigdawg_catalog
+- select * from catalog.engines;
+
+```
+#!sql
+
+ eid |   name    |   host    | port |              connection_properties              
+-----+-----------+-----------+------+-------------------------------------------------
+   0 | postgres1 | localhost | 5431 | engine for bigdawg catalog data and mimic2 data
+   1 | postgres2 | localhost | 5430 | main engine for mimic2_copy data
+(2 rows)
+```
+
+
+- select * from catalog.databases;
+```
+#!sql
+
+ dbid | engine_id |      name       |  userid  | password 
+------+-----------+-----------------+----------+----------
+    0 |         0 | bigdawg_catalog | postgres | test
+    1 |         0 | bigdawg_schemas | postgres | test
+    2 |         0 | mimic2          | pguser   | test
+    3 |         1 | mimic2_copy     | pguser   | test
+(3 rows)
+
+```
+
+
+### mimic2:
+- go to bigdawgmiddle/installation/Downloads/postgres1/bin
+- ./psql -p 5431 -d mimic2
+- select * from mimic2v26.d_patients limit 6;
+
+### mimic2_copy:
+- go to bigdawgmiddle/installation/Downloads/postgres2/bin
+- ./psql -p 5430 -d mimic2_copy
+- select * from mimic2v26.d_patients limit 6;
+
+
+### Test case for Phase 0.2:
+
+```
+#!bash
+
+curl -v -H "Content-Type: application/json" -X POST -d '{"query":"bdrel(select ailment.id, mimic2v26.d_patients.lastname, mimic2v26.d_patients.firstname, ailment.disease_name from ailment join mimic2v26.d_patients on ailment.id = mimic2v26.d_patients.id limit 5);","authorization":{},"tuplesPerPage":1,"pageNumber":1,"timestamp":"2012-04-23T18:25:43.511Z"}' http://localhost:8080/bigdawg/query
+```
+
+
+
+
+
+--------------------
+
+For demo of Phase 0.1:
+
+Setting up PostgreSQL on local host, not for Catalog:
+
+CREATE DATABASE mimic2;
+\c mimic2
+CREATE SCHEMA mimic2v26;
+CREATE TABLE d_patients (
+pid integer primary key,
+name archer(10)
+);
+INSERT INTO d_patients VALUES(1, "John Smith");
+INSERT INTO d_patients VALUES(2, "Jane Smith");
+CREATE USER pguser PASSWORD 'test';
+GRANT ALL ON ALL TABLES IN SCHEMA mimic2v26 TO pguser;
+
+To run a query with one bdrel(...) layer: 
+
+curl -v -H "Content-Type: application/json" -X POST -d '{"query":"RELATION(bdrel(select * from mimic2v26.d_patients limit 5);)","authorization":{},"tuplesPerPage":1,"pageNumber":1,"timestamp":"2012-04-23T18:25:43.511Z"}' http://localhost:8080/bigdawg/query
+
+
+
+
+
+
+--------------------
+
+
+
+
+
+
+
 
 test CURL post register a push alert
 ---------
@@ -172,133 +348,4 @@ curl -H "Content-Type: application/json" -X POST -d '{"query":"checkHeartRate","
 nohup mvn exec:java 2>&1 > bigdawg.log &
 
 
-----------------
 
-For demo of Phase 0.1:
-
-Setting up PostgreSQL on local host, not for Catalog:
-
-CREATE DATABASE mimic2;
-\c mimic2
-CREATE SCHEMA mimic2v26;
-CREATE TABLE d_patients (
-pid integer primary key,
-name archer(10)
-);
-INSERT INTO d_patients VALUES(1, "John Smith");
-INSERT INTO d_patients VALUES(2, "Jane Smith");
-CREATE USER pguser PASSWORD 'test';
-GRANT ALL ON ALL TABLES IN SCHEMA mimic2v26 TO pguser;
-
-To run a query with one bdrel(...) layer: 
-
-curl -v -H "Content-Type: application/json" -X POST -d '{"query":"RELATION(bdrel(select * from mimic2v26.d_patients limit 5);)","authorization":{},"tuplesPerPage":1,"pageNumber":1,"timestamp":"2012-04-23T18:25:43.511Z"}' http://localhost:8080/bigdawg/query
-
-
-# For demo of Phase 0.2:
-
-The main question is how we can handle many database instances. The idea is to store the meta-information (instance host, port, datbase name, etc.) in the catalog. The only connection information stored in the config file: bigdawgmiddle/src/main/resources/bigdawg-config.properties pertain to the PostgreSQL instance where the data for the catalog is stored. Additionally, the config file: bigdawgmiddle/src/main/resources/bigdawg-log4j.properties contains information about PostgreSQL instance where the logs are stored. 
-
-### The current working version can be tested here:
-
-```
-#!bash
-
-curl -v -H "Content-Type: application/json" -X POST -d '{"query":"RELATION(select * from mimic2v26.d_patients limit 6);","authorization":{},"tuplesPerPage":1,"pageNumber":1,"timestamp":"2012-04-23T18:25:43.511Z"}' http://madison.cs.uchicago.edu:8080/bigdawg/query
-```
-
-
-### Prepare environment with 2 PostgreSQL instances:
-- go to bigdawgmiddle/installation (there are the scripts that we will use)
-- mkdir data
-- cd data
-- download mimic2.pgd to the data directory from [https://app.box.com/s/8by2c36m8bwxl9654bwf3mttdt25uu4k](Link URL)
-- run script: **bash setup.sh** (this script should be executed only once)
-- to stop the PostgreSQL instances run: bash stop_postgres.sh
-- to start the PostgreSQL instances run: bash start_postgres.sh
-
-### Additionally, you can change pom.xml and try migrating data from postgres1 to postgres2:
-- go to bigdawgmiddle/
-- in pom.xml uncomment: <bigDawg.main.class>istc.bigdawg.migration.FromPostgresToPostgres</bigDawg.main.class>
-- in pom.xml comment: <bigDawg.main.class>istc.bigdawg.Main</bigDawg.main.class>
-- run: mvn clean compile -P dev
-- run: mvn exec:java
-
-```
-#!bash
-
-
-0    [main] INFO  istc.bigdawg.LoggerSetup  - Starting application. Logging was configured!
-Migrating data from PostgreSQL to PostgreSQL
-143  [main] DEBUG istc.bigdawg.migration.FromPostgresToPostgres  - Number of extracted rows: 143 Number of loaded rows: 143
-```
-
-
-### The last script creates 2 PostgreSQL instances:
-- postgres1 port: 5431 in bigdawgmiddle/installation/Downloads/postgres1
-- postgres2 port: 5430 in bigdawgmiddle/installation/Downloads/postgres2
-
-## You can access a few databases in the following way:
-### logs: 
-- go to bigdawgmiddle/installation/Downloads/postgres1/bin
-- ./psql -p 5431 -d logs
-- select * from logs order by time desc;
-
-
-```
-#!sql
-
- user_id |          time           |                    logger                     | level |                                                                                message                    
-                                                            
----------+-------------------------+-----------------------------------------------+-------+-----------------------------------------------------------------------------------------------------------
-------------------------------------------------------------
-         | 2015-12-23 12:17:24.358 | istc.bigdawg.migration.FromPostgresToPostgres | DEBUG | Number of extracted rows: 143 Number of loaded rows: 143
-         | 2015-12-23 12:17:24.215 | istc.bigdawg.LoggerSetup                      | INFO  | Starting application. Logging was configured!
-         | 2015-12-23 11:39:39.607 | istc.bigdawg.postgresql.PostgreSQLHandler     | INFO  | format TABLE Java time milliseconds: 0,
-         | 2015-12-23 11:39:39.604 | istc.bigdawg.postgresql.PostgreSQLHandler     | INFO  | PostgreSQL query execution time milliseconds: 21,
-         | 2015-12-23 11:39:39.577 | istc.bigdawg.query.QueryClient                | INFO  | istream: {"query":"RELATION(select * from mimic2v26.d_patients limit 6);","authorization":{},"tuplesPerPag
-e":1,"pageNumber":1,"timestamp":"2012-04-23T18:25:43.511Z"}
-(5 rows)
-
-```
-
-
-### bigdawg_catalog:
-- go to bigdawgmiddle/installation/Downloads/postgres1/bin
-- ./psql -p 5431 -d bigdawg_catalog
-- select * from catalog.engines;
-
-```
-#!sql
-
- eid |   name    |   host    | port |              connection_properties              
------+-----------+-----------+------+-------------------------------------------------
-   1 | postgres1 | localhost | 5431 | engine for bigdawg catalog data and mimic2 data
-   2 | postgres2 | localhost | 5430 | main engine for mimic2_copy data
-(2 rows)
-```
-
-
-- select * from catalog.databases;
-```
-#!sql
-
- dbid | engine_id |      name       |  userid  | password 
-------+-----------+-----------------+----------+----------
-    1 |         1 | bigdawg_catalog | postgres | test
-    2 |         1 | mimic2          | pguser   | test
-    3 |         2 | mimic2_copy     | pguser   | test
-(3 rows)
-
-```
-
-
-### mimic2:
-- go to bigdawgmiddle/installation/Downloads/postgres1/bin
-- ./psql -p 5431 -d mimic2
-- select * from mimic2v26.d_patients limit 6;
-
-### mimic2_copy:
-- go to bigdawgmiddle/installation/Downloads/postgres2/bin
-- ./psql -p 5430 -d mimic2_copy
-- select * from mimic2v26.d_patients limit 6;
