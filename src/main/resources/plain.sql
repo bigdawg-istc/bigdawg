@@ -16,6 +16,8 @@ create table ailment (
 	disease_name varchar(50)
 );
 
+
+
 CREATE TABLE demographics (
        patient_id integer,
        birth_year integer,
@@ -23,7 +25,8 @@ CREATE TABLE demographics (
        race integer,
        ethnicity integer,
        insurance integer,
-       zip integer);
+       zip integer
+);
  
 CREATE TABLE diagnoses (
 	patient_id integer,
@@ -52,7 +55,8 @@ CREATE TABLE vitals (
 	pulse integer,
 	systolic integer,
 	diastolic integer ,
-	bp_method varchar(10));       
+	bp_method varchar(10)
+);       
 
 
 CREATE TABLE labs (

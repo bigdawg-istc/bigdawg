@@ -77,8 +77,8 @@ public class SQLGenerationTest  extends TestCase {
 
 	private void setupMimicBasic() {
 		String testName = "mimic_basic";
-		final String inputPlaintext    = "bdrel(select * from ailment join mimic2v26.d_patients on ailment.id = mimic2v26.d_patients.id);";
-		final String expectedPlaintext = "SELECT ailment.id, ailment.disease_name, d_patients.id, d_patients.lastname, d_patients.firstname FROM ailment JOIN mimic2v26.d_patients ON ailment.id = mimic2v26.d_patients.id";
+		final String inputPlaintext    = "bdrel(select ailment.id, mimic2v26.d_patients.lastname, mimic2v26.d_patients.firstname, ailment.disease_name from ailment join mimic2v26.d_patients on ailment.id = mimic2v26.d_patients.id);";
+		final String expectedPlaintext = "SELECT ailment.id, d_patients.lastname, d_patients.firstname, ailment.disease_name FROM ailment JOIN mimic2v26.d_patients ON ailment.id = mimic2v26.d_patients.id";
 		inputPlaintexts.put(testName, inputPlaintext);
 		expectedPlaintexts.put(testName, expectedPlaintext);
 	}
@@ -118,7 +118,7 @@ public class SQLGenerationTest  extends TestCase {
 			testCaseDirect("mimic_basic");
 	}
 	
-	
+	/*
 	@Test
 	public void testFourWayOneDirect() throws Exception {
 			testCaseDirect("four_way_one");
@@ -234,7 +234,7 @@ public class SQLGenerationTest  extends TestCase {
 		
 		//*/
 		
-		
+		System.out.println("\n\n\n");
 		
 		// EXECUTE QUERY TREE OF SUB-PLAN 
 		// TODO

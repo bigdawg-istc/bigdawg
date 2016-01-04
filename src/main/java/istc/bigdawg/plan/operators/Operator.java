@@ -221,14 +221,13 @@ public class Operator {
 	
 	public String generateSelectForExecutionTree(Select srcStatement, String into) throws Exception {
 		Select dstStatement  = this.generatePlaintext(srcStatement, null);
-		
+		System.out.println("PLAIN DSTSTATEMENT: "+ ((PlainSelect) dstStatement.getSelectBody()));
 		
 		// iterate over out schema and add it to select clause
 		List<SelectItem> selects = new ArrayList<SelectItem>();
 
 		for(String s : outSchema.keySet()) {
 			SQLAttribute attr = outSchema.get(s);
-						
 			SelectExpressionItem si = new SelectExpressionItem(attr.getExpression());
 			if(!(si.toString().equals(attr.getName()))) {
 				si.setAlias(new Alias(attr.getName()));
@@ -236,6 +235,9 @@ public class Operator {
 			
 			selects.add(si);
 		}
+		
+		((PlainSelect) dstStatement.getSelectBody()).setSelectItems(selects);
+		
 		
 		// dealing with WITH statment
 		if (into != null) {
