@@ -97,15 +97,15 @@ public class QueryClient {
 			st = ObjectMapperResource.INSTANCE.getObjectMapper().readValue(
 					istream, QueryRequest.class);
 			// System.out.println(mapper.writeValueAsString(st));
-			Parser parser = new simpleParser();
-			ASTNode parsed;
-			parsed = parser.parseQueryIntoTree(st.getQuery());
+//			Parser parser = new simpleParser();
+//			ASTNode parsed;
+//			parsed = parser.parseQueryIntoTree(st.getQuery());
 
 			// System.out.println(parsed.getShim());
-			String queryString = parsed.getTarget();
+			String queryString = st.getQuery();
 
-			for (DBHandler handler : registeredDbHandlers) {
-				if (handler.getShim() == parsed.getShim()) {
+//			for (DBHandler handler : registeredDbHandlers) {
+//				if (handler.getShim() == parsed.getShim()) {
 					//return handler.executeQuery(queryString);
 					try {
 						// this 6 here is a magic number but I can see that it omits bdrel
@@ -115,26 +115,26 @@ public class QueryClient {
 						return Response.status(412).entity(e.getMessage()).build();
 					}
 					//return handler.executeQuery(queryString.substring(6,queryString.length()-2));
-				}
-			}
+//				}
+//			}
 			// no handler found
-			QueryResponseTupleList resp = new QueryResponseTupleList(
-					"ERROR: Unrecognized island"
-							+ parsed.getIsland().toString(), 412, null, 1, 1,
-					null, null, new Timestamp(0));
-			String responseResult = ObjectMapperResource.INSTANCE
-					.getObjectMapper().writeValueAsString(resp);
-			return Response.status(412).entity(responseResult).build();
+//			QueryResponseTupleList resp = new QueryResponseTupleList(
+//					"ERROR: Unrecognized island"
+//							+ parsed.getIsland().toString(), 412, null, 1, 1,
+//					null, null, new Timestamp(0));
+//			String responseResult = ObjectMapperResource.INSTANCE
+//					.getObjectMapper().writeValueAsString(resp);
+//			return Response.status(412).entity(responseResult).build();
 		} catch (IOException e) {
 			e.printStackTrace();
 			return Response.status(412).entity(e.getMessage()).build();
-		} catch (NotSupportIslandException e) {
+		} /*catch (NotSupportIslandException e) {
 			e.printStackTrace();
 			return Response
 					.status(412)
 					.entity("The island in the query is not supported. "
 							+ e.getMessage()).build();
-		}
+		}*/
 	}
 
 	public static void main(String[] args) {
