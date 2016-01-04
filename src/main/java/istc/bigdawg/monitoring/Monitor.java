@@ -7,17 +7,17 @@ import istc.bigdawg.query.ASTNode;
 import istc.bigdawg.query.QueryClient;
 import istc.bigdawg.query.parser.Parser;
 import istc.bigdawg.query.parser.simpleParser;
-import teddy.bigdawg.catalog.CatalogInstance;
-import teddy.bigdawg.catalog.CatalogViewer;
-import teddy.bigdawg.executor.Executor;
-import teddy.bigdawg.executor.plan.ExecutionNodeFactory;
-import teddy.bigdawg.executor.plan.QueryExecutionPlan;
-import teddy.bigdawg.packages.QueriesAndPerformanceInformation;
-import teddy.bigdawg.plan.SQLQueryPlan;
-import teddy.bigdawg.plan.extract.SQLPlanParser;
-import teddy.bigdawg.plan.operators.Operator;
-import teddy.bigdawg.planner.Planner;
-import teddy.bigdawg.signature.Signature;
+import istc.bigdawg.catalog.CatalogInstance;
+import istc.bigdawg.catalog.CatalogViewer;
+import istc.bigdawg.executor.Executor;
+import istc.bigdawg.executor.plan.ExecutionNodeFactory;
+import istc.bigdawg.executor.plan.QueryExecutionPlan;
+import istc.bigdawg.packages.QueriesAndPerformanceInformation;
+import istc.bigdawg.plan.SQLQueryPlan;
+import istc.bigdawg.plan.extract.SQLPlanParser;
+import istc.bigdawg.plan.operators.Operator;
+import istc.bigdawg.planner.Planner;
+import istc.bigdawg.signature.Signature;
 
 import javax.ws.rs.core.Response;
 

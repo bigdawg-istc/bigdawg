@@ -30,7 +30,7 @@ import istc.bigdawg.query.parser.Parser;
 import istc.bigdawg.query.parser.simpleParser;
 import istc.bigdawg.scidb.SciDBHandler;
 import istc.bigdawg.utils.ObjectMapperResource;
-import teddy.bigdawg.planner.Planner;
+import istc.bigdawg.planner.Planner;
 /**
  * @author Adam Dziedzic
  * 

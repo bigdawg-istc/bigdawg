@@ -9,7 +9,7 @@ import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
 import org.glassfish.jersey.server.ResourceConfig;
 
 import istc.bigdawg.properties.BigDawgConfigProperties;
-import teddy.bigdawg.catalog.CatalogInstance;
+import istc.bigdawg.catalog.CatalogInstance;
 
 /**
  * Main class.

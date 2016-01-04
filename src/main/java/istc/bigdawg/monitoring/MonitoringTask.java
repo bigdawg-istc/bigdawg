@@ -4,8 +4,8 @@ import istc.bigdawg.postgresql.PostgreSQLInstance;
 import istc.bigdawg.query.QueryClient;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import teddy.bigdawg.catalog.Catalog;
-import teddy.bigdawg.signature.Signature;
+import istc.bigdawg.catalog.Catalog;
+import istc.bigdawg.signature.Signature;
 
 import java.io.BufferedReader;
 import java.io.IOException;

@@ -21,8 +21,8 @@ import org.apache.log4j.Logger;
 import istc.bigdawg.BDConstants.Shim;
 import istc.bigdawg.query.DBHandler;
 import istc.bigdawg.query.QueryClient;
-import teddy.bigdawg.catalog.CatalogInstance;
-import teddy.bigdawg.catalog.CatalogViewer;
+import istc.bigdawg.catalog.CatalogInstance;
+import istc.bigdawg.catalog.CatalogViewer;
 
 /**
  * @author Adam Dziedzic
