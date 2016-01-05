@@ -28,7 +28,7 @@ public class Aggregate extends Operator {
 	// can address complex expressions by adding a step after aggregate
 	// create a list of aggregations to perform
 	
-	public enum AggregateType { MIN, MAX, COUNT, COUNT_DISTINCT, AVG };
+	public enum AggregateType { MIN, MAX, COUNT, COUNT_DISTINCT, AVG, SUM};
 	private List<SQLAttribute> groupBy;
 	private List<String> aggregateExpressions; // e.g., COUNT(SOMETHING)
 	private List<AggregateType>  aggregates; 
@@ -117,6 +117,9 @@ public class Aggregate extends Operator {
 				break;
 			case "avg":
 				aggregates.add(AggregateType.AVG);
+				break;
+			case "sum":
+				aggregates.add(AggregateType.SUM);
 				break;
 			case "count":
 				if(f.isDistinct())  {

@@ -87,37 +87,35 @@ public class QueryClient {
 	 */
 	@Path("query")
 	@POST
-	@Consumes(MediaType.APPLICATION_JSON)
-	@Produces(MediaType.APPLICATION_JSON)
+//	@Consumes(MediaType.APPLICATION_JSON)
+//	@Produces(MediaType.APPLICATION_JSON)
 	public Response query(String istream) {
-		// System.out.println(istream);
+//		// System.out.println(istream);
 		log.info("istream: " + istream);
-		QueryRequest st;
-		try {
-			st = ObjectMapperResource.INSTANCE.getObjectMapper().readValue(
-					istream, QueryRequest.class);
-			// System.out.println(mapper.writeValueAsString(st));
+//		QueryRequest st;
+//		try {
+//			st = ObjectMapperResource.INSTANCE.getObjectMapper().readValue(
+//					istream, QueryRequest.class);
+//			// System.out.println(mapper.writeValueAsString(st));
 //			Parser parser = new simpleParser();
 //			ASTNode parsed;
 //			parsed = parser.parseQueryIntoTree(st.getQuery());
-
-			// System.out.println(parsed.getShim());
-			String queryString = st.getQuery();
-
+//
+//			// System.out.println(parsed.getShim());
+//			String queryString = st.getQuery();
+//
 //			for (DBHandler handler : registeredDbHandlers) {
 //				if (handler.getShim() == parsed.getShim()) {
 					//return handler.executeQuery(queryString);
 					try {
-						// this 6 here is a magic number but I can see that it omits bdrel
-						return Planner.processQuery(queryString);
+						return Planner.processQuery(istream);
 					} catch (Exception e) {
-						// TODO Auto-generated catch block
 						return Response.status(412).entity(e.getMessage()).build();
 					}
-					//return handler.executeQuery(queryString.substring(6,queryString.length()-2));
+//					return handler.executeQuery(queryString.substring(6,queryString.length()-2));
 //				}
 //			}
-			// no handler found
+//			// no handler found
 //			QueryResponseTupleList resp = new QueryResponseTupleList(
 //					"ERROR: Unrecognized island"
 //							+ parsed.getIsland().toString(), 412, null, 1, 1,
@@ -125,16 +123,16 @@ public class QueryClient {
 //			String responseResult = ObjectMapperResource.INSTANCE
 //					.getObjectMapper().writeValueAsString(resp);
 //			return Response.status(412).entity(responseResult).build();
-		} catch (IOException e) {
-			e.printStackTrace();
-			return Response.status(412).entity(e.getMessage()).build();
-		} /*catch (NotSupportIslandException e) {
-			e.printStackTrace();
-			return Response
-					.status(412)
-					.entity("The island in the query is not supported. "
-							+ e.getMessage()).build();
-		}*/
+//		} catch (IOException e) {
+//			e.printStackTrace();
+//			return Response.status(412).entity(e.getMessage()).build();
+//		} catch (NotSupportIslandException e) {
+//			e.printStackTrace();
+//			return Response
+//					.status(412)
+//					.entity("The island in the query is not supported. "
+//							+ e.getMessage()).build();
+//		}
 	}
 
 	public static void main(String[] args) {

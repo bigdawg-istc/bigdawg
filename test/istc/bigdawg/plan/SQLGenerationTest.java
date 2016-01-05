@@ -118,7 +118,7 @@ public class SQLGenerationTest  extends TestCase {
 			testCaseDirect("mimic_basic");
 	}
 	
-	/*
+	
 	@Test
 	public void testFourWayOneDirect() throws Exception {
 			testCaseDirect("four_way_one");
@@ -207,7 +207,7 @@ public class SQLGenerationTest  extends TestCase {
 //				System.out.println("->->->"+o.toString());
 //			}
 //		};
-//		System.out.println("\n\n\n"+map.toString()+"\n\n");
+		System.out.println("\n\n\n"+map.toString()+"\n\n");
 		
 		
 		level++;

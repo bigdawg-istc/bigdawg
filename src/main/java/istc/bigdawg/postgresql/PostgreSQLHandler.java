@@ -21,7 +21,9 @@ import org.apache.log4j.Logger;
 import istc.bigdawg.BDConstants.Shim;
 import istc.bigdawg.query.DBHandler;
 import istc.bigdawg.query.QueryClient;
+import istc.bigdawg.catalog.Catalog;
 import istc.bigdawg.catalog.CatalogInstance;
+import istc.bigdawg.catalog.CatalogUtilities;
 import istc.bigdawg.catalog.CatalogViewer;
 
 /**
@@ -373,4 +375,43 @@ public class PostgreSQLHandler implements DBHandler {
 		return Shim.PSQLRELATION;
 	}
 
+	
+	
+	/**
+	 * NEW FUNCTION generate the "CREATE TABLE" clause from existing tables on DB. Recommend use with 'bigdawg_schema' 
+	 * @param schemaAndTableName
+	 * @return
+	 * @throws Exception
+	 */
+	public String getCreateTable(String schemaAndTableName) throws Exception {
+		
+		StringBuilder extraction = new StringBuilder();
+
+		
+		this.getConnection();
+		st = con.createStatement();
+		
+		
+		rs = st.executeQuery(
+				"SELECT attrelid, attname, format_type(atttypid, atttypmod) AS type, atttypid, atttypmod "
+				+ "FROM pg_catalog.pg_attribute "
+				+ "WHERE NOT attisdropped AND attrelid = '"+schemaAndTableName+"'::regclass AND atttypid NOT IN (26,27,28,29) "
+				+ "ORDER BY attnum;");
+		
+		
+		if (rs.next()) {
+			extraction.append("CREATE TABLE ").append(schemaAndTableName).append(" (");
+			extraction.append(rs.getString("attname")).append(" ");
+			extraction.append(rs.getString("type"));
+		}
+		while (rs.next()) {
+			extraction.append(", ");
+			extraction.append(rs.getString("attname")).append(" ");
+			extraction.append(rs.getString("type"));
+		}
+		extraction.append(");");
+//		rs.close();
+		
+		return extraction.toString();
+	}
 }

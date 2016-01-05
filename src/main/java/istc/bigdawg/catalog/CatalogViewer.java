@@ -129,11 +129,11 @@ public class CatalogViewer {
 		int len = strs.length;
 		String extraction = new String("");
 
-		String wherePred = new String(" lower(o.name) = lower(\'" + strs[0] + "\') ");
+		String wherePred = new String(" lower(o.name) = lower(\'" + strs[0].trim() + "\') ");
 		for (int i = 1; i < len; i++) {
-			wherePred = wherePred + "or lower(o.name) = lower(\'" + strs[i] + "\') ";
+			wherePred = wherePred + "or lower(o.name) = lower(\'" + strs[i].trim() + "\') ";
 		}
-
+		System.out.println("wherePred + " + wherePred);
 		ResultSet rs = cc.execRet(
 				"select distinct o.name obj " + "from catalog.objects o " + "where " + wherePred + "order by o.name;");
 		if (rs.next())
