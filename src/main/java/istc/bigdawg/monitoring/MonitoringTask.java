@@ -23,9 +23,10 @@ import static istc.bigdawg.postgresql.PostgreSQLHandler.getRows;
  */
 public class MonitoringTask implements Runnable {
     private static final String RETRIEVE = "SELECT query FROM monitoring WHERE lastRan=(SELECT min(lastRan) FROM monitoring) AND island='%s' ORDER BY RAND() LIMIT 1";
-    private static final float MAX_CPU = 50;
+    private static final double MAX_LOAD = 0.7;
 
     private final String island;
+    private final int cores;
 
     /**
      * Runs in background on each machine. In lean mode, no benchmarks are run except through this.
@@ -36,6 +37,27 @@ public class MonitoringTask implements Runnable {
      */
     public MonitoringTask (String island) {
         this.island = island;
+
+        int cores = 1;
+
+        try {
+            Process p = Runtime.getRuntime().exec("nproc");
+            p.waitFor();
+            BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream()));
+            StringBuffer sb = new StringBuffer();
+            String line = "";
+            while ((line = reader.readLine())!= null) {
+                sb.append(line + "\n");
+            }
+            String result = sb.toString().replaceAll("[^0-9]", "");
+            cores = Integer.parseInt(result);
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        this.cores = cores;
     }
 
     /**
@@ -44,7 +66,7 @@ public class MonitoringTask implements Runnable {
     @Override
     public void run() {
         while(true) {
-            if (can_add()) {
+            if (this.can_add()) {
                 try {
                     final String query = this.getQuery();
                     final String island = this.island;
@@ -76,12 +98,12 @@ public class MonitoringTask implements Runnable {
     }
 
     /**
-     * Checks whether the average system CPU usage is under a set threshold. Requires systat to be installed
+     * Checks whether the load average is below some set threshold
      * @return true if it is currently under the threshold. false otherwise.
      */
-    private static boolean can_add() {
+    private boolean can_add() {
         try {
-            Process p = Runtime.getRuntime().exec("iostat -c | awk 'NR==4 {print $3}'");
+            Process p = Runtime.getRuntime().exec("uptime | awk '{print $9}'");
             p.waitFor();
             BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream()));
             StringBuffer sb = new StringBuffer();
@@ -89,9 +111,9 @@ public class MonitoringTask implements Runnable {
             while ((line = reader.readLine())!= null) {
                 sb.append(line + "\n");
             }
-            String result = sb.toString().replaceAll("[^0-9]+", "");
-            float sysCPU = Float.parseFloat(result);
-            if (sysCPU > MAX_CPU) {
+            String result = sb.toString().replaceAll("[^0-9.]", "");
+            double load = Double.parseDouble(result);
+            if (load/this.cores > MAX_LOAD) {
                 return false;
             }
         } catch (IOException|InterruptedException e) {
