@@ -4,7 +4,6 @@ import istc.bigdawg.BDConstants;
 import istc.bigdawg.exceptions.NotSupportIslandException;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.query.ASTNode;
-import istc.bigdawg.query.QueryClient;
 import istc.bigdawg.query.parser.Parser;
 import istc.bigdawg.query.parser.simpleParser;
 import istc.bigdawg.catalog.CatalogInstance;
@@ -16,7 +15,6 @@ import istc.bigdawg.packages.QueriesAndPerformanceInformation;
 import istc.bigdawg.plan.SQLQueryPlan;
 import istc.bigdawg.plan.extract.SQLPlanParser;
 import istc.bigdawg.plan.operators.Operator;
-import istc.bigdawg.planner.Planner;
 import istc.bigdawg.signature.Signature;
 
 import javax.ws.rs.core.Response;
@@ -27,7 +25,7 @@ import java.util.Arrays;
 import java.util.Map;
 
 public class Monitor {
-    private static final String INSERT = "INSERT INTO monitoring(island, query) VALUES (%s, %s)";
+    private static final String INSERT = "INSERT INTO monitoring(island, query, lastRan, duration) VALUES (%s, %s, -1, -1)";
     private static final String DELETE = "DELETE FROM monitoring WHERE island='%s' AND query='%s'";
     private static final String UPDATE = "UPDATE monitoring SET lastRan=%d, duration=%d WHERE island='%s' AND query='%s'";
     private static final String RETRIEVE = "SELECT * FROM monitoring WHERE island=%s AND query='%s'";
@@ -87,8 +85,6 @@ public class Monitor {
         }
         return true;
     }
-    
-    
 
     public static QueriesAndPerformanceInformation getBenchmarkPerformance(ArrayList<ArrayList<Object>> permuted) throws NotSupportIslandException {
         ArrayList<String> queries = new ArrayList<>();
@@ -100,10 +96,10 @@ public class Monitor {
                     // TODO match to nearest existing benchmark
                     queries.add(((Signature) currentQuery).getQuery());
 
-                    //PostgreSQLHandler handler = new PostgreSQLHandler();
-                    //Parser parser = new simpleParser();
-                    //ASTNode node = parser.parseQueryIntoTree(((Signature) currentQuery).getQuery());
-                    //perfInfo.add(handler.executeQuery(String.format(RETRIEVE, node.getIsland().name(), node.getTarget())));
+                    PostgreSQLHandler handler = new PostgreSQLHandler();
+                    Parser parser = new simpleParser();
+                    ASTNode node = parser.parseQueryIntoTree(((Signature) currentQuery).getQuery());
+                    perfInfo.add(handler.executeQuery(String.format(RETRIEVE, node.getIsland().name(), node.getTarget())));
                 }
             }
         }
@@ -135,11 +131,12 @@ public class Monitor {
         for (ArrayList<Object> currentList: permuted) {
             for (Object currentQuery: currentList) {
                 if (currentQuery instanceof Signature) {
+                    String query = ((Signature) currentQuery).getQuery();
                     // TODO match to nearest existing benchmark
 
                     // This is from the Planner's processQuery function
                     PostgreSQLHandler psqlh = new PostgreSQLHandler(0, 3);
-                    SQLQueryPlan queryPlan = SQLPlanParser.extractDirect(psqlh, (((Signature) currentQuery).getQuery()));
+                    SQLQueryPlan queryPlan = SQLPlanParser.extractDirect(psqlh, (query));
                     Operator root = queryPlan.getRootNode();
 
                     ArrayList<String> objs = new ArrayList<>(Arrays.asList(((Signature) currentQuery).getSig2().split("\t")));
@@ -153,7 +150,7 @@ public class Monitor {
                     Map<String, Operator> out =  ExecutionNodeFactory.traverseAndPickOutWiths(root, queryPlan);
                     ExecutionNodeFactory.addNodesAndEdges(qep, map, out, queryPlan.getStatement());
 
-                    qep.setQueryId(((Signature) currentQuery).getQuery());
+                    qep.setQueryId(query);
                     qep.setIsland(((Signature) currentQuery).getIsland());
 
                     Executor.executePlan(qep);
