@@ -150,9 +150,6 @@ public class Monitor {
                     Map<String, Operator> out =  ExecutionNodeFactory.traverseAndPickOutWiths(root, queryPlan);
                     ExecutionNodeFactory.addNodesAndEdges(qep, map, out, queryPlan.getStatement());
 
-                    qep.setQueryId(query);
-                    qep.setIsland(((Signature) currentQuery).getIsland());
-
                     Executor.executePlan(qep);
                 }
             }
