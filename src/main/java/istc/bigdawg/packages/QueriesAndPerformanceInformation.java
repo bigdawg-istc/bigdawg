@@ -1,11 +1,11 @@
 package istc.bigdawg.packages;
 
-import java.util.ArrayList;
+import java.util.List;
 
 public class QueriesAndPerformanceInformation {
-	public ArrayList<ArrayList<String>> qList;
-	public ArrayList<Object> pInfo;
-	public QueriesAndPerformanceInformation(ArrayList<ArrayList<String>> q, ArrayList<Object> p) {
+	public List<List<String>> qList;
+	public List<Object> pInfo;
+	public QueriesAndPerformanceInformation(List<List<String>> q, List<Object> p) {
 		qList = q;
 		pInfo = p;
 	}

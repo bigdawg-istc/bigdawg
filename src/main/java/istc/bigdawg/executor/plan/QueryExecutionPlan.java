@@ -22,9 +22,16 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
 
     private static final long serialVersionUID = 7704709501946249185L;
 
-    public QueryExecutionPlan() {
+    private final String island;
+
+    public QueryExecutionPlan(String island) {
         super(DefaultEdge.class);
+        this.island = island;
         // TODO add any variables needed from Planner
+    }
+
+    public String getIsland() {
+        return this.island;
     }
 
     /**
@@ -231,6 +238,8 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
         Iterator<ExecutionNode> nodeIterator = qep.iterator();
         StringBuilder result = new StringBuilder();
 
+        result.append(String.format("ISLAND:%s", qep.getIsland()));
+
         // Converts each node into a String representation of itself
         result.append("NODES:(");
         List<String> nodes = new ArrayList<>();
@@ -276,14 +285,21 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
      * @return the QueryExecutionPlan
      */
     public static QueryExecutionPlan stringToQEP(String representation) {
+        Pattern islandPattern = Pattern.compile("(?<=ISLAND:)(?s).*(?=NODES:)");
         Pattern nodesPattern = Pattern.compile("(?<=NODES:\\()(?s).*(?=\\)EDGES:)");
         Pattern edgesPattern = Pattern.compile("(?<=EDGES:\\()(?s).*(?=\\))");
 
         Pattern nodePattern = Pattern.compile("(\\(.*?ENGINE:\\(.*?\\).*?\\))");
         Pattern edgePattern = Pattern.compile("([0-9]+),([0-9]+)");
 
+        String island = "";
+        Matcher m = islandPattern.matcher(representation);
+        if (m.find()) {
+            island = m.group();
+        }
+
         String nodes = "";
-        Matcher m = nodesPattern.matcher(representation);
+        m = nodesPattern.matcher(representation);
         if (m.find()) {
             nodes = m.group();
         }
@@ -294,7 +310,7 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
             edges = m.group();
         }
 
-        QueryExecutionPlan qep = new QueryExecutionPlan();
+        QueryExecutionPlan qep = new QueryExecutionPlan(island);
 
         List<ExecutionNode> nodeList = new ArrayList<>();
         m = nodePattern.matcher(nodes);

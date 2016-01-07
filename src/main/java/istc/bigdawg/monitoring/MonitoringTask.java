@@ -1,11 +1,10 @@
 package istc.bigdawg.monitoring;
 
+import istc.bigdawg.executor.plan.QueryExecutionPlan;
 import istc.bigdawg.postgresql.PostgreSQLInstance;
 import istc.bigdawg.query.QueryClient;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import istc.bigdawg.catalog.Catalog;
-import istc.bigdawg.signature.Signature;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -74,11 +73,10 @@ public class MonitoringTask implements Runnable {
                         Thread t1 = new Thread(new Runnable() {
                             public void run() {
                                 try {
-                                    ArrayList<ArrayList<Object>> permuted = new ArrayList<>();
-                                    ArrayList<Object> currentList = new ArrayList<>();
-                                    currentList.add(new Signature(new Catalog(), query, island, "identifier"));
-                                    permuted.add(currentList);
-                                    Monitor.runBenchmark(permuted);
+                                    QueryExecutionPlan qep = QueryExecutionPlan.stringToQEP(query);
+                                    ArrayList<QueryExecutionPlan> qeps = new ArrayList<>();
+                                    qeps.add(qep);
+                                    Monitor.runBenchmarks(qeps);
                                 } catch (Exception e) {}
                             }
                         });
