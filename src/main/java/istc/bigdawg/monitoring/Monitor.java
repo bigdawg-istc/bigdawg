@@ -138,7 +138,7 @@ public class Monitor {
                     // TODO match to nearest existing benchmark
 
                     // This is from the Planner's processQuery function
-                    PostgreSQLHandler psqlh = new PostgreSQLHandler(0, 3);
+                    PostgreSQLHandler psqlh = new PostgreSQLHandler(0, 1);
                     SQLQueryPlan queryPlan = SQLPlanParser.extractDirect(psqlh, (((Signature) currentQuery).getQuery()));
                     Operator root = queryPlan.getRootNode();
 

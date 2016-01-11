@@ -18,3 +18,4 @@ database=bigdawg_catalog
 ./psql -p ${port_1} -f ${catalog_resource}/inserts.sql -d ${database}
 
 cd ${current_dir}
+

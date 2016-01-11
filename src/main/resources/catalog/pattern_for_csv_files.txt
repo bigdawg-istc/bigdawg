@@ -1,6 +1,0 @@
-##comment without space between double hash (##) and the comment
-#name of the table to which we want to insert the data
-1,2,...
-
-- all the data separated by commas for sql insert into 
-- no empty line at the end of the data file 

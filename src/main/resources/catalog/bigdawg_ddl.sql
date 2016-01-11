@@ -15,6 +15,8 @@ CREATE TABLE catalog.engines (
        connection_properties varchar(100)
 );
 
+CREATE UNIQUE INDEX hostPort on catalog.engines (host,port);
+
 CREATE TABLE catalog.shims (
        shim_id integer PRIMARY KEY,
        island_id integer REFERENCES catalog.islands(iid),
@@ -42,7 +44,7 @@ CREATE TABLE catalog.databases (
 -- e.g., if we created an array with dimensions X,Y and then we migrate it over to psql, we don't want to lose its initial dimensions                                               
 CREATE TABLE catalog.objects (
        oid integer PRIMARY KEY,
-       name varchar(15), -- name of the object
+       name varchar(50), -- name of the object
        fields varchar(300), -- csv of the field names, e.g. "dbid,\"engine id\",name,userid,password"
        logical_db integer REFERENCES catalog.databases(dbid), -- how was the object created                                                                                               
        physical_db integer REFERENCES catalog.databases(dbid) -- where is it located now?                                                                                                 

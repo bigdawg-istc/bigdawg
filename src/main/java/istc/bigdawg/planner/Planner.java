@@ -46,8 +46,8 @@ public class Planner {
 
 	public static Response processQuery(String userinput) throws Exception {
 		
-		PostgreSQLHandler psqlh = new PostgreSQLHandler(0, 3);
-		SQLDatabaseSingleton.getInstance().setDatabase("bigdawg_schemas", "src/main/resources/plain.sql");
+		PostgreSQLHandler psqlh = new PostgreSQLHandler(0, 1);
+		SQLDatabaseSingleton.getInstance().setDatabase("bigdawg_schemas", "src/main/resources/schemas/plain.sql");
 		// WE CURRENTLY NEED TO DOCUMENT WHICH TABLES ARE CREATED IN THIS FILE. 
 		// NEXT VERSION I'LL REMOVE THIS CONSTRAINT. TODO
 		

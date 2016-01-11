@@ -1,6 +1,0 @@
-##add catalog.databases inside the database instances: dbid, engine_id, name, userid, password
-#catalog.databases
-0,0,'bigdawg_catalog','postgres','test'
-1,0,'bigdawg_schemas','postgres','test'
-2,0,'mimic2','pguser','test'
-3,1,'mimic2_copy','pguser','test'

@@ -10,9 +10,6 @@ CREATE TABLE a_chartdurations (
     duration double precision
 );
 
-
-
-
 CREATE TABLE a_iodurations (
     subject_id integer NOT NULL,
     icustay_id integer,
