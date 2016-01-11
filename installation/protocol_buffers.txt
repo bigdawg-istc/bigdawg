@@ -1,0 +1,4 @@
+Libraries have been installed in:
+   /usr/local/lib
+
+
