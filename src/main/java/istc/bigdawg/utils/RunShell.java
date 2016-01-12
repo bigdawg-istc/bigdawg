@@ -32,7 +32,7 @@ public class RunShell {
 		return prop.getInputStream();
 	}
 
-	public static InputStream runSciDB(String host, String query)
+	public static InputStream runSciDBquery(String host, String query)
 			throws IOException, InterruptedException, SciDBException {
 		System.out.println("query in runSciDB: "+query);
 		query = query.replace("^^", "'");

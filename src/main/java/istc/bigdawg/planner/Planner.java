@@ -40,7 +40,7 @@ public class Planner {
 	 * 
 	 */
 	private static Logger logger = Logger.getLogger(Planner.class.getName());
-	private static LinkedHashMap<Integer, ArrayList<String>> queryQueue = new LinkedHashMap<Integer, ArrayList<String>>(); // queries
+	private static LinkedHashMap<Integer, List<String>> queryQueue = new LinkedHashMap<>(); // queries
 																									// to
 																									// be
 																									// executed
