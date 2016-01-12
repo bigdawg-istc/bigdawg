@@ -4,7 +4,6 @@ import istc.bigdawg.BDConstants;
 import istc.bigdawg.exceptions.NotSupportIslandException;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.query.ASTNode;
-import istc.bigdawg.query.QueryClient;
 import istc.bigdawg.query.parser.Parser;
 import istc.bigdawg.query.parser.simpleParser;
 import istc.bigdawg.catalog.CatalogInstance;
@@ -16,7 +15,6 @@ import istc.bigdawg.packages.QueriesAndPerformanceInformation;
 import istc.bigdawg.plan.SQLQueryPlan;
 import istc.bigdawg.plan.extract.SQLPlanParser;
 import istc.bigdawg.plan.operators.Operator;
-import istc.bigdawg.planner.Planner;
 import istc.bigdawg.signature.Signature;
 
 import javax.ws.rs.core.Response;
@@ -24,39 +22,34 @@ import javax.ws.rs.core.Response;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 public class Monitor {
-    private static final String INSERT = "INSERT INTO monitoring(island, query) VALUES (%s, %s)";
+    private static final String INSERT = "INSERT INTO monitoring(island, query, lastRan, duration) VALUES (%s, %s, -1, -1)";
     private static final String DELETE = "DELETE FROM monitoring WHERE island='%s' AND query='%s'";
     private static final String UPDATE = "UPDATE monitoring SET lastRan=%d, duration=%d WHERE island='%s' AND query='%s'";
     private static final String RETRIEVE = "SELECT * FROM monitoring WHERE island=%s AND query='%s'";
 
-    public static boolean addBenchmark(ArrayList<ArrayList<Object>> permuted, boolean lean) {
+    public static boolean addBenchmarks(List<QueryExecutionPlan> qeps, boolean lean) {
         BDConstants.Shim[] shims = BDConstants.Shim.values();
-        return addBenchmark(permuted, lean, shims);
+        return addBenchmarks(qeps, lean, shims);
     }
 
-    public static boolean addBenchmark(ArrayList<ArrayList<Object>> permuted, boolean lean, BDConstants.Shim[] shims) {
-        for (ArrayList<Object> currentList: permuted) {
-            for (Object currentQuery: currentList) {
-                if (currentQuery instanceof Signature) {
-                    // TODO Convert the query for each shim
-                    // Repeat for each of the converted queries
-                    try {
-                        if (!insert(((Signature) currentQuery).getQuery())) {
-                            return false;
-                        }
-                    } catch (NotSupportIslandException e) {
-                        e.printStackTrace();
-                    }
+    public static boolean addBenchmarks(List<QueryExecutionPlan> qeps, boolean lean, BDConstants.Shim[] shims) {
+        for (QueryExecutionPlan qep: qeps) {
+            try {
+                if (!insert(QueryExecutionPlan.qepToString(qep), qep.getIsland())) {
+                    return false;
                 }
+            } catch (NotSupportIslandException e) {
+                e.printStackTrace();
             }
         }
 
         if (!lean) {
             try {
-                runBenchmark(permuted);
+                runBenchmarks(qeps);
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -65,105 +58,59 @@ public class Monitor {
         return true;
     }
 
-    public static boolean removeBenchmark(ArrayList<ArrayList<Object>> permuted) {
-        return removeBenchmark(permuted, false);
+    public static boolean removeBenchmarks(List<QueryExecutionPlan> qeps) {
+        return removeBenchmarks(qeps, false);
     }
 
-    public static boolean removeBenchmark(ArrayList<ArrayList<Object>> permuted, boolean removeAll) {
-        for (ArrayList<Object> currentList: permuted) {
-            for (Object currentQuery: currentList) {
-                if (currentQuery instanceof Signature) {
-                    // TODO Convert the query for each shim
-                    // Repeat for each of the converted queries
-                    try {
-                        if (!delete(((Signature) currentQuery).getQuery())) {
-                            return false;
-                        }
-                    } catch (NotSupportIslandException e) {
-                        e.printStackTrace();
-                    }
+    public static boolean removeBenchmarks(List<QueryExecutionPlan> qeps, boolean removeAll) {
+        for (QueryExecutionPlan qep: qeps) {
+            try {
+                if (!delete(QueryExecutionPlan.qepToString(qep), qep.getIsland())) {
+                    return false;
                 }
+            } catch (NotSupportIslandException e) {
+                e.printStackTrace();
             }
         }
         return true;
     }
-    
-    
 
-    public static QueriesAndPerformanceInformation getBenchmarkPerformance(ArrayList<ArrayList<Object>> permuted) throws NotSupportIslandException {
-        ArrayList<String> queries = new ArrayList<>();
-        ArrayList<Object> perfInfo = new ArrayList<>();
+    public static QueriesAndPerformanceInformation getBenchmarkPerformance(List<QueryExecutionPlan> qeps) throws NotSupportIslandException {
+        List<String> queries = new ArrayList<>();
+        List<Object> perfInfo = new ArrayList<>();
 
-        for (ArrayList<Object> currentList: permuted) {
-            for (Object currentQuery: currentList) {
-                if (currentQuery instanceof Signature) {
-                    // TODO match to nearest existing benchmark
-                    queries.add(((Signature) currentQuery).getQuery());
-
-                    //PostgreSQLHandler handler = new PostgreSQLHandler();
-                    //Parser parser = new simpleParser();
-                    //ASTNode node = parser.parseQueryIntoTree(((Signature) currentQuery).getQuery());
-                    //perfInfo.add(handler.executeQuery(String.format(RETRIEVE, node.getIsland().name(), node.getTarget())));
-                }
-            }
+        for (QueryExecutionPlan qep: qeps) {
+            String qepString = QueryExecutionPlan.qepToString(qep);
+            queries.add(qepString);
+            PostgreSQLHandler handler = new PostgreSQLHandler();
+            perfInfo.add(handler.executeQuery(String.format(RETRIEVE, qep.getIsland(), qepString)));
         }
-        ArrayList<ArrayList<String>> queryList = new ArrayList();
+        List<List<String>> queryList = new ArrayList();
         queryList.add(queries);
         System.out.printf("[BigDAWG] MONITOR: Performance information generated.\n");
         return new QueriesAndPerformanceInformation(queryList, perfInfo);
     }
 
-    private static boolean insert(String query) throws NotSupportIslandException {
-        Parser parser = new simpleParser();
-        ASTNode node = parser.parseQueryIntoTree(query);
-
+    private static boolean insert(String query, String island) throws NotSupportIslandException {
         PostgreSQLHandler handler = new PostgreSQLHandler();
-        Response response = handler.executeQuery(String.format(INSERT, node.getIsland().name(), node.getTarget()));
+        Response response = handler.executeQuery(String.format(INSERT, island, query));
         return response.getStatus() == 200;
     }
 
-    private static boolean delete(String query) throws NotSupportIslandException {
-        Parser parser = new simpleParser();
-        ASTNode node = parser.parseQueryIntoTree(query);
-
+    private static boolean delete(String query, String island) throws NotSupportIslandException {
         PostgreSQLHandler handler = new PostgreSQLHandler();
-        Response response = handler.executeQuery(String.format(DELETE, node.getIsland().name(), node.getTarget()));
+        Response response = handler.executeQuery(String.format(DELETE, island, query));
         return response.getStatus() == 200;
     }
 
-    public static void runBenchmark(ArrayList<ArrayList<Object>> permuted) throws Exception {
-        for (ArrayList<Object> currentList: permuted) {
-            for (Object currentQuery: currentList) {
-                if (currentQuery instanceof Signature) {
-                    // TODO match to nearest existing benchmark
-
-                    // This is from the Planner's processQuery function
-                    PostgreSQLHandler psqlh = new PostgreSQLHandler(0, 1);
-                    SQLQueryPlan queryPlan = SQLPlanParser.extractDirect(psqlh, (((Signature) currentQuery).getQuery()));
-                    Operator root = queryPlan.getRootNode();
-
-                    ArrayList<String> objs = new ArrayList<>(Arrays.asList(((Signature) currentQuery).getSig2().split("\t")));
-                    Map<String, ArrayList<String>> map = CatalogViewer.getDBMappingByObj(CatalogInstance.INSTANCE.getCatalog(), objs);
-
-                    ArrayList<String> root_dep = new ArrayList<String>();
-                    root_dep.addAll(root.getTableLocations(map).keySet());
-                    map.put("BIGDAWG_MAIN", root_dep);
-
-                    QueryExecutionPlan qep = new QueryExecutionPlan();
-                    Map<String, Operator> out =  ExecutionNodeFactory.traverseAndPickOutWiths(root, queryPlan);
-                    ExecutionNodeFactory.addNodesAndEdges(qep, map, out, queryPlan.getStatement());
-
-                    qep.setQueryId(((Signature) currentQuery).getQuery());
-                    qep.setIsland(((Signature) currentQuery).getIsland());
-
-                    Executor.executePlan(qep);
-                }
-            }
+    public static void runBenchmarks(List<QueryExecutionPlan> qeps) throws Exception {
+        for (QueryExecutionPlan qep: qeps) {
+            Executor.executePlan(qep);
         }
     }
 
-    public void finishedBenchmark(QueryExecutionPlan plan, long startTime, long endTime) throws SQLException {
+    public void finishedBenchmark(QueryExecutionPlan qep, long startTime, long endTime) throws SQLException {
         PostgreSQLHandler handler = new PostgreSQLHandler();
-        handler.executeNotQueryPostgreSQL(String.format(UPDATE, endTime, endTime-startTime, plan.getIsland(), plan.getQueryId()));
+        handler.executeNotQueryPostgreSQL(String.format(UPDATE, endTime, endTime-startTime, qep.getIsland(), QueryExecutionPlan.qepToString(qep)));
     }
 }
