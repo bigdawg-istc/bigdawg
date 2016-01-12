@@ -326,16 +326,18 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
             nodeList.add(currentNode);
         }
 
-        m = edgePattern.matcher(edges);
-        while (m.find()) {
-            int from = Integer.parseInt(m.group(1));
-            int to = Integer.parseInt(m.group(2));
-            try {
-				qep.addDagEdge(nodeList.get(from), nodeList.get(to));
-			} catch (org.jgrapht.experimental.dag.DirectedAcyclicGraph.CycleFoundException e) {
-				e.printStackTrace();
-				System.exit(1);
-			}
+        try {
+            m = edgePattern.matcher(edges);
+            while (m.find()) {
+                int from = Integer.parseInt(m.group(1));
+                int to = Integer.parseInt(m.group(2));
+                    qep.addDagEdge(nodeList.get(from), nodeList.get(to));
+
+            }
+        } catch (CycleFoundException e) {
+            // Misformatted String
+            e.printStackTrace();
+            return null;
         }
 
         return qep;

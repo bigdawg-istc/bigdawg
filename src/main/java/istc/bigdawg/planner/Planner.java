@@ -15,12 +15,9 @@ import org.apache.log4j.Logger;
 import istc.bigdawg.monitoring.Monitor;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.postgresql.PostgreSQLHandler.QueryResult;
-import net.sf.jsqlparser.statement.select.Select;
-import istc.bigdawg.cast.Cast;
 import istc.bigdawg.catalog.CatalogInstance;
 import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.executor.Executor;
-import istc.bigdawg.executor.plan.ExecutionNode;
 import istc.bigdawg.executor.plan.ExecutionNodeFactory;
 import istc.bigdawg.executor.plan.QueryExecutionPlan;
 import istc.bigdawg.packages.QueriesAndPerformanceInformation;
@@ -60,8 +57,7 @@ public class Planner {
 		// GET SIGNATURE AND CASTS
 		logger.debug("Generating signatures and casts...");
 		Map<String, Object> sigAndCasts = UserQueryParser.getSignaturesAndCasts(CatalogInstance.INSTANCE.getCatalog(), crossIslandQuery);
-		
-		
+
 		// POPULATE queryQueue WITH OPTIMAL PLANS
 		getGetPerformanceAndPickTheBest(sigAndCasts);
 
@@ -71,9 +67,8 @@ public class Planner {
 		
 		// generating query tree 
 		logger.debug("Generating query execution tree...");
-		QueryExecutionPlan qep = new QueryExecutionPlan();
-		populateQueryExecutionPlan(qep, psqlh, sigAndCasts, maxSerial);
-		
+		QueryExecutionPlan qep = new QueryExecutionPlan(((Signature)sigAndCasts.get("OUTPUT")).getIsland());
+		populateQueryExecutionPlan(qep, psqlh, sigAndCasts);
 //		System.out.println("QueryExecutionPlan:: ");
 //		for (ExecutionNode v : qep.vertexSet()) {
 //			System.out.print(v.getTableName()+"\t\t----- "+ v.getQueryString()+"\n");
@@ -92,7 +87,7 @@ public class Planner {
 	 * @param sigAndCasts
 	 * @throws Exception
 	 */
-	public static void populateQueryExecutionPlan(QueryExecutionPlan qep, PostgreSQLHandler psqlh, Map<String, Object> sigAndCasts, int queryId) throws Exception {
+	public static void populateQueryExecutionPlan(QueryExecutionPlan qep, PostgreSQLHandler psqlh, Map<String, Object> sigAndCasts) throws Exception {
 		try {
 		SQLQueryPlan queryPlan = SQLPlanParser.extractDirect(psqlh, ((Signature)sigAndCasts.get("OUTPUT")).getQuery());
 		Operator root = queryPlan.getRootNode();
@@ -111,11 +106,9 @@ public class Planner {
 		
 		
 		Map<String, Operator> out =  ExecutionNodeFactory.traverseAndPickOutWiths(root, queryPlan);
-		
-		
+
+
 		ExecutionNodeFactory.addNodesAndEdges(qep, map, out, queryPlan.getStatement());
-		qep.setQueryId(String.valueOf(queryId));
-		qep.setIsland(((Signature)sigAndCasts.get("OUTPUT")).getIsland());
 		} catch (Exception e) {
 			e.printStackTrace();
 			throw e;
@@ -136,14 +129,16 @@ public class Planner {
 		// TODO make trees and NOT list of signature and casts; how about changing signature 1 into execution plans?
 		ArrayList<ArrayList<Object>> permuted = new ArrayList<ArrayList<Object>>();
 		permuted.add(new ArrayList<Object>(sigAndCasts.values()));
-		// 
+		//
 		// 
 		// CHEAT: JUST ONE 
 		// TODO DON'T CHEAT
 
 		// now call the corresponding monitor function to deliver permuted.
 		// Today there IS ONLY ONE PLAN
-		QueriesAndPerformanceInformation qnp = Monitor.getBenchmarkPerformance(permuted); // TODO CHANGE THE MONITOR FUNCTION
+		// TODO generate list of QueryExecutionPlans to send to monitor
+		ArrayList<QueryExecutionPlan> qeps = new ArrayList<>();
+		QueriesAndPerformanceInformation qnp = Monitor.getBenchmarkPerformance(qeps); // TODO CHANGE THE QEPS SENT TO MONITOR FUNCTION
 		
 		// does some magic to pick out the best query, store it to the query plan queue
 		// CHEAT: JUST ONE
