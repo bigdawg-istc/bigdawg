@@ -6,7 +6,6 @@ import java.util.regex.Pattern;
 
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.query.ConnectionInfo;
-import istc.bigdawg.query.parser.Parser;
 import org.jgrapht.Graphs;
 import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
 import org.jgrapht.graph.DefaultEdge;
@@ -320,11 +319,19 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
             nodeList.add(currentNode);
         }
 
-        m = edgePattern.matcher(edges);
-        while (m.find()) {
-            int from = Integer.parseInt(m.group(1));
-            int to = Integer.parseInt(m.group(2));
-            qep.addDagEdge(nodeList.get(from), nodeList.get(to));
+
+        try {
+            m = edgePattern.matcher(edges);
+            while (m.find()) {
+                int from = Integer.parseInt(m.group(1));
+                int to = Integer.parseInt(m.group(2));
+                    qep.addDagEdge(nodeList.get(from), nodeList.get(to));
+
+            }
+        } catch (CycleFoundException e) {
+            // Misformatted String
+            e.printStackTrace();
+            return null;
         }
 
         return qep;

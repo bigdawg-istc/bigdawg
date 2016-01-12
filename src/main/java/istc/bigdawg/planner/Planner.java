@@ -15,12 +15,9 @@ import org.apache.log4j.Logger;
 import istc.bigdawg.monitoring.Monitor;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.postgresql.PostgreSQLHandler.QueryResult;
-import net.sf.jsqlparser.statement.select.Select;
-import istc.bigdawg.cast.Cast;
 import istc.bigdawg.catalog.CatalogInstance;
 import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.executor.Executor;
-import istc.bigdawg.executor.plan.ExecutionNode;
 import istc.bigdawg.executor.plan.ExecutionNodeFactory;
 import istc.bigdawg.executor.plan.QueryExecutionPlan;
 import istc.bigdawg.packages.QueriesAndPerformanceInformation;
@@ -37,7 +34,7 @@ public class Planner {
 	 * 
 	 */
 	private static Logger logger = Logger.getLogger(Planner.class.getName());
-	private static LinkedHashMap<Integer, ArrayList<String>> queryQueue = new LinkedHashMap<Integer, ArrayList<String>>(); // queries
+	private static LinkedHashMap<Integer, List<String>> queryQueue = new LinkedHashMap<>(); // queries
 																									// to
 																									// be
 																									// executed
