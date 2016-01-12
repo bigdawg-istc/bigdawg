@@ -3,17 +3,6 @@
  */
 package istc.bigdawg.scidb;
 
-import istc.bigdawg.BDConstants;
-import istc.bigdawg.BDConstants.Shim;
-import istc.bigdawg.exceptions.SciDBException;
-import istc.bigdawg.properties.BigDawgConfigProperties;
-import istc.bigdawg.query.DBHandler;
-import istc.bigdawg.query.QueryResponseTupleList;
-import istc.bigdawg.utils.Constants;
-import istc.bigdawg.utils.ObjectMapperResource;
-import istc.bigdawg.utils.RunShell;
-import istc.bigdawg.utils.Tuple.Tuple2;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.sql.Timestamp;
@@ -25,7 +14,16 @@ import javax.ws.rs.core.Response;
 import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import istc.bigdawg.BDConstants;
+import istc.bigdawg.BDConstants.Shim;
+import istc.bigdawg.exceptions.SciDBException;
+import istc.bigdawg.properties.BigDawgConfigProperties;
+import istc.bigdawg.query.DBHandler;
+import istc.bigdawg.query.QueryResponseTupleList;
+import istc.bigdawg.utils.Constants;
+import istc.bigdawg.utils.ObjectMapperResource;
+import istc.bigdawg.utils.RunShell;
+import istc.bigdawg.utils.Tuple.Tuple2;
 
 /**
  * @author adam
@@ -110,7 +108,7 @@ public class SciDBHandler implements DBHandler {
 	}
 	
 	private String getDataFromSciDB(final String queryString, final String sciDBHostname) throws IOException, InterruptedException, SciDBException {
-		InputStream resultInStream = RunShell.runSciDB(sciDBHostname,
+		InputStream resultInStream = RunShell.runSciDBquery(sciDBHostname,
 				queryString);
 		String resultString = IOUtils.toString(resultInStream,
 				Constants.ENCODING);

@@ -141,3 +141,11 @@ Run it from SciDB account !!!:
 scidb@gaia:/home/adam$ /opt/scidb/14.12/bin/scidb.py startall single_server
 scidb@gaia:/opt/scidb/14.12/bin$ iquery -aq "build(<v:string>[i=0:0,1,0], 'hello world')"
 
+useful queries:
+AQL% select * from list('arrays');
+adam@adam-OptiPlex-9010:~/data/tpch/tpch1G/csv$ csv2scidb -d '|' -p NSS -i region.csv -o region.sci
+create array region <r_regionkey:int64,r_name:string,r_comment:string> [i=0:*,1000000,0];
+AQL% load region from '/home/adam/data/tpch/tpch1G/csv/region.sci';
+
+
+
