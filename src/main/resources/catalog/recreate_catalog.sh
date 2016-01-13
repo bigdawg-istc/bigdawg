@@ -11,8 +11,8 @@ postgres_bin=${4:-${postgres_bin_init}}
 
 cd ${postgres_bin}
 database=bigdawg_catalog
-./psql -p ${port_1} -c "drop database if exists ${database}" -d template1
-./psql -p ${port_1} -c "create database ${database}" -d template1
+./psql -p ${port_1} -c "drop database if exists ${database}" -d template1 -U postgres
+./psql -p ${port_1} -c "create database ${database}" -d template1 -U postgres
 
 ./psql -p ${port_1} -f ${catalog_resource}/bigdawg_ddl.sql -d ${database}
 ./psql -p ${port_1} -f ${catalog_resource}/inserts.sql -d ${database}

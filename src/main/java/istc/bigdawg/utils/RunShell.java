@@ -3,14 +3,17 @@
  */
 package istc.bigdawg.utils;
 
-import istc.bigdawg.exceptions.SciDBException;
-import istc.bigdawg.exceptions.ShellScriptException;
-import istc.bigdawg.properties.BigDawgConfigProperties;
-
 import java.io.IOException;
 import java.io.InputStream;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.log4j.Logger;
+
+import istc.bigdawg.LoggerSetup;
+import istc.bigdawg.exceptions.RunShellException;
+import istc.bigdawg.exceptions.SciDBException;
+import istc.bigdawg.exceptions.AccumuloShellScriptException;
+import istc.bigdawg.properties.BigDawgConfigProperties;
 
 /**
  * @author Adam Dziedzic
@@ -18,52 +21,94 @@ import org.apache.commons.io.IOUtils;
  */
 public class RunShell {
 
-	public static InputStream run(String filePath, String database,
-			String table, String query) throws IOException,
-			InterruptedException, ShellScriptException {
-		Process prop = new ProcessBuilder(filePath, database, table, query)
-				.start();
+	private static Logger log = Logger.getLogger(RunShell.class);
+
+	public static InputStream runShell(ProcessBuilder procBuilder)
+			throws RunShellException, InterruptedException, IOException {
+		Process prop = procBuilder.start();
 		prop.waitFor();
 		int exitVal = prop.exitValue();
 		if (exitVal != 0) {
-			throw new ShellScriptException("Problem with the shell script: "
-					+ filePath + ". Process returned value: " + exitVal);
+			throw new RunShellException("Process returned value: " + exitVal);
 		}
 		return prop.getInputStream();
 	}
 
-	public static InputStream runSciDBquery(String host, String query)
-			throws IOException, InterruptedException, SciDBException {
-		System.out.println("query in runSciDB: "+query);
-		query = query.replace("^^", "'");
-		Process prop = new ProcessBuilder("/opt/scidb/14.12/bin/iquery", "--host", host, "-aq",
-				query, "-o", "tsv+").start();
-		prop.waitFor();
-		int exitVal = prop.exitValue();
-		if (exitVal != 0) {
-			throw new SciDBException("Problem iquery and parameters: " + host
-					+ " " + query + ". Process returned value: " + exitVal);
+	public static InputStream runAccumuloScript(String filePath, String database, String table, String query)
+			throws IOException, InterruptedException, AccumuloShellScriptException {
+		try {
+			return runShell(new ProcessBuilder(filePath, database, table, query));
+		} catch (RunShellException e) {
+			e.printStackTrace();
+			String msg = "Problem with the shell script: " + filePath + " database: " + database + " table: " + table
+					+ " query: " + query + " " + e.getMessage();
+			log.error(msg);
+			throw new AccumuloShellScriptException(msg);
 		}
-		return prop.getInputStream();
+	}
+
+	public static InputStream runSciDBAFLquery(String host, String port, String binPath, String query)
+			throws IOException, InterruptedException, SciDBException {
+		String msg = "host: " + host + " query in runSciDB: " + query + " SciDB bin path: " + binPath;
+		log.info(msg);
+		/*
+		 * there were problems with the ' so it was supposed to be rplaced with
+		 * ^^ in the input
+		 */
+		query = query.replace("^^", "'");
+		try {
+			return runShell(new ProcessBuilder(binPath + "iquery", "--host", host, "--port", port, "--afl --query",
+					query, "-o", "tsv+"));
+		} catch (RunShellException e) {
+			e.printStackTrace();
+			msg = "Problem iquery and parameters: " + msg + " " + e.getMessage();
+			log.error(msg);
+			throw new SciDBException(msg);
+		}
+	}
+
+	/**
+	 * Execute AQL command in SciDB without returning any data.
+	 * 
+	 * @param host
+	 * @param port
+	 * @param command
+	 * @return
+	 * @throws SciDBException
+	 * @throws IOException
+	 * @throws InterruptedException
+	 */
+	public static InputStream executeAQLcommandSciDB(String host, String port, String binPath, String command)
+			throws SciDBException, IOException, InterruptedException {
+		String msg = "command to be executed in SciDB: " + command.replace("'", "") + "; on host: " + host + " port: "
+				+ port + " SciDB bin path: " + binPath;
+		log.info(msg);
+		try {
+			return runShell(new ProcessBuilder(binPath + "iquery", "--host", host, "--port", port, "--no-fetch",
+					"--query", command));
+		} catch (RunShellException e) {
+			e.printStackTrace();
+			msg = "Error for: " + msg + " " + e.getMessage();
+			log.error(msg);
+			throw new SciDBException(msg);
+		}
 	}
 
 	/**
 	 * @param args
+	 * @throws IOException
 	 */
-	public static void main(String[] args) {
-		System.out.println("Present Project Directory : "
-				+ System.getProperty("user.dir"));
+	public static void main(String[] args) throws IOException {
+		LoggerSetup.setLogging();
+		System.out.println("Present Project Directory : " + System.getProperty("user.dir"));
 		try {
 			// InputStream
 			// inStream=run(System.getProperty("user.dir")+"/scripts/test_script/echo_script.sh");
 			// InputStream
 			// inStream=run(System.getProperty("user.dir")+"/scripts/test_script/vijay_query.sh");
-			System.out.println(BigDawgConfigProperties.INSTANCE
-					.getAccumuloShellScript());
-			InputStream inStream = run(
-					BigDawgConfigProperties.INSTANCE.getAccumuloShellScript(),
-					"classdb01",
-					"note_events_Tedge",
+			System.out.println(BigDawgConfigProperties.INSTANCE.getAccumuloShellScript());
+			InputStream inStream = runAccumuloScript(BigDawgConfigProperties.INSTANCE.getAccumuloShellScript(),
+					"classdb01", "note_events_Tedge",
 					"Tedge('16965_recordTime_2697-08-04-00:00:00.0_recordNum_1_recordType_DISCHARGE_SUMMARY.txt,',:)");
 			// InputStream
 			// inStream=run("/home/adam/Chicago/bigdawgmiddle/scripts/test_script/vijay_query.sh");
@@ -73,7 +118,7 @@ public class RunShell {
 			e.printStackTrace();
 		} catch (InterruptedException e) {
 			e.printStackTrace();
-		} catch (ShellScriptException e) {
+		} catch (AccumuloShellScriptException e) {
 			e.printStackTrace();
 		}
 	}
