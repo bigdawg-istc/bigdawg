@@ -1,4 +1,4 @@
-package istc.bigdawg.util;
+package istc.bigdawg.utils.sqlutil;
 
 import java.io.IOException;
 import java.net.URL;

@@ -15,16 +15,17 @@ import istc.bigdawg.plan.SQLQueryPlan;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Alias;
 import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.Select;
+import net.sf.jsqlparser.statement.select.SelectBody;
 import net.sf.jsqlparser.statement.select.SelectExpressionItem;
 import net.sf.jsqlparser.statement.select.SelectItem;
 import net.sf.jsqlparser.statement.select.WithItem;
 
 public class Operator {
 
-	
 	
 	private boolean isCTERoot = false;
 	// for use in getPlaintext
@@ -46,16 +47,24 @@ public class Operator {
 	// denoting sliced execution by op (e.g., comorbidity query)
 	protected Map<String, SQLAttribute> outSchema;
 	
+	
 	// direct descendants
 	protected List<Operator> children;
 
 
-	protected Operator parent;
+	protected Operator parent = null;
+	
 	
 	
 	protected final int indent = 4;
 	
 	
+	
+	protected boolean isPruned = false;
+	protected static int pruneCount = 0;
+	protected Integer pruneID = null;
+	
+	protected boolean isQueryRoot = false;
 	
 	
 	public Operator(Map<String, String> parameters, List<String> output,  
@@ -93,7 +102,7 @@ public class Operator {
 			SQLTableExpression supplement) {
 		
 		outSchema = new LinkedHashMap<String, SQLAttribute>();
-		children = new  ArrayList<Operator>();
+		children  = new ArrayList<Operator>();
 		
 		children.add(lhs);
 		children.add(rhs);
@@ -115,6 +124,51 @@ public class Operator {
 		
 	}
 	
+	public Operator(Operator o) throws Exception {
+		if (!this.getClass().equals(o.getClass())) throw new Exception();
+		
+		this.isCTERoot = o.isCTERoot;
+		this.isBlocking = o.isBlocking; 
+		this.isLocal = o.isLocal; 
+		this.isPruned = o.isPruned;
+		this.pruneID = o.pruneID;
+
+		this.isQueryRoot = o.isQueryRoot;
+		
+		this.outSchema = new LinkedHashMap<>();
+		for (String s : o.outSchema.keySet()) {
+			this.outSchema.put(new String(s), new SQLAttribute(o.outSchema.get(s)));
+		}
+		
+		this.children = new ArrayList<>();
+		for (Operator s : o.children) {
+			if (s instanceof Join) {
+				Join j = new Join(s);
+				j.setParent(this);
+				children.add(j);
+			} else if (s instanceof SeqScan) {
+				SeqScan ss = new SeqScan(s);
+				ss.setParent(this);
+				children.add(ss);
+			} else if (s instanceof CommonSQLTableExpressionScan) {
+				CommonSQLTableExpressionScan c = new CommonSQLTableExpressionScan(s);
+				c.setParent(this);
+				children.add(c);
+			} else if (s instanceof Sort) {
+				Sort t = new Sort(s);
+				t.setParent(this);
+				children.add(t);
+			} else {
+				if (s instanceof Aggregate) {
+				} else if (s instanceof Distinct) {
+				} else if (s instanceof WindowAggregate) {
+				} else {
+					throw new Exception("Unknown Operator from Operator Copy: "+s.getClass().toString());
+				}
+				throw new Exception("Unsupported Operator Copy: "+s.getClass().toString());
+			}
+		}
+	}
 
 	public boolean CTERoot() {
 		return isCTERoot;
@@ -126,6 +180,10 @@ public class Operator {
 	
 	public void setParent(Operator p) {
 		parent = p;
+	}
+	
+	public Operator getParent() {
+		return parent;
 	}
 	
 
@@ -220,14 +278,18 @@ public class Operator {
 	
 	
 	public String generateSelectForExecutionTree(Select srcStatement, String into) throws Exception {
+		
 		Select dstStatement  = this.generatePlaintext(srcStatement, null);
-		System.out.println("PLAIN DSTSTATEMENT: "+ ((PlainSelect) dstStatement.getSelectBody()));
+//		System.out.println("PLAIN DSTSTATEMENT: "+ ((PlainSelect) dstStatement.getSelectBody()));
 		
 		// iterate over out schema and add it to select clause
 		List<SelectItem> selects = new ArrayList<SelectItem>();
 
 		for(String s : outSchema.keySet()) {
 			SQLAttribute attr = outSchema.get(s);
+			
+			changeAttributeName(attr);
+			
 			SelectExpressionItem si = new SelectExpressionItem(attr.getExpression());
 			if(!(si.toString().equals(attr.getName()))) {
 				si.setAlias(new Alias(attr.getName()));
@@ -241,22 +303,77 @@ public class Operator {
 		
 		// dealing with WITH statment
 		if (into != null) {
-			for (WithItem wi : dstStatement.getWithItemsList()) {
-				if (wi.getName().equals(into)) {
-					Table t = new Table();
-					t.setName(into);
-					ArrayList<Table> tl = new ArrayList<>();
-					tl.add(t);
-					
-					((PlainSelect) wi.getSelectBody()).setIntoTables(tl);
-					return ((PlainSelect) wi.getSelectBody()).toString();
-				}
+			
+			if (dstStatement.getWithItemsList() == null) {
+				return addInto(dstStatement.getSelectBody(), into);
 			}
 			
+			for (WithItem wi : dstStatement.getWithItemsList()) {
+				if (wi.getName().equals(into)) {
+					return addInto(wi.getSelectBody(), into);
+				}
+			}
+
+			return addInto(dstStatement.getSelectBody(), into);
 		}
 		return ((PlainSelect) dstStatement.getSelectBody()).toString();
 	}
 	
+	/**
+	 * add an SELECT INTO token to the select body
+	 * @param body
+	 * @param into
+	 * @return the resulting text
+	 */
+	private String addInto(SelectBody body, String into) {
+		Table t = new Table();
+		t.setName(into);
+		ArrayList<Table> tl = new ArrayList<>();
+		tl.add(t);
+		
+		((PlainSelect) body).setIntoTables(tl);
+		return ((PlainSelect) body).toString();
+	}
+	
+	/**
+	 * This Function updates the attribute name to match with that of the referenced table
+	 * @param attr
+	 * @return
+	 * @throws Exception
+	 */
+	public boolean changeAttributeName(SQLAttribute attr) throws Exception {
+		// if no children, then do nothing 
+		// for each children, 
+		// check if the child is pruned, 
+		//     if so check if it bears the name; 
+		//         if so, change the attribute name 
+
+		if (children.size() > 0) {
+			for (Operator o : children) {
+				if (o.isPruned()) {
+					if (o.getOutSchema().containsKey(attr.getFullyQualifiedName())) {
+						Expression e = attr.getExpression();
+						
+						if (e instanceof Column) {
+							Table t = new Table();
+							t.setName(o.getPruneToken());
+							((Column)e).setTable(t);
+							attr.setName(((Column)e).toString());
+						} else {
+							throw new Exception ("Unsupported column type: "+e.getClass().toString());
+						}
+						
+						attr.setExpression(e);
+						return true;
+					}
+				} else {
+					if (o.changeAttributeName(attr)) return true;
+				}
+			}
+		}
+		
+		return false;
+	}
 	
 	// this is the implicit root of the SQL generated
 	public String generatePlaintext(Select srcStatement) throws Exception {
@@ -270,6 +387,9 @@ public class Operator {
 		for(String s : outSchema.keySet()) {
 			SQLAttribute attr = outSchema.get(s);
 						
+			// find the table where it is pruned
+			changeAttributeName(attr);
+			
 			SelectExpressionItem si = new SelectExpressionItem(attr.getExpression());
 			if(!(si.toString().equals(attr.getName()))) {
 				si.setAlias(new Alias(attr.getName()));
@@ -408,14 +528,39 @@ public class Operator {
 	
 	
 	/**
+	 * NOTE: MODIFY THIS SO IT UPDATES MAP WITH PRUNE INFORMATION
 	 * getLocation gets a list of result locations that are possible for this operator
 	 * @return List<Integer> of dbid
 	 */
 	public Map<String, ArrayList<String>> getTableLocations(Map<String, ArrayList<String>> map) {
 		Map<String, ArrayList<String>> result = new HashMap<>();
-		for (Operator o : children)
+		for (Operator o : children) {
 			result.putAll(o.getTableLocations(map));
+		}
 		return result;
 	}
 	
+	public boolean isPruned() {
+		return isPruned;
+	}
+	
+	public void prune(boolean p) {
+		if (p && this.pruneID == null) {
+			pruneCount += 1;
+			this.pruneID = pruneCount;
+		}
+		isPruned = p;
+	}
+	
+	public String getPruneToken() {
+		return "BIGDAWGPRUNED_"+this.pruneID;
+	}
+	
+	public void setQueryRoot() {
+		this.isQueryRoot = true;
+	}
+	
+	public boolean isQueryRoot() {
+		return this.isQueryRoot;
+	}
 }

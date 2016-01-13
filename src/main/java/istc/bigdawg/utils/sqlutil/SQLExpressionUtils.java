@@ -1,4 +1,4 @@
-package istc.bigdawg.util;
+package istc.bigdawg.utils.sqlutil;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -23,7 +23,8 @@ public class CatalogViewer {
 	 * @return
 	 * @throws Exception
 	 */
-	public static ArrayList<String> getConnectionInfo(Catalog cc, int db_id) throws Exception {
+	public static ArrayList<String> getConnectionInfo(int db_id) throws Exception {
+		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
 		CatalogUtilities.checkConnection(cc);
 
@@ -53,7 +54,8 @@ public class CatalogViewer {
 	 * @return HashMap<Integer, ArrayList<String>>
 	 * @throws Exception
 	 */
-	public static HashMap<Integer, ArrayList<String>> getDBMappingByDB (Catalog cc, ArrayList<String> inputs) throws Exception {
+	public static HashMap<Integer, ArrayList<String>> getDBMappingByDB (ArrayList<String> inputs) throws Exception {
+		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		CatalogUtilities.checkConnection(cc);
 		if (inputs.size() == 0) throw new Exception("Empty inputs from getDBMapping");
 		
@@ -85,7 +87,9 @@ public class CatalogViewer {
 	 * @return HashMap<String,ArrayList<String>>
 	 * @throws Exception
 	 */
-	public static HashMap<String,ArrayList<String>> getDBMappingByObj (Catalog cc, ArrayList<String> inputs) throws Exception {
+	public static HashMap<String,ArrayList<String>> getDBMappingByObj (ArrayList<String> inputs) throws Exception {
+		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
+		
 		CatalogUtilities.checkConnection(cc);
 		if (inputs.size() == 0) throw new Exception("Empty inputs from getDBMapping");
 		
@@ -119,7 +123,9 @@ public class CatalogViewer {
 	 * @return String of TSV String of object names (obj)
 	 * @throws Exception
 	 */
-	public static String getObjectsFromList(Catalog cc, String csvstr) throws Exception {
+	public static String getObjectsFromList(String csvstr) throws Exception {
+		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
+		
 		// input check
 		CatalogUtilities.checkConnection(cc);
 		if (csvstr.length() == 0)
@@ -133,7 +139,7 @@ public class CatalogViewer {
 		for (int i = 1; i < len; i++) {
 			wherePred = wherePred + "or lower(o.name) = lower(\'" + strs[i].trim() + "\') ";
 		}
-		System.out.println("wherePred + " + wherePred);
+
 		ResultSet rs = cc.execRet(
 				"select distinct o.name obj " + "from catalog.objects o " + "where " + wherePred + "order by o.name;");
 		if (rs.next())
@@ -154,7 +160,8 @@ public class CatalogViewer {
 	 *         shim access_method
 	 * @throws Exception
 	 */
-	public static ArrayList<String> getAllShims(Catalog cc) throws Exception {
+	public static ArrayList<String> getAllShims() throws Exception {
+		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
 		CatalogUtilities.checkConnection(cc);
 
@@ -179,7 +186,8 @@ public class CatalogViewer {
 	 *         (dst), and cast access_method
 	 * @throws Exception
 	 */
-	public static ArrayList<String> getAllCasts(Catalog cc) throws Exception {
+	public static ArrayList<String> getAllCasts() throws Exception {
+		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
 		CatalogUtilities.checkConnection(cc);
 
@@ -202,7 +210,8 @@ public class CatalogViewer {
 	 *         physical_db, and name of engine (engine)
 	 * @throws Exception
 	 */
-	public static ArrayList<String> getAllObjects(Catalog cc) throws Exception {
+	public static ArrayList<String> getAllObjects() throws Exception {
+		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
 		CatalogUtilities.checkConnection(cc);
 
@@ -228,7 +237,8 @@ public class CatalogViewer {
 	 *         physical_db, physical_db
 	 * @throws Exception
 	 */
-	public static ArrayList<String> getObjectsByName(Catalog cc, String objName) throws Exception {
+	public static ArrayList<String> getObjectsByName(String objName) throws Exception {
+		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
 		CatalogUtilities.checkConnection(cc);
 		CatalogUtilities.checkLength(objName, 15);
@@ -256,7 +266,8 @@ public class CatalogViewer {
 	 * @return ArrayList of TSV String of db name (name), userid and password.
 	 * @throws Exception
 	 */
-	public static ArrayList<String> getDbAccessInfo(Catalog cc, String dbName) throws Exception {
+	public static ArrayList<String> getDbAccessInfo(String dbName) throws Exception {
+		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
 		CatalogUtilities.checkConnection(cc);
 		CatalogUtilities.checkLength(dbName, 15);
@@ -283,7 +294,8 @@ public class CatalogViewer {
 	 *         (engine).
 	 * @throws Exception
 	 */
-	public static ArrayList<String> getDbsOfEngine(Catalog cc, String engineName) throws Exception {
+	public static ArrayList<String> getDbsOfEngine(String engineName) throws Exception {
+		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
 		CatalogUtilities.checkConnection(cc);
 		CatalogUtilities.checkLength(engineName, 15);
@@ -311,7 +323,8 @@ public class CatalogViewer {
 	 *         and shim access method (access_method)
 	 * @throws Exception
 	 */
-	public static ArrayList<String> getDbsOfIsland(Catalog cc, String islandName) throws Exception {
+	public static ArrayList<String> getDbsOfIsland(String islandName) throws Exception {
+		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
 		CatalogUtilities.checkConnection(cc);
 		CatalogUtilities.checkLength(islandName, 15);
@@ -342,7 +355,8 @@ public class CatalogViewer {
 	 *         and engine name (engine)
 	 * @throws Exception
 	 */
-	public static ArrayList<String> getDbsOfObject(Catalog cc, String objName) throws Exception {
+	public static ArrayList<String> getDbsOfObject(String objName) throws Exception {
+		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
 		CatalogUtilities.checkConnection(cc);
 		CatalogUtilities.checkLength(objName, 15);
@@ -372,8 +386,8 @@ public class CatalogViewer {
 	 *         shim_id
 	 * @throws Exception
 	 */
-	public static ArrayList<String> getShimsUseObjectsIslands(Catalog cc, ArrayList<String> objs,
-			ArrayList<String> islands) throws Exception {
+	public static ArrayList<String> getShimsUseObjectsIslands(ArrayList<String> objs, ArrayList<String> islands) throws Exception {
+		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
 		CatalogUtilities.checkConnection(cc);
 		if (objs.size() == 0)
@@ -438,8 +452,8 @@ public class CatalogViewer {
 	 *         (db), island, and shim access method.
 	 * @throws Exception
 	 */
-	public static ArrayList<String> getShimsUseObjectsFieldsIslands(Catalog cc, ArrayList<String> objs,
-			ArrayList<String> fs, ArrayList<String> islands) throws Exception {
+	public static ArrayList<String> getShimsUseObjectsFieldsIslands(ArrayList<String> objs, ArrayList<String> fs, ArrayList<String> islands) throws Exception {
+		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
 		CatalogUtilities.checkConnection(cc);
 		if (objs.size() == 0)
@@ -511,7 +525,8 @@ public class CatalogViewer {
 	 *         (src_id), destination engine id (src_id)
 	 * @throws Exception
 	 */
-	public static ArrayList<String> getOneStepCastsUseObjects(Catalog cc, ArrayList<String> objs) throws Exception {
+	public static ArrayList<String> getOneStepCastsUseObjects(ArrayList<String> objs) throws Exception {
+		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
 		CatalogUtilities.checkConnection(cc);
 		if (objs.size() == 0)
@@ -552,8 +567,8 @@ public class CatalogViewer {
 	 *         engine name (dst) and cast access method (access_method)
 	 * @throws Exception
 	 */
-	public static ArrayList<String> getOneStepCastsUseEngineNames(Catalog cc, ArrayList<String> src_e,
-			ArrayList<String> dst_e) throws Exception {
+	public static ArrayList<String> getOneStepCastsUseEngineNames(ArrayList<String> src_e, ArrayList<String> dst_e) throws Exception {
+		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
 		CatalogUtilities.checkConnection(cc);
 		if (src_e.size() == 0)
@@ -602,8 +617,8 @@ public class CatalogViewer {
 	 *         (access_method)
 	 * @throws Exception
 	 */
-	public static ArrayList<String> getOneStepCastsUseDbToDb(Catalog cc, ArrayList<String> src_db,
-			ArrayList<String> dst_db) throws Exception {
+	public static ArrayList<String> getOneStepCastsUseDbToDb(ArrayList<String> src_db, ArrayList<String> dst_db) throws Exception {
+		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
 		CatalogUtilities.checkConnection(cc);
 		if (src_db.size() == 0)
@@ -655,8 +670,8 @@ public class CatalogViewer {
 	 *         access_method
 	 * @throws Exception
 	 */
-	public static ArrayList<String> getOneStepCastDbsUseObjectsIslands(Catalog cc, ArrayList<String> objs,
-			ArrayList<String> islands) throws Exception {
+	public static ArrayList<String> getOneStepCastDbsUseObjectsIslands(ArrayList<String> objs, ArrayList<String> islands) throws Exception {
+		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
 		CatalogUtilities.checkConnection(cc);
 		if (objs.size() == 0)
@@ -717,7 +732,8 @@ public class CatalogViewer {
 	 *             problem with the connection to the catalog or no data for the
 	 *             arguments in the catalog
 	 */
-	public static PostgreSQLConnectionInfo getConnection(Catalog cc, int engineId, int dbId) throws Exception {
+	public static PostgreSQLConnectionInfo getConnection(int engineId, int dbId) throws Exception {
+		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// TODO add cache for the connections (done by Adam)
 		CatalogUtilities.checkConnection(cc);
 		PreparedStatement stmt = cc.connection

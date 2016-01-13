@@ -11,7 +11,7 @@ import istc.bigdawg.schema.SQLAttribute;
 import istc.bigdawg.extract.logical.SQLTableExpression;
 import istc.bigdawg.plan.SQLQueryPlan;
 import istc.bigdawg.plan.extract.SQLOutItem;
-import istc.bigdawg.util.SQLUtilities;
+import istc.bigdawg.utils.sqlutil.SQLUtilities;
 
 
 import net.sf.jsqlparser.JSQLParserException;

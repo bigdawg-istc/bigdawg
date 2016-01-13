@@ -41,10 +41,12 @@ public class SQLQueryPlan {
 	public SQLQueryPlan(Operator root) {
 		planRoots = new HashMap<String, Operator>();
 		rootNode = root;
+		root.setQueryRoot();
 	}
 	
 	public void setRootNode(Operator o) {
 		rootNode = o;
+		o.setQueryRoot();
 	}
 	
 	// get root of a CTE statement or main

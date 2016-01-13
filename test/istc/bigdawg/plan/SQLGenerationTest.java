@@ -85,8 +85,8 @@ public class SQLGenerationTest  extends TestCase {
 	
 	private void setupFourWayOne() {
 		String testName = "four_way_one";
-		final String inputPlaintext    = "bdrel(WITH diag AS (SELECT * FROM diagnoses WHERE icd9 LIKE '410%'), dnd AS (SELECT d.patient_id, race, count(type_) AS ct FROM diag AS d JOIN demographics AS dm ON d.patient_id = dm.patient_id GROUP BY race, d.patient_id), v AS (SELECT * FROM vitals WHERE pulse > 80) SELECT dnd.race, m.medication, dnd.ct, v.patient_id FROM dnd JOIN medications AS m ON dnd.patient_id = m.patient_id JOIN v ON v.patient_id = dnd.patient_id);";
-		final String expectedPlaintext = "WITH diag AS (SELECT * FROM diagnoses WHERE icd9 LIKE '410%'), dnd AS (SELECT d.patient_id, race, count(type_) AS ct FROM diag AS d JOIN demographics AS dm ON d.patient_id = dm.patient_id GROUP BY race, d.patient_id), v AS (SELECT * FROM vitals WHERE pulse > 80) SELECT dnd.race, m.medication, dnd.ct, v.patient_id FROM dnd JOIN v ON v.patient_id = dnd.patient_id JOIN medications AS m ON dnd.patient_id = m.patient_id";
+		final String inputPlaintext    = "bdrel(WITH diag AS (SELECT * FROM diagnoses WHERE icd9 LIKE '410%' order by patient_id), dnd AS (SELECT d.patient_id, race, count(type_) AS ct FROM diag AS d JOIN demographics AS dm ON d.patient_id = dm.patient_id GROUP BY race, d.patient_id), v AS (SELECT * FROM vitals WHERE pulse > 80) SELECT dnd.race, m.medication, dnd.ct, v.patient_id FROM dnd JOIN medications AS m ON dnd.patient_id = m.patient_id JOIN v ON v.patient_id = dnd.patient_id);";
+		final String expectedPlaintext = "WITH diag AS (SELECT * FROM diagnoses WHERE icd9 LIKE '410%' ORDER BY patient_id), dnd AS (SELECT d.patient_id, race, count(type_) AS ct FROM diag AS d JOIN demographics AS dm ON d.patient_id = dm.patient_id GROUP BY race, d.patient_id), v AS (SELECT * FROM vitals WHERE pulse > 80) SELECT dnd.race, m.medication, dnd.ct, v.patient_id FROM dnd JOIN v ON v.patient_id = dnd.patient_id JOIN medications AS m ON m.patient_id = dnd.patient_id";
 		inputPlaintexts.put(testName, inputPlaintext);
 		expectedPlaintexts.put(testName, expectedPlaintext);
 	};
@@ -113,11 +113,12 @@ public class SQLGenerationTest  extends TestCase {
 		
 	}
 //*/
+	/*
 	@Test
 	public void testMimicBasic() throws Exception {
 			testCaseDirect("mimic_basic");
 	}
-	
+	//*/
 	
 	@Test
 	public void testFourWayOneDirect() throws Exception {
@@ -150,16 +151,16 @@ public class SQLGenerationTest  extends TestCase {
 		
 		
 		// UNROLLING
-		ArrayList<String> islandQueries = UserQueryParser.getUnwrappedQueriesByIslands(sqlQuery, "BIGDAWGTAG_");
+		Map<String, String> islandQueries = UserQueryParser.getUnwrappedQueriesByIslands(sqlQuery, "BIGDAWGTAG_");
 		
 		
 		// GET SIGNATURE AND CASTS
-		HashMap<String, Object> sigsCasts = (HashMap<String, Object>) UserQueryParser.getSignaturesAndCasts(CatalogInstance.INSTANCE.getCatalog(), islandQueries);
+		HashMap<String, Object> sigsCasts = (HashMap<String, Object>) UserQueryParser.getSignaturesAndCasts(islandQueries);
 		
 		
 		// GET ALTERNATIVE EXECUTION PLANS
 		ArrayList<String> objs = new ArrayList<>(Arrays.asList(((Signature) sigsCasts.get("OUTPUT")).getSig2().split("\t")));
-		Map<String, ArrayList<String>> map = CatalogViewer.getDBMappingByObj(CatalogInstance.INSTANCE.getCatalog(), objs);
+		Map<String, ArrayList<String>> map = CatalogViewer.getDBMappingByObj(objs);
 		CatalogInstance.INSTANCE.closeCatalog();
 		
 		
@@ -182,7 +183,7 @@ public class SQLGenerationTest  extends TestCase {
 
 		
 		
-		Map<String, Operator> out =  ExecutionNodeFactory.traverseAndPickOutWiths(root, queryPlan);
+		Map<String, Operator> out =  ExecutionNodeFactory.traverseAndPickOutWiths(root);
 		for (String s : out.keySet()){
 			System.out.println("---->>>> " + s +"; " + out.get(s).generatePlaintext(queryPlan.getStatement()));
 		}
@@ -197,6 +198,7 @@ public class SQLGenerationTest  extends TestCase {
 		System.out.println("\nLEVEL " + level + " :: "+ root.toString() + " :: \n==>\n" + root.generatePlaintext(queryPlan.getStatement()));
 		System.out.println("TABLE LOCATIONS: "+rootTL); // this getTableLocations(...) function modifies map
 		System.out.println("---===>>> "+root.getClass().toString());
+		System.out.println("---===>>> PARENT "+root.getParent());
 		
 //		for (Operator o : ExecutionNodeFactory.joinGrouper((Join)root)) {
 //			if (o instanceof CommonSQLTableExpressionScan) {
@@ -220,6 +222,7 @@ public class SQLGenerationTest  extends TestCase {
 				System.out.println("\nLEVEL "+ level +" :: "+c.blockingStatus()+" :: "+ c.toString() + " \n==>>\n" + plaintext);
 				System.out.println("TABLE LOCATIONS: "+c.getTableLocations(map));
 				System.out.println("---===>>> "+c.getClass().toString());
+				System.out.println("---===>>> PARENT "+c.getParent());
 				// blocking status acquired
 				
 				

@@ -21,17 +21,38 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
         implements Iterable<ExecutionNode> {
 
     private static final long serialVersionUID = 7704709501946249185L;
-
+    private static int maxSerial = 0;
+    private int serial;
+    private String terminalTableName;
+    
     private final String island;
 
     public QueryExecutionPlan(String island) {
         super(DefaultEdge.class);
         this.island = island;
+        maxSerial++;
+        serial = maxSerial;
         // TODO add any variables needed from Planner
     }
 
     public String getIsland() {
         return this.island;
+    }
+    
+    public int getSerialNumber() {
+    	return serial;
+    }
+    
+    public String getSerializedName() {
+    	return "QEPTERMINALNODE_"+serial;
+    }
+    
+    public void setTerminalTableName(String terminalTableName) {
+    	this.terminalTableName = terminalTableName;
+    }
+    
+    public String getTerminalTableName() {
+    	return terminalTableName;
     }
 
     /**
@@ -283,8 +304,9 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
      * Produces an QueryExecutionPlan from the output of qepToString
      * @param representation an output of qepToString
      * @return the QueryExecutionPlan
+     * @throws org.jgrapht.experimental.dag.DirectedAcyclicGraph.CycleFoundException 
      */
-    public static QueryExecutionPlan stringToQEP(String representation) {
+    public static QueryExecutionPlan stringToQEP(String representation) throws org.jgrapht.experimental.dag.DirectedAcyclicGraph.CycleFoundException {
         Pattern islandPattern = Pattern.compile("(?<=ISLAND:)(?s).*(?=NODES:)");
         Pattern nodesPattern = Pattern.compile("(?<=NODES:\\()(?s).*(?=\\)EDGES:)");
         Pattern edgesPattern = Pattern.compile("(?<=EDGES:\\()(?s).*(?=\\))");

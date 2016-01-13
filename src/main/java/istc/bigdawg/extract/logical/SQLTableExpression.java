@@ -7,7 +7,7 @@ import java.util.Map;
 
 import istc.bigdawg.plan.operators.Sort;
 import istc.bigdawg.plan.operators.Sort.SortOrder;
-
+import net.sf.jsqlparser.expression.Alias;
 import net.sf.jsqlparser.expression.AnalyticExpression;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.schema.Table;
@@ -26,9 +26,10 @@ public class SQLTableExpression {
 
     // look up alternate name for column or expression that is aliased.
     private Map<String, String>  attributeAliases;
+    private Map<String, String>  tableAliases;
     private int analyticExpressionIdx;
     private int sortIdx; // iterate over sorts - they may come from OVER or ORDER BY
-    private List<ArrayList<OrderByElement>> sortList = null;
+    private Map<String, ArrayList<OrderByElement>> sortList = null;
     private PlainSelect parsedStatement; // usually contains a WithItem, PlainSelect, or both
     private List<Join> joins;
     
@@ -37,6 +38,7 @@ public class SQLTableExpression {
     public SQLTableExpression()  {
     	 analyticExpressions = new ArrayList<AnalyticExpression>();
     	 attributeAliases = new HashMap<String, String>();
+    	 tableAliases = new HashMap<String, String>();
     	 joins = new ArrayList<Join>();
     	 
     	 analyticExpressionIdx = 0;  // iterate over this when we encounter analytics in the plan
@@ -82,14 +84,14 @@ public class SQLTableExpression {
     // takes in a table from the query tree
     // if it is associated with a join, return join
     public Join getJoin(Table rhs) {
-//    	System.out.println("Searching for table " + rhs);
+
+    	System.out.println("Retrieving from join list " + joins);
     	for(Join j : joins) {
     		FromItem from = j.getRightItem();
-//    		System.out.println("Checking out " + j + " from " + from);
+    		System.out.println("Comparing " + rhs + " to " + from);
  
 	   		if(from instanceof Table) {
 	    			Table t = (Table) from;
-//	        		System.out.println("Names: " + t.getName() + "," + rhs.getName());
 	    			
 	        		if(rhs.getAlias() != null) {
 	        			if(rhs.getName().equals(t.getName()) && rhs.getAlias().getName().equals(t.getAlias().getName())) {
@@ -190,12 +192,12 @@ public class SQLTableExpression {
     
     // have a sort from the query execution plan
     // need to resolve it to OrderByElement to get ASC or DESC clause
-    public Sort.SortOrder getSortOrder(List<String> sortKeys) throws Exception {
+    public Sort.SortOrder getSortOrder(List<String> sortKeys, String sectionName) throws Exception {
+    	
     	if(sortList == null) {
     		createSortList();
     	}
-    	
-    	List<OrderByElement> sort = sortList.get(sortIdx);
+    	List<OrderByElement> sort = sortList.get(sectionName);
     	++sortIdx;
     	
     	// make sure they match
@@ -227,7 +229,7 @@ public class SQLTableExpression {
     
     void createSortList() {
     	
-    	sortList = new ArrayList<ArrayList<OrderByElement> >();
+    	sortList = new HashMap<>(); //String, ArrayList<ArrayList<OrderByElement> 
     	sortIdx = 0;
     	
     	for(int i = 0; i < analyticExpressions.size(); ++i) {
@@ -245,12 +247,13 @@ public class SQLTableExpression {
         			
         		}
         		elements.addAll(ae.getOrderByElements());
-        		sortList.add(elements);
+//        		sortList.add(elements);
+        		sortList.put(ae.getName(), elements);
     		}
     	}
     	
     	if(orderBy != null) {
-    		sortList.add((ArrayList<OrderByElement>) orderBy);
+    		sortList.put("main", (ArrayList<OrderByElement>) orderBy);
     	}
     	
     }
@@ -271,4 +274,12 @@ public class SQLTableExpression {
     	return name;
     }
 	
+    public void addTableAlias(String name2, Alias alias) {
+		tableAliases.put(name2, alias.getName());
+		
+	}
+	
+	public String getTableAlias(String n) {
+		return tableAliases.get(n);
+	}
 }

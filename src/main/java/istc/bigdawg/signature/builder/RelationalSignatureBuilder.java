@@ -31,7 +31,7 @@ public class RelationalSignatureBuilder {
 		} while(line != null);
 		
 		// get tokens, so catalog can filter non-ops
-		objStringBuffer.append("(?i)(?!(").append(opStringBuffer).append("|\\bby\\b|\\bas\\b))\\b\\w+\\.?\\w*\\b");
+		objStringBuffer.append("(?i)(?!(").append(opStringBuffer).append("|\\bby\\b|\\bas\\b))\\b[\\w.]+\\b");
 		
 		// finish ops
 		opStringBuffer.insert(0, "(?i)(").append(")");
@@ -63,7 +63,7 @@ public class RelationalSignatureBuilder {
 		}
 	}
 	
-	public static String sig2(Catalog cc, String input) throws Exception {
+	public static String sig2(String input) throws Exception {
 		if (objPattern == null) listing();
 		
 		StringBuffer stringBuffer	= new StringBuffer();
@@ -87,7 +87,7 @@ public class RelationalSignatureBuilder {
 		}
 		
 		stringBuffer.append("\t").append(dawgtags);
-		String result = CatalogViewer.getObjectsFromList(cc, stringBuffer.toString());
+		String result = CatalogViewer.getObjectsFromList(stringBuffer.toString());
 		if (result.length() == 0) {
 			return dawgtags.toString();
 		} else {

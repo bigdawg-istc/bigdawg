@@ -23,11 +23,14 @@ import istc.bigdawg.executor.Executor;
 import istc.bigdawg.executor.plan.ExecutionNode;
 import istc.bigdawg.executor.plan.ExecutionNodeFactory;
 import istc.bigdawg.executor.plan.QueryExecutionPlan;
+import istc.bigdawg.packages.CrossIslandQueryPlan;
 import istc.bigdawg.packages.QueriesAndPerformanceInformation;
 import istc.bigdawg.parsers.UserQueryParser;
 import istc.bigdawg.plan.SQLQueryPlan;
 import istc.bigdawg.plan.extract.SQLPlanParser;
+import istc.bigdawg.plan.operators.Join;
 import istc.bigdawg.plan.operators.Operator;
+import istc.bigdawg.plan.operators.SeqScan;
 import istc.bigdawg.schema.SQLDatabaseSingleton;
 import istc.bigdawg.signature.Signature;
 
@@ -50,28 +53,44 @@ public class Planner {
 		SQLDatabaseSingleton.getInstance().setDatabase("bigdawg_schemas", "src/main/resources/plain.sql");
 		// WE CURRENTLY NEED TO DOCUMENT WHICH TABLES ARE CREATED IN THIS FILE. 
 		// NEXT VERSION I'LL REMOVE THIS CONSTRAINT. TODO
+		// WELL. Let it be for now.
 		
 		
 		// UNROLLING
 		logger.debug("User query received. Parsing...");
-		ArrayList<String> crossIslandQuery = UserQueryParser.getUnwrappedQueriesByIslands(userinput, "BIGDAWGTAG_");
+		Map<String, String> crossIslandQuery = UserQueryParser.getUnwrappedQueriesByIslands(userinput, "BIGDAWGTAG_");
+		
+		// NEW UPDATE, JAN 11
+		CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(crossIslandQuery);
+		
+		// TODO get ciqp components to generate new query execution plan
 		
 		
-		// GET SIGNATURE AND CASTS
-		logger.debug("Generating signatures and casts...");
-		Map<String, Object> sigAndCasts = UserQueryParser.getSignaturesAndCasts(CatalogInstance.INSTANCE.getCatalog(), crossIslandQuery);
-
-		// POPULATE queryQueue WITH OPTIMAL PLANS
-		getGetPerformanceAndPickTheBest(sigAndCasts);
-
-		// now the serial number of query is added;
-		int querySerial = maxSerial; // THIS IS A STRONG ASSUMPTION IN MULTI-THREAD. NOT A PROBLEM AT THE MOMENT TODO
-
 		
-		// generating query tree 
-		logger.debug("Generating query execution tree...");
-		QueryExecutionPlan qep = new QueryExecutionPlan(((Signature)sigAndCasts.get("OUTPUT")).getIsland());
-		populateQueryExecutionPlan(qep, psqlh, sigAndCasts);
+		
+//		// GET SIGNATURE AND CASTS
+//		logger.debug("Generating signatures and casts...");
+//		Map<String, Object> sigAndCasts = UserQueryParser.getSignaturesAndCasts(crossIslandQuery);
+//
+//		// POPULATE queryQueue WITH OPTIMAL PLANS
+//		getGetPerformanceAndPickTheBest(sigAndCasts);
+//
+//		// now the serial number of query is added;
+//		int querySerial = maxSerial; // THIS IS A STRONG ASSUMPTION IN MULTI-THREAD. NOT A PROBLEM AT THE MOMENT TODO
+//
+//		
+//		// generating query tree 
+//		logger.debug("Generating query execution tree...");
+		QueryExecutionPlan qep = new QueryExecutionPlan("RELATIONAL");
+		
+		
+		
+//		populateQueryExecutionPlan(qep, psqlh, sigAndCasts); TODO
+		
+		
+		
+		
+		
 //		System.out.println("QueryExecutionPlan:: ");
 //		for (ExecutionNode v : qep.vertexSet()) {
 //			System.out.print(v.getTableName()+"\t\t----- "+ v.getQueryString()+"\n");
@@ -80,7 +99,7 @@ public class Planner {
 		
 		// EXECUTE TEH RESULT
 		logger.debug("Executing query execution tree...");
-		return compileResults(querySerial, Executor.executePlan(qep));
+		return compileResults(ciqp.getSerial(), Executor.executePlan(qep));
 	}
 
 	/**
@@ -90,28 +109,35 @@ public class Planner {
 	 * @param sigAndCasts
 	 * @throws Exception
 	 */
-	public static void populateQueryExecutionPlan(QueryExecutionPlan qep, PostgreSQLHandler psqlh, Map<String, Object> sigAndCasts) throws Exception {
+	public static QueryExecutionPlan populateQueryExecutionPlan(PostgreSQLHandler psqlh, String island, String query, String tsvSig2) throws Exception {
 		try {
-		SQLQueryPlan queryPlan = SQLPlanParser.extractDirect(psqlh, ((Signature)sigAndCasts.get("OUTPUT")).getQuery());
-		Operator root = queryPlan.getRootNode();
-		
-		
-		
-		ArrayList<String> objs = new ArrayList<>(Arrays.asList(((Signature) sigAndCasts.get("OUTPUT")).getSig2().split("\t")));
-		Map<String, ArrayList<String>> map = CatalogViewer.getDBMappingByObj(CatalogInstance.INSTANCE.getCatalog(), objs);
-		
-		
-		
-		ArrayList<String> root_dep = new ArrayList<String>();
-		root_dep.addAll(root.getTableLocations(map).keySet());
-		map.put("BIGDAWG_MAIN", root_dep);
-		root.generatePlaintext(queryPlan.getStatement()); // the production of AST should be root
-		
-		
-		Map<String, Operator> out =  ExecutionNodeFactory.traverseAndPickOutWiths(root, queryPlan);
-
-
-		ExecutionNodeFactory.addNodesAndEdges(qep, map, out, queryPlan.getStatement());
+			QueryExecutionPlan qep = new QueryExecutionPlan(island);
+			
+			
+			
+			SQLQueryPlan queryPlan = SQLPlanParser.extractDirect(psqlh, query);
+			Operator root = queryPlan.getRootNode();
+			
+			
+			
+			ArrayList<String> objs = new ArrayList<>(Arrays.asList(tsvSig2.split("\t")));
+			Map<String, ArrayList<String>> map = CatalogViewer.getDBMappingByObj(objs);
+			
+			
+			
+			ArrayList<String> root_dep = new ArrayList<String>();
+			root_dep.addAll(root.getTableLocations(map).keySet()); // modifies map
+			map.put("BIGDAWG_MAIN", root_dep);
+			root.generatePlaintext(queryPlan.getStatement()); // the production of AST should be root
+			
+			
+//			Map<String, Operator> out =  ExecutionNodeFactory.traverseAndPickOutWiths(root, queryPlan);
+	// mark
+	
+//			ExecutionNodeFactory.addNodesAndEdges(qep, map, out, queryPlan.getStatement());
+			
+			
+			return qep;
 		} catch (Exception e) {
 			e.printStackTrace();
 			throw e;
@@ -131,7 +157,7 @@ public class Planner {
 		// GENERATE PERMUTATIONS
 		// TODO make trees and NOT list of signature and casts; how about changing signature 1 into execution plans?
 		ArrayList<ArrayList<Object>> permuted = new ArrayList<ArrayList<Object>>();
-		permuted.add(new ArrayList<Object>(sigAndCasts.values()));
+		permuted.add(new ArrayList<Object>(sigAndCasts.values())); // this should be qeps
 		//
 		// 
 		// CHEAT: JUST ONE 
@@ -147,26 +173,11 @@ public class Planner {
 		// CHEAT: JUST ONE
 		// TODO DON'T CHEAT; ACTUALLY PICK; CHANGE THIS 0
 		maxSerial += 1;
-		queryQueue.put(maxSerial, qnp.qList.get(0)); 
+		queryQueue.put(maxSerial, (ArrayList<String>) qnp.qList.get(0)); // TODO 
 		
 		logger.debug("Performance information received; serial number: "+maxSerial);
 	};
 
-	/**
-	 * DEPRECATED
-	 * CALL EXECUTOR OR MIGRATOR: evoked by planner itself. Look for the query
-	 * and execute the first sub-query
-	 * 
-	 * @return 0 if no error; otherwise incomplete
-	 */
-	private static QueryResult executeOneSubquery(int querySerial, int subqueryPos) throws Exception {
-		// call either an executor or migrator function
-
-		String subQ = queryQueue.get(querySerial).get(subqueryPos);
-
-		System.out.printf("[BigDAWG] PLANNER: dispatching sub-query %d of query %d...\n", subqueryPos, querySerial);
-		return Executor.executeDSA(querySerial, subqueryPos, subQ);
-	}
 
 	/**
 	 * CALLED BY EXECUTOR: Receive result and send it to user
@@ -203,4 +214,14 @@ public class Planner {
 		return Response.status(200).entity(out.toString()).build();
 	}
 
+	
+	public static void permuteOperators(Operator root) throws Exception {
+		if (root instanceof SeqScan) {
+			
+		} else if (root instanceof Join) {
+			
+		} else {
+			throw new Exception ("Unsupported Operator!!");
+		}
+	}
 }

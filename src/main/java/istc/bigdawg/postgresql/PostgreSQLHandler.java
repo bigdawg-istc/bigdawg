@@ -19,6 +19,7 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
 import istc.bigdawg.BDConstants.Shim;
+import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.query.DBHandler;
 import istc.bigdawg.query.QueryClient;
 import istc.bigdawg.catalog.Catalog;
@@ -41,7 +42,7 @@ public class PostgreSQLHandler implements DBHandler {
 
 	public PostgreSQLHandler(int engineId, int dbId) throws Exception {
 		try {
-			this.conInfo = CatalogViewer.getConnection(CatalogInstance.INSTANCE.getCatalog(), engineId, dbId);
+			this.conInfo = CatalogViewer.getConnection(engineId, dbId);
 		} catch (Exception e) {
 			String msg = "Catalog chosen connection: " + conInfo.getHost() + " " + conInfo.getPort() + " "
 					+ conInfo.getDatabase() + " " + conInfo.getUser() + " " + conInfo.getPassword() + ".";
@@ -55,6 +56,7 @@ public class PostgreSQLHandler implements DBHandler {
 		this.conInfo = conInfo;
 	}
 
+	
 	public PostgreSQLHandler() {
 		String msg = "Default handler. PostgreSQL parameters from a file.";
 		System.out.println(msg);
@@ -413,5 +415,16 @@ public class PostgreSQLHandler implements DBHandler {
 //		rs.close();
 		
 		return extraction.toString();
+	}
+	
+	/**
+	 * MOVED FROM ExecutionNodeFactory, etc.
+	 * @param dbid
+	 * @return connection info associated with the DBID
+	 * @throws Exception
+	 */
+	public static ConnectionInfo generateConnectionInfo(int dbid) throws Exception {
+		ArrayList<String> infos = CatalogViewer.getConnectionInfo(dbid);
+		return new PostgreSQLConnectionInfo(infos.get(0), infos.get(1), infos.get(2), infos.get(3), infos.get(4));
 	}
 }

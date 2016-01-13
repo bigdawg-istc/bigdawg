@@ -10,7 +10,7 @@ import org.junit.Test;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import junit.framework.TestCase;
 
-public class UtilityTest extends TestCase {
+public class CreateTableTest extends TestCase {
 
 	
 	private static Map<String, String> expectedOutputs;
