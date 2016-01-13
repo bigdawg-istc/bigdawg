@@ -142,10 +142,12 @@ public class ExecutionNodeFactory {
 		}
 		
 		String remainderInto = qep.getSerializedName();
-		String remainderSelectIntoString = remainder.generateSelectForExecutionTree(srcStmt, remainderInto);
-		dependentNodes.put(remainderInto, new LocalQueryExecutionNode(remainderSelectIntoString, remainderCI, remainderInto));
+		String remainderSelectIntoString = remainder.generateSelectForExecutionTree(srcStmt, null);
+		LocalQueryExecutionNode remainderNode = new LocalQueryExecutionNode(remainderSelectIntoString, remainderCI, remainderInto);
+		dependentNodes.put(remainderInto, remainderNode);
 			
 		qep.setTerminalTableName(remainderInto);
+		qep.setTerminalTableNode(remainderNode);
 		
 		// if there remainderLoc is not null, then there is nothing in the container. 
 		// Return.

@@ -23,6 +23,7 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
     private static int maxSerial = 0;
     private int serial;
     private String terminalTableName;
+    private ExecutionNode terminalNode;
     
     private final String island;
 
@@ -52,6 +53,14 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
     
     public String getTerminalTableName() {
     	return terminalTableName;
+    }
+    
+    public void setTerminalTableNode(ExecutionNode terminalTable) {
+    	this.terminalNode = terminalTable;
+    }
+    
+    public ExecutionNode getTerminalTableNode() {
+    	return this.terminalNode;
     }
 
     /**
