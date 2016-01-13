@@ -1,4 +1,0 @@
-##add database catalog engines: engine_id, name, host, port, connection_properties
-#catalog.engines
-0,'postgres1','localhost',5431,'engine for bigdawg catalog, schema and mimic2 data'
-1,'postgres2','localhost',5430,'main engine for mimic2_copy data'

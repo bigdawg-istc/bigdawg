@@ -1,6 +1,3 @@
-
-CREATE SCHEMA IF NOT EXISTS mimic2v26;
-
 CREATE TABLE IF NOT EXISTS monitoring (
 	lastRan bigint,
 	duration integer,
@@ -18,8 +15,6 @@ CREATE TABLE IF NOT EXISTS ailment (
 	id integer,
 	disease_name varchar(50)
 );
-
-
 
 CREATE TABLE IF NOT EXISTS demographics (
        patient_id integer,
