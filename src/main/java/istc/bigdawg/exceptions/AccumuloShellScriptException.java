@@ -7,7 +7,7 @@ package istc.bigdawg.exceptions;
  * @author adam
  *
  */
-public class ShellScriptException extends Exception {
+public class AccumuloShellScriptException extends Exception {
 
 	/**
 	 * 
@@ -17,10 +17,8 @@ public class ShellScriptException extends Exception {
 	/**
 	 * 
 	 */
-	public ShellScriptException(String message) {
+	public AccumuloShellScriptException(String message) {
 		super(message);
 	}
-	
-	
 
 }

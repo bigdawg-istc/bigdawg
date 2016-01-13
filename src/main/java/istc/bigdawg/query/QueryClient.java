@@ -17,7 +17,7 @@ import org.apache.accumulo.core.client.TableNotFoundException;
 import org.apache.log4j.Logger;
 
 import istc.bigdawg.accumulo.AccumuloHandler;
-import istc.bigdawg.exceptions.ShellScriptException;
+import istc.bigdawg.exceptions.AccumuloShellScriptException;
 import istc.bigdawg.myria.MyriaHandler;
 import istc.bigdawg.planner.Planner;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
@@ -73,7 +73,7 @@ public class QueryClient {
 	 * @throws AccumuloSecurityException
 	 * @throws AccumuloException
 	 * @throws TableNotFoundException
-	 * @throws ShellScriptException
+	 * @throws AccumuloShellScriptException
 	 * @throws InterruptedException
 	 */
 	@Path("query")
