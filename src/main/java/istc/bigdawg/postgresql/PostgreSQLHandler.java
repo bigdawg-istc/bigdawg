@@ -214,8 +214,13 @@ public class PostgreSQLHandler implements DBHandler {
 	public QueryResult executeQueryPostgreSQL(final String query) throws SQLException {
 		try {
 			this.getConnection();
+			
+			log.debug("\n\nquery: "+query+"");
+			log.debug("ConnectionInfo: "+this.conInfo.toString()+"\n");
+			
 			st = con.createStatement();
 			rs = st.executeQuery(query);
+			
 			ResultSetMetaData rsmd = rs.getMetaData();
 			List<String> colNames = getColumnNames(rsmd);
 			List<String> types = getColumnTypes(rsmd);

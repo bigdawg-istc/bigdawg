@@ -11,9 +11,9 @@ import net.sf.jsqlparser.statement.select.Select;
 public class QueryContainerForCommonDatabase {
 	
 	private HashMap<String, ConnectionInfo> 	databaseConnectionInfos;
-	private Operator								rootOperator;
-	private Select									select;
-	private String									pruneToken;
+	private Operator							rootOperator;
+	private Select								select;
+	private String								pruneToken;
 	
 	public QueryContainerForCommonDatabase (Map<String, ConnectionInfo> cis, Operator o, Select srcQuery, String into) throws Exception {
 		
@@ -36,7 +36,7 @@ public class QueryContainerForCommonDatabase {
 	}
 	
 	public String generateSelectIntoString() throws Exception {
-		return rootOperator.generateSelectForExecutionTree(select, pruneToken);
+		return rootOperator.generateSelectForExecutionTree(select, null);//pruneToken);
 	}
 	
 	public String getName() {
