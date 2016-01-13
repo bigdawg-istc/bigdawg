@@ -13,6 +13,8 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static istc.bigdawg.postgresql.PostgreSQLHandler.getColumnNames;
 import static istc.bigdawg.postgresql.PostgreSQLHandler.getRows;
@@ -68,7 +70,6 @@ public class MonitoringTask implements Runnable {
             if (this.can_add()) {
                 try {
                     final String query = this.getQuery();
-                    final String island = this.island;
                     if (query != null) {
                         Thread t1 = new Thread(new Runnable() {
                             public void run() {
@@ -101,15 +102,20 @@ public class MonitoringTask implements Runnable {
      */
     private boolean can_add() {
         try {
-            Process p = Runtime.getRuntime().exec("uptime | awk '{print $9}'");
+            Process p = Runtime.getRuntime().exec("uptime");
             p.waitFor();
             BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream()));
             StringBuffer sb = new StringBuffer();
             String line = "";
-            while ((line = reader.readLine())!= null) {
+            while ((line = reader.readLine()) != null) {
                 sb.append(line + "\n");
             }
-            String result = sb.toString().replaceAll("[^0-9.]", "");
+            Pattern currentLoad = Pattern.compile("(?<=load average: )([.0-9]+)");
+            Matcher m = currentLoad.matcher(sb);
+            String result = "";
+            if (m.find()) {
+                result = m.group();
+            }
             double load = Double.parseDouble(result);
             if (load/this.cores > MAX_LOAD) {
                 return false;
