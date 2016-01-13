@@ -305,6 +305,10 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
         }
         result.append(")");
 
+        result.append(String.format("SERIAL:%d", qep.getSerialNumber()));
+        result.append(String.format("TERMTABLE:%s", qep.getTerminalTableName()));
+        result.append(String.format("TERMNODE:%d", order.get(executionNodeToString(qep.getTerminalTableNode()))));
+
         return result.toString();
     }
 
@@ -321,6 +325,10 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
 
         Pattern nodePattern = Pattern.compile("(\\(.*?ENGINE:\\(.*?\\).*?\\))");
         Pattern edgePattern = Pattern.compile("([0-9]+),([0-9]+)");
+
+        Pattern serialPattern = Pattern.compile("(?<=SERIAL:)([0-9]+)");
+        Pattern terminalTableNamePattern = Pattern.compile("(?<=TERMTABLE:)((?s).*)(?=TERMNODE:)");
+        Pattern terminalNodePattern = Pattern.compile("(?<=TERMNODE:)([0-9]+)");
 
         String island = "";
         Matcher m = islandPattern.matcher(representation);
@@ -356,13 +364,32 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
             while (m.find()) {
                 int from = Integer.parseInt(m.group(1));
                 int to = Integer.parseInt(m.group(2));
-                    qep.addDagEdge(nodeList.get(from), nodeList.get(to));
-
+                qep.addDagEdge(nodeList.get(from), nodeList.get(to));
             }
         } catch (CycleFoundException e) {
             // Misformatted String
             e.printStackTrace();
             return null;
+        }
+
+        m = serialPattern.matcher(representation);
+        if (m.find()) {
+            String serial = m.group();
+            qep.serial = Integer.parseInt(serial);
+        }
+
+        m = terminalTableNamePattern.matcher(representation);
+        if (m.find()) {
+            String terminalTableName = m.group();
+            if (terminalTableName.length() > 0) {
+                qep.setTerminalTableName(terminalTableName);
+            }
+        }
+
+        m = terminalNodePattern.matcher(representation);
+        if (m.find()) {
+            String terminalNode = m.group();
+            qep.setTerminalTableNode(nodeList.get(Integer.parseInt(terminalNode)));
         }
 
         return qep;
