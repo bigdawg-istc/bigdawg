@@ -388,9 +388,9 @@ public class PostgreSQLHandler implements DBHandler {
 	 * NEW FUNCTION generate the "CREATE TABLE" clause from existing tables on DB. Recommend use with 'bigdawg_schema' 
 	 * @param schemaAndTableName
 	 * @return
-	 * @throws Exception
+	 * @throws SQLException 
 	 */
-	public String getCreateTable(String schemaAndTableName) throws Exception {
+	public String getCreateTable(String schemaAndTableName) throws SQLException {
 		
 		StringBuilder extraction = new StringBuilder();
 
