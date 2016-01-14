@@ -90,7 +90,7 @@ public class Executor {
                             return handler.executeQueryPostgreSQL(query);
                         } else {
                             // SELECT INTO statements don't return QueryResults
-                            handler.executeNotQueryPostgreSQL(query);
+                            handler.executeStatmentPostgreSQL(query);
                             
                             // clean up the intermediate table later
                             node.getTableName().ifPresent((table) -> {
@@ -130,7 +130,7 @@ public class Executor {
     private static void cleanTemporaryTables(Map<ConnectionInfo, Set<String>> temporaryTables) throws SQLException {
         for (ConnectionInfo c : temporaryTables.keySet()) {
             log.debug(String.format("Cleaning up %s by removing %s...", c, temporaryTables.get(c)));
-            ((PostgreSQLHandler) c.getHandler()).executeNotQueryPostgreSQL(c.getCleanupQuery(temporaryTables.get(c)));
+            ((PostgreSQLHandler) c.getHandler()).executeStatmentPostgreSQL(c.getCleanupQuery(temporaryTables.get(c)));
         }
     }
     

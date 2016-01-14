@@ -20,6 +20,7 @@ import istc.bigdawg.LoggerSetup;
 import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
+import istc.bigdawg.postgresql.PostgreSQLSchemaTableName;
 import istc.bigdawg.query.ConnectionInfo;
 
 /**
@@ -125,6 +126,54 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 		return null;
 	}
 
+	private class TargetSchemaTable {
+		private String schemaName;
+		private boolean wasSchemaCreated;
+		private String tableName;
+		private boolean wasTableCreated;
+
+		public TargetSchemaTable(String schemaName, boolean wasSchemaCreated, String tableName,
+				boolean wasTableCreated) {
+			this.schemaName = schemaName;
+			this.wasSchemaCreated = wasSchemaCreated;
+			this.tableName = tableName;
+			this.wasTableCreated = wasTableCreated;
+		}
+
+		public String getSchemaName() {
+			return schemaName;
+		}
+
+		public boolean isWasSchemaCreated() {
+			return wasSchemaCreated;
+		}
+
+		public String getTableName() {
+			return tableName;
+		}
+
+		public boolean isWasTableCreated() {
+			return wasTableCreated;
+		}
+	}
+
+	private TargetSchemaTable createTargetSchemaTableIfNotExist(PostgreSQLConnectionInfo connectionFrom, String fromTable,
+			PostgreSQLConnectionInfo connectionTo, String toTable) {
+		Connection conFrom = null;
+		Connection conTo = null;
+		PostgreSQLSchemaTableName schemaTableTo = new PostgreSQLSchemaTableName(toTable);
+		try {	
+			PostgreSQLHandler postgresToHanlder = new PostgreSQLHandler(connectionTo);
+			conTo = PostgreSQLHandler.getConnection(connectionTo);
+			
+		} catch (SQLException e) {
+			e.printStackTrace();
+			
+		}
+		
+		return null;
+	}
+
 	/**
 	 * @return
 	 * @throws SQLException
@@ -136,7 +185,7 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 		logger.debug("Specific data migration");
 
 		String copyFromString = getCopyCommand(fromTable, DIRECTION.TO/* STDOUT */);
-		String copyToString = getCopyCommand(toTable, DIRECTION.FROM/* STDOUT */);
+		String copyToString = getCopyCommand(toTable, DIRECTION.FROM/* STDIN */);
 
 		Connection conFrom = null;
 		Connection conTo = null;

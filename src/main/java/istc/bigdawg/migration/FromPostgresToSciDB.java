@@ -105,7 +105,7 @@ public class FromPostgresToSciDB implements FromDatabaseToDatabase {
 			 */
 			List<PostgreSQLColumnMetaData> columnsMetaData;
 			try {
-				columnsMetaData = PostgreSQLHandler.getColumnsMetaData(connectionFrom, fromTable);
+				columnsMetaData = new PostgreSQLHandler().getColumnsMetaData(connectionFrom, fromTable);
 			} catch (SQLException e) {
 				e.printStackTrace();
 				return MigrationResult.getFailedInstance(
