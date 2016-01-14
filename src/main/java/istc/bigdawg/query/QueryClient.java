@@ -4,16 +4,11 @@
  */
 package istc.bigdawg.query;
 
-import java.io.IOException;
-import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import org.apache.accumulo.core.client.AccumuloException;
@@ -22,15 +17,11 @@ import org.apache.accumulo.core.client.TableNotFoundException;
 import org.apache.log4j.Logger;
 
 import istc.bigdawg.accumulo.AccumuloHandler;
-import istc.bigdawg.exceptions.NotSupportIslandException;
-import istc.bigdawg.exceptions.ShellScriptException;
+import istc.bigdawg.exceptions.AccumuloShellScriptException;
 import istc.bigdawg.myria.MyriaHandler;
-import istc.bigdawg.postgresql.PostgreSQLHandler;
-import istc.bigdawg.query.parser.Parser;
-import istc.bigdawg.query.parser.simpleParser;
-import istc.bigdawg.scidb.SciDBHandler;
-import istc.bigdawg.utils.ObjectMapperResource;
 import istc.bigdawg.planner.Planner;
+import istc.bigdawg.postgresql.PostgreSQLHandler;
+import istc.bigdawg.scidb.SciDBHandler;
 /**
  * @author Adam Dziedzic
  * 
@@ -58,8 +49,8 @@ public class QueryClient {
 
 	static {
 		registeredDbHandlers = new ArrayList<DBHandler>();
-		int postgreSQL1Engine=1;
-		int mimic2DB=2;
+		int postgreSQL1Engine=0;
+		int mimic2DB=1;
 		try {
 			registeredDbHandlers.add(new PostgreSQLHandler(postgreSQL1Engine,mimic2DB));
 		} catch (Exception e) {
@@ -82,7 +73,7 @@ public class QueryClient {
 	 * @throws AccumuloSecurityException
 	 * @throws AccumuloException
 	 * @throws TableNotFoundException
-	 * @throws ShellScriptException
+	 * @throws AccumuloShellScriptException
 	 * @throws InterruptedException
 	 */
 	@Path("query")
@@ -110,6 +101,7 @@ public class QueryClient {
 					try {
 						return Planner.processQuery(istream);
 					} catch (Exception e) {
+						e.printStackTrace();
 						return Response.status(412).entity(e.getMessage()).build();
 					}
 //					return handler.executeQuery(queryString.substring(6,queryString.length()-2));

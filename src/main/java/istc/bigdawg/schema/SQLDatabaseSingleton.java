@@ -6,7 +6,7 @@ public class SQLDatabaseSingleton  {
 	 private istc.bigdawg.schema.SQLDatabase db = null; 
 	 
 	   protected SQLDatabaseSingleton() throws Exception  {
-			db = new SQLDatabase("bigdawg_schemas", "src/main/resources/plain.sql");
+			db = new SQLDatabase("bigdawg_schemas", "src/main/resources/schemas/plain.sql");
 	   }
 
 	   public static SQLDatabaseSingleton getInstance() throws Exception {

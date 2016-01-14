@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -20,6 +19,7 @@ import org.postgresql.core.BaseConnection;
 import istc.bigdawg.LoggerSetup;
 import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
+import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.query.ConnectionInfo;
 
 /**
@@ -47,23 +47,6 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 		copyFromStringBuf.append(direction.toString() + " ");
 		copyFromStringBuf.append("STDOUT with binary");/* with binary */
 		return copyFromStringBuf.toString();
-	}
-
-	private Connection getConnection(PostgreSQLConnectionInfo conInfo) throws SQLException {
-		Connection con;
-		String url = conInfo.getUrl();
-		String user = conInfo.getUser();
-		String password = conInfo.getPassword();
-		try {
-			con = DriverManager.getConnection(url, user, password);
-		} catch (SQLException e) {
-			String msg = "Could not connect to the PostgreSQL instance: Url: " + url + " User: " + user + " Password: "
-					+ password;
-			logger.error(msg);
-			e.printStackTrace();
-			throw e;
-		}
-		return con;
 	}
 
 	private class CopyFromExecutor implements Callable<Long> {
@@ -158,8 +141,8 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 		Connection conFrom = null;
 		Connection conTo = null;
 		try {
-			conFrom = getConnection(connectionFrom);
-			conTo = getConnection(connectionTo);
+			conFrom = PostgreSQLHandler.getConnection(connectionFrom);
+			conTo = PostgreSQLHandler.getConnection(connectionTo);
 
 			// Statement st = conTo.createStatement();
 			// st.execute("CREATE temporary TABLE d_patients (subject_id integer
