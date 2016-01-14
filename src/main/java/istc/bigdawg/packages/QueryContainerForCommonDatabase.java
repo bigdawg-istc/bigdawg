@@ -24,7 +24,7 @@ public class QueryContainerForCommonDatabase {
 		
 		this.databaseConnectionInfos.putAll(cis);
 		
-		System.out.println("--> Gen select into: "+generateSelectIntoString());
+//		System.out.println("--> Gen select into: "+generateSelectIntoString());
 	}
 
 	public Set<String> getConnectionStrings() throws Exception {

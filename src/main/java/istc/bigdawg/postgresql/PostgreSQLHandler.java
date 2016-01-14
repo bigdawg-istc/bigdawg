@@ -194,6 +194,7 @@ public class PostgreSQLHandler implements DBHandler {
 			this.getConnection();
 			st = con.createStatement();
 			st.execute(statement);
+			System.out.println("Check point 3");
 		} catch (SQLException ex) {
 			Logger lgr = Logger.getLogger(QueryClient.class.getName());
 			ex.printStackTrace();

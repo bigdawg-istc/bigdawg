@@ -266,9 +266,9 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
     public static String qepToString(QueryExecutionPlan qep) {
         Iterator<ExecutionNode> nodeIterator = qep.iterator();
         StringBuilder result = new StringBuilder();
-
+//        System.out.println("Check point 1, qepToString");
         result.append(String.format("ISLAND:%s", qep.getIsland()));
-
+//        System.out.println("Check point 2, qepToString");
         // Converts each node into a String representation of itself
         result.append("NODES:(");
         List<String> nodes = new ArrayList<>();
@@ -277,7 +277,7 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
             String currentNodeRep = executionNodeToString(currentNode);
             nodes.add(currentNodeRep);
         }
-
+//        System.out.println("Check point 3, qepToString");
         String[] nodeList = new String[nodes.size()];
         for (int i = 0; i < nodes.size(); i++) {
             nodeList[i] = nodes.get(i);
@@ -288,27 +288,42 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
             result.append(nodeList[i]);
         }
         result.append(")");
-
+//        System.out.println("Check point 4, qepToString");
         // Stores the edges as tuples of the form (from,to) indexed by order added to the result
+        
+        
         result.append("EDGES:(");
-        nodeIterator = qep.iterator();
-        while (nodeIterator.hasNext()) {
-            ExecutionNode currentNode = nodeIterator.next();
-            int from = order.get(executionNodeToString(currentNode));
-            Collection<ExecutionNode> dependents = qep.getDependents(currentNode);
-            if (dependents != null) {
-                for (ExecutionNode dependent: dependents) {
-                    int to = order.get(executionNodeToString(dependent));
-                    result.append(String.format("(%d,%d)", from, to));
-                }
-            }
+        
+        
+        
+        
+        if (!qep.edgeSet().isEmpty()) {
+	        nodeIterator = qep.iterator();
+	        System.out.println("Check point 4.5, qepToString");
+	        while (nodeIterator.hasNext()) {
+	            ExecutionNode currentNode = nodeIterator.next();
+	            int from = order.get(executionNodeToString(currentNode));
+	            Collection<ExecutionNode> dependents = qep.getDependents(currentNode);
+	            if (dependents != null) {
+	                for (ExecutionNode dependent: dependents) {
+	                    int to = order.get(executionNodeToString(dependent));
+	                    result.append(String.format("(%d,%d)", from, to));
+	                }
+	            }
+	        }
         }
+        
+        
+        
+        
+        
         result.append(")");
-
+        
+//        System.out.println("Check point 5, qepToString");
         result.append(String.format("SERIAL:%d", qep.getSerialNumber()));
         result.append(String.format("TERMTABLE:%s", qep.getTerminalTableName()));
         result.append(String.format("TERMNODE:%d", order.get(executionNodeToString(qep.getTerminalTableNode()))));
-
+//        System.out.println("Check point 6, qepToString");
         return result.toString();
     }
 
