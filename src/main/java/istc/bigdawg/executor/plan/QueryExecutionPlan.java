@@ -296,12 +296,14 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
         
         
         
-        
-        if (!qep.edgeSet().isEmpty()) {
+        if (false) {
+//        if (!qep.edgeSet().isEmpty()) {
 	        nodeIterator = qep.iterator();
 	        System.out.println("Check point 4.5, qepToString");
 	        while (nodeIterator.hasNext()) {
 	            ExecutionNode currentNode = nodeIterator.next();
+	            System.out.printf("\ncurrentNode: %s\n", order.containsKey(currentNode));
+	            System.out.printf("order: %s\n\n", order.containsKey(currentNode));
 	            int from = order.get(executionNodeToString(currentNode));
 	            Collection<ExecutionNode> dependents = qep.getDependents(currentNode);
 	            if (dependents != null) {

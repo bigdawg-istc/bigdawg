@@ -144,6 +144,13 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 			conFrom = PostgreSQLHandler.getConnection(connectionFrom);
 			conTo = PostgreSQLHandler.getConnection(connectionTo);
 
+			
+			// create the table on ToServer
+			String createTableString = PostgreSQLHandler.getCreateTable(connectionFrom, fromTable);
+			conTo.createStatement().executeUpdate(createTableString);
+			
+			
+			
 			// Statement st = conTo.createStatement();
 			// st.execute("CREATE temporary TABLE d_patients (subject_id integer
 			// NOT NULL,sex character varying(1),dob timestamp without time zone

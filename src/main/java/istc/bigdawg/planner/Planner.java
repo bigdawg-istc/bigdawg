@@ -1,10 +1,6 @@
 package istc.bigdawg.planner;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -12,44 +8,31 @@ import javax.ws.rs.core.Response;
 
 import org.apache.log4j.Logger;
 
-import istc.bigdawg.monitoring.Monitor;
-import istc.bigdawg.postgresql.PostgreSQLHandler;
-import istc.bigdawg.postgresql.PostgreSQLHandler.QueryResult;
-import net.sf.jsqlparser.statement.select.Select;
-import istc.bigdawg.cast.Cast;
-import istc.bigdawg.catalog.CatalogInstance;
-import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.executor.Executor;
-import istc.bigdawg.executor.plan.ExecutionNode;
-import istc.bigdawg.executor.plan.ExecutionNodeFactory;
 import istc.bigdawg.executor.plan.QueryExecutionPlan;
+import istc.bigdawg.monitoring.Monitor;
 import istc.bigdawg.packages.CrossIslandQueryPlan;
 import istc.bigdawg.packages.QueriesAndPerformanceInformation;
 import istc.bigdawg.parsers.UserQueryParser;
-import istc.bigdawg.plan.SQLQueryPlan;
-import istc.bigdawg.plan.extract.SQLPlanParser;
 import istc.bigdawg.plan.operators.Join;
 import istc.bigdawg.plan.operators.Operator;
 import istc.bigdawg.plan.operators.SeqScan;
+import istc.bigdawg.postgresql.PostgreSQLHandler.QueryResult;
 import istc.bigdawg.schema.SQLDatabaseSingleton;
-import istc.bigdawg.signature.Signature;
 
 public class Planner {
 
-	/*
-	 * 
-	 */
 	private static Logger logger = Logger.getLogger(Planner.class.getName());
-	private static LinkedHashMap<Integer, List<String>> queryQueue = new LinkedHashMap<>(); // queries
-																									// to
-																									// be
-																									// executed
+//	private static LinkedHashMap<Integer, List<String>> queryQueue = new LinkedHashMap<>(); // queries
+//																									// to
+//																									// be
+//																									// executed
 	private static Integer maxSerial = 0;
 
 
 	public static Response processQuery(String userinput) throws Exception {
 		
-		SQLDatabaseSingleton.getInstance().setDatabase("bigdawg_schemas", "src/main/resources/plain.sql");
+		SQLDatabaseSingleton.getInstance().setDatabase("bigdawg_schemas", "src/main/resources/schemas/plain.sql");
 				
 		
 		// UNROLLING
@@ -84,6 +67,7 @@ public class Planner {
 	 * 
 	 * @param userinput
 	 */
+	@Deprecated
 	public static void getGetPerformanceAndPickTheBest(Map<String, Object> sigAndCasts) throws Exception {
 		
 		// GENERATE PERMUTATIONS
@@ -105,7 +89,7 @@ public class Planner {
 		// CHEAT: JUST ONE
 		// TODO DON'T CHEAT; ACTUALLY PICK; CHANGE THIS 0
 		maxSerial += 1;
-		queryQueue.put(maxSerial, (ArrayList<String>) qnp.qList.get(0)); // TODO 
+//		queryQueue.put(maxSerial, (ArrayList<String>) qnp.qList.get(0)); // TODO 
 		
 		logger.debug("Performance information received; serial number: "+maxSerial);
 	};
@@ -122,7 +106,7 @@ public class Planner {
 		System.out.printf("[BigDAWG] PLANNER: Query %d is completed. Result:\n", querySerial);
 
 		// remove corresponding elements in the two queues
-		queryQueue.remove(querySerial);
+//		queryQueue.remove(querySerial);
 
 		// print the result;
 		StringBuffer out = new StringBuffer();

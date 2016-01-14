@@ -7,6 +7,7 @@ import java.util.Map;
 
 import org.junit.Test;
 
+import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import junit.framework.TestCase;
 
@@ -14,11 +15,11 @@ public class CreateTableTest extends TestCase {
 
 	
 	private static Map<String, String> expectedOutputs;
-	private static PostgreSQLHandler psqlh;
+	private static PostgreSQLConnectionInfo psqlci;
 	
 	protected void setUp() throws Exception {
 		expectedOutputs = new HashMap<>();
-		psqlh			= new PostgreSQLHandler();
+		psqlci = (PostgreSQLConnectionInfo) PostgreSQLHandler.generateConnectionInfo(0);
 		
 		setupCreateTableEngines();
 	}
@@ -38,7 +39,7 @@ public class CreateTableTest extends TestCase {
 		
 		String expectedOutput = expectedOutputs.get(testName);
 		
-		String serverOutput = psqlh.getCreateTable(testName);
+		String serverOutput = PostgreSQLHandler.getCreateTable(psqlci, testName);
 		
 		assertEquals(expectedOutput, serverOutput);
 	}

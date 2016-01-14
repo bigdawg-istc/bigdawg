@@ -44,7 +44,7 @@ public class Executor {
     public static QueryResult executePlan(QueryExecutionPlan plan) throws SQLException, MigrationException {
         long start = System.currentTimeMillis();
 
-        log.debug(String.format("Executing query %s...", plan));
+        log.debug(String.format("Executing query %s...", plan.getSerializedName()));
 
         // maps nodes to a list of all engines on which they are stored
         Map<ExecutionNode, Set<ConnectionInfo>> mapping = new HashMap<>();
@@ -52,7 +52,7 @@ public class Executor {
 
         // Iterate through the plan in topological order
         for (ExecutionNode node : plan) {            
-            log.debug(String.format("Examining query node %s...", node));
+            log.debug(String.format("Examining query node %s...", node.getTableName()));
 
             if (node instanceof LocalQueryExecutionNode) {
                 // colocate dependencies to single engine
@@ -81,7 +81,7 @@ public class Executor {
                         });
 
                 Optional<QueryResult> result = node.getQueryString().map((query) -> {
-                    log.debug(String.format("Executing %s...", node));
+                    log.debug(String.format("Executing %s...", node.getTableName()));
                     PostgreSQLHandler handler = new PostgreSQLHandler((PostgreSQLConnectionInfo) node.getEngine());
 
                     try {
@@ -114,7 +114,7 @@ public class Executor {
 
                     long end = System.currentTimeMillis();
 
-                    log.debug(String.format("Finished executing %s, in %d seconds.", plan, (start - end) / 1000));
+                    log.debug(String.format("Finished executing %s, in %d seconds.", plan.getSerializedName(), (start - end) / 1000));
                     log.debug(String.format("Sending timing to monitor..."));
                     monitor.finishedBenchmark(plan, start, end);
 

@@ -36,7 +36,7 @@ public class QueryContainerForCommonDatabase {
 	}
 	
 	public String generateSelectIntoString() throws Exception {
-		return rootOperator.generateSelectForExecutionTree(select, null);//pruneToken);
+		return rootOperator.generateSelectForExecutionTree(select, pruneToken);
 	}
 	
 	public String getName() {

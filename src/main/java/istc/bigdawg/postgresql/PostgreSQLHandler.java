@@ -210,7 +210,6 @@ public class PostgreSQLHandler implements DBHandler {
 			this.getConnection();
 			st = con.createStatement();
 			st.execute(statement);
-			System.out.println("Check point 3");
 		} catch (SQLException ex) {
 			Logger lgr = Logger.getLogger(QueryClient.class.getName());
 			ex.printStackTrace();
@@ -231,9 +230,6 @@ public class PostgreSQLHandler implements DBHandler {
 	public QueryResult executeQueryPostgreSQL(final String query) throws SQLException {
 		try {
 			this.getConnection();
-			
-			log.debug("\n\nquery: "+query+"");
-			log.debug("ConnectionInfo: "+this.conInfo.toString()+"\n");
 			
 			st = con.createStatement();
 			rs = st.executeQuery(query);
@@ -410,14 +406,14 @@ public class PostgreSQLHandler implements DBHandler {
 	 * @return
 	 * @throws SQLException 
 	 */
-	public String getCreateTable(String schemaAndTableName) throws SQLException {
+	public static String getCreateTable(PostgreSQLConnectionInfo ciFrom, String schemaAndTableName) throws SQLException {
 
 		StringBuilder extraction = new StringBuilder();
 
-		this.getConnection();
-		st = con.createStatement();
+		Connection con = getConnection(ciFrom);
+		Statement st = con.createStatement();
 
-		rs = st.executeQuery("SELECT attrelid, attname, format_type(atttypid, atttypmod) AS type, atttypid, atttypmod "
+		ResultSet rs = st.executeQuery("SELECT attrelid, attname, format_type(atttypid, atttypmod) AS type, atttypid, atttypmod "
 				+ "FROM pg_catalog.pg_attribute " + "WHERE NOT attisdropped AND attrelid = '" + schemaAndTableName
 				+ "'::regclass AND atttypid NOT IN (26,27,28,29) " + "ORDER BY attnum;");
 
