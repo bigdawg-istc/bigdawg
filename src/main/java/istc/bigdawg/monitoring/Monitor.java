@@ -29,7 +29,7 @@ public class Monitor {
     private static final String INSERT = "INSERT INTO monitoring(island, query, lastRan, duration) VALUES (%s, %s, -1, -1)";
     private static final String DELETE = "DELETE FROM monitoring WHERE island='%s' AND query='%s'";
     private static final String UPDATE = "UPDATE monitoring SET lastRan=%d, duration=%d WHERE island='%s' AND query='%s'";
-    private static final String RETRIEVE = "SELECT * FROM monitoring WHERE island=%s AND query='%s'";
+    private static final String RETRIEVE = "SELECT * FROM monitoring WHERE island='%s' AND query='%s'";
 
     public static boolean addBenchmarks(List<QueryExecutionPlan> qeps, boolean lean) {
         BDConstants.Shim[] shims = BDConstants.Shim.values();
