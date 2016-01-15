@@ -280,9 +280,11 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
         Collections.sort(nodes);
 //        System.out.println("Check point 3, qepToString");
         Map<String, Integer> order = new HashMap<>();
-        for (int i = 0; i < nodes.size(); i++) {
-            order.put(nodes.get(i), i);
-            result.append(nodes.get(i));
+        int i = 0;
+        for (String currentNodeRep: nodes) {
+            order.put(currentNodeRep, i);
+            i++;
+            result.append(currentNodeRep);
         }
         result.append(")");
 //        System.out.println("Check point 4, qepToString");
