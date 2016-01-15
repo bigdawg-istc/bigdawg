@@ -30,7 +30,8 @@ public class PostgreSQLSchemaTableName {
 		this.tableName = tableNameInitial;
 		this.schemaName = DEFAULT_SCHEMA;
 		if (tableNameInitial.contains(".")) {
-			String[] schemaTable = tableName.split(".");
+			// divide the given string based on dot: "."
+			String[] schemaTable = tableName.split("\\.");
 			if (schemaTable.length > 2) {
 				throw new IllegalArgumentException("The table name contains more than one dot (.)!");
 			}

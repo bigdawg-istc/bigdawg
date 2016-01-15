@@ -55,18 +55,32 @@ public class PostgreSQLHandler implements DBHandler {
 
 	public PostgreSQLHandler() {
 		String msg = "Default handler. PostgreSQL parameters from a file.";
-		System.out.println(msg);
 		log.info(msg);
 	}
 
-	private void getConnection() throws SQLException {
-		if (con != null) {
+	/**
+	 * Establish connection to PostgreSQL for this instance.
+	 * 
+	 * @throws SQLException
+	 *             if could not establish a connection
+	 */
+	private void establishConnection() throws SQLException {
+		if (con == null) {
 			if (conInfo != null) {
-				con = DriverManager.getConnection("jdbc:postgresql://" + conInfo.getHost() + ":" + conInfo.getPort()
-						+ "/" + conInfo.getDatabase(), conInfo.getUser(), conInfo.getPassword());
+				try {
+					con = DriverManager.getConnection("jdbc:postgresql://" + conInfo.getHost() + ":" + conInfo.getPort()
+							+ "/" + conInfo.getDatabase(), conInfo.getUser(), conInfo.getPassword());
+				} catch (SQLException e) {
+					e.printStackTrace();
+					log.error(
+							e.getMessage() + " Could not connecto to PostgreSQL database using: " + conInfo.toString(),
+							e);
+					throw e;
+				}
 			} else {
 				con = PostgreSQLInstance.getConnection();
 			}
+
 		}
 	}
 
@@ -188,18 +202,27 @@ public class PostgreSQLHandler implements DBHandler {
 		return Response.status(200).entity(out).build();
 	}
 
+	/**
+	 * Clean resource after a query/statement was executed in PostgreSQL.
+	 * 
+	 * @throws SQLException
+	 */
 	private void cleanPostgreSQLResources() throws SQLException {
 		if (rs != null) {
 			rs.close();
+			rs = null;
 		}
 		if (st != null) {
 			st.close();
+			st = null;
 		}
 		if (preparedSt != null) {
 			preparedSt.close();
+			preparedSt = null;
 		}
 		if (con != null) {
 			con.close();
+			con = null;
 		}
 	}
 
@@ -212,7 +235,7 @@ public class PostgreSQLHandler implements DBHandler {
 	 */
 	public void executeStatmentPostgreSQL(String statement) throws SQLException {
 		try {
-			this.getConnection();
+			this.establishConnection();
 			st = con.createStatement();
 			st.execute(statement);
 		} catch (SQLException ex) {
@@ -234,7 +257,7 @@ public class PostgreSQLHandler implements DBHandler {
 
 	public QueryResult executeQueryPostgreSQL(final String query) throws SQLException {
 		try {
-			this.getConnection();
+			this.establishConnection();
 
 			log.debug("\n\nquery: " + query + "");
 			log.debug("ConnectionInfo: " + this.conInfo.toString() + "\n");
@@ -275,7 +298,7 @@ public class PostgreSQLHandler implements DBHandler {
 	 */
 	public String generatePostgreSQLQueryXML(final String query) throws SQLException {
 		try {
-			this.getConnection();
+			this.establishConnection();
 			st = con.createStatement();
 			// st.executeUpdate("set search_path to schemas; ");
 			ResultSet rs = st.executeQuery(query);
@@ -312,7 +335,7 @@ public class PostgreSQLHandler implements DBHandler {
 	 */
 	public void populateSchemasSchema(final String query, boolean drop) throws SQLException {
 		try {
-			this.getConnection();
+			this.establishConnection();
 			st = con.createStatement();
 			if (drop) {
 				st.executeUpdate("drop schema schemas cascade; ");
@@ -387,7 +410,7 @@ public class PostgreSQLHandler implements DBHandler {
 				+ "pg_attribute.attnum = any(pg_index.indkey) AND indisprimary";
 		// System.out.println(query);
 		try {
-			this.getConnection();
+			this.establishConnection();
 			preparedSt = con.prepareStatement(query);
 			preparedSt.setString(1, table);
 			rs = preparedSt.executeQuery();
@@ -418,7 +441,7 @@ public class PostgreSQLHandler implements DBHandler {
 
 		StringBuilder extraction = new StringBuilder();
 
-		this.getConnection();
+		this.establishConnection();
 		st = con.createStatement();
 
 		rs = st.executeQuery("SELECT attrelid, attname, format_type(atttypid, atttypmod) AS type, atttypid, atttypmod "
@@ -461,43 +484,79 @@ public class PostgreSQLHandler implements DBHandler {
 	 *         of a column (1st column type, first index in the returned array)
 	 * @throws SQLException
 	 */
-	public List<PostgreSQLColumnMetaData> getColumnsMetaData(PostgreSQLConnectionInfo conInfo,
-			String tableNameInitial) throws SQLException {
+	public List<PostgreSQLColumnMetaData> getColumnsMetaData(PostgreSQLConnectionInfo conInfo, String tableNameInitial)
+			throws SQLException {
 		try {
-		this.getConnection();
-		PostgreSQLSchemaTableName schemaTable = new PostgreSQLSchemaTableName(tableNameInitial);
-		try {
-			preparedSt = con.prepareStatement(
-					"SELECT column_name, ordinal_position, is_nullable, data_type, character_maximum_length, numeric_precision, numeric_scale "
-							+ "FROM information_schema.columns " + "WHERE table_schema=? and table_name=?"
-							+ " order by ordinal_position");
-			preparedSt.setString(1, schemaTable.getSchemaName());
-			preparedSt.setString(2, schemaTable.getTableName());
-		} catch (SQLException e) {
-			e.printStackTrace();
-			log.error("PostgreSQLHandler, the query preparation failed.");
-			throw e;
-		}
-		ResultSet resultSet = preparedSt.executeQuery();
-		List<PostgreSQLColumnMetaData> result = new ArrayList<>();
-		while (resultSet.next()) {
-			result.add(
-					new PostgreSQLColumnMetaData(resultSet.getString(1), resultSet.getInt(2), resultSet.getBoolean(3),
-							resultSet.getString(4), resultSet.getInt(5), resultSet.getInt(6), resultSet.getInt(7)));
-		}
-		return result;
+			this.establishConnection();
+			PostgreSQLSchemaTableName schemaTable = new PostgreSQLSchemaTableName(tableNameInitial);
+			try {
+				preparedSt = con.prepareStatement(
+						"SELECT column_name, ordinal_position, is_nullable, data_type, character_maximum_length, numeric_precision, numeric_scale "
+								+ "FROM information_schema.columns " + "WHERE table_schema=? and table_name=?"
+								+ " order by ordinal_position");
+				preparedSt.setString(1, schemaTable.getSchemaName());
+				preparedSt.setString(2, schemaTable.getTableName());
+			} catch (SQLException e) {
+				e.printStackTrace();
+				log.error("PostgreSQLHandler, the query preparation failed.");
+				throw e;
+			}
+			ResultSet resultSet = preparedSt.executeQuery();
+			List<PostgreSQLColumnMetaData> result = new ArrayList<>();
+			while (resultSet.next()) {
+				result.add(new PostgreSQLColumnMetaData(resultSet.getString(1), resultSet.getInt(2),
+						resultSet.getBoolean(3), resultSet.getString(4), resultSet.getInt(5), resultSet.getInt(6),
+						resultSet.getInt(7)));
+			}
+			return result;
 		} finally {
 			try {
 				this.cleanPostgreSQLResources();
 			} catch (SQLException ex) {
 				ex.printStackTrace();
-				log.error(ex.getMessage() + "; conInfo: " + conInfo.toString() + "; table: "+tableNameInitial, ex);
+				log.error(ex.getMessage() + "; conInfo: " + conInfo.toString() + "; table: " + tableNameInitial, ex);
 				throw ex;
 			}
 		}
 	}
 
-	public boolean existSchema(PostgreSQLConnectionInfo conInfo) {
-		return false;
+	/**
+	 * Create schema if not exists.
+	 * 
+	 * @param conInfo
+	 *            connection to PostgreSQL
+	 * @param schemaName
+	 *            the name of a schema to be created (if not already exists).
+	 * @return true if schema was created (false is schema already existed)
+	 * @throws SQLException
+	 */
+	public boolean createSchemaIfNotExists(PostgreSQLConnectionInfo conInfo, String schemaName) throws SQLException {
+		try {
+			this.establishConnection();
+			try {
+				preparedSt = con.prepareStatement("create schema if not exists "+schemaName);
+			} catch (SQLException e) {
+				e.printStackTrace();
+				log.error(e.getMessage() + " PostgreSQLHandler, the query preparation failed.");
+				throw e;
+			}
+			try {
+				// no results returned
+				preparedSt.execute();
+			} catch (SQLException e) {
+				e.printStackTrace();
+				log.error(e.getMessage() + " Failed to create the schema.");
+				throw e;
+			}
+			return true;
+		} finally {
+			try {
+				this.cleanPostgreSQLResources();
+			} catch (SQLException ex) {
+				ex.printStackTrace();
+				log.error(ex.getMessage() + "; conInfo: " + conInfo.toString() + "; schemaName: " + schemaName, ex);
+				throw ex;
+			}
+		}
 	}
 }

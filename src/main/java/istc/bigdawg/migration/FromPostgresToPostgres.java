@@ -50,6 +50,13 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 		return copyFromStringBuf.toString();
 	}
 
+	/**
+	 * This is run as a separate thread to copy data from PostgreSQL.
+	 * 
+	 * @author Adam Dziedzic
+	 * 
+	 *         Jan 14, 2016 6:06:36 PM
+	 */
 	private class CopyFromExecutor implements Callable<Long> {
 
 		private CopyManager cpFrom;
@@ -63,24 +70,33 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 			this.output = output;
 		}
 
+		/**
+		 * Copy data from PostgreSQL.
+		 * 
+		 * @return number of extracted rows
+		 */
 		public Long call() {
-			Long countLoadedRows = 0L;
+			Long countExtractedRows = 0L;
 			try {
-				countLoadedRows = cpFrom.copyOut(copyFromString, output);
+				countExtractedRows = cpFrom.copyOut(copyFromString, output);
 				output.close();
-			} catch (IOException e) {
-				String msg = "Problem with thread for PostgreSQL copy manager " + "while copying data from PostgreSQL.";
-				logger.error(msg);
-				e.printStackTrace();
-			} catch (SQLException e) {
-				String msg = "SQL problem for copy data from PostgreSQL.";
-				logger.error(msg);
+			} catch (IOException | SQLException e) {
+				String msg = e.getMessage() + " Problem with thread for PostgreSQL copy manager "
+						+ "while copying (extracting) data from PostgreSQL.";
+				logger.error(msg, e);
 				e.printStackTrace();
 			}
-			return countLoadedRows;
+			return countExtractedRows;
 		}
 	}
 
+	/**
+	 * This is run in a separate thread to copy data to PostgreSQL.
+	 * 
+	 * @author Adam Dziedzic
+	 * 
+	 *         Jan 14, 2016 6:07:05 PM
+	 */
 	private class CopyToExecutor implements Callable<Long> {
 
 		private CopyManager cpTo;
@@ -93,22 +109,23 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 			this.input = input;
 		}
 
+		/**
+		 * Copy data to PostgreSQL.
+		 * 
+		 * @return number of loaded rows
+		 */
 		public Long call() {
-			/* Number of extracted rows. */
-			Long countExtractedRows = 0L;
+			Long countLoadedRows = 0L;
 			try {
-				countExtractedRows = cpTo.copyIn(copyToString, input);
+				countLoadedRows = cpTo.copyIn(copyToString, input);
 				input.close();
-			} catch (IOException e) {
-				String msg = "Problem with thread for PostgreSQL copy manager " + "while copying data to PostgreSQL.";
-				logger.error(msg);
-				e.printStackTrace();
-			} catch (SQLException e) {
-				String msg = "SQL problem for copy data from PostgreSQL.";
+			} catch (IOException | SQLException e) {
+				String msg = e.getMessage() + " Problem with thread for PostgreSQL copy manager "
+						+ "while copying data to PostgreSQL.";
 				logger.error(msg);
 				e.printStackTrace();
 			}
-			return countExtractedRows;
+			return countLoadedRows;
 		}
 	}
 
@@ -127,29 +144,18 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 	}
 
 	private class TargetSchemaTable {
-		private String schemaName;
+		private PostgreSQLSchemaTableName schemaTableName;
 		private boolean wasSchemaCreated;
-		private String tableName;
 		private boolean wasTableCreated;
 
-		public TargetSchemaTable(String schemaName, boolean wasSchemaCreated, String tableName,
+		public TargetSchemaTable(PostgreSQLSchemaTableName schemaTableName, boolean wasSchemaCreated,
 				boolean wasTableCreated) {
-			this.schemaName = schemaName;
 			this.wasSchemaCreated = wasSchemaCreated;
-			this.tableName = tableName;
 			this.wasTableCreated = wasTableCreated;
-		}
-
-		public String getSchemaName() {
-			return schemaName;
 		}
 
 		public boolean isWasSchemaCreated() {
 			return wasSchemaCreated;
-		}
-
-		public String getTableName() {
-			return tableName;
 		}
 
 		public boolean isWasTableCreated() {
@@ -157,25 +163,17 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 		}
 	}
 
-	private TargetSchemaTable createTargetSchemaTableIfNotExist(PostgreSQLConnectionInfo connectionFrom, String fromTable,
-			PostgreSQLConnectionInfo connectionTo, String toTable) {
-		Connection conFrom = null;
-		Connection conTo = null;
-		PostgreSQLSchemaTableName schemaTableTo = new PostgreSQLSchemaTableName(toTable);
-		try {	
-			PostgreSQLHandler postgresToHanlder = new PostgreSQLHandler(connectionTo);
-			conTo = PostgreSQLHandler.getConnection(connectionTo);
-			
-		} catch (SQLException e) {
-			e.printStackTrace();
-			
-		}
-		
+	private TargetSchemaTable createTargetSchemaTableIfNotExist(PostgreSQLConnectionInfo connectionTo, String toTable)
+			throws SQLException {
+		PostgreSQLHandler postgresToHanlder = new PostgreSQLHandler(connectionTo);
+		PostgreSQLSchemaTableName schemaTable = new PostgreSQLSchemaTableName(toTable);
+		postgresToHanlder.createSchemaIfNotExists(connectionTo, schemaTable.getSchemaName());
 		return null;
 	}
 
 	/**
-	 * @return
+	 * @return {@link MigrationResult} with information about the migration
+	 *         process
 	 * @throws SQLException
 	 * @throws IOException
 	 * 
@@ -184,6 +182,8 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 			PostgreSQLConnectionInfo connectionTo, String toTable) throws SQLException, IOException {
 		logger.debug("Specific data migration");
 
+		createTargetSchemaTableIfNotExist(connectionTo,toTable);
+		
 		String copyFromString = getCopyCommand(fromTable, DIRECTION.TO/* STDOUT */);
 		String copyToString = getCopyCommand(toTable, DIRECTION.FROM/* STDIN */);
 
@@ -217,24 +217,27 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 			copyToThread.start();
 			try {
 				copyFromThread.join();
-			} catch (InterruptedException e1) {
-				String msg = "Not possible to join the thread to copy data from PostgreSQL.";
+			} catch (InterruptedException e) {
+				String msg = e.getMessage() + " Not possible to join the thread to copy data from PostgreSQL.";
 				logger.error(msg);
-				e1.printStackTrace();
+				e.printStackTrace();
+				return MigrationResult.getFailedInstance(msg);
 			}
 			try {
 				copyToThread.join();
 			} catch (InterruptedException e) {
-				String msg = "Not possible to join the thread to copy data to PostgreSQL.";
+				String msg = e.getMessage() + " Not possible to join the thread to copy data to PostgreSQL.";
 				logger.error(msg);
 				e.printStackTrace();
+				return MigrationResult.getFailedInstance(msg);
 			}
 			try {
 				return new MigrationResult(taskCopyFromExecutor.get(), taskCopyToExecutor.get());
 			} catch (InterruptedException | ExecutionException e) {
-				String msg = "Migration failed. Task did not finish correctly.";
+				String msg = e.getMessage() + " Migration failed. Task did not finish correctly.";
 				logger.error(msg);
 				e.printStackTrace();
+				return MigrationResult.getFailedInstance(msg);
 			}
 		} finally {
 			if (conFrom != null) {
@@ -244,7 +247,6 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 				conTo.close();
 			}
 		}
-		return null;
 	}
 
 	/**
