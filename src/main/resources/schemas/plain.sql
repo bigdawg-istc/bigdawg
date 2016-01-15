@@ -2,7 +2,7 @@ CREATE TABLE IF NOT EXISTS monitoring (
 	lastRan bigint,
 	duration integer,
 	island varchar(30),
-	query varchar(200)
+	query varchar(3000)
 );
 
 CREATE TABLE IF NOT EXISTS treatments (

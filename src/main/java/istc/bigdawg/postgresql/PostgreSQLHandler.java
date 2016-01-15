@@ -212,7 +212,7 @@ public class PostgreSQLHandler implements DBHandler {
 			st.execute(statement);
 		} catch (SQLException ex) {
 			Logger lgr = Logger.getLogger(QueryClient.class.getName());
-			ex.printStackTrace();
+//			ex.printStackTrace();
 			lgr.log(Level.ERROR, ex.getMessage() + "; query: " + statement, ex);
 			throw ex;
 		} finally {
@@ -220,7 +220,7 @@ public class PostgreSQLHandler implements DBHandler {
 				this.cleanPostgreSQLResources();
 			} catch (SQLException ex) {
 				Logger lgr = Logger.getLogger(QueryClient.class.getName());
-				ex.printStackTrace();
+//				ex.printStackTrace();
 				lgr.log(Level.INFO, ex.getMessage() + "; query: " + statement, ex);
 				throw ex;
 			}
@@ -241,7 +241,7 @@ public class PostgreSQLHandler implements DBHandler {
 			return new QueryResult(rows, types, colNames);
 		} catch (SQLException ex) {
 			Logger lgr = Logger.getLogger(QueryClient.class.getName());
-			ex.printStackTrace();
+//			ex.printStackTrace();
 			lgr.log(Level.ERROR, ex.getMessage() + "; query: " + query, ex);
 			throw ex;
 		} finally {
@@ -249,7 +249,7 @@ public class PostgreSQLHandler implements DBHandler {
 				this.cleanPostgreSQLResources();
 			} catch (SQLException ex) {
 				Logger lgr = Logger.getLogger(QueryClient.class.getName());
-				ex.printStackTrace();
+//				ex.printStackTrace();
 				lgr.log(Level.INFO, ex.getMessage() + "; query: " + query, ex);
 				throw ex;
 			}
@@ -278,7 +278,7 @@ public class PostgreSQLHandler implements DBHandler {
 			}
 		} catch (SQLException ex) {
 			Logger lgr = Logger.getLogger(QueryClient.class.getName());
-			ex.printStackTrace();
+//			ex.printStackTrace();
 			lgr.log(Level.ERROR, ex.getMessage() + "; query: " + query, ex);
 			throw ex;
 		} finally {
@@ -286,7 +286,7 @@ public class PostgreSQLHandler implements DBHandler {
 				this.cleanPostgreSQLResources();
 			} catch (SQLException ex) {
 				Logger lgr = Logger.getLogger(QueryClient.class.getName());
-				ex.printStackTrace();
+//				ex.printStackTrace();
 				lgr.log(Level.INFO, ex.getMessage() + "; query: " + query, ex);
 				throw ex;
 			}

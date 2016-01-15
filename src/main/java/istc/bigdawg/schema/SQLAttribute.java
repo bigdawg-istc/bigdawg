@@ -49,8 +49,17 @@ public class SQLAttribute {
 		}
 		
 		public SQLAttribute(SQLAttribute sa) {
-			type = sa.type;
-			name = new String(sa.name);
+			this.type = sa.type;
+			this.name = new String(sa.name);
+			if (sa.srcTable != null) this.srcTable = new String(sa.srcTable);
+			this.expr = sa.expr;
+			
+			if (sa.sources != null) {
+				this.sources = new HashSet<>();
+				for (SQLAttribute a : sa.sources) {
+					this.sources.add(new SQLAttribute(a));
+				}
+			}
 		}
 
 
