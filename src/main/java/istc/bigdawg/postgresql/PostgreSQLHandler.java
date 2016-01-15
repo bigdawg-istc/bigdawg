@@ -477,12 +477,14 @@ public class PostgreSQLHandler implements DBHandler {
 	}
 
 	/**
+	 * Get metadata about columns (column name, position, data type, etc) for a
+	 * table in PostgreSQL.
 	 * 
 	 * @param conInfo
 	 * @param tableName
-	 * @return list of attribute types, list index corresponds to the position
-	 *         of a column (1st column type, first index in the returned array)
+	 * @return instance of a #PosgreSQLColumnMetaData class
 	 * @throws SQLException
+	 *             if the data extraction from PostgreSQL failed
 	 */
 	public List<PostgreSQLColumnMetaData> getColumnsMetaData(PostgreSQLConnectionInfo conInfo, String tableNameInitial)
 			throws SQLException {
@@ -521,34 +523,36 @@ public class PostgreSQLHandler implements DBHandler {
 	}
 
 	/**
-	 * Create schema if not exists.
+	 * Check if a schema exists.
 	 * 
 	 * @param conInfo
-	 *            connection to PostgreSQL
 	 * @param schemaName
-	 *            the name of a schema to be created (if not already exists).
-	 * @return true if schema was created (false is schema already existed)
+	 *            the name of the schema to be checked if exists
+	 * @return
 	 * @throws SQLException
 	 */
-	public boolean createSchemaIfNotExists(PostgreSQLConnectionInfo conInfo, String schemaName) throws SQLException {
+	public boolean existsSchema(PostgreSQLConnectionInfo conInfo, String schemaName) throws SQLException {
 		try {
 			this.establishConnection();
 			try {
-				preparedSt = con.prepareStatement("create schema if not exists "+schemaName);
+				preparedSt = con.prepareStatement(
+						"select exists (select 1 from information_schema.schemata where schema_name=?)");
+				preparedSt.setString(1, schemaName);
 			} catch (SQLException e) {
 				e.printStackTrace();
-				log.error(e.getMessage() + " PostgreSQLHandler, the query preparation failed.");
+				log.error(e.getMessage()
+						+ " PostgreSQLHandler, the query preparation for checking is a schema exists failed.");
 				throw e;
 			}
 			try {
-				// no results returned
-				preparedSt.execute();
+				ResultSet rs = preparedSt.executeQuery();
+				rs.next();
+				return rs.getBoolean(1);
 			} catch (SQLException e) {
 				e.printStackTrace();
-				log.error(e.getMessage() + " Failed to create the schema.");
+				log.error(e.getMessage() + " Failed to check if a schema exists.");
 				throw e;
 			}
-			return true;
 		} finally {
 			try {
 				this.cleanPostgreSQLResources();
@@ -558,5 +562,76 @@ public class PostgreSQLHandler implements DBHandler {
 				throw ex;
 			}
 		}
+	}
+
+	/**
+	 * Create schema if not exists.
+	 * 
+	 * @param conInfo
+	 *            connection to PostgreSQL
+	 * @param schemaName
+	 *            the name of a schema to be created (if not already exists).
+	 * @return true if schema was created (false is schema already existed)
+	 * @throws SQLException
+	 */
+	public void createSchemaIfNotExists(PostgreSQLConnectionInfo conInfo, String schemaName) throws SQLException {
+		executeStatmentPostgreSQL("create schema if not exists " + schemaName);
+	}
+
+	/**
+	 * Check if a table exists.
+	 * 
+	 * @param conInfo
+	 * @param schemaTable
+	 *            names of a schema and a table
+	 * @return true if the table exists, false if there is no such table in the
+	 *         given schema
+	 * @throws SQLException
+	 */
+	public boolean existsTable(PostgreSQLConnectionInfo conInfo, PostgreSQLSchemaTableName schemaTable)
+			throws SQLException {
+		try {
+			this.establishConnection();
+			try {
+				preparedSt = con.prepareStatement(
+						"select exists (select 1 from information_schema.tables where table_schema=? and table_name=?)");
+				preparedSt.setString(1, schemaTable.getSchemaName());
+				preparedSt.setString(2, schemaTable.getTableName());
+			} catch (SQLException e) {
+				e.printStackTrace();
+				log.error(e.getMessage()
+						+ " PostgreSQLHandler, the query preparation for checking is a table exists failed.");
+				throw e;
+			}
+			try {
+				ResultSet rs = preparedSt.executeQuery();
+				rs.next();
+				return rs.getBoolean(1);
+			} catch (SQLException e) {
+				e.printStackTrace();
+				log.error(e.getMessage() + " Failed to check if a table exists.");
+				throw e;
+			}
+		} finally {
+			try {
+				this.cleanPostgreSQLResources();
+			} catch (SQLException ex) {
+				ex.printStackTrace();
+				log.error(ex.getMessage() + "; conInfo: " + conInfo.toString() + "; schemaName: "
+						+ schemaTable.getSchemaName() + " tableName: " + schemaTable.getTableName(), ex);
+				throw ex;
+			}
+		}
+
+	}
+	
+	/**
+	 * Release this PostgreSQLHandler resources.
+	 * Close connections/statements opened with the PostgreSLQ handler.
+	 * 
+	 * @throws SQLException 
+	 */
+	public void close() throws SQLException {
+		cleanPostgreSQLResources();
 	}
 }

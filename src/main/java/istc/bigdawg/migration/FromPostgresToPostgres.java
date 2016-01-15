@@ -18,6 +18,7 @@ import org.postgresql.core.BaseConnection;
 
 import istc.bigdawg.LoggerSetup;
 import istc.bigdawg.exceptions.MigrationException;
+import istc.bigdawg.migration.commons.TargetSchemaTable;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.postgresql.PostgreSQLSchemaTableName;
@@ -143,31 +144,15 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 		return null;
 	}
 
-	private class TargetSchemaTable {
-		private PostgreSQLSchemaTableName schemaTableName;
-		private boolean wasSchemaCreated;
-		private boolean wasTableCreated;
-
-		public TargetSchemaTable(PostgreSQLSchemaTableName schemaTableName, boolean wasSchemaCreated,
-				boolean wasTableCreated) {
-			this.wasSchemaCreated = wasSchemaCreated;
-			this.wasTableCreated = wasTableCreated;
-		}
-
-		public boolean isWasSchemaCreated() {
-			return wasSchemaCreated;
-		}
-
-		public boolean isWasTableCreated() {
-			return wasTableCreated;
-		}
-	}
-
 	private TargetSchemaTable createTargetSchemaTableIfNotExist(PostgreSQLConnectionInfo connectionTo, String toTable)
 			throws SQLException {
-		PostgreSQLHandler postgresToHanlder = new PostgreSQLHandler(connectionTo);
+		PostgreSQLHandler postgresToHandler = new PostgreSQLHandler(connectionTo);
 		PostgreSQLSchemaTableName schemaTable = new PostgreSQLSchemaTableName(toTable);
-		postgresToHanlder.createSchemaIfNotExists(connectionTo, schemaTable.getSchemaName());
+		boolean existsSchema = postgresToHandler.existsSchema(connectionTo,schemaTable.getSchemaName()); 
+		if (!existsSchema) {
+			postgresToHandler.createSchemaIfNotExists(connectionTo, schemaTable.getSchemaName());
+		}
+		boolean existsTable = postgresToHandler.existsTable(connectionTo,schemaTable);
 		return null;
 	}
 
@@ -181,9 +166,9 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 	public MigrationResult migrate(PostgreSQLConnectionInfo connectionFrom, String fromTable,
 			PostgreSQLConnectionInfo connectionTo, String toTable) throws SQLException, IOException {
 		logger.debug("Specific data migration");
-
-		createTargetSchemaTableIfNotExist(connectionTo,toTable);
 		
+		createTargetSchemaTableIfNotExist(connectionTo, toTable);
+
 		String copyFromString = getCopyCommand(fromTable, DIRECTION.TO/* STDOUT */);
 		String copyToString = getCopyCommand(toTable, DIRECTION.FROM/* STDIN */);
 

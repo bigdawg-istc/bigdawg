@@ -44,7 +44,7 @@ public class Migrator {
 		}
 		throw new MigrationException("Unsupported migration from " + connectionFrom.getHost() + ":"
 				+ connectionFrom.getPort() + " to " + connectionTo.getHost() + ":" + connectionTo.getPort() + "!\n"
-				+ "Detailed info:\n" + "From:\n" + connectionFrom.toString() + "\n To:\n" + connectionTo.toString());
+				+ "Detail info:\n" + "From:\n" + connectionFrom.toString() + "\n To:\n" + connectionTo.toString());
 	}
 
 	public static void main(String[] args) {
