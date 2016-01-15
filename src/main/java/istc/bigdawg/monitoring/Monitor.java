@@ -93,14 +93,22 @@ public class Monitor {
 
     private static boolean insert(String query, String island) throws NotSupportIslandException {
         PostgreSQLHandler handler = new PostgreSQLHandler();
-        Response response = handler.executeQuery(String.format(INSERT, island, query));
-        return response.getStatus() == 200;
+        try {
+			handler.executeNotQueryPostgreSQL(String.format(INSERT, island, query));
+			return true;
+		} catch (SQLException e) {
+			return false;
+		}
     }
 
     private static boolean delete(String query, String island) throws NotSupportIslandException {
         PostgreSQLHandler handler = new PostgreSQLHandler();
-        Response response = handler.executeQuery(String.format(DELETE, island, query));
-        return response.getStatus() == 200;
+        try {
+			handler.executeNotQueryPostgreSQL(String.format(DELETE, island, query));
+			return true;
+		} catch (SQLException e) {
+			return false;
+		}
     }
 
     public static void runBenchmarks(List<QueryExecutionPlan> qeps) throws Exception {
