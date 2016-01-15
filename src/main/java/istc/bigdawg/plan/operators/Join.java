@@ -264,8 +264,23 @@ public class Join extends Operator {
 //			parsedJoin.setRightItem(t1);
 //			BinaryExpression on = (BinaryExpression) parsedJoin.getOnExpression();
 			
-			Column cLeft  = ((Column) on.getLeftExpression());
-			Column cRight = ((Column) on.getRightExpression());
+			Column cLeft;
+			Column cRight;
+			
+			Expression l = on.getLeftExpression();
+			Expression r = on.getRightExpression();
+
+			if (l.getClass().equals(net.sf.jsqlparser.expression.Parenthesis.class))
+				cLeft = (Column) ((net.sf.jsqlparser.expression.Parenthesis) l).getExpression();
+			else
+				cLeft  = ((Column) on.getLeftExpression());
+			
+			if (r.getClass().equals(net.sf.jsqlparser.expression.Parenthesis.class)) 
+				cRight = (Column) ((net.sf.jsqlparser.expression.Parenthesis) r).getExpression();
+			else 
+				cRight = ((Column) on.getRightExpression());
+			
+			
 			
 			String cLeftColName = cLeft.getTable().getName()+"."+cLeft.getColumnName();
 			

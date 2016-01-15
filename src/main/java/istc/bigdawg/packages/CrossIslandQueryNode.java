@@ -94,6 +94,23 @@ public class CrossIslandQueryNode {
 		return qep;
 	}
 	
+	public List<QueryExecutionPlan> getAllQEPs() throws Exception {
+		
+		List<QueryExecutionPlan> qepl = new ArrayList<>();
+		
+		// after permutation, the same SELECT this might not work
+		// but we'll see
+//		Select srcStmt = (Select) CCJSqlParserUtil.parse(query);
+		
+		for (int i = 0; i < remainderPermutations.size(); i++ ){
+			QueryExecutionPlan qep = new QueryExecutionPlan(scope.toString()); 
+			ExecutionNodeFactory.addNodesAndEdgesNaive( qep, remainderPermutations.get(i), remainderLoc, queryContainer, select);
+			qepl.add(qep);
+		}
+		
+		return qepl;
+	}
+	
 	/** Setup. 
 	 * 
 	 * @throws Exception

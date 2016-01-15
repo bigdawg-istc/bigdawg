@@ -5,6 +5,11 @@ CREATE TABLE IF NOT EXISTS monitoring (
 	query varchar(200)
 );
 
+CREATE TABLE IF NOT EXISTS treatments (
+	disease_name varchar(30),
+	treatment varchar(30)
+);
+
 CREATE TABLE IF NOT EXISTS mimic2v26.d_patients (
 	id integer,
 	lastname varchar(30),

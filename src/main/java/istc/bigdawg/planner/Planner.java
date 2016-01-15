@@ -11,6 +11,7 @@ import org.apache.log4j.Logger;
 import istc.bigdawg.executor.Executor;
 import istc.bigdawg.executor.plan.QueryExecutionPlan;
 import istc.bigdawg.monitoring.Monitor;
+import istc.bigdawg.packages.CrossIslandQueryNode;
 import istc.bigdawg.packages.CrossIslandQueryPlan;
 import istc.bigdawg.packages.QueriesAndPerformanceInformation;
 import istc.bigdawg.parsers.UserQueryParser;
@@ -42,10 +43,12 @@ public class Planner {
 		CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(crossIslandQuery);
 
 		// pass this to monitor, and pick your favorite
+		CrossIslandQueryNode ciqn = ciqp.getRoot();
+		int choice = getGetPerformanceAndPickTheBest(ciqn);
 		
 		
 		// currently there should be just one island, therefore one child, root.
-		QueryExecutionPlan qep = ciqp.getRoot().getQEP(0);
+		QueryExecutionPlan qep = ciqp.getRoot().getQEP(choice);
 		
 		
 		
@@ -67,31 +70,28 @@ public class Planner {
 	 * 
 	 * @param userinput
 	 */
-	@Deprecated
-	public static void getGetPerformanceAndPickTheBest(Map<String, Object> sigAndCasts) throws Exception {
+	public static int getGetPerformanceAndPickTheBest(CrossIslandQueryNode ciqn) throws Exception {
 		
-		// GENERATE PERMUTATIONS
-		// TODO make trees and NOT list of signature and casts; how about changing signature 1 into execution plans?
-		ArrayList<ArrayList<Object>> permuted = new ArrayList<ArrayList<Object>>();
-		permuted.add(new ArrayList<Object>(sigAndCasts.values())); // this should be qeps
-		//
-		// 
-		// CHEAT: JUST ONE 
-		// TODO DON'T CHEAT
-
+		int choice = 0;
+		
 		// now call the corresponding monitor function to deliver permuted.
 		// Today there IS ONLY ONE PLAN
 		// TODO generate list of QueryExecutionPlans to send to monitor
-		ArrayList<QueryExecutionPlan> qeps = new ArrayList<>();
+		List<QueryExecutionPlan> qeps = ciqn.getAllQEPs();
+		Monitor.addBenchmarks(qeps, false);
 		QueriesAndPerformanceInformation qnp = Monitor.getBenchmarkPerformance(qeps); // TODO CHANGE THE QEPS SENT TO MONITOR FUNCTION
+		
+		
+		
 		
 		// does some magic to pick out the best query, store it to the query plan queue
 		// CHEAT: JUST ONE
 		// TODO DON'T CHEAT; ACTUALLY PICK; CHANGE THIS 0
-		maxSerial += 1;
-//		queryQueue.put(maxSerial, (ArrayList<String>) qnp.qList.get(0)); // TODO 
 		
-		logger.debug("Performance information received; serial number: "+maxSerial);
+		
+		
+		
+		return choice;
 	};
 
 
