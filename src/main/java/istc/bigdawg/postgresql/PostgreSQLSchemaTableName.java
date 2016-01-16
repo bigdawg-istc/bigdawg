@@ -65,5 +65,9 @@ public class PostgreSQLSchemaTableName {
 	public String getTableName() {
 		return tableName;
 	}
+	
+	public String getFullName() {
+		return schemaName+"."+tableName;
+	}
 
 }

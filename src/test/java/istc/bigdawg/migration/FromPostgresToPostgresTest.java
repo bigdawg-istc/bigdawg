@@ -31,7 +31,7 @@ public class FromPostgresToPostgresTest {
 	}
 
 	@Test
-	public void testFromPostgresToPostgres() throws SQLException, IOException {
+	public void testFromPostgresToPostgres() throws Exception {
 		System.out.println("Migrating data from PostgreSQL to PostgreSQL");
 		FromPostgresToPostgres migrator = new FromPostgresToPostgres();
 		PostgreSQLConnectionInfo conInfoFrom = new PostgreSQLConnectionInfo("localhost", "5431", "mimic2", "pguser",
@@ -46,14 +46,14 @@ public class FromPostgresToPostgresTest {
 			double doubleValue = 1.2;
 			String stringValue = "adamdziedzic";
 			String createTable = "create table " + tableName + "(a int,b double precision,c varchar)";
-			postgres1.executeStatmentPostgreSQL(createTable);
+			postgres1.executeStatementPostgreSQL(createTable);
 
 			String insertInto = "insert into " + tableName + " values(" + intValue + "," + doubleValue + ",'"
 					+ stringValue + "')";
 			System.out.println(insertInto);
-			postgres1.executeStatmentPostgreSQL(insertInto);
+			postgres1.executeStatementPostgreSQL(insertInto);
 
-			postgres2.executeStatmentPostgreSQL(createTable);
+			postgres2.executeStatementPostgreSQL(createTable);
 
 			MigrationResult result = migrator.migrate(conInfoFrom, tableName, conInfoTo, tableName);
 
@@ -81,8 +81,8 @@ public class FromPostgresToPostgresTest {
 			e.printStackTrace();
 			throw e;
 		} finally {
-			postgres1.executeStatmentPostgreSQL("drop table " + tableName);
-			postgres2.executeStatmentPostgreSQL("drop table " + tableName);
+			postgres1.executeStatementPostgreSQL("drop table " + tableName);
+			postgres2.executeStatementPostgreSQL("drop table " + tableName);
 		}
 
 	}

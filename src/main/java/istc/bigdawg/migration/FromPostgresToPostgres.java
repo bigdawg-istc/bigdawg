@@ -137,37 +137,74 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 			try {
 				return this.migrate((PostgreSQLConnectionInfo) connectionFrom, fromTable,
 						(PostgreSQLConnectionInfo) connectionTo, toTable);
-			} catch (SQLException | IOException e) {
+			} catch (Exception e) {
 				throw new MigrationException(e.getMessage(), e);
 			}
 		}
 		return null;
 	}
 
-	private TargetSchemaTable createTargetSchemaTableIfNotExist(PostgreSQLConnectionInfo connectionTo, String toTable)
-			throws SQLException {
+	/**
+	 * Create the target schema and table if not exists.
+	 * 
+	 * @param connectionFrom
+	 * @param fromTable
+	 * @param connectionTo
+	 * @param toTable
+	 * @return
+	 * @throws SQLException
+	 */
+	private TargetSchemaTable createTargetSchemaTableIfNotExist(PostgreSQLConnectionInfo connectionFrom,
+			String fromTable, PostgreSQLConnectionInfo connectionTo, String toTable) throws SQLException {
 		PostgreSQLHandler postgresToHandler = new PostgreSQLHandler(connectionTo);
 		PostgreSQLSchemaTableName schemaTable = new PostgreSQLSchemaTableName(toTable);
-		boolean existsSchema = postgresToHandler.existsSchema(connectionTo,schemaTable.getSchemaName()); 
+		boolean wasSchemaCreated = false;
+		boolean wasTableCreated = false;
+		boolean existsSchema = postgresToHandler.existsSchema(schemaTable.getSchemaName());
 		if (!existsSchema) {
-			postgresToHandler.createSchemaIfNotExists(connectionTo, schemaTable.getSchemaName());
+			postgresToHandler.createSchemaIfNotExists(schemaTable.getSchemaName());
+			wasSchemaCreated = true;
 		}
-		boolean existsTable = postgresToHandler.existsTable(connectionTo,schemaTable);
-		return null;
+		boolean existsTable = postgresToHandler.existsTable(schemaTable);
+		if (!existsTable) {
+			PostgreSQLHandler postgresFromHandler = new PostgreSQLHandler(connectionFrom);
+			String createTableStatement = postgresFromHandler.getCreateTable(schemaTable.getFullName());
+			postgresToHandler.createTable(createTableStatement);
+			wasTableCreated = true;
+		}
+		return new TargetSchemaTable(schemaTable, wasSchemaCreated, wasTableCreated);
+	}
+
+	/**
+	 * Remove the schema and table if they were created in this migration
+	 * process.
+	 * 
+	 * @param connection
+	 * @throws SQLException
+	 */
+	private void cleanCreatedSchemaTable(PostgreSQLConnectionInfo connectionTo, TargetSchemaTable schemaTable)
+			throws SQLException {
+		PostgreSQLHandler handler = new PostgreSQLHandler(connectionTo);
+		if (schemaTable.wasTableCreated()) {
+			handler.dropTableIfExists(schemaTable.getSchemaTableName().getFullName());
+		}
+		if (schemaTable.wasTableCreated()) {
+			handler.dropSchemaIfExists(schemaTable.getSchemaTableName().getSchemaName());
+		}
 	}
 
 	/**
 	 * @return {@link MigrationResult} with information about the migration
 	 *         process
-	 * @throws SQLException
-	 * @throws IOException
+	 * @throws Exception 
 	 * 
 	 */
 	public MigrationResult migrate(PostgreSQLConnectionInfo connectionFrom, String fromTable,
-			PostgreSQLConnectionInfo connectionTo, String toTable) throws SQLException, IOException {
+			PostgreSQLConnectionInfo connectionTo, String toTable) throws Exception {
 		logger.debug("Specific data migration");
-		
-		createTargetSchemaTableIfNotExist(connectionTo, toTable);
+
+		TargetSchemaTable targetSchemaTable = createTargetSchemaTableIfNotExist(connectionFrom, fromTable, connectionTo,
+				toTable);
 
 		String copyFromString = getCopyCommand(fromTable, DIRECTION.TO/* STDOUT */);
 		String copyToString = getCopyCommand(toTable, DIRECTION.FROM/* STDIN */);
@@ -206,7 +243,8 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 				String msg = e.getMessage() + " Not possible to join the thread to copy data from PostgreSQL.";
 				logger.error(msg);
 				e.printStackTrace();
-				return MigrationResult.getFailedInstance(msg);
+				cleanCreatedSchemaTable(connectionTo, targetSchemaTable);
+				throw e;
 			}
 			try {
 				copyToThread.join();
@@ -214,7 +252,8 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 				String msg = e.getMessage() + " Not possible to join the thread to copy data to PostgreSQL.";
 				logger.error(msg);
 				e.printStackTrace();
-				return MigrationResult.getFailedInstance(msg);
+				cleanCreatedSchemaTable(connectionTo, targetSchemaTable);
+				throw e;
 			}
 			try {
 				return new MigrationResult(taskCopyFromExecutor.get(), taskCopyToExecutor.get());
@@ -222,7 +261,8 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 				String msg = e.getMessage() + " Migration failed. Task did not finish correctly.";
 				logger.error(msg);
 				e.printStackTrace();
-				return MigrationResult.getFailedInstance(msg);
+				cleanCreatedSchemaTable(connectionTo, targetSchemaTable);
+				throw e;
 			}
 		} finally {
 			if (conFrom != null) {
@@ -236,9 +276,9 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 
 	/**
 	 * @param args
-	 * @throws IOException
+	 * @throws Exception 
 	 */
-	public static void main(String[] args) throws IOException {
+	public static void main(String[] args) throws Exception {
 		LoggerSetup.setLogging();
 		System.out.println("Migrating data from PostgreSQL to PostgreSQL");
 		FromPostgresToPostgres migrator = new FromPostgresToPostgres();
@@ -246,24 +286,24 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 				"test");
 		PostgreSQLConnectionInfo conInfoTo = new PostgreSQLConnectionInfo("localhost", "5430", "mimic2_copy", "pguser",
 				"test");
+		MigrationResult result;
 		try {
-			MigrationResult result = migrator.migrate(conInfoFrom, "mimic2v26.d_patients", conInfoTo,
+			result = migrator.migrate(conInfoFrom, "mimic2v26.d_patients", conInfoTo,
 					"mimic2v26.d_patients");
-			logger.debug("Number of extracted rows: " + result.getCountExtractedRows() + " Number of loaded rows: "
-					+ result.getCountLoadedRows());
-		} catch (SQLException | IOException e) {
-			String msg = "Problem with specific data migration.";
-			logger.error(msg);
+		} catch (Exception e) {
 			e.printStackTrace();
+			return;
 		}
+		logger.debug("Number of extracted rows: " + result.getCountExtractedRows() + " Number of loaded rows: "
+				+ result.getCountLoadedRows());
 
 		ConnectionInfo conFrom = conInfoFrom;
 		ConnectionInfo conTo = conInfoTo;
-		MigrationResult result;
+		MigrationResult result1;
 		try {
-			result = migrator.migrate(conFrom, "mimic2v26.d_patients", conTo, "mimic2v26.d_patients");
-			logger.debug("Number of extracted rows: " + result.getCountExtractedRows() + " Number of loaded rows: "
-					+ result.getCountLoadedRows());
+			result1 = migrator.migrate(conFrom, "mimic2v26.d_patients", conTo, "mimic2v26.d_patients");
+			logger.debug("Number of extracted rows: " + result1.getCountExtractedRows() + " Number of loaded rows: "
+					+ result1.getCountLoadedRows());
 		} catch (MigrationException e) {
 			String msg = "Problem with general data migration.";
 			logger.error(msg);

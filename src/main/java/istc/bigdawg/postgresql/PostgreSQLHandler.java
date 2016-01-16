@@ -64,24 +64,22 @@ public class PostgreSQLHandler implements DBHandler {
 	 * @throws SQLException
 	 *             if could not establish a connection
 	 */
-	private void establishConnection() throws SQLException {
+	private Connection getConnection() throws SQLException {
 		if (con == null) {
 			if (conInfo != null) {
 				try {
-					con = DriverManager.getConnection("jdbc:postgresql://" + conInfo.getHost() + ":" + conInfo.getPort()
-							+ "/" + conInfo.getDatabase(), conInfo.getUser(), conInfo.getPassword());
+					con = getConnection(conInfo);
 				} catch (SQLException e) {
 					e.printStackTrace();
-					log.error(
-							e.getMessage() + " Could not connecto to PostgreSQL database using: " + conInfo.toString(),
+					log.error(e.getMessage() + " Could not connect to PostgreSQL database using: " + conInfo.toString(),
 							e);
 					throw e;
 				}
 			} else {
 				con = PostgreSQLInstance.getConnection();
 			}
-
 		}
+		return con;
 	}
 
 	public static Connection getConnection(PostgreSQLConnectionInfo conInfo) throws SQLException {
@@ -227,37 +225,44 @@ public class PostgreSQLHandler implements DBHandler {
 	}
 
 	/**
-	 * Executes a statement (not a query) in PostgreSQL.
+	 * Executes a statement (not a query) in PostgreSQL. It cleans the resources
+	 * at the end.
 	 * 
 	 * @param statement
 	 *            to be executed
 	 * @throws SQLException
 	 */
-	public void executeStatmentPostgreSQL(String statement) throws SQLException {
+	public void executeStatementPostgreSQL(String statement) throws SQLException {
 		try {
-			this.establishConnection();
-			st = con.createStatement();
-			st.execute(statement);
+			getConnection();
+			con.createStatement().execute(statement);
 		} catch (SQLException ex) {
-			Logger lgr = Logger.getLogger(QueryClient.class.getName());
 			ex.printStackTrace();
-			lgr.log(Level.ERROR, ex.getMessage() + "; query: " + statement, ex);
+			// remove ' from the statement - otherwise it won't be inserted into
+			// log table in Postgres
+			log.error(ex.getMessage() + "; statement to be executed: " + statement.replace("'", ""), ex);
 			throw ex;
 		} finally {
 			try {
-				this.cleanPostgreSQLResources();
+				cleanPostgreSQLResources();
 			} catch (SQLException ex) {
-				Logger lgr = Logger.getLogger(QueryClient.class.getName());
 				ex.printStackTrace();
-				lgr.log(Level.INFO, ex.getMessage() + "; query: " + statement, ex);
+				log.info(ex.getMessage() + "; statement: " + statement.replace("'", ""), ex);
 				throw ex;
 			}
 		}
 	}
 
+	/**
+	 * It executes the query and releases the resources at the end.
+	 * 
+	 * @param query
+	 * @return #QueryResult
+	 * @throws SQLException
+	 */
 	public QueryResult executeQueryPostgreSQL(final String query) throws SQLException {
 		try {
-			this.establishConnection();
+			this.getConnection();
 
 			log.debug("\n\nquery: " + query + "");
 			log.debug("ConnectionInfo: " + this.conInfo.toString() + "\n");
@@ -298,7 +303,7 @@ public class PostgreSQLHandler implements DBHandler {
 	 */
 	public String generatePostgreSQLQueryXML(final String query) throws SQLException {
 		try {
-			this.establishConnection();
+			this.getConnection();
 			st = con.createStatement();
 			// st.executeUpdate("set search_path to schemas; ");
 			ResultSet rs = st.executeQuery(query);
@@ -335,7 +340,7 @@ public class PostgreSQLHandler implements DBHandler {
 	 */
 	public void populateSchemasSchema(final String query, boolean drop) throws SQLException {
 		try {
-			this.establishConnection();
+			this.getConnection();
 			st = con.createStatement();
 			if (drop) {
 				st.executeUpdate("drop schema schemas cascade; ");
@@ -410,7 +415,7 @@ public class PostgreSQLHandler implements DBHandler {
 				+ "pg_attribute.attnum = any(pg_index.indkey) AND indisprimary";
 		// System.out.println(query);
 		try {
-			this.establishConnection();
+			getConnection();
 			preparedSt = con.prepareStatement(query);
 			preparedSt.setString(1, table);
 			rs = preparedSt.executeQuery();
@@ -441,7 +446,7 @@ public class PostgreSQLHandler implements DBHandler {
 
 		StringBuilder extraction = new StringBuilder();
 
-		this.establishConnection();
+		this.getConnection();
 		st = con.createStatement();
 
 		rs = st.executeQuery("SELECT attrelid, attname, format_type(atttypid, atttypmod) AS type, atttypid, atttypmod "
@@ -486,10 +491,9 @@ public class PostgreSQLHandler implements DBHandler {
 	 * @throws SQLException
 	 *             if the data extraction from PostgreSQL failed
 	 */
-	public List<PostgreSQLColumnMetaData> getColumnsMetaData(PostgreSQLConnectionInfo conInfo, String tableNameInitial)
-			throws SQLException {
+	public List<PostgreSQLColumnMetaData> getColumnsMetaData(String tableNameInitial) throws SQLException {
 		try {
-			this.establishConnection();
+			this.getConnection();
 			PostgreSQLSchemaTableName schemaTable = new PostgreSQLSchemaTableName(tableNameInitial);
 			try {
 				preparedSt = con.prepareStatement(
@@ -531,9 +535,9 @@ public class PostgreSQLHandler implements DBHandler {
 	 * @return
 	 * @throws SQLException
 	 */
-	public boolean existsSchema(PostgreSQLConnectionInfo conInfo, String schemaName) throws SQLException {
+	public boolean existsSchema(String schemaName) throws SQLException {
 		try {
-			this.establishConnection();
+			this.getConnection();
 			try {
 				preparedSt = con.prepareStatement(
 						"select exists (select 1 from information_schema.schemata where schema_name=?)");
@@ -574,8 +578,33 @@ public class PostgreSQLHandler implements DBHandler {
 	 * @return true if schema was created (false is schema already existed)
 	 * @throws SQLException
 	 */
-	public void createSchemaIfNotExists(PostgreSQLConnectionInfo conInfo, String schemaName) throws SQLException {
-		executeStatmentPostgreSQL("create schema if not exists " + schemaName);
+	public void createSchemaIfNotExists(String schemaName) throws SQLException {
+		executeStatementPostgreSQL("create schema if not exists " + schemaName);
+	}
+
+	/**
+	 * Create a table if it not exists.
+	 * 
+	 * @param schemaTable
+	 *            give the name of the table and the schema where it resides
+	 * @throws SQLException
+	 */
+	public void createTable(String createTableStatement) throws SQLException {
+		executeStatementPostgreSQL(createTableStatement);
+	}
+	
+	public void dropSchemaIfExists(String schemaName) throws SQLException {
+		executeStatementPostgreSQL("drop schema if exists "+schemaName);
+	}
+	
+	/**
+	 * Drop a table. 
+	 * 
+	 * @param tableName the name of the table
+	 * @throws SQLException
+	 */
+	public void dropTableIfExists(String tableName) throws SQLException {
+		executeStatementPostgreSQL("drop table if exists "+tableName);
 	}
 
 	/**
@@ -588,10 +617,9 @@ public class PostgreSQLHandler implements DBHandler {
 	 *         given schema
 	 * @throws SQLException
 	 */
-	public boolean existsTable(PostgreSQLConnectionInfo conInfo, PostgreSQLSchemaTableName schemaTable)
-			throws SQLException {
+	public boolean existsTable(PostgreSQLSchemaTableName schemaTable) throws SQLException {
 		try {
-			this.establishConnection();
+			this.getConnection();
 			try {
 				preparedSt = con.prepareStatement(
 						"select exists (select 1 from information_schema.tables where table_schema=? and table_name=?)");
@@ -600,7 +628,7 @@ public class PostgreSQLHandler implements DBHandler {
 			} catch (SQLException e) {
 				e.printStackTrace();
 				log.error(e.getMessage()
-						+ " PostgreSQLHandler, the query preparation for checking is a table exists failed.");
+						+ " PostgreSQLHandler, the query preparation for checking if a table exists failed.");
 				throw e;
 			}
 			try {
@@ -614,7 +642,7 @@ public class PostgreSQLHandler implements DBHandler {
 			}
 		} finally {
 			try {
-				this.cleanPostgreSQLResources();
+				cleanPostgreSQLResources();
 			} catch (SQLException ex) {
 				ex.printStackTrace();
 				log.error(ex.getMessage() + "; conInfo: " + conInfo.toString() + "; schemaName: "
@@ -622,16 +650,6 @@ public class PostgreSQLHandler implements DBHandler {
 				throw ex;
 			}
 		}
+	}
 
-	}
-	
-	/**
-	 * Release this PostgreSQLHandler resources.
-	 * Close connections/statements opened with the PostgreSLQ handler.
-	 * 
-	 * @throws SQLException 
-	 */
-	public void close() throws SQLException {
-		cleanPostgreSQLResources();
-	}
 }

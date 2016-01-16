@@ -23,11 +23,11 @@ public class TargetSchemaTable {
 		this.wasTableCreated = wasTableCreated;
 	}
 
-	public boolean isWasSchemaCreated() {
+	public boolean wasSchemaCreated() {
 		return wasSchemaCreated;
 	}
 
-	public boolean isWasTableCreated() {
+	public boolean wasTableCreated() {
 		return wasTableCreated;
 	}
 
