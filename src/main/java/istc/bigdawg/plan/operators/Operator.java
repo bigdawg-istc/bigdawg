@@ -286,7 +286,7 @@ public class Operator {
 		List<SelectItem> selects = new ArrayList<SelectItem>();
 
 		for(String s : outSchema.keySet()) {
-			SQLAttribute attr = outSchema.get(s);
+			SQLAttribute attr = new SQLAttribute(outSchema.get(s));
 			
 			changeAttributeName(attr);
 			
@@ -357,17 +357,19 @@ public class Operator {
 						if (e instanceof Column) {
 							Table t = new Table();
 							t.setName(o.getPruneToken());
-							((Column)e).setTable(t);
-							attr.setName(((Column)e).toString());
+							
+							Column newE = new Column(t, ((Column)e).getColumnName());
+							
+							attr.setName(newE.toString());
+							attr.setExpression(newE);
 						} else {
 							throw new Exception ("Unsupported column type: "+e.getClass().toString());
 						}
 						
-						attr.setExpression(e);
 						return true;
 					}
 				} else {
-					if (o.changeAttributeName(attr)) return true;
+					if ( o.changeAttributeName(attr) ) return true;
 				}
 			}
 		}
@@ -385,7 +387,7 @@ public class Operator {
 		List<SelectItem> selects = new ArrayList<SelectItem>();
 
 		for(String s : outSchema.keySet()) {
-			SQLAttribute attr = outSchema.get(s);
+			SQLAttribute attr = new SQLAttribute(outSchema.get(s));
 						
 			// find the table where it is pruned
 			changeAttributeName(attr);
@@ -552,7 +554,12 @@ public class Operator {
 		isPruned = p;
 	}
 	
-	public String getPruneToken() {
+	public String getPruneToken() throws Exception {
+		
+		if (!isPruned) {
+			throw new Exception("\n\n\n----> unpruned token: "+this.outSchema.toString()+"\n\n");
+		}
+		
 		return "BIGDAWGPRUNED_"+this.pruneID;
 	}
 	

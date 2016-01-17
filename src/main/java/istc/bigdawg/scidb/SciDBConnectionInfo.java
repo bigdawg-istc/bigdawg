@@ -110,6 +110,8 @@ public class SciDBConnectionInfo implements ConnectionInfo {
 		return binPath;
 	}
 
+	public String getDatabase() { return binPath; }
+
 	@Override
 	public String toString() {
 		return "SciDBConnectionInfo [host=" + host + ", port=" + port + ", user=" + user + ", password=" + password

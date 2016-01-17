@@ -28,12 +28,7 @@ public class ExecutionNodeFactory {
 
 	private static int maxSerial = 0;
 	
-	/**
-	 * NO LONGER USED
-	 * TODO CHECK REMOVABILITY
-	 * @author Jack
-	 *
-	 */
+	@Deprecated
 	public static Map<String, Operator> traverseAndPickOutWiths (Operator root) throws Exception {
 		Map<String, Operator> result = new HashMap<>();
 		maxSerial++;
@@ -57,16 +52,8 @@ public class ExecutionNodeFactory {
 		return result;
 	}
 	
-	/**
-	 * NO LONGER USED
-	 * TODO DETERMINE UTILITY AND REMOVE
-	 * @param qep
-	 * @param map
-	 * @param withNSelect
-	 * @param srcSTMT
-	 * @throws Exception
-	 */
-	private static void addNodesAndEdgesOLD(QueryExecutionPlan qep, Map<String, ArrayList<String>> map, Map<String, Operator> withNSelect, Select srcSTMT) throws Exception {
+	@Deprecated
+	public static void addNodesAndEdgesOLD(QueryExecutionPlan qep, Map<String, ArrayList<String>> map, Map<String, Operator> withNSelect, Select srcSTMT) throws Exception {
 
 		HashMap<String, ExecutionNode> dependentNodes = new HashMap<>();
 		ArrayList<String> edgesFrom = new ArrayList<>();
@@ -135,9 +122,11 @@ public class ExecutionNodeFactory {
 		String remainderDBID;
 		ConnectionInfo remainderCI;
 		if (remainderLoc != null) {
+			System.out.println("remainderLoc not null; result: "+ remainderLoc.get(0));
 			remainderCI = PostgreSQLHandler.generateConnectionInfo(Integer.parseInt(remainderLoc.get(0)));	
 		} else {
 			remainderDBID = container.values().iterator().next().getConnectionInfos().keySet().iterator().next();
+			System.out.println("remainderLoc IS null; result: "+ remainderDBID);
 			remainderCI = PostgreSQLHandler.generateConnectionInfo(Integer.parseInt(remainderDBID));
 		}
 		
@@ -151,7 +140,10 @@ public class ExecutionNodeFactory {
 		
 		// if there remainderLoc is not null, then there is nothing in the container. 
 		// Return.
-		if (remainderLoc != null) return;
+		if (remainderLoc != null) {
+			qep.addVertex(remainderNode);
+			return;
+		}
 		
 		
 		// this function is called the naive version because it just migrates everything to a random DB -- first brought up by iterator

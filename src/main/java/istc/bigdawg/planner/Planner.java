@@ -1,10 +1,6 @@
 package istc.bigdawg.planner;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -12,44 +8,32 @@ import javax.ws.rs.core.Response;
 
 import org.apache.log4j.Logger;
 
-import istc.bigdawg.monitoring.Monitor;
-import istc.bigdawg.postgresql.PostgreSQLHandler;
-import istc.bigdawg.postgresql.PostgreSQLHandler.QueryResult;
-import net.sf.jsqlparser.statement.select.Select;
-import istc.bigdawg.cast.Cast;
-import istc.bigdawg.catalog.CatalogInstance;
-import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.executor.Executor;
-import istc.bigdawg.executor.plan.ExecutionNode;
-import istc.bigdawg.executor.plan.ExecutionNodeFactory;
 import istc.bigdawg.executor.plan.QueryExecutionPlan;
+import istc.bigdawg.monitoring.Monitor;
+import istc.bigdawg.packages.CrossIslandQueryNode;
 import istc.bigdawg.packages.CrossIslandQueryPlan;
 import istc.bigdawg.packages.QueriesAndPerformanceInformation;
 import istc.bigdawg.parsers.UserQueryParser;
-import istc.bigdawg.plan.SQLQueryPlan;
-import istc.bigdawg.plan.extract.SQLPlanParser;
 import istc.bigdawg.plan.operators.Join;
 import istc.bigdawg.plan.operators.Operator;
 import istc.bigdawg.plan.operators.SeqScan;
+import istc.bigdawg.postgresql.PostgreSQLHandler.QueryResult;
 import istc.bigdawg.schema.SQLDatabaseSingleton;
-import istc.bigdawg.signature.Signature;
 
 public class Planner {
 
-	/*
-	 * 
-	 */
 	private static Logger logger = Logger.getLogger(Planner.class.getName());
-	private static LinkedHashMap<Integer, List<String>> queryQueue = new LinkedHashMap<>(); // queries
-																									// to
-																									// be
-																									// executed
+//	private static LinkedHashMap<Integer, List<String>> queryQueue = new LinkedHashMap<>(); // queries
+//																									// to
+//																									// be
+//																									// executed
 	private static Integer maxSerial = 0;
 
 
 	public static Response processQuery(String userinput) throws Exception {
 		
-		SQLDatabaseSingleton.getInstance().setDatabase("bigdawg_schemas", "src/main/resources/plain.sql");
+		SQLDatabaseSingleton.getInstance().setDatabase("bigdawg_schemas", "src/main/resources/schemas/plain.sql");
 				
 		
 		// UNROLLING
@@ -59,10 +43,12 @@ public class Planner {
 		CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(crossIslandQuery);
 
 		// pass this to monitor, and pick your favorite
+		CrossIslandQueryNode ciqn = ciqp.getRoot();
+		int choice = getGetPerformanceAndPickTheBest(ciqn);
 		
 		
 		// currently there should be just one island, therefore one child, root.
-		QueryExecutionPlan qep = ciqp.getRoot().getQEP(0);
+		QueryExecutionPlan qep = ciqp.getRoot().getQEP(choice);
 		
 		
 		
@@ -84,30 +70,28 @@ public class Planner {
 	 * 
 	 * @param userinput
 	 */
-	public static void getGetPerformanceAndPickTheBest(Map<String, Object> sigAndCasts) throws Exception {
+	public static int getGetPerformanceAndPickTheBest(CrossIslandQueryNode ciqn) throws Exception {
 		
-		// GENERATE PERMUTATIONS
-		// TODO make trees and NOT list of signature and casts; how about changing signature 1 into execution plans?
-		ArrayList<ArrayList<Object>> permuted = new ArrayList<ArrayList<Object>>();
-		permuted.add(new ArrayList<Object>(sigAndCasts.values())); // this should be qeps
-		//
-		// 
-		// CHEAT: JUST ONE 
-		// TODO DON'T CHEAT
-
+		int choice = 0;
+		
 		// now call the corresponding monitor function to deliver permuted.
 		// Today there IS ONLY ONE PLAN
 		// TODO generate list of QueryExecutionPlans to send to monitor
-		ArrayList<QueryExecutionPlan> qeps = new ArrayList<>();
+		List<QueryExecutionPlan> qeps = ciqn.getAllQEPs();
+		Monitor.addBenchmarks(qeps, false);
 		QueriesAndPerformanceInformation qnp = Monitor.getBenchmarkPerformance(qeps); // TODO CHANGE THE QEPS SENT TO MONITOR FUNCTION
+		
+		
+		
 		
 		// does some magic to pick out the best query, store it to the query plan queue
 		// CHEAT: JUST ONE
 		// TODO DON'T CHEAT; ACTUALLY PICK; CHANGE THIS 0
-		maxSerial += 1;
-		queryQueue.put(maxSerial, (ArrayList<String>) qnp.qList.get(0)); // TODO 
 		
-		logger.debug("Performance information received; serial number: "+maxSerial);
+		
+		
+		
+		return choice;
 	};
 
 
@@ -122,7 +106,7 @@ public class Planner {
 		System.out.printf("[BigDAWG] PLANNER: Query %d is completed. Result:\n", querySerial);
 
 		// remove corresponding elements in the two queues
-		queryQueue.remove(querySerial);
+//		queryQueue.remove(querySerial);
 
 		// print the result;
 		StringBuffer out = new StringBuffer();

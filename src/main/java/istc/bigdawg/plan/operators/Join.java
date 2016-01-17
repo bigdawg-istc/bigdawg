@@ -251,25 +251,58 @@ public class Join extends Operator {
     	}
     	
     	if (child0.isPruned() || child1.isPruned()) {
-    		Table t0 = new Table();
-    		Table t1 = new Table();
-			
-    		t0.setName(child0.getPruneToken());
-    		t1.setName(child1.getPruneToken());
     		
-			dstStatement = SelectUtils.buildSelectFromTable(t0);
 			
 			BinaryExpression on = (BinaryExpression) CCJSqlParserUtil.parseCondExpression(joinPredicate);
 			
-//			parsedJoin.setRightItem(t1);
-//			BinaryExpression on = (BinaryExpression) parsedJoin.getOnExpression();
+			Column cLeft;
+			Column cRight;
 			
-			Column cLeft  = ((Column) on.getLeftExpression());
-			Column cRight = ((Column) on.getRightExpression());
 			
-			String cLeftColName = cLeft.getTable().getName()+"."+cLeft.getColumnName();
+			Expression l = on.getLeftExpression();
+			Expression r = on.getRightExpression();
+
+			if (l.getClass().equals(net.sf.jsqlparser.expression.Parenthesis.class))
+				l = ((net.sf.jsqlparser.expression.Parenthesis) l).getExpression();
+			if (r.getClass().equals(net.sf.jsqlparser.expression.Parenthesis.class)) 
+				r = ((net.sf.jsqlparser.expression.Parenthesis) r).getExpression();
+
+			cLeft  = ((Column) l);
+			cRight = ((Column) r);
 			
-			if (child0.getOutSchema().keySet().contains(cLeftColName)) {
+			
+			
+    		String cLeftColName = cLeft.getTable().getName()+"."+cLeft.getColumnName();
+    		String cRightColName = cRight.getTable().getName()+"."+cRight.getColumnName();
+    		
+    		
+			Table t0 = new Table();
+    		Table t1 = new Table();
+    		
+    		
+    		if (child0.getOutSchema().containsKey(cLeftColName)) {
+    			
+    			t0.setName(cLeft.getTable().getName());
+    			t1.setName(cRight.getTable().getName());
+    			
+	    		setTableNameFromPrunedOne(child0, t0, cLeftColName, false);
+	    		setTableNameFromPrunedOne(child1, t1, cRightColName, false);
+    		
+    		} else {
+    			
+    			t0.setName(cRight.getTable().getName());
+    			t1.setName(cLeft.getTable().getName());
+    			
+    			setTableNameFromPrunedOne(child0, t0, cRightColName, false);
+	    		setTableNameFromPrunedOne(child1, t1, cLeftColName, false);
+	    		
+    		} 
+    		
+
+    		dstStatement = SelectUtils.buildSelectFromTable(t0);
+			
+			
+			if (child0.getOutSchema().containsKey(cLeftColName)) {
 				cLeft.setTable(t0);
 				cRight.setTable(t1);
 			} else {
@@ -328,6 +361,30 @@ public class Join extends Operator {
 		return dstStatement;
 
 	}
+    
+    private boolean setTableNameFromPrunedOne(Operator o, Table t, String fullyQualifiedName, boolean found) throws Exception{
+		if (o.getOutSchema().containsKey(fullyQualifiedName)) {
+			if (o.isPruned()) {
+				t.setName(o.getPruneToken());
+				System.out.printf("FOUND: FQN: %s,   outSchema: %s\n", fullyQualifiedName, o.getOutSchema());
+				return true;
+			} else {
+				if (o.getClass().equals(Join.class)) {
+	    			if (setTableNameFromPrunedOne(o.getChildren().get(0), t, fullyQualifiedName, found)) 
+	    				return true;
+	    			else 
+	    				return setTableNameFromPrunedOne(o.getChildren().get(1), t, fullyQualifiedName, found);
+	    		} else {
+	    			if (o.getChildren().size() == 0) return false;
+	    			return setTableNameFromPrunedOne(o.getChildren().get(0), t, fullyQualifiedName, found);
+	    		}
+			}
+		} else {
+			System.out.printf("NOT FOUND: FQN: %s,   outSchema: %s\n", fullyQualifiedName, o.getOutSchema());
+		}
+		
+		return false;
+    }
 	
     public String toString() {
     		return "Joining " + children.get(0).toString() + " x " + children.get(1).toString() 

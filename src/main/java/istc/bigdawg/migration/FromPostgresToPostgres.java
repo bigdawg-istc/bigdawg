@@ -9,7 +9,6 @@ import java.io.PipedOutputStream;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 
 import org.apache.log4j.Logger;

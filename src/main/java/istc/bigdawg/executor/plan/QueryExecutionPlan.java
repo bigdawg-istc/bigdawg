@@ -142,7 +142,7 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
         ConnectionInfo engine = node.getEngine();
         currentRep.append(String.format("CONNECTIONTYPE:%s", engine.getClass().getName()));
         currentRep.append(String.format("HOST:%s", engine.getHost()));
-        currentRep.append(String.format("HANDLER:%s", engine.getHandler()));
+        currentRep.append(String.format("DATABASE:%s", engine.getDatabase()));
         currentRep.append(String.format("PASSWORD:%s", engine.getPassword()));
         currentRep.append(String.format("PORT:%s", engine.getPort()));
         currentRep.append(String.format("USER:%s", engine.getUser()));
@@ -164,8 +164,8 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
         Pattern table = Pattern.compile("(?<=TABLE:)(?s).*(?=ENGINE:)");
         Pattern engine = Pattern.compile("(?<=ENGINE:\\()[^\\)]*(?=\\))");
         Pattern connectionType = Pattern.compile("(?<=CONNECTIONTYPE:)(?s).*(?=HOST:)");
-        Pattern host = Pattern.compile("(?<=HOST:)(?s).*(?=HANDLER:)");
-        Pattern handler = Pattern.compile("(?<=HANDLER:)(?s).*(?=PASSWORD:)");
+        Pattern host = Pattern.compile("(?<=HOST:)(?s).*(?=DATABASE:)");
+        Pattern database = Pattern.compile("(?<=DATABASE:)(?s).*(?=PASSWORD:)");
         Pattern password = Pattern.compile("(?<=PASSWORD:)(?s).*(?=PORT:)");
         Pattern port = Pattern.compile("(?<=PORT:)(?s).*(?=USER:)");
         Pattern user = Pattern.compile("(?<=USER:)(?s).*");
@@ -213,10 +213,10 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
         if (m.find()) {
             engineHost = m.group();
         }
-        String engineHandler = "";
-        m = handler.matcher(engineInfo);
+        String engineDatabase = "";
+        m = database.matcher(engineInfo);
         if (m.find()) {
-            engineHandler = m.group();
+            engineDatabase = m.group();
         }
         String enginePassword = "";
         m = password.matcher(engineInfo);
@@ -237,7 +237,7 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
         ConnectionInfo connectionInfo = null;
         // TODO implement for other ConnectionInfo classes
         if (engineConnectionType.contains("PostgreSQLConnectionInfo")){
-            connectionInfo = new PostgreSQLConnectionInfo(engineHost, enginePort, engineHandler, engineUser, enginePassword);
+            connectionInfo = new PostgreSQLConnectionInfo(engineHost, enginePort, engineDatabase, engineUser, enginePassword);
         }
 
         // Get the type of ExecutionNode
@@ -266,9 +266,7 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
     public static String qepToString(QueryExecutionPlan qep) {
         Iterator<ExecutionNode> nodeIterator = qep.iterator();
         StringBuilder result = new StringBuilder();
-
         result.append(String.format("ISLAND:%s", qep.getIsland()));
-
         // Converts each node into a String representation of itself
         result.append("NODES:(");
         List<String> nodes = new ArrayList<>();
@@ -277,15 +275,13 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
             String currentNodeRep = executionNodeToString(currentNode);
             nodes.add(currentNodeRep);
         }
-
-        String[] nodeList = new String[nodes.size()];
-        for (int i = 0; i < nodes.size(); i++) {
-            nodeList[i] = nodes.get(i);
-        }
+        Collections.sort(nodes);
         Map<String, Integer> order = new HashMap<>();
-        for (int i = 0; i < nodeList.length; i++) {
-            order.put(nodeList[i], i);
-            result.append(nodeList[i]);
+        int i = 0;
+        for (String currentNodeRep: nodes) {
+            order.put(currentNodeRep, i);
+            i++;
+            result.append(currentNodeRep);
         }
         result.append(")");
 
@@ -303,12 +299,20 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
                 }
             }
         }
+        
         result.append(")");
 
         result.append(String.format("SERIAL:%d", qep.getSerialNumber()));
-        result.append(String.format("TERMTABLE:%s", qep.getTerminalTableName()));
-        result.append(String.format("TERMNODE:%d", order.get(executionNodeToString(qep.getTerminalTableNode()))));
-
+        String termTable = "";
+        if (qep.getTerminalTableName() != null){
+            termTable = qep.getTerminalTableName();
+        }
+        result.append(String.format("TERMTABLE:%s", termTable));
+        String termNode = "";
+        if (qep.getTerminalTableNode() != null) {
+            termNode = String.valueOf(order.get(executionNodeToString(qep.getTerminalTableNode())));
+        }
+        result.append(String.format("TERMNODE:%s", termNode));
         return result.toString();
     }
 
@@ -389,7 +393,9 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
         m = terminalNodePattern.matcher(representation);
         if (m.find()) {
             String terminalNode = m.group();
-            qep.setTerminalTableNode(nodeList.get(Integer.parseInt(terminalNode)));
+            if (terminalNode.length() > 0) {
+                qep.setTerminalTableNode(nodeList.get(Integer.parseInt(terminalNode)));
+            }
         }
 
         return qep;
