@@ -23,6 +23,7 @@ import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.query.DBHandler;
 import istc.bigdawg.query.QueryClient;
+import istc.bigdawg.util.StackTrace;
 
 /**
  * @author Adam Dziedzic
@@ -225,6 +226,30 @@ public class PostgreSQLHandler implements DBHandler {
 	}
 
 	/**
+	 * Execute an SQL statement on a given connection.
+	 * 
+	 * @param connection
+	 *            connection on which the statement is executed
+	 * @param stringStatement
+	 *            sql statement to be executed
+	 * @throws SQLException
+	 */
+	public static void executeStatement(Connection connection, String stringStatement) throws SQLException {
+		try {
+			Statement statement = connection.createStatement();
+			statement.execute(stringStatement);
+			statement.close();
+		} catch (SQLException ex) {
+			ex.printStackTrace();
+			// remove ' from the statement - otherwise it won't be inserted into
+			// log table in Postgres
+			log.error(ex.getMessage() + "; statement to be executed: " + stringStatement.replace("'", "") + " "
+					+ ex.getStackTrace(), ex);
+			throw ex;
+		}
+	}
+
+	/**
 	 * Executes a statement (not a query) in PostgreSQL. It cleans the resources
 	 * at the end.
 	 * 
@@ -233,18 +258,12 @@ public class PostgreSQLHandler implements DBHandler {
 	 * @throws SQLException
 	 */
 	public void executeStatementPostgreSQL(String statement) throws SQLException {
+		getConnection();
 		try {
-			getConnection();
-			con.createStatement().execute(statement);
-		} catch (SQLException ex) {
-			ex.printStackTrace();
-			// remove ' from the statement - otherwise it won't be inserted into
-			// log table in Postgres
-			log.error(ex.getMessage() + "; statement to be executed: " + statement.replace("'", ""), ex);
-			throw ex;
+			executeStatement(con, statement);
 		} finally {
 			try {
-				cleanPostgreSQLResources();
+				this.cleanPostgreSQLResources();
 			} catch (SQLException ex) {
 				ex.printStackTrace();
 				log.info(ex.getMessage() + "; statement: " + statement.replace("'", ""), ex);
@@ -435,6 +454,50 @@ public class PostgreSQLHandler implements DBHandler {
 	}
 
 	/**
+	 * Get SQL create table statement. {@link getCtreateTable(String
+	 * schemaAntTableName)}
+	 * 
+	 * @param con
+	 * @param schemaAndTableName
+	 * @return
+	 * @throws SQLException
+	 */
+	public static String getCreateTable(Connection con, String schemaAndTableName) throws SQLException {
+		try {
+			StringBuilder extraction = new StringBuilder();
+
+			Statement st = con.createStatement();
+
+			ResultSet rs = st.executeQuery(
+					"SELECT attrelid, attname, format_type(atttypid, atttypmod) AS type, atttypid, atttypmod "
+							+ "FROM pg_catalog.pg_attribute " + "WHERE NOT attisdropped AND attrelid = '"
+							+ schemaAndTableName + "'::regclass AND atttypid NOT IN (26,27,28,29) "
+							+ "ORDER BY attnum;");
+
+			if (rs.next()) {
+				extraction.append("CREATE TABLE IF NOT EXISTS ").append(schemaAndTableName).append(" (");
+				extraction.append(rs.getString("attname")).append(" ");
+				extraction.append(rs.getString("type"));
+			}
+			while (rs.next()) {
+				extraction.append(", ");
+				extraction.append(rs.getString("attname")).append(" ");
+				extraction.append(rs.getString("type"));
+			}
+			extraction.append(");");
+			rs.close();
+			st.close();
+			return extraction.toString();
+		} catch (SQLException ex) {
+			ex.printStackTrace();
+			log.error(ex.getMessage() + "; conInfo: " + con.getClientInfo() + "; schemaAndTableName: "
+					+ schemaAndTableName + " " + StackTrace.getFullStackTrace(ex), ex);
+			throw ex;
+		}
+
+	}
+
+	/**
 	 * NEW FUNCTION generate the "CREATE TABLE" clause from existing tables on
 	 * DB. Recommend use with 'bigdawg_schema'
 	 * 
@@ -443,30 +506,19 @@ public class PostgreSQLHandler implements DBHandler {
 	 * @throws SQLException
 	 */
 	public String getCreateTable(String schemaAndTableName) throws SQLException {
-
-		StringBuilder extraction = new StringBuilder();
-
-		this.getConnection();
-		st = con.createStatement();
-
-		rs = st.executeQuery("SELECT attrelid, attname, format_type(atttypid, atttypmod) AS type, atttypid, atttypmod "
-				+ "FROM pg_catalog.pg_attribute " + "WHERE NOT attisdropped AND attrelid = '" + schemaAndTableName
-				+ "'::regclass AND atttypid NOT IN (26,27,28,29) " + "ORDER BY attnum;");
-
-		if (rs.next()) {
-			extraction.append("CREATE TABLE ").append(schemaAndTableName).append(" (");
-			extraction.append(rs.getString("attname")).append(" ");
-			extraction.append(rs.getString("type"));
+		try {
+			getConnection();
+			return getCreateTable(con, schemaAndTableName);
+		} finally {
+			try {
+				this.cleanPostgreSQLResources();
+			} catch (SQLException ex) {
+				ex.printStackTrace();
+				log.error(ex.getMessage() + "; conInfo: " + conInfo.toString() + "; schemaAndTableName: "
+						+ schemaAndTableName + " " + ex.getStackTrace(), ex);
+				throw ex;
+			}
 		}
-		while (rs.next()) {
-			extraction.append(", ");
-			extraction.append(rs.getString("attname")).append(" ");
-			extraction.append(rs.getString("type"));
-		}
-		extraction.append(");");
-		// rs.close();
-
-		return extraction.toString();
 	}
 
 	/**
@@ -592,19 +644,20 @@ public class PostgreSQLHandler implements DBHandler {
 	public void createTable(String createTableStatement) throws SQLException {
 		executeStatementPostgreSQL(createTableStatement);
 	}
-	
+
 	public void dropSchemaIfExists(String schemaName) throws SQLException {
-		executeStatementPostgreSQL("drop schema if exists "+schemaName);
+		executeStatementPostgreSQL("drop schema if exists " + schemaName);
 	}
-	
+
 	/**
-	 * Drop a table. 
+	 * Drop a table.
 	 * 
-	 * @param tableName the name of the table
+	 * @param tableName
+	 *            the name of the table
 	 * @throws SQLException
 	 */
 	public void dropTableIfExists(String tableName) throws SQLException {
-		executeStatementPostgreSQL("drop table if exists "+tableName);
+		executeStatementPostgreSQL("drop table if exists " + tableName);
 	}
 
 	/**

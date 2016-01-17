@@ -18,11 +18,11 @@ import org.postgresql.core.BaseConnection;
 
 import istc.bigdawg.LoggerSetup;
 import istc.bigdawg.exceptions.MigrationException;
-import istc.bigdawg.migration.commons.TargetSchemaTable;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.postgresql.PostgreSQLSchemaTableName;
 import istc.bigdawg.query.ConnectionInfo;
+import istc.bigdawg.util.StackTrace;
 
 /**
  * @author Adam Dziedzic
@@ -145,66 +145,36 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 	}
 
 	/**
-	 * Create the target schema and table if not exists.
+	 * Create a new schema and table in the connectionTo if they not exists. Get
+	 * the table definition from connectionFrom.
 	 * 
 	 * @param connectionFrom
+	 *            from which database we fetch the data
 	 * @param fromTable
+	 *            from which table we fetch the data
 	 * @param connectionTo
+	 *            to which database we connect to
 	 * @param toTable
-	 * @return
+	 *            to which table we want to load the data
 	 * @throws SQLException
 	 */
-	private TargetSchemaTable createTargetSchemaTableIfNotExist(PostgreSQLConnectionInfo connectionFrom,
-			String fromTable, PostgreSQLConnectionInfo connectionTo, String toTable) throws SQLException {
-		PostgreSQLHandler postgresToHandler = new PostgreSQLHandler(connectionTo);
+	private void createTargetTableSchema(Connection connectionFrom, String fromTable, Connection connectionTo,
+			String toTable) throws SQLException {
 		PostgreSQLSchemaTableName schemaTable = new PostgreSQLSchemaTableName(toTable);
-		boolean wasSchemaCreated = false;
-		boolean wasTableCreated = false;
-		boolean existsSchema = postgresToHandler.existsSchema(schemaTable.getSchemaName());
-		if (!existsSchema) {
-			postgresToHandler.createSchemaIfNotExists(schemaTable.getSchemaName());
-			wasSchemaCreated = true;
-		}
-		boolean existsTable = postgresToHandler.existsTable(schemaTable);
-		if (!existsTable) {
-			PostgreSQLHandler postgresFromHandler = new PostgreSQLHandler(connectionFrom);
-			String createTableStatement = postgresFromHandler.getCreateTable(schemaTable.getFullName());
-			postgresToHandler.createTable(createTableStatement);
-			wasTableCreated = true;
-		}
-		return new TargetSchemaTable(schemaTable, wasSchemaCreated, wasTableCreated);
-	}
-
-	/**
-	 * Remove the schema and table if they were created in this migration
-	 * process.
-	 * 
-	 * @param connection
-	 * @throws SQLException
-	 */
-	private void cleanCreatedSchemaTable(PostgreSQLConnectionInfo connectionTo, TargetSchemaTable schemaTable)
-			throws SQLException {
-		PostgreSQLHandler handler = new PostgreSQLHandler(connectionTo);
-		if (schemaTable.wasTableCreated()) {
-			handler.dropTableIfExists(schemaTable.getSchemaTableName().getFullName());
-		}
-		if (schemaTable.wasTableCreated()) {
-			handler.dropSchemaIfExists(schemaTable.getSchemaTableName().getSchemaName());
-		}
+		PostgreSQLHandler.executeStatement(connectionTo, "create schema if not exists " + schemaTable.getSchemaName());
+		String createTableStatement = PostgreSQLHandler.getCreateTable(connectionFrom, fromTable);
+		PostgreSQLHandler.executeStatement(connectionTo, createTableStatement);
 	}
 
 	/**
 	 * @return {@link MigrationResult} with information about the migration
 	 *         process
-	 * @throws Exception 
+	 * @throws Exception
 	 * 
 	 */
 	public MigrationResult migrate(PostgreSQLConnectionInfo connectionFrom, String fromTable,
 			PostgreSQLConnectionInfo connectionTo, String toTable) throws Exception {
 		logger.debug("Specific data migration");
-
-		TargetSchemaTable targetSchemaTable = createTargetSchemaTableIfNotExist(connectionFrom, fromTable, connectionTo,
-				toTable);
 
 		String copyFromString = getCopyCommand(fromTable, DIRECTION.TO/* STDOUT */);
 		String copyToString = getCopyCommand(toTable, DIRECTION.FROM/* STDIN */);
@@ -214,6 +184,11 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 		try {
 			conFrom = PostgreSQLHandler.getConnection(connectionFrom);
 			conTo = PostgreSQLHandler.getConnection(connectionTo);
+
+			conFrom.setReadOnly(true);
+			conFrom.setAutoCommit(false);
+			conTo.setAutoCommit(false);
+			createTargetTableSchema(conFrom, fromTable, conTo, toTable);
 
 			// Statement st = conTo.createStatement();
 			// st.execute("CREATE temporary TABLE d_patients (subject_id integer
@@ -237,46 +212,36 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 
 			copyFromThread.start();
 			copyToThread.start();
-			try {
-				copyFromThread.join();
-			} catch (InterruptedException e) {
-				String msg = e.getMessage() + " Not possible to join the thread to copy data from PostgreSQL.";
-				logger.error(msg);
-				e.printStackTrace();
-				cleanCreatedSchemaTable(connectionTo, targetSchemaTable);
-				throw e;
-			}
-			try {
-				copyToThread.join();
-			} catch (InterruptedException e) {
-				String msg = e.getMessage() + " Not possible to join the thread to copy data to PostgreSQL.";
-				logger.error(msg);
-				e.printStackTrace();
-				cleanCreatedSchemaTable(connectionTo, targetSchemaTable);
-				throw e;
-			}
-			try {
-				return new MigrationResult(taskCopyFromExecutor.get(), taskCopyToExecutor.get());
-			} catch (InterruptedException | ExecutionException e) {
-				String msg = e.getMessage() + " Migration failed. Task did not finish correctly.";
-				logger.error(msg);
-				e.printStackTrace();
-				cleanCreatedSchemaTable(connectionTo, targetSchemaTable);
-				throw e;
-			}
+			
+			copyFromThread.join();
+			copyToThread.join();
+
+			conTo.commit();
+			conFrom.commit();
+			return new MigrationResult(taskCopyFromExecutor.get(), taskCopyToExecutor.get());
+		} catch (Exception e) {
+			e.printStackTrace();
+			String msg = e.getMessage() + " Migration failed. Task did not finish correctly.";
+			logger.error(msg + StackTrace.getFullStackTrace(e),e);
+			conTo.rollback();
+			conFrom.rollback();
+			throw e;
 		} finally {
 			if (conFrom != null) {
+				// calling closed on an already closed connection has no effect
 				conFrom.close();
+				conFrom = null;
 			}
 			if (conTo != null) {
 				conTo.close();
+				conTo = null;
 			}
 		}
 	}
 
 	/**
 	 * @param args
-	 * @throws Exception 
+	 * @throws Exception
 	 */
 	public static void main(String[] args) throws Exception {
 		LoggerSetup.setLogging();
@@ -288,8 +253,7 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 				"test");
 		MigrationResult result;
 		try {
-			result = migrator.migrate(conInfoFrom, "mimic2v26.d_patients", conInfoTo,
-					"mimic2v26.d_patients");
+			result = migrator.migrate(conInfoFrom, "mimic2v26.d_patients", conInfoTo, "mimic2v26.d_patients");
 		} catch (Exception e) {
 			e.printStackTrace();
 			return;

@@ -60,7 +60,7 @@ cd ${current_dir}
 
 log_db=logs
 ./psql -p ${port_1} -c "create database ${log_db} owner pguser" -d template1
-./psql -p ${port_1} -f ${initial_dir}/../scripts/create_log_table_database_logs.sql -d ${log_db}
+./psql -p ${port_1} -f ${initial_dir}/../src/main/resources/create_logs_table.sql -d ${log_db}
 
 postgres2_bin=${downloads_dir}/postgres2/bin
 database2=mimic2_copy
