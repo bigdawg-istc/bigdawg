@@ -732,15 +732,14 @@ public class CatalogViewer {
 	 *             problem with the connection to the catalog or no data for the
 	 *             arguments in the catalog
 	 */
-	public static PostgreSQLConnectionInfo getConnection(int engineId, int dbId) throws Exception {
+	public static PostgreSQLConnectionInfo getConnection(int dbId) throws Exception {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// TODO add cache for the connections (done by Adam)
 		CatalogUtilities.checkConnection(cc);
 		PreparedStatement stmt = cc.connection
 				.prepareStatement("SELECT host,port,databases.name as name,userid,password "
 						+ "FROM catalog.engines engines, catalog.databases databases "
-						+ "WHERE engines.eid=databases.engine_id and engine_id=? and databases.dbid=?");
-		stmt.setInt(1, engineId);
+						+ "WHERE engines.eid=databases.engine_id and and databases.dbid=?");
 		stmt.setInt(2, dbId);
 		ResultSet rs = null;
 		try {
@@ -753,7 +752,7 @@ public class CatalogViewer {
 			throw e;
 		}
 		if (rs.next() == false) {
-			String msg = "No results for the given engineId: " + engineId + " and dbId: " + dbId;
+			String msg = "No results for the given dbId: " + dbId;
 			System.err.println(msg);
 			logger.error(msg);
 			throw new Exception(msg);

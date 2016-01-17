@@ -4,7 +4,7 @@ CREATE TABLE catalog.islands (
        iid integer PRIMARY KEY,
        scope_name varchar(15), -- e.g., RELATIONAL, ARRAY                                                                                                                                 
        access_method varchar(30) -- how do we bring up the parser to validate statements in the island language?                                                                   
-);
+); 
 
 -- underlying database engines                                                                                                                                                             
 CREATE TABLE catalog.engines (
@@ -28,7 +28,8 @@ CREATE TABLE catalog.shims (
 CREATE TABLE catalog.casts (
        src_eid integer REFERENCES catalog.engines(eid),
        dst_eid integer REFERENCES catalog.engines(eid),
-       access_method varchar(30)
+       access_method varchar(30),
+       PRIMARY KEY(src_eid,dst_eid)
 );
 
 -- sometimes once we get to an engine, we may have to connect to a specific db created in it                                                                                        
