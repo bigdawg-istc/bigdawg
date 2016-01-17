@@ -43,7 +43,10 @@ public class SeqScan extends Scan {
 		
 	}
 		
-
+	public SeqScan(Operator o) throws Exception {
+		super(o);
+		this.catalog = SQLDatabaseSingleton.getInstance();
+	}
 
 	
 	

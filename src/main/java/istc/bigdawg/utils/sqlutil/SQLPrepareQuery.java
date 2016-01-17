@@ -1,4 +1,4 @@
-package istc.bigdawg.util;
+package istc.bigdawg.utils.sqlutil;
 
 import java.io.BufferedReader;
 import java.io.FileInputStream;

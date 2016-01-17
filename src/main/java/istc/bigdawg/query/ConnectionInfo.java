@@ -39,6 +39,12 @@ public interface ConnectionInfo {
 	 * @return password for the user
 	 */
 	public String getPassword();
+
+	/**
+	 *
+	 * @return databases/binpath, etc
+	 */
+	public String getDatabase();
 	
 	/**
 	 * @param objects a Collection of objects to be removed 

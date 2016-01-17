@@ -10,8 +10,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import istc.bigdawg.util.SQLUtilities;
-
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.create.table.ColDataType;
@@ -51,8 +49,17 @@ public class SQLAttribute {
 		}
 		
 		public SQLAttribute(SQLAttribute sa) {
-			type = sa.type;
-			name = new String(sa.name);
+			this.type = sa.type;
+			this.name = new String(sa.name);
+			if (sa.srcTable != null) this.srcTable = new String(sa.srcTable);
+			this.expr = sa.expr;
+			
+			if (sa.sources != null) {
+				this.sources = new HashSet<>();
+				for (SQLAttribute a : sa.sources) {
+					this.sources.add(new SQLAttribute(a));
+				}
+			}
 		}
 
 

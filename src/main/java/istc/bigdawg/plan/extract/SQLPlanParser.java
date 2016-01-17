@@ -1,6 +1,5 @@
 package istc.bigdawg.plan.extract;
 
-import java.io.File;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -15,15 +14,18 @@ import istc.bigdawg.extract.logical.SQLTableExpression;
 import istc.bigdawg.plan.SQLQueryPlan;
 import istc.bigdawg.plan.operators.Operator;
 import istc.bigdawg.plan.operators.OperatorFactory;
-import istc.bigdawg.util.SQLPrepareQuery;
-import istc.bigdawg.util.SQLUtilities;
+import istc.bigdawg.utils.sqlutil.SQLPrepareQuery;
+import istc.bigdawg.utils.sqlutil.SQLUtilities;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
 import istc.bigdawg.postgresql.PostgreSQLHandler;
-import istc.bigdawg.postgresql.PostgreSQLHandler.QueryResult;
+//import istc.bigdawg.postgresql.PostgreSQLHandler.QueryResult;
+import net.sf.jsqlparser.parser.CCJSqlParserUtil;
+import net.sf.jsqlparser.statement.select.PlainSelect;
+import net.sf.jsqlparser.statement.select.Select;
 import net.sf.jsqlparser.statement.select.WithItem;
 
 
@@ -42,14 +44,17 @@ public class SQLPlanParser {
 	//private DatabaseSingleton catalog;
 	SQLQueryPlan queryPlan;
 	
-	boolean skipSort = false; 
+	int skipSortCount = 0;
+	
+	// NEW
+	Select query;
 
     
 	// sqlPlan passes in supplement info
-	public SQLPlanParser(String xmlString, SQLQueryPlan sqlPlan) throws Exception {
+	public SQLPlanParser(String xmlString, SQLQueryPlan sqlPlan, String q) throws Exception {
 	   //catalog = DatabaseSingleton.getInstance();
+		this.query = (Select) CCJSqlParserUtil.parse(q);
 		queryPlan = sqlPlan;
-//		System.out.println("Parsing xml String...");
 		
 		DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
 		InputSource is = new InputSource();
@@ -68,7 +73,7 @@ public class SQLPlanParser {
             		Node plan = query.getChildNodes().item(j);
         		    // <Plan>
             		if(plan.getNodeName() == "Plan") {
-            			Operator root = parsePlanTail("main", plan, 0);
+            			Operator root = parsePlanTail("main", plan, 0, false);
             			queryPlan.setRootNode(root); 
 
             			break;
@@ -93,7 +98,8 @@ public class SQLPlanParser {
 		SQLQueryPlan queryPlan = parser.getSQLQueryPlan();
 		
 		// run parser
-		SQLPlanParser p = new SQLPlanParser(xml, queryPlan);
+		@SuppressWarnings("unused")
+		SQLPlanParser p = new SQLPlanParser(xml, queryPlan, query);
 		
 		return queryPlan;
 	}
@@ -107,19 +113,23 @@ public class SQLPlanParser {
 		SQLParseLogical parser = new SQLParseLogical(query);
 		SQLQueryPlan queryPlan = parser.getSQLQueryPlan();
 		
+//		System.out.println("\n\nXMLString: \n"+xmlString+"\n");
+		
 		// run parser
-		SQLPlanParser p = new SQLPlanParser(xmlString, queryPlan);
+		@SuppressWarnings("unused")
+		SQLPlanParser p = new SQLPlanParser(xmlString, queryPlan, query);
 		
 		return queryPlan;
 	}
 	
 	// parse a single <Plan>
-	Operator parsePlanTail(String planName, Node node, int recursionLevel) throws Exception {
+	Operator parsePlanTail(String planName, Node node, int recursionLevel, boolean skipSort) throws Exception {
 		
 		if(node.getNodeName() != "Plan") {
 			throw new Exception("Not parsing a valid plan node!");
 		}
 
+		boolean localSkipSort = false;
 		
 		List<String> sortKeys = new ArrayList<String>();
 		List<String> outItems = new ArrayList<String>();
@@ -137,90 +147,120 @@ public class SQLPlanParser {
 		// scan might be seq, cte, index, etc.
 		
 		for(int j = 0; j < children.getLength(); ++j) {
-					Node c = children.item(j);
+			Node c = children.item(j);
+	
+			switch(c.getNodeName())  {
+			
+			case "Node-Type":
+				nodeType = c.getTextContent();
+				parameters.put("Node-Type", nodeType);
+				if(nodeType.equals("Merge Join")) {
+					
+					localSkipSort = determineLocalSortSkip(planName);
+					
+				}
+				break;
+	
+			case "Strategy":
+				if(c.getTextContent().equals("Sorted") && nodeType.equals("Aggregate")) {
+					localSkipSort = true;
+				}
+			
+			case "Output":
+				  NodeList output = c.getChildNodes();
+				  for(int k = 0; k < output.getLength(); ++k) {
+					  Node outExpr = output.item(k);
+					  if(outExpr.getNodeName() == "Item") {
+						  String s = SQLUtilities.removeOuterParens(outExpr.getTextContent());
+						  outItems.add(s);
+					  }
+				  }
+				  break;
+			case "Sort-Key":
+				  NodeList sortNodes = c.getChildNodes();
+				  for(int k = 0; k < sortNodes.getLength(); ++k) {
+					  Node outExpr = sortNodes.item(k);
+					  if(outExpr.getNodeName() == "Item") {
+						  String s = SQLUtilities.removeOuterParens(outExpr.getTextContent());
+						  sortKeys.add(s);
+					  }
+				  }
+				  break;
+			case "Subplan-Name":
+				localPlan = c.getTextContent(); // switch to new CTE
+				localPlan = localPlan.substring(localPlan.indexOf(" ")+1);  // chop out "CTE " prefix
+				supplement = queryPlan.getSQLTableExpression(localPlan);
+				break;
+			case "Plans":
+				int r = recursionLevel+1;
+				childOps = parsePlansTail(localPlan, c, r, localSkipSort);
+				break;
+				
+			default:
+				parameters.put(c.getNodeName(), c.getTextContent()); // record it for later
+			}
+	
+			
+		} // end children for plan
+
 		
-					switch(c.getNodeName())  {
-					
-					case "Node-Type":
-						nodeType = c.getTextContent();
-						parameters.put("Node-Type", nodeType);
-						break;
 
-					case "Strategy":
-						if(c.getTextContent().equals("Sorted") && nodeType.equals("Aggregate")) {
-							skipSort = true;
-						}
-					
-					case "Output":
-						  NodeList output = c.getChildNodes();
-						  for(int k = 0; k < output.getLength(); ++k) {
-							  Node outExpr = output.item(k);
-							  if(outExpr.getNodeName() == "Item") {
-								  String s = SQLUtilities.removeOuterParens(outExpr.getTextContent());
-								  outItems.add(s);
-							  }
-						  }
-						  break;
-					case "Sort-Key":
-						  NodeList sortNodes = c.getChildNodes();
-						  for(int k = 0; k < sortNodes.getLength(); ++k) {
-							  Node outExpr = sortNodes.item(k);
-							  if(outExpr.getNodeName() == "Item") {
-								  String s = SQLUtilities.removeOuterParens(outExpr.getTextContent());
-								  sortKeys.add(s);
-							  }
-						  }
-						  break;
-					case "Subplan-Name":
-						localPlan = c.getTextContent(); // switch to new CTE
-						localPlan = localPlan.substring(localPlan.indexOf(" ")+1);  // chop out "CTE " prefix
-						supplement = queryPlan.getSQLTableExpression(localPlan);
-						break;
-					case "Plans":
-						int r = recursionLevel+1;
-						childOps = parsePlansTail(localPlan, c, r);
-						break;
-						
-					default:
-						parameters.put(c.getNodeName(), c.getTextContent()); // record it for later
-					}
+		Operator op;
+		if(nodeType.equals("Sort") && skipSort) { // skip sort associated with GroupAggregate
+//			System.out.println("--->>>> node context:: "+planName + "\n"+node.getTextContent());
+			op = childOps.get(0);
+			--skipSortCount;
+		}
+		else {
+			parameters.put("sectionName", planName);
+			op =  OperatorFactory.get(nodeType, parameters, outItems, sortKeys, childOps, queryPlan, supplement);
+		}
 
-					
-				} // end children for plan
-
-
-				Operator op;
-				if(nodeType.equals("Sort") && skipSort == true) { // skip sort associated with GroupAggregate
-					op = childOps.get(0);
-					skipSort = false;
-				}
-				else {
-					op =  OperatorFactory.get(nodeType, parameters, outItems, sortKeys, childOps, queryPlan, supplement);
-				}
-
-//				System.out.println("Generated operator for " + op.getClass() + " with out schema " + op.getOutSchema().keySet());
-				
-				if(!localPlan.equals(planName)) { // we created a cte
-					WithItem w = queryPlan.getWithItem(localPlan);
-
-					op.setCTERootStatus(true);
-					queryPlan.addPlan(localPlan, op);
-				}
-				
-				return op;
+		
+		if(!localPlan.equals(planName)) { // we created a cte
+			op.setCTERootStatus(true);
+			queryPlan.addPlan(localPlan, op);
+		}
+		
+		return op;
 	}
 	
-	
+	/**
+	 * This is used to determine whether a merge-sort should let its child skip its sort should it sees one
+	 * @param planName
+	 * @return
+	 */
+	private boolean determineLocalSortSkip (String planName) {
+		if (planName.equals("main")) {
+			if (((PlainSelect) query.getSelectBody()).getOrderByElements() == null // || ((PlainSelect) query.getSelectBody()).getOrderByElements().isEmpty()
+				) {
+			return true;
+			} 
+		} else {
+			if (query.getWithItemsList() != null //&& (!query.getWithItemsList().isEmpty())
+					) {
+				for (WithItem w : query.getWithItemsList()) {
+					if (w.getName().equals(planName)) {
+						if (((PlainSelect)w.getSelectBody()).getOrderByElements() == null // || ((PlainSelect) query.getSelectBody()).getOrderByElements().isEmpty()
+								) {
+							return true;
+						}
+					}
+				}
+			} 
+		}
+		return false;
+	}
 	
 	// handle a <Plans> op, might return a list
-	List<Operator> parsePlansTail(String planName, Node node, int recursionLevel) throws Exception {
+	List<Operator> parsePlansTail(String planName, Node node, int recursionLevel, boolean skipSort) throws Exception {
 		NodeList children = node.getChildNodes();
 		List<Operator> childNodes = new ArrayList<Operator>();
 		
 		for(int i = 0; i < children.getLength(); ++i) {
 			Node c = children.item(i);
 			if(c.getNodeName() == "Plan") {
-				Operator o = parsePlanTail(planName, c, recursionLevel+1);
+				Operator o = parsePlanTail(planName, c, recursionLevel+1, skipSort);
 				
 				// only add children that are part of the main plan, not the CTEs which are accounted for in CTEScan
 				if(!o.CTERoot()) {

@@ -26,10 +26,10 @@ import java.util.List;
 import java.util.Map;
 
 public class Monitor {
-    private static final String INSERT = "INSERT INTO monitoring(island, query, lastRan, duration) VALUES (%s, %s, -1, -1)";
+    private static final String INSERT = "INSERT INTO monitoring(island, query, lastRan, duration) VALUES ('%s', '%s', -1, -1)";
     private static final String DELETE = "DELETE FROM monitoring WHERE island='%s' AND query='%s'";
     private static final String UPDATE = "UPDATE monitoring SET lastRan=%d, duration=%d WHERE island='%s' AND query='%s'";
-    private static final String RETRIEVE = "SELECT * FROM monitoring WHERE island=%s AND query='%s'";
+    private static final String RETRIEVE = "SELECT * FROM monitoring WHERE island='%s' AND query='%s'";
 
     public static boolean addBenchmarks(List<QueryExecutionPlan> qeps, boolean lean) {
         BDConstants.Shim[] shims = BDConstants.Shim.values();
@@ -93,14 +93,22 @@ public class Monitor {
 
     private static boolean insert(String query, String island) throws NotSupportIslandException {
         PostgreSQLHandler handler = new PostgreSQLHandler();
-        Response response = handler.executeQuery(String.format(INSERT, island, query));
-        return response.getStatus() == 200;
+        try {
+			handler.executeNotQueryPostgreSQL(String.format(INSERT, island, query));
+			return true;
+		} catch (SQLException e) {
+			return false;
+		}
     }
 
     private static boolean delete(String query, String island) throws NotSupportIslandException {
         PostgreSQLHandler handler = new PostgreSQLHandler();
-        Response response = handler.executeQuery(String.format(DELETE, island, query));
-        return response.getStatus() == 200;
+        try {
+			handler.executeNotQueryPostgreSQL(String.format(DELETE, island, query));
+			return true;
+		} catch (SQLException e) {
+			return false;
+		}
     }
 
     public static void runBenchmarks(List<QueryExecutionPlan> qeps) throws Exception {
@@ -111,6 +119,6 @@ public class Monitor {
 
     public void finishedBenchmark(QueryExecutionPlan qep, long startTime, long endTime) throws SQLException {
         PostgreSQLHandler handler = new PostgreSQLHandler();
-        handler.executeNotQueryPostgreSQL(String.format(UPDATE, endTime, endTime-startTime, qep.getIsland(), QueryExecutionPlan.qepToString(qep)));
+        handler.executeStatementPostgreSQL(String.format(UPDATE, endTime, endTime-startTime, qep.getIsland(), QueryExecutionPlan.qepToString(qep)));
     }
 }

@@ -8,7 +8,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import istc.bigdawg.cast.Cast;
-import istc.bigdawg.catalog.Catalog;
 import istc.bigdawg.signature.Signature;
 
 public class UserQueryParser {
@@ -23,14 +22,14 @@ public class UserQueryParser {
 	 * @param str
 	 * @return ArrayList of Strings, each an island call or a cast call.
 	 */
-	public static ArrayList<String> getUnwrappedQueriesByIslands(String str, String extractTitle) {
+	public static Map<String, String> getUnwrappedQueriesByIslands(String str, String extractTitle) {
 		
 		Pattern mark					= Pattern.compile("(?i)(bdrel\\(|bdarray\\(|bdtext\\(|bdgraph\\(|"
 											+ "bdstream\\(|bdcast\\(|"
 											+ "(, ?(relational|graph|stream|text|array)\\))|\\(|\\))");
 		Matcher matcher					= mark.matcher(str);
 	    
-	    ArrayList<String> extraction 	= new ArrayList<String>();
+	    Map<String, String> extraction 	= new HashMap<>();
 	    Stack<String> stkwrite			= new Stack<String>();
 	    Stack<Integer> stkparen			= new Stack<Integer>();
 	    
@@ -59,9 +58,9 @@ public class UserQueryParser {
 	    		} else {
 		    		// finish and extract this entry, add new variable for the prior
 		    		if (parenLevel == 1)
-		    			extraction.add(stkwrite.pop() + str.substring(lastStop, matcher.end()) + ";");
+		    			extraction.put("OUTPUT", stkwrite.pop() + str.substring(lastStop, matcher.end()));// + ";");
 		    		else 
-		    			extraction.add(stkwrite.pop() + str.substring(lastStop, matcher.end()) + ", " + extractTitle + extractionCounter);
+		    			extraction.put(extractTitle + extractionCounter, stkwrite.pop() + str.substring(lastStop, matcher.end()));
 		    		stkwrite.push(stkwrite.pop() + extractTitle + extractionCounter);
 		    		
 		    		extractionCounter += 1;
@@ -80,46 +79,39 @@ public class UserQueryParser {
 	/**
 	 * Takes the unwrapped queries and turn them into signatures and casts.
 	 * Currently, it's a TSV string of operators, a TSV string of of objects, and a TSV string  
-	 * @param cc
 	 * @param qs, or queries
 	 * @return ArrayList of Signatures and casts
 	 * @throws Exception
 	 */
-	public static Map<String, Object> getSignaturesAndCasts (Catalog cc, ArrayList<String> qs) throws Exception {
+	public static Map<String, Object> getSignaturesAndCasts (Map<String, String> qs) throws Exception {
 		
 		Map<String, Object> output	= new HashMap<String, Object>();
 		Pattern islandStart 		= Pattern.compile("^(bdrel\\(|bdarray\\(|bdtext\\(|bdgraph\\(|bdstream\\(|bdcast\\()");
-		Pattern dawgtag 			= Pattern.compile("[;]|([A-Z]+_[0-9_]+)$");
+		Pattern dawgtag 			= Pattern.compile("((\\);)|(\\)))$");
 		
 		Matcher mStart;
 		Matcher mEnd;
 		
 		String query;
 		String islandString;
-		String tagString;
 		
-		for (String q : qs) {
+		for (String tagString : qs.keySet()) {
+			
+			String q = qs.get(tagString);
 			
 			mStart = islandStart.matcher(q);
 			mEnd   = dawgtag.matcher(q);
 			
 			if (mStart.find() && mEnd.find()) {
 				islandString = q.substring(mStart.start(), mStart.end());
-				tagString    = q.substring(mEnd.start(), mEnd.end());
-				
-				if (!tagString.startsWith(";")) {
-					query	  = q.substring(mStart.end(), mEnd.start()-3); // only executable query left in there
-				} else {
-					query     = q.substring(mStart.end(), mEnd.start()-1);
-					tagString = "OUTPUT";					
-				}
+				query = q.substring(mStart.end(), mEnd.start());
 				
 				switch (islandString.toLowerCase()) {
 					case "bdrel(":
-						output.put(tagString, new Signature(cc, query, "RELATIONAL", tagString));
+						output.put(tagString, new Signature(query, "RELATIONAL", tagString));
 						break;
 					case "bdarray(":
-						output.put(tagString, new Signature(cc, query, "ARRAY", tagString));
+						output.put(tagString, new Signature(query, "ARRAY", tagString));
 						break;
 					case "bdtext(":
 						System.out.print  ("[Unsupported]\tTEXT\t");

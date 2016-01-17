@@ -22,8 +22,10 @@ public enum BigDawgConfigProperties {
 	private String accumuloPasswordToken;
 
 	private String scidbHostname;
+	private String scidbPort;
 	private String scidbUser;
 	private String scidbPassword;
+	private String scidbBinPath;
 
 	private String sStoreURL;
 	private String accumuloShellScript;
@@ -35,8 +37,7 @@ public enum BigDawgConfigProperties {
 	private BigDawgConfigProperties() throws AssertionError {
 		Properties prop = new Properties();
 		String propFileName = "bigdawg-config.properties";
-		InputStream inputStream = BigDawgConfigProperties.class
-				.getClassLoader().getResourceAsStream(propFileName);
+		InputStream inputStream = BigDawgConfigProperties.class.getClassLoader().getResourceAsStream(propFileName);
 		if (inputStream != null) {
 			try {
 				prop.load(inputStream);
@@ -46,8 +47,7 @@ public enum BigDawgConfigProperties {
 			}
 		} else {
 			FileNotFoundException e = new FileNotFoundException(
-					"property file '" + propFileName
-							+ "' not found in the classpath");
+					"property file '" + propFileName + "' not found in the classpath");
 			e.printStackTrace();
 			throw new AssertionError(e);
 		}
@@ -62,28 +62,29 @@ public enum BigDawgConfigProperties {
 		this.accumuloIstanceName = prop.getProperty("main.accumulo.instanceName");
 		this.accumuloZooKeepers = prop.getProperty("main.accumulo.zooKeepers");
 		this.accumuloUser = prop.getProperty("main.accumulo.user");
-		this.accumuloPasswordToken = prop
-				.getProperty("main.accumulo.passwordToken");
-		this.accumuloShellScript=prop.getProperty("main.accumulo.shell.script");
-		
+		this.accumuloPasswordToken = prop.getProperty("main.accumulo.passwordToken");
+		this.accumuloShellScript = prop.getProperty("main.accumulo.shell.script");
+
 		this.sStoreURL = prop.getProperty("main.sstore.alerturl");
-		
-		this.myriaHost=prop.getProperty("main.myria.host");
-		this.myriaPort=prop.getProperty("main.myria.port");
-		this.myriaContentType=prop.getProperty("main.myria.content.type");
-		
-		this.scidbHostname=prop.getProperty("main.scidb.hostname");
-		this.scidbPassword=prop.getProperty("main.scidb.password");
-		this.scidbUser=prop.getProperty("main.scidb.user");
-		
+
+		this.myriaHost = prop.getProperty("main.myria.host");
+		this.myriaPort = prop.getProperty("main.myria.port");
+		this.myriaContentType = prop.getProperty("main.myria.content.type");
+
+		this.scidbHostname = prop.getProperty("main.scidb.hostname");
+		this.scidbPort = prop.getProperty("main.scidb.port");
+		this.scidbPassword = prop.getProperty("main.scidb.password");
+		this.scidbUser = prop.getProperty("main.scidb.user");
+		this.scidbBinPath = prop.getProperty("main.scidb.bin_path");
 	}
+
 	/**
 	 * @return the accumuloIstanceType
 	 */
 	public String getAccumuloIstanceType() {
 		return accumuloIstanceType;
 	}
-	
+
 	/**
 	 * @return the accumuloIstanceType
 	 */
@@ -166,10 +167,8 @@ public enum BigDawgConfigProperties {
 	}
 
 	public String getBaseURI() {
-		String baseURI = "http://"
-				+ BigDawgConfigProperties.INSTANCE.getGrizzlyIpAddress() + ":"
-				+ BigDawgConfigProperties.INSTANCE.getGrizzlyPort()
-				+ "/bigdawg/";
+		String baseURI = "http://" + BigDawgConfigProperties.INSTANCE.getGrizzlyIpAddress() + ":"
+				+ BigDawgConfigProperties.INSTANCE.getGrizzlyPort() + "/bigdawg/";
 		return baseURI;
 	}
 
@@ -190,16 +189,33 @@ public enum BigDawgConfigProperties {
 	public String getMyriaHost() {
 		return myriaHost;
 	}
+
 	/**
 	 * @return the myriaPort
 	 */
 	public String getMyriaPort() {
 		return myriaPort;
 	}
+
 	/**
 	 * @return the myriaContentType
 	 */
 	public String getMyriaContentType() {
 		return myriaContentType;
+	}
+
+	/**
+	 * 
+	 * @return SciDB bin path
+	 */
+	public String getScidbBinPath() {
+		return scidbBinPath;
+	}
+
+	/**
+	 * @return the scidbPort
+	 */
+	public String getScidbPort() {
+		return scidbPort;
 	}
 }

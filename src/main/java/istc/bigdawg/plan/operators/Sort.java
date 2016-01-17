@@ -1,5 +1,6 @@
 package istc.bigdawg.plan.operators;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -15,6 +16,7 @@ import net.sf.jsqlparser.statement.select.Select;
 
 public class Sort extends Operator {
 
+	
 	private List<String> sortKeys;
 	
 	public enum SortOrder {ASC, DESC}; // ascending or descending?
@@ -39,9 +41,9 @@ public class Sort extends Operator {
 		// instantiate iterator to get the right one
 		// iterate from first OVER --> ORDER BY
 
+		
+		sortOrder = supplement.getSortOrder(keys, parameters.get("sectionName"));
 		sortKeys = keys;
-
-		sortOrder = supplement.getSortOrder(sortKeys);
 		
 //		secureCoordination = children.get(0).secureCoordination;
 		outSchema = new LinkedHashMap<String, SQLAttribute>(child.outSchema);
@@ -61,9 +63,28 @@ public class Sort extends Operator {
 		}
 		
 		orderByElements = supplement.getOrderByClause();
-		
-
 	
+	}
+	
+	public Sort(Operator o) throws Exception {
+		super(o);
+		Sort s = (Sort) o;
+
+//		private List<String> sortKeys;
+//		private SortOrder sortOrder;
+//		private List<OrderByElement> orderByElements;
+//		protected boolean isWinAgg = false; // is it part of a windowed aggregate or an ORDER BY clause?
+		
+		this.sortKeys = new ArrayList<>();
+		this.isWinAgg = s.isWinAgg;
+		for (String str : s.sortKeys) {
+			this.sortKeys.add(new String(str));
+		}
+		this.sortOrder = s.sortOrder; 
+		this.orderByElements = new ArrayList<>();
+		for (OrderByElement ob : s.orderByElements) {
+			this.orderByElements.add(ob);
+		}
 	}
 	
 	@Override

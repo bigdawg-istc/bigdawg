@@ -40,6 +40,11 @@ CREATE TABLE catalog.databases (
        password varchar(15) -- may be hash of pwd
 );
 
+CREATE TABLE catalog.scidbbinpaths (
+    eid integer PRIMARY KEY,
+    bin_path varchar(100)
+);
+
 -- we need to model objects in terms of where they were created and their present storage site                                                                                      
 -- e.g., if we created an array with dimensions X,Y and then we migrate it over to psql, we don't want to lose its initial dimensions                                               
 CREATE TABLE catalog.objects (

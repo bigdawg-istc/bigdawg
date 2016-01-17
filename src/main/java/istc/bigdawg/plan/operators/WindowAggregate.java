@@ -8,7 +8,7 @@ import istc.bigdawg.extract.logical.SQLTableExpression;
 import istc.bigdawg.plan.SQLQueryPlan;
 import istc.bigdawg.plan.extract.SQLOutItem;
 import istc.bigdawg.schema.SQLAttribute;
-import istc.bigdawg.util.SQLExpressionUtils;
+import istc.bigdawg.utils.sqlutil.SQLExpressionUtils;
 
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.AnalyticExpression;

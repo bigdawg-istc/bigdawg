@@ -22,6 +22,7 @@ public class OperatorFactory {
 				return new CommonSQLTableExpressionScan(parameters, output, null, plan, supplement);
 			case "Hash Join":
 			case "Nested Loop":
+			case "Merge Join":
 				return new Join(parameters, output, children.get(0), children.get(1), plan, supplement);
 			case "Seq Scan":
 				return new SeqScan(parameters, output, null, supplement);

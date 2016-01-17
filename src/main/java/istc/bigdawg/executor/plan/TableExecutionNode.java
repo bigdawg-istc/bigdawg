@@ -87,4 +87,9 @@ public class TableExecutionNode implements ExecutionNode {
             return false;
         return true;
     }
+
+    @Override
+    public String toString() {
+        return "TableExecutionNode [engine=" + engine + ", tableName=" + tableName + "]";
+    }
 }

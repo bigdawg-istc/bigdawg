@@ -1,6 +1,5 @@
 package istc.bigdawg.signature;
 
-import istc.bigdawg.catalog.Catalog;
 import istc.bigdawg.signature.builder.ArraySignatureBuilder;
 import istc.bigdawg.signature.builder.RelationalSignatureBuilder;
 
@@ -20,17 +19,17 @@ public class Signature {
 	 * @param island
 	 * @throws Exception
 	 */
-	public Signature(Catalog cc, String query, String island, String identifier) throws Exception {
+	public Signature(String query, String island, String identifier) throws Exception {
 		
 		switch (island.toLowerCase()) {
 			case "relational":
 				setSig1(RelationalSignatureBuilder.sig1(query));
-				setSig2(RelationalSignatureBuilder.sig2(cc, query));
+				setSig2(RelationalSignatureBuilder.sig2(query));
 				setSig3(RelationalSignatureBuilder.sig3(query));
 				break;
 			case "array":
 				setSig1(ArraySignatureBuilder.sig1(query));
-				setSig2(ArraySignatureBuilder.sig2(cc, query));
+				setSig2(ArraySignatureBuilder.sig2(query));
 				setSig3(ArraySignatureBuilder.sig3(query));
 				break;
 			default:

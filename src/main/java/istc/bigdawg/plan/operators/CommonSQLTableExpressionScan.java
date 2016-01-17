@@ -30,8 +30,6 @@ public class CommonSQLTableExpressionScan extends Scan {
 	CommonSQLTableExpressionScan(Map<String, String> parameters, List<String> output, Operator child, SQLQueryPlan plan, SQLTableExpression supplement) throws Exception  {
 		super(parameters, output, child, supplement);
 		
-		
-
 		cteName = parameters.get("CTE-Name");
 		with = plan.getWithItem(cteName);
 		
@@ -41,8 +39,6 @@ public class CommonSQLTableExpressionScan extends Scan {
 		// insert cte alias for schema resolution
 		// delete everything before the first dot and replace it with the tableAlias
 		sourceStatement = plan.getPlanRoot(cteName);
-		
-//		secureCoordination = sourceStatement.secureCoordination;
 		
 		Iterator<Map.Entry<String, SQLAttribute>  > schemaItr = sourceStatement.outSchema.entrySet().iterator();
 
@@ -71,13 +67,48 @@ public class CommonSQLTableExpressionScan extends Scan {
 			outSchema.put(alias, sa);
 			
 		}
-		
-
-		
-		
 
 	}
 
+	
+	public CommonSQLTableExpressionScan(Operator o) throws Exception {
+		super(o);
+		CommonSQLTableExpressionScan c = (CommonSQLTableExpressionScan) o;
+		this.cteName = new String(c.cteName);
+		
+		Operator s = c.sourceStatement;
+		
+		if (s instanceof Join) {
+			this.sourceStatement = new Join(s);
+		} else if (s instanceof SeqScan) {
+			this.sourceStatement = new SeqScan(s);
+		} else if (s instanceof CommonSQLTableExpressionScan) {
+			this.sourceStatement = new CommonSQLTableExpressionScan(s);
+		} else if (s instanceof Sort) {
+			this.sourceStatement = new Sort(s);
+		} else {
+			if (s instanceof Aggregate) {
+			} else if (s instanceof Distinct) {
+			} else if (s instanceof WindowAggregate) {
+			} else {
+				throw new Exception("Unknown Operator from Operator Copy: "+s.getClass().toString());
+			}
+			throw new Exception("Unsupported Operator Copy: "+s.getClass().toString());
+		}
+		
+		this.with = new WithItem();
+		try {
+			this.with.setName(new String(c.with.getName()));
+			this.with.setRecursive(c.with.isRecursive());
+			this.with.setSelectBody(c.with.getSelectBody());
+			this.with.setWithItemList(c.with.getWithItemList());
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+//		private String cteName;
+//		private WithItem with;
+//		private Operator sourceStatement;
+	};
 
 	@Override
 	public Select generatePlaintext(Select srcStatement, Select dstStatement) throws Exception {

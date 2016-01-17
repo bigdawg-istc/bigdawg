@@ -237,3 +237,12 @@ postgresql logs for mimic2: /home/ubuntu/logs_postgres
 
 psql -U pguser -d mimic2 -h localhost
 
+useful commands:
+copy region from '/home/adam/data/tpch/tpch1G/csv/region.csv' (DELIMITER '|');
+
+SELECT EXISTS (
+   SELECT 1
+   FROM   information_schema.tables 
+   WHERE  table_schema = 'public'
+   AND    table_name = 'region'
+);

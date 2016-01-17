@@ -13,7 +13,7 @@ import istc.bigdawg.query.ConnectionInfo;
 public interface ExecutionNode {
 
     /**
-     * @return int representing the database engine where the node should be
+     * @return ConnectionInfo representing the database engine where the node should be
      *         executed
      */
     public ConnectionInfo getEngine();

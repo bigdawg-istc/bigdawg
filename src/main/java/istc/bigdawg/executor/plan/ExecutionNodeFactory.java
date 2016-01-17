@@ -11,20 +11,28 @@ import java.util.Set;
 import org.jgrapht.graph.DefaultEdge;
 
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
+import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.query.ConnectionInfo;
+import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.select.Select;
 import istc.bigdawg.catalog.CatalogInstance;
 import istc.bigdawg.catalog.CatalogViewer;
+import istc.bigdawg.packages.QueryContainerForCommonDatabase;
 import istc.bigdawg.plan.SQLQueryPlan;
 import istc.bigdawg.plan.operators.CommonSQLTableExpressionScan;
 import istc.bigdawg.plan.operators.Join;
 import istc.bigdawg.plan.operators.Operator;
 
+
 public class ExecutionNodeFactory {
 
-	public static Map<String, Operator> traverseAndPickOutWiths (Operator root, SQLQueryPlan queryPlan) throws Exception {
-		Map<String, Operator> result = new HashMap<>(); 
-		result.put("BIGDAWG_MAIN", root);//.generateSelectForExecutionTree(queryPlan.getStatement(), null));
+	private static int maxSerial = 0;
+	
+	@Deprecated
+	public static Map<String, Operator> traverseAndPickOutWiths (Operator root) throws Exception {
+		Map<String, Operator> result = new HashMap<>();
+		maxSerial++;
+		result.put("BIGDAWG_MAIN_"+maxSerial, root);//.generateSelectForExecutionTree(queryPlan.getStatement(), null));
 		
 		List<Operator> treeWalker = root.getChildren();
 		while(treeWalker.size() > 0) {
@@ -44,12 +52,8 @@ public class ExecutionNodeFactory {
 		return result;
 	}
 	
-	private static ConnectionInfo getConnectionInfo(int dbid) throws Exception {
-		ArrayList<String> infos = CatalogViewer.getConnectionInfo(CatalogInstance.INSTANCE.getCatalog(), dbid);
-		return new PostgreSQLConnectionInfo(infos.get(0), infos.get(1), infos.get(2), infos.get(3), infos.get(4));
-	}
-	
-	public static void addNodesAndEdges(QueryExecutionPlan qep, Map<String, ArrayList<String>> dependency_map, Map<String, Operator> withNSelect, Select srcSTMT) throws Exception {
+	@Deprecated
+	public static void addNodesAndEdgesOLD(QueryExecutionPlan qep, Map<String, ArrayList<String>> map, Map<String, Operator> withNSelect, Select srcSTMT) throws Exception {
 
 		HashMap<String, ExecutionNode> dependentNodes = new HashMap<>();
 		ArrayList<String> edgesFrom = new ArrayList<>();
@@ -59,13 +63,13 @@ public class ExecutionNodeFactory {
 
 			// root node
 			
-			String ref = dependency_map.get(statementName).get(0);
+			String ref = map.get(statementName).get(0);
 			
 			while ((ref.charAt(0) ^ 0x30) > 0x9) { // trying to find the operator a home
-				ref = dependency_map.get(ref).get(0);
+				ref = map.get(ref).get(0);
 			}
 			
-			ConnectionInfo psqlInfo = getConnectionInfo(Integer.parseInt(ref));
+			ConnectionInfo psqlInfo = PostgreSQLHandler.generateConnectionInfo(Integer.parseInt(ref));
 			
 			Operator o = withNSelect.get(statementName);
 			String put = null; if (o instanceof CommonSQLTableExpressionScan) put = statementName;
@@ -74,11 +78,11 @@ public class ExecutionNodeFactory {
 			dependentNodes.put(statementName, new LocalQueryExecutionNode(sel, psqlInfo, statementName));
 //			System.out.printf("Adding node: %s; %s\n", statementName, sel);
 			// dependences
-			for (String s : dependency_map.get(statementName)) {
+			for (String s : map.get(statementName)) {
 
-				String loc = dependency_map.get(s).get(0);
+				String loc = map.get(s).get(0);
 				if ((loc.charAt(0) ^ 0x30) <= 0x9) {
-					dependentNodes.put(s, new TableExecutionNode(getConnectionInfo(Integer.parseInt(loc)), s));
+					dependentNodes.put(s, new TableExecutionNode(PostgreSQLHandler.generateConnectionInfo(Integer.parseInt(loc)), s));
 					edgesFrom.add(s);
 					edgesTo.add(statementName);
 					continue;
@@ -86,10 +90,10 @@ public class ExecutionNodeFactory {
 				
 				String i = s;
 				while ((i.charAt(0) ^ 0x30) > 0x9) {
-					i = dependency_map.get(i).get(0);
+					i = map.get(i).get(0);
 				}
 				
-				psqlInfo = getConnectionInfo(Integer.parseInt(i));
+				psqlInfo = PostgreSQLHandler.generateConnectionInfo(Integer.parseInt(i));
 				o 	= withNSelect.get(s);
 				put = null; if (o instanceof CommonSQLTableExpressionScan) put = s;
 				sel = o.generateSelectForExecutionTree(srcSTMT, put);
@@ -108,18 +112,57 @@ public class ExecutionNodeFactory {
 		}
 	}
 	
-	// not using it for now
-	public static List<Operator> joinGrouper(Join root) throws Exception {
-		ArrayList<Operator> result = new ArrayList<>();
-		if (root.getChildren() == null)
-			throw new Exception("A join without a child: "+root);
-		for (Operator o : root.getChildren()) {
-			if (o instanceof Join) {
-				result.addAll(joinGrouper((Join)o));
-			} else {
-				result.add(o);
-			}
+	public static void addNodesAndEdgesNaive(QueryExecutionPlan qep, Operator remainder, List<String> remainderLoc, Map<String, QueryContainerForCommonDatabase> container, Select srcStmt) throws Exception {
+		//TODO this should take a new QEP, a local map, the remainder, the container, and something else about the query
+		
+		HashMap<String, ExecutionNode> dependentNodes = new HashMap<>();
+		ArrayList<String> edgesFrom = new ArrayList<>();
+		ArrayList<String> edgesTo = new ArrayList<>();
+		
+		String remainderDBID;
+		ConnectionInfo remainderCI;
+		if (remainderLoc != null) {
+			System.out.println("remainderLoc not null; result: "+ remainderLoc.get(0));
+			remainderCI = PostgreSQLHandler.generateConnectionInfo(Integer.parseInt(remainderLoc.get(0)));	
+		} else {
+			remainderDBID = container.values().iterator().next().getConnectionInfos().keySet().iterator().next();
+			System.out.println("remainderLoc IS null; result: "+ remainderDBID);
+			remainderCI = PostgreSQLHandler.generateConnectionInfo(Integer.parseInt(remainderDBID));
 		}
-		return result;
+		
+		String remainderInto = qep.getSerializedName();
+		String remainderSelectIntoString = remainder.generateSelectForExecutionTree(srcStmt, null);
+		LocalQueryExecutionNode remainderNode = new LocalQueryExecutionNode(remainderSelectIntoString, remainderCI, remainderInto);
+		dependentNodes.put(remainderInto, remainderNode);
+			
+		qep.setTerminalTableName(remainderInto);
+		qep.setTerminalTableNode(remainderNode);
+		
+		// if there remainderLoc is not null, then there is nothing in the container. 
+		// Return.
+		if (remainderLoc != null) {
+			qep.addVertex(remainderNode);
+			return;
+		}
+		
+		
+		// this function is called the naive version because it just migrates everything to a random DB -- first brought up by iterator
+		for (String statementName : container.keySet()) {
+			
+			String selectIntoString = container.get(statementName).generateSelectIntoString();
+			ConnectionInfo ci = container.get(statementName).getConnectionInfos().values().iterator().next();
+			dependentNodes.put(statementName, new LocalQueryExecutionNode(selectIntoString, ci, statementName));
+			
+			edgesFrom.add(statementName);
+			edgesTo.add(remainderInto);
+			
+		}
+		
+		for (String s : dependentNodes.keySet()) {
+			qep.addVertex(dependentNodes.get(s));
+		}
+		for (int i = 0; i < edgesFrom.size() ; i++) {
+			qep.addDagEdge(dependentNodes.get(edgesFrom.get(i)), dependentNodes.get(edgesTo.get(i)));
+		}
 	}
 }

@@ -7,10 +7,8 @@ import java.io.IOException;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 
 import org.apache.log4j.Logger;
@@ -20,7 +18,10 @@ import org.postgresql.core.BaseConnection;
 import istc.bigdawg.LoggerSetup;
 import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
+import istc.bigdawg.postgresql.PostgreSQLHandler;
+import istc.bigdawg.postgresql.PostgreSQLSchemaTableName;
 import istc.bigdawg.query.ConnectionInfo;
+import istc.bigdawg.util.StackTrace;
 
 /**
  * @author Adam Dziedzic
@@ -49,23 +50,13 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 		return copyFromStringBuf.toString();
 	}
 
-	private Connection getConnection(PostgreSQLConnectionInfo conInfo) throws SQLException {
-		Connection con;
-		String url = conInfo.getUrl();
-		String user = conInfo.getUser();
-		String password = conInfo.getPassword();
-		try {
-			con = DriverManager.getConnection(url, user, password);
-		} catch (SQLException e) {
-			String msg = "Could not connect to the PostgreSQL instance: Url: " + url + " User: " + user + " Password: "
-					+ password;
-			logger.error(msg);
-			e.printStackTrace();
-			throw e;
-		}
-		return con;
-	}
-
+	/**
+	 * This is run as a separate thread to copy data from PostgreSQL.
+	 * 
+	 * @author Adam Dziedzic
+	 * 
+	 *         Jan 14, 2016 6:06:36 PM
+	 */
 	private class CopyFromExecutor implements Callable<Long> {
 
 		private CopyManager cpFrom;
@@ -79,24 +70,33 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 			this.output = output;
 		}
 
+		/**
+		 * Copy data from PostgreSQL.
+		 * 
+		 * @return number of extracted rows
+		 */
 		public Long call() {
-			Long countLoadedRows = 0L;
+			Long countExtractedRows = 0L;
 			try {
-				countLoadedRows = cpFrom.copyOut(copyFromString, output);
+				countExtractedRows = cpFrom.copyOut(copyFromString, output);
 				output.close();
-			} catch (IOException e) {
-				String msg = "Problem with thread for PostgreSQL copy manager " + "while copying data from PostgreSQL.";
-				logger.error(msg);
-				e.printStackTrace();
-			} catch (SQLException e) {
-				String msg = "SQL problem for copy data from PostgreSQL.";
-				logger.error(msg);
+			} catch (IOException | SQLException e) {
+				String msg = e.getMessage() + " Problem with thread for PostgreSQL copy manager "
+						+ "while copying (extracting) data from PostgreSQL.";
+				logger.error(msg, e);
 				e.printStackTrace();
 			}
-			return countLoadedRows;
+			return countExtractedRows;
 		}
 	}
 
+	/**
+	 * This is run in a separate thread to copy data to PostgreSQL.
+	 * 
+	 * @author Adam Dziedzic
+	 * 
+	 *         Jan 14, 2016 6:07:05 PM
+	 */
 	private class CopyToExecutor implements Callable<Long> {
 
 		private CopyManager cpTo;
@@ -109,22 +109,23 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 			this.input = input;
 		}
 
+		/**
+		 * Copy data to PostgreSQL.
+		 * 
+		 * @return number of loaded rows
+		 */
 		public Long call() {
-			/* Number of extracted rows. */
-			Long countExtractedRows = 0L;
+			Long countLoadedRows = 0L;
 			try {
-				countExtractedRows = cpTo.copyIn(copyToString, input);
+				countLoadedRows = cpTo.copyIn(copyToString, input);
 				input.close();
-			} catch (IOException e) {
-				String msg = "Problem with thread for PostgreSQL copy manager " + "while copying data to PostgreSQL.";
-				logger.error(msg);
-				e.printStackTrace();
-			} catch (SQLException e) {
-				String msg = "SQL problem for copy data from PostgreSQL.";
+			} catch (IOException | SQLException e) {
+				String msg = e.getMessage() + " Problem with thread for PostgreSQL copy manager "
+						+ "while copying data to PostgreSQL.";
 				logger.error(msg);
 				e.printStackTrace();
 			}
-			return countExtractedRows;
+			return countLoadedRows;
 		}
 	}
 
@@ -135,7 +136,7 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 			try {
 				return this.migrate((PostgreSQLConnectionInfo) connectionFrom, fromTable,
 						(PostgreSQLConnectionInfo) connectionTo, toTable);
-			} catch (SQLException | IOException e) {
+			} catch (Exception e) {
 				throw new MigrationException(e.getMessage(), e);
 			}
 		}
@@ -143,23 +144,50 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 	}
 
 	/**
-	 * @return
+	 * Create a new schema and table in the connectionTo if they not exists. Get
+	 * the table definition from connectionFrom.
+	 * 
+	 * @param connectionFrom
+	 *            from which database we fetch the data
+	 * @param fromTable
+	 *            from which table we fetch the data
+	 * @param connectionTo
+	 *            to which database we connect to
+	 * @param toTable
+	 *            to which table we want to load the data
 	 * @throws SQLException
-	 * @throws IOException
+	 */
+	private void createTargetTableSchema(Connection connectionFrom, String fromTable, Connection connectionTo,
+			String toTable) throws SQLException {
+		PostgreSQLSchemaTableName schemaTable = new PostgreSQLSchemaTableName(toTable);
+		PostgreSQLHandler.executeStatement(connectionTo, "create schema if not exists " + schemaTable.getSchemaName());
+		String createTableStatement = PostgreSQLHandler.getCreateTable(connectionFrom, fromTable);
+		PostgreSQLHandler.executeStatement(connectionTo, createTableStatement);
+	}
+
+	/**
+	 * @return {@link MigrationResult} with information about the migration
+	 *         process
+	 * @throws Exception
 	 * 
 	 */
 	public MigrationResult migrate(PostgreSQLConnectionInfo connectionFrom, String fromTable,
-			PostgreSQLConnectionInfo connectionTo, String toTable) throws SQLException, IOException {
+			PostgreSQLConnectionInfo connectionTo, String toTable) throws Exception {
 		logger.debug("Specific data migration");
 
 		String copyFromString = getCopyCommand(fromTable, DIRECTION.TO/* STDOUT */);
-		String copyToString = getCopyCommand(toTable, DIRECTION.FROM/* STDOUT */);
+		String copyToString = getCopyCommand(toTable, DIRECTION.FROM/* STDIN */);
 
 		Connection conFrom = null;
 		Connection conTo = null;
 		try {
-			conFrom = getConnection(connectionFrom);
-			conTo = getConnection(connectionTo);
+			conFrom = PostgreSQLHandler.getConnection(connectionFrom);
+			conTo = PostgreSQLHandler.getConnection(connectionTo);
+
+			conFrom.setReadOnly(true);
+			conFrom.setAutoCommit(false);
+			conTo.setAutoCommit(false);
+			createTargetTableSchema(conFrom, fromTable, conTo, toTable);
 
 			// Statement st = conTo.createStatement();
 			// st.execute("CREATE temporary TABLE d_patients (subject_id integer
@@ -183,43 +211,38 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 
 			copyFromThread.start();
 			copyToThread.start();
-			try {
-				copyFromThread.join();
-			} catch (InterruptedException e1) {
-				String msg = "Not possible to join the thread to copy data from PostgreSQL.";
-				logger.error(msg);
-				e1.printStackTrace();
-			}
-			try {
-				copyToThread.join();
-			} catch (InterruptedException e) {
-				String msg = "Not possible to join the thread to copy data to PostgreSQL.";
-				logger.error(msg);
-				e.printStackTrace();
-			}
-			try {
-				return new MigrationResult(taskCopyFromExecutor.get(), taskCopyToExecutor.get());
-			} catch (InterruptedException | ExecutionException e) {
-				String msg = "Migration failed. Task did not finish correctly.";
-				logger.error(msg);
-				e.printStackTrace();
-			}
+			
+			copyFromThread.join();
+			copyToThread.join();
+
+			conTo.commit();
+			conFrom.commit();
+			return new MigrationResult(taskCopyFromExecutor.get(), taskCopyToExecutor.get());
+		} catch (Exception e) {
+			e.printStackTrace();
+			String msg = e.getMessage() + " Migration failed. Task did not finish correctly.";
+			logger.error(msg + StackTrace.getFullStackTrace(e),e);
+			conTo.rollback();
+			conFrom.rollback();
+			throw e;
 		} finally {
 			if (conFrom != null) {
+				// calling closed on an already closed connection has no effect
 				conFrom.close();
+				conFrom = null;
 			}
 			if (conTo != null) {
 				conTo.close();
+				conTo = null;
 			}
 		}
-		return null;
 	}
 
 	/**
 	 * @param args
-	 * @throws IOException
+	 * @throws Exception
 	 */
-	public static void main(String[] args) throws IOException {
+	public static void main(String[] args) throws Exception {
 		LoggerSetup.setLogging();
 		System.out.println("Migrating data from PostgreSQL to PostgreSQL");
 		FromPostgresToPostgres migrator = new FromPostgresToPostgres();
@@ -227,24 +250,23 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 				"test");
 		PostgreSQLConnectionInfo conInfoTo = new PostgreSQLConnectionInfo("localhost", "5430", "mimic2_copy", "pguser",
 				"test");
+		MigrationResult result;
 		try {
-			MigrationResult result = migrator.migrate(conInfoFrom, "mimic2v26.d_patients", conInfoTo,
-					"mimic2v26.d_patients");
-			logger.debug("Number of extracted rows: " + result.getCountExtractedRows() + " Number of loaded rows: "
-					+ result.getCountLoadedRows());
-		} catch (SQLException | IOException e) {
-			String msg = "Problem with specific data migration.";
-			logger.error(msg);
+			result = migrator.migrate(conInfoFrom, "mimic2v26.d_patients", conInfoTo, "mimic2v26.d_patients");
+		} catch (Exception e) {
 			e.printStackTrace();
+			return;
 		}
+		logger.debug("Number of extracted rows: " + result.getCountExtractedRows() + " Number of loaded rows: "
+				+ result.getCountLoadedRows());
 
 		ConnectionInfo conFrom = conInfoFrom;
 		ConnectionInfo conTo = conInfoTo;
-		MigrationResult result;
+		MigrationResult result1;
 		try {
-			result = migrator.migrate(conFrom, "mimic2v26.d_patients", conTo, "mimic2v26.d_patients");
-			logger.debug("Number of extracted rows: " + result.getCountExtractedRows() + " Number of loaded rows: "
-					+ result.getCountLoadedRows());
+			result1 = migrator.migrate(conFrom, "mimic2v26.d_patients", conTo, "mimic2v26.d_patients");
+			logger.debug("Number of extracted rows: " + result1.getCountExtractedRows() + " Number of loaded rows: "
+					+ result1.getCountLoadedRows());
 		} catch (MigrationException e) {
 			String msg = "Problem with general data migration.";
 			logger.error(msg);

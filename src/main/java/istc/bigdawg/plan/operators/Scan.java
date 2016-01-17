@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.Set;
 
 import istc.bigdawg.extract.logical.SQLTableExpression;
-import istc.bigdawg.util.SQLUtilities;
+import istc.bigdawg.utils.sqlutil.SQLUtilities;
 
 import net.sf.jsqlparser.expression.Alias;
 import net.sf.jsqlparser.expression.Expression;
@@ -58,6 +58,30 @@ public class Scan extends Operator {
 		
 	}
 	
+	public Scan(Operator o) throws Exception {
+		super(o);
+		Scan sc = (Scan) o;
+		
+		this.filterExpression = new String(sc.filterExpression);
+		this.srcTable = new String(sc.srcTable);
+		this.tableAlias = new String(sc.tableAlias);
+		
+		this.filterSet = new HashSet<>();
+		for (String s : sc.filterSet) {
+			this.filterSet.add(new String(s));
+		}
+		this.table = new Table();
+		try {
+			this.table.setName(new String(sc.table.getName()));
+			this.table.setSchemaName(new String(sc.table.getSchemaName()));
+			this.table.setAlias(sc.table.getAlias());
+			this.table.setASTNode(sc.table.getASTNode());
+			this.table.setDatabase(sc.table.getDatabase());
+			this.table.setPivot(sc.table.getPivot());
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
 	
 	public Table getTable() {
 		return table;
@@ -71,7 +95,7 @@ public class Scan extends Operator {
 			dstStatement = SelectUtils.buildSelectFromTable(table);
 		}
 		
-		if(filterExpression != null) {
+		if(filterExpression != null && !isPruned) {
 			PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
 			
 			if(ps.getWhere() != null) {

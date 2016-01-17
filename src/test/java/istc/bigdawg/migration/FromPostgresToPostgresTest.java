@@ -10,8 +10,10 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
 
+import org.junit.Before;
 import org.junit.Test;
 
+import istc.bigdawg.LoggerSetup;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.postgresql.PostgreSQLHandler.QueryResult;
@@ -22,9 +24,14 @@ import istc.bigdawg.postgresql.PostgreSQLHandler.QueryResult;
  *
  */
 public class FromPostgresToPostgresTest {
+	
+	@Before
+	public void setUp() throws IOException {
+		LoggerSetup.setLogging();
+	}
 
 	@Test
-	public void testFromPostgresToPostgres() throws SQLException, IOException {
+	public void testFromPostgresToPostgres() throws Exception {
 		System.out.println("Migrating data from PostgreSQL to PostgreSQL");
 		FromPostgresToPostgres migrator = new FromPostgresToPostgres();
 		PostgreSQLConnectionInfo conInfoFrom = new PostgreSQLConnectionInfo("localhost", "5431", "mimic2", "pguser",
@@ -39,14 +46,14 @@ public class FromPostgresToPostgresTest {
 			double doubleValue = 1.2;
 			String stringValue = "adamdziedzic";
 			String createTable = "create table " + tableName + "(a int,b double precision,c varchar)";
-			postgres1.executeNotQueryPostgreSQL(createTable);
+			postgres1.executeStatementPostgreSQL(createTable);
 
 			String insertInto = "insert into " + tableName + " values(" + intValue + "," + doubleValue + ",'"
 					+ stringValue + "')";
 			System.out.println(insertInto);
-			postgres1.executeNotQueryPostgreSQL(insertInto);
+			postgres1.executeStatementPostgreSQL(insertInto);
 
-			postgres2.executeNotQueryPostgreSQL(createTable);
+			postgres2.executeStatementPostgreSQL(createTable);
 
 			MigrationResult result = migrator.migrate(conInfoFrom, tableName, conInfoTo, tableName);
 
@@ -74,8 +81,8 @@ public class FromPostgresToPostgresTest {
 			e.printStackTrace();
 			throw e;
 		} finally {
-			postgres1.executeNotQueryPostgreSQL("drop table " + tableName);
-			postgres2.executeNotQueryPostgreSQL("drop table " + tableName);
+			postgres1.executeStatementPostgreSQL("drop table " + tableName);
+			postgres2.executeStatementPostgreSQL("drop table " + tableName);
 		}
 
 	}

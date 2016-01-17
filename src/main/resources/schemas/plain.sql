@@ -2,7 +2,12 @@ CREATE TABLE IF NOT EXISTS monitoring (
 	lastRan bigint,
 	duration integer,
 	island varchar(30),
-	query varchar(200)
+	query varchar(3000)
+);
+
+CREATE TABLE IF NOT EXISTS treatments (
+	disease_name varchar(30),
+	treatment varchar(30)
 );
 
 CREATE TABLE IF NOT EXISTS mimic2v26.d_patients (

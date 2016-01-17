@@ -2,6 +2,8 @@
 insert into catalog.engines values(0,'postgres1','localhost',5431,'engine for bigdawg catalog, schema and mimic2 data');
 insert into catalog.engines values(1,'postgres2','localhost',5430,'main engine for mimic2_copy data');
 
+insert into catalog.engines values(2,'scidb','localhost',1239,'scidb database');
+
 --add catalog.databases inside the database instances: dbid, engine_id, name, userid, password
 insert into catalog.databases values(0,0,'bigdawg_catalog','postgres','test');
 insert into catalog.databases values(3,0,'bigdawg_schemas','postgres','test');
@@ -15,6 +17,10 @@ insert into catalog.islands values (0, 'RELATIONAL', 'Everything written in PSQL
 -- catalog.shims
 -- shim_id	island_id	engine_id	access_method	
 insert into catalog.shims values (0, 0, 0, 'N/A');
+
+-- catalog.scidbbinapath
+-- binary path to scidb utilities: csv2scidb, iquery, etc.
+insert into catalog.scidbbinpaths values (2,'/opt/scidb/14.12/bin/');
 
 -- catalog.objects
 -- oid	name	fields	logical_db	physical_db

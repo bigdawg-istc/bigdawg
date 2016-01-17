@@ -20,17 +20,47 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
         implements Iterable<ExecutionNode> {
 
     private static final long serialVersionUID = 7704709501946249185L;
-
+    private static int maxSerial = 0;
+    private int serial;
+    private String terminalTableName;
+    private ExecutionNode terminalNode;
+    
     private final String island;
 
     public QueryExecutionPlan(String island) {
         super(DefaultEdge.class);
         this.island = island;
+        maxSerial++;
+        serial = maxSerial;
         // TODO add any variables needed from Planner
     }
 
     public String getIsland() {
         return this.island;
+    }
+    
+    public int getSerialNumber() {
+    	return serial;
+    }
+    
+    public String getSerializedName() {
+    	return "QEPTERMINALNODE_"+serial;
+    }
+    
+    public void setTerminalTableName(String terminalTableName) {
+    	this.terminalTableName = terminalTableName;
+    }
+    
+    public String getTerminalTableName() {
+    	return terminalTableName;
+    }
+    
+    public void setTerminalTableNode(ExecutionNode terminalTable) {
+    	this.terminalNode = terminalTable;
+    }
+    
+    public ExecutionNode getTerminalTableNode() {
+    	return this.terminalNode;
     }
 
     /**
@@ -112,7 +142,7 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
         ConnectionInfo engine = node.getEngine();
         currentRep.append(String.format("CONNECTIONTYPE:%s", engine.getClass().getName()));
         currentRep.append(String.format("HOST:%s", engine.getHost()));
-        currentRep.append(String.format("HANDLER:%s", engine.getHandler()));
+        currentRep.append(String.format("DATABASE:%s", engine.getDatabase()));
         currentRep.append(String.format("PASSWORD:%s", engine.getPassword()));
         currentRep.append(String.format("PORT:%s", engine.getPort()));
         currentRep.append(String.format("USER:%s", engine.getUser()));
@@ -134,8 +164,8 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
         Pattern table = Pattern.compile("(?<=TABLE:)(?s).*(?=ENGINE:)");
         Pattern engine = Pattern.compile("(?<=ENGINE:\\()[^\\)]*(?=\\))");
         Pattern connectionType = Pattern.compile("(?<=CONNECTIONTYPE:)(?s).*(?=HOST:)");
-        Pattern host = Pattern.compile("(?<=HOST:)(?s).*(?=HANDLER:)");
-        Pattern handler = Pattern.compile("(?<=HANDLER:)(?s).*(?=PASSWORD:)");
+        Pattern host = Pattern.compile("(?<=HOST:)(?s).*(?=DATABASE:)");
+        Pattern database = Pattern.compile("(?<=DATABASE:)(?s).*(?=PASSWORD:)");
         Pattern password = Pattern.compile("(?<=PASSWORD:)(?s).*(?=PORT:)");
         Pattern port = Pattern.compile("(?<=PORT:)(?s).*(?=USER:)");
         Pattern user = Pattern.compile("(?<=USER:)(?s).*");
@@ -183,10 +213,10 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
         if (m.find()) {
             engineHost = m.group();
         }
-        String engineHandler = "";
-        m = handler.matcher(engineInfo);
+        String engineDatabase = "";
+        m = database.matcher(engineInfo);
         if (m.find()) {
-            engineHandler = m.group();
+            engineDatabase = m.group();
         }
         String enginePassword = "";
         m = password.matcher(engineInfo);
@@ -207,7 +237,7 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
         ConnectionInfo connectionInfo = null;
         // TODO implement for other ConnectionInfo classes
         if (engineConnectionType.contains("PostgreSQLConnectionInfo")){
-            connectionInfo = new PostgreSQLConnectionInfo(engineHost, enginePort, engineHandler, engineUser, enginePassword);
+            connectionInfo = new PostgreSQLConnectionInfo(engineHost, enginePort, engineDatabase, engineUser, enginePassword);
         }
 
         // Get the type of ExecutionNode
@@ -236,9 +266,7 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
     public static String qepToString(QueryExecutionPlan qep) {
         Iterator<ExecutionNode> nodeIterator = qep.iterator();
         StringBuilder result = new StringBuilder();
-
         result.append(String.format("ISLAND:%s", qep.getIsland()));
-
         // Converts each node into a String representation of itself
         result.append("NODES:(");
         List<String> nodes = new ArrayList<>();
@@ -247,15 +275,13 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
             String currentNodeRep = executionNodeToString(currentNode);
             nodes.add(currentNodeRep);
         }
-
-        String[] nodeList = new String[nodes.size()];
-        for (int i = 0; i < nodes.size(); i++) {
-            nodeList[i] = nodes.get(i);
-        }
+        Collections.sort(nodes);
         Map<String, Integer> order = new HashMap<>();
-        for (int i = 0; i < nodeList.length; i++) {
-            order.put(nodeList[i], i);
-            result.append(nodeList[i]);
+        int i = 0;
+        for (String currentNodeRep: nodes) {
+            order.put(currentNodeRep, i);
+            i++;
+            result.append(currentNodeRep);
         }
         result.append(")");
 
@@ -273,8 +299,20 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
                 }
             }
         }
+        
         result.append(")");
 
+        result.append(String.format("SERIAL:%d", qep.getSerialNumber()));
+        String termTable = "";
+        if (qep.getTerminalTableName() != null){
+            termTable = qep.getTerminalTableName();
+        }
+        result.append(String.format("TERMTABLE:%s", termTable));
+        String termNode = "";
+        if (qep.getTerminalTableNode() != null) {
+            termNode = String.valueOf(order.get(executionNodeToString(qep.getTerminalTableNode())));
+        }
+        result.append(String.format("TERMNODE:%s", termNode));
         return result.toString();
     }
 
@@ -282,14 +320,19 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
      * Produces an QueryExecutionPlan from the output of qepToString
      * @param representation an output of qepToString
      * @return the QueryExecutionPlan
+     * @throws org.jgrapht.experimental.dag.DirectedAcyclicGraph.CycleFoundException 
      */
-    public static QueryExecutionPlan stringToQEP(String representation) {
+    public static QueryExecutionPlan stringToQEP(String representation) throws org.jgrapht.experimental.dag.DirectedAcyclicGraph.CycleFoundException {
         Pattern islandPattern = Pattern.compile("(?<=ISLAND:)(?s).*(?=NODES:)");
         Pattern nodesPattern = Pattern.compile("(?<=NODES:\\()(?s).*(?=\\)EDGES:)");
         Pattern edgesPattern = Pattern.compile("(?<=EDGES:\\()(?s).*(?=\\))");
 
         Pattern nodePattern = Pattern.compile("(\\(.*?ENGINE:\\(.*?\\).*?\\))");
         Pattern edgePattern = Pattern.compile("([0-9]+),([0-9]+)");
+
+        Pattern serialPattern = Pattern.compile("(?<=SERIAL:)([0-9]+)");
+        Pattern terminalTableNamePattern = Pattern.compile("(?<=TERMTABLE:)((?s).*)(?=TERMNODE:)");
+        Pattern terminalNodePattern = Pattern.compile("(?<=TERMNODE:)([0-9]+)");
 
         String island = "";
         Matcher m = islandPattern.matcher(representation);
@@ -325,13 +368,34 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
             while (m.find()) {
                 int from = Integer.parseInt(m.group(1));
                 int to = Integer.parseInt(m.group(2));
-                    qep.addDagEdge(nodeList.get(from), nodeList.get(to));
-
+                qep.addDagEdge(nodeList.get(from), nodeList.get(to));
             }
         } catch (CycleFoundException e) {
             // Misformatted String
             e.printStackTrace();
             return null;
+        }
+
+        m = serialPattern.matcher(representation);
+        if (m.find()) {
+            String serial = m.group();
+            qep.serial = Integer.parseInt(serial);
+        }
+
+        m = terminalTableNamePattern.matcher(representation);
+        if (m.find()) {
+            String terminalTableName = m.group();
+            if (terminalTableName.length() > 0) {
+                qep.setTerminalTableName(terminalTableName);
+            }
+        }
+
+        m = terminalNodePattern.matcher(representation);
+        if (m.find()) {
+            String terminalNode = m.group();
+            if (terminalNode.length() > 0) {
+                qep.setTerminalTableNode(nodeList.get(Integer.parseInt(terminalNode)));
+            }
         }
 
         return qep;

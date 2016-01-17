@@ -100,4 +100,10 @@ public class LocalQueryExecutionNode implements ExecutionNode {
             return false;
         return true;
     }
+
+    @Override
+    public String toString() {
+        return "LocalQueryExecutionNode [query=" + query + ", engine=" + engine + ", resultsTable=" + resultsTable
+                + "]";
+    }
 }

@@ -254,7 +254,6 @@ public class SQLExpressionHandler implements ExpressionVisitor, ItemsListVisitor
     @Override
     public void visit(OrExpression orExpression) {
         visitBinaryExpression(orExpression, " OR ");
-
     }
 
     @Override
