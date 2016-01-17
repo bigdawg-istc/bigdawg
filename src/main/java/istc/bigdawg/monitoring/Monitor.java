@@ -85,7 +85,7 @@ public class Monitor {
             PostgreSQLHandler handler = new PostgreSQLHandler();
             perfInfo.add(handler.executeQuery(String.format(RETRIEVE, qep.getIsland(), qepString)));
         }
-        List<List<String>> queryList = new ArrayList();
+        List<List<String>> queryList = new ArrayList<>();
         queryList.add(queries);
         System.out.printf("[BigDAWG] MONITOR: Performance information generated.\n");
         return new QueriesAndPerformanceInformation(queryList, perfInfo);
@@ -94,7 +94,7 @@ public class Monitor {
     private static boolean insert(String query, String island) throws NotSupportIslandException {
         PostgreSQLHandler handler = new PostgreSQLHandler();
         try {
-			handler.executeNotQueryPostgreSQL(String.format(INSERT, island, query));
+			handler.executeStatementPostgreSQL(String.format(INSERT, island, query));
 			return true;
 		} catch (SQLException e) {
 			return false;
@@ -104,7 +104,7 @@ public class Monitor {
     private static boolean delete(String query, String island) throws NotSupportIslandException {
         PostgreSQLHandler handler = new PostgreSQLHandler();
         try {
-			handler.executeNotQueryPostgreSQL(String.format(DELETE, island, query));
+			handler.executeStatementPostgreSQL(String.format(DELETE, island, query));
 			return true;
 		} catch (SQLException e) {
 			return false;
