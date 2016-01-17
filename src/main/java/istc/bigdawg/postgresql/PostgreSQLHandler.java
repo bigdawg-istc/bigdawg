@@ -40,7 +40,7 @@ public class PostgreSQLHandler implements DBHandler {
 
 	public PostgreSQLHandler(int engineId, int dbId) throws Exception {
 		try {
-			this.conInfo = CatalogViewer.getConnection(engineId, dbId);
+			this.conInfo = CatalogViewer.getConnection(dbId);
 		} catch (Exception e) {
 			String msg = "Catalog chosen connection: " + conInfo.getHost() + " " + conInfo.getPort() + " "
 					+ conInfo.getDatabase() + " " + conInfo.getUser() + " " + conInfo.getPassword() + ".";

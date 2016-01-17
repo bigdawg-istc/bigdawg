@@ -35,7 +35,7 @@ public class CatalogInitiator {
 		cc.setLastURL(url);
 		cc.setLastUsername(username);
 		cc.setLastPassword(password);
-	};
+	}
 	
 	public static void close(Catalog cc) throws Exception {
 		if (cc.isInitiated()) { 
