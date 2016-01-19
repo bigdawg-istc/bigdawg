@@ -36,3 +36,16 @@ CREATE TABLE IF NOT EXISTS monitoring (
   lastRan int,
   duration int
 );
+
+CREATE TABLE IF NOT EXISTS migrationstats (
+  migrationstatsID serial PRIMARY KEY,
+  fromLoc varchar(250),
+  toLoc varchar(250),
+  objectFrom varchar(250),
+  objectTo varchar(250),
+  startTime int,
+  endTime int,
+  countExtracted int,
+  countLoaded int,
+  message varchar(1000)
+);

@@ -4,8 +4,6 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
-import istc.bigdawg.query.ConnectionInfo;
 import org.jgrapht.Graphs;
 import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
 import org.jgrapht.graph.DefaultEdge;
@@ -118,147 +116,6 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
     }
 
     /**
-     * Produces a String representation of an ExecutionNode
-     * @param node The ExecutionNode we want to make into a String
-     * @return The representation
-     */
-    public static String executionNodeToString(ExecutionNode node) {
-        StringBuilder currentRep = new StringBuilder();
-        currentRep.append("(");
-
-        Optional<String> queryString = node.getQueryString();
-        if (queryString.isPresent()) {
-            currentRep.append("QUERY:");
-            currentRep.append(queryString.get());
-        }
-
-        Optional<String> tableName = node.getTableName();
-        if (tableName.isPresent()) {
-            currentRep.append("TABLE:");
-            currentRep.append(tableName.get());
-        }
-
-        currentRep.append("ENGINE:(");
-        ConnectionInfo engine = node.getEngine();
-        currentRep.append(String.format("CONNECTIONTYPE:%s", engine.getClass().getName()));
-        currentRep.append(String.format("HOST:%s", engine.getHost()));
-        currentRep.append(String.format("DATABASE:%s", engine.getDatabase()));
-        currentRep.append(String.format("PASSWORD:%s", engine.getPassword()));
-        currentRep.append(String.format("PORT:%s", engine.getPort()));
-        currentRep.append(String.format("USER:%s", engine.getUser()));
-        currentRep.append(")");
-
-        currentRep.append(String.format("NODETYPE:%s", node.getClass().getName()));
-        currentRep.append(")");
-        return currentRep.toString();
-    }
-
-    /**
-     * Produces an ExecutionNode from the output of executionNodeToString
-     * @param representation an output of executionNodeToString
-     * @return the ExecutionNode
-     */
-    public static ExecutionNode stringToExecutionNode(String representation) {
-        Pattern queryTable = Pattern.compile("(?<=QUERY:)(?s).*(?=TABLE:)");
-        Pattern queryEngine = Pattern.compile("(?<=QUERY:)(?s).*(?=ENGINE:)");
-        Pattern table = Pattern.compile("(?<=TABLE:)(?s).*(?=ENGINE:)");
-        Pattern engine = Pattern.compile("(?<=ENGINE:\\()[^\\)]*(?=\\))");
-        Pattern connectionType = Pattern.compile("(?<=CONNECTIONTYPE:)(?s).*(?=HOST:)");
-        Pattern host = Pattern.compile("(?<=HOST:)(?s).*(?=DATABASE:)");
-        Pattern database = Pattern.compile("(?<=DATABASE:)(?s).*(?=PASSWORD:)");
-        Pattern password = Pattern.compile("(?<=PASSWORD:)(?s).*(?=PORT:)");
-        Pattern port = Pattern.compile("(?<=PORT:)(?s).*(?=USER:)");
-        Pattern user = Pattern.compile("(?<=USER:)(?s).*");
-        Pattern nodeType = Pattern.compile("(?<=NODETYPE:)[^\\)]*(?=\\))");
-
-        // Extract the query
-        Optional<String> query = Optional.empty();
-        if (representation.contains("QUERY:")) {
-            if (representation.contains("TABLE:")) {
-                Matcher m = queryTable.matcher(representation);
-                if (m.find()) {
-                    query = Optional.of(m.group());
-                }
-            } else {
-                Matcher m = queryEngine.matcher(representation);
-                if (m.find()) {
-                    query = Optional.of(m.group());
-                }
-            }
-        }
-
-        // Extract the tableName
-        Optional<String> tableName = Optional.empty();
-        if (representation.contains("TABLE:")){
-            Matcher m = table.matcher(representation);
-            if (m.find()) {
-                tableName = Optional.of(m.group());
-            }
-        }
-
-        // Extract the ConnectionInfo
-        Matcher m = engine.matcher(representation);
-        String engineInfo = "";
-        if (m.find()) {
-            engineInfo = m.group();
-        }
-
-        String engineConnectionType = "";
-        m = connectionType.matcher(engineInfo);
-        if (m.find()) {
-            engineConnectionType = m.group();
-        }
-        String engineHost = "";
-        m = host.matcher(engineInfo);
-        if (m.find()) {
-            engineHost = m.group();
-        }
-        String engineDatabase = "";
-        m = database.matcher(engineInfo);
-        if (m.find()) {
-            engineDatabase = m.group();
-        }
-        String enginePassword = "";
-        m = password.matcher(engineInfo);
-        if (m.find()) {
-            enginePassword = m.group();
-        }
-        String enginePort = "";
-        m = port.matcher(engineInfo);
-        if (m.find()) {
-            enginePort = m.group();
-        }
-        String engineUser = "";
-        m = user.matcher(engineInfo);
-        if (m.find()) {
-            engineUser = m.group();
-        }
-
-        ConnectionInfo connectionInfo = null;
-        // TODO implement for other ConnectionInfo classes
-        if (engineConnectionType.contains("PostgreSQLConnectionInfo")){
-            connectionInfo = new PostgreSQLConnectionInfo(engineHost, enginePort, engineDatabase, engineUser, enginePassword);
-        }
-
-        // Get the type of ExecutionNode
-        String nodeClass = "LocalQueryExecutionNode";
-        m = nodeType.matcher(representation);
-        if (m.find()) {
-            nodeClass = m.group();
-        }
-
-        ExecutionNode result = null;
-        if (nodeClass.contains("LocalQueryExecutionNode")) {
-            result = new LocalQueryExecutionNode(query.get(), connectionInfo, tableName.get());
-        } else if (nodeClass.contains("TableExecutionNode")) {
-            result = new TableExecutionNode(connectionInfo, tableName.get());
-        } else if (nodeClass.contains("BinaryJoinExecutionNode")) {
-            result = new BinaryJoinExecutionNode();
-        }
-        return result;
-    }
-
-    /**
      * Produces a String representation of a QueryExecutionPlan
      * @param qep a QueryExecutionPlan
      * @return the String representation
@@ -272,7 +129,7 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
         List<String> nodes = new ArrayList<>();
         while (nodeIterator.hasNext()) {
             ExecutionNode currentNode = nodeIterator.next();
-            String currentNodeRep = executionNodeToString(currentNode);
+            String currentNodeRep = ExecutionNodeFactory.executionNodeToString(currentNode);
             nodes.add(currentNodeRep);
         }
         Collections.sort(nodes);
@@ -290,11 +147,11 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
         nodeIterator = qep.iterator();
         while (nodeIterator.hasNext()) {
             ExecutionNode currentNode = nodeIterator.next();
-            int from = order.get(executionNodeToString(currentNode));
+            int from = order.get(ExecutionNodeFactory.executionNodeToString(currentNode));
             Collection<ExecutionNode> dependents = qep.getDependents(currentNode);
             if (dependents != null) {
                 for (ExecutionNode dependent: dependents) {
-                    int to = order.get(executionNodeToString(dependent));
+                    int to = order.get(ExecutionNodeFactory.executionNodeToString(dependent));
                     result.append(String.format("(%d,%d)", from, to));
                 }
             }
@@ -310,7 +167,7 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
         result.append(String.format("TERMTABLE:%s", termTable));
         String termNode = "";
         if (qep.getTerminalTableNode() != null) {
-            termNode = String.valueOf(order.get(executionNodeToString(qep.getTerminalTableNode())));
+            termNode = String.valueOf(order.get(ExecutionNodeFactory.executionNodeToString(qep.getTerminalTableNode())));
         }
         result.append(String.format("TERMNODE:%s", termNode));
         return result.toString();
@@ -357,7 +214,7 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
         List<ExecutionNode> nodeList = new ArrayList<>();
         m = nodePattern.matcher(nodes);
         while (m.find()) {
-            ExecutionNode currentNode = stringToExecutionNode(m.group());
+            ExecutionNode currentNode = ExecutionNodeFactory.stringToExecutionNode(m.group());
             qep.addVertex(currentNode);
             nodeList.add(currentNode);
         }

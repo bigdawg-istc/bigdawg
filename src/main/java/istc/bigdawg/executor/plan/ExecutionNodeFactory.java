@@ -1,33 +1,116 @@
 package istc.bigdawg.executor.plan;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-import org.jgrapht.graph.DefaultEdge;
+import istc.bigdawg.query.ConnectionInfoParser;
 
-import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.query.ConnectionInfo;
-import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.select.Select;
-import istc.bigdawg.catalog.CatalogInstance;
-import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.packages.QueryContainerForCommonDatabase;
-import istc.bigdawg.plan.SQLQueryPlan;
 import istc.bigdawg.plan.operators.CommonSQLTableExpressionScan;
-import istc.bigdawg.plan.operators.Join;
 import istc.bigdawg.plan.operators.Operator;
 
 
 public class ExecutionNodeFactory {
 
 	private static int maxSerial = 0;
-	
+
+	/**
+	 * Produces a String representation of an ExecutionNode
+	 * @param node The ExecutionNode we want to make into a String
+	 * @return The representation
+	 */
+	public static String executionNodeToString(ExecutionNode node) {
+		StringBuilder currentRep = new StringBuilder();
+		currentRep.append("(");
+
+		Optional<String> queryString = node.getQueryString();
+		if (queryString.isPresent()) {
+			currentRep.append("QUERY:");
+			currentRep.append(queryString.get());
+		}
+
+		Optional<String> tableName = node.getTableName();
+		if (tableName.isPresent()) {
+			currentRep.append("TABLE:");
+			currentRep.append(tableName.get());
+		}
+
+		currentRep.append("ENGINE:(");
+		currentRep.append(ConnectionInfoParser.connectionInfoToString(node.getEngine()));
+		currentRep.append(")");
+
+		currentRep.append(String.format("NODETYPE:%s", node.getClass().getName()));
+		currentRep.append(")");
+		return currentRep.toString();
+	}
+
+	/**
+	 * Produces an ExecutionNode from the output of executionNodeToString
+	 * @param representation an output of executionNodeToString
+	 * @return the ExecutionNode
+	 */
+	public static ExecutionNode stringToExecutionNode(String representation) {
+		Pattern queryTable = Pattern.compile("(?<=QUERY:)(?s).*(?=TABLE:)");
+		Pattern queryEngine = Pattern.compile("(?<=QUERY:)(?s).*(?=ENGINE:)");
+		Pattern table = Pattern.compile("(?<=TABLE:)(?s).*(?=ENGINE:)");
+		Pattern engine = Pattern.compile("(?<=ENGINE:\\()[^\\)]*(?=\\))");
+		Pattern nodeType = Pattern.compile("(?<=NODETYPE:)[^\\)]*(?=\\))");
+
+		// Extract the query
+		Optional<String> query = Optional.empty();
+		if (representation.contains("QUERY:")) {
+			if (representation.contains("TABLE:")) {
+				Matcher m = queryTable.matcher(representation);
+				if (m.find()) {
+					query = Optional.of(m.group());
+				}
+			} else {
+				Matcher m = queryEngine.matcher(representation);
+				if (m.find()) {
+					query = Optional.of(m.group());
+				}
+			}
+		}
+
+		// Extract the tableName
+		Optional<String> tableName = Optional.empty();
+		if (representation.contains("TABLE:")){
+			Matcher m = table.matcher(representation);
+			if (m.find()) {
+				tableName = Optional.of(m.group());
+			}
+		}
+
+		// Extract the ConnectionInfo
+		Matcher m = engine.matcher(representation);
+		String engineInfo = "";
+		if (m.find()) {
+			engineInfo = m.group();
+		}
+		ConnectionInfo connectionInfo = ConnectionInfoParser.stringToConnectionInfo(engineInfo);
+
+		// Get the type of ExecutionNode
+		String nodeClass = "LocalQueryExecutionNode";
+		m = nodeType.matcher(representation);
+		if (m.find()) {
+			nodeClass = m.group();
+		}
+
+		ExecutionNode result = null;
+		if (nodeClass.contains("LocalQueryExecutionNode")) {
+			result = new LocalQueryExecutionNode(query.get(), connectionInfo, tableName.get());
+		} else if (nodeClass.contains("TableExecutionNode")) {
+			result = new TableExecutionNode(connectionInfo, tableName.get());
+		} else if (nodeClass.contains("BinaryJoinExecutionNode")) {
+			result = new BinaryJoinExecutionNode();
+		}
+		return result;
+	}
+
 	@Deprecated
 	public static Map<String, Operator> traverseAndPickOutWiths (Operator root) throws Exception {
 		Map<String, Operator> result = new HashMap<>();
