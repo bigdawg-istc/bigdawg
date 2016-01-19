@@ -20,8 +20,8 @@ public class MigrationStatistics {
 	private String objectTo;
 	private long startTimeMigration;
 	private long endTimeMigration;
-	private long countExtractedElements;
-	private long countLoadedElements;
+	private Long countExtractedElements;
+	private Long countLoadedElements;
 	private String message;
 
 	/**
@@ -106,7 +106,7 @@ public class MigrationStatistics {
 	 * @return the countExtractedElements Number of extracted elements
 	 *         (rows/objects) (may not be available). These elements are extracted from the {@link #getObjectTo()}
 	 */
-	public long getCountExtractedElements() {
+	public Long getCountExtractedElements() {
 		return countExtractedElements;
 	}
 
@@ -114,7 +114,7 @@ public class MigrationStatistics {
 	 * @return the countLoadedElements Number of loaded elements (rows/objects)
 	 *         (may not be available) These elements are loaded to the {@link #getObjectTo()}
 	 */
-	public long getCountLoadedElements() {
+	public Long getCountLoadedElements() {
 		return countLoadedElements;
 	}
 
