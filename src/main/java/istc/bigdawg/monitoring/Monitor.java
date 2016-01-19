@@ -115,8 +115,8 @@ public class Monitor {
 
     public void addMigrationStats(MigrationStatistics stats) throws SQLException {
         PostgreSQLHandler handler = new PostgreSQLHandler();
-        String fromLoc = ConnectionInfoParser.connectionInfoToString(stats.getFrom());
-        String toLoc = ConnectionInfoParser.connectionInfoToString(stats.getTo());
+        String fromLoc = ConnectionInfoParser.connectionInfoToString(stats.getConnectionFrom());
+        String toLoc = ConnectionInfoParser.connectionInfoToString(stats.getConnectionTo());
         handler.executeStatementPostgreSQL(String.format(MIGRATE, fromLoc, toLoc, stats.getObjectFrom(), stats.getObjectTo(), stats.getStartTimeMigration(), stats.getEndTimeMigration(), stats.getCountExtractedElements(), stats.getCountLoadedElements(), stats.getMessage()));
     }
 
