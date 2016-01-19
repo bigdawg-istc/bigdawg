@@ -14,8 +14,8 @@ import istc.bigdawg.query.ConnectionInfo;
  */
 public class MigrationStatistics {
 
-	private ConnectionInfo from;
-	private ConnectionInfo to;
+	private ConnectionInfo connectionFrom;
+	private ConnectionInfo connectionTo;
 	private String objectFrom;
 	private String objectTo;
 	private long startTimeMigration;
@@ -25,8 +25,8 @@ public class MigrationStatistics {
 	private String message;
 
 	/**
-	 * @param from
-	 * @param to
+	 * @param connectionFrom
+	 * @param connectionTo
 	 * @param objectFrom
 	 * @param objectTo
 	 * @param startTimeMigration
@@ -35,11 +35,11 @@ public class MigrationStatistics {
 	 * @param countLoadedElements
 	 * @param message
 	 */
-	public MigrationStatistics(ConnectionInfo from, ConnectionInfo to, String objectFrom, String objectTo,
+	public MigrationStatistics(ConnectionInfo connectionFrom, ConnectionInfo connectionTo, String objectFrom, String objectTo,
 			long startTimeMigration, long endTimeMigration, long countExtractedElements, long countLoadedElements,
 			String message) {
-		this.from = from;
-		this.to = to;
+		this.connectionFrom = connectionFrom;
+		this.connectionTo = connectionTo;
 		this.objectFrom = objectFrom;
 		this.objectTo = objectTo;
 		this.startTimeMigration = startTimeMigration;
@@ -50,24 +50,25 @@ public class MigrationStatistics {
 	}
 
 	/**
-	 * @return the from Information from which database the data is migrated.
+	 * @return the connectionFrom Information from which database the data is migrated.
 	 *         (not null)
 	 */
-	public ConnectionInfo getFrom() {
-		return from;
+	public ConnectionInfo getConnectionFrom() {
+		return connectionFrom;
 	}
 
 	/**
-	 * @return the to Information to which database the data is migrated. (not
+	 * @return the connectionTo Information to which database the data is migrated. (not
 	 *         null)
 	 */
-	public ConnectionInfo getTo() {
-		return to;
+	public ConnectionInfo getConnectionTo() {
+		return connectionTo;
 	}
 
 	/**
 	 * @return the objectFrom Array/Table or another object from which we
-	 *         extract data. (not null)
+	 *         extract data. (not null) The object resided in the database
+	 *         identified by connectionFrom {@link #getConnectionFrom()}
 	 */
 	public String getObjectFrom() {
 		return objectFrom;
@@ -75,7 +76,8 @@ public class MigrationStatistics {
 
 	/**
 	 * @return the objectTo Array/Table or another object to which we load the
-	 *         data. (not null)
+	 *         data. (not null) The object resided in the database
+	 *         identified by connectionTo {@link #getConnectionTo()}
 	 */
 	public String getObjectTo() {
 		return objectTo;
@@ -102,7 +104,7 @@ public class MigrationStatistics {
 
 	/**
 	 * @return the countExtractedElements Number of extracted elements
-	 *         (rows/objects) (may not be available)
+	 *         (rows/objects) (may not be available). These elements are extracted from the {@link #getObjectTo()}
 	 */
 	public long getCountExtractedElements() {
 		return countExtractedElements;
@@ -110,7 +112,7 @@ public class MigrationStatistics {
 
 	/**
 	 * @return the countLoadedElements Number of loaded elements (rows/objects)
-	 *         (may not be available)
+	 *         (may not be available) These elements are loaded to the {@link #getObjectTo()}
 	 */
 	public long getCountLoadedElements() {
 		return countLoadedElements;
