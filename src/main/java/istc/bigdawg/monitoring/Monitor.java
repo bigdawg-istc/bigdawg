@@ -117,7 +117,15 @@ public class Monitor {
         PostgreSQLHandler handler = new PostgreSQLHandler();
         String fromLoc = ConnectionInfoParser.connectionInfoToString(stats.getConnectionFrom());
         String toLoc = ConnectionInfoParser.connectionInfoToString(stats.getConnectionTo());
-        handler.executeStatementPostgreSQL(String.format(MIGRATE, fromLoc, toLoc, stats.getObjectFrom(), stats.getObjectTo(), stats.getStartTimeMigration(), stats.getEndTimeMigration(), stats.getCountExtractedElements(), stats.getCountLoadedElements(), stats.getMessage()));
+        long countExtracted = -1;
+        long countLoaded = -1;
+        if (stats.getCountExtractedElements() != null){
+            countExtracted = stats.getCountExtractedElements();
+        }
+        if (stats.getCountLoadedElements() != null){
+            countLoaded = stats.getCountLoadedElements();
+        }
+        handler.executeStatementPostgreSQL(String.format(MIGRATE, fromLoc, toLoc, stats.getObjectFrom(), stats.getObjectTo(), stats.getStartTimeMigration(), stats.getEndTimeMigration(), countExtracted, countLoaded, stats.getMessage()));
     }
 
     public List<MigrationStatistics> getMigrationStats(ConnectionInfo from, ConnectionInfo to) throws SQLException {
@@ -133,9 +141,17 @@ public class Monitor {
             long startTime = Long.parseLong(row.get(2));
             long endTime = Long.parseLong(row.get(3));
             long countExtracted = Long.parseLong(row.get(4));
+            Long countExtractedElements = null;
+            if (countExtracted >= 0) {
+                countExtractedElements = countExtracted;
+            }
             long countLoaded = Long.parseLong(row.get(5));
+            Long countLoadedElements = null;
+            if (countLoaded >= 0) {
+                countLoadedElements = countLoaded;
+            }
             String message = row.get(6);
-            results.add(new MigrationStatistics(from, to, objectFrom, objectTo, startTime, endTime, countExtracted, countLoaded, message));
+            results.add(new MigrationStatistics(from, to, objectFrom, objectTo, startTime, endTime, countExtractedElements, countLoadedElements, message));
         }
         return results;
     }
