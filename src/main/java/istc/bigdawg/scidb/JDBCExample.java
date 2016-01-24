@@ -47,6 +47,9 @@ class JDBCExample {
 				System.out.println(res.getLong("x") + " " + res.getLong("y") + " " + res.getString("a"));
 				res.next();
 			}
+			res.close();
+			st.close();
+			conn.close();
 		} catch (SQLException e) {
 			System.out.println(e);
 		}

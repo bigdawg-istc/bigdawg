@@ -545,18 +545,20 @@ public class PostgreSQLHandler implements DBHandler {
 	 */
 	public List<PostgreSQLColumnMetaData> getColumnsMetaData(String tableNameInitial) throws SQLException {
 		try {
-			this.getConnection();
+ 			this.getConnection();
 			PostgreSQLSchemaTableName schemaTable = new PostgreSQLSchemaTableName(tableNameInitial);
 			try {
 				preparedSt = con.prepareStatement(
 						"SELECT column_name, ordinal_position, is_nullable, data_type, character_maximum_length, numeric_precision, numeric_scale "
 								+ "FROM information_schema.columns " + "WHERE table_schema=? and table_name=?"
-								+ " order by ordinal_position");
+								+ " order by ordinal_position;");
 				preparedSt.setString(1, schemaTable.getSchemaName());
 				preparedSt.setString(2, schemaTable.getTableName());
+				// postgresql logger cannot accept single quotes
+				log.debug("replace double quotes (\") with signle quotes in the query to run it in PostgreSQL: "+preparedSt.toString().replace("'", "\""));
 			} catch (SQLException e) {
 				e.printStackTrace();
-				log.error("PostgreSQLHandler, the query preparation failed.");
+				log.error("PostgreSQLHandler, the query preparation failed. "+e.getMessage());
 				throw e;
 			}
 			ResultSet resultSet = preparedSt.executeQuery();

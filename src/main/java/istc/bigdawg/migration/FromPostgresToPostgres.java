@@ -131,7 +131,7 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 
 	public MigrationResult migrate(ConnectionInfo connectionFrom, String fromTable, ConnectionInfo connectionTo,
 			String toTable) throws MigrationException {
-		logger.debug("General data migration.");
+		logger.debug("General data migration: "+this.getClass().getName());
 		if (connectionFrom instanceof PostgreSQLConnectionInfo && connectionTo instanceof PostgreSQLConnectionInfo) {
 			try {
 				return this.migrate((PostgreSQLConnectionInfo) connectionFrom, fromTable,
@@ -173,7 +173,6 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 	 */
 	public MigrationResult migrate(PostgreSQLConnectionInfo connectionFrom, String fromTable,
 			PostgreSQLConnectionInfo connectionTo, String toTable) throws Exception {
-		logger.debug("Specific data migration");
 		long startTimeMigration = System.currentTimeMillis();
 
 		String copyFromString = getCopyCommand(fromTable, DIRECTION.TO/* STDOUT */);

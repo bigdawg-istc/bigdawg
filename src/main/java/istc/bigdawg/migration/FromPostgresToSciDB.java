@@ -50,7 +50,7 @@ public class FromPostgresToSciDB implements FromDatabaseToDatabase {
 	/**
 	 * 
 	 */
-	public MigrationResult FromPostgresToSciDBSimpleCSV(PostgreSQLConnectionInfo connectionFrom, String fromTable,
+	public MigrationResult migrateSingleThreadCSV(PostgreSQLConnectionInfo connectionFrom, String fromTable,
 			SciDBConnectionInfo connectionTo, String arrayTo) {
 		String generalMessage = "Data migration from Postgres to SciDB";
 		log.info(generalMessage);
@@ -105,7 +105,7 @@ public class FromPostgresToSciDB implements FromDatabaseToDatabase {
 			 */
 			List<PostgreSQLColumnMetaData> columnsMetaData;
 			try {
-				columnsMetaData = new PostgreSQLHandler().getColumnsMetaData(fromTable);
+				columnsMetaData = new PostgreSQLHandler(connectionFrom).getColumnsMetaData(fromTable);
 			} catch (SQLException e) {
 				e.printStackTrace();
 				return MigrationResult.getFailedInstance(
@@ -115,6 +115,7 @@ public class FromPostgresToSciDB implements FromDatabaseToDatabase {
 
 			ProcessBuilder csv2scidb = new ProcessBuilder(connectionTo.getBinPath() + "csv2scidb", "-i", csvFilePath,
 					"-o", scidbFilePath, "-d", delimiter, "-p", typesPattern);
+			log.debug(csv2scidb.command());
 			try {
 				RunShell.runShell(csv2scidb);
 			} catch (RunShellException | InterruptedException | IOException e) {
@@ -157,7 +158,15 @@ public class FromPostgresToSciDB implements FromDatabaseToDatabase {
 	@Override
 	public MigrationResult migrate(ConnectionInfo connectionFrom, String objectFrom, ConnectionInfo connectionTo,
 			String objectTo) throws MigrationException {
-		// TODO Auto-generated method stub
+		log.debug("General data migration: "+this.getClass().getName());
+		if (connectionFrom instanceof PostgreSQLConnectionInfo && connectionTo instanceof SciDBConnectionInfo) {
+			try {
+				return this.migrateSingleThreadCSV((PostgreSQLConnectionInfo) connectionFrom, objectFrom,
+						(SciDBConnectionInfo) connectionTo, objectTo);
+			} catch (Exception e) {
+				throw new MigrationException(e.getMessage(), e);
+			}
+		}
 		return null;
 	}
 
@@ -174,7 +183,17 @@ public class FromPostgresToSciDB implements FromDatabaseToDatabase {
 		SciDBConnectionInfo conTo = new SciDBConnectionInfo("localhost", "1239", "scidb", "mypassw",
 				"/opt/scidb/14.12/bin/");
 		String arrayTo = "region";
-		migrator.FromPostgresToSciDBSimpleCSV(conFrom, fromTable, conTo, arrayTo);
+		migrator.migrateSingleThreadCSV(conFrom, fromTable, conTo, arrayTo);
 	}
 
 }
+
+/*
+0    [main] INFO  istc.bigdawg.LoggerSetup  - Starting application. Logging was configured!
+94   [main] INFO  istc.bigdawg.migration.FromPostgresToSciDB  - Data migration from Postgres to SciDB
+110  [main] DEBUG istc.bigdawg.migration.FromPostgresToSciDB  - Data migration from Postgres to SciDB extracted rows from PostgreSQL: 5
+121  [main] DEBUG istc.bigdawg.postgresql.PostgreSQLHandler  - replace double quotes (") with signle quotes in the query to run it in PostgreSQL: SELECT column_name, ordinal_position, is_nullable, data_type, character_maximum_length, numeric_precision, numeric_scale FROM information_schema.columns WHERE table_schema="public" and table_name="region" order by ordinal_position
+156  [main] DEBUG istc.bigdawg.migration.FromPostgresToSciDB  - [/opt/scidb/14.12/bin/csv2scidb, -i, /tmp/bigdawg_region.csv, -o, /tmp/bigdawg_region.scidb, -d, |, -p, NSS]
+548  [main] INFO  istc.bigdawg.utils.RunShell  - command to be executed in SciDB: load region from /tmp/bigdawg_region.scidb; on host: localhost port: 1239 SciDB bin path: /opt/scidb/14.12/bin/
+673  [main] DEBUG istc.bigdawg.migration.FromPostgresToSciDB  - Load data to SciDB: Query was executed successfully
+*/

@@ -42,6 +42,15 @@ public class SciDBHandler implements DBHandler {
 		this.conInfo = conInfo;
 	}
 
+	/**
+	 * This statement will be executed via jdbc.
+	 * 
+	 * @param statement scidb statement 
+	 */
+	public void executeStatement(String statement) {
+	
+	}
+	
 	/*
 	 * (non-Javadoc)
 	 * 
