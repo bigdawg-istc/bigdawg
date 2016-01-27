@@ -31,8 +31,6 @@ public class Sort extends Operator {
 		super(parameters, output, child, supplement);
 
 		isBlocking = true;
-//		isSplittable = true;
-		isLocal = false;
 		
 
 		// two order bys might exist in a supplement:

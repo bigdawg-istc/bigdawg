@@ -1,19 +1,24 @@
 package istc.bigdawg.plan.operators;
 
+import java.sql.Connection;
 import java.util.List;
 import java.util.Map;
 
-import istc.bigdawg.schema.SQLDatabaseSingleton;
-import istc.bigdawg.schema.SQLAttribute;
-import istc.bigdawg.schema.SQLTable;
+import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.extract.logical.SQLTableExpression;
 import istc.bigdawg.plan.extract.SQLOutItem;
+import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
+import istc.bigdawg.postgresql.PostgreSQLHandler;
+import istc.bigdawg.schema.SQLAttribute;
+import istc.bigdawg.schema.SQLTable;
+import net.sf.jsqlparser.parser.CCJSqlParserUtil;
+import net.sf.jsqlparser.statement.create.table.CreateTable;
 
 public class SeqScan extends Scan {
 
 	
 	
-	private SQLDatabaseSingleton catalog;
+//	private SQLDatabaseSingleton catalog;
 	
 	
 	
@@ -22,12 +27,25 @@ public class SeqScan extends Scan {
 		super(parameters, output, child, supplement);
 		
 		
-		catalog = SQLDatabaseSingleton.getInstance();
-		
-		
 		// match output to base relation
-		SQLTable baseTable = new SQLTable(catalog.getDatabase().getTable(super.srcTable));
+
+		String schemaAndName = parameters.get("Schema");
+		if (schemaAndName == null || schemaAndName.equals("public")) schemaAndName = super.srcTable;
+		else schemaAndName = schemaAndName + "." + super.srcTable;
 		
+		this.dataObjects.add(schemaAndName);
+		
+		int dbid = CatalogViewer.getDbsOfObject(schemaAndName).get(0); // TODO FIX THIS; MAKE SURE THE RIGHT DATABASE (SQL) IS REFERENCED
+		
+		
+		
+		Connection con = PostgreSQLHandler.getConnection(((PostgreSQLConnectionInfo)PostgreSQLHandler.generateConnectionInfo(dbid)));
+		
+		CreateTable create = (CreateTable) CCJSqlParserUtil.parse(PostgreSQLHandler.getCreateTable(con, schemaAndName));
+		SQLTable baseTable = new SQLTable(create); 
+		
+		
+
 		
 		for(int i = 0; i < output.size(); ++i) {
 			
@@ -45,7 +63,7 @@ public class SeqScan extends Scan {
 		
 	public SeqScan(Operator o) throws Exception {
 		super(o);
-		this.catalog = SQLDatabaseSingleton.getInstance();
+//		this.catalog = SQLDatabaseSingleton.getInstance();
 	}
 
 	

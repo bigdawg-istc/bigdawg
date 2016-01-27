@@ -22,8 +22,6 @@ public class Distinct extends Operator {
 		
 		
 		isBlocking = true;
-//		isSplittable = true;
-		isLocal = false;
 
 //		secureCoordination = child.secureCoordination;
 		Map<String, SQLAttribute> srcSchema = child.getOutSchema(); //TODO CHECK THIS? TODO TODO

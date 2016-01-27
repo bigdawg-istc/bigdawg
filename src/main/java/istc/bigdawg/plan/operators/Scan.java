@@ -32,7 +32,6 @@ public class Scan extends Operator {
 		super(parameters, output, child, supplement);
 
 		isBlocking = false;
-		isLocal = true;
 
 		srcTable = parameters.get("Relation-Name");
 		

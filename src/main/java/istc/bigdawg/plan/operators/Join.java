@@ -1,7 +1,6 @@
 package istc.bigdawg.plan.operators;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -10,52 +9,45 @@ import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
 
-import istc.bigdawg.schema.SQLAttribute;
 import istc.bigdawg.extract.logical.SQLExpressionHandler;
 import istc.bigdawg.extract.logical.SQLTableExpression;
 import istc.bigdawg.plan.SQLQueryPlan;
 import istc.bigdawg.plan.extract.SQLOutItem;
-import istc.bigdawg.utils.sqlutil.SQLExpressionUtils;
+import istc.bigdawg.schema.SQLAttribute;
 import istc.bigdawg.utils.sqlutil.SQLUtilities;
-
-import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.BinaryExpression;
 import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.expression.Parenthesis;
 import net.sf.jsqlparser.expression.operators.relational.EqualsTo;
 import net.sf.jsqlparser.expression.operators.relational.LikeExpression;
 import net.sf.jsqlparser.expression.operators.relational.OldOracleJoinBinaryExpression;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
+import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.Select;
 import net.sf.jsqlparser.util.SelectUtils;
 
-import net.sf.jsqlparser.schema.Column;
-
-// Join can run in 3 modes: public, split, private
-// if it is in split mode then Alice and Bob perform partial join locally 
-// and do distributed comparisons as needed
-// split join is possible when there are no blocking ops between leaf and this
 
 public class Join extends Operator {
 
 	public enum JoinType  {Left, Natural, Right};
 	
 	private String currentWhere = "";
-	private boolean lhsHasJoinPred = false;
 	private JoinType joinType = null;
 	private String joinPredicate = null;
 	private String joinFilter; 
-//	private net.sf.jsqlparser.statement.select.Join parsedJoin;
+	private String joinPredicateOriginal = null; // TODO determine if this is useful for constructing new remainders 
+	private String joinFilterOriginal = null; 
 	
 
 	protected Map<String, SQLAttribute> srcSchema;
+	protected boolean joinPredicateUpdated = false;
 	
 	public Join (Operator o) throws Exception {
 		super(o);
 		Join j = (Join) o;
 		this.currentWhere = new String(j.currentWhere);
-		this.lhsHasJoinPred = j.lhsHasJoinPred;
 		this.joinType = j.joinType;
 		this.joinPredicate = new String(j.joinPredicate);
 		for (String s : j.srcSchema.keySet()) {
@@ -76,17 +68,13 @@ public class Join extends Operator {
 			}
 		}
 		
+
 		// if hash join
 		joinPredicate = SQLUtilities.parseString(joinPredicate);
 		joinFilter = parameters.get("Join-Filter");
 		joinFilter = SQLUtilities.parseString(joinFilter);
 
 
-		
-		if (lhs instanceof Scan) {
-			lhsHasJoinPred = true;
-		}
-		
 		
 	
 		if(joinFilter != null && joinFilter.contains(joinPredicate)) { // remove duplicate
@@ -118,6 +106,11 @@ public class Join extends Operator {
 				
 		}
 		inferJoinParameters();
+		
+		if (joinPredicate != null)
+			joinPredicateOriginal 	= new String (joinPredicate);
+		if (joinFilter != null)
+			joinFilterOriginal 		= new String (joinFilter);
 	}
     
  // combine join ON clause with WHEREs that combine two tables
@@ -245,107 +238,111 @@ public class Join extends Operator {
     	Operator child0 = children.get(0);
     	Operator child1 = children.get(1);
     	
-    	if (lhsHasJoinPred) {
-    		child1 = children.get(0);
-        	child0 = children.get(1);
+    	
+    	
+    	// constructing the ON expression
+
+    	// TODO ASSUMPTION: no more than one predicate
+    	
+    	
+    	Table t0 = new Table();
+		Table t1 = new Table();
+    	
+    	if (joinPredicate != null) {
+    		
+    		joinPredicate = updateOnExpression(joinPredicate, child0, child1, t0, t1, true);
+    		joinPredicateUpdated = true;
+    		// ^ ON predicate constructed
+    		
+    	} else {
+        	Set<String> child0ObjectSet = child0.getDataObjects();
+        	Set<String> child1ObjectSet = child1.getDataObjects();
+
+//    		// for debugging
+//        	System.out.printf("\nJP: %s\nchild0obj: %s\nchild1obj: %s\n\n", joinPredicate, 
+//        			child0ObjectSet, child1ObjectSet);
+    		
+        	t0.setName((String)child0ObjectSet.toArray()[0]);
+        	t1.setName((String)child1ObjectSet.toArray()[0]);
     	}
     	
-    	if (child0.isPruned() || child1.isPruned()) {
-    		
+    	
+		
+		
+		
+		Expression expr = null;
+    	if(joinPredicate != null && !joinPredicate.isEmpty()) {
+    		expr = CCJSqlParserUtil.parseCondExpression(joinPredicate);
+    	} else {
+    		expr = null;
+    	}
+		
+    	
+    	
+    	
+    	
+    	// check parent reservation and mark this node's usage
+    	// TODO update all operators to use getJoinReservedObjectsFromParents();
+    	
+    	boolean dstStatementStartedNull = false;
+    	boolean t0toAddJoin = false;
+    	
+    	if (dstStatement == null) {
+			dstStatement = SelectUtils.buildSelectFromTable(t0);
+			dstStatementStartedNull = true;
 			
-			BinaryExpression on = (BinaryExpression) CCJSqlParserUtil.parseCondExpression(joinPredicate);
+			this.joinReservedObjects.add(t0.getFullyQualifiedName());
+			this.joinReservedObjects.add(t1.getFullyQualifiedName());
+		} else {
 			
-			Column cLeft;
-			Column cRight;
+			getJoinReservedObjectsFromParents();
 			
-			
-			Expression l = on.getLeftExpression();
-			Expression r = on.getRightExpression();
-
-			if (l.getClass().equals(net.sf.jsqlparser.expression.Parenthesis.class))
-				l = ((net.sf.jsqlparser.expression.Parenthesis) l).getExpression();
-			if (r.getClass().equals(net.sf.jsqlparser.expression.Parenthesis.class)) 
-				r = ((net.sf.jsqlparser.expression.Parenthesis) r).getExpression();
-
-			cLeft  = ((Column) l);
-			cRight = ((Column) r);
-			
-			
-			
-    		String cLeftColName = cLeft.getTable().getName()+"."+cLeft.getColumnName();
-    		String cRightColName = cRight.getTable().getName()+"."+cRight.getColumnName();
-    		
-    		
-			Table t0 = new Table();
-    		Table t1 = new Table();
-    		
-    		
-    		if (child0.getOutSchema().containsKey(cLeftColName)) {
-    			
-    			t0.setName(cLeft.getTable().getName());
-    			t1.setName(cRight.getTable().getName());
-    			
-	    		setTableNameFromPrunedOne(child0, t0, cLeftColName, false);
-	    		setTableNameFromPrunedOne(child1, t1, cRightColName, false);
-    		
-    		} else {
-    			
-    			t0.setName(cRight.getTable().getName());
-    			t1.setName(cLeft.getTable().getName());
-    			
-    			setTableNameFromPrunedOne(child0, t0, cRightColName, false);
-	    		setTableNameFromPrunedOne(child1, t1, cLeftColName, false);
-	    		
-    		} 
-    		
-
-    		dstStatement = SelectUtils.buildSelectFromTable(t0);
-			
-			
-			if (child0.getOutSchema().containsKey(cLeftColName)) {
-				cLeft.setTable(t0);
-				cRight.setTable(t1);
+			if (this.joinReservedObjects.contains(t0.getFullyQualifiedName())) {
+				this.joinReservedObjects.add(t1.getFullyQualifiedName());
 			} else {
-				cLeft.setTable(t1);
-				cRight.setTable(t0);
+				t0toAddJoin = true;
+				this.joinReservedObjects.add(t0.getFullyQualifiedName());
 			}
-			
-			joinPredicate = on.toString();
-    	}
+		}
+    		
     	
     	
-		dstStatement = child0.generatePlaintext(srcStatement, dstStatement); // this should have already taken care of the pruning
+		// modify the dstStatement
+    	
+    	// start at child 0
+		dstStatement = child0.generatePlaintext(srcStatement, dstStatement); 
 		ps = (PlainSelect) dstStatement.getSelectBody();
 		if (ps.getWhere() != null) filterSet.add(ps.getWhere().toString());
 	
-		dstStatement = child1.generatePlaintext(srcStatement, dstStatement); // this should have already taken care of the pruning
+		// proceed to the bridge, this node
+		if (dstStatementStartedNull) {
+			if (joinPredicate == null) 
+				addJSQLParserJoin(dstStatement, t1);
+			else SelectUtils.addJoin(dstStatement, t1, expr);
+		} else {
+			if (t0toAddJoin) {
+				if (joinPredicate == null) addJSQLParserJoin(dstStatement, t0);
+				else SelectUtils.addJoin(dstStatement, t0, expr);
+			} else {
+				if (joinPredicate == null) addJSQLParserJoin(dstStatement, t1);
+				else SelectUtils.addJoin(dstStatement, t1, expr);
+			}
+		}
+		
+		// finish with child 1
+		dstStatement = child1.generatePlaintext(srcStatement, dstStatement); 
 		ps = (PlainSelect) dstStatement.getSelectBody();
 		if (ps.getWhere() != null) filterSet.add(ps.getWhere().toString());
 		
+    	
+    	
 		
-		// child1 of join should always be a scan
-    	assert(child1 instanceof Scan);
-    	Scan newScan = (Scan) child1;
-    	
-    	Expression expr = null;
-    	if(joinPredicate != null && !joinPredicate.isEmpty()) {
-    		expr = CCJSqlParserUtil.parseCondExpression(joinPredicate);
-    	}
-    	
-    	
-    	if (child0.isPruned() || child1.isPruned()) {
-    		Table t1 = new Table();
-    		t1.setName(child1.getPruneToken());
-    		SelectUtils.addJoin(dstStatement, t1, expr);
-    	} else {
-    		SelectUtils.addJoin(dstStatement, newScan.getTable(), expr);    		
-    	}
 		
 		if(joinFilter != null) {
 			
 			filterSet.add(joinFilter);
 
-//			// not sure if these are useful
+//			// not sure if useful
 //			if(ps.getWhere() != null) {
 //				filterSet.add(ps.getWhere().toString());
 //			}
@@ -362,11 +359,57 @@ public class Join extends Operator {
 
 	}
     
+    
+    public String updateOnExpression(String joinPred, Operator child0, Operator child1, Table t0, Table t1, boolean update) throws Exception {
+    	
+    	if ((!update) && joinPredicateUpdated)
+    		return joinPredicate;
+    	
+		BinaryExpression on = (BinaryExpression) CCJSqlParserUtil.parseCondExpression(joinPred);
+		
+		Expression l = on.getLeftExpression();
+		Expression r = on.getRightExpression();
+
+		
+		// TODO ASSUMPTION: THERE CAN ONLY BE COLUMNS
+		if (l.getClass().equals(Parenthesis.class)) {
+			l = ((Parenthesis) l).getExpression();
+			on.setLeftExpression(l);
+		}
+		if (r.getClass().equals(Parenthesis.class)) {
+			r = ((Parenthesis) r).getExpression();
+			on.setRightExpression(r);
+		}
+			
+		
+		Column cLeft  = ((Column) l);
+		Column cRight = ((Column) r);
+		
+		
+		String cLeftColName = cLeft.getTable().getName()+"."+cLeft.getColumnName();
+		String cRightColName = cRight.getTable().getName()+"."+cRight.getColumnName();
+		
+		
+		
+		t0.setName(cLeft.getTable().getName());
+		t1.setName(cRight.getTable().getName());
+		
+		setTableNameFromPrunedOne(child0, t0, cLeftColName, false);
+		setTableNameFromPrunedOne(child1, t1, cRightColName, false);
+    		
+		cLeft.setTable(t0);
+		cRight.setTable(t1);
+		
+		return on.toString();
+	}
+    
+    
+    
     private boolean setTableNameFromPrunedOne(Operator o, Table t, String fullyQualifiedName, boolean found) throws Exception{
 		if (o.getOutSchema().containsKey(fullyQualifiedName)) {
 			if (o.isPruned()) {
 				t.setName(o.getPruneToken());
-				System.out.printf("FOUND: FQN: %s,   outSchema: %s\n", fullyQualifiedName, o.getOutSchema());
+//				System.out.printf("FOUND: FQN: %s,   outSchema: %s\n", fullyQualifiedName, o.getOutSchema());
 				return true;
 			} else {
 				if (o.getClass().equals(Join.class)) {
@@ -380,7 +423,7 @@ public class Join extends Operator {
 	    		}
 			}
 		} else {
-			System.out.printf("NOT FOUND: FQN: %s,   outSchema: %s\n", fullyQualifiedName, o.getOutSchema());
+//			System.out.printf("NOT FOUND: FQN: %s,   outSchema: %s\n", fullyQualifiedName, o.getOutSchema());
 		}
 		
 		return false;
@@ -400,5 +443,22 @@ public class Join extends Operator {
 		planStr += ", " + joinPredicate + ", " + joinFilter + ")";
 		return planStr;
 	}
+	
+	public String getJoinPredicateOriginal() {
+		return joinPredicateOriginal;
+	}
+	public String getJoinFilterOriginal() {
+		return joinFilterOriginal;
+	}
+	
+	private void addJSQLParserJoin(Select dstStatement, Table t) {
+		net.sf.jsqlparser.statement.select.Join newJ = new net.sf.jsqlparser.statement.select.Join();
+    	newJ.setRightItem(t);
+    	newJ.setSimple(true);
+    	if (((PlainSelect) dstStatement.getSelectBody()).getJoins() == null)
+    		((PlainSelect) dstStatement.getSelectBody()).setJoins(new ArrayList<>());
+    	((PlainSelect) dstStatement.getSelectBody()).getJoins().add(newJ);
+	}
+	
 	
 };

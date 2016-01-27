@@ -347,29 +347,29 @@ public class CatalogViewer {
 	}
 
 	/**
-	 * With object name, fetch database name and engine name.
+	 * With object name, fetch dbid
 	 * 
-	 * @param cc
 	 * @param objName
-	 * @return ArrayList of TSV String of object name (obj), database name (db),
-	 *         and engine name (engine)
+	 * @return ArrayList of integers of database id (dbid)
 	 * @throws Exception
 	 */
-	public static ArrayList<String> getDbsOfObject(String objName) throws Exception {
+	public static ArrayList<Integer> getDbsOfObject(String objName) throws Exception {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
 		CatalogUtilities.checkConnection(cc);
-		CatalogUtilities.checkLength(objName, 15);
+		CatalogUtilities.checkLength(objName, 50);
 
-		ArrayList<String> extraction = new ArrayList<String>();
+		ArrayList<Integer> extraction = new ArrayList<>();
 
-		ResultSet rs = cc.execRet("select o.name obj, d.name db, e.name engine " + "from catalog.objects o "
+		ResultSet rs = cc.execRet("select d.dbid " + "from catalog.objects o "
 				+ "join catalog.databases d 	on o.physical_db = d.dbid "
-				+ "join catalog.engines e 		on d.engine_id = e.eid " + "where o.name ilike \'%" + objName + "%\' "
-				+ "order by o.name, d.name, e.name;");
+//				+ "join catalog.engines e 		on d.engine_id = e.eid "
+				+ "where o.name = \'" + objName + "\' "
+//				+ " and e.name ilike \'%postgres%\' "
+				+ "order by d.dbid;");
 
 		while (rs.next()) {
-			extraction.add(rs.getString("obj") + "\t" + rs.getString("db") + "\t" + rs.getString("engine"));
+			extraction.add(rs.getInt("dbid"));
 		}
 		rs.close();
 
@@ -739,8 +739,8 @@ public class CatalogViewer {
 		PreparedStatement stmt = cc.connection
 				.prepareStatement("SELECT host,port,databases.name as name,userid,password "
 						+ "FROM catalog.engines engines, catalog.databases databases "
-						+ "WHERE engines.eid=databases.engine_id and and databases.dbid=?");
-		stmt.setInt(2, dbId);
+						+ "WHERE engines.eid=databases.engine_id and databases.dbid=?");
+		stmt.setInt(1, dbId);
 		ResultSet rs = null;
 		try {
 			rs = stmt.executeQuery();

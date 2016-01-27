@@ -33,6 +33,7 @@ public class CommonSQLTableExpressionScan extends Scan {
 		cteName = parameters.get("CTE-Name");
 		with = plan.getWithItem(cteName);
 		
+		this.dataObjects.add(cteName);
 		
 		// match output to base relation
 		Map<String, SQLAttribute> cteSchema = new HashMap<String, SQLAttribute>();

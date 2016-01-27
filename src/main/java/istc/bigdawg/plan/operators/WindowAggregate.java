@@ -32,8 +32,6 @@ public class WindowAggregate extends Operator {
 		super(parameters, output, child, supplement);
 
 		isBlocking = true;
-//		isSplittable = true;
-		isLocal = false;
 
 		winaggs = new ArrayList<String>();
 		

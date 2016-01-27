@@ -47,8 +47,6 @@ public class Aggregate extends Operator {
 
 		
 		isBlocking = true;
-//		isSplittable = true;
-		isLocal = false;
 		
 		aggregates = new ArrayList<AggregateType>();
 		aggregateExpressions = new ArrayList<String>(); 

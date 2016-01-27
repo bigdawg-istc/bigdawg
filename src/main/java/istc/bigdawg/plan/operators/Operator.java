@@ -30,18 +30,11 @@ public class Operator {
 	private boolean isCTERoot = false;
 	// for use in getPlaintext
 
-
+	
 	// does this op need access to all inputs before it can emit output?
 	// e.g., max, min, sort
 	// these block force sync points in our setup
 	protected boolean isBlocking; 
-	
-	
-	// consider adding this:
-	// denotes that filter, scan, and any joins on replicas can be computed locally
-	// no potential to do remote coordination
-	protected boolean isLocal; 
-	
 	
 	
 	// denoting sliced execution by op (e.g., comorbidity query)
@@ -50,14 +43,7 @@ public class Operator {
 	
 	// direct descendants
 	protected List<Operator> children;
-
-
 	protected Operator parent = null;
-	
-	
-	
-	protected final int indent = 4;
-	
 	
 	
 	protected boolean isPruned = false;
@@ -65,6 +51,11 @@ public class Operator {
 	protected Integer pruneID = null;
 	
 	protected boolean isQueryRoot = false;
+	
+	
+	protected Set<String> dataObjects;
+	protected Set<String> joinReservedObjects;
+	
 	
 	
 	public Operator(Map<String, String> parameters, List<String> output,  
@@ -76,7 +67,8 @@ public class Operator {
 		// order preserving
 		outSchema = new LinkedHashMap<String, SQLAttribute>();
 		children  = new ArrayList<Operator>();
-		
+		dataObjects = new HashSet<>();
+		joinReservedObjects = new HashSet<>();
 
 		
 		
@@ -103,6 +95,8 @@ public class Operator {
 		
 		outSchema = new LinkedHashMap<String, SQLAttribute>();
 		children  = new ArrayList<Operator>();
+		dataObjects = new HashSet<>();
+		joinReservedObjects = new HashSet<>();
 		
 		children.add(lhs);
 		children.add(rhs);
@@ -129,42 +123,39 @@ public class Operator {
 		
 		this.isCTERoot = o.isCTERoot;
 		this.isBlocking = o.isBlocking; 
-		this.isLocal = o.isLocal; 
 		this.isPruned = o.isPruned;
 		this.pruneID = o.pruneID;
 
 		this.isQueryRoot = o.isQueryRoot;
+		
+		this.dataObjects = new HashSet<>();
+		joinReservedObjects = new HashSet<>();
 		
 		this.outSchema = new LinkedHashMap<>();
 		for (String s : o.outSchema.keySet()) {
 			this.outSchema.put(new String(s), new SQLAttribute(o.outSchema.get(s)));
 		}
 		
+		
 		this.children = new ArrayList<>();
 		for (Operator s : o.children) {
 			if (s instanceof Join) {
 				Join j = new Join(s);
 				j.setParent(this);
-				children.add(j);
+				this.children.add(j);
 			} else if (s instanceof SeqScan) {
 				SeqScan ss = new SeqScan(s);
 				ss.setParent(this);
-				children.add(ss);
+				this.children.add(ss);
 			} else if (s instanceof CommonSQLTableExpressionScan) {
 				CommonSQLTableExpressionScan c = new CommonSQLTableExpressionScan(s);
 				c.setParent(this);
-				children.add(c);
+				this.children.add(c);
 			} else if (s instanceof Sort) {
 				Sort t = new Sort(s);
 				t.setParent(this);
-				children.add(t);
+				this.children.add(t);
 			} else {
-				if (s instanceof Aggregate) {
-				} else if (s instanceof Distinct) {
-				} else if (s instanceof WindowAggregate) {
-				} else {
-					throw new Exception("Unknown Operator from Operator Copy: "+s.getClass().toString());
-				}
 				throw new Exception("Unsupported Operator Copy: "+s.getClass().toString());
 			}
 		}
@@ -569,5 +560,33 @@ public class Operator {
 	
 	public boolean isQueryRoot() {
 		return this.isQueryRoot;
+	}
+	
+	
+	public void getJoinReservedObjectsFromParents() {
+		if (parent != null) {
+			this.joinReservedObjects.clear();
+			this.joinReservedObjects.addAll(this.parent.joinReservedObjects);
+		}
+	}
+	
+	
+//	 for debugging
+	public Set<String> getDataObjects() throws Exception {
+		
+		if (isPruned) {
+			Set<String> temps = new HashSet<>();
+			temps.add(getPruneToken());
+			return temps;
+		}
+		
+		if (!(this instanceof SeqScan || this instanceof CommonSQLTableExpressionScan)) {
+			this.dataObjects.clear();
+			for (Operator o : children) {
+				this.dataObjects.addAll(o.getDataObjects());
+			}
+		}
+		
+		return dataObjects;
 	}
 }

@@ -39,9 +39,10 @@ public class CreateTableTest extends TestCase {
 		
 		String expectedOutput = expectedOutputs.get(testName);
 		
-		String serverOutput = PostgreSQLHandler.getCreateTable(psqlci, testName);
+		fail();
+//		String serverOutput = PostgreSQLHandler.getCreateTable(psqlci, testName);
 		
-		assertEquals(expectedOutput, serverOutput);
+//		assertEquals(expectedOutput, serverOutput);
 	}
 
 }

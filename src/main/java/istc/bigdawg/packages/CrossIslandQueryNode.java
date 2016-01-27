@@ -25,6 +25,7 @@ import istc.bigdawg.signature.builder.RelationalSignatureBuilder;
 import istc.bigdawg.utils.IslandsAndCast;
 import istc.bigdawg.utils.IslandsAndCast.Scope;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
+import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.Select;
 
 public class CrossIslandQueryNode {
@@ -42,6 +43,8 @@ public class CrossIslandQueryNode {
 	private static DBHandler dbSchemaHandler = null;
 	 
 	private Map<String, ArrayList<String>> originalMap;
+	
+	private Set<String> joinPredicates;
 	
 	
 	public CrossIslandQueryNode (IslandsAndCast.Scope scope, String islandQuery, String tagString) throws Exception {
@@ -62,6 +65,7 @@ public class CrossIslandQueryNode {
 		queryContainer = new HashMap<>();
 		remainderPermutations = new ArrayList<>();
 		remainderLoc = new ArrayList<>();
+		joinPredicates = new HashSet<>();
 		populateQueryContainer();
 	}
 	
@@ -135,6 +139,9 @@ public class CrossIslandQueryNode {
 		// traverse add remainder
 		remainderLoc = traverse(root, select); // this populated everything
 		
+		System.out.println("\njoinPredicates: "+joinPredicates);
+		System.out.println("dataObjects: "+root.getDataObjects());
+		
 		
 		if (remainderLoc == null) {
 
@@ -146,6 +153,15 @@ public class CrossIslandQueryNode {
 			// Permutations are done according to the structure of remainders.
 			// if remainderLoc is not null, then there is only one permutation
 			// otherwise, one should be able to specify an index to construct a QEP
+			
+			// get on expressions for every join;
+			// figure out possible relative ordering -- which one must be presented first and which one later --- pruning?
+			// :: joinPredicates
+			// convert joinPredicates into a set of rules? TODO
+			// convert into 
+			
+			
+			
 			
 			
 		} // if remainderLoc is not null, then THERE IS NO NEED FOR PERMUTATIONS 
@@ -205,15 +221,18 @@ public class CrossIslandQueryNode {
 			}
 			
 			
-			if (c0 == null) {
+			if (c0 == null && c1 != null) {
 				pruneChild(sourceQuery, child1, c1);
 			}
 			
-			if (c1 == null) {
+			if (c1 == null && c0 != null) {
 				pruneChild(sourceQuery, child0, c0);
 			} 
 			
 			// do nothing if both are pruned before enter here, thus saving it for the remainder 
+			
+			if (((Join)node).getJoinPredicateOriginal() != null)
+				joinPredicates.add(((Join)node).updateOnExpression(((Join)node).getJoinPredicateOriginal(), child0, child1, new Table(), new Table(), true));
 			
 		} else {
 			 throw new Exception("unsupported Operator in CrossIslandQueryNode");
@@ -233,7 +252,13 @@ public class CrossIslandQueryNode {
 		c.prune(true);
 		
 		Map<String, ConnectionInfo> cis = new HashMap<>();
+		
+//		System.out.println("traverse result: "+traverseResult);
+		
 		for (String s : traverseResult) {
+			
+//			System.out.println("dbid: "+s);
+			
 			cis.put(s, PostgreSQLHandler.generateConnectionInfo(Integer.parseInt(s)));
 		}
 		
