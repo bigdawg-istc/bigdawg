@@ -174,6 +174,7 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 	public MigrationResult migrate(PostgreSQLConnectionInfo connectionFrom, String fromTable,
 			PostgreSQLConnectionInfo connectionTo, String toTable) throws Exception {
 		logger.debug("Specific data migration");
+		long startTimeMigration = System.currentTimeMillis();
 
 		String copyFromString = getCopyCommand(fromTable, DIRECTION.TO/* STDOUT */);
 		String copyToString = getCopyCommand(toTable, DIRECTION.FROM/* STDIN */);
@@ -211,17 +212,23 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 
 			copyFromThread.start();
 			copyToThread.start();
-			
+
 			copyFromThread.join();
 			copyToThread.join();
 
 			conTo.commit();
 			conFrom.commit();
-			return new MigrationResult(taskCopyFromExecutor.get(), taskCopyToExecutor.get());
+			long countExtractedElements = taskCopyFromExecutor.get();
+			long countLoadedElements = taskCopyToExecutor.get();
+			long endTimeMigration = System.currentTimeMillis();
+			MigrationStatistics stats = new MigrationStatistics(connectionFrom, connectionTo, fromTable, toTable,
+					startTimeMigration, endTimeMigration, countExtractedElements, countLoadedElements,
+					this.getClass().getName());
+			return new MigrationResult(countExtractedElements, countLoadedElements);
 		} catch (Exception e) {
 			e.printStackTrace();
 			String msg = e.getMessage() + " Migration failed. Task did not finish correctly.";
-			logger.error(msg + StackTrace.getFullStackTrace(e),e);
+			logger.error(msg + StackTrace.getFullStackTrace(e), e);
 			conTo.rollback();
 			conFrom.rollback();
 			throw e;
@@ -257,16 +264,16 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 			e.printStackTrace();
 			return;
 		}
-		logger.debug("Number of extracted rows: " + result.getCountExtractedRows() + " Number of loaded rows: "
-				+ result.getCountLoadedRows());
+		logger.debug("Number of extracted rows: " + result.getCountExtractedElements() + " Number of loaded rows: "
+				+ result.getCountLoadedElements());
 
 		ConnectionInfo conFrom = conInfoFrom;
 		ConnectionInfo conTo = conInfoTo;
 		MigrationResult result1;
 		try {
 			result1 = migrator.migrate(conFrom, "mimic2v26.d_patients", conTo, "mimic2v26.d_patients");
-			logger.debug("Number of extracted rows: " + result1.getCountExtractedRows() + " Number of loaded rows: "
-					+ result1.getCountLoadedRows());
+			logger.debug("Number of extracted rows: " + result1.getCountExtractedElements() + " Number of loaded rows: "
+					+ result1.getCountLoadedElements());
 		} catch (MigrationException e) {
 			String msg = "Problem with general data migration.";
 			logger.error(msg);

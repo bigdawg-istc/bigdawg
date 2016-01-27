@@ -57,8 +57,8 @@ public class FromPostgresToPostgresTest {
 
 			MigrationResult result = migrator.migrate(conInfoFrom, tableName, conInfoTo, tableName);
 
-			assertEquals(result.getCountExtractedRows(), Long.valueOf(1L));
-			assertEquals(result.getCountLoadedRows(), Long.valueOf(1L));
+			assertEquals(result.getCountExtractedElements(), Long.valueOf(1L));
+			assertEquals(result.getCountLoadedElements(), Long.valueOf(1L));
 
 			QueryResult qresult = postgres2.executeQueryPostgreSQL("select * from " + tableName);
 			List<List<String>> rows = qresult.getRows();

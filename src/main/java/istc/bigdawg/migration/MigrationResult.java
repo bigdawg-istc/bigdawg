@@ -10,8 +10,8 @@ package istc.bigdawg.migration;
  */
 public class MigrationResult {
 
-	private Long countExtractedRows;
-	private Long countLoadedRows;
+	private Long countExtractedElements;
+	private Long countLoadedElements;
 	private String message;
 	private boolean isError;
 	
@@ -20,21 +20,21 @@ public class MigrationResult {
 	}
 
 	public MigrationResult(Long countExtractedRows, Long countLoadedRows) {
-		this.countExtractedRows = countExtractedRows;
-		this.countLoadedRows = countLoadedRows;
+		this.countExtractedElements = countExtractedRows;
+		this.countLoadedElements = countLoadedRows;
 		this.isError = false;
 	}
 
 	public MigrationResult(Long countExtractedRows, Long countLoadedRows, String message, boolean isError) {
-		this.countExtractedRows = countExtractedRows;
-		this.countLoadedRows = countLoadedRows;
+		this.countExtractedElements = countExtractedRows;
+		this.countLoadedElements = countLoadedRows;
 		this.message = message;
 		this.isError = isError;
 	}
 	
 	public MigrationResult(String message, boolean isError) {
-		this.countExtractedRows=0L;
-		this.countLoadedRows=0L;
+		this.countExtractedElements=0L;
+		this.countLoadedElements=0L;
 		this.message=message;
 		this.isError=isError;
 	}
@@ -47,12 +47,12 @@ public class MigrationResult {
 		return isError;
 	}
 
-	public Long getCountExtractedRows() {
-		return countExtractedRows;
+	public Long getCountExtractedElements() {
+		return countExtractedElements;
 	}
 
-	public Long getCountLoadedRows() {
-		return countLoadedRows;
+	public Long getCountLoadedElements() {
+		return countLoadedElements;
 	}
 
 }

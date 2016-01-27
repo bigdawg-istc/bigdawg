@@ -23,14 +23,14 @@ public class Migrator {
 
 	private static Logger logger = Logger.getLogger(Migrator.class.getName());
 	private static List<FromDatabaseToDatabase> registeredMigrators;
+	
+	public enum Type {
+		CSV_PARALLEL, BINARY_PARALLEL, CSV_SEQUENTIAL, BINARY_SEQUENTIAL
+	}
 
 	static {
 		registeredMigrators = new ArrayList<FromDatabaseToDatabase>();
 		registeredMigrators.add(new FromPostgresToPostgres());
-	}
-
-	public Migrator() {
-
 	}
 
 	public static MigrationResult migrate(ConnectionInfo connectionFrom, String objectFrom, ConnectionInfo connectionTo,
@@ -63,8 +63,8 @@ public class Migrator {
 		MigrationResult result;
 		try {
 			result = Migrator.migrate(conFrom, "mimic2v26.d_patients", conTo, "mimic2v26.d_patients");
-			logger.debug("Number of extracted rows: " + result.getCountExtractedRows() + " Number of loaded rows: "
-					+ result.getCountLoadedRows());
+			logger.debug("Number of extracted rows: " + result.getCountExtractedElements() + " Number of loaded rows: "
+					+ result.getCountLoadedElements());
 		} catch (MigrationException e) {
 			String msg = "Problem with general data Migrator.";
 			logger.error(msg);

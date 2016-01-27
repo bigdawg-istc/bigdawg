@@ -2,34 +2,25 @@ package istc.bigdawg.monitoring;
 
 import istc.bigdawg.BDConstants;
 import istc.bigdawg.exceptions.NotSupportIslandException;
+import istc.bigdawg.migration.MigrationStatistics;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
-import istc.bigdawg.query.ASTNode;
-import istc.bigdawg.query.parser.Parser;
-import istc.bigdawg.query.parser.simpleParser;
-import istc.bigdawg.catalog.CatalogInstance;
-import istc.bigdawg.catalog.CatalogViewer;
+import istc.bigdawg.query.ConnectionInfo;
+import istc.bigdawg.query.ConnectionInfoParser;
 import istc.bigdawg.executor.Executor;
-import istc.bigdawg.executor.plan.ExecutionNodeFactory;
 import istc.bigdawg.executor.plan.QueryExecutionPlan;
 import istc.bigdawg.packages.QueriesAndPerformanceInformation;
-import istc.bigdawg.plan.SQLQueryPlan;
-import istc.bigdawg.plan.extract.SQLPlanParser;
-import istc.bigdawg.plan.operators.Operator;
-import istc.bigdawg.signature.Signature;
-
-import javax.ws.rs.core.Response;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 
 public class Monitor {
     private static final String INSERT = "INSERT INTO monitoring(island, query, lastRan, duration) VALUES ('%s', '%s', -1, -1)";
     private static final String DELETE = "DELETE FROM monitoring WHERE island='%s' AND query='%s'";
     private static final String UPDATE = "UPDATE monitoring SET lastRan=%d, duration=%d WHERE island='%s' AND query='%s'";
     private static final String RETRIEVE = "SELECT * FROM monitoring WHERE island='%s' AND query='%s'";
+    private static final String MIGRATE = "INSERT INTO migrationstats(fromLoc, toLoc, objectFrom, objectTo, startTime, endTime, countExtracted, countLoaded, message) VALUES ('%s', '%s', '%s', '%s', %d, %d, %d, %d, '%s')";
+    private static final String RETRIEVEMIGRATE = "SELECT objectFrom, objectTo, startTime, endTime, countExtracted, countLoaded, message FROM migrationstats WHERE fromLoc='%s' AND toLoc='%s'";
 
     public static boolean addBenchmarks(List<QueryExecutionPlan> qeps, boolean lean) {
         BDConstants.Shim[] shims = BDConstants.Shim.values();
@@ -120,5 +111,48 @@ public class Monitor {
     public void finishedBenchmark(QueryExecutionPlan qep, long startTime, long endTime) throws SQLException {
         PostgreSQLHandler handler = new PostgreSQLHandler();
         handler.executeStatementPostgreSQL(String.format(UPDATE, endTime, endTime-startTime, qep.getIsland(), QueryExecutionPlan.qepToString(qep)));
+    }
+
+    public void addMigrationStats(MigrationStatistics stats) throws SQLException {
+        PostgreSQLHandler handler = new PostgreSQLHandler();
+        String fromLoc = ConnectionInfoParser.connectionInfoToString(stats.getConnectionFrom());
+        String toLoc = ConnectionInfoParser.connectionInfoToString(stats.getConnectionTo());
+        long countExtracted = -1;
+        long countLoaded = -1;
+        if (stats.getCountExtractedElements() != null){
+            countExtracted = stats.getCountExtractedElements();
+        }
+        if (stats.getCountLoadedElements() != null){
+            countLoaded = stats.getCountLoadedElements();
+        }
+        handler.executeStatementPostgreSQL(String.format(MIGRATE, fromLoc, toLoc, stats.getObjectFrom(), stats.getObjectTo(), stats.getStartTimeMigration(), stats.getEndTimeMigration(), countExtracted, countLoaded, stats.getMessage()));
+    }
+
+    public List<MigrationStatistics> getMigrationStats(ConnectionInfo from, ConnectionInfo to) throws SQLException {
+        String fromLoc = ConnectionInfoParser.connectionInfoToString(from);
+        String toLoc = ConnectionInfoParser.connectionInfoToString(to);
+        PostgreSQLHandler handler = new PostgreSQLHandler();
+        PostgreSQLHandler.QueryResult qresult = handler.executeQueryPostgreSQL(String.format(RETRIEVEMIGRATE, fromLoc, toLoc));
+        List<MigrationStatistics> results = new ArrayList<>();
+        List<List<String>> rows = qresult.getRows();
+        for (List<String> row: rows){
+            String objectFrom = row.get(0);
+            String objectTo = row.get(1);
+            long startTime = Long.parseLong(row.get(2));
+            long endTime = Long.parseLong(row.get(3));
+            long countExtracted = Long.parseLong(row.get(4));
+            Long countExtractedElements = null;
+            if (countExtracted >= 0) {
+                countExtractedElements = countExtracted;
+            }
+            long countLoaded = Long.parseLong(row.get(5));
+            Long countLoadedElements = null;
+            if (countLoaded >= 0) {
+                countLoadedElements = countLoaded;
+            }
+            String message = row.get(6);
+            results.add(new MigrationStatistics(from, to, objectFrom, objectTo, startTime, endTime, countExtractedElements, countLoadedElements, message));
+        }
+        return results;
     }
 }
