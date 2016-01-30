@@ -1,6 +1,7 @@
 package istc.bigdawg.plan.operators;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -27,7 +28,7 @@ import net.sf.jsqlparser.statement.select.WithItem;
 public class Operator {
 
 	
-	private boolean isCTERoot = false;
+	protected boolean isCTERoot = false;
 	// for use in getPlaintext
 
 	
@@ -55,7 +56,7 @@ public class Operator {
 	
 	protected Set<String> dataObjects;
 	protected Set<String> joinReservedObjects;
-	
+	protected boolean isCopy = false;  // used in building permutations; only remainder join operators could attain true, so far
 	
 	
 	public Operator(Map<String, String> parameters, List<String> output,  
@@ -119,7 +120,6 @@ public class Operator {
 	}
 	
 	public Operator(Operator o) throws Exception {
-		if (!this.getClass().equals(o.getClass())) throw new Exception();
 		
 		this.isCTERoot = o.isCTERoot;
 		this.isBlocking = o.isBlocking; 
@@ -131,14 +131,21 @@ public class Operator {
 		this.dataObjects = new HashSet<>();
 		joinReservedObjects = new HashSet<>();
 		
+		
 		this.outSchema = new LinkedHashMap<>();
 		for (String s : o.outSchema.keySet()) {
 			this.outSchema.put(new String(s), new SQLAttribute(o.outSchema.get(s)));
 		}
 		
-		
 		this.children = new ArrayList<>();
 		for (Operator s : o.children) {
+			
+			// pruned nodes are not regenerated
+			if (s.isPruned()) {
+				this.children.add(s);
+				continue;
+			}
+			
 			if (s instanceof Join) {
 				Join j = new Join(s);
 				j.setParent(this);
@@ -274,7 +281,7 @@ public class Operator {
 //		System.out.println("PLAIN DSTSTATEMENT: "+ ((PlainSelect) dstStatement.getSelectBody()));
 		
 		// iterate over out schema and add it to select clause
-		List<SelectItem> selects = new ArrayList<SelectItem>();
+		HashMap<String, SelectItem> selects = new HashMap<String, SelectItem>();
 
 		for(String s : outSchema.keySet()) {
 			SQLAttribute attr = new SQLAttribute(outSchema.get(s));
@@ -286,10 +293,16 @@ public class Operator {
 				si.setAlias(new Alias(attr.getName()));
 			}
 			
-			selects.add(si);
+			selects.put(s, si);
 		}
 		
-		((PlainSelect) dstStatement.getSelectBody()).setSelectItems(selects);
+		
+		// TODO WRITE A FUNCTION TO CHANGE THE SELECT ORDERS, BASE ON THE SRCSTATEMENT, IF APPLICABLE
+		// MAKE SURE TO CHCK THE CHILDREN OPERATORS FOR THE NAMES
+		
+		
+		
+		((PlainSelect) dstStatement.getSelectBody()).setSelectItems(changeSelectItemsOrder(srcStatement, selects));
 		
 		
 		// dealing with WITH statment
@@ -309,6 +322,41 @@ public class Operator {
 		}
 		return ((PlainSelect) dstStatement.getSelectBody()).toString();
 	}
+	
+	private List<SelectItem> changeSelectItemsOrder(Select srcStatement, HashMap<String, SelectItem> selects) throws Exception {
+		List<SelectItem> orders = ((PlainSelect) srcStatement.getSelectBody()).getSelectItems();
+		List<SelectItem> holder = new ArrayList<>();
+		
+		for (SelectItem si : orders) {
+			// find the child where the pruned token or seqscan or CTE is located, make it the corresponding position
+			
+			Column c = (Column)((SelectExpressionItem)si).getExpression();
+			String out = c.getFullyQualifiedName();
+			if (selects.get(out) != null)
+				holder.add(selects.get(out));
+			else if (selects.get(out = c.getTable().getName()+ "."+ c.getColumnName()) != null)
+				holder.add(selects.get(out));
+			else {
+				
+				out = c.getFullyQualifiedName();
+				
+				// well.
+				for (String s : selects.keySet()) {
+					if (s.endsWith(out)){
+						holder.add(selects.get(s));
+						break;
+					}
+				}
+			}
+			selects.remove(out);
+				
+			
+			
+			
+		}
+		return holder;
+	}
+	
 	
 	/**
 	 * add an SELECT INTO token to the select body
@@ -375,11 +423,11 @@ public class Operator {
 		
 		
 		// iterate over out schema and add it to select clause
-		List<SelectItem> selects = new ArrayList<SelectItem>();
+		HashMap<String, SelectItem> selects = new HashMap<String, SelectItem>();
 
 		for(String s : outSchema.keySet()) {
 			SQLAttribute attr = new SQLAttribute(outSchema.get(s));
-						
+
 			// find the table where it is pruned
 			changeAttributeName(attr);
 			
@@ -388,11 +436,10 @@ public class Operator {
 				si.setAlias(new Alias(attr.getName()));
 			}
 			
-			selects.add(si);
+			selects.put(s, si);
 		}
 		
-		PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
-		ps.setSelectItems(selects);
+		((PlainSelect) dstStatement.getSelectBody()).setSelectItems(changeSelectItemsOrder(srcStatement, selects));
 		
 		return dstStatement.toString();
 
@@ -565,14 +612,12 @@ public class Operator {
 	
 	public void getJoinReservedObjectsFromParents() {
 		if (parent != null) {
-			this.joinReservedObjects.clear();
 			this.joinReservedObjects.addAll(this.parent.joinReservedObjects);
 		}
 	}
 	
 	
-//	 for debugging
-	public Set<String> getDataObjects() throws Exception {
+	public Set<String> getDataObjectNames() throws Exception {
 		
 		if (isPruned) {
 			Set<String> temps = new HashSet<>();
@@ -583,10 +628,34 @@ public class Operator {
 		if (!(this instanceof SeqScan || this instanceof CommonSQLTableExpressionScan)) {
 			this.dataObjects.clear();
 			for (Operator o : children) {
-				this.dataObjects.addAll(o.getDataObjects());
+				this.dataObjects.addAll(o.getDataObjectNames());
 			}
 		}
 		
 		return dataObjects;
 	}
+	
+	public List<Operator> getDataObjects() {
+		List<Operator> extraction = new ArrayList<>();
+		
+		if (isPruned) {
+			extraction.add(this);
+			return extraction;
+		}
+		
+		if (!(this instanceof SeqScan || this instanceof CommonSQLTableExpressionScan)) {
+			for (Operator o : children) {
+				extraction.addAll(o.getDataObjects());
+			}
+		} else {
+			extraction.add(this);
+		}
+		
+		
+		return extraction;
+	}
+	
+	public boolean isCopy(){
+		return this.isCopy;
+	};
 }

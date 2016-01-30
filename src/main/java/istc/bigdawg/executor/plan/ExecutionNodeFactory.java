@@ -195,7 +195,8 @@ public class ExecutionNodeFactory {
 		}
 	}
 	
-	public static void addNodesAndEdgesNaive(QueryExecutionPlan qep, Operator remainder, List<String> remainderLoc, Map<String, QueryContainerForCommonDatabase> container, Select srcStmt) throws Exception {
+	public static void addNodesAndEdgesNaive(QueryExecutionPlan qep, Operator remainder, List<String> remainderLoc, Map<String, 
+			QueryContainerForCommonDatabase> container, Select srcStmt) throws Exception {
 		//TODO this should take a new QEP, a local map, the remainder, the container, and something else about the query
 		
 		HashMap<String, ExecutionNode> dependentNodes = new HashMap<>();

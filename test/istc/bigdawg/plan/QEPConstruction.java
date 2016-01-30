@@ -36,16 +36,16 @@ public class QEPConstruction {
 	
 	private void setupCrossIslandPlanConstructionTier1() {
 		HashMap<String, String> ba1 = new HashMap<>();
-		ba1.put("OUTPUT", "SELECT BIGDAWGPRUNED_1.id, BIGDAWGPRUNED_1.lastname, BIGDAWGPRUNED_1.firstname, BIGDAWGPRUNED_2.id, BIGDAWGPRUNED_2.disease_name FROM BIGDAWGPRUNED_2 JOIN BIGDAWGPRUNED_1 ON BIGDAWGPRUNED_2.id = BIGDAWGPRUNED_1.id");
+		ba1.put("OUTPUT", "SELECT BIGDAWGPRUNED_1.id, BIGDAWGPRUNED_1.lastname, BIGDAWGPRUNED_2.disease_name FROM BIGDAWGPRUNED_2 JOIN BIGDAWGPRUNED_1 ON BIGDAWGPRUNED_2.id = BIGDAWGPRUNED_1.id");
 		
 		expectedOutputs.put("cross-1", ba1);
-		inputs.put("cross-1", "bdrel(select * from mimic2v26.d_patients join ailment on mimic2v26.d_patients.id = ailment.id)");
+		inputs.put("cross-1", "bdrel(select mimic2v26.d_patients.id, mimic2v26.d_patients.lastname, ailment.disease_name from mimic2v26.d_patients join ailment on mimic2v26.d_patients.id = ailment.id)");
 	}
 	
 	
 	private void setupCrossIslandPlanConstructionTier2() {
 		HashMap<String, String> ba1 = new HashMap<>();
-		ba1.put("OUTPUT", "SELECT demographics.patient_id, vitals.height_timestamp, medications.medication FROM medications JOIN vitals ON vitals.patient_id = medications.patient_id JOIN demographics ON medications.patient_id = demographics.patient_id");
+		ba1.put("OUTPUT", "SELECT demographics.patient_id, vitals.height_timestamp, medications.medication FROM vitals JOIN medications ON vitals.patient_id = medications.patient_id JOIN demographics ON medications.patient_id = demographics.patient_id");
 		
 		expectedOutputs.put("cross-2", ba1);
 		inputs.put("cross-2", "bdrel(SELECT demographics.patient_id, height_timestamp, medication FROM demographics JOIN medications ON medications.patient_id = demographics.patient_id JOIN vitals ON vitals.patient_id = demographics.patient_id)");
@@ -62,7 +62,7 @@ public class QEPConstruction {
 	
 	private void setupCrossIslandPlanConstructionTier3NoOn() {
 		HashMap<String, String> ba1 = new HashMap<>();
-		ba1.put("OUTPUT", "SELECT BIGDAWGPRUNED_9.id, BIGDAWGPRUNED_9.lastname, BIGDAWGPRUNED_8.disease_name, BIGDAWGPRUNED_8.id, BIGDAWGPRUNED_10.content FROM BIGDAWGPRUNED_7 JOIN BIGDAWGPRUNED_8 ON BIGDAWGPRUNED_8.disease_name = BIGDAWGPRUNED_7.disease_name, BIGDAWGPRUNED_9, BIGDAWGPRUNED_10");
+		ba1.put("OUTPUT", "SELECT BIGDAWGPRUNED_9.id, BIGDAWGPRUNED_9.lastname, BIGDAWGPRUNED_8.disease_name, BIGDAWGPRUNED_8.id, BIGDAWGPRUNED_10.content FROM BIGDAWGPRUNED_8 JOIN BIGDAWGPRUNED_7 ON BIGDAWGPRUNED_8.disease_name = BIGDAWGPRUNED_7.disease_name, BIGDAWGPRUNED_9, BIGDAWGPRUNED_10");
 		
 		expectedOutputs.put("cross-3-no-on", ba1);
 		inputs.put("cross-3-no-on", "bdrel(SELECT mimic2v26.d_patients.id, lastname, ailment.disease_name, ailment.id, inputs.content FROM mimic2v26.d_patients, ailment JOIN treatments ON ailment.disease_name = treatments.disease_name, inputs)");
