@@ -18,7 +18,7 @@ public class Monitor {
     private static final String INSERT = "INSERT INTO monitoring(island, query, lastRan, duration) VALUES ('%s', '%s', -1, -1)";
     private static final String DELETE = "DELETE FROM monitoring WHERE island='%s' AND query='%s'";
     private static final String UPDATE = "UPDATE monitoring SET lastRan=%d, duration=%d WHERE island='%s' AND query='%s'";
-    private static final String RETRIEVE = "SELECT * FROM monitoring WHERE island='%s' AND query='%s'";
+    private static final String RETRIEVE = "SELECT duration FROM monitoring WHERE island='%s' AND query='%s'";
     private static final String MIGRATE = "INSERT INTO migrationstats(fromLoc, toLoc, objectFrom, objectTo, startTime, endTime, countExtracted, countLoaded, message) VALUES ('%s', '%s', '%s', '%s', %d, %d, %d, %d, '%s')";
     private static final String RETRIEVEMIGRATE = "SELECT objectFrom, objectTo, startTime, endTime, countExtracted, countLoaded, message FROM migrationstats WHERE fromLoc='%s' AND toLoc='%s'";
 
@@ -68,18 +68,30 @@ public class Monitor {
 
     public static QueriesAndPerformanceInformation getBenchmarkPerformance(List<QueryExecutionPlan> qeps) throws NotSupportIslandException {
         List<String> queries = new ArrayList<>();
-        List<Object> perfInfo = new ArrayList<>();
+        List<Long> perfInfo = new ArrayList<>();
 
         for (QueryExecutionPlan qep: qeps) {
             String qepString = QueryExecutionPlan.qepToString(qep);
             queries.add(qepString);
             PostgreSQLHandler handler = new PostgreSQLHandler();
-            perfInfo.add(handler.executeQuery(String.format(RETRIEVE, qep.getIsland(), qepString)));
+            try {
+                PostgreSQLHandler.QueryResult qresult = handler.executeQueryPostgreSQL(String.format(RETRIEVE, qep.getIsland(), qepString));
+                List<List<String>> rows = qresult.getRows();
+                long duration = Long.MAX_VALUE;
+                for (List<String> row: rows){
+                    long currentDuration = Long.parseLong(row.get(0));
+                    if (currentDuration < duration){
+                        duration = currentDuration;
+                    }
+                }
+                perfInfo.add(duration);
+            } catch (SQLException e) {
+                e.printStackTrace();
+                perfInfo.add(Long.MAX_VALUE);
+            }
         }
-        List<List<String>> queryList = new ArrayList<>();
-        queryList.add(queries);
         System.out.printf("[BigDAWG] MONITOR: Performance information generated.\n");
-        return new QueriesAndPerformanceInformation(queryList, perfInfo);
+        return new QueriesAndPerformanceInformation(queries, perfInfo);
     }
 
     private static boolean insert(String query, String island) throws NotSupportIslandException {
