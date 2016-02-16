@@ -80,7 +80,7 @@ public class Monitor {
                 long duration = Long.MAX_VALUE;
                 for (List<String> row: rows){
                     long currentDuration = Long.parseLong(row.get(0));
-                    if (currentDuration < duration){
+                    if (currentDuration >= 0 && currentDuration < duration){
                         duration = currentDuration;
                     }
                 }
