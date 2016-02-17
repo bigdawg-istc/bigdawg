@@ -5,6 +5,10 @@ package istc.bigdawg.scidb;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
@@ -23,6 +27,7 @@ import istc.bigdawg.query.QueryResponseTupleList;
 import istc.bigdawg.utils.Constants;
 import istc.bigdawg.utils.ObjectMapperResource;
 import istc.bigdawg.utils.RunShell;
+import istc.bigdawg.utils.StackTrace;
 import istc.bigdawg.utils.Tuple.Tuple2;
 
 /**
@@ -31,26 +36,91 @@ import istc.bigdawg.utils.Tuple.Tuple2;
  */
 public class SciDBHandler implements DBHandler {
 
-	private Logger log = Logger.getLogger(SciDBHandler.class.getName());
+	private static Logger log = Logger.getLogger(SciDBHandler.class.getName());
 	private SciDBConnectionInfo conInfo;
+	private Connection connection;
 
 	public SciDBHandler() {
 		this.conInfo = new SciDBConnectionInfo();
 	}
 
-	public SciDBHandler(SciDBConnectionInfo conInfo) {
+	public static Connection getConnection(SciDBConnectionInfo conInfo) throws ClassNotFoundException, SQLException {
+		try {
+			Class.forName("org.scidb.jdbc.Driver");
+		} catch (ClassNotFoundException e) {
+			e.printStackTrace();
+			log.error("SciDB jdbc driver is not in the CLASSPATH -> " + e.getMessage(), e);
+			throw e;
+		}
+		try {
+			return DriverManager.getConnection(conInfo.getUrl());
+		} catch (SQLException ex) {
+			ex.printStackTrace();
+			log.error("Could not establish a connection to a SciDB database. " + conInfo.toString() + " "
+					+ ex.getMessage() + StackTrace.getFullStackTrace(ex), ex);
+			throw ex;
+		}
+	}
+
+	/**
+	 * Create a new SciDB hander for a given connection. You have to close the
+	 * handler at the end to release the resources.
+	 * 
+	 * @param conInfo
+	 * @throws SQLException
+	 * @throws ClassNotFoundException
+	 */
+	public SciDBHandler(SciDBConnectionInfo conInfo) throws SQLException, ClassNotFoundException {
 		this.conInfo = conInfo;
+		this.connection = getConnection(conInfo);
+	}
+
+	/**
+	 * You have to close the handler at the end to release the resources.
+	 * 
+	 * @throws SQLException
+	 */
+	public void close() throws SQLException {
+		if (connection != null) {
+			try {
+				connection.close();
+				connection = null;
+			} catch (SQLException e) {
+				e.printStackTrace();
+				log.error("Could not close the connection to a SciDB database. " + conInfo.toString() + " "
+						+ e.getMessage() + StackTrace.getFullStackTrace(e), e);
+				throw e;
+			}
+		}
 	}
 
 	/**
 	 * This statement will be executed via jdbc.
 	 * 
-	 * @param statement scidb statement 
+	 * @param statement
+	 *            scidb statement
+	 * @throws SQLException
 	 */
-	public void executeStatement(String statement) {
-	
+	public void executeStatement(String stringStatement) throws SQLException {
+		Statement statement = null;
+		try {
+			statement = connection.createStatement();
+			statement.execute(stringStatement);
+			statement.close();
+		} catch (SQLException ex) {
+			ex.printStackTrace();
+			// remove ' from the statement - otherwise it won't be inserted into
+			// log table in Postgres
+			log.error(ex.getMessage() + "; statement to be executed: " + stringStatement.replace("'", "") + " "
+					+ ex.getStackTrace(), ex);
+			throw ex;
+		} finally {
+			if (statement != null) {
+				statement.close();
+			}
+		}
 	}
-	
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -129,8 +199,9 @@ public class SciDBHandler implements DBHandler {
 	public static void main(String[] args) {
 		try {
 			// String resultSciDB = new
-			// SciDBHandler().executeQueryScidb("list(^^arrays^^)");
-			String resultSciDB = new SciDBHandler().executeQueryScidb("scan(waveform_test_1GB)");
+			new SciDBHandler().executeQueryScidb("list(^^arrays^^)");
+			// String resultSciDB = new
+			// SciDBHandler().executeQueryScidb("scan(waveform_test_1GB)");
 			// System.out.println(resultSciDB);
 		} catch (IOException | InterruptedException | SciDBException e) {
 			e.printStackTrace();
@@ -154,10 +225,10 @@ public class SciDBHandler implements DBHandler {
 			if ((columnMetaData.getDataType().equals("character") || columnMetaData.getDataType().equals("char"))
 					&& columnMetaData.getCharacterMaximumLength() == 1) {
 				newType = 'C';
-			} else
-				if (columnMetaData.getDataType().equals("varchar") || columnMetaData.getDataType().equals("character")
-						|| columnMetaData.getDataType().contains("character varying")
-						|| columnMetaData.getDataType().equals("text")) {
+			} else if (columnMetaData.getDataType().equals("varchar")
+					|| columnMetaData.getDataType().equals("character")
+					|| columnMetaData.getDataType().contains("character varying")
+					|| columnMetaData.getDataType().equals("text")) {
 				// for "string" type
 				newType = 'S';
 			}

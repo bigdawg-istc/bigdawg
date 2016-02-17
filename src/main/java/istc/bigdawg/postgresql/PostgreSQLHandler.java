@@ -23,7 +23,7 @@ import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.query.DBHandler;
 import istc.bigdawg.query.QueryClient;
-import istc.bigdawg.util.StackTrace;
+import istc.bigdawg.utils.StackTrace;
 
 /**
  * @author Adam Dziedzic
@@ -38,7 +38,7 @@ public class PostgreSQLHandler implements DBHandler {
 	private PreparedStatement preparedSt = null;
 	private ResultSet rs = null;
 
-	public PostgreSQLHandler(int engineId, int dbId) throws Exception {
+	public PostgreSQLHandler(int dbId) throws Exception {
 		try {
 			this.conInfo = CatalogViewer.getConnection(dbId);
 		} catch (Exception e) {
@@ -235,8 +235,9 @@ public class PostgreSQLHandler implements DBHandler {
 	 * @throws SQLException
 	 */
 	public static void executeStatement(Connection connection, String stringStatement) throws SQLException {
+		Statement statement = null;
 		try {
-			Statement statement = connection.createStatement();
+			statement = connection.createStatement();
 			statement.execute(stringStatement);
 			statement.close();
 		} catch (SQLException ex) {
@@ -246,6 +247,10 @@ public class PostgreSQLHandler implements DBHandler {
 			log.error(ex.getMessage() + "; statement to be executed: " + stringStatement.replace("'", "") + " "
 					+ ex.getStackTrace(), ex);
 			throw ex;
+		} finally {
+			if (statement != null) {
+				statement.close();
+			}
 		}
 	}
 

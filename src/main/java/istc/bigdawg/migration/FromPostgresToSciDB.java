@@ -25,9 +25,9 @@ import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
 import istc.bigdawg.scidb.SciDBHandler;
-import istc.bigdawg.util.SystemUtilities;
 import istc.bigdawg.utils.Constants;
 import istc.bigdawg.utils.RunShell;
+import istc.bigdawg.utils.SystemUtilities;
 
 /**
  * @author Adam Dziedzic
@@ -182,7 +182,7 @@ public class FromPostgresToSciDB implements FromDatabaseToDatabase {
 		String fromTable = "region";
 		SciDBConnectionInfo conTo = new SciDBConnectionInfo("localhost", "1239", "scidb", "mypassw",
 				"/opt/scidb/14.12/bin/");
-		String arrayTo = "region";
+		String arrayTo = "region2";
 		migrator.migrateSingleThreadCSV(conFrom, fromTable, conTo, arrayTo);
 	}
 

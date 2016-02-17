@@ -21,7 +21,7 @@ import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.postgresql.PostgreSQLSchemaTableName;
 import istc.bigdawg.query.ConnectionInfo;
-import istc.bigdawg.util.StackTrace;
+import istc.bigdawg.utils.StackTrace;
 
 /**
  * @author Adam Dziedzic
