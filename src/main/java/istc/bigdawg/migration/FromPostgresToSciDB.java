@@ -146,18 +146,33 @@ public class FromPostgresToSciDB implements FromDatabaseToDatabase {
 		return resultString;
 	}
 
-	/*
-	 * (non-Javadoc)
+	/**
+	 * This is migration from PostgreSQL to SciDB.
+	 * 
+	 * @param connectionFrom the connection to PostgreSQL
+	 * @param fromTable the name of the table in PostgreSQL to be migrated
+	 * @param connectionTo the connection to SciDB database
+	 * @param arrayTo the name of the array in SciDB
 	 * 
 	 * @see
 	 * istc.bigdawg.migration.FromDatabaseToDatabase#migrate(istc.bigdawg.query.
 	 * ConnectionInfo, java.lang.String, istc.bigdawg.query.ConnectionInfo,
 	 * java.lang.String)
+	 * 
+	 * 
 	 */
 	@Override
-	public MigrationResult migrate(ConnectionInfo connectionFrom, String objectFrom, ConnectionInfo connectionTo,
-			String objectTo) throws MigrationException {
-		// TODO Auto-generated method stub
+	public MigrationResult migrate(ConnectionInfo connectionFrom, String fromTable, ConnectionInfo connectionTo,
+			String toArray) throws MigrationException {
+		log.debug("Data migration from PostgreSQL to SciDB.");
+		if (connectionFrom instanceof PostgreSQLConnectionInfo && connectionTo instanceof SciDBConnectionInfo) {
+			try {
+				return this.migrate((PostgreSQLConnectionInfo) connectionFrom, fromTable,
+						(SciDBConnectionInfo) connectionTo, toArray);
+			} catch (Exception e) {
+				throw new MigrationException(e.getMessage(), e);
+			}
+		}
 		return null;
 	}
 
