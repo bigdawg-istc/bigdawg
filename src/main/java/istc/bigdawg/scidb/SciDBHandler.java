@@ -5,6 +5,12 @@ package istc.bigdawg.scidb;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
@@ -16,13 +22,17 @@ import org.apache.log4j.Logger;
 
 import istc.bigdawg.BDConstants;
 import istc.bigdawg.BDConstants.Shim;
+import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.exceptions.SciDBException;
 import istc.bigdawg.postgresql.PostgreSQLColumnMetaData;
+import istc.bigdawg.postgresql.PostgreSQLHandler;
+import istc.bigdawg.postgresql.PostgreSQLHandler.QueryResult;
 import istc.bigdawg.query.DBHandler;
 import istc.bigdawg.query.QueryResponseTupleList;
 import istc.bigdawg.utils.Constants;
 import istc.bigdawg.utils.ObjectMapperResource;
 import istc.bigdawg.utils.RunShell;
+import istc.bigdawg.utils.StackTrace;
 import istc.bigdawg.utils.Tuple.Tuple2;
 
 /**
@@ -31,15 +41,126 @@ import istc.bigdawg.utils.Tuple.Tuple2;
  */
 public class SciDBHandler implements DBHandler {
 
-	private Logger log = Logger.getLogger(SciDBHandler.class.getName());
+	private static Logger log = Logger.getLogger(SciDBHandler.class.getName());
 	private SciDBConnectionInfo conInfo;
+	private Connection connection;
 
-	public SciDBHandler() {
+	public SciDBHandler() throws ClassNotFoundException, SQLException {
 		this.conInfo = new SciDBConnectionInfo();
+		this.connection = getConnection(conInfo);
 	}
 
-	public SciDBHandler(SciDBConnectionInfo conInfo) {
+	/**
+	 * Create a JDBC connectin to SciDB based on the conInfo (host,port,etc.).
+	 * 
+	 * @param conInfo
+	 *            Information on the conection (host,port,etc.).
+	 * @return the JDBC connection to SciDB
+	 * @throws ClassNotFoundException
+	 * @throws SQLException
+	 * @throws MigrationException 
+	 */
+	public static Connection getConnection(SciDBConnectionInfo conInfo) throws SQLException {
+		try {
+			Class.forName("org.scidb.jdbc.Driver");
+		} catch (ClassNotFoundException e) {
+			e.printStackTrace();
+			log.error("SciDB jdbc driver is not in the CLASSPATH -> " + e.getMessage(), e);
+			throw new RuntimeException(e.getMessage());
+		}
+		try {
+			return DriverManager.getConnection(conInfo.getUrl());
+		} catch (SQLException ex) {
+			ex.printStackTrace();
+			log.error("Could not establish a connection to a SciDB database. " + conInfo.toString() + " "
+					+ ex.getMessage() + StackTrace.getFullStackTrace(ex), ex);
+			throw ex;
+		}
+	}
+
+	/**
+	 * Create a new SciDB hander for a given connection. You have to close the
+	 * handler at the end to release the resources.
+	 * 
+	 * @param conInfo
+	 * @throws SQLException
+	 * @throws ClassNotFoundException
+	 */
+	public SciDBHandler(SciDBConnectionInfo conInfo) throws SQLException, ClassNotFoundException {
 		this.conInfo = conInfo;
+		this.connection = getConnection(conInfo);
+	}
+
+	/**
+	 * You have to close the handler at the end to release the resources.
+	 * 
+	 * @throws SQLException
+	 */
+	public void close() throws SQLException {
+		if (connection != null) {
+			try {
+				connection.close();
+				connection = null;
+			} catch (SQLException e) {
+				e.printStackTrace();
+				log.error("Could not close the connection to a SciDB database. " + conInfo.toString() + " "
+						+ e.getMessage() + StackTrace.getFullStackTrace(e), e);
+				throw e;
+			}
+		}
+	}
+
+	/**
+	 * This statement will be executed via jdbc.
+	 * 
+	 * @param statement
+	 *            scidb statement
+	 * @throws SQLException
+	 */
+	public void executeStatement(String stringStatement) throws SQLException {
+		Statement statement = null;
+		try {
+			statement = connection.createStatement();
+			statement.execute(stringStatement);
+			statement.close();
+		} catch (SQLException ex) {
+			ex.printStackTrace();
+			// remove ' from the statement - otherwise it won't be inserted into
+			// log table in Postgres
+			log.error(ex.getMessage() + "; statement to be executed: " + stringStatement.replace("'", "") + " "
+					+ ex.getStackTrace(), ex);
+			throw ex;
+		} finally {
+			if (statement != null) {
+				statement.close();
+			}
+		}
+	}
+
+	public QueryResult executeQueryJDBC(String queryString) throws SQLException {
+		Statement statement = null;
+		ResultSet resultSet = null;
+		try {
+			statement = connection.createStatement();
+			resultSet = statement.executeQuery(queryString);
+			ResultSetMetaData rsmd = resultSet.getMetaData();
+			List<String> colNames = PostgreSQLHandler.getColumnNames(rsmd);
+			List<String> types = PostgreSQLHandler.getColumnTypes(rsmd);
+			List<List<String>> rows = PostgreSQLHandler.getRows(resultSet);
+			return new PostgreSQLHandler().new QueryResult(rows, types, colNames);
+		} catch (SQLException ex) {
+			ex.printStackTrace();
+			// remove ' from the statement - otherwise it won't be inserted into
+			// log table in Postgres
+			log.error(ex.getMessage() + "; statement to be executed: " + queryString.replace("'", "") + " "
+					+ ex.getStackTrace(), ex);
+			throw ex;
+		} finally {
+			if (statement != null) {
+
+				statement.close();
+			}
+		}
 	}
 
 	/*
@@ -120,10 +241,28 @@ public class SciDBHandler implements DBHandler {
 	public static void main(String[] args) {
 		try {
 			// String resultSciDB = new
-			// SciDBHandler().executeQueryScidb("list(^^arrays^^)");
-			String resultSciDB = new SciDBHandler().executeQueryScidb("scan(waveform_test_1GB)");
+			// new SciDBHandler().executeQueryScidb("list(^^arrays^^)");
+			try {
+				// new SciDBHandler().executeStatement("drop array adam2");
+				SciDBHandler handler = new SciDBHandler();
+				handler.executeStatement("create array adam2<v:string> [i=0:10,1,0]");
+				handler.close();
+				
+				handler = new SciDBHandler();
+				QueryResult queryResult = handler.executeQueryJDBC("select * from list('arrays')");
+				System.out.println("rows from scidb: "+queryResult.getRows().toString());
+				handler.close();
+			} catch (ClassNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			// STRING resultSciDB = new
+			// SciDBHandler().executeQueryScidb("scan(waveform_test_1GB)");
 			// System.out.println(resultSciDB);
-		} catch (IOException | InterruptedException | SciDBException e) {
+			// } catch (IOException | InterruptedException | SciDBException e) {
+			// e.printStackTrace();
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 
@@ -145,10 +284,10 @@ public class SciDBHandler implements DBHandler {
 			if ((columnMetaData.getDataType().equals("character") || columnMetaData.getDataType().equals("char"))
 					&& columnMetaData.getCharacterMaximumLength() == 1) {
 				newType = 'C';
-			} else
-				if (columnMetaData.getDataType().equals("varchar") || columnMetaData.getDataType().equals("character")
-						|| columnMetaData.getDataType().contains("character varying")
-						|| columnMetaData.getDataType().equals("text")) {
+			} else if (columnMetaData.getDataType().equals("varchar")
+					|| columnMetaData.getDataType().equals("character")
+					|| columnMetaData.getDataType().contains("character varying")
+					|| columnMetaData.getDataType().equals("text")) {
 				// for "string" type
 				newType = 'S';
 			}

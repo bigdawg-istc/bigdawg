@@ -18,7 +18,7 @@ public class Monitor {
     private static final String INSERT = "INSERT INTO monitoring(island, query, lastRan, duration) VALUES ('%s', '%s', -1, -1)";
     private static final String DELETE = "DELETE FROM monitoring WHERE island='%s' AND query='%s'";
     private static final String UPDATE = "UPDATE monitoring SET lastRan=%d, duration=%d WHERE island='%s' AND query='%s'";
-    private static final String RETRIEVE = "SELECT * FROM monitoring WHERE island='%s' AND query='%s'";
+    private static final String RETRIEVE = "SELECT duration FROM monitoring WHERE island='%s' AND query='%s'";
     private static final String MIGRATE = "INSERT INTO migrationstats(fromLoc, toLoc, objectFrom, objectTo, startTime, endTime, countExtracted, countLoaded, message) VALUES ('%s', '%s', '%s', '%s', %d, %d, %d, %d, '%s')";
     private static final String RETRIEVEMIGRATE = "SELECT objectFrom, objectTo, startTime, endTime, countExtracted, countLoaded, message FROM migrationstats WHERE fromLoc='%s' AND toLoc='%s'";
 
@@ -68,18 +68,30 @@ public class Monitor {
 
     public static QueriesAndPerformanceInformation getBenchmarkPerformance(List<QueryExecutionPlan> qeps) throws NotSupportIslandException {
         List<String> queries = new ArrayList<>();
-        List<Object> perfInfo = new ArrayList<>();
+        List<Long> perfInfo = new ArrayList<>();
 
         for (QueryExecutionPlan qep: qeps) {
             String qepString = QueryExecutionPlan.qepToString(qep);
             queries.add(qepString);
             PostgreSQLHandler handler = new PostgreSQLHandler();
-            perfInfo.add(handler.executeQuery(String.format(RETRIEVE, qep.getIsland(), qepString)));
+            try {
+                PostgreSQLHandler.QueryResult qresult = handler.executeQueryPostgreSQL(String.format(RETRIEVE, qep.getIsland(), qepString));
+                List<List<String>> rows = qresult.getRows();
+                long duration = Long.MAX_VALUE;
+                for (List<String> row: rows){
+                    long currentDuration = Long.parseLong(row.get(0));
+                    if (currentDuration >= 0 && currentDuration < duration){
+                        duration = currentDuration;
+                    }
+                }
+                perfInfo.add(duration);
+            } catch (SQLException e) {
+                e.printStackTrace();
+                perfInfo.add(Long.MAX_VALUE);
+            }
         }
-        List<List<String>> queryList = new ArrayList<>();
-        queryList.add(queries);
         System.out.printf("[BigDAWG] MONITOR: Performance information generated.\n");
-        return new QueriesAndPerformanceInformation(queryList, perfInfo);
+        return new QueriesAndPerformanceInformation(queries, perfInfo);
     }
 
     private static boolean insert(String query, String island) throws NotSupportIslandException {
@@ -117,7 +129,15 @@ public class Monitor {
         PostgreSQLHandler handler = new PostgreSQLHandler();
         String fromLoc = ConnectionInfoParser.connectionInfoToString(stats.getConnectionFrom());
         String toLoc = ConnectionInfoParser.connectionInfoToString(stats.getConnectionTo());
-        handler.executeStatementPostgreSQL(String.format(MIGRATE, fromLoc, toLoc, stats.getObjectFrom(), stats.getObjectTo(), stats.getStartTimeMigration(), stats.getEndTimeMigration(), stats.getCountExtractedElements(), stats.getCountLoadedElements(), stats.getMessage()));
+        long countExtracted = -1;
+        long countLoaded = -1;
+        if (stats.getCountExtractedElements() != null){
+            countExtracted = stats.getCountExtractedElements();
+        }
+        if (stats.getCountLoadedElements() != null){
+            countLoaded = stats.getCountLoadedElements();
+        }
+        handler.executeStatementPostgreSQL(String.format(MIGRATE, fromLoc, toLoc, stats.getObjectFrom(), stats.getObjectTo(), stats.getStartTimeMigration(), stats.getEndTimeMigration(), countExtracted, countLoaded, stats.getMessage()));
     }
 
     public List<MigrationStatistics> getMigrationStats(ConnectionInfo from, ConnectionInfo to) throws SQLException {
@@ -133,9 +153,17 @@ public class Monitor {
             long startTime = Long.parseLong(row.get(2));
             long endTime = Long.parseLong(row.get(3));
             long countExtracted = Long.parseLong(row.get(4));
+            Long countExtractedElements = null;
+            if (countExtracted >= 0) {
+                countExtractedElements = countExtracted;
+            }
             long countLoaded = Long.parseLong(row.get(5));
+            Long countLoadedElements = null;
+            if (countLoaded >= 0) {
+                countLoadedElements = countLoaded;
+            }
             String message = row.get(6);
-            results.add(new MigrationStatistics(from, to, objectFrom, objectTo, startTime, endTime, countExtracted, countLoaded, message));
+            results.add(new MigrationStatistics(from, to, objectFrom, objectTo, startTime, endTime, countExtractedElements, countLoadedElements, message));
         }
         return results;
     }

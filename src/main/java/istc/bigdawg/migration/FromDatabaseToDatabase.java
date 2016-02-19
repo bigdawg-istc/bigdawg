@@ -12,6 +12,7 @@ import istc.bigdawg.query.ConnectionInfo;
  *
  */
 public interface FromDatabaseToDatabase {
+
 	MigrationResult migrate(ConnectionInfo connectionFrom, String objectFrom, ConnectionInfo connectionTo,
 			String objectTo) throws MigrationException;
 }

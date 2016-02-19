@@ -80,16 +80,17 @@ public class Planner {
 		List<QueryExecutionPlan> qeps = ciqn.getAllQEPs();
 		Monitor.addBenchmarks(qeps, false);
 		QueriesAndPerformanceInformation qnp = Monitor.getBenchmarkPerformance(qeps); // TODO CHANGE THE QEPS SENT TO MONITOR FUNCTION
-		
-		
-		
-		
+
 		// does some magic to pick out the best query, store it to the query plan queue
-		// CHEAT: JUST ONE
-		// TODO DON'T CHEAT; ACTUALLY PICK; CHANGE THIS 0
-		
-		
-		
+
+		long minDuration = Long.MAX_VALUE;
+		for (int i = 0; i < qnp.qList.size(); i++){
+			long currentDuration = qnp.pInfo.get(i);
+			if (currentDuration < minDuration){
+				minDuration = currentDuration;
+				choice = i;
+			}
+		}
 		
 		return choice;
 	};

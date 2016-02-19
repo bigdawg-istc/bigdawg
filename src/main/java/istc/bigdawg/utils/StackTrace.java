@@ -1,7 +1,7 @@
 /**
  * 
  */
-package istc.bigdawg.util;
+package istc.bigdawg.utils;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;

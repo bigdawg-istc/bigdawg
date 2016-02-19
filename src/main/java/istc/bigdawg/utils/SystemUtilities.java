@@ -1,7 +1,7 @@
 /**
  * 
  */
-package istc.bigdawg.util;
+package istc.bigdawg.utils;
 
 import java.io.IOException;
 import java.nio.file.FileSystems;
