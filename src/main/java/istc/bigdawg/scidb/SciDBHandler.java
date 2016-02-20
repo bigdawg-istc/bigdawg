@@ -13,20 +13,21 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
+import org.scidb.jdbc.IResultSetWrapper;
 
 import istc.bigdawg.BDConstants;
 import istc.bigdawg.BDConstants.Shim;
 import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.exceptions.SciDBException;
 import istc.bigdawg.postgresql.PostgreSQLColumnMetaData;
-import istc.bigdawg.postgresql.PostgreSQLHandler;
-import istc.bigdawg.postgresql.PostgreSQLHandler.QueryResult;
 import istc.bigdawg.query.DBHandler;
 import istc.bigdawg.query.QueryResponseTupleList;
 import istc.bigdawg.utils.Constants;
@@ -58,7 +59,7 @@ public class SciDBHandler implements DBHandler {
 	 * @return the JDBC connection to SciDB
 	 * @throws ClassNotFoundException
 	 * @throws SQLException
-	 * @throws MigrationException 
+	 * @throws MigrationException
 	 */
 	public static Connection getConnection(SciDBConnectionInfo conInfo) throws SQLException {
 		try {
@@ -86,7 +87,7 @@ public class SciDBHandler implements DBHandler {
 	 * @throws SQLException
 	 * @throws ClassNotFoundException
 	 */
-	public SciDBHandler(SciDBConnectionInfo conInfo) throws SQLException, ClassNotFoundException {
+	public SciDBHandler(SciDBConnectionInfo conInfo) throws SQLException {
 		this.conInfo = conInfo;
 		this.connection = getConnection(conInfo);
 	}
@@ -132,32 +133,6 @@ public class SciDBHandler implements DBHandler {
 			throw ex;
 		} finally {
 			if (statement != null) {
-				statement.close();
-			}
-		}
-	}
-
-	public QueryResult executeQueryJDBC(String queryString) throws SQLException {
-		Statement statement = null;
-		ResultSet resultSet = null;
-		try {
-			statement = connection.createStatement();
-			resultSet = statement.executeQuery(queryString);
-			ResultSetMetaData rsmd = resultSet.getMetaData();
-			List<String> colNames = PostgreSQLHandler.getColumnNames(rsmd);
-			List<String> types = PostgreSQLHandler.getColumnTypes(rsmd);
-			List<List<String>> rows = PostgreSQLHandler.getRows(resultSet);
-			return new PostgreSQLHandler().new QueryResult(rows, types, colNames);
-		} catch (SQLException ex) {
-			ex.printStackTrace();
-			// remove ' from the statement - otherwise it won't be inserted into
-			// log table in Postgres
-			log.error(ex.getMessage() + "; statement to be executed: " + queryString.replace("'", "") + " "
-					+ ex.getStackTrace(), ex);
-			throw ex;
-		} finally {
-			if (statement != null) {
-
 				statement.close();
 			}
 		}
@@ -236,36 +211,50 @@ public class SciDBHandler implements DBHandler {
 	}
 
 	/**
-	 * @param args
+	 * Returns the meta data of the array for each column/attribute in the array
+	 * 
+	 * @param arrayName
+	 *            the arrayName string
+	 * @return map columm/attribute name to its metadata
+	 * @throws SQLException
 	 */
-	public static void main(String[] args) {
-		try {
-			// String resultSciDB = new
-			// new SciDBHandler().executeQueryScidb("list(^^arrays^^)");
-			try {
-				// new SciDBHandler().executeStatement("drop array adam2");
-				SciDBHandler handler = new SciDBHandler();
-				handler.executeStatement("create array adam2<v:string> [i=0:10,1,0]");
-				handler.close();
-				
-				handler = new SciDBHandler();
-				QueryResult queryResult = handler.executeQueryJDBC("select * from list('arrays')");
-				System.out.println("rows from scidb: "+queryResult.getRows().toString());
-				handler.close();
-			} catch (ClassNotFoundException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			// STRING resultSciDB = new
-			// SciDBHandler().executeQueryScidb("scan(waveform_test_1GB)");
-			// System.out.println(resultSciDB);
-			// } catch (IOException | InterruptedException | SciDBException e) {
-			// e.printStackTrace();
-		} catch (SQLException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+	public SciDBArrayMetaData getArrayMetaData(String arrayName) throws SQLException {
+		Map<String, SciDBColumnMetaData> dimensionsMap = new HashMap<>();
+		List<SciDBColumnMetaData> dimensionsOrdered = new ArrayList<>();
+		Map<String, SciDBColumnMetaData> attributesMap = new HashMap<>();
+		List<SciDBColumnMetaData> attributesOrdered = new ArrayList<>();
 
+		Statement st = null;
+		ResultSet res = null;
+		try {
+			st = connection.createStatement();
+			// the query will not return any result but will give us the
+			// metadata
+			// about the array
+			res = st.executeQuery("select * from " + arrayName + "where 1>2");
+			ResultSetMetaData meta = res.getMetaData();
+			IResultSetWrapper resWrapper;
+			resWrapper = res.unwrap(IResultSetWrapper.class);
+			for (int i = 1; i <= meta.getColumnCount(); i++) {
+				SciDBColumnMetaData columnMetaData = new SciDBColumnMetaData(meta.getColumnName(i),
+						meta.getColumnTypeName(i));
+				if (resWrapper.isColumnAttribute(i)) {
+					attributesMap.put(meta.getColumnName(i), columnMetaData);
+					attributesOrdered.add(columnMetaData);
+				} else {
+					dimensionsMap.put(meta.getColumnName(i), columnMetaData);
+					dimensionsOrdered.add(columnMetaData);
+				}
+			}
+			return new SciDBArrayMetaData(dimensionsMap, dimensionsOrdered, attributesMap, attributesOrdered);
+		} finally {
+			if (st != null) {
+				st.close();
+			}
+			if (res != null) {
+				res.close();
+			}
+		}
 	}
 
 	/**
@@ -298,6 +287,34 @@ public class SciDBHandler implements DBHandler {
 			scidbTypesPattern[columnMetaData.getPosition() - 1] = newType;
 		}
 		return String.copyValueOf(scidbTypesPattern);
+	}
+
+	/**
+	 * @param args
+	 */
+	public static void main(String[] args) {
+		try {
+			// String resultSciDB = new
+			// new SciDBHandler().executeQueryScidb("list(^^arrays^^)");
+			try {
+				// new SciDBHandler().executeStatement("drop array adam2");
+				SciDBHandler handler = new SciDBHandler();
+				handler.executeStatement("create array adam2<v:string> [i=0:10,1,0]");
+				handler.close();
+			} catch (ClassNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			// STRING resultSciDB = new
+			// SciDBHandler().executeQueryScidb("scan(waveform_test_1GB)");
+			// System.out.println(resultSciDB);
+			// } catch (IOException | InterruptedException | SciDBException e) {
+			// e.printStackTrace();
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
 	}
 
 }

@@ -64,6 +64,7 @@ public class FromPostgresToSciDBTest {
 		assertEquals(5, numberOfRowsPostgres);
 	}
 
+	
 	@Test
 	public void testFromPostgresToSciDBcsvSingleThreadMigration() throws SQLException {
 		migrator.migrateSingleThreadCSV(conFrom, fromTable, conTo, toArray);
@@ -92,7 +93,5 @@ public class FromPostgresToSciDBTest {
 		con.close();
 		assertEquals(numberOfRowsPostgres, numberOfCellsSciDB);
 	}
-	
-	
 
 }

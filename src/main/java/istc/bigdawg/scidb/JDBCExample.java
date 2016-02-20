@@ -37,7 +37,7 @@ class JDBCExample {
 			IResultSetWrapper resWrapper = res.unwrap(IResultSetWrapper.class);
 			for (int i = 1; i <= meta.getColumnCount(); i++) {
 				System.out.println(meta.getColumnName(i) + " - " + meta.getColumnTypeName(i) + " - is attribute:"
-						+ resWrapper.isColumnAttribute(i));
+						+ resWrapper.isColumnAttribute(i) + "  - is column dimension: " + resWrapper.isColumnDimension(i));
 			}
 			System.out.println("=====");
 

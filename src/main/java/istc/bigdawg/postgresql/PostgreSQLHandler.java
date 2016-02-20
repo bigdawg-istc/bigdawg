@@ -11,7 +11,9 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.ws.rs.core.Response;
 
@@ -544,11 +546,11 @@ public class PostgreSQLHandler implements DBHandler {
 	 * 
 	 * @param conInfo
 	 * @param tableName
-	 * @return instance of a #PosgreSQLColumnMetaData class
+	 * @return map column name to column meta data
 	 * @throws SQLException
 	 *             if the data extraction from PostgreSQL failed
 	 */
-	public List<PostgreSQLColumnMetaData> getColumnsMetaData(String tableNameInitial) throws SQLException {
+	public PostgreSQLTableMetaData getColumnsMetaData(String tableNameInitial) throws SQLException {
 		try {
  			this.getConnection();
 			PostgreSQLSchemaTableName schemaTable = new PostgreSQLSchemaTableName(tableNameInitial);
@@ -567,13 +569,16 @@ public class PostgreSQLHandler implements DBHandler {
 				throw e;
 			}
 			ResultSet resultSet = preparedSt.executeQuery();
-			List<PostgreSQLColumnMetaData> result = new ArrayList<>();
+			Map<String,PostgreSQLColumnMetaData> columnsMap = new HashMap<>();
+			List<PostgreSQLColumnMetaData> columnsOrdered = new ArrayList<>();
 			while (resultSet.next()) {
-				result.add(new PostgreSQLColumnMetaData(resultSet.getString(1), resultSet.getInt(2),
+				PostgreSQLColumnMetaData columnMetaData = new PostgreSQLColumnMetaData(resultSet.getString(1), resultSet.getInt(2),
 						resultSet.getBoolean(3), resultSet.getString(4), resultSet.getInt(5), resultSet.getInt(6),
-						resultSet.getInt(7)));
+						resultSet.getInt(7));
+				columnsMap.put(resultSet.getString(1), columnMetaData);
+				columnsOrdered.add(columnMetaData);
 			}
-			return result;
+			return new PostgreSQLTableMetaData(columnsMap,columnsOrdered);
 		} finally {
 			try {
 				this.cleanPostgreSQLResources();
