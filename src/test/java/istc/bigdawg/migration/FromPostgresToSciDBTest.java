@@ -19,6 +19,7 @@ import org.postgresql.copy.CopyManager;
 import org.postgresql.core.BaseConnection;
 import org.scidb.jdbc.IResultSetWrapper;
 
+import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfoTest;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
@@ -66,7 +67,7 @@ public class FromPostgresToSciDBTest {
 
 	
 	@Test
-	public void testFromPostgresToSciDBcsvSingleThreadMigration() throws SQLException {
+	public void testFromPostgresToSciDBcsvSingleThreadMigration() throws SQLException, MigrationException {
 		migrator.migrateSingleThreadCSV(conFrom, fromTable, conTo, toArray);
 		Connection con = SciDBHandler.getConnection(conTo);
 		Statement query = con.createStatement();
