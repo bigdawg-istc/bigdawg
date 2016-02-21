@@ -20,6 +20,7 @@ public class SciDBConnectionInfo implements ConnectionInfo {
 	private String user;
 	private String password;
 	private String binPath;
+	private String database;
 
 	/**
 	 * 
@@ -31,13 +32,22 @@ public class SciDBConnectionInfo implements ConnectionInfo {
 		this.password = BigDawgConfigProperties.INSTANCE.getScidbPassword();
 		this.binPath = BigDawgConfigProperties.INSTANCE.getScidbBinPath();
 	}
-
+	
 	public SciDBConnectionInfo(String host, String port, String user, String password, String binPath) {
+		this(host,port,user,password,binPath,null);
+	}
+
+	public SciDBConnectionInfo(String host, String port, String user, String password, String binPath, String database) {
 		this.host = host;
 		this.port = port;
 		this.user = user;
 		this.password = password;
 		this.binPath = binPath;
+		this.database=database;
+	}
+	
+	public String getUrl() {
+		return "jdbc:scidb://" + getHost() + ":" + getPort() + "/";
 	}
 
 	/*
@@ -89,7 +99,7 @@ public class SciDBConnectionInfo implements ConnectionInfo {
 	@Override
 	public String getCleanupQuery(Collection<String> objects) {
 		// TODO Auto-generated method stub
-		return null;
+		throw new UnsupportedOperationException();
 	}
 
 	/*
@@ -109,8 +119,6 @@ public class SciDBConnectionInfo implements ConnectionInfo {
 	public String getBinPath() {
 		return binPath;
 	}
-
-	public String getDatabase() { return binPath; }
 
 	@Override
 	public String toString() {
@@ -165,6 +173,11 @@ public class SciDBConnectionInfo implements ConnectionInfo {
 		} else if (!user.equals(other.user))
 			return false;
 		return true;
+	}
+
+	@Override
+	public String getDatabase() {
+		return database;
 	}
 
 }

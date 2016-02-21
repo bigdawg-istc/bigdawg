@@ -49,7 +49,7 @@ class JDBCExample {
 			IResultSetWrapper resWrapper = res.unwrap(IResultSetWrapper.class);
 			for (int i = 1; i <= meta.getColumnCount(); i++) {
 				System.out.println(meta.getColumnName(i) + " - " + meta.getColumnTypeName(i) + " - is attribute:"
-						+ resWrapper.isColumnAttribute(i));
+						+ resWrapper.isColumnAttribute(i) + "  - is column dimension: " + resWrapper.isColumnDimension(i));
 			}
 			
 //			System.out.println("=====");
@@ -60,8 +60,17 @@ class JDBCExample {
 				System.out.println(res.getString("logical_plan"));//.getLong("x") + " " + res.getLong("y") + " " + res.getString("a"));
 				res.next();
 			}
+			res.close();
+			
+			ResultSet res2 = st.executeQuery("select * from test_waveform_flat where 1>2");
+			res2.close();
+			st.close();
+			conn.close();
 		} catch (SQLException e) {
-			System.out.println(e);
+			e.printStackTrace();
+			System.out.println(e.getMessage().contains("does not exist"));
+			System.out.println(e.getMessage());
+			//System.out.println(e);
 		}
 		System.exit(0);
 	}

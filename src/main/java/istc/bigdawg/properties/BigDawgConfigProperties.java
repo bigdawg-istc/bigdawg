@@ -15,6 +15,12 @@ public enum BigDawgConfigProperties {
 	private String postgreSQLUser;
 	private String postgreSQLPassword;
 
+	private String postgreSQLTestHost;
+	private String postgreSQLTestPort;
+	private String postgreSQLTestDatabase;
+	private String postgreSQLTestUser;
+	private String postgreSQLTestPassword;
+
 	private String accumuloIstanceType;
 	private String accumuloIstanceName;
 	private String accumuloZooKeepers;
@@ -57,6 +63,12 @@ public enum BigDawgConfigProperties {
 		this.postgreSQLURL = prop.getProperty("main.postgresql.url");
 		this.postgreSQLUser = prop.getProperty("main.postgresql.user");
 		this.postgreSQLPassword = prop.getProperty("main.postgresql.password");
+		
+		this.postgreSQLTestHost = prop.getProperty("main.postgresql.test.host");
+		this.postgreSQLTestPort = prop.getProperty("main.postgresql.test.port");
+		this.postgreSQLTestDatabase = prop.getProperty("main.postgresql.test.database");
+		this.postgreSQLTestUser = prop.getProperty("main.postgresql.test.user");
+		this.postgreSQLTestPassword = prop.getProperty("main.postgresql.test.password");
 
 		this.accumuloIstanceType = prop.getProperty("main.accumulo.instanceType");
 		this.accumuloIstanceName = prop.getProperty("main.accumulo.instanceName");
@@ -217,5 +229,40 @@ public enum BigDawgConfigProperties {
 	 */
 	public String getScidbPort() {
 		return scidbPort;
+	}
+	
+		/**
+	 * @return the postgreSQLTestHost
+	 */
+	public String getPostgreSQLTestHost() {
+		return postgreSQLTestHost;
+	}
+
+	/**
+	 * @return the postgreSQLTestPort
+	 */
+	public String getPostgreSQLTestPort() {
+		return postgreSQLTestPort;
+	}
+
+	/**
+	 * @return the postgreSQLTestDatabase
+	 */
+	public String getPostgreSQLTestDatabase() {
+		return postgreSQLTestDatabase;
+	}
+
+	/**
+	 * @return the postgreSQLTestUser
+	 */
+	public String getPostgreSQLTestUser() {
+		return postgreSQLTestUser;
+	}
+
+	/**
+	 * @return the postgreSQLTestPassword
+	 */
+	public String getPostgreSQLTestPassword() {
+		return postgreSQLTestPassword;
 	}
 }

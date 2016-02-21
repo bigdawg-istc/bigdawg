@@ -58,17 +58,18 @@ public class CrossIslandQueryNode {
 	public CrossIslandQueryNode (IslandsAndCast.Scope scope, String islandQuery, String tagString) throws Exception {
 		this.scope = scope;
 		this.query  = islandQuery;
-		if (scope.equals(Scope.RELATIONAL)) this.select = (Select) CCJSqlParserUtil.parse(islandQuery);
+		if (scope.equals(Scope.RELATIONAL)) 
+			this.select = (Select) CCJSqlParserUtil.parse(islandQuery);
 		
 		// collect the cross island children
 		children = getCrossIslandChildrenReferences(tagString);
 		
 		if (dbSchemaHandler == null) {
 			if (scope.equals(Scope.RELATIONAL))
-				dbSchemaHandler = new PostgreSQLHandler(0, 3);
+				dbSchemaHandler = new PostgreSQLHandler(3);
 			else if (scope.equals(Scope.ARRAY))
 				dbSchemaHandler = new SciDBHandler();
-			else
+			else 
 				throw new Exception("Unsupported Island");
 		}
 		

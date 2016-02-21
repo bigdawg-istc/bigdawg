@@ -38,7 +38,7 @@ public class SQLGenerationTest  extends TestCase {
 		inputPlaintexts  = new HashMap<String, String>();
 		
 		CatalogInstance.INSTANCE.getCatalog();
-		if (psqlh == null) psqlh = new PostgreSQLHandler(0, 3);
+		if (psqlh == null) psqlh = new PostgreSQLHandler(3);
 		
 		
 //		SQLDatabaseSingleton.getInstance().setDatabase("bigdawg_schemas", "src/main/resources/schemas/plain.sql");
