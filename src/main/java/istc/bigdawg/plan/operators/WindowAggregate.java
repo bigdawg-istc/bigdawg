@@ -5,14 +5,11 @@ import java.util.List;
 import java.util.Map;
 
 import istc.bigdawg.extract.logical.SQLTableExpression;
-import istc.bigdawg.plan.SQLQueryPlan;
+import istc.bigdawg.packages.SciDBArray;
+import istc.bigdawg.plan.extract.CommonOutItem;
 import istc.bigdawg.plan.extract.SQLOutItem;
-import istc.bigdawg.schema.SQLAttribute;
-import istc.bigdawg.utils.sqlutil.SQLExpressionUtils;
-
-import net.sf.jsqlparser.JSQLParserException;
+import istc.bigdawg.schema.DataObjectAttribute;
 import net.sf.jsqlparser.expression.AnalyticExpression;
-import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 import net.sf.jsqlparser.statement.select.OrderByElement;
 import net.sf.jsqlparser.statement.select.Select;
@@ -28,10 +25,13 @@ public class WindowAggregate extends Operator {
 	
 	List<AnalyticExpression> parsedAggregates;
 	
-	WindowAggregate(Map<String, String> parameters, List<String> output, Operator child, SQLQueryPlan plan, SQLTableExpression supplement) throws Exception  {
+	WindowAggregate(Map<String, String> parameters, List<String> output, Operator child, SQLTableExpression supplement) throws Exception  {
 		super(parameters, output, child, supplement);
 
 		isBlocking = true;
+		blockerCount++;
+		this.blockerID = blockerCount;
+		
 
 		winaggs = new ArrayList<String>();
 		
@@ -43,7 +43,7 @@ public class WindowAggregate extends Operator {
 			String expr = output.get(i);
 				
 			SQLOutItem out = new SQLOutItem(expr, child.outSchema, supplement);
-			SQLAttribute attr = out.getAttribute();
+			DataObjectAttribute attr = out.getAttribute();
 			String alias = attr.getName();
 			
 			outSchema.put(alias, attr);
@@ -89,45 +89,64 @@ public class WindowAggregate extends Operator {
 	}
 	
 	
-	@Override
-	public List<SQLAttribute> getSliceKey() throws JSQLParserException {
-		List<SQLAttribute> sliceKey = new ArrayList<SQLAttribute>();
-				
-		if(partitionBy != null && partitionBy.size() > 0) {
-			for(ExpressionList l : partitionBy) {
-				for(Expression e : l.getExpressions()) {
-					List<String> candidateKeys = SQLExpressionUtils.getAttributes(e.toString());
-					for(String s : candidateKeys) {
-						SQLAttribute a = outSchema.get(s); // src schema and out schema are the same
-						if(a == null) {
-							// iterate over outSchema and find match with fully qualified name
-							for(String name : outSchema.keySet()) {
-								String attrName = name.substring(name.indexOf(".")+1);
-								if(attrName.equals(s))  {
-									a = outSchema.get(name);
-									break;
-								}
-							}
-						}
-						
-						
-//						if(a.getSecurityPolicy().equals(SQLAttribute.SecurityPolicy.Public)) {
-							sliceKey.add(a);
-//						}
-					} // end candidate keys
-					
-				} // end expressions for a single windowed aggregate
-			} // end iterator over all partition bys
+	// for AFL
+	WindowAggregate(Map<String, String> parameters, SciDBArray output, Operator child) throws Exception  {
+		super(parameters, output, child);
+
+		isBlocking = true;
+		blockerCount++;
+		this.blockerID = blockerCount;
+
+		winaggs = new ArrayList<String>();
+		
+		partitionBy = new ArrayList<ExpressionList>();
+		orderBy =  new ArrayList<List<OrderByElement> >();
+		
+		
+		for (String expr : output.getAttributes().keySet()) {
+			CommonOutItem out = new CommonOutItem(expr, output.getAttributes().get(expr), null);
+			DataObjectAttribute attr = out.getAttribute();
+			String alias = attr.getName();
+			
+			outSchema.put(alias, attr);
+			
+
+//			if(out.hasWindowedAggregates()) {
+//
+//				parsedAggregates = out.getWindowedAggregates();
+//				List<AnalyticExpression> ae = out.getWindowedAggregates();
+//				for(int j = 0; j < ae.size(); ++j) {
+//					AnalyticExpression e = ae.get(j);
+//
+//					winaggs.add(e.getName());
+//					
+//					assert(e.getName().equals("row_number()")); // others are not yet implemented
+//						
+//					partitionBy.add(e.getPartitionExpressionList());
+//					orderBy.add(e.getOrderByElements());
+//				}
+//			}
+			
+	
+			
 		}
 		
-		return sliceKey;
+		if(partitionBy.size() > 0) {
+			// if this is (PARTITION BY x ORDER BY y) push down slice key to sort
+			// want to slice as fine as possible to break up SMC groups
+			if(child instanceof Sort && !orderBy.isEmpty()) {
+				Sort c = (Sort) child;
+				c.isWinAgg = true;
+			}
+		}
+		
+
 	}
 	
 	
-	
 	@Override
-	public Select generatePlaintext(Select srcStatement, Select dstStatement) throws Exception {
-		dstStatement = children.get(0).generatePlaintext(srcStatement, dstStatement);
+	public Select generatePlaintextDestOnly(Select dstStatement) throws Exception {
+		dstStatement = children.get(0).generatePlaintextDestOnly(dstStatement);
 		// do nothing here until SELECT clause		
 	
 		return dstStatement;
@@ -139,7 +158,8 @@ public class WindowAggregate extends Operator {
 		return "WindowAgg over " + winaggs + " partition by " + partitionBy + " order by " + orderBy;
 	}
 	
-	public String printPlan(int recursionLevel) {
+	@Override
+	public String printPlan(int recursionLevel) throws Exception{
 		String planStr =  "WindowAgg(";
 		planStr +=  children.get(0).printPlan(recursionLevel+1);
 		planStr += winaggs + "," + partitionBy + "," + orderBy + ")";

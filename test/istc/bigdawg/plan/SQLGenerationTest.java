@@ -41,7 +41,7 @@ public class SQLGenerationTest  extends TestCase {
 		if (psqlh == null) psqlh = new PostgreSQLHandler(0, 3);
 		
 		
-		SQLDatabaseSingleton.getInstance().setDatabase("bigdawg_schemas", "src/main/resources/schemas/plain.sql");
+//		SQLDatabaseSingleton.getInstance().setDatabase("bigdawg_schemas", "src/main/resources/schemas/plain.sql");
 		
 		// ingesting the dummy schema 
 //		psqlh.populateSchemasSchema(new String(Files.readAllBytes(Paths.get("src/main/resources/plain.sql"))), false);

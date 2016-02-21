@@ -135,65 +135,7 @@ public class ExecutionNodeFactory {
 		return result;
 	}
 	
-	@Deprecated
-	public static void addNodesAndEdgesOLD(QueryExecutionPlan qep, Map<String, ArrayList<String>> map, Map<String, Operator> withNSelect, Select srcSTMT) throws Exception {
-
-		HashMap<String, ExecutionNode> dependentNodes = new HashMap<>();
-		ArrayList<String> edgesFrom = new ArrayList<>();
-		ArrayList<String> edgesTo = new ArrayList<>();
-		
-		for (String statementName : withNSelect.keySet()) {
-
-			// root node
-			
-			String ref = map.get(statementName).get(0);
-			
-			while ((ref.charAt(0) ^ 0x30) > 0x9) { // trying to find the operator a home
-				ref = map.get(ref).get(0);
-			}
-			
-			ConnectionInfo psqlInfo = PostgreSQLHandler.generateConnectionInfo(Integer.parseInt(ref));
-			
-			Operator o = withNSelect.get(statementName);
-			String put = null; if (o instanceof CommonSQLTableExpressionScan) put = statementName;
-			String sel = o.generateSelectForExecutionTree(srcSTMT, put);
-			
-			dependentNodes.put(statementName, new LocalQueryExecutionNode(sel, psqlInfo, statementName));
-//			System.out.printf("Adding node: %s; %s\n", statementName, sel);
-			// dependences
-			for (String s : map.get(statementName)) {
-
-				String loc = map.get(s).get(0);
-				if ((loc.charAt(0) ^ 0x30) <= 0x9) {
-					dependentNodes.put(s, new TableExecutionNode(PostgreSQLHandler.generateConnectionInfo(Integer.parseInt(loc)), s));
-					edgesFrom.add(s);
-					edgesTo.add(statementName);
-					continue;
-				}
-				
-				String i = s;
-				while ((i.charAt(0) ^ 0x30) > 0x9) {
-					i = map.get(i).get(0);
-				}
-				
-				psqlInfo = PostgreSQLHandler.generateConnectionInfo(Integer.parseInt(i));
-				o 	= withNSelect.get(s);
-				put = null; if (o instanceof CommonSQLTableExpressionScan) put = s;
-				sel = o.generateSelectForExecutionTree(srcSTMT, put);
-				
-				dependentNodes.put(s, new LocalQueryExecutionNode(sel, psqlInfo, s));
-				edgesFrom.add(s);
-				edgesTo.add(statementName);
-			}
-			
-		}
-		for (String s : dependentNodes.keySet()) {
-			qep.addVertex(dependentNodes.get(s));
-		}
-		for (int i = 0; i < edgesFrom.size() ; i ++) {
-			qep.addDagEdge(dependentNodes.get(edgesFrom.get(i)), dependentNodes.get(edgesTo.get(i)));
-		}
-	}
+	
 	
 	public static void addNodesAndEdgesNaive(QueryExecutionPlan qep, Operator remainder, List<String> remainderLoc, Map<String, 
 			QueryContainerForCommonDatabase> container, Select srcStmt) throws Exception {
@@ -215,7 +157,9 @@ public class ExecutionNodeFactory {
 		}
 		
 		String remainderInto = qep.getSerializedName();
-		String remainderSelectIntoString = remainder.generateSelectForExecutionTree(srcStmt, null);
+		
+		// if RELATIONAL
+		String remainderSelectIntoString = remainder.generateSelectForExecutionTree(null);
 		LocalQueryExecutionNode remainderNode = new LocalQueryExecutionNode(remainderSelectIntoString, remainderCI, remainderInto);
 		dependentNodes.put(remainderInto, remainderNode);
 			

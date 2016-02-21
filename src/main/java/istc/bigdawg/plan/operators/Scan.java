@@ -8,8 +8,8 @@ import java.util.Map;
 import java.util.Set;
 
 import istc.bigdawg.extract.logical.SQLTableExpression;
+import istc.bigdawg.packages.SciDBArray;
 import istc.bigdawg.utils.sqlutil.SQLUtilities;
-
 import net.sf.jsqlparser.expression.Alias;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
@@ -57,26 +57,58 @@ public class Scan extends Operator {
 		
 	}
 	
-	public Scan(Operator o) throws Exception {
-		super(o);
+	// for AFL
+	public Scan(Map<String, String> parameters, SciDBArray output, Operator child) throws Exception {
+		super(parameters, output, child);
+
+		isBlocking = false;
+
+		srcTable = parameters.get("Relation-Name");
+		
+		if(srcTable == null) { // it's a cte scan
+			srcTable = parameters.get("CTE-Name");
+		}
+		tableAlias = parameters.get("Alias");
+		
+		if(parameters.get("Filter") != null) {
+			filterExpression = SQLUtilities.parseString(parameters.get("Filter"));
+			filterSet = new HashSet<String>();
+			filterSet.add(filterExpression);
+		}
+		
+		table = new Table(srcTable); // new one to accommodate aliasing
+		if (parameters.get("Schema") != null && (!parameters.get("Schema").equals("public"))) 
+			table.setSchemaName(parameters.get("Schema"));
+
+		if(tableAlias != null && !tableAlias.equalsIgnoreCase(srcTable)) {
+			table.setAlias(new Alias(tableAlias));
+		}
+
+		
+	}
+	
+	public Scan(Operator o, boolean addChild) throws Exception {
+		super(o, addChild);
 		Scan sc = (Scan) o;
 		
-		this.filterExpression = new String(sc.filterExpression);
+		if (sc.filterExpression != null) this.filterExpression = new String(sc.filterExpression);
 		this.srcTable = new String(sc.srcTable);
 		this.tableAlias = new String(sc.tableAlias);
-		
-		this.filterSet = new HashSet<>();
-		for (String s : sc.filterSet) {
-			this.filterSet.add(new String(s));
+
+		if (sc.filterSet != null) {
+			this.filterSet = new HashSet<>();
+			for (String s : sc.filterSet) {
+				this.filterSet.add(new String(s));
+			}
 		}
 		this.table = new Table();
 		try {
 			this.table.setName(new String(sc.table.getName()));
-			this.table.setSchemaName(new String(sc.table.getSchemaName()));
-			this.table.setAlias(sc.table.getAlias());
-			this.table.setASTNode(sc.table.getASTNode());
-			this.table.setDatabase(sc.table.getDatabase());
-			this.table.setPivot(sc.table.getPivot());
+			if (sc.table.getSchemaName() != null) this.table.setSchemaName(new String(sc.table.getSchemaName()));
+			if (sc.table.getAlias() != null) this.table.setAlias(sc.table.getAlias());
+			if (sc.table.getASTNode() != null) this.table.setASTNode(sc.table.getASTNode());
+			if (sc.table.getDatabase() != null)this.table.setDatabase(sc.table.getDatabase());
+			if (sc.table.getPivot() != null)this.table.setPivot(sc.table.getPivot());
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -88,7 +120,7 @@ public class Scan extends Operator {
 	}
 	
 	@Override
-	public Select generatePlaintext(Select srcStatement, Select dstStatement) throws Exception {
+	public Select generatePlaintextDestOnly(Select dstStatement) throws Exception {
 
 		if(dstStatement == null) {
 			dstStatement = SelectUtils.buildSelectFromTable(table);
@@ -108,9 +140,14 @@ public class Scan extends Operator {
 				}
 			}
 			
-			Expression where = 	CCJSqlParserUtil.parseCondExpression(filterExpression);
-
-			ps.setWhere(where);
+			try {
+				Expression where = 	CCJSqlParserUtil.parseCondExpression(filterExpression);
+				ps.setWhere(where);
+			} catch (Exception e) {
+				System.out.println(filterExpression.toString());
+			}
+			
+			
 
 		}
 		

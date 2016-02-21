@@ -1,15 +1,13 @@
 package istc.bigdawg.plan.operators;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import istc.bigdawg.schema.SQLAttribute;
 import istc.bigdawg.extract.logical.SQLTableExpression;
 import istc.bigdawg.plan.SQLQueryPlan;
 import istc.bigdawg.plan.extract.SQLOutItem;
-
-import net.sf.jsqlparser.JSQLParserException;
+import istc.bigdawg.schema.DataObjectAttribute;
+import istc.bigdawg.schema.SQLAttribute;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.Select;
 
@@ -17,14 +15,16 @@ public class Distinct extends Operator {
 
 	
 	
-	Distinct(Map<String, String> parameters, List<String> output, Operator child, SQLQueryPlan plan, SQLTableExpression supplement) throws Exception  {
+	Distinct(Map<String, String> parameters, List<String> output, Operator child, SQLTableExpression supplement) throws Exception  {
 		super(parameters, output, child, supplement);
 		
 		
 		isBlocking = true;
+		blockerCount++;
+		this.blockerID = blockerCount;
 
 //		secureCoordination = child.secureCoordination;
-		Map<String, SQLAttribute> srcSchema = child.getOutSchema(); //TODO CHECK THIS? TODO TODO
+		Map<String, DataObjectAttribute> srcSchema = child.getOutSchema(); //TODO CHECK THIS? TODO TODO
 		for(int i = 0; i < output.size(); ++i) {
 			
 			String expr = output.get(i); // fully qualified name
@@ -46,9 +46,9 @@ public class Distinct extends Operator {
 
 	
 	@Override
-	public Select generatePlaintext(Select srcStatement, Select dstStatement) throws Exception {
+	public Select generatePlaintextDestOnly(Select dstStatement) throws Exception {
 		
-		dstStatement = children.get(0).generatePlaintext(srcStatement, dstStatement);
+		dstStatement = children.get(0).generatePlaintextDestOnly(dstStatement);
 		
 		PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
 		ps.setDistinct(new net.sf.jsqlparser.statement.select.Distinct());
@@ -58,25 +58,13 @@ public class Distinct extends Operator {
 	}
 
 	
-	@Override
-	public List<SQLAttribute> getSliceKey()  throws JSQLParserException {
-		List<SQLAttribute> sliceKey = new ArrayList<SQLAttribute>();
-		for(SQLAttribute a : outSchema.values()) {
-//			if(a.getSecurityPolicy().equals(SQLAttribute.SecurityPolicy.Public)) {
-				sliceKey.add(a);
-//			}
-		}
-		
-		return sliceKey;
-		
-	}
 	
 	public String toString() {
 		return "Distinct over " + outSchema;
 	}
 	
 	@Override
-	public String printPlan(int recursionLevel) {
+	public String printPlan(int recursionLevel) throws Exception {
 		String planStr =  "Distinct(";
 		planStr += children.get(0).printPlan(recursionLevel + 1);
 		planStr += ")";

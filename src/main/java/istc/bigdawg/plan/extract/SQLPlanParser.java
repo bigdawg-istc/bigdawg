@@ -113,6 +113,8 @@ public class SQLPlanParser {
 		SQLParseLogical parser = new SQLParseLogical(query);
 		SQLQueryPlan queryPlan = parser.getSQLQueryPlan();
 		
+		
+//		System.out.println("query: \n"+query);
 //		System.out.println("\n\nXMLString: \n"+xmlString+"\n");
 		
 		// run parser
@@ -185,6 +187,7 @@ public class SQLPlanParser {
 						  sortKeys.add(s);
 					  }
 				  }
+				  
 				  break;
 			case "Subplan-Name":
 				localPlan = c.getTextContent(); // switch to new CTE
@@ -207,7 +210,6 @@ public class SQLPlanParser {
 
 		Operator op;
 		if(nodeType.equals("Sort") && skipSort) { // skip sort associated with GroupAggregate
-//			System.out.println("--->>>> node context:: "+planName + "\n"+node.getTextContent());
 			op = childOps.get(0);
 			--skipSortCount;
 		}
@@ -232,10 +234,10 @@ public class SQLPlanParser {
 	 */
 	private boolean determineLocalSortSkip (String planName) {
 		if (planName.equals("main")) {
-			if (((PlainSelect) query.getSelectBody()).getOrderByElements() == null // || ((PlainSelect) query.getSelectBody()).getOrderByElements().isEmpty()
-				) {
+//			if (((PlainSelect) query.getSelectBody()).getOrderByElements() == null // || ((PlainSelect) query.getSelectBody()).getOrderByElements().isEmpty()
+//				) {
 			return true;
-			} 
+//			} 
 		} else {
 			if (query.getWithItemsList() != null //&& (!query.getWithItemsList().isEmpty())
 					) {
@@ -249,6 +251,7 @@ public class SQLPlanParser {
 				}
 			} 
 		}
+		
 		return false;
 	}
 	
@@ -273,21 +276,21 @@ public class SQLPlanParser {
 	}
 
 	
-	public static String padLeft(String s, int n) {
-		if(n > 0) {
-			return String.format("%1$" + n + "s", s);  
-		}
-		 
-		return s;
-	}
-
-	public static String padRight(String s, int n) {
-		if(n > 0) {
-		     return String.format("%1$-" + n + "s", s);  
-		}
-		return s;
-		
-	}
+//	public static String padLeft(String s, int n) {
+//		if(n > 0) {
+//			return String.format("%1$" + n + "s", s);  
+//		}
+//		 
+//		return s;
+//	}
+//
+//	public static String padRight(String s, int n) {
+//		if(n > 0) {
+//		     return String.format("%1$-" + n + "s", s);  
+//		}
+//		return s;
+//		
+//	}
 	
 }
 

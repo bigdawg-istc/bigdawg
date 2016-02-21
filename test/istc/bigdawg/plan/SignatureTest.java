@@ -11,6 +11,7 @@ import istc.bigdawg.catalog.CatalogInstance;
 import istc.bigdawg.packages.CrossIslandQueryNode;
 import istc.bigdawg.packages.CrossIslandQueryPlan;
 import istc.bigdawg.parsers.UserQueryParser;
+import istc.bigdawg.utils.IslandsAndCast.Scope;
 import junit.framework.TestCase;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.select.Select;
@@ -30,6 +31,7 @@ public class SignatureTest extends TestCase {
 		setupCrossIslandPlanConstructionTier1();
 		setupCrossIslandPlanConstructionTier2();
 		setupCrossIslandPlanConstructionTier2WithOrderBy();
+		setupCrossIslandPlanConstructionArrayTier1();
 	}
 	
 	
@@ -44,7 +46,7 @@ public class SignatureTest extends TestCase {
 	
 	private void setupCrossIslandPlanConstructionTier1() {
 		HashMap<String, String> ba1 = new HashMap<>();
-		ba1.put("OUTPUT", "SELECT BIGDAWGPRUNED_1.id, BIGDAWGPRUNED_1.lastname, BIGDAWGPRUNED_1.firstname, BIGDAWGPRUNED_2.id, BIGDAWGPRUNED_2.disease_name FROM BIGDAWGPRUNED_1 JOIN BIGDAWGPRUNED_2 ON BIGDAWGPRUNED_2.id = BIGDAWGPRUNED_1.id");
+		ba1.put("OUTPUT", "SELECT * FROM BIGDAWGPRUNED_2 JOIN BIGDAWGPRUNED_1 ON BIGDAWGPRUNED_2.id = BIGDAWGPRUNED_1.id");
 		
 		expectedOutputs.put("cross-1", ba1);
 		inputs.put("cross-1", "bdrel(select * from mimic2v26.d_patients join ailment on mimic2v26.d_patients.id = ailment.id)");
@@ -53,7 +55,7 @@ public class SignatureTest extends TestCase {
 	
 	private void setupCrossIslandPlanConstructionTier2() {
 		HashMap<String, String> ba1 = new HashMap<>();
-		ba1.put("OUTPUT", "SELECT demographics.patient_id, vitals.height_timestamp, medications.medication FROM medications JOIN vitals ON vitals.patient_id = medications.patient_id JOIN demographics ON medications.patient_id = demographics.patient_id");
+		ba1.put("OUTPUT", "SELECT demographics.patient_id, vitals.height_timestamp, medications.medication FROM vitals JOIN medications ON vitals.patient_id = medications.patient_id JOIN demographics ON medications.patient_id = demographics.patient_id");
 		
 		expectedOutputs.put("cross-2", ba1);
 		inputs.put("cross-2", "bdrel(SELECT demographics.patient_id, height_timestamp, medication FROM demographics JOIN medications ON demographics.patient_id = medications.patient_id JOIN vitals ON demographics.patient_id = vitals.patient_id)");
@@ -68,6 +70,13 @@ public class SignatureTest extends TestCase {
 		inputs.put("cross-2-ob", "bdrel(SELECT demographics.patient_id, height_timestamp, medication FROM demographics JOIN medications ON demographics.patient_id = medications.patient_id JOIN vitals ON demographics.patient_id = vitals.patient_id ORDER BY demographics.patient_id)");
 	}
 	
+	private void setupCrossIslandPlanConstructionArrayTier1() {
+		HashMap<String, String> ba1 = new HashMap<>();
+		ba1.put("OUTPUT", "SELECT demographics.patient_id, vitals.height_timestamp, medications.medication FROM vitals JOIN medications ON vitals.patient_id = medications.patient_id JOIN demographics ON medications.patient_id = demographics.patient_id");
+		
+		expectedOutputs.put("array-1", ba1);
+		inputs.put("array-1", "bdarray(project(mimic2v26.d_patients, mimic2v26.d_patients.id, mimic2v26.d_patients.lastname))");
+	}
 	
 	@Test
 	public void testBreakApart() throws Exception {
@@ -89,6 +98,12 @@ public class SignatureTest extends TestCase {
 		testCaseCrossIslandPlanConstruction("cross-2-ob", true);
 	}
 	
+	
+	@Test
+	public void testCrossIslandPlanConstructionArrayTier1() throws Exception {
+		testCaseCrossIslandPlanConstruction("array-1", false);
+	}
+	
 	private void testCaseForBreakApart(String testName) throws Exception {
 		
 		String userinput = inputs.get(testName);
@@ -108,8 +123,11 @@ public class SignatureTest extends TestCase {
 			
 			for (String k : ciqp.getMemberKeySet()) {
 				CrossIslandQueryNode n = ciqp.getMember(k);
-				
-				String remainderText = n.getRemainder(0).generatePlaintext((Select) CCJSqlParserUtil.parse(n.getQuery()));
+				String remainderText = ""; 
+				if (n.getScope().equals(Scope.RELATIONAL))
+					remainderText = n.getRemainder(0).generatePlaintext((Select) CCJSqlParserUtil.parse(n.getQuery()));
+				else if (n.getScope().equals(Scope.ARRAY))
+					remainderText = "array!";
 				System.out.println("----> Gen remainder: "+remainderText+"\n");
 				assertEquals(((HashMap<String, String>)expectedOutputs.get(testName)).get("OUTPUT"), remainderText);
 			}
@@ -117,8 +135,10 @@ public class SignatureTest extends TestCase {
 		} catch (Exception e) {
 			if (unsupportedToken) 
 				assertEquals("unsupported Operator in CrossIslandQueryNode", e.getMessage());
-			else 
+			else {
+				e.printStackTrace();
 				fail("Expecting an exception about unsupported operation");
+			}
 		}
 		
 		

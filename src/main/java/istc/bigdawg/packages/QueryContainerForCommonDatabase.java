@@ -12,13 +12,13 @@ public class QueryContainerForCommonDatabase {
 	
 	private HashMap<String, ConnectionInfo> 	databaseConnectionInfos;
 	private Operator							rootOperator;
-	private Select								select;
+//	private Select								select;
 	private String								pruneToken;
 	
-	public QueryContainerForCommonDatabase (Map<String, ConnectionInfo> cis, Operator o, Select srcQuery, String into) throws Exception {
+	public QueryContainerForCommonDatabase (Map<String, ConnectionInfo> cis, Operator o, String into) throws Exception {
 		
 		this.rootOperator				= o;
-		this.select						= srcQuery;
+//		this.select						= srcQuery;
 		this.pruneToken					= into;
 		this.databaseConnectionInfos	= new HashMap<>();
 		
@@ -36,7 +36,7 @@ public class QueryContainerForCommonDatabase {
 	}
 	
 	public String generateSelectIntoString() throws Exception {
-		return rootOperator.generateSelectForExecutionTree(select, pruneToken);
+		return rootOperator.generateSelectForExecutionTree(pruneToken);
 	}
 	
 	public String getName() {

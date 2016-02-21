@@ -13,24 +13,24 @@ import net.sf.jsqlparser.statement.select.Select;
 import net.sf.jsqlparser.statement.select.WithItem;
 
 // keep track of query root node and any CTEs
-public class SQLQueryPlan {
+public class AFLQueryPlan {
 
 	private Map<String, Operator> planRoots;
 	private Map<String,SQLTableExpression> tableExpressions; 
 	
-	private Select statement;
+	private String statement;
 	
 	
 	Operator rootNode;
 	
-	public SQLQueryPlan() {
+	public AFLQueryPlan() {
 		planRoots = new HashMap<String, Operator>();
 		tableExpressions = new HashMap<String, SQLTableExpression>();
 	}
 	
 	
 	
-	public SQLQueryPlan(Operator root) {
+	public AFLQueryPlan(Operator root) {
 		planRoots = new HashMap<String, Operator>();
 		rootNode = root;
 		root.setQueryRoot();
@@ -46,7 +46,7 @@ public class SQLQueryPlan {
 		return planRoots.get(statementName);
 	}
 	
-	public String printPlan() throws Exception {
+	public String printPlan() throws Exception{
 		String plan = new String();
 		
 		// prepend plans for chronological order
@@ -69,11 +69,11 @@ public class SQLQueryPlan {
 	}
 	
 	
-	public void setLogicalStatement(Select s) {
+	public void setLogicalStatement(String s) {
 		statement = s;
 	}
 	
-	public Select getStatement() {
+	public String getStatement() {
 		return statement;
 	}
 	
@@ -93,29 +93,5 @@ public class SQLQueryPlan {
 	}
 	
 	
-/*	public void generatePlaintext(Select s) throws JSQLParserException {
-		// first cte references a seq scan for the query to have secure input
-		for(String cte : planRoots.keySet()) {
-			Operator o = planRoots.get(cte);
-			WithItem w = new WithItem();
-			//o.generatePlaintext((Select) ps, true);
-		}
-
-	} */
-
-
-	public WithItem getWithItem(String localPlan) {
-		if(statement.getWithItemsList() == null || statement.getWithItemsList().isEmpty()) {
-			return null;
-		}
-
-		for(WithItem w : statement.getWithItemsList()) {
-			if(w.getName().equals(localPlan)) {
-				return w;
-			}
-		}
-		
-		return null;
-	}
 
 }

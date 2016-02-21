@@ -10,6 +10,7 @@ import java.util.HashMap;
 import org.apache.log4j.Logger;
 
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
+import istc.bigdawg.scidb.SciDBConnectionInfo;
 
 public class CatalogViewer {
 
@@ -23,22 +24,58 @@ public class CatalogViewer {
 	 * @return
 	 * @throws Exception
 	 */
-	public static ArrayList<String> getConnectionInfo(int db_id) throws Exception {
+	public static PostgreSQLConnectionInfo getPSQLConnectionInfo(int db_id) throws Exception {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
 		CatalogUtilities.checkConnection(cc);
 
-		ArrayList<String> extraction = new ArrayList<>();
+		PostgreSQLConnectionInfo extraction;
 
 		ResultSet rs = cc.execRet(
 				"select dbid, eid, host, port, db.name as dbname, userid, password "
 				+ "from catalog.databases db join catalog.engines e on db.engine_id = e.eid where dbid = "+db_id);
-		if (rs.next())
-			extraction.add(rs.getString("host"));
-			extraction.add(rs.getString("port"));
-			extraction.add(rs.getString("dbname"));
-			extraction.add(rs.getString("userid"));
-			extraction.add(rs.getString("password"));
+		if (rs.next()) {
+			extraction = new PostgreSQLConnectionInfo(rs.getString("host"), rs.getString("port"), 
+					rs.getString("dbname"), rs.getString("userid"), rs.getString("password"));
+		} else {
+			rs.close();
+			throw new Exception("Postgres Connection Info Not Found: "+db_id);
+		}
+			
+		if (rs.next()) {
+			throw new Exception("Non-unique DBID: "+db_id);
+		}
+		rs.close();
+
+		return extraction;
+	}
+	
+	/**
+	 * takes a integer DBID, returns a 5-field ArrayList<String> that tells host, port, dbname, userid and password
+	 * 
+	 * @param cc
+	 * @param db_id
+	 * @return
+	 * @throws Exception
+	 */
+	public static SciDBConnectionInfo getSciDBConnectionInfo(int db_id) throws Exception {
+		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
+		// input check
+		CatalogUtilities.checkConnection(cc);
+
+		SciDBConnectionInfo extraction;
+
+		ResultSet rs = cc.execRet(
+				"select dbid, eid, host, port, connection_properties, userid, password "
+				+ "from catalog.databases db join catalog.engines e on db.engine_id = e.eid where dbid = "+db_id);
+		if (rs.next()) // String host, String port, String user, String password, String binPath
+			extraction = new SciDBConnectionInfo(rs.getString("host"), rs.getString("port"), 
+					rs.getString("userid"), rs.getString("password"), rs.getString("connection_properties"));
+		else {
+			rs.close();
+			throw new Exception("SciDB Connection Info Not Found: "+db_id);
+		}
+			
 		if (rs.next()) {
 			throw new Exception("Non-unique DBID: "+db_id);
 		}
