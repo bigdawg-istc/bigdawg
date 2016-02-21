@@ -46,7 +46,7 @@ public class SciDBHandler implements DBHandler {
 	private SciDBConnectionInfo conInfo;
 	private Connection connection;
 
-	public SciDBHandler() throws ClassNotFoundException, SQLException {
+	public SciDBHandler() throws SQLException {
 		this.conInfo = new SciDBConnectionInfo();
 		this.connection = getConnection(conInfo);
 	}
@@ -61,20 +61,24 @@ public class SciDBHandler implements DBHandler {
 	 * @throws SQLException
 	 * @throws MigrationException
 	 */
-	public static Connection getConnection(SciDBConnectionInfo conInfo) throws SQLException {
+	public static Connection getConnection(SciDBConnectionInfo conInfo)
+			throws SQLException {
 		try {
 			Class.forName("org.scidb.jdbc.Driver");
-		} catch (ClassNotFoundException e) {
-			e.printStackTrace();
-			log.error("SciDB jdbc driver is not in the CLASSPATH -> " + e.getMessage(), e);
-			throw new RuntimeException(e.getMessage());
+		} catch (ClassNotFoundException ex) {
+			ex.printStackTrace();
+			log.error("SciDB jdbc driver is not in the CLASSPATH -> "
+					+ ex.getMessage() + " " + StackTrace.getFullStackTrace(ex),
+					ex);
+			throw new RuntimeException(ex.getMessage());
 		}
 		try {
 			return DriverManager.getConnection(conInfo.getUrl());
 		} catch (SQLException ex) {
 			ex.printStackTrace();
-			log.error("Could not establish a connection to a SciDB database. " + conInfo.toString() + " "
-					+ ex.getMessage() + StackTrace.getFullStackTrace(ex), ex);
+			log.error("Could not establish a connection to a SciDB database. "
+					+ conInfo.toString() + " " + ex.getMessage()
+					+ StackTrace.getFullStackTrace(ex), ex);
 			throw ex;
 		}
 	}
@@ -104,8 +108,9 @@ public class SciDBHandler implements DBHandler {
 				connection = null;
 			} catch (SQLException e) {
 				e.printStackTrace();
-				log.error("Could not close the connection to a SciDB database. " + conInfo.toString() + " "
-						+ e.getMessage() + StackTrace.getFullStackTrace(e), e);
+				log.error("Could not close the connection to a SciDB database. "
+						+ conInfo.toString() + " " + e.getMessage()
+						+ StackTrace.getFullStackTrace(e), e);
 				throw e;
 			}
 		}
@@ -128,8 +133,9 @@ public class SciDBHandler implements DBHandler {
 			ex.printStackTrace();
 			// remove ' from the statement - otherwise it won't be inserted into
 			// log table in Postgres
-			log.error(ex.getMessage() + "; statement to be executed: " + stringStatement.replace("'", "") + " "
-					+ ex.getStackTrace(), ex);
+			log.error(ex.getMessage() + "; statement to be executed: "
+					+ stringStatement.replace("'", "") + " " + " "
+					+ StackTrace.getFullStackTrace(ex), ex);
 			throw ex;
 		} finally {
 			if (statement != null) {
@@ -169,7 +175,8 @@ public class SciDBHandler implements DBHandler {
 		return BDConstants.Shim.PSQLARRAY;
 	}
 
-	private String executeQueryScidb(String queryString) throws IOException, InterruptedException, SciDBException {
+	private String executeQueryScidb(String queryString)
+			throws IOException, InterruptedException, SciDBException {
 		// String sciDBUser = BigDawgConfigProperties.INSTANCE.getScidbUser();
 		// String sciDBPassword = BigDawgConfigProperties.INSTANCE
 		// .getScidbPassword();
@@ -177,36 +184,45 @@ public class SciDBHandler implements DBHandler {
 		// System.out.println("sciDBUser: " + sciDBUser);
 		// System.out.println("sciDBPassword: " + sciDBPassword);
 		long lStartTime = System.nanoTime();
-		String resultString = getDataFromSciDB(queryString, conInfo.getHost(), conInfo.getPort(), conInfo.getBinPath());
-		String messageGetData = "SciDB query execution time milliseconds: " + (System.nanoTime() - lStartTime) / 1000000
-				+ ",";
+		String resultString = getDataFromSciDB(queryString, conInfo.getHost(),
+				conInfo.getPort(), conInfo.getBinPath());
+		String messageGetData = "SciDB query execution time milliseconds: "
+				+ (System.nanoTime() - lStartTime) / 1000000 + ",";
 		System.out.print(messageGetData);
 		log.info(messageGetData);
 		// System.out.println("result_string: "+resultString);
 
 		lStartTime = System.nanoTime();
-		Tuple2<List<String>, List<List<String>>> parsedData = ParseSciDBResponse.parse(resultString);
+		Tuple2<List<String>, List<List<String>>> parsedData = ParseSciDBResponse
+				.parse(resultString);
 		List<String> colNames = parsedData.getT1();
 		List<List<String>> tuples = parsedData.getT2();
-		QueryResponseTupleList resp = new QueryResponseTupleList("OK", 200, tuples, 1, 1, colNames,
-				new ArrayList<String>(), new Timestamp(0));
-		String messageParsing = "Parsing data time milliseconds: " + (System.nanoTime() - lStartTime) / 1000000 + ",";
+		QueryResponseTupleList resp = new QueryResponseTupleList("OK", 200,
+				tuples, 1, 1, colNames, new ArrayList<String>(),
+				new Timestamp(0));
+		String messageParsing = "Parsing data time milliseconds: "
+				+ (System.nanoTime() - lStartTime) / 1000000 + ",";
 		System.out.print(messageParsing);
 		log.info(messageParsing);
 
 		lStartTime = System.nanoTime();
-		String responseResult = ObjectMapperResource.INSTANCE.getObjectMapper().writeValueAsString(resp);
-		String messageJSON = "JSON formatting time milliseconds: " + (System.nanoTime() - lStartTime) / 1000000 + ",";
+		String responseResult = ObjectMapperResource.INSTANCE.getObjectMapper()
+				.writeValueAsString(resp);
+		String messageJSON = "JSON formatting time milliseconds: "
+				+ (System.nanoTime() - lStartTime) / 1000000 + ",";
 		System.out.print(messageJSON);
 		log.info(messageJSON);
 
 		return responseResult;
 	}
 
-	private String getDataFromSciDB(final String queryString, final String host, final String port,
-			final String binPath) throws IOException, InterruptedException, SciDBException {
-		InputStream resultInStream = RunShell.runSciDBAFLquery(host, port, binPath, queryString);
-		String resultString = IOUtils.toString(resultInStream, Constants.ENCODING);
+	private String getDataFromSciDB(final String queryString, final String host,
+			final String port, final String binPath)
+					throws IOException, InterruptedException, SciDBException {
+		InputStream resultInStream = RunShell.runSciDBAFLquery(host, port,
+				binPath, queryString);
+		String resultString = IOUtils.toString(resultInStream,
+				Constants.ENCODING);
 		return resultString;
 	}
 
@@ -218,41 +234,94 @@ public class SciDBHandler implements DBHandler {
 	 * @return map columm/attribute name to its metadata
 	 * @throws SQLException
 	 */
-	public SciDBArrayMetaData getArrayMetaData(String arrayName) throws SQLException {
+	public SciDBArrayMetaData getArrayMetaData(String arrayName)
+			throws SQLException {
 		Map<String, SciDBColumnMetaData> dimensionsMap = new HashMap<>();
 		List<SciDBColumnMetaData> dimensionsOrdered = new ArrayList<>();
 		Map<String, SciDBColumnMetaData> attributesMap = new HashMap<>();
 		List<SciDBColumnMetaData> attributesOrdered = new ArrayList<>();
-
-		Statement st = null;
-		ResultSet res = null;
+		Statement statement = null;
+		ResultSet resultSetDimensions = null;
+		ResultSet resultSetAttributes = null;
 		try {
-			st = connection.createStatement();
-			// the query will not return any result but will give us the
-			// metadata
-			// about the array
-			res = st.executeQuery("select * from " + arrayName + "where 1>2");
-			ResultSetMetaData meta = res.getMetaData();
-			IResultSetWrapper resWrapper;
-			resWrapper = res.unwrap(IResultSetWrapper.class);
-			for (int i = 1; i <= meta.getColumnCount(); i++) {
-				SciDBColumnMetaData columnMetaData = new SciDBColumnMetaData(meta.getColumnName(i),
-						meta.getColumnTypeName(i));
-				if (resWrapper.isColumnAttribute(i)) {
-					attributesMap.put(meta.getColumnName(i), columnMetaData);
-					attributesOrdered.add(columnMetaData);
-				} else {
-					dimensionsMap.put(meta.getColumnName(i), columnMetaData);
-					dimensionsOrdered.add(columnMetaData);
-				}
+			statement = connection.createStatement();
+			resultSetDimensions = statement.executeQuery(
+					"select * from dimensions(" + arrayName + ")");
+			while (!resultSetDimensions.isAfterLast()) {
+				SciDBColumnMetaData columnMetaData = new SciDBColumnMetaData(
+						resultSetDimensions.getString(2),
+						resultSetDimensions.getString(9));
+				dimensionsMap.put(resultSetDimensions.getString(2),
+						columnMetaData);
+				dimensionsOrdered.add(columnMetaData);
+				resultSetDimensions.next();
 			}
-			return new SciDBArrayMetaData(dimensionsMap, dimensionsOrdered, attributesMap, attributesOrdered);
+			resultSetAttributes = statement.executeQuery(
+					"select * from attributes(" + arrayName + ")");
+			while (!resultSetAttributes.isAfterLast()) { 
+				SciDBColumnMetaData columnMetaData = new SciDBColumnMetaData(
+						resultSetAttributes.getString(2),
+						resultSetAttributes.getString(3));
+				attributesMap.put(resultSetAttributes.getString(2),
+						columnMetaData);
+				attributesOrdered.add(columnMetaData);
+				resultSetAttributes.next();
+			}
+			return new SciDBArrayMetaData(dimensionsMap, dimensionsOrdered,
+					attributesMap, attributesOrdered);
+		} catch (SQLException ex) {
+			ex.printStackTrace();
+			log.error("Error while trying to get meta data from SciDB. "
+					+ ex.getMessage() + " " + StackTrace.getFullStackTrace(ex),
+					ex);
+			throw ex;
 		} finally {
-			if (st != null) {
-				st.close();
+			closeResultSet(resultSetDimensions);
+			closeResultSet(resultSetAttributes);
+			closeStatement(statement);
+		}
+	}
+
+	/**
+	 * Close the result set
+	 * 
+	 * @param resultSet
+	 * @throws SQLException
+	 */
+	private void closeResultSet(ResultSet resultSet) throws SQLException {
+		if (resultSet != null) {
+			try {
+				resultSet.close();
+			} catch (SQLException ex) {
+				ex.printStackTrace();
+				log.error(
+						"Error while trying to close result set (from a query) in SciDB."
+								+ ex.getMessage() + " "
+								+ StackTrace.getFullStackTrace(ex),
+						ex);
+				throw ex;
 			}
-			if (res != null) {
-				res.close();
+		}
+	}
+
+	/**
+	 * Close the statement.
+	 * 
+	 * @param statement
+	 * @throws SQLException
+	 */
+	private void closeStatement(Statement statement) throws SQLException {
+		if (statement != null) {
+			try {
+				statement.close();
+			} catch (SQLException ex) {
+				ex.printStackTrace();
+				log.error(
+						"Error while trying to close the AQL statement from SciDB."
+								+ ex.getMessage() + " "
+								+ StackTrace.getFullStackTrace(ex),
+						ex);
+				throw ex;
 			}
 		}
 	}
@@ -265,17 +334,20 @@ public class SciDBHandler implements DBHandler {
 	 * @return a string of characters from the set: NnSsCc
 	 * 
 	 */
-	public static String getTypePatternFromPostgresTypes(List<PostgreSQLColumnMetaData> columnsMetaData) {
+	public static String getTypePatternFromPostgresTypes(
+			List<PostgreSQLColumnMetaData> columnsMetaData) {
 		char[] scidbTypesPattern = new char[columnsMetaData.size()];
 		for (PostgreSQLColumnMetaData columnMetaData : columnsMetaData) {
 			// check the character type
 			char newType = 'N'; // N - numeric by default
-			if ((columnMetaData.getDataType().equals("character") || columnMetaData.getDataType().equals("char"))
+			if ((columnMetaData.getDataType().equals("character")
+					|| columnMetaData.getDataType().equals("char"))
 					&& columnMetaData.getCharacterMaximumLength() == 1) {
 				newType = 'C';
 			} else if (columnMetaData.getDataType().equals("varchar")
 					|| columnMetaData.getDataType().equals("character")
-					|| columnMetaData.getDataType().contains("character varying")
+					|| columnMetaData.getDataType()
+							.contains("character varying")
 					|| columnMetaData.getDataType().equals("text")) {
 				// for "string" type
 				newType = 'S';
@@ -296,22 +368,17 @@ public class SciDBHandler implements DBHandler {
 		try {
 			// String resultSciDB = new
 			// new SciDBHandler().executeQueryScidb("list(^^arrays^^)");
-			try {
-				// new SciDBHandler().executeStatement("drop array adam2");
-				SciDBHandler handler = new SciDBHandler();
-				handler.executeStatement("create array adam2<v:string> [i=0:10,1,0]");
-				handler.close();
-			} catch (ClassNotFoundException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			// STRING resultSciDB = new
+			// new SciDBHandler().executeStatement("drop array adam2");
+			SciDBHandler handler = new SciDBHandler();
+			handler.executeStatement(
+					"create array adam2<v:string> [i=0:10,1,0]");
+			handler.close();
+			// String resultSciDB = new
 			// SciDBHandler().executeQueryScidb("scan(waveform_test_1GB)");
 			// System.out.println(resultSciDB);
 			// } catch (IOException | InterruptedException | SciDBException e) {
 			// e.printStackTrace();
 		} catch (SQLException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 

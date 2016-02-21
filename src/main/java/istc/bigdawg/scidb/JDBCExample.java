@@ -48,10 +48,16 @@ class JDBCExample {
 				res.next();
 			}
 			res.close();
+			
+			ResultSet res2 = st.executeQuery("select * from test_waveform_flat where 1>2");
+			res2.close();
 			st.close();
 			conn.close();
 		} catch (SQLException e) {
-			System.out.println(e);
+			e.printStackTrace();
+			System.out.println(e.getMessage().contains("does not exist"));
+			System.out.println(e.getMessage());
+			//System.out.println(e);
 		}
 		System.exit(0);
 	}
