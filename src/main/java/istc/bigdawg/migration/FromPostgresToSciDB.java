@@ -66,8 +66,7 @@ public class FromPostgresToSciDB implements FromDatabaseToDatabase {
 		copyFromStringBuf.append(table + " ");
 		copyFromStringBuf.append("TO ");
 		copyFromStringBuf.append(" STDOUT ");
-		copyFromStringBuf
-				.append("with (format csv, delimiter '" + delimiter + "')");
+		copyFromStringBuf.append("with (format csv, delimiter '" + delimiter + "')");
 		return copyFromStringBuf.toString();
 	}
 
@@ -82,57 +81,45 @@ public class FromPostgresToSciDB implements FromDatabaseToDatabase {
 	 * 
 	 * @throws MigrationException
 	 */
-	private Long extractDataFromPostgreSQLSingleThreadCsv(String fromTable,
-			PostgreSQLConnectionInfo connectionFrom, String csvFilePath,
-			String delimiter) throws MigrationException {
-		String copyCommandPostgreSQL = getCopyCommandPostgreSQL(fromTable,
-				delimiter);
+	private Long extractDataFromPostgreSQLSingleThreadCsv(String fromTable, PostgreSQLConnectionInfo connectionFrom,
+			String csvFilePath, String delimiter) throws MigrationException {
+		String copyCommandPostgreSQL = getCopyCommandPostgreSQL(fromTable, delimiter);
 		Connection conPostgreSQL;
 		try {
 			conPostgreSQL = PostgreSQLHandler.getConnection(connectionFrom);
 		} catch (SQLException e) {
 			e.printStackTrace();
-			throw new MigrationException(errMessage
-					+ "Could not connect to PostgreSQL! " + e.getMessage());
+			throw new MigrationException(errMessage + "Could not connect to PostgreSQL! " + e.getMessage());
 		}
 		CopyManager copyManagerPostgreSQL;
 		try {
-			copyManagerPostgreSQL = new CopyManager(
-					(BaseConnection) conPostgreSQL);
+			copyManagerPostgreSQL = new CopyManager((BaseConnection) conPostgreSQL);
 		} catch (SQLException e1) {
 			e1.printStackTrace();
-			throw new MigrationException(
-					errMessage + "PostgreSQL Copy Manager creation failed. "
-							+ e1.getMessage());
+			throw new MigrationException(errMessage + "PostgreSQL Copy Manager creation failed. " + e1.getMessage());
 		}
 		FileWriter writer = null;
 		try {
 			writer = new FileWriter(csvFilePath);
 		} catch (IOException e) {
 			e.printStackTrace();
-			throw new MigrationException(
-					errMessage + " Problem with opening a file: " + csvFilePath
-							+ " for writing.");
+			throw new MigrationException(errMessage + " Problem with opening a file: " + csvFilePath + " for writing.");
 		}
 		Long extractedRowsCount;
 		try {
-			extractedRowsCount = copyManagerPostgreSQL
-					.copyOut(copyCommandPostgreSQL, writer);
-			log.debug(generalMessage + " extracted rows from PostgreSQL: "
-					+ extractedRowsCount);
+			extractedRowsCount = copyManagerPostgreSQL.copyOut(copyCommandPostgreSQL, writer);
+			log.debug(generalMessage + " extracted rows from PostgreSQL: " + extractedRowsCount);
 		} catch (SQLException | IOException e) {
 			e.printStackTrace();
-			throw new MigrationException(errMessage
-					+ " PostgreSQL Copy Manager: extracting data from PostgreSQL failed. "
-					+ e.getMessage());
+			throw new MigrationException(
+					errMessage + " PostgreSQL Copy Manager: extracting data from PostgreSQL failed. " + e.getMessage());
 		}
 		try {
 			writer.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 			throw new MigrationException(
-					errMessage + " Problem with closing the file: "
-							+ csvFilePath + " " + e.getMessage());
+					errMessage + " Problem with closing the file: " + csvFilePath + " " + e.getMessage());
 		}
 		return extractedRowsCount;
 	}
@@ -149,18 +136,15 @@ public class FromPostgresToSciDB implements FromDatabaseToDatabase {
 	 *             thrown when Extraction of the attribute types from PostgreSQL
 	 *             failed
 	 */
-	private PostgreSQLTableMetaData getPostgreSQLTableMetaData(
-			PostgreSQLConnectionInfo connectionFrom, String fromTable)
-					throws MigrationException {
+	private PostgreSQLTableMetaData getPostgreSQLTableMetaData(PostgreSQLConnectionInfo connectionFrom,
+			String fromTable) throws MigrationException {
 		PostgreSQLTableMetaData postgresTableMetaData;
 		try {
-			postgresTableMetaData = new PostgreSQLHandler(connectionFrom)
-					.getColumnsMetaData(fromTable);
+			postgresTableMetaData = new PostgreSQLHandler(connectionFrom).getColumnsMetaData(fromTable);
 		} catch (SQLException e) {
 			e.printStackTrace();
-			throw new MigrationException(errMessage
-					+ " Extraction of the attribute types from PostgreSQL failed. "
-					+ e.getMessage());
+			throw new MigrationException(
+					errMessage + " Extraction of the attribute types from PostgreSQL failed. " + e.getMessage());
 		}
 		return postgresTableMetaData;
 	}
@@ -180,22 +164,17 @@ public class FromPostgresToSciDB implements FromDatabaseToDatabase {
 	 * @throws MigrationException
 	 *             thrown when conversion from csv to scidb format failed
 	 */
-	private void fromCsvToSciDB(PostgreSQLTableMetaData postgresTableMetaData,
-			String csvFilePath, String delimiter, String scidbFilePath,
-			SciDBConnectionInfo connectionTo) throws MigrationException {
-		String typesPattern = SciDBHandler.getTypePatternFromPostgresTypes(
-				postgresTableMetaData.getColumnsOrdered());
-		ProcessBuilder csv2scidb = new ProcessBuilder(
-				connectionTo.getBinPath() + "csv2scidb", "-i", csvFilePath,
-				"-o", scidbFilePath, "-d", delimiter, "-p", typesPattern);
+	private void fromCsvToSciDB(PostgreSQLTableMetaData postgresTableMetaData, String csvFilePath, String delimiter,
+			String scidbFilePath, SciDBConnectionInfo connectionTo) throws MigrationException {
+		String typesPattern = SciDBHandler.getTypePatternFromPostgresTypes(postgresTableMetaData.getColumnsOrdered());
+		ProcessBuilder csv2scidb = new ProcessBuilder(connectionTo.getBinPath() + "csv2scidb", "-i", csvFilePath, "-o",
+				scidbFilePath, "-d", delimiter, "-p", typesPattern);
 		log.debug(csv2scidb.command());
 		try {
 			RunShell.runShell(csv2scidb);
 		} catch (RunShellException | InterruptedException | IOException e) {
 			e.printStackTrace();
-			throw new MigrationException(
-					errMessage + " Conversion from csv to scidb format failed! "
-							+ e.getMessage());
+			throw new MigrationException(errMessage + " Conversion from csv to scidb format failed! " + e.getMessage());
 		}
 		// save the disk space
 		SystemUtilities.deleteFileIfExists(csvFilePath);
@@ -218,34 +197,30 @@ public class FromPostgresToSciDB implements FromDatabaseToDatabase {
 	 * @throws SQLException
 	 * @throws MigrationException
 	 */
-	public MigrationResult migrateSingleThreadCSV(
-			PostgreSQLConnectionInfo connectionFrom, String fromTable,
-			SciDBConnectionInfo connectionTo, String toArray)
-					throws MigrationException {
-		String csvFilePath = SystemUtilities.getSystemTempDir() + "/bigdawg_"
-				+ fromTable + ".csv";
+	public MigrationResult migrateSingleThreadCSV(PostgreSQLConnectionInfo connectionFrom, String fromTable,
+			SciDBConnectionInfo connectionTo, String toArray) throws MigrationException, SQLException {
+		String csvFilePath = SystemUtilities.getSystemTempDir() + "/bigdawg_" + fromTable + ".csv";
 		String delimiter = "|";
-		String scidbFilePath = SystemUtilities.getSystemTempDir() + "/bigdawg_"
-				+ fromTable + ".scidb";
+		String scidbFilePath = SystemUtilities.getSystemTempDir() + "/bigdawg_" + fromTable + ".scidb";
 		try {
 			log.info(generalMessage);
-			long extractedRowsCount = extractDataFromPostgreSQLSingleThreadCsv(
-					fromTable, connectionFrom, csvFilePath, delimiter);
-			PostgreSQLTableMetaData postgresTableMetaData = getPostgreSQLTableMetaData(
-					connectionFrom, fromTable);
-			fromCsvToSciDB(postgresTableMetaData, csvFilePath, delimiter,
-					scidbFilePath, connectionTo);
-			prepareFlatTargetArrays(connectionTo, toArray, fromTable,
-					postgresTableMetaData);
+			long extractedRowsCount = extractDataFromPostgreSQLSingleThreadCsv(fromTable, connectionFrom, csvFilePath,
+					delimiter);
+			PostgreSQLTableMetaData postgresTableMetaData = getPostgreSQLTableMetaData(connectionFrom, fromTable);
+			fromCsvToSciDB(postgresTableMetaData, csvFilePath, delimiter, scidbFilePath, connectionTo);
+			SciDBHandler handler = new SciDBHandler(connectionTo);
+			handler.setAutoCommit(false);
+			prepareFlatTargetArrays(handler, toArray, fromTable, postgresTableMetaData);
 			try {
-				loadDataToSciDB(connectionTo, toArray, scidbFilePath);
-			} catch (IOException | InterruptedException | SciDBException e) {
-				throw new MigrationException(
-						errMessage + " Final data loading to SciDB failed! "
-								+ e.getMessage());
+				// we have to do it, why there is a lock on the table?
+				handler.close();
+				handler = new SciDBHandler(connectionTo);
+				loadDataToSciDB(handler, toArray, scidbFilePath);
+			} catch (SQLException e) {
+				throw new MigrationException(errMessage + " Final data loading to SciDB failed! " + e.getMessage());
 			}
-			return new MigrationResult(extractedRowsCount, null,
-					"No information about loaded rows.", false);
+			handler.close();
+			return new MigrationResult(extractedRowsCount, null, "No information about loaded rows.", false);
 		} finally {
 			SystemUtilities.deleteFileIfExists(csvFilePath);
 			SystemUtilities.deleteFileIfExists(scidbFilePath);
@@ -264,15 +239,11 @@ public class FromPostgresToSciDB implements FromDatabaseToDatabase {
 	 * @return
 	 * @throws MigrationException
 	 */
-	private boolean isFlatArray(PostgreSQLTableMetaData postgresTableMetaData,
-			SciDBArrayMetaData scidbArrayMetaData, String fromTable,
-			String toArray) throws MigrationException {
-		List<SciDBColumnMetaData> scidbAttributesOrdered = scidbArrayMetaData
-				.getAttributesOrdered();
-		List<SciDBColumnMetaData> scidbDimensionsOrdered = scidbArrayMetaData
-				.getDimensionsOrdered();
-		List<PostgreSQLColumnMetaData> postgresColumnsOrdered = postgresTableMetaData
-				.getColumnsOrdered();
+	private boolean isFlatArray(PostgreSQLTableMetaData postgresTableMetaData, SciDBArrayMetaData scidbArrayMetaData,
+			String fromTable, String toArray) throws MigrationException {
+		List<SciDBColumnMetaData> scidbAttributesOrdered = scidbArrayMetaData.getAttributesOrdered();
+		List<SciDBColumnMetaData> scidbDimensionsOrdered = scidbArrayMetaData.getDimensionsOrdered();
+		List<PostgreSQLColumnMetaData> postgresColumnsOrdered = postgresTableMetaData.getColumnsOrdered();
 		// check if this is the flat array only
 		if (scidbDimensionsOrdered.size() != 1) {
 			return false;
@@ -283,14 +254,13 @@ public class FromPostgresToSciDB implements FromDatabaseToDatabase {
 			 * columns in PostgreSQL
 			 */
 			for (int i = 0; i < scidbAttributesOrdered.size(); ++i) {
-				if (scidbAttributesOrdered.get(i)
-						.getColumnName() != postgresColumnsOrdered.get(i)
-								.getName()) {
-					throw new MigrationException("The attribute "
-							+ postgresColumnsOrdered.get(i).getName()
+				if (!scidbAttributesOrdered.get(i).getColumnName().equals(postgresColumnsOrdered.get(i).getName())) {
+					throw new MigrationException("The attribute " + postgresColumnsOrdered.get(i).getName()
 							+ " from PostgreSQL's table: " + fromTable
 							+ " is not matched in the same ORDER with attribute/dimension in the array in SciDB: "
-							+ toArray);
+							+ toArray + " (position " + i + " PostgreSQL is for the attribute "
+							+ postgresColumnsOrdered.get(i).getName() + " wheras the position " + i
+							+ " in the array in SciDB is: " + scidbAttributesOrdered.get(i).getColumnName() + ").");
 				}
 			}
 			return true;
@@ -310,45 +280,24 @@ public class FromPostgresToSciDB implements FromDatabaseToDatabase {
 	 * @throws MigrationException
 	 * 
 	 */
-	public void prepareFlatTargetArrays(SciDBConnectionInfo connectionInfo,
-			String toArray, String fromTable,
-			PostgreSQLTableMetaData postgresTableMetaData)
-					throws MigrationException {
-		SciDBHandler handler = null;
-		try {
-			handler = new SciDBHandler(connectionInfo);
-		} catch (SQLException ex) {
-			throw new MigrationException(ex.getMessage());
-		}
-		SciDBArrayMetaData arrayMetaData = null;
-		try {
-			arrayMetaData = handler.getArrayMetaData(toArray);
-		} catch (SQLException ex) {
-			throw new MigrationException(ex.getMessage());
-		}
-		if (isFlatArray(postgresTableMetaData, arrayMetaData, fromTable,
-				toArray)) {
+	public void prepareFlatTargetArrays(SciDBHandler handler, String toArray, String fromTable,
+			PostgreSQLTableMetaData postgresTableMetaData) throws MigrationException, SQLException {
+		SciDBArrayMetaData arrayMetaData = handler.getArrayMetaData(toArray);
+		if (isFlatArray(postgresTableMetaData, arrayMetaData, fromTable, toArray)) {
 			return;
 		}
 		/*
 		 * check if every column from Postgres is mapped to a column/attribute
 		 * in SciDB's arrays
 		 */
-		Map<String, SciDBColumnMetaData> dimensionsMap = arrayMetaData
-				.getDimensionsMap();
-		Map<String, SciDBColumnMetaData> attributesMap = arrayMetaData
-				.getAttributesMap();
-		List<PostgreSQLColumnMetaData> postgresColumnsOrdered = postgresTableMetaData
-				.getColumnsOrdered();
+		Map<String, SciDBColumnMetaData> dimensionsMap = arrayMetaData.getDimensionsMap();
+		Map<String, SciDBColumnMetaData> attributesMap = arrayMetaData.getAttributesMap();
+		List<PostgreSQLColumnMetaData> postgresColumnsOrdered = postgresTableMetaData.getColumnsOrdered();
 		for (PostgreSQLColumnMetaData postgresColumnMetaData : postgresColumnsOrdered) {
 			String postgresColumnName = postgresColumnMetaData.getName();
-			if (!dimensionsMap.containsKey(postgresColumnName)
-					&& !attributesMap.containsKey(postgresColumnName)) {
-				throw new MigrationException(
-						"The attribute " + postgresColumnName
-								+ " from PostgreSQL's table: " + fromTable
-								+ " is not matched with any attribute/dimension in the array in SciDB: "
-								+ toArray);
+			if (!dimensionsMap.containsKey(postgresColumnName) && !attributesMap.containsKey(postgresColumnName)) {
+				throw new MigrationException("The attribute " + postgresColumnName + " from PostgreSQL's table: "
+						+ fromTable + " is not matched with any attribute/dimension in the array in SciDB: " + toArray);
 			}
 		}
 		/*
@@ -363,16 +312,17 @@ public class FromPostgresToSciDB implements FromDatabaseToDatabase {
 
 	}
 
-	private String loadDataToSciDB(SciDBConnectionInfo conTo, String arrayTo,
-			String dataFile)
-					throws IOException, InterruptedException, SciDBException {
-		InputStream resultInStream = RunShell.executeAQLcommandSciDB(
-				conTo.getHost(), conTo.getPort(), conTo.getBinPath(),
-				"load " + arrayTo + " from '" + dataFile + "'");
-		String resultString = IOUtils.toString(resultInStream,
-				Constants.ENCODING);
-		log.debug("Load data to SciDB: " + resultString);
-		return resultString;
+	private String loadDataToSciDB(SciDBHandler handler, String arrayTo, String dataFile)
+			throws SQLException {
+		// InputStream resultInStream =
+		// RunShell.executeAQLcommandSciDB(conTo.getHost(), conTo.getPort(),
+		// conTo.getBinPath(), "load " + arrayTo + " from '" + dataFile + "'");
+		// String resultString = IOUtils.toString(resultInStream,
+		// Constants.ENCODING);
+		//	log.debug("Load data to SciDB: " + resultString);
+		handler.executeStatement("load " + arrayTo + " from '" + dataFile + "'");
+		handler.commit();
+		return "Data successfuly loaded to SciDB";
 	}
 
 	/**
@@ -394,17 +344,14 @@ public class FromPostgresToSciDB implements FromDatabaseToDatabase {
 	 * 
 	 */
 	@Override
-	public MigrationResult migrate(ConnectionInfo connectionFrom,
-			String fromTable, ConnectionInfo connectionTo, String toArray)
-					throws MigrationException {
+	public MigrationResult migrate(ConnectionInfo connectionFrom, String fromTable, ConnectionInfo connectionTo,
+			String toArray) throws MigrationException {
 		log.debug("General data migration: " + this.getClass().getName());
-		if (connectionFrom instanceof PostgreSQLConnectionInfo
-				&& connectionTo instanceof SciDBConnectionInfo) {
+		if (connectionFrom instanceof PostgreSQLConnectionInfo && connectionTo instanceof SciDBConnectionInfo) {
 			try {
-				return this.migrateSingleThreadCSV(
-						(PostgreSQLConnectionInfo) connectionFrom, fromTable,
+				return this.migrateSingleThreadCSV((PostgreSQLConnectionInfo) connectionFrom, fromTable,
 						(SciDBConnectionInfo) connectionTo, toArray);
-			} catch (MigrationException e) {
+			} catch (MigrationException | SQLException e) {
 				throw new MigrationException(e.getMessage(), e);
 			}
 		}
@@ -416,15 +363,14 @@ public class FromPostgresToSciDB implements FromDatabaseToDatabase {
 	 * @throws IOException
 	 * @throws MigrationException
 	 */
-	public static void main(String[] args)
-			throws MigrationException, IOException {
+	public static void main(String[] args) throws MigrationException, IOException {
 		LoggerSetup.setLogging();
 		FromPostgresToSciDB migrator = new FromPostgresToSciDB();
-		PostgreSQLConnectionInfo conFrom = new PostgreSQLConnectionInfo(
-				"localhost", "5431", "tpch", "postgres", "test");
+		PostgreSQLConnectionInfo conFrom = new PostgreSQLConnectionInfo("localhost", "5431", "tpch", "postgres",
+				"test");
 		String fromTable = "region";
-		SciDBConnectionInfo conTo = new SciDBConnectionInfo("localhost", "1239",
-				"scidb", "mypassw", "/opt/scidb/14.12/bin/");
+		SciDBConnectionInfo conTo = new SciDBConnectionInfo("localhost", "1239", "scidb", "mypassw",
+				"/opt/scidb/14.12/bin/");
 		String toArray = "region2";
 		// migrator.migrateSingleThreadCSV(conFrom, fromTable, conTo, arrayTo);
 		migrator.migrate(conFrom, fromTable, conTo, toArray);

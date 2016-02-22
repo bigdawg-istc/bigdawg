@@ -38,7 +38,7 @@ public class FromPostgresToSciDBTest {
 	private String fromTable = "region_test_from_13241";
 	private SciDBConnectionInfo conTo = new SciDBConnectionInfo("localhost", "1239", "scidb", "mypassw",
 			"/opt/scidb/14.12/bin/");
-	private String toArray = "region";
+	private String toArray = "region3";
 	private long numberOfRowsPostgres = 0;
 
 	@Before
@@ -84,10 +84,11 @@ public class FromPostgresToSciDBTest {
 		}
 
 		long numberOfCellsSciDB = 0;
-		while (resultSet.next()) {
+		while (!resultSet.isAfterLast()) {
 			// System.out.println(resultSet.getString(3));
 			// System.out.println(resultSet.getInt(1));
 			++numberOfCellsSciDB;
+			resultSet.next();
 		}
 		resultSet.close();
 		query.close();
