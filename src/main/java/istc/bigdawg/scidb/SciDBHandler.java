@@ -20,6 +20,7 @@ import javax.ws.rs.core.Response;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
+import org.scidb.jdbc.IStatementWrapper;
 
 import istc.bigdawg.BDConstants;
 import istc.bigdawg.BDConstants.Shim;
@@ -48,6 +49,10 @@ public class SciDBHandler implements DBHandler {
 	private static Logger log = Logger.getLogger(SciDBHandler.class.getName());
 	private SciDBConnectionInfo conInfo;
 	private Connection connection;
+
+	public enum Lang {
+		AQL, AFL
+	};
 
 	/**
 	 * Create a default SciDB Handler with parameters from the configuration
@@ -127,16 +132,45 @@ public class SciDBHandler implements DBHandler {
 	}
 
 	/**
-	 * This statement will be executed via jdbc.
+	 * This statement will be executed via jdbc in AFL language.
+	 * 
+	 * @param statement
+	 *            scidb statement
+	 * @throws SQLException
+	 */
+	public void executeStatementAFL(String stringStatement)
+			throws SQLException {
+		executeStatementSciDB(stringStatement, Lang.AFL);
+	}
+
+	/**
+	 * This statement will be executed via jdbc in AQL language.
 	 * 
 	 * @param statement
 	 *            scidb statement
 	 * @throws SQLException
 	 */
 	public void executeStatement(String stringStatement) throws SQLException {
+		executeStatementSciDB(stringStatement, Lang.AQL);
+	}
+
+	/**
+	 * Execute the statement in SciDB in the given language (AFL or AQL).
+	 * 
+	 * @param stringStatement
+	 * @param lang
+	 * @throws SQLException
+	 */
+	private void executeStatementSciDB(String stringStatement, Lang lang)
+			throws SQLException {
 		Statement statement = null;
 		try {
 			statement = connection.createStatement();
+			IStatementWrapper statementWrapper = statement
+					.unwrap(IStatementWrapper.class);
+			if (lang == Lang.AFL) {
+				statementWrapper.setAfl(true);
+			}
 			statement.execute(stringStatement);
 		} catch (SQLException ex) {
 			ex.printStackTrace();
@@ -408,6 +442,42 @@ public class SciDBHandler implements DBHandler {
 			scidbTypesPattern[columnMetaData.getPosition() - 1] = newType;
 		}
 		return String.copyValueOf(scidbTypesPattern);
+	}
+
+	/**
+	 * This is similar to dropArrayIfExists. The array is removed if it exists.
+	 * Otherwise, no exception is thrown.
+	 * 
+	 * @throws SQLException
+	 */
+	public static void dropArrayIfExists(SciDBConnectionInfo conTo, String array)
+			throws SQLException {
+		Connection con = null;
+		Statement statement = null;
+		try {
+			con = SciDBHandler.getConnection(conTo);
+			statement = con.createStatement();
+			statement.execute("drop array " + array);
+		} catch (SQLException ex) {
+			/*
+			 * it can be thrown when the target array did not exists which
+			 * should be a default behavior
+			 */
+			if (ex.getMessage()
+					.contains("Array '" + array + "' does not exist.")) {
+				/* the array did not exist in the SciDB database */
+				return;
+			} else {
+				throw ex;
+			}
+		} finally {
+			if (statement != null) {
+				statement.close();
+			}
+			if (con != null) {
+				con.close();
+			}
+		}
 	}
 
 	/**

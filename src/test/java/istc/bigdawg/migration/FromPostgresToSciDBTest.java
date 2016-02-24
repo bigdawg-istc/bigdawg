@@ -93,6 +93,7 @@ public class FromPostgresToSciDBTest {
 	public void testFromPostgresToSciDBcsvSingleThreadMigrationPreparedArray()
 			throws SQLException, MigrationException {
 		// prepare the target array
+		SciDBHandler.dropArrayIfExists(conTo, toArray);
 		SciDBHandler handler = new SciDBHandler(conTo);
 		handler.executeStatement("create array " + toArray
 				+ " <r_regionkey:int64,r_name:string,r_comment:string> [i=0:*,1000000,0]");
@@ -104,13 +105,12 @@ public class FromPostgresToSciDBTest {
 		migrator.migrateSingleThreadCSV(conFrom, fromTable, conTo, toArray);
 		checkNumberOfElements(conTo, toArray);
 		// clean: remove the target array
-		handler = new SciDBHandler();
-		handler.executeStatement("drop array " + toArray);
-		handler.close();
+		SciDBHandler.dropArrayIfExists(conTo, toArray);
 	}
 
 	/**
 	 * Check if the number of loaded elements is correct.
+	 * This is an internal method.
 	 * 
 	 * @param conTo
 	 * @param toArray
@@ -168,30 +168,36 @@ public class FromPostgresToSciDBTest {
 	public void testFromPostgresToSciDBNoTargetArray()
 			throws MigrationException, SQLException {
 		// make sure that the target array does not exist
-		Connection con = null;
-		Statement statement = null;
-		try {
-			con = SciDBHandler.getConnection(conTo);
-			statement = con.createStatement();
-			statement.execute("drop array " + toArray);
-		} catch (SQLException ex) {
-			/*
-			 * it can be thrown when the target array did not exists which
-			 * should be a default behavior
-			 */
-		} finally {
-			if (statement != null) {
-				statement.close();
-			}
-			if (con != null) {
-				con.close();
-			}
-		}
+		SciDBHandler.dropArrayIfExists(conTo, toArray);
 		migrator.migrateSingleThreadCSV(conFrom, fromTable, conTo, toArray);
 		// drop the created array
-		SciDBHandler handler = new SciDBHandler();
-		handler.executeStatement("drop array " + toArray);
+		SciDBHandler.dropArrayIfExists(conTo, toArray);
+	}
+
+	@Test
+	/**
+	 * The data should be loaded to the multi-dimensional target array and after
+	 * the process the intermediate flat array should be removed.
+	 * 
+	 * @throws MigrationException
+	 * @throws SQLException
+	 */
+	public void testFromPostgresToSciDBMultiDimensionalTargetArray()
+			throws MigrationException, SQLException {
+		// prepare the target array
+		SciDBHandler.dropArrayIfExists(conTo, toArray);
+		SciDBHandler handler = new SciDBHandler(conTo);
+		handler.executeStatement("create array " + toArray
+				+ " <r_name:string,r_comment:string> [r_regionkey=0:*,1000000,0]");
+		handler.commit();
 		handler.close();
+		/*
+		 * test of the main method
+		 */
+		migrator.migrateSingleThreadCSV(conFrom, fromTable, conTo, toArray);
+		checkNumberOfElements(conTo, toArray);
+		// clean: remove the target array
+		SciDBHandler.dropArrayIfExists(conTo, toArray);
 	}
 
 	@After

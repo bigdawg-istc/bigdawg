@@ -52,6 +52,18 @@ public class SciDBHandlerTest {
 	}
 
 	@Test
+	/**
+	 * Check if the command in SciDB can be executed in the AFL language.
+	 * 
+	 * @throws SQLException
+	 */
+	public void testExecuteStatementAFL() throws SQLException {
+		SciDBHandler handler = new SciDBHandler();
+		handler.executeStatementAFL("list('arrays')");
+		handler.close();
+	}
+
+	@Test
 	public void testQueryScidbJDBCStandardConnectionPrintArrays()
 			throws Exception {
 		String arrayName = "adam_test_scidb_011_3";

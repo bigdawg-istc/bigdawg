@@ -7,8 +7,10 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
 import org.postgresql.copy.CopyManager;
@@ -49,6 +51,49 @@ public class FromPostgresToSciDB implements FromDatabaseToDatabase {
 
 	/* General error message when the migration fails in the class. */
 	private String errMessage = generalMessage + " failed! ";
+
+	/*
+	 * These are the arrays that were created during migration of data from
+	 * PostgreSQL to SciDB. If something fails on the way, then the arrays
+	 * should be removed.
+	 */
+	private Set<String> createdArrays = new HashSet<>();
+
+	/**
+	 * The arrays that were
+	 * 
+	 * @author Adam Dziedzic
+	 * 
+	 *         Feb 24, 2016 2:53:57 PM
+	 */
+	private class Arrays {
+		private String flat;
+		private String multiDimensional;
+
+		/**
+		 * @param flat
+		 * @param multiDimensional
+		 */
+		public Arrays(String flat, String multiDimensional) {
+			this.flat = flat;
+			this.multiDimensional = multiDimensional;
+		}
+
+		/**
+		 * @return the flat
+		 */
+		public String getFlat() {
+			return flat;
+		}
+
+		/**
+		 * @return the multiDimensional
+		 */
+		public String getMultiDimensional() {
+			return multiDimensional;
+		}
+
+	}
 
 	/**
 	 * Command to copy data from a table in PostgreSQL.
@@ -236,10 +281,10 @@ public class FromPostgresToSciDB implements FromDatabaseToDatabase {
 					connectionFrom, fromTable);
 			fromCsvToSciDB(postgresTableMetaData, csvFilePath, delimiter,
 					scidbFilePath, connectionTo);
-			prepareFlatTargetArrays(connectionTo, toArray, fromTable,
-					postgresTableMetaData);
-			loadDataToSciDB(connectionTo, toArray, scidbFilePath);
-
+			Arrays arrays = prepareFlatTargetArrays(connectionTo, toArray,
+					fromTable, postgresTableMetaData);
+			loadDataToSciDB(connectionTo, arrays, scidbFilePath);
+			removeFlatArray(connectionTo, arrays);
 			return new MigrationResult(extractedRowsCount, null,
 					"No information about loaded rows.", false);
 		} catch (SQLException | UnsupportedTypeException e) {
@@ -252,12 +297,43 @@ public class FromPostgresToSciDB implements FromDatabaseToDatabase {
 					+ " SciDBConnection: " + connectionTo.toString()
 					+ " to array:" + toArray;
 			log.error(msg);
+			/* try to clean the environment: remove the created arrays */
+			for (String array : createdArrays) {
+				removeArray(connectionTo, array);
+			}
 			throw new MigrationException(msg);
 		} finally {
 			SystemUtilities.deleteFileIfExists(csvFilePath);
 			SystemUtilities.deleteFileIfExists(scidbFilePath);
 		}
 
+	}
+
+	/**
+	 * Remove the intermediate flat array if it was created.
+	 * 
+	 * @param connectionTo
+	 * @param arrays
+	 * @throws SQLException
+	 */
+	private void removeFlatArray(SciDBConnectionInfo connectionTo,
+			Arrays arrays) throws SQLException {
+		if (arrays.getMultiDimensional() != null) {
+			removeArray(connectionTo, arrays.getFlat());
+		}
+	}
+
+	/**
+	 * Remove the given array from SciDB.
+	 * 
+	 * @param arrayName
+	 * @throws SQLException
+	 */
+	private void removeArray(SciDBConnectionInfo connectionTo, String arrayName)
+			throws SQLException {
+		SciDBHandler handler = new SciDBHandler(connectionTo);
+		handler.executeStatement("drop array " + arrayName);
+		handler.close();
 	}
 
 	/**
@@ -292,7 +368,7 @@ public class FromPostgresToSciDB implements FromDatabaseToDatabase {
 			for (int i = 0; i < scidbAttributesOrdered.size(); ++i) {
 				if (!scidbAttributesOrdered.get(i).getColumnName()
 						.equals(postgresColumnsOrdered.get(i).getName())) {
-					throw new MigrationException("The attribute "
+					String msg = "The attribute "
 							+ postgresColumnsOrdered.get(i).getName()
 							+ " from PostgreSQL's table: " + fromTable
 							+ " is not matched in the same ORDER with attribute/dimension in the array in SciDB: "
@@ -302,7 +378,9 @@ public class FromPostgresToSciDB implements FromDatabaseToDatabase {
 							+ " whereas the position " + i
 							+ " in the array in SciDB is: "
 							+ scidbAttributesOrdered.get(i).getColumnName()
-							+ ").");
+							+ ").";
+					log.error(msg);
+					throw new MigrationException(msg);
 				}
 			}
 			return true;
@@ -334,10 +412,11 @@ public class FromPostgresToSciDB implements FromDatabaseToDatabase {
 			String postgresColumnType = postgresColumnMetaData.getDataType();
 			String attributeType = DataTypesFromPostgreSQLToSciDB
 					.getSciDBTypeFromPostgreSQLType(postgresColumnType);
-			createArrayStringBuf.append(attributeName + ":" + attributeType + ",");
+			createArrayStringBuf
+					.append(attributeName + ":" + attributeType + ",");
 		}
 		/* delete the last comma "," */
-		createArrayStringBuf.deleteCharAt(createArrayStringBuf.length()-1);
+		createArrayStringBuf.deleteCharAt(createArrayStringBuf.length() - 1);
 		/* " r_regionkey:int64,r_name:string,r_comment:string> );" */
 		/* this is by default 1 mln cells in a chunk */
 		createArrayStringBuf.append("> [i=0:*,1000000,0]");
@@ -345,6 +424,7 @@ public class FromPostgresToSciDB implements FromDatabaseToDatabase {
 		handler.executeStatement(createArrayStringBuf.toString());
 		handler.commit();
 		handler.close();
+		createdArrays.add(toArray);
 	}
 
 	/**
@@ -359,7 +439,7 @@ public class FromPostgresToSciDB implements FromDatabaseToDatabase {
 	 * @throws UnsupportedTypeException
 	 * 
 	 */
-	public void prepareFlatTargetArrays(SciDBConnectionInfo connectionTo,
+	private Arrays prepareFlatTargetArrays(SciDBConnectionInfo connectionTo,
 			String toArray, String fromTable,
 			PostgreSQLTableMetaData postgresTableMetaData)
 					throws MigrationException, SQLException,
@@ -371,12 +451,13 @@ public class FromPostgresToSciDB implements FromDatabaseToDatabase {
 		} catch (NoTargetArrayException e) {
 			buildTargetDefaultFlatArray(connectionTo, toArray,
 					postgresTableMetaData);
-			return;
+			/* the data shoule be loaded to the deafault flat array */
+			return new Arrays(toArray, null);
 		}
 		handler.close();
 		if (isFlatArray(postgresTableMetaData, arrayMetaData, fromTable,
 				toArray)) {
-			return;
+			return new Arrays(toArray, null);
 		}
 		/*
 		 * check if every column from Postgres is mapped to a column/attribute
@@ -399,6 +480,24 @@ public class FromPostgresToSciDB implements FromDatabaseToDatabase {
 								+ toArray);
 			}
 		}
+		String newFlatIntermediateArray = toArray + "__flat__";
+		buildTargetDefaultFlatArray(connectionTo, newFlatIntermediateArray,
+				postgresTableMetaData);
+		return new Arrays(newFlatIntermediateArray, toArray);
+	}
+
+	/**
+	 * Load the data to SciDB (identified by connectionTo): to a given array
+	 * from a given file.
+	 * 
+	 * @param connectionTo
+	 * @param arrays
+	 * @param scidbFilePath
+	 * @return
+	 * @throws SQLException
+	 */
+	private String loadDataToSciDB(SciDBConnectionInfo connectionTo,
+			Arrays arrays, String scidbFilePath) throws SQLException {
 		/*
 		 * we have to create a flat array and redimension it to the final result
 		 */
@@ -409,10 +508,6 @@ public class FromPostgresToSciDB implements FromDatabaseToDatabase {
 
 		/* remove the auxiliary flat array if the target was not flat */
 
-	}
-
-	private String loadDataToSciDB(SciDBConnectionInfo connectionTo,
-			String arrayTo, String scidbFilePath) throws SQLException {
 		// InputStream resultInStream =
 		// RunShell.executeAQLcommandSciDB(conTo.getHost(), conTo.getPort(),
 		// conTo.getBinPath(), "load " + arrayTo + " from '" + dataFile + "'");
@@ -420,10 +515,18 @@ public class FromPostgresToSciDB implements FromDatabaseToDatabase {
 		// Constants.ENCODING);
 		// log.debug("Load data to SciDB: " + resultString);
 		SciDBHandler handler = new SciDBHandler(connectionTo);
-		String loadCommand = "load " + arrayTo + " from '" + scidbFilePath
-				+ "'";
+		String loadCommand = null;
+		if (arrays.getMultiDimensional() == null) {
+			loadCommand = "load(" + arrays.getFlat() + ", '" + scidbFilePath
+					+ "')";
+		} else {
+			loadCommand = "store(redimension(load(" + arrays.getFlat()
+					+ ", '" + scidbFilePath + "'),"
+					+ arrays.getMultiDimensional() + "),"
+					+ arrays.getMultiDimensional() + ")";
+		}
 		log.debug("load command: " + loadCommand.replace("'", ""));
-		handler.executeStatement(loadCommand);
+		handler.executeStatementAFL(loadCommand);
 		handler.commit();
 		handler.close();
 		return "Data successfuly loaded to SciDB";
