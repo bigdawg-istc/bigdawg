@@ -208,18 +208,12 @@ public class FromPostgresToSciDB implements FromDatabaseToDatabase {
 					delimiter);
 			PostgreSQLTableMetaData postgresTableMetaData = getPostgreSQLTableMetaData(connectionFrom, fromTable);
 			fromCsvToSciDB(postgresTableMetaData, csvFilePath, delimiter, scidbFilePath, connectionTo);
-			SciDBHandler handler = new SciDBHandler(connectionTo);
-			handler.setAutoCommit(false);
-			prepareFlatTargetArrays(handler, toArray, fromTable, postgresTableMetaData);
+			prepareFlatTargetArrays(connectionTo, toArray, fromTable, postgresTableMetaData);
 			try {
-				// we have to do it, why there is a lock on the table?
-				handler.close();
-				handler = new SciDBHandler(connectionTo);
-				loadDataToSciDB(handler, toArray, scidbFilePath);
+				loadDataToSciDB(connectionTo, toArray, scidbFilePath);
 			} catch (SQLException e) {
 				throw new MigrationException(errMessage + " Final data loading to SciDB failed! " + e.getMessage());
 			}
-			handler.close();
 			return new MigrationResult(extractedRowsCount, null, "No information about loaded rows.", false);
 		} finally {
 			SystemUtilities.deleteFileIfExists(csvFilePath);
@@ -259,7 +253,7 @@ public class FromPostgresToSciDB implements FromDatabaseToDatabase {
 							+ " from PostgreSQL's table: " + fromTable
 							+ " is not matched in the same ORDER with attribute/dimension in the array in SciDB: "
 							+ toArray + " (position " + i + " PostgreSQL is for the attribute "
-							+ postgresColumnsOrdered.get(i).getName() + " wheras the position " + i
+							+ postgresColumnsOrdered.get(i).getName() + " whereas the position " + i
 							+ " in the array in SciDB is: " + scidbAttributesOrdered.get(i).getColumnName() + ").");
 				}
 			}
@@ -280,9 +274,11 @@ public class FromPostgresToSciDB implements FromDatabaseToDatabase {
 	 * @throws MigrationException
 	 * 
 	 */
-	public void prepareFlatTargetArrays(SciDBHandler handler, String toArray, String fromTable,
+	public void prepareFlatTargetArrays(SciDBConnectionInfo connectionTo, String toArray, String fromTable,
 			PostgreSQLTableMetaData postgresTableMetaData) throws MigrationException, SQLException {
+		SciDBHandler handler = new SciDBHandler(connectionTo);
 		SciDBArrayMetaData arrayMetaData = handler.getArrayMetaData(toArray);
+		handler.close();
 		if (isFlatArray(postgresTableMetaData, arrayMetaData, fromTable, toArray)) {
 			return;
 		}
@@ -312,7 +308,7 @@ public class FromPostgresToSciDB implements FromDatabaseToDatabase {
 
 	}
 
-	private String loadDataToSciDB(SciDBHandler handler, String arrayTo, String dataFile)
+	private String loadDataToSciDB(SciDBConnectionInfo connectionTo, String arrayTo, String dataFile)
 			throws SQLException {
 		// InputStream resultInStream =
 		// RunShell.executeAQLcommandSciDB(conTo.getHost(), conTo.getPort(),
@@ -320,8 +316,9 @@ public class FromPostgresToSciDB implements FromDatabaseToDatabase {
 		// String resultString = IOUtils.toString(resultInStream,
 		// Constants.ENCODING);
 		//	log.debug("Load data to SciDB: " + resultString);
+		SciDBHandler handler = new SciDBHandler(connectionTo);
 		handler.executeStatement("load " + arrayTo + " from '" + dataFile + "'");
-		handler.commit();
+		handler.close();
 		return "Data successfuly loaded to SciDB";
 	}
 

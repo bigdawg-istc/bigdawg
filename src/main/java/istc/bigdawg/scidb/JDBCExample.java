@@ -20,10 +20,17 @@ class JDBCExample {
 
 		try {
 			Connection conn = DriverManager.getConnection("jdbc:scidb://localhost/");
+			conn.setAutoCommit(false);
 			Statement st = conn.createStatement();
 			boolean result = st.execute("load region from '/home/adam/data/tpch/tpch1G/csv/region.sci'");
 			System.out.println("result of the load statement: "+result);
-			ResultSet resLoad = st.getResultSet();
+//			ResultSet resLoad = st.getResultSet();
+//			ResultSet rsRegion = st.executeQuery("select * from region");
+//			while(!rsRegion.isAfterLast()) {
+//				System.out.println(rsRegion.getString(2));
+//				rsRegion.next();
+//			}
+			conn.commit();
 			// create array A<a:string>[x=0:2,3,0, y=0:2,3,0];
 			// select * into A from
 			// array(A, '[["a","b","c"]["d","e","f"]["123","456","789"]]');
@@ -49,7 +56,7 @@ class JDBCExample {
 			}
 			res.close();
 			
-			ResultSet res2 = st.executeQuery("select * from test_waveform_flat where 1>2");
+			ResultSet res2 = st.executeQuery("select * from test_waveform_flat");
 			res2.close();
 			st.close();
 			conn.close();

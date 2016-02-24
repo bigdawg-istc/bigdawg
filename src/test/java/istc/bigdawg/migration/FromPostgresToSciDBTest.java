@@ -13,6 +13,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.postgresql.copy.CopyManager;
@@ -35,10 +36,10 @@ public class FromPostgresToSciDBTest {
 
 	private FromPostgresToSciDB migrator = new FromPostgresToSciDB();
 	private PostgreSQLConnectionInfo conFrom = new PostgreSQLConnectionInfoTest();
-	private String fromTable = "region_test_from_13241";
-	private SciDBConnectionInfo conTo = new SciDBConnectionInfo("localhost", "1239", "scidb", "mypassw",
-			"/opt/scidb/14.12/bin/");
-	private String toArray = "region3";
+	private String fromTable = "bigdawg_region_test_from_13241_FromPostgresToSciDBTest";
+	private SciDBConnectionInfo conTo = new SciDBConnectionInfo("localhost",
+			"1239", "scidb", "mypassw", "/opt/scidb/14.12/bin/");
+	private String toArray = "bigdawg_region_test_from_13241_FromPostgresToSciDBTest";
 	private long numberOfRowsPostgres = 0;
 
 	@Before
@@ -50,7 +51,8 @@ public class FromPostgresToSciDBTest {
 		Connection con = PostgreSQLHandler.getConnection(conFrom);
 		con.setAutoCommit(false);
 		CopyManager cpTo = new CopyManager((BaseConnection) con);
-		InputStream input = FromPostgresToSciDBTest.class.getClassLoader().getResourceAsStream("region.csv");
+		InputStream input = FromPostgresToSciDBTest.class.getClassLoader()
+				.getResourceAsStream("region.csv");
 		// FileInputStream input = new FileInputStream(new
 		// File("./region.csv"));
 		// CHECK IF THE INPUT STREAM CONTAINS THE REQUIRED DATA
@@ -59,16 +61,35 @@ public class FromPostgresToSciDBTest {
 		// input.read(buffer, 0, size);
 		// String in = new String(buffer, StandardCharsets.UTF_8);
 		// System.out.println(in);
-		numberOfRowsPostgres = cpTo.copyIn("Copy " + fromTable + " from STDIN with (format csv, delimiter '|')", input);
+		numberOfRowsPostgres = cpTo.copyIn(
+				"Copy " + fromTable
+						+ " from STDIN with (format csv, delimiter '|')",
+				input);
 		con.commit();
 		con.close();
 		assertEquals(5, numberOfRowsPostgres);
 	}
 
-	
 	@Test
-	public void testFromPostgresToSciDBcsvSingleThreadMigration() throws SQLException, MigrationException {
+	/**
+	 * If the test fails, first check if the target array is already in the
+	 * SciDB database.
+	 * 
+	 * @throws SQLException
+	 * @throws MigrationException
+	 */
+	public void testFromPostgresToSciDBcsvSingleThreadMigrationPreparedArray()
+			throws SQLException, MigrationException {
+//		// prepare the target array
+//		SciDBHandler handler = new SciDBHandler();
+//		handler.executeStatement(
+//				"create array " + toArray + "<r_regionkey:int64,r_name:string,r_comment:string> [i=0:*,1000000,0]");
+//		handler.close();
+		/*
+		 * test of the main method
+		 */
 		migrator.migrateSingleThreadCSV(conFrom, fromTable, conTo, toArray);
+
 		Connection con = SciDBHandler.getConnection(conTo);
 		Statement query = con.createStatement();
 		ResultSet resultSet = query.executeQuery("select * from " + toArray);
@@ -77,9 +98,11 @@ public class FromPostgresToSciDBTest {
 		System.out.println("Source array name: " + meta.getTableName(0));
 		System.out.println(meta.getColumnCount() + " columns:");
 
-		IResultSetWrapper resWrapper = resultSet.unwrap(IResultSetWrapper.class);
+		IResultSetWrapper resWrapper = resultSet
+				.unwrap(IResultSetWrapper.class);
 		for (int i = 1; i <= meta.getColumnCount(); i++) {
-			System.out.println(meta.getColumnName(i) + " - " + meta.getColumnTypeName(i) + " - is attribute:"
+			System.out.println(meta.getColumnName(i) + " - "
+					+ meta.getColumnTypeName(i) + " - is attribute:"
 					+ resWrapper.isColumnAttribute(i));
 		}
 
@@ -94,6 +117,17 @@ public class FromPostgresToSciDBTest {
 		query.close();
 		con.close();
 		assertEquals(numberOfRowsPostgres, numberOfCellsSciDB);
+
+//		// clean: remove the target array
+//		handler = new SciDBHandler();
+//		handler.executeStatement("drop array " + toArray);
+//		handler.close();
+	}
+
+	@After
+	public void removePostgreSQLTestTable() throws SQLException {
+		PostgreSQLHandler handler = new PostgreSQLHandler(conFrom);
+		handler.dropTableIfExists(fromTable);
 	}
 
 }
