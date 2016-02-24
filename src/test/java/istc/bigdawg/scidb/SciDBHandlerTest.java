@@ -14,7 +14,11 @@ import java.util.Map;
 
 import org.junit.Test;
 
+import istc.bigdawg.exceptions.NoTargetArrayException;
+
 /**
+ * Test the operation executed in SciDB.
+ * 
  * @author Adam Dziedzic
  * 
  *
@@ -92,7 +96,16 @@ public class SciDBHandlerTest {
 	}
 
 	@Test
-	public void testGetArrayMetaData() throws SQLException {
+	/**
+	 * Check if we can correctly extract meta data about arrays in SciDB, for
+	 * example: attributes of the arrays, dimensions of the arrays, types of
+	 * attributes, names of attributes, etc.
+	 * 
+	 * @throws SQLException
+	 * @throws NoTargetArrayException
+	 */
+	public void testGetArrayMetaData()
+			throws SQLException, NoTargetArrayException {
 		String arrayName2 = "adam_test_scidb_011_2";
 		SciDBHandler handler = new SciDBHandler();
 		// create array
@@ -118,7 +131,7 @@ public class SciDBHandlerTest {
 		Map<String, SciDBColumnMetaData> dimensionsMap = meta
 				.getDimensionsMap();
 		assertEquals(2, dimensionsMap.size());
-		
+
 		SciDBColumnMetaData firstDimensionMap = dimensionsMap.get("i");
 		assertEquals("i", firstDimensionMap.getColumnName());
 		assertEquals("int64", firstDimensionMap.getColumnType());
@@ -138,8 +151,8 @@ public class SciDBHandlerTest {
 		SciDBColumnMetaData secondAttribute = attributesOrdered.get(1);
 		assertEquals("d", secondAttribute.getColumnName());
 		assertEquals("double", secondAttribute.getColumnType());
-		
-		Map<String,SciDBColumnMetaData> attributesMap = meta
+
+		Map<String, SciDBColumnMetaData> attributesMap = meta
 				.getAttributesMap();
 		assertEquals(2, attributesMap.size());
 
