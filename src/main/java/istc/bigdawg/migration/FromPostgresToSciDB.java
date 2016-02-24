@@ -168,7 +168,7 @@ public class FromPostgresToSciDB implements FromDatabaseToDatabase {
 			String scidbFilePath, SciDBConnectionInfo connectionTo) throws MigrationException {
 		String typesPattern = SciDBHandler.getTypePatternFromPostgresTypes(postgresTableMetaData.getColumnsOrdered());
 		ProcessBuilder csv2scidb = new ProcessBuilder(connectionTo.getBinPath() + "csv2scidb", "-i", csvFilePath, "-o",
-				scidbFilePath, "-d", delimiter, "-p", typesPattern);
+				scidbFilePath, "-p", typesPattern, "-d", "\"" + delimiter + "\"");
 		log.debug(csv2scidb.command());
 		try {
 			RunShell.runShell(csv2scidb);
@@ -308,16 +308,19 @@ public class FromPostgresToSciDB implements FromDatabaseToDatabase {
 
 	}
 
-	private String loadDataToSciDB(SciDBConnectionInfo connectionTo, String arrayTo, String dataFile)
+	private String loadDataToSciDB(SciDBConnectionInfo connectionTo, String arrayTo, String scidbFilePath)
 			throws SQLException {
 		// InputStream resultInStream =
 		// RunShell.executeAQLcommandSciDB(conTo.getHost(), conTo.getPort(),
 		// conTo.getBinPath(), "load " + arrayTo + " from '" + dataFile + "'");
 		// String resultString = IOUtils.toString(resultInStream,
 		// Constants.ENCODING);
-		//	log.debug("Load data to SciDB: " + resultString);
+		// log.debug("Load data to SciDB: " + resultString);
 		SciDBHandler handler = new SciDBHandler(connectionTo);
-		handler.executeStatement("load " + arrayTo + " from '" + dataFile + "'");
+		String loadCommand = "load " + arrayTo + " from '" + scidbFilePath + "'";
+		log.debug("load command: " + loadCommand.replace("'", ""));
+		handler.executeStatement(loadCommand);
+		handler.commit();
 		handler.close();
 		return "Data successfuly loaded to SciDB";
 	}

@@ -20,7 +20,6 @@ public class PostgreSQLTableMetaData {
 
 	public PostgreSQLTableMetaData(Map<String, PostgreSQLColumnMetaData> columnsMap,
 			List<PostgreSQLColumnMetaData> columnsOrdered) {
-		super();
 		this.columnsMap = columnsMap;
 		this.columnsOrdered = columnsOrdered;
 	}
