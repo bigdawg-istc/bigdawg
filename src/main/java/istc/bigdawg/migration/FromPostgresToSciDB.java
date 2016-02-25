@@ -47,7 +47,7 @@ public class FromPostgresToSciDB implements FromDatabaseToDatabase {
 	private static Logger log = Logger.getLogger(FromPostgresToSciDB.class);
 
 	/* General message about the action in the class. */
-	private String generalMessage = "Data migration from Postgres to SciDB";
+	private String generalMessage = "Data migration from PostgreSQL to SciDB";
 
 	/* General error message when the migration fails in the class. */
 	private String errMessage = generalMessage + " failed! ";
@@ -60,7 +60,7 @@ public class FromPostgresToSciDB implements FromDatabaseToDatabase {
 	private Set<String> createdArrays = new HashSet<>();
 
 	/**
-	 * The arrays that were
+	 * The arrays that were created/detected during data migration.
 	 * 
 	 * @author Adam Dziedzic
 	 * 
@@ -310,10 +310,14 @@ public class FromPostgresToSciDB implements FromDatabaseToDatabase {
 	}
 
 	/**
-	 * Remove the intermediate flat array if it was created.
+	 * Remove the intermediate flat array if it was created. If the
+	 * multi-dimensional array was the target one, then the intermediate array
+	 * should be deleted (the array was created in this migration process).
 	 * 
 	 * @param connectionTo
+	 *            connection to SciDB
 	 * @param arrays
+	 *            the information about arrays: flat and multi-dimensional
 	 * @throws SQLException
 	 */
 	private void removeFlatArray(SciDBConnectionInfo connectionTo,
@@ -326,6 +330,7 @@ public class FromPostgresToSciDB implements FromDatabaseToDatabase {
 	/**
 	 * Remove the given array from SciDB.
 	 * 
+	 * @param connectionTo
 	 * @param arrayName
 	 * @throws SQLException
 	 */
@@ -520,10 +525,9 @@ public class FromPostgresToSciDB implements FromDatabaseToDatabase {
 			loadCommand = "load(" + arrays.getFlat() + ", '" + scidbFilePath
 					+ "')";
 		} else {
-			loadCommand = "store(redimension(load(" + arrays.getFlat()
-					+ ", '" + scidbFilePath + "'),"
-					+ arrays.getMultiDimensional() + "),"
-					+ arrays.getMultiDimensional() + ")";
+			loadCommand = "store(redimension(load(" + arrays.getFlat() + ", '"
+					+ scidbFilePath + "')," + arrays.getMultiDimensional()
+					+ ")," + arrays.getMultiDimensional() + ")";
 		}
 		log.debug("load command: " + loadCommand.replace("'", ""));
 		handler.executeStatementAFL(loadCommand);

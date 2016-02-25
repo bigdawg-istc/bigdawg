@@ -33,6 +33,7 @@ public class Migrator {
 		registeredMigrators = new ArrayList<FromDatabaseToDatabase>();
 		registeredMigrators.add(new FromPostgresToPostgres());
 		registeredMigrators.add(new FromPostgresToSciDB());
+		registeredMigrators.add(new FromSciDBToPostgres());
 	}
 
 	public static MigrationResult migrate(ConnectionInfo connectionFrom, String objectFrom, ConnectionInfo connectionTo,

@@ -8,17 +8,13 @@ import static org.junit.Assert.assertEquals;
 import java.io.IOException;
 import java.io.InputStream;
 import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.sql.Statement;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.postgresql.copy.CopyManager;
 import org.postgresql.core.BaseConnection;
-import org.scidb.jdbc.IResultSetWrapper;
 
 import istc.bigdawg.LoggerSetup;
 import istc.bigdawg.exceptions.MigrationException;
@@ -40,8 +36,10 @@ public class FromPostgresToSciDBTest {
 	private FromPostgresToSciDB migrator = new FromPostgresToSciDB();
 	private PostgreSQLConnectionInfo conFrom = new PostgreSQLConnectionInfoTest();
 	private String fromTable = "region_test_from_13241";
-	private SciDBConnectionInfo conTo = new SciDBConnectionInfo("localhost",
-			"1239", "scidb", "mypassw", "/opt/scidb/14.12/bin/");
+	private SciDBConnectionInfo conTo = new SciDBConnectionInfo();
+	// private SciDBConnectionInfo conTo = new
+	// SciDBConnectionInfo("localhost","1239", "scidb", "mypassw",
+	// "/opt/scidb/14.12/bin/");
 	// private String toArray =
 	// "bigdawg_region_test_from_13241_FromPostgresToSciDBTest";
 	private String toArray = "region_test_from_13241";
@@ -109,8 +107,8 @@ public class FromPostgresToSciDBTest {
 	}
 
 	/**
-	 * Check if the number of loaded elements is correct.
-	 * This is an internal method.
+	 * Check if the number of loaded elements is correct. This is an internal
+	 * method.
 	 * 
 	 * @param conTo
 	 * @param toArray
@@ -118,43 +116,8 @@ public class FromPostgresToSciDBTest {
 	 */
 	private void checkNumberOfElements(SciDBConnectionInfo conTo,
 			String toArray) throws SQLException {
-		Connection con = SciDBHandler.getConnection(conTo);
-		Statement query = con.createStatement();
-		ResultSet resultSet = query.executeQuery("select * from " + toArray);
-
-		showMetaData(resultSet);
-
-		long numberOfCellsSciDB = 0;
-		while (!resultSet.isAfterLast()) {
-			// System.out.println(resultSet.getString(3));
-			// System.out.println(resultSet.getInt(1));
-			++numberOfCellsSciDB;
-			resultSet.next();
-		}
-		resultSet.close();
-		query.close();
-		con.close();
+		long numberOfCellsSciDB = Utils.getNumberOfCellsSciDB(conTo, toArray);
 		assertEquals(numberOfRowsPostgres, numberOfCellsSciDB);
-	}
-
-	/**
-	 * Show meta data about the target array.
-	 * 
-	 * @param resultSet
-	 * @throws SQLException
-	 */
-	private void showMetaData(ResultSet resultSet) throws SQLException {
-		ResultSetMetaData meta = resultSet.getMetaData();
-		System.out.println("Source array name: " + meta.getTableName(0));
-		System.out.println(meta.getColumnCount() + " columns:");
-
-		IResultSetWrapper resWrapper = resultSet
-				.unwrap(IResultSetWrapper.class);
-		for (int i = 1; i <= meta.getColumnCount(); i++) {
-			System.out.println(meta.getColumnName(i) + " - "
-					+ meta.getColumnTypeName(i) + " - is attribute:"
-					+ resWrapper.isColumnAttribute(i));
-		}
 	}
 
 	@Test

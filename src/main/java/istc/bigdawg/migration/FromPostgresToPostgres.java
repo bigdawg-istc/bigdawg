@@ -29,7 +29,11 @@ import istc.bigdawg.utils.StackTrace;
  */
 public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 
-	private static Logger logger = Logger.getLogger(FromPostgresToPostgres.class);
+	/*
+	 * log
+	 */
+	private static Logger logger = Logger
+			.getLogger(FromPostgresToPostgres.class);
 
 	/**
 	 * Direction for the PostgreSQL copy command.
@@ -63,8 +67,8 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 		private String copyFromString;
 		private final PipedOutputStream output;
 
-		private CopyFromExecutor(final CopyManager cpFrom, final String copyFromString,
-				final PipedOutputStream output) {
+		private CopyFromExecutor(final CopyManager cpFrom,
+				final String copyFromString, final PipedOutputStream output) {
 			this.cpFrom = cpFrom;
 			this.copyFromString = copyFromString;
 			this.output = output;
@@ -81,7 +85,8 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 				countExtractedRows = cpFrom.copyOut(copyFromString, output);
 				output.close();
 			} catch (IOException | SQLException e) {
-				String msg = e.getMessage() + " Problem with thread for PostgreSQL copy manager "
+				String msg = e.getMessage()
+						+ " Problem with thread for PostgreSQL copy manager "
 						+ "while copying (extracting) data from PostgreSQL.";
 				logger.error(msg, e);
 				e.printStackTrace();
@@ -91,51 +96,18 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 	}
 
 	/**
-	 * This is run in a separate thread to copy data to PostgreSQL.
-	 * 
-	 * @author Adam Dziedzic
-	 * 
-	 *         Jan 14, 2016 6:07:05 PM
+	 * Migrate data between instances of PostgreSQL.
 	 */
-	private class CopyToExecutor implements Callable<Long> {
-
-		private CopyManager cpTo;
-		private String copyToString;
-		private final PipedInputStream input;
-
-		public CopyToExecutor(final CopyManager cpTo, final String copyToString, final PipedInputStream input) {
-			this.cpTo = cpTo;
-			this.copyToString = copyToString;
-			this.input = input;
-		}
-
-		/**
-		 * Copy data to PostgreSQL.
-		 * 
-		 * @return number of loaded rows
-		 */
-		public Long call() {
-			Long countLoadedRows = 0L;
+	public MigrationResult migrate(ConnectionInfo connectionFrom,
+			String fromTable, ConnectionInfo connectionTo, String toTable)
+					throws MigrationException {
+		logger.debug("General data migration: " + this.getClass().getName());
+		if (connectionFrom instanceof PostgreSQLConnectionInfo
+				&& connectionTo instanceof PostgreSQLConnectionInfo) {
 			try {
-				countLoadedRows = cpTo.copyIn(copyToString, input);
-				input.close();
-			} catch (IOException | SQLException e) {
-				String msg = e.getMessage() + " Problem with thread for PostgreSQL copy manager "
-						+ "while copying data to PostgreSQL.";
-				logger.error(msg);
-				e.printStackTrace();
-			}
-			return countLoadedRows;
-		}
-	}
-
-	public MigrationResult migrate(ConnectionInfo connectionFrom, String fromTable, ConnectionInfo connectionTo,
-			String toTable) throws MigrationException {
-		logger.debug("General data migration: "+this.getClass().getName());
-		if (connectionFrom instanceof PostgreSQLConnectionInfo && connectionTo instanceof PostgreSQLConnectionInfo) {
-			try {
-				return this.migrate((PostgreSQLConnectionInfo) connectionFrom, fromTable,
-						(PostgreSQLConnectionInfo) connectionTo, toTable);
+				return this.migrate((PostgreSQLConnectionInfo) connectionFrom,
+						fromTable, (PostgreSQLConnectionInfo) connectionTo,
+						toTable);
 			} catch (Exception e) {
 				throw new MigrationException(e.getMessage(), e);
 			}
@@ -144,7 +116,7 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 	}
 
 	/**
-	 * Create a new schema and table in the connectionTo if they not exists. Get
+	 * Create a new schema and table in the connectionTo if they not exist. Get
 	 * the table definition from connectionFrom.
 	 * 
 	 * @param connectionFrom
@@ -157,11 +129,15 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 	 *            to which table we want to load the data
 	 * @throws SQLException
 	 */
-	private void createTargetTableSchema(Connection connectionFrom, String fromTable, Connection connectionTo,
-			String toTable) throws SQLException {
-		PostgreSQLSchemaTableName schemaTable = new PostgreSQLSchemaTableName(toTable);
-		PostgreSQLHandler.executeStatement(connectionTo, "create schema if not exists " + schemaTable.getSchemaName());
-		String createTableStatement = PostgreSQLHandler.getCreateTable(connectionFrom, fromTable);
+	private void createTargetTableSchema(Connection connectionFrom,
+			String fromTable, Connection connectionTo, String toTable)
+					throws SQLException {
+		PostgreSQLSchemaTableName schemaTable = new PostgreSQLSchemaTableName(
+				toTable);
+		PostgreSQLHandler.executeStatement(connectionTo,
+				"create schema if not exists " + schemaTable.getSchemaName());
+		String createTableStatement = PostgreSQLHandler
+				.getCreateTable(connectionFrom, fromTable);
 		PostgreSQLHandler.executeStatement(connectionTo, createTableStatement);
 	}
 
@@ -171,12 +147,15 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 	 * @throws Exception
 	 * 
 	 */
-	public MigrationResult migrate(PostgreSQLConnectionInfo connectionFrom, String fromTable,
-			PostgreSQLConnectionInfo connectionTo, String toTable) throws Exception {
+	public MigrationResult migrate(PostgreSQLConnectionInfo connectionFrom,
+			String fromTable, PostgreSQLConnectionInfo connectionTo,
+			String toTable) throws Exception {
 		long startTimeMigration = System.currentTimeMillis();
 
-		String copyFromString = getCopyCommand(fromTable, DIRECTION.TO/* STDOUT */);
-		String copyToString = getCopyCommand(toTable, DIRECTION.FROM/* STDIN */);
+		String copyFromString = getCopyCommand(fromTable,
+				DIRECTION.TO/* STDOUT */);
+		String copyToString = getCopyCommand(toTable,
+				DIRECTION.FROM/* STDIN */);
 
 		Connection conFrom = null;
 		Connection conTo = null;
@@ -201,12 +180,16 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 			final PipedOutputStream output = new PipedOutputStream();
 			final PipedInputStream input = new PipedInputStream(output);
 
-			CopyFromExecutor copyFromExecutor = new CopyFromExecutor(cpFrom, copyFromString, output);
-			FutureTask<Long> taskCopyFromExecutor = new FutureTask<Long>(copyFromExecutor);
+			CopyFromExecutor copyFromExecutor = new CopyFromExecutor(cpFrom,
+					copyFromString, output);
+			FutureTask<Long> taskCopyFromExecutor = new FutureTask<Long>(
+					copyFromExecutor);
 			Thread copyFromThread = new Thread(taskCopyFromExecutor);
 
-			CopyToExecutor copyToExecutor = new CopyToExecutor(cpTo, copyToString, input);
-			FutureTask<Long> taskCopyToExecutor = new FutureTask<Long>(copyToExecutor);
+			CopyToPostgresExecutor copyToExecutor = new CopyToPostgresExecutor(
+					cpTo, copyToString, input);
+			FutureTask<Long> taskCopyToExecutor = new FutureTask<Long>(
+					copyToExecutor);
 			Thread copyToThread = new Thread(taskCopyToExecutor);
 
 			copyFromThread.start();
@@ -220,13 +203,16 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 			long countExtractedElements = taskCopyFromExecutor.get();
 			long countLoadedElements = taskCopyToExecutor.get();
 			long endTimeMigration = System.currentTimeMillis();
-			MigrationStatistics stats = new MigrationStatistics(connectionFrom, connectionTo, fromTable, toTable,
-					startTimeMigration, endTimeMigration, countExtractedElements, countLoadedElements,
-					this.getClass().getName());
-			return new MigrationResult(countExtractedElements, countLoadedElements);
+			MigrationStatistics stats = new MigrationStatistics(connectionFrom,
+					connectionTo, fromTable, toTable, startTimeMigration,
+					endTimeMigration, countExtractedElements,
+					countLoadedElements, this.getClass().getName());
+			return new MigrationResult(countExtractedElements,
+					countLoadedElements);
 		} catch (Exception e) {
 			e.printStackTrace();
-			String msg = e.getMessage() + " Migration failed. Task did not finish correctly.";
+			String msg = e.getMessage()
+					+ " Migration failed. Task did not finish correctly.";
 			logger.error(msg + StackTrace.getFullStackTrace(e), e);
 			conTo.rollback();
 			conFrom.rollback();
@@ -252,26 +238,31 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 		LoggerSetup.setLogging();
 		System.out.println("Migrating data from PostgreSQL to PostgreSQL");
 		FromPostgresToPostgres migrator = new FromPostgresToPostgres();
-		PostgreSQLConnectionInfo conInfoFrom = new PostgreSQLConnectionInfo("localhost", "5431", "mimic2", "pguser",
-				"test");
-		PostgreSQLConnectionInfo conInfoTo = new PostgreSQLConnectionInfo("localhost", "5430", "mimic2_copy", "pguser",
-				"test");
+		PostgreSQLConnectionInfo conInfoFrom = new PostgreSQLConnectionInfo(
+				"localhost", "5431", "mimic2", "pguser", "test");
+		PostgreSQLConnectionInfo conInfoTo = new PostgreSQLConnectionInfo(
+				"localhost", "5430", "mimic2_copy", "pguser", "test");
 		MigrationResult result;
 		try {
-			result = migrator.migrate(conInfoFrom, "mimic2v26.d_patients", conInfoTo, "mimic2v26.d_patients");
+			result = migrator.migrate(conInfoFrom, "mimic2v26.d_patients",
+					conInfoTo, "mimic2v26.d_patients");
 		} catch (Exception e) {
 			e.printStackTrace();
 			return;
 		}
-		logger.debug("Number of extracted rows: " + result.getCountExtractedElements() + " Number of loaded rows: "
-				+ result.getCountLoadedElements());
+		logger.debug("Number of extracted rows: "
+				+ result.getCountExtractedElements()
+				+ " Number of loaded rows: " + result.getCountLoadedElements());
 
 		ConnectionInfo conFrom = conInfoFrom;
 		ConnectionInfo conTo = conInfoTo;
 		MigrationResult result1;
 		try {
-			result1 = migrator.migrate(conFrom, "mimic2v26.d_patients", conTo, "mimic2v26.d_patients");
-			logger.debug("Number of extracted rows: " + result1.getCountExtractedElements() + " Number of loaded rows: "
+			result1 = migrator.migrate(conFrom, "mimic2v26.d_patients", conTo,
+					"mimic2v26.d_patients");
+			logger.debug("Number of extracted rows: "
+					+ result1.getCountExtractedElements()
+					+ " Number of loaded rows: "
 					+ result1.getCountLoadedElements());
 		} catch (MigrationException e) {
 			String msg = "Problem with general data migration.";

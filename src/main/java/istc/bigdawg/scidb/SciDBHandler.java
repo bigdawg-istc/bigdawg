@@ -475,6 +475,7 @@ public class SciDBHandler implements DBHandler {
 				statement.close();
 			}
 			if (con != null) {
+				con.commit();
 				con.close();
 			}
 		}
