@@ -15,6 +15,7 @@ public class MigrationResult {
 	private String message;
 	private boolean isError;
 	
+	public static MigrationResult getEmptyInstance(String message) { return new MigrationResult(message, true);}
 	public static MigrationResult getFailedInstance(String message) {
 		return new MigrationResult(message,true);
 	}
