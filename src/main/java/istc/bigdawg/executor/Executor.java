@@ -4,11 +4,12 @@ import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.executor.plan.QueryExecutionPlan;
 import istc.bigdawg.postgresql.PostgreSQLHandler.QueryResult;
 
-
 import java.sql.SQLException;
+import java.util.Optional;
 
 public class Executor {
     public static QueryResult executePlan(QueryExecutionPlan plan) throws SQLException, MigrationException {
-        return new PlanExecutor(plan).executePlan();
+        return new PlanExecutor(plan).executePlan().orElse(null);
+    }
     }
 }

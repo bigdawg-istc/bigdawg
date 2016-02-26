@@ -65,7 +65,7 @@ class PlanExecutor {
     /**
      * Execute the plan, and return the result
      */
-    public QueryResult executePlan() throws SQLException, MigrationException {
+    public Optional<QueryResult> executePlan() throws SQLException, MigrationException {
         long start = System.currentTimeMillis();
 
         log.debug(String.format("Executing query plan %s...", plan.getSerializedName()));
@@ -75,7 +75,6 @@ class PlanExecutor {
         for (ExecutionNode node : plan) {
             log.debug(String.format("Examining query node %s...", node.getTableName()));
 
-            // TODO: look into what happens when we create too many of these... deadlock? thread starvation?
             CompletableFuture<Optional<QueryResult>> result = CompletableFuture.supplyAsync(() -> this.executeNode(node));
 
             if (plan.getTerminalTableNode().equals(node)) {
@@ -103,41 +102,39 @@ class PlanExecutor {
         monitor.finishedBenchmark(plan, start, end);
 
         log.debug(String.format("Returning result to planner..."));
-        return result.orElse(null);
+        return result;
     }
     
     private Optional<QueryResult> executeNode(ExecutionNode node) {
-        // colocate dependencies once they are available
+        // colocate dependencies, blocking until completed
         colocateDependencies(node);
 
-        return node.getQueryString().map((query) -> {
-            log.debug(String.format("Executing query node %s...", node.getTableName()));
-            PostgreSQLHandler handler = new PostgreSQLHandler((PostgreSQLConnectionInfo) node.getEngine());
+        log.debug(String.format("Executing query node %s...", node.getTableName()));
 
+        return node.getQueryString().flatMap((query) -> {
             try {
-                if (plan.getTerminalTableNode().equals(node)) {
-                    // terminal node is a SELECT query
-                    return handler.executeQueryPostgreSQL(query);
-                } else {
-                    // SELECT INTO statements don't return QueryResults
-                    handler.executeStatementPostgreSQL(query);
+                PostgreSQLHandler handler = new PostgreSQLHandler((PostgreSQLConnectionInfo) node.getEngine());
+                Optional<QueryResult> result = handler.executePostgreSQL(query);
 
+                // record information for cleanup if non-terminal node
+                if (!plan.getTerminalTableNode().equals(node)) {
                     // clean up the intermediate table later
                     node.getTableName().ifPresent((table) -> temporaryTables.put(node.getEngine(), table));
+
+                    // update nodeLocations to reflect that the results are located on this node's engine
+                    resultLocations.put(node, node.getEngine());
+
+                    for (ExecutionNode dependent : plan.getDependents(node)) {
+                        locks.get(dependent).countDown();
+                    }
                 }
 
-                // update nodeLocations to reflect that the results are located on this node's engine
-                resultLocations.put(node, node.getEngine());
-
-                for (ExecutionNode dependent : plan.getDependents(node)) {
-                    locks.get(dependent).countDown();
-                }
+                return result;
             } catch (SQLException e) {
                 log.error(String.format("Error executing node %s", node), e);
+                return Optional.empty();
             }
-
-            return null;
-        });        
+        });
     }
 
 
@@ -210,14 +207,14 @@ class PlanExecutor {
 
 
     /**
-     * Colocates the dependencies for the given ExecutionNode onto that node's engine.
+     * Colocates the dependencies for the given ExecutionNode onto that node's engine one at a time.
      *
      * Waits for any incomplete dependencies, and blocks the current thread until completion.
      *
      * @param node
      */
     @Deprecated
-    private void colocateDependenciesSerial(ExecutionNode node) {
+    private void colocateDependenciesSerially(ExecutionNode node) {
         // Block until dependencies are all resolved
         try {
             log.debug(String.format("Waiting for dependencies of query node %s to be resolved", node));
@@ -229,8 +226,6 @@ class PlanExecutor {
 
         log.debug(String.format("Colocating dependencies of query node %s", node));
 
-        // TODO: be smart about concurrent migrations of same table to/from same engines
-        // TODO: migrate in separate futures
         plan.getDependencies(node).stream()
                 // only look at dependencies not already on desired engine
                 .filter(d -> !resultLocations.containsEntry(d, node.getEngine()))

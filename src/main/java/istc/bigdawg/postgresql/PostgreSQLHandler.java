@@ -10,10 +10,7 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import javax.ws.rs.core.Response;
 
@@ -274,6 +271,50 @@ public class PostgreSQLHandler implements DBHandler {
 			} catch (SQLException ex) {
 				ex.printStackTrace();
 				log.info(ex.getMessage() + "; statement: " + statement.replace("'", ""), ex);
+				throw ex;
+			}
+		}
+	}
+
+	/**
+	 * It executes the SQL command and releases the resources at the end, returning a QueryResult if present
+	 *
+	 * @param query
+	 * @return #Optional<QueryResult>
+	 * @throws SQLException
+	 */
+	public Optional<QueryResult> executePostgreSQL(final String query) throws SQLException {
+		try {
+			this.getConnection();
+
+			log.debug("\n\nquery: " + query + "");
+			log.debug("ConnectionInfo: " + this.conInfo.toString() + "\n");
+
+			st = con.createStatement();
+			if (st.execute(query)) {
+				rs = st.getResultSet();
+
+				ResultSetMetaData rsmd = rs.getMetaData();
+				List<String> colNames = getColumnNames(rsmd);
+				List<String> types = getColumnTypes(rsmd);
+				List<List<String>> rows = getRows(rs);
+				return Optional.of(new QueryResult(rows, types, colNames));
+			} else {
+				return Optional.empty();
+			}
+
+		} catch (SQLException ex) {
+			Logger lgr = Logger.getLogger(QueryClient.class.getName());
+//			ex.printStackTrace();
+			lgr.log(Level.ERROR, ex.getMessage() + "; query: " + query, ex);
+			throw ex;
+		} finally {
+			try {
+				this.cleanPostgreSQLResources();
+			} catch (SQLException ex) {
+				Logger lgr = Logger.getLogger(QueryClient.class.getName());
+//				ex.printStackTrace();
+				lgr.log(Level.INFO, ex.getMessage() + "; query: " + query, ex);
 				throw ex;
 			}
 		}
