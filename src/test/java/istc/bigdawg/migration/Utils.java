@@ -11,6 +11,9 @@ import java.sql.Statement;
 
 import org.scidb.jdbc.IResultSetWrapper;
 
+import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
+import istc.bigdawg.postgresql.PostgreSQLHandler;
+import istc.bigdawg.postgresql.PostgreSQLHandler.QueryResult;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
 import istc.bigdawg.scidb.SciDBHandler;
 
@@ -20,7 +23,7 @@ import istc.bigdawg.scidb.SciDBHandler;
  *         Feb 24, 2016 7:36:20 PM
  */
 public class Utils {
-	
+
 	/**
 	 * Show meta data about the target array.
 	 * 
@@ -41,7 +44,8 @@ public class Utils {
 		}
 	}
 
-	public static long getNumberOfCellsSciDB(SciDBConnectionInfo conTo, String array) throws SQLException {
+	public static long getNumberOfCellsSciDB(SciDBConnectionInfo conTo,
+			String array) throws SQLException {
 		Connection con = SciDBHandler.getConnection(conTo);
 		Statement query = con.createStatement();
 		ResultSet resultSet = query.executeQuery("select * from " + array);
@@ -59,6 +63,23 @@ public class Utils {
 		query.close();
 		con.close();
 		return numberOfCellsSciDB;
+	}
+
+	/**
+	 * Get number of tuples in the table in the PostgreSQL instance identified
+	 * by con.
+	 * 
+	 * @param con connection to PostgreSQL
+	 * @param table a table in PostgreSQL
+	 * @return number of tuples in the table
+	 * @throws SQLException
+	 */
+	public static long getPostgreSQLCountTuples(PostgreSQLConnectionInfo con,
+			String table) throws SQLException {
+		PostgreSQLHandler handler = new PostgreSQLHandler(con);
+		QueryResult qr = handler
+				.executeQueryPostgreSQL("select count(*) from " + table);
+		return Long.valueOf(qr.getRows().get(0).get(0));
 	}
 
 }

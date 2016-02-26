@@ -18,7 +18,6 @@ import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfoTest;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
-import istc.bigdawg.postgresql.PostgreSQLHandler.QueryResult;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
 import istc.bigdawg.scidb.SciDBHandler;
 
@@ -74,9 +73,7 @@ public class FromSciDBToPostgresTest {
 		PostgreSQLHandler handler = new PostgreSQLHandler(conTo);
 		handler.dropTableIfExists(toTable);
 		migrator.migrateSingleThreadCSV(conFrom, fromArray, conTo, toTable);
-		QueryResult qr = handler
-				.executeQueryPostgreSQL("select count(*) from " + toTable);
-		long postgresCountTuples = Long.valueOf(qr.getRows().get(0).get(0));
+		long postgresCountTuples = Utils.getPostgreSQLCountTuples(conTo, toTable);
 		assertEquals(numberOfCellsSciDB, postgresCountTuples);
 		// drop the created table
 		handler.dropTableIfExists(toTable);
@@ -91,18 +88,18 @@ public class FromSciDBToPostgresTest {
 		handler.createTable("create table " + toTable
 				+ " (r_regionkey BIGINT NOT NULL, r_name CHAR(25) NOT NULL, r_comment VARCHAR(152) NOT NULL);");
 		migrator.migrateSingleThreadCSV(conFrom, fromArray, conTo, toTable);
-		QueryResult qr = handler
-				.executeQueryPostgreSQL("select count(*) from " + toTable);
-		long postgresCountTuples = Long.valueOf(qr.getRows().get(0).get(0));
+		long postgresCountTuples = Utils.getPostgreSQLCountTuples(conTo, toTable);
 		assertEquals(numberOfCellsSciDB, postgresCountTuples);
 		// drop the created table
 		handler.dropTableIfExists(toTable);
-		System.out.println("The end of the test with prepared table in PosgreSQL.");
+		System.out.println(
+				"The end of the test with prepared table in PosgreSQL.");
 	}
-	
+
 	@After
 	public void after() {
-		System.out.println("The end of the " + this.getClass().getName() + " test!");
+		System.out.println(
+				"The end of the " + this.getClass().getName() + " test!");
 	}
 
 }
