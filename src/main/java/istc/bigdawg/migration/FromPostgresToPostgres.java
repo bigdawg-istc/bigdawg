@@ -137,22 +137,13 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 			conTo.setAutoCommit(false);
 			createTargetTableSchema(conFrom, fromTable, conTo, toTable);
 
-			// Statement st = conTo.createStatement();
-			// st.execute("CREATE temporary TABLE d_patients (subject_id integer
-			// NOT NULL,sex character varying(1),dob timestamp without time zone
-			// NOT NULL,dod timestamp without time zone,hospital_expire_flg
-			// character varying(1) DEFAULT 'N'::character varying)");
-
-			CopyManager cpFrom = new CopyManager((BaseConnection) conFrom);
-			CopyManager cpTo = new CopyManager((BaseConnection) conTo);
-
 			final PipedOutputStream output = new PipedOutputStream();
 			final PipedInputStream input = new PipedInputStream(output);
 
-			CopyFromPostgresExecutor copyFromExecutor = new CopyFromPostgresExecutor(cpFrom, copyFromString, output);
+			CopyFromPostgresExecutor copyFromExecutor = new CopyFromPostgresExecutor(conFrom, copyFromString, output);
 			FutureTask<Long> taskCopyFromExecutor = new FutureTask<Long>(copyFromExecutor);
 
-			CopyToPostgresExecutor copyToExecutor = new CopyToPostgresExecutor(cpTo, copyToString, input);
+			CopyToPostgresExecutor copyToExecutor = new CopyToPostgresExecutor(conTo, copyToString, input);
 			FutureTask<Long> taskCopyToExecutor = new FutureTask<Long>(copyToExecutor);
 			
 			executor = Executors.newFixedThreadPool(minNumberOfThreads);
@@ -160,9 +151,6 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 			executor.submit(taskCopyToExecutor);
 			long countExtractedElements = taskCopyFromExecutor.get();
 			long countLoadedElements = taskCopyToExecutor.get();
-
-			conTo.commit();
-			conFrom.commit();
 
 			long endTimeMigration = System.currentTimeMillis();
 			MigrationStatistics stats = new MigrationStatistics(connectionFrom, connectionTo, fromTable, toTable,

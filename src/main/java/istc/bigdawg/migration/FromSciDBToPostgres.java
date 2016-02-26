@@ -182,8 +182,7 @@ public class FromSciDBToPostgres implements FromDatabaseToDatabase {
 	private long loadDataToPostgres(Connection conTo, String toTable,
 			InputStream input) throws SQLException, FileNotFoundException,
 					InterruptedException, ExecutionException {
-		CopyManager cpTo = new CopyManager((BaseConnection) conTo);
-		CopyToPostgresExecutor copyToExecutor = new CopyToPostgresExecutor(cpTo,
+		CopyToPostgresExecutor copyToExecutor = new CopyToPostgresExecutor(conTo,
 				getCopyToPostgreSQLCommand(toTable), input);
 		FutureTask<Long> taskCopyToExecutor = new FutureTask<Long>(
 				copyToExecutor);
@@ -207,10 +206,11 @@ public class FromSciDBToPostgres implements FromDatabaseToDatabase {
 					throws MigrationException {
 		String csvFilePath = SystemUtilities.getSystemTempDir() + "/bigdawg_"
 				+ fromArray + ".csv";
+		Connection postgresCon = null;
 		try {
 			long startTimeMigration = System.currentTimeMillis();
 			exportDataFromSciDB(connectionFrom, fromArray, csvFilePath);
-			Connection postgresCon = PostgreSQLHandler
+			postgresCon = PostgreSQLHandler
 					.getConnection(connectionTo);
 			postgresCon.setAutoCommit(false);
 			createTargetTableSchema(connectionFrom, fromArray, postgresCon,
@@ -232,6 +232,14 @@ public class FromSciDBToPostgres implements FromDatabaseToDatabase {
 					+ StackTrace.getFullStackTrace(ex));
 			throw new MigrationException(errMessage + " " + ex.getMessage());
 		} finally {
+			if (postgresCon != null) {
+				try {
+					postgresCon.close();
+				} catch (SQLException e) {
+					e.printStackTrace();
+					throw new MigrationException(e.getMessage());
+				}
+			}
 			/*
 			 * the file was created by SciDB and we cannot remove it (another
 			 * user)
