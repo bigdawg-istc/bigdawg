@@ -18,7 +18,7 @@ import org.postgresql.copy.CopyManager;
  * 
  *         Jan 14, 2016 6:07:05 PM
  */
-class CopyToPostgresExecutor implements Callable<Long> {
+public class CopyToPostgresExecutor implements Callable<Long> {
 
 	private static Logger log = Logger.getLogger(FromPostgresToPostgres.class);
 
