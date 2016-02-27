@@ -3,10 +3,8 @@ package istc.bigdawg.plan.extract;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.Stack;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -84,11 +82,15 @@ public class AFLPlanParser {
 		Matcher mSchema;
 		Matcher mSchemaName;
 		for (String line : lines) {
+			
+			
 			// Always start with a "^>+\\[lInstance\\] "; here, level++;
 			mInstance = lInstance.matcher(line);
 			if (mInstance.find()) {
 				temp = line.substring(mInstance.end());
 //				System.out.println("Instance: "+temp);
+				
+				
 				
 				currentNode = new AFLPlanNode();
 				if (root == null) root = currentNode;
@@ -133,13 +135,6 @@ public class AFLPlanParser {
 				
 				addAttribute(priorAttributes, currentNode, pa);
 				
-				
-//				if (temp.equals("opParamPlaceholder")) 
-//					temp = "";
-//				else 
-//					temp = temp+"; ";
-//				
-//				System.out.println("Field: "+temp+line.substring(mField.end()));
 				continue;
 			}
 			
@@ -153,7 +148,8 @@ public class AFLPlanParser {
 				// conclude the search for attributes
 				priorAttributes.clear();
 				
-				temp = line.substring(mSchema.end());
+				
+				temp = line.substring(mSchema.end()).replaceAll("@[0-9]+", "");
 				
 				mSchemaName = lSchemaName.matcher(temp);
 				
@@ -177,16 +173,15 @@ public class AFLPlanParser {
 						nodes.push(currentNode);
 				}
 				
-//				System.out.println("Schema: "+temp.substring(mSchemaName.start(),mSchemaName.end()).split("@")[0]+" $ "+temp.substring(mSchemaName.end()));
-//				System.out.println();
 				continue;
 			}
 			
 			// else, skipped
 		} 
 		root.extractAliases();
+		root.fixDimensionStrings();
 		
-		System.out.println(root.toString());
+//		System.out.println(root.toString());
 		
 		return root;
 	}
@@ -225,11 +220,9 @@ public class AFLPlanParser {
 	// parse a single <Plan>
 	Operator parsePlanTail(AFLPlanNode node, int recursionLevel) throws Exception {
 		
-//		List<AFLPlanNode> children = node.children;
 		String nodeType = null;
 		Map<String, String> parameters = new HashMap<String, String>();
 		List<String> sortKeys = new ArrayList<String>();
-//		Set<String> outItems = new HashSet<String>();
 		List<Operator> childOps = new ArrayList<Operator>();
 		
 		switch(node.name)  {
@@ -247,19 +240,10 @@ public class AFLPlanParser {
 			for(int k = 0; k < filterAttributes.size(); ++k) {
 				AFLPlanAttribute outExpr = filterAttributes.get(k);
 				
-				if (outExpr.name.equals("paramLogicalExpression")) {
-					
-					String sign = outExpr.subAttributes.get(0).properties.get(0);
-					AFLPlanAttribute apa = outExpr.subAttributes.get(0).subAttributes.get(0);
-					String left = apa.properties.get(apa.properties.size()-1);
-					apa = outExpr.subAttributes.get(0).subAttributes.get(1);
-					String right = apa.properties.get(apa.properties.size()-1);
-					
-					parameters.put("Filter", left+" "+sign+" "+right);
-				}
+				if (outExpr.name.equals("paramLogicalExpression")) 
+					parameters.put("Filter", getFilterExpression(outExpr.subAttributes.get(0)));
 			}
 			
-//			parameters.put("Filter", "filter not implemented");
 			break;
 		case "cross_join":
 			nodeType = "Cross Join";
@@ -319,40 +303,6 @@ public class AFLPlanParser {
 			throw new Exception("unsupported AFL function: "+node.name);
 		}
 		
-//		Matcher schemaAttributes = lSchemaAttributes.matcher(node.schema);
-//		schemaAttributes.find();
-//		
-//		
-//		// outItems
-//		// attributes
-//		String attribs = node.schema.substring(schemaAttributes.start()+1,schemaAttributes.end()-1);
-//		List<String> attribList = new ArrayList<>(Arrays.asList(attribs.split(",")));
-//		for (int k = 0; k < attribList.size(); ++k) {
-//			outItems.add(attribList.get(k).split(":")[0]);
-//		}
-		
-		
-//		// dimensions; should it be included?	
-//		String dims = node.schema.substring(schemaAttributes.end()).trim();
-//		dims = dims.substring(1, dims.length()-1).replaceAll("=[-0-9]+:[0-9*]+,[0-9]+,[0-9],?", ";");
-//		List<String> dimsList = new ArrayList<>(Arrays.asList(dims.split(";")));
-//		
-//		StringBuilder sb = new StringBuilder();
-//		sb.append("(");
-//		boolean starter = true;
-//		for (String s : node.schemaAlias) {
-//			if (starter) {
-//				sb.append(s.split("@")[0]).append(",[-_ \\w]*)|(").append(s.split("@")[0]).append(")");
-//				starter = false;
-//			} else 
-//				sb.append("|(").append(s.split("@")[0]).append(",[-_ \\w]*)|(").append(s.split("@")[0]).append(")");
-//		}
-//		sb.append("$");
-//		for (int k = 0; k < dimsList.size(); ++k) 
-//			dimsList.set(k, dimsList.get(k).replaceAll(sb.toString(), ""));
-//		
-//		outItems.addAll(dimsList);
-//		System.out.println(outItems.toString());
 		
 		parameters.put("Node-Type", nodeType);
 		parameters.put("OperatorName", node.name);
@@ -371,32 +321,37 @@ public class AFLPlanParser {
 		return op;
 	}
 	
-//	/**
-//	 * This is used to determine whether a merge-sort should let its child skip its sort should it sees one
-//	 * @param planName
-//	 * @return
-//	 */
-//	private boolean determineLocalSortSkip (String planName) {
-//		if (planName.equals("main")) {
-//			if (((PlainSelect) query.getSelectBody()).getOrderByElements() == null // || ((PlainSelect) query.getSelectBody()).getOrderByElements().isEmpty()
-//				) {
-//			return true;
-//			} 
-//		} else {
-//			if (query.getWithItemsList() != null //&& (!query.getWithItemsList().isEmpty())
-//					) {
-//				for (WithItem w : query.getWithItemsList()) {
-//					if (w.getName().equals(planName)) {
-//						if (((PlainSelect)w.getSelectBody()).getOrderByElements() == null // || ((PlainSelect) query.getSelectBody()).getOrderByElements().isEmpty()
-//								) {
-//							return true;
-//						}
-//					}
-//				}
-//			} 
-//		}
-//		return false;
-//	}
+	
+	public String getFilterExpression(AFLPlanAttribute outExpr) throws Exception {
+
+		if (outExpr.subAttributes.size() != 2)
+			throw new Exception("Unexpected subAttribute: "+outExpr.subAttributes);
+
+
+		AFLPlanAttribute a0 = outExpr.subAttributes.get(0);
+		AFLPlanAttribute a1 = outExpr.subAttributes.get(1);
+
+		String left;
+		String right;
+		String sign;
+
+		if (a0.name.equals("attributeReference") || a0.name.equals("constant")) 
+			left = a0.properties.get(a0.properties.size()-1);
+		else 
+			left = "("+ getFilterExpression(a0) + ")";
+
+		sign = outExpr.properties.get(0);
+
+		if (a1.name.equals("attributeReference") || a1.name.equals("constant")) 
+			right = a1.properties.get(a1.properties.size()-1);
+		else 
+			right = "("+ getFilterExpression(a1) + ")";
+
+		return left + " " + sign + " " + right;
+	}
+	
+	
+	
 	
 	// handle a <Plans> op, might return a list
 	List<Operator> parsePlansTail(AFLPlanNode node, int recursionLevel) throws Exception {

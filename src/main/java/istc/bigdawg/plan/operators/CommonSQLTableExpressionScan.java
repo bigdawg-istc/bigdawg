@@ -110,8 +110,8 @@ public class CommonSQLTableExpressionScan extends Scan {
 	};
 
 	@Override
-	public Select generatePlaintextDestOnly(Select dstStatement) throws Exception {
-		dstStatement = super.generatePlaintextDestOnly(dstStatement);
+	public Select generateSQLStringDestOnly(Select dstStatement) throws Exception {
+		dstStatement = super.generateSQLStringDestOnly(dstStatement);
 		 
 		List<WithItem> withs = dstStatement.getWithItemsList();
 		
@@ -139,7 +139,7 @@ public class CommonSQLTableExpressionScan extends Scan {
 			// recurse if child references any additional CTEs
 			// create new dst statement for child and grab its select body
 			
-			Select dstPrime = sourceStatement.generatePlaintextDestOnly(null);
+			Select dstPrime = sourceStatement.generateSQLStringDestOnly(null);
 
 			List<WithItem> dstWithsPrime = dstPrime.getWithItemsList();
 			if(dstWithsPrime != null) {
@@ -170,7 +170,7 @@ public class CommonSQLTableExpressionScan extends Scan {
 	}
 	
 	@Override
-	public String printPlan(int recursionLevel) {
+	public String generateAFLString(int recursionLevel) {
 		String planStr =  "CTE_Scan(" + cteName;
 		if(filterExpression != null) {
 			planStr += ", " + filterExpression;
@@ -182,12 +182,12 @@ public class CommonSQLTableExpressionScan extends Scan {
 	}
 	
 	@Override
-	public Map<String, ArrayList<String>> getTableLocations(Map<String, ArrayList<String>> locations) {
+	public Map<String, List<String>> getTableLocations(Map<String, List<String>> locations) {
 
 		// the assumption here is that there is no Nested Query
 		// since the order of execution is unforeseeable, all will become place holder
 		
-		Map<String, ArrayList<String>> result = new HashMap<>();
+		Map<String, List<String>> result = new HashMap<>();
 		Set<String> sas = new HashSet<String>();
 		ArrayList<String> outs = new ArrayList<String> ();
 		

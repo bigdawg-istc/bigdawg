@@ -46,9 +46,9 @@ public class Distinct extends Operator {
 
 	
 	@Override
-	public Select generatePlaintextDestOnly(Select dstStatement) throws Exception {
+	public Select generateSQLStringDestOnly(Select dstStatement) throws Exception {
 		
-		dstStatement = children.get(0).generatePlaintextDestOnly(dstStatement);
+		dstStatement = children.get(0).generateSQLStringDestOnly(dstStatement);
 		
 		PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
 		ps.setDistinct(new net.sf.jsqlparser.statement.select.Distinct());
@@ -64,9 +64,9 @@ public class Distinct extends Operator {
 	}
 	
 	@Override
-	public String printPlan(int recursionLevel) throws Exception {
+	public String generateAFLString(int recursionLevel) throws Exception {
 		String planStr =  "Distinct(";
-		planStr += children.get(0).printPlan(recursionLevel + 1);
+		planStr += children.get(0).generateAFLString(recursionLevel + 1);
 		planStr += ")";
 		return planStr;
 	}

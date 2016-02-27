@@ -51,9 +51,9 @@ public class AFLQueryPlan {
 		
 		// prepend plans for chronological order
 		for(String s : planRoots.keySet()) {
-			plan = "CTE " + s + ": " + planRoots.get(s).printPlan(0) + "\n" + plan;
+			plan = "CTE " + s + ": " + planRoots.get(s).generateAFLString(0) + "\n" + plan;
 		}
-		plan += rootNode.printPlan(0);
+		plan += rootNode.generateAFLString(0);
 		
 		return plan;
 	}

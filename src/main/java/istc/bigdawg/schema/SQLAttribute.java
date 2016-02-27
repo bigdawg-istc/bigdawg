@@ -22,6 +22,7 @@ public class SQLAttribute extends DataObjectAttribute {
 		SQLAttribute(ColDataType t, String n) {
 			super(n);
 			type = t;
+			typeString = type.getDataType();
 		}
 		
 		SQLAttribute(ColumnDefinition a, String table) throws Exception {
@@ -30,6 +31,7 @@ public class SQLAttribute extends DataObjectAttribute {
 			type = a.getColDataType();
 			String typeName = type.getDataType();
 			type.setDataType(new String(typeName));
+			typeString = type.getDataType();
 			
 		}
 		
@@ -37,6 +39,7 @@ public class SQLAttribute extends DataObjectAttribute {
 			super(sa);
 			this.type = sa.type;
 			this.expr = sa.expr;
+			typeString = type.getDataType();
 		}
 
 

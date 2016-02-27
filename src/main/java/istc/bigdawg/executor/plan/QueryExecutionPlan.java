@@ -1,12 +1,20 @@
 package istc.bigdawg.executor.plan;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.jgrapht.Graphs;
 import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
 import org.jgrapht.graph.DefaultEdge;
+
+import istc.bigdawg.utils.IslandsAndCast.Scope;
 
 /**
  * Represents the steps needed to compute a query as a directed, acyclic graph
@@ -23,9 +31,9 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
     private String terminalTableName;
     private ExecutionNode terminalNode;
     
-    private final String island;
+    private final Scope island;
 
-    public QueryExecutionPlan(String island) {
+    public QueryExecutionPlan(Scope island) {
         super(DefaultEdge.class);
         this.island = island;
         maxSerial++;
@@ -33,7 +41,7 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
         // TODO add any variables needed from Planner
     }
 
-    public String getIsland() {
+    public Scope getIsland() {
         return this.island;
     }
     
@@ -209,7 +217,7 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
             edges = m.group();
         }
 
-        QueryExecutionPlan qep = new QueryExecutionPlan(island);
+        QueryExecutionPlan qep = new QueryExecutionPlan(Scope.valueOf(island));
 
         List<ExecutionNode> nodeList = new ArrayList<>();
         m = nodePattern.matcher(nodes);

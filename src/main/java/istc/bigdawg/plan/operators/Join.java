@@ -126,14 +126,26 @@ public class Join extends Operator {
 		srcSchema = new LinkedHashMap<String, DataObjectAttribute>(lhs.outSchema);
 		srcSchema.putAll(rhs.outSchema);
 		
+		// attributes
 		for (String expr : output.getAttributes().keySet()) {
 			
-			CommonOutItem out = new CommonOutItem(expr, output.getAttributes().get(expr), srcSchema);
+			CommonOutItem out = new CommonOutItem(expr, output.getAttributes().get(expr), false, srcSchema);
 			DataObjectAttribute attr = out.getAttribute();
 			String attrName = attr.getFullyQualifiedName();		
 			outSchema.put(attrName, attr);
 				
 		}
+		
+		// dimensions
+		for (String expr : output.getDimensions().keySet()) {
+			
+			CommonOutItem out = new CommonOutItem(expr, "Dimension", true, srcSchema);
+			DataObjectAttribute attr = out.getAttribute();
+			String attrName = attr.getFullyQualifiedName();		
+			outSchema.put(attrName, attr);
+				
+		}
+		
 //		inferJoinParameters();
 		
 		if (joinPredicate != null)
@@ -307,7 +319,7 @@ public class Join extends Operator {
     
 
     @Override
-	public Select generatePlaintextDestOnly(Select dstStatement) throws Exception {
+	public Select generateSQLStringDestOnly(Select dstStatement) throws Exception {
 		
     	Set<String> filterSet = new HashSet<String>();
     	PlainSelect ps = null;
@@ -388,7 +400,7 @@ public class Join extends Operator {
     			t = t1;
     			
     		} else {
-    			dstStatement = child0.generatePlaintextDestOnly(dstStatement); 
+    			dstStatement = child0.generateSQLStringDestOnly(dstStatement); 
     			ps = (PlainSelect) dstStatement.getSelectBody();
     			if (ps.getWhere() != null) filterSet.add(ps.getWhere().toString());
     			
@@ -405,7 +417,7 @@ public class Join extends Operator {
 		} else {
 			
 			
-			dstStatement = child0.generatePlaintextDestOnly(dstStatement); 
+			dstStatement = child0.generateSQLStringDestOnly(dstStatement); 
 			ps = (PlainSelect) dstStatement.getSelectBody();
 			if (ps.getWhere() != null) filterSet.add(ps.getWhere().toString());
 			
@@ -428,7 +440,7 @@ public class Join extends Operator {
 		
 		updateThisAndParentJoinReservedObjects(t.getFullyQualifiedName());
 		
-		dstStatement = child1.generatePlaintextDestOnly(dstStatement); 
+		dstStatement = child1.generateSQLStringDestOnly(dstStatement); 
 		ps = (PlainSelect) dstStatement.getSelectBody();
 		if (ps.getWhere() != null) filterSet.add(ps.getWhere().toString());
     		
@@ -541,14 +553,14 @@ public class Join extends Operator {
     }
     
 	@Override
-	public String printPlan(int recursionLevel) throws Exception {
+	public String generateAFLString(int recursionLevel) throws Exception {
 		StringBuilder sb = new StringBuilder();
 		sb.append("cross_join(");
 		
 		if (children.get(0).isPruned())
 			sb.append(children.get(0).getPruneToken());
 		else 
-			sb.append(children.get(0).printPlan(recursionLevel+1));
+			sb.append(children.get(0).generateAFLString(recursionLevel+1));
 		
 		if (!this.aliases.isEmpty()) 
 			sb.append(" as ").append(aliases.get(0));
@@ -557,7 +569,7 @@ public class Join extends Operator {
 		if (children.get(1).isPruned())
 			sb.append(children.get(1).getPruneToken());
 		else 
-			sb.append(children.get(1).printPlan(recursionLevel+1));
+			sb.append(children.get(1).generateAFLString(recursionLevel+1));
 		
 		if (!this.aliases.isEmpty()) sb.append(" as ").append(aliases.get(1));
 		
@@ -589,4 +601,10 @@ public class Join extends Operator {
 	public String getCurrentJoinPredicate(){
 		return joinPredicate;
 	};
+	
+	@Override
+	public String getTreeRepresentation(){
+		if (isPruned()) return "{PRUNED}";
+		else return "{join"+children.get(0).getTreeRepresentation()+children.get(1).getTreeRepresentation()+"}";
+	}
 };

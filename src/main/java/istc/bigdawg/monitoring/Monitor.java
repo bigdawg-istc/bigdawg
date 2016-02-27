@@ -1,18 +1,19 @@
 package istc.bigdawg.monitoring;
 
-import istc.bigdawg.BDConstants;
-import istc.bigdawg.exceptions.NotSupportIslandException;
-import istc.bigdawg.migration.MigrationStatistics;
-import istc.bigdawg.postgresql.PostgreSQLHandler;
-import istc.bigdawg.query.ConnectionInfo;
-import istc.bigdawg.query.ConnectionInfoParser;
-import istc.bigdawg.executor.Executor;
-import istc.bigdawg.executor.plan.QueryExecutionPlan;
-import istc.bigdawg.packages.QueriesAndPerformanceInformation;
-
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+
+import istc.bigdawg.BDConstants;
+import istc.bigdawg.exceptions.NotSupportIslandException;
+import istc.bigdawg.executor.Executor;
+import istc.bigdawg.executor.plan.QueryExecutionPlan;
+import istc.bigdawg.migration.MigrationStatistics;
+import istc.bigdawg.packages.QueriesAndPerformanceInformation;
+import istc.bigdawg.postgresql.PostgreSQLHandler;
+import istc.bigdawg.query.ConnectionInfo;
+import istc.bigdawg.query.ConnectionInfoParser;
+import istc.bigdawg.utils.IslandsAndCast.Scope;
 
 public class Monitor {
     private static final String INSERT = "INSERT INTO monitoring(island, query, lastRan, duration) VALUES ('%s', '%s', -1, -1)";
@@ -94,20 +95,20 @@ public class Monitor {
         return new QueriesAndPerformanceInformation(queries, perfInfo);
     }
 
-    private static boolean insert(String query, String island) throws NotSupportIslandException {
+    private static boolean insert(String query, Scope island) throws NotSupportIslandException {
         PostgreSQLHandler handler = new PostgreSQLHandler();
         try {
-			handler.executeStatementPostgreSQL(String.format(INSERT, island, query));
+			handler.executeStatementPostgreSQL(String.format(INSERT, island.toString(), query));
 			return true;
 		} catch (SQLException e) {
 			return false;
 		}
     }
 
-    private static boolean delete(String query, String island) throws NotSupportIslandException {
+    private static boolean delete(String query, Scope island) throws NotSupportIslandException {
         PostgreSQLHandler handler = new PostgreSQLHandler();
         try {
-			handler.executeStatementPostgreSQL(String.format(DELETE, island, query));
+			handler.executeStatementPostgreSQL(String.format(DELETE, island.toString(), query));
 			return true;
 		} catch (SQLException e) {
 			return false;

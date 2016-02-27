@@ -136,8 +136,8 @@ public class Sort extends Operator {
 	}
 	
 	@Override
-	public Select generatePlaintextDestOnly(Select dstStatement) throws Exception {
-		dstStatement = children.get(0).generatePlaintextDestOnly(dstStatement);
+	public Select generateSQLStringDestOnly(Select dstStatement) throws Exception {
+		dstStatement = children.get(0).generateSQLStringDestOnly(dstStatement);
 
 		updateOrderByElements();
 		
@@ -192,10 +192,10 @@ public class Sort extends Operator {
 	
 	
 	@Override
-	public String printPlan(int recursionLevel) throws Exception{
+	public String generateAFLString(int recursionLevel) throws Exception{
 		StringBuilder sb = new StringBuilder();
 		sb.append("sort(");
-		sb.append(children.get(0).printPlan(recursionLevel+1));
+		sb.append(children.get(0).generateAFLString(recursionLevel+1));
 		if (!sortKeys.isEmpty()) {
 
 			updateOrderByElements();
@@ -208,6 +208,11 @@ public class Sort extends Operator {
 		sb.append(')');
 		return sb.toString();
 		
+	}
+	
+	@Override
+	public String getTreeRepresentation(){
+		return "{sort"+children.get(0).getTreeRepresentation()+"}";
 	}
 	
 };

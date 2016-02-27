@@ -9,14 +9,16 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import scala.reflect.macros.Aliases;
+
 public class SciDBArray {
 	
 	private static Pattern lSchemaAttributes = Pattern.compile("^<[-:,.@\\w_ ]+>");
-	private static Pattern lDimensions = Pattern.compile("=[-0-9]+:[0-9*]+,[0-9]+,[0-9],?");
+	private static Pattern lDimensions = Pattern.compile("=[*-0-9]+:[*0-9]+,[0-9]+,[0-9]+,?");
 	private static Pattern lSchemaDimensions = Pattern.compile("\\[[-:,@*=\\w_ ]+\\]$");
 	
 	private Map<String, String> attributes;
-	private Map<String, List<String>> dimensions;
+	private Map<String, String> dimensions;
 	private Set<String> schemaAliases;
 	private String schemaAlias = null;
 	
@@ -53,19 +55,28 @@ public class SciDBArray {
 		}
 	}
 	
-	public static Map<String, List<String>> parseDimensions(String wholeSchema) {
+	public static Map<String, String> parseDimensions(String wholeSchema) {
 		Matcher di = lSchemaDimensions.matcher(wholeSchema);
 		if (di.find()) {
-			Map<String, List<String>> outputs = new LinkedHashMap<>();
+			Map<String, String> outputs = new LinkedHashMap<>();
 			
 			String dims = wholeSchema.substring(di.start(), di.end());
 			dims = dims.substring(1, dims.length()-1);
 			Matcher d = lDimensions.matcher(dims);
+			
 			int lastStop = 0;
 			
 			while (d.find()) {
+				
+				int end = d.end();
+				if (dims.charAt(d.end()-1) == ',')
+					end--;
+				
 				outputs.put(dims.substring(lastStop, d.start()), 
-						Arrays.asList(dims.substring(d.start()+1, d.end()).split("[,:]")));
+						dims.substring(d.start()+1, end));
+				
+				
+				lastStop = d.end();
 			}
 			
 			return outputs;
@@ -95,11 +106,10 @@ public class SciDBArray {
 		sb.append('>').append('[');
 		started = false;
 		for (String aName : dimensions.keySet()) {
-			List<String> props = dimensions.get(aName);
+//			List<String> props = dimensions.get(aName);
 			if (started) sb.append(',');
 			else started = true;
-			sb.append(aName).append('=').append(props.get(0)).append(':').append(props.get(1))
-				.append(',').append(props.get(2)).append(',').append(props.get(3));
+			sb.append(aName).append('=').append(dimensions.get(aName));
 		}
 		sb.append(']');
 		
@@ -108,8 +118,59 @@ public class SciDBArray {
 	}
 	
 	
+	public void fixDimensionStrings() {
+		
+		
+//		if (schemaAliases.isEmpty()) {
+//			System.out.println("\n\n\nname: "+this.schemaAlias+"\n\n\n");
+//			return;
+//		}
+		
+		StringBuilder sb = new StringBuilder();
+		
+		sb.append("((, )?(");
+		
+		boolean started = false;
+		for (String s : schemaAliases) {
+			if (started) sb.append('|');
+			else started = true;
+			
+			sb.append(s);
+			
+		}
+		
+		sb.append("))*$");
+		
+		Pattern p = Pattern.compile(sb.toString());
+		
+		
+		Map<String, String> substitute = new LinkedHashMap<>();
+		
+		for (String s : dimensions.keySet()) {
+			
+			Matcher d = p.matcher(s);
+			
+			if (d.find()) {
+				substitute.put(s.substring(0,d.start()), dimensions.get(s));
+				
+//				System.out.println("Substitude String:: "+s.substring(0, d.start()));
+//				System.out.println("Whole string:: "+s);
+			} else {
+				System.out.println("Cannot find: "+s);
+				break;
+			}
+		}
+		
+		dimensions.clear();
+		dimensions.putAll(substitute);
+		
+//		System.out.println("Pattern string: "+sb.toString());
+		
+	}
 	
-	public Map<String, List<String>> getDimensions() throws Exception {
+	
+	
+	public Map<String, String> getDimensions() throws Exception {
 		return dimensions;
 	}
 	

@@ -1,6 +1,5 @@
 package istc.bigdawg.plan.operators;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -120,7 +119,7 @@ public class Scan extends Operator {
 	}
 	
 	@Override
-	public Select generatePlaintextDestOnly(Select dstStatement) throws Exception {
+	public Select generateSQLStringDestOnly(Select dstStatement) throws Exception {
 
 		if(dstStatement == null) {
 			dstStatement = SelectUtils.buildSelectFromTable(table);
@@ -158,8 +157,8 @@ public class Scan extends Operator {
 	}
 
 	@Override
-	public Map<String, ArrayList<String>> getTableLocations(Map<String, ArrayList<String>> locations) {
-		Map<String, ArrayList<String>> result = new HashMap<>();
+	public Map<String, List<String>> getTableLocations(Map<String, List<String>> locations) {
+		Map<String, List<String>> result = new HashMap<>();
 		if (children != null) {
 			for (Operator o : children)
 				result.putAll(o.getTableLocations(locations));

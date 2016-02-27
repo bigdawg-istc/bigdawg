@@ -21,7 +21,6 @@ public class SeqScan extends Scan {
 
 	
 	
-//	private SQLDatabaseSingleton catalog;
 	private String operatorName = null;
 	
 	
@@ -38,7 +37,14 @@ public class SeqScan extends Scan {
 		
 		this.dataObjects.add(schemaAndName);
 		
-		int dbid = CatalogViewer.getDbsOfObject(schemaAndName).get(0); // TODO FIX THIS; MAKE SURE THE RIGHT DATABASE (SQL) IS REFERENCED
+		int dbid;
+
+//		System.out.println(schemaAndName);
+		
+		if (super.srcTable.toLowerCase().startsWith("bigdawgtag_")) {
+			dbid = 3;
+		} else 
+			dbid = CatalogViewer.getDbsOfObject(schemaAndName, "postgres").get(0);
 		
 		
 		
@@ -59,7 +65,12 @@ public class SeqScan extends Scan {
 			
 		}
 		
-		operatorName = "project";
+		if (filterExpression != null && (!filterExpression.equals("")))
+			operatorName = "filter";
+		else if (children.size() != 0)
+			operatorName = "project";
+		else 
+			operatorName = "scan";
 	}
 	
 	// for AFL
@@ -85,14 +96,27 @@ public class SeqScan extends Scan {
 //		CreateTable create = (CreateTable) CCJSqlParserUtil.parse(PostgreSQLHandler.getCreateTable(con, schemaAndName));
 //		DataObject baseTable = new DataObject(output); 
 		
+		// attributes
 		for (String expr : output.getAttributes().keySet()) {
-			CommonOutItem out = new CommonOutItem(expr, output.getAttributes().get(expr), null);
+			
+			CommonOutItem out = new CommonOutItem(expr, output.getAttributes().get(expr), false, null);
 			
 			DataObjectAttribute sa =  out.getAttribute();
 			String alias = sa.getName();
 			
 			outSchema.put(alias, sa);
 			
+		}
+		
+		// dimensions
+		for (String expr : output.getDimensions().keySet()) {
+			
+			CommonOutItem out = new CommonOutItem(expr, output.getDimensions().get(expr), true, null);
+			
+			DataObjectAttribute attr = out.getAttribute();
+			String attrName = attr.getFullyQualifiedName();		
+			
+			outSchema.put(attrName, attr);
 		}
 		
 	}
@@ -110,9 +134,10 @@ public class SeqScan extends Scan {
 	
 	
 	@Override
-	public String printPlan(int recursionLevel) throws Exception {
+	public String generateAFLString(int recursionLevel) throws Exception {
 		StringBuilder sb = new StringBuilder();
-		sb.append(operatorName).append('(');
+		if (!(operatorName.equals("scan") && recursionLevel > 0))
+			sb.append(operatorName).append('(');
 		
 		boolean ped = (!this.getChildren().isEmpty()) && this.getChildren().get(0).isPruned();
 		
@@ -140,8 +165,26 @@ public class SeqScan extends Scan {
 		default:
 			break;
 		}
-		sb.append(')');
+		if (!(operatorName.equals("scan") && recursionLevel > 0))
+			sb.append(')');
 		return sb.toString();
 	}
 	
+	@Override
+	public String getTreeRepresentation(){
+		
+		StringBuilder sb = new StringBuilder();
+		sb.append('{');
+		if (children.isEmpty()){
+			// it is a scan
+			sb.append(this.srcTable);
+		} else {
+			// filter, project
+			sb.append(operatorName).append(children.get(0).getTreeRepresentation());
+		}
+		
+		sb.append('}');
+		
+		return sb.toString();
+	}
 };

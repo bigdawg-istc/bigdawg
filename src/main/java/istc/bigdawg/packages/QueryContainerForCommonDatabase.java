@@ -35,8 +35,12 @@ public class QueryContainerForCommonDatabase {
 		return databaseConnectionInfos;
 	}
 	
-	public String generateSelectIntoString() throws Exception {
-		return rootOperator.generateSelectForExecutionTree(pruneToken);
+	public String generateSQLSelectIntoString() throws Exception {
+		return rootOperator.generateSQLSelectIntoStringForExecutionTree(pruneToken);
+	}
+	
+	public String generateAFLStoreString() throws Exception {
+		return rootOperator.generateAFLStoreStringForExecutionTree(pruneToken);
 	}
 	
 	public String getName() {

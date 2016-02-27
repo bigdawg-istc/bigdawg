@@ -1,17 +1,21 @@
 package istc.bigdawg.packages;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import istc.bigdawg.plan.operators.Operator;
 import istc.bigdawg.utils.IslandsAndCast;
 
 public class CrossIslandQueryPlan {
 	private Map<String, CrossIslandQueryNode> members;
+	private Map<String, Operator> rootsForSchemas;
 	private CrossIslandQueryNode root;
 	private static Pattern start = Pattern.compile("^((bdrel\\()|(bdarray\\()|(bdgraph\\()|(bdtext\\()|(bdstream\\()|(bdcast\\())");
 	private static Pattern end	 = Pattern.compile("\\);?$");
@@ -24,8 +28,9 @@ public class CrossIslandQueryPlan {
 		this.serial = maxSerial;
 	};
 	
-	public CrossIslandQueryPlan(Map<String, String> queries) throws Exception {
-		members = new HashMap<>();
+	public CrossIslandQueryPlan(LinkedHashMap<String, String> queries) throws Exception {
+		members = new LinkedHashMap<>();
+		rootsForSchemas = new HashMap<>();
 		addNodes(queries);
 		maxSerial++;
 		this.serial = maxSerial;
@@ -35,7 +40,10 @@ public class CrossIslandQueryPlan {
 	
 	public void addNodes(Map<String, String> queries) throws Exception {
 
-		for (String n : queries.keySet()) {
+		List<String> l = new ArrayList<>(queries.keySet());
+		Collections.sort(l, Collections.reverseOrder());
+		
+		for (String n : l) {
 			
 			// IDENTIFY ISLAND AND STRIP
 			String rawQueryString = queries.get(n);
@@ -46,18 +54,22 @@ public class CrossIslandQueryPlan {
 			
 			if (islandMatcher.find() && queryEndMatcher.find()) {
 				
+				// creating the children tables for this islands
+				
 				
 				newNode = new CrossIslandQueryNode(
 						IslandsAndCast.convertScope(rawQueryString.substring(islandMatcher.start(), islandMatcher.end()))
 						, rawQueryString.substring(islandMatcher.end(), queryEndMatcher.start())
-						, n);
+						, n
+						, rootsForSchemas);
 				
+				rootsForSchemas.put(n, newNode.getRemainder(0));
 				
 			} else 
 				throw new Exception("Matcher cannot find token");
 			
 			
-			if (n.equals("OUTPUT")) {
+			if (n.equals("A_OUTPUT")) {
 				root = newNode;
 			}
 			
@@ -76,6 +88,10 @@ public class CrossIslandQueryPlan {
 	
 	public Set<String> getMemberKeySet() {
 		return members.keySet();
+	}
+	
+	public Map<String, Operator> getRootsForSchema() {
+		return rootsForSchemas;
 	}
 	
 	public List<CrossIslandQueryNode> getMemberChildren (String memberTag) {

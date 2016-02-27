@@ -243,10 +243,17 @@ public class CatalogModifier {
 		try {
 			CatalogUtilities.checkConnection(cc);
 			
-			String host = "192.168.1.22";
+			String host = "192.168.1.13";
 			
-			cc.execNoRet("update catalog.engines set host = \\'"+ host +"\\' where eid = 1;"); 
-			cc.execNoRet("update catalog.engines set host = \\'"+ host +"\\' where eid = 2;");
+			cc.execNoRet("update catalog.engines set host = \'"+ host +"\' where eid = 1;"); 
+			cc.execNoRet("update catalog.engines set host = \'"+ host +"\' where eid = 2;");
+			cc.execNoRet("update catalog.engines set host = \'"+ host +"\' where eid = 4;");
+			
+//			// insert example: addObject(String newName, String newFields, int newLogDB, int newPhyDB)
+//			addObject("go_matrix", "geneid,goid,belongs", 6, 6);
+//			addObject("genes", "id,target,pos,len,func", 9, 9);
+//			addObject("patients", "id,age,gender,zipcode,disease,response", 7, 7);
+//			addObject("geo", "geneid,patientid,expr_value", 8, 8);
 
 			
 			cc.commit();

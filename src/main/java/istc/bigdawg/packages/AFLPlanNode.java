@@ -36,12 +36,29 @@ public class AFLPlanNode {
 		childrenReceived = 0;
 	}
 	
-	public void extractAliases() {
-		if (children.isEmpty()) return;
+	public void extractAliases() throws Exception {
+		
+		if (schema == null)
+			throw new Exception("NULL schema from AFLPlanNode.");
 		
 		for (AFLPlanNode c : children) {
 			c.extractAliases();
 			this.schemaAlias.addAll(c.schemaAlias);
+		}
+		
+		schema.getAllSchemaAliases().addAll(this.schemaAlias);
+		
+	}
+	
+	public void fixDimensionStrings() throws Exception {
+		
+		if (schema == null)
+			throw new Exception("NULL schema from AFLPlanNode.");
+		
+		schema.fixDimensionStrings();
+		
+		for (AFLPlanNode c : children) {
+			c.fixDimensionStrings();
 		}
 		
 	}
@@ -51,14 +68,14 @@ public class AFLPlanNode {
 		StringBuilder sb = new StringBuilder();
 		int l;
 		
-		sb.append("Level ").append(indent);
+		sb.append("Level ").append(indent-2);
 		sb.append(' ').append(name);
 		sb.append("; Children: ");
 		sb.append(childrenCount);
 		sb.append('\n');
 		l = attributes.size();
 		for (int i = 0; i < l; ++i) sb.append(attributes.get(i));
-		sb.append("Alias: ").append(schemaAlias).append('\n');
+		sb.append("Aliases: ").append(schemaAlias).append('\n');
 		sb.append("Schema: ").append(schema.getSchemaString());
 		sb.append('\n').append('\n');
 		l = children.size();

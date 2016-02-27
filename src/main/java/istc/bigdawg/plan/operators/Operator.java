@@ -234,9 +234,9 @@ public class Operator {
 	}
 	
 	
-	public String generateSelectForExecutionTree(String into) throws Exception {
+	public String generateSQLSelectIntoStringForExecutionTree(String into) throws Exception {
 		
-		Select dstStatement  = this.generatePlaintextDestOnly(null);
+		Select dstStatement  = this.generateSQLStringDestOnly(null);
 //		System.out.println("PLAIN DSTSTATEMENT: "+ ((PlainSelect) dstStatement.getSelectBody()));
 		
 		// iterate over out schema and add it to select clause
@@ -277,6 +277,20 @@ public class Operator {
 		}
 		return ((PlainSelect) dstStatement.getSelectBody()).toString();
 	}
+	
+	
+	
+	public String generateAFLStoreStringForExecutionTree(String into) throws Exception {
+		
+		String dstString = this.generateAFLString(1); // this gets rid of "scan" if there is one
+		
+		if (into != null) {
+			dstString = "store(" + dstString + ", " + into + ")";
+		}
+		
+		return dstString;
+	}
+	
 	
 	private List<SelectItem> changeSelectItemsOrder(Select srcStatement, HashMap<String, SelectItem> selects) throws Exception {
 		List<SelectItem> orders = ((PlainSelect) srcStatement.getSelectBody()).getSelectItems();
@@ -387,10 +401,10 @@ public class Operator {
 	}
 	
 	// this is the implicit root of the SQL generated
-	public String generatePlaintext(Select srcStatement) throws Exception {
+	public String generateSQLString(Select srcStatement) throws Exception {
 		
 		clearJoinReservedObjects();
-		Select dstStatement  = this.generatePlaintextDestOnly(null);
+		Select dstStatement  = this.generateSQLStringDestOnly(null);
 		
 		
 		// iterate over out schema and add it to select clause
@@ -431,11 +445,11 @@ public class Operator {
 //		return dstStatement;
 //	}
 	
-	protected Select generatePlaintextDestOnly(Select dstStatement) throws Exception {
+	protected Select generateSQLStringDestOnly(Select dstStatement) throws Exception {
 
 		// generic case
 		for(int i = 0; i < children.size(); ++i) {
-			dstStatement = children.get(i).generatePlaintextDestOnly(dstStatement);
+			dstStatement = children.get(i).generateSQLStringDestOnly(dstStatement);
 		}
 		return dstStatement;
 	}
@@ -458,19 +472,11 @@ public class Operator {
 	// recurse through plan and print it in nested form
 	// each op adds its part
 	// produces an plan similar to SciDB's AFL syntax
-	public String printPlan(int recursionLevel) throws Exception {
+	public String generateAFLString(int recursionLevel) throws Exception {
 		return new String();
 	}
 	
 	
-	protected static String padLeft(String s, int n) {
-		if(n > 0) {
-			return String.format("%1$" + n + "s", s);  
-		}
-		 
-		return s;
-	}
-
 	
 	public Map<String, DataObjectAttribute>  getOutSchema() {
 		return outSchema;
@@ -493,8 +499,8 @@ public class Operator {
 	 * getLocation gets a list of result locations that are possible for this operator
 	 * @return List<Integer> of dbid
 	 */
-	public Map<String, ArrayList<String>> getTableLocations(Map<String, ArrayList<String>> map) {
-		Map<String, ArrayList<String>> result = new HashMap<>();
+	public Map<String, List<String>> getTableLocations(Map<String, List<String>> map) {
+		Map<String, List<String>> result = new HashMap<>();
 		for (Operator o : children) {
 			result.putAll(o.getTableLocations(map));
 		}
@@ -623,4 +629,68 @@ public class Operator {
 			throw new Exception("Unsupported Operator Copy: "+this.getClass().toString());
 		}
 	}
+	
+	// will likely get overridden
+	public String getTreeRepresentation(){
+		return "Unimplemented: "+this.getClass().toString();
+	}
+	
+	
+	public String generateSQLCreateTableStatementLocally(String name){
+		StringBuilder sb = new StringBuilder();
+		
+		sb.append("CREATE TABLE ").append(name).append(' ').append('(');
+		
+		boolean started = false;
+		
+		for (DataObjectAttribute doa : outSchema.values()) {
+			if (started == true) sb.append(',');
+			else started = true;
+			
+			sb.append(doa.generateSQLTypedString());
+		}
+		
+		sb.append(')');
+		
+		return sb.toString();
+	} 
+	
+	public String generateAFLCreateArrayStatementLocally(String name){
+		StringBuilder sb = new StringBuilder();
+		
+		List<DataObjectAttribute> attribs = new ArrayList<>();
+		List<DataObjectAttribute> dims = new ArrayList<>();
+		
+		for (DataObjectAttribute doa : outSchema.values()) {
+			if (doa.isHidden()) dims.add(doa);
+			else attribs.add(doa);
+		}
+		
+		
+		sb.append("CREATE ARRAY ").append(name).append(' ').append('<');
+		
+		boolean started = false;
+		for (DataObjectAttribute doa : attribs) {
+			if (started == true) sb.append(',');
+			else started = true;
+			
+			sb.append(doa.generateAFLTypeString());
+		}
+		
+		sb.append('>').append('[');
+		if (dims.isEmpty()) {
+			sb.append("i=0:*,10000000,0");
+		} else {
+			started = false;
+			for (DataObjectAttribute doa : dims) {
+				if (started == true) sb.append(',');
+				else started = true;
+				
+				sb.append(doa.generateAFLTypeString());
+			}
+		}
+		sb.append(']');
+		
+		return sb.toString();
+	} 
 }

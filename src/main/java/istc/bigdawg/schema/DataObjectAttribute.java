@@ -9,7 +9,7 @@ public class DataObjectAttribute {
 	protected Set<DataObjectAttribute> sources = null; //  the provenance of each DataObjectAttribute, map to prevent duplicates
 	protected DataObject srcDataObject = null;
 	protected String typeString = null;
-	
+	protected boolean hidden = false;
 	
 	public DataObjectAttribute(String n) {
 		name = new String(n);
@@ -85,7 +85,104 @@ public class DataObjectAttribute {
 		typeString = new String(t);
 	}
 	
-	public String getTypeString (String t) {
+	public String getTypeString () {
 		return typeString;
+	}
+	
+	public boolean isHidden() {
+		return hidden;
+	}
+	
+	public void setHidden(boolean hidden) {
+		this.hidden = hidden;
+	}
+	
+	
+	public String generateSQLTypedString() {
+//		return name.replaceAll(".+\\.(?=[\\w]+$)", "___") + " " + convertTypeStringToSQLTyped();
+		return name.replaceAll(".+\\.(?=[\\w]+$)", "") + " " + convertTypeStringToSQLTyped();
+	}
+	
+	public String generateAFLTypeString() {
+		
+		char token = ':';
+		if (isHidden())
+			token = '=';
+		
+		return name.replaceAll(".+\\.(?=[\\w]+$)", "") + token + convertTypeStringToAFLTyped();
+		
+//		if (isHidden())
+//			return name.replaceAll("\\.", "___") + '=' + convertTypeStringToAFLTyped();
+//		else 
+//			return name.replaceAll("\\.", "___") + ':' + convertTypeStringToAFLTyped();
+	}
+	
+	public String convertTypeStringToSQLTyped() {
+		
+		if (typeString == null || typeString.charAt(0) == '*' || (typeString.charAt(0) >= '0' && typeString.charAt(0) <= '9'))
+			return "integer";
+		
+		String str = typeString.concat("     ").substring(0,5).toLowerCase();
+		
+		switch (str) {
+		case "int32":
+		case "int64":
+			return "integer";
+		case "string":
+			return "varchar";
+		case "float":
+			return "double precision";
+		case "bool ":
+			return "boolean";
+		default:
+			return typeString;
+		}
+		
+	}
+	
+	public String convertTypeStringToAFLTyped() {
+		
+		if (typeString == null) {
+			System.out.println("Missing typeString: "+ this.name);
+			return "int64";
+		}
+		
+		if (typeString.charAt(0) == '*' || (typeString.charAt(0) >= '0' && typeString.charAt(0) <= '9'))
+			return typeString;
+		
+		String str = typeString.concat("     ").substring(0,5).toLowerCase();
+		
+		switch (str) {
+		
+		case "varch":
+			return "string";
+		case "times":
+			return "datetime";
+		case "doubl":
+			return "double";
+		case "integ":
+		case "bigin":
+			return "int64";
+		case "boole":
+			return "bool";
+		default:
+			return typeString;
+		}
+	}
+	
+	
+	
+	
+	@Override
+	public String toString() {
+		
+		String ret = new String(this.getFullyQualifiedName() + ": ");
+		
+		if(typeString != null) {
+			ret += "type: " +  typeString;
+		}
+		
+		return ret;
+		
 	}
 }

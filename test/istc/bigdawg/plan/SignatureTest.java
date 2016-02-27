@@ -1,7 +1,7 @@
 package istc.bigdawg.plan;
 
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.junit.Before;
@@ -107,14 +107,14 @@ public class SignatureTest extends TestCase {
 	private void testCaseForBreakApart(String testName) throws Exception {
 		
 		String userinput = inputs.get(testName);
-		Map<String, String> crossIslandQuery = UserQueryParser.getUnwrappedQueriesByIslands(userinput, "BIGDAWGTAG_");
+		Map<String, String> crossIslandQuery = UserQueryParser.getUnwrappedQueriesByIslands(userinput);
 		
 		assertEquals(expectedOutputs.get(testName), crossIslandQuery);
 	}
 
 	private void testCaseCrossIslandPlanConstruction(String testName, boolean unsupportedToken) throws Exception {
 		String userinput = inputs.get(testName);
-		Map<String, String> crossIslandQuery = UserQueryParser.getUnwrappedQueriesByIslands(userinput, "BIGDAWGTAG_");
+		LinkedHashMap<String, String> crossIslandQuery = UserQueryParser.getUnwrappedQueriesByIslands(userinput);
 		
 		try { 
 			CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(crossIslandQuery);
@@ -125,9 +125,9 @@ public class SignatureTest extends TestCase {
 				CrossIslandQueryNode n = ciqp.getMember(k);
 				String remainderText = ""; 
 				if (n.getScope().equals(Scope.RELATIONAL))
-					remainderText = n.getRemainder(0).generatePlaintext((Select) CCJSqlParserUtil.parse(n.getQuery()));
+					remainderText = n.getRemainder(0).generateSQLString((Select) CCJSqlParserUtil.parse(n.getQuery()));
 				else if (n.getScope().equals(Scope.ARRAY))
-					remainderText = "array!";
+					remainderText = n.getRemainder(0).generateAFLString(0);
 				System.out.println("----> Gen remainder: "+remainderText+"\n");
 				assertEquals(((HashMap<String, String>)expectedOutputs.get(testName)).get("OUTPUT"), remainderText);
 			}

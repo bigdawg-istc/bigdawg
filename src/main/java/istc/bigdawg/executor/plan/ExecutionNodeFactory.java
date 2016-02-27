@@ -1,17 +1,20 @@
 package istc.bigdawg.executor.plan;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import istc.bigdawg.query.ConnectionInfoParser;
-
-import istc.bigdawg.postgresql.PostgreSQLHandler;
-import istc.bigdawg.query.ConnectionInfo;
-import net.sf.jsqlparser.statement.select.Select;
 import istc.bigdawg.packages.QueryContainerForCommonDatabase;
 import istc.bigdawg.plan.operators.CommonSQLTableExpressionScan;
 import istc.bigdawg.plan.operators.Operator;
+import istc.bigdawg.postgresql.PostgreSQLHandler;
+import istc.bigdawg.query.ConnectionInfo;
+import istc.bigdawg.query.ConnectionInfoParser;
+import istc.bigdawg.utils.IslandsAndCast.Scope;
 
 
 public class ExecutionNodeFactory {
@@ -138,8 +141,8 @@ public class ExecutionNodeFactory {
 	
 	
 	public static void addNodesAndEdgesNaive(QueryExecutionPlan qep, Operator remainder, List<String> remainderLoc, Map<String, 
-			QueryContainerForCommonDatabase> container, Select srcStmt) throws Exception {
-		//TODO this should take a new QEP, a local map, the remainder, the container, and something else about the query
+			QueryContainerForCommonDatabase> container) throws Exception {
+		// this should take a new QEP, a local map, the remainder, the container, and something else about the query
 		
 		HashMap<String, ExecutionNode> dependentNodes = new HashMap<>();
 		ArrayList<String> edgesFrom = new ArrayList<>();
@@ -148,18 +151,25 @@ public class ExecutionNodeFactory {
 		String remainderDBID;
 		ConnectionInfo remainderCI;
 		if (remainderLoc != null) {
-			System.out.println("remainderLoc not null; result: "+ remainderLoc.get(0));
+//			System.out.println("remainderLoc not null; result: "+ remainderLoc.get(0));
 			remainderCI = PostgreSQLHandler.generateConnectionInfo(Integer.parseInt(remainderLoc.get(0)));	
 		} else {
 			remainderDBID = container.values().iterator().next().getConnectionInfos().keySet().iterator().next();
-			System.out.println("remainderLoc IS null; result: "+ remainderDBID);
+//			System.out.println("remainderLoc IS null; result: "+ remainderDBID);
 			remainderCI = PostgreSQLHandler.generateConnectionInfo(Integer.parseInt(remainderDBID));
 		}
 		
 		String remainderInto = qep.getSerializedName();
-		
+		String remainderSelectIntoString;
+
 		// if RELATIONAL
-		String remainderSelectIntoString = remainder.generateSelectForExecutionTree(null);
+		if (qep.getIsland().equals(Scope.RELATIONAL))
+			remainderSelectIntoString = remainder.generateSQLSelectIntoStringForExecutionTree(null);
+		else if (qep.getIsland().equals(Scope.ARRAY))
+			remainderSelectIntoString = remainder.generateAFLStoreStringForExecutionTree(null);
+		else 
+			throw new Exception("Unsupported island code: "+qep.getIsland().toString());
+		
 		LocalQueryExecutionNode remainderNode = new LocalQueryExecutionNode(remainderSelectIntoString, remainderCI, remainderInto);
 		dependentNodes.put(remainderInto, remainderNode);
 			
@@ -177,7 +187,16 @@ public class ExecutionNodeFactory {
 		// this function is called the naive version because it just migrates everything to a random DB -- first brought up by iterator
 		for (String statementName : container.keySet()) {
 			
-			String selectIntoString = container.get(statementName).generateSelectIntoString();
+			String selectIntoString;
+			
+			// if relational
+			if (qep.getIsland().equals(Scope.RELATIONAL))
+				selectIntoString = container.get(statementName).generateSQLSelectIntoString();
+			else if (qep.getIsland().equals(Scope.ARRAY))
+				selectIntoString = container.get(statementName).generateAFLStoreString();
+			else 
+				throw new Exception("Unsupported island code: "+qep.getIsland().toString());
+			
 			ConnectionInfo ci = container.get(statementName).getConnectionInfos().values().iterator().next();
 			dependentNodes.put(statementName, new LocalQueryExecutionNode(selectIntoString, ci, statementName));
 			

@@ -17,8 +17,6 @@ import istc.bigdawg.plan.AFLQueryPlan;
 import istc.bigdawg.plan.SQLQueryPlan;
 import istc.bigdawg.plan.extract.AFLPlanParser;
 import istc.bigdawg.plan.extract.SQLPlanParser;
-import istc.bigdawg.plan.operators.Aggregate;
-import istc.bigdawg.plan.operators.CommonSQLTableExpressionScan;
 import istc.bigdawg.plan.operators.Join;
 import istc.bigdawg.plan.operators.Join.JoinType;
 import istc.bigdawg.plan.operators.Operator;
@@ -41,6 +39,7 @@ public class CrossIslandQueryNode {
 	private IslandsAndCast.Scope scope;
 	private String query;
 	private Select select;
+	private String name;
 	
 	private Map<String, QueryContainerForCommonDatabase> queryContainer;
 	private List<Operator> remainderPermutations;
@@ -48,43 +47,78 @@ public class CrossIslandQueryNode {
 	
 	private Set<String> children;
 	private Matcher tagMatcher;
-	private static DBHandler dbSchemaHandler = null;
+	private DBHandler dbSchemaHandler = null;
 	 
-	private Map<String, ArrayList<String>> originalMap;
+	private Map<String, List<String>> originalMap;
 	
 	private Set<String> joinPredicates;
 	
 	
-	public CrossIslandQueryNode (IslandsAndCast.Scope scope, String islandQuery, String tagString) throws Exception {
+	public CrossIslandQueryNode (IslandsAndCast.Scope scope, String islandQuery, String name, Map<String, Operator> rootsForSchemas) throws Exception {
 		this.scope = scope;
-		this.query  = islandQuery;
-		if (scope.equals(Scope.RELATIONAL)) 
-			this.select = (Select) CCJSqlParserUtil.parse(islandQuery);
+		this.query = islandQuery;
+		this.name  = name;
 		
 		// collect the cross island children
-		children = getCrossIslandChildrenReferences(tagString);
+		children = getCrossIslandChildrenReferences();
 		
-		if (dbSchemaHandler == null) {
-			if (scope.equals(Scope.RELATIONAL))
-				dbSchemaHandler = new PostgreSQLHandler(3);
-			else if (scope.equals(Scope.ARRAY))
-				dbSchemaHandler = new SciDBHandler();
-			else 
-				throw new Exception("Unsupported Island");
-		}
+//		System.out.println("CrossIslandChildren: "+children.toString());
+//		System.out.println("RootsForSchemas: "+rootsForSchemas.toString());
+		
+		
+		
+		// create new tables or arrays for planning use
+		if (scope.equals(Scope.RELATIONAL)) {
+			this.select = (Select) CCJSqlParserUtil.parse(islandQuery);
+			dbSchemaHandler = new PostgreSQLHandler(3);
+			for (String key : rootsForSchemas.keySet()) {
+				if (children.contains(key)) {
+					System.out.println("key: "+key+"; query: "+rootsForSchemas.get(key).generateSQLCreateTableStatementLocally(key)+"\n\n");
+					((PostgreSQLHandler)dbSchemaHandler).executeStatementPostgreSQL(rootsForSchemas.get(key)
+							.generateSQLCreateTableStatementLocally(key));
+				}
+			}
+		} else if (scope.equals(Scope.ARRAY)) {
+			dbSchemaHandler = new SciDBHandler(6);
+			for (String key : rootsForSchemas.keySet()) {
+				if (children.contains(key)) {
+					System.out.println("key: "+key+"; query: "+rootsForSchemas.get(key).generateSQLCreateTableStatementLocally(key)+"\n\n");
+					((SciDBHandler)dbSchemaHandler).executeStatement(rootsForSchemas.get(key)
+							.generateAFLCreateArrayStatementLocally(key));
+				}
+			}
+		} else
+			throw new Exception("Unsupported island code : "+scope.toString());
 		
 		queryContainer = new HashMap<>();
 		remainderPermutations = new ArrayList<>();
 		remainderLoc = new ArrayList<>();
 		joinPredicates = new HashSet<>();
 		populateQueryContainer();
+		
+		
+		
+		
+		// removing temporary schema plates
+		if (scope.equals(Scope.RELATIONAL)) {
+			for (String key : rootsForSchemas.keySet()) 
+				if (children.contains(key)) 
+					((PostgreSQLHandler)dbSchemaHandler).executeStatementPostgreSQL("drop table "+key);
+		} else if (scope.equals(Scope.ARRAY)) {
+			for (String key : rootsForSchemas.keySet()) 
+				if (children.contains(key)) 
+					((SciDBHandler)dbSchemaHandler).executeStatement("remove("+key+")");
+		} else
+			throw new Exception("Unsupported island code : "+scope.toString());
+		
+		
 	}
 	
-	public Set<String> getCrossIslandChildrenReferences(String dawgtag) {
+	public Set<String> getCrossIslandChildrenReferences() {
 		
 		// aka find children
 		
-		tagMatcher = Pattern.compile("\\b"+dawgtag+"[0-9_]+\\b").matcher(query);
+		tagMatcher = Pattern.compile("\\bBIGDAWGTAG_[0-9]+\\b").matcher(query);
 		Set<String> offsprings = new HashSet<>();
 		
 		while (tagMatcher.find()) {
@@ -103,8 +137,8 @@ public class CrossIslandQueryNode {
 		
 		
 //		Select srcStmt = (Select) CCJSqlParserUtil.parse(query);
-		QueryExecutionPlan qep = new QueryExecutionPlan(scope.toString()); 
-		ExecutionNodeFactory.addNodesAndEdgesNaive( qep, remainderPermutations.get(perm), remainderLoc, queryContainer, select);
+		QueryExecutionPlan qep = new QueryExecutionPlan(scope); 
+		ExecutionNodeFactory.addNodesAndEdgesNaive( qep, remainderPermutations.get(perm), remainderLoc, queryContainer);
 		
 		return qep;
 	}
@@ -118,8 +152,8 @@ public class CrossIslandQueryNode {
 //		Select srcStmt = (Select) CCJSqlParserUtil.parse(query);
 		
 		for (int i = 0; i < remainderPermutations.size(); i++ ){
-			QueryExecutionPlan qep = new QueryExecutionPlan(scope.toString()); 
-			ExecutionNodeFactory.addNodesAndEdgesNaive( qep, remainderPermutations.get(i), remainderLoc, queryContainer, select);
+			QueryExecutionPlan qep = new QueryExecutionPlan(scope); 
+			ExecutionNodeFactory.addNodesAndEdgesNaive( qep, remainderPermutations.get(i), remainderLoc, queryContainer);
 			qepl.add(qep);
 		}
 		
@@ -130,15 +164,16 @@ public class CrossIslandQueryNode {
 	 * 
 	 * @throws Exception
 	 */
-	public void populateQueryContainer() throws Exception {
+	private void populateQueryContainer() throws Exception {
 		
 		
 		// NOW WE ONLY SUPPORT RELATIONAL ISLAND
-		// TODO SUPPORT OTHER ISLANDS && ISLAND CHECK 
+		// SUPPORT OTHER ISLANDS && ISLAND CHECK 
 		
 		Operator root = null;
 		ArrayList<String> objs = null;
 		
+		System.out.println("Original query to be parsed: \n"+query);
 		
 		if (scope.equals(Scope.RELATIONAL)) {
 			SQLQueryPlan queryPlan = SQLPlanParser.extractDirect((PostgreSQLHandler)dbSchemaHandler, query);
@@ -148,13 +183,12 @@ public class CrossIslandQueryNode {
 			AFLQueryPlan queryPlan = AFLPlanParser.extractDirect((SciDBHandler)dbSchemaHandler, query);
 			root = queryPlan.getRootNode();
 			objs = new ArrayList<>(Arrays.asList(ArraySignatureBuilder.sig2(query).split("\t")));
-		}
+		} else 
+			throw new Exception("Unsupported island code: "+scope.toString());
 		
 		
 		originalMap = CatalogViewer.getDBMappingByObj(objs);
 		
-		
-//		Select selectQuery = (Select) CCJSqlParserUtil.parse(query);
 		
 		
 		// traverse add remainder
@@ -162,14 +196,11 @@ public class CrossIslandQueryNode {
 		
 		Map<String, Map<String, String>> jp = processJoinPredicates(joinPredicates);
 		
-//		System.out.println("\njoinPredicates: "+jp);
-//		System.out.println("dataObjects: "+root.getDataObjectNames());
-		
 		
 		if (remainderLoc == null && root.getDataObjectNames().size() > 1) {
 
 			
-			// TODO permutation happens here! it should use remainderPermutaions.get(0) as a basis and generate all other possible ones.
+			// Permutation happens here! it should use remainderPermutaions.get(0) as a basis and generate all other possible ones.
 			// 1. support WITH ; 
 			// 2. CHANGE SORT RELATED CODE
 			//
@@ -186,12 +217,15 @@ public class CrossIslandQueryNode {
 			
 			List<Operator> permResult = getPermutatedOperatorsWithBlock(root, jp);
 			
-			System.out.println("\n\n\nPermResult: ");
+			System.out.println("\n\n\nResult of Permutation: ");
 			int i = 1;
 			for (Operator o : permResult) {
-			
-				System.out.printf("%d. %s\n\n", i, o.generatePlaintext(select));
-//				System.out.printf("%d. %s\n\n", i, o.generatePlaintext(select));
+				if (scope.equals(Scope.RELATIONAL))
+					System.out.printf("%d. %s\n\n", i, o.generateSQLString(select));
+				else if (scope.equals(Scope.ARRAY))
+					System.out.printf("%d. %s\n\n", i, o.generateAFLString(0));
+				
+//				System.out.printf("%d. %s\n\n", i, o.generateSQLString(select)); // duplicate command to test modification of underlying structure
 				i++;
 			}
 			
@@ -277,7 +311,6 @@ public class CrossIslandQueryNode {
 			
 			// 2.
 			for (Operator b : blockers) {
-				System.out.println("<<<>>><<< ");
 				blockerTrees.put(b.getBlockerID(), getPermutatedOperatorsWithBlock(b, joinPredConnections));
 			}
 			
@@ -382,7 +415,7 @@ public class CrossIslandQueryNode {
 			
 		} else if (len == 2) {
 			// the case of two
-			extraction.add(makeJoin(ops.get(0), ops.get(1), null, joinPredConnections, new HashSet<>())); // TODO FIGURE OUT HOW TO INSERT THE JP
+			extraction.add(makeJoin(ops.get(0), ops.get(1), null, joinPredConnections, new HashSet<>())); 
 			return extraction;
 		} 
 		
@@ -420,8 +453,6 @@ public class CrossIslandQueryNode {
 							
 							if (isDisj(k0o, k1o)) {
 								
-								// TODO this is where you check conditions
-								// well, currently we do not prune search space
 								
 //								// debug
 //								if (i == len-1) {
@@ -553,7 +584,6 @@ public class CrossIslandQueryNode {
 				
 //				System.out.println("key: "+key);
 				
-				// check if key has been used; TODO
 				
 				while (used.contains(key)) {
 					key = o2ns.iterator().next();
@@ -651,8 +681,14 @@ public class CrossIslandQueryNode {
 		
 		if (node instanceof SeqScan) {
 			
+//			System.out.println(((SeqScan) node).getTable().getFullyQualifiedName());
+//			System.out.println(originalMap);
 			
-			ret = new ArrayList<String>(originalMap.get(((SeqScan) node).getTable().getFullyQualifiedName()));
+			if (((SeqScan) node).getTable().getFullyQualifiedName().toLowerCase().startsWith("bigdawgtag_")){
+				ret = new ArrayList<String>();
+				ret.add("3");
+			}else 
+				ret = new ArrayList<String>(originalMap.get(((SeqScan) node).getTable().getFullyQualifiedName()));
 			
 			
 		} else if (node instanceof Join) {
@@ -691,7 +727,7 @@ public class CrossIslandQueryNode {
 			
 			// do nothing if both are pruned before enter here, thus saving it for the remainder 
 			
-			if (((Join)node).getJoinPredicateOriginal() != null)
+			if (((Join)node).getJoinPredicateOriginal() != null && (!((Join)node).getJoinPredicateOriginal().isEmpty()))
 				joinPredicates.add(((Join)node).updateOnExpression(((Join)node).getJoinPredicateOriginal(), child0, child1, new Table(), new Table(), true));
 			
 		} else if (node instanceof Sort) {
@@ -725,7 +761,12 @@ public class CrossIslandQueryNode {
 			
 //			System.out.println("dbid: "+s);
 			
-			cis.put(s, PostgreSQLHandler.generateConnectionInfo(Integer.parseInt(s)));
+			if (scope.equals(Scope.RELATIONAL))
+				cis.put(s, CatalogViewer.getPSQLConnectionInfo(Integer.parseInt(s)));
+			else if (scope.equals(Scope.ARRAY))
+				cis.put(s, CatalogViewer.getSciDBConnectionInfo(Integer.parseInt(s)));
+			else 
+				throw new Exception("Unsupported island code: "+scope.toString());
 		}
 		
 		queryContainer.put(c.getPruneToken(), new QueryContainerForCommonDatabase(cis, c, c.getPruneToken()));
@@ -750,5 +791,9 @@ public class CrossIslandQueryNode {
 	
 	public Operator getRemainder(int index) {
 		return remainderPermutations.get(index);
+	}
+	
+	public Map<String, QueryContainerForCommonDatabase> getQueryContainer(){
+		return queryContainer;
 	}
 }

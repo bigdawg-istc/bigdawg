@@ -24,6 +24,7 @@ import org.scidb.jdbc.IStatementWrapper;
 
 import istc.bigdawg.BDConstants;
 import istc.bigdawg.BDConstants.Shim;
+import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.exceptions.SciDBException;
 import istc.bigdawg.postgresql.PostgreSQLColumnMetaData;
@@ -48,6 +49,16 @@ public class SciDBHandler implements DBHandler {
 	public SciDBHandler() {
 		this.conInfo = new SciDBConnectionInfo();
 		try {
+			this.connection = getConnection(conInfo);
+		} catch (Exception e) {
+			log.debug("getConnection throws Exception from default SciDBHandler(); this is not supposed to happen. Check properties file.");
+			e.printStackTrace();
+		}
+	}
+	
+	public SciDBHandler(int dbid) {
+		try {
+			this.conInfo = CatalogViewer.getSciDBConnectionInfo(dbid);
 			this.connection = getConnection(conInfo);
 		} catch (Exception e) {
 			log.debug("getConnection throws Exception from default SciDBHandler(); this is not supposed to happen. Check properties file.");

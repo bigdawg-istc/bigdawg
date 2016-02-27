@@ -24,9 +24,11 @@ public class CommonOutItem {
 	protected String alias = null; // attr alias
 	protected DataObjectAttribute outAttribute;
 	
-	public CommonOutItem(String alias, String type, Map<String, DataObjectAttribute> srcSchema) throws Exception {
+	
+	public CommonOutItem(String alias, String type, boolean hidden, Map<String, DataObjectAttribute> srcSchema) throws Exception {
 		
 		outAttribute = new DataObjectAttribute();
+		
 		
 //		aggregates = new ArrayList<Function>();
 //		windowedAggregates = new ArrayList<AnalyticExpression>();
@@ -39,6 +41,7 @@ public class CommonOutItem {
 		
 		outAttribute.setName(alias);
 		outAttribute.setTypeString(type);
+		outAttribute.setHidden(hidden);
 		
 		
 //			public void visit(Column tableColumn) {

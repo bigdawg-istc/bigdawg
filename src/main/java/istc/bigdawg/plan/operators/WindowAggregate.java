@@ -104,7 +104,7 @@ public class WindowAggregate extends Operator {
 		
 		
 		for (String expr : output.getAttributes().keySet()) {
-			CommonOutItem out = new CommonOutItem(expr, output.getAttributes().get(expr), null);
+			CommonOutItem out = new CommonOutItem(expr, output.getAttributes().get(expr), false, null);
 			DataObjectAttribute attr = out.getAttribute();
 			String alias = attr.getName();
 			
@@ -131,6 +131,16 @@ public class WindowAggregate extends Operator {
 			
 		}
 		
+		// dimensions
+		for (String expr : output.getDimensions().keySet()) {
+			
+			CommonOutItem out = new CommonOutItem(expr, "Dimension", true, null);
+			DataObjectAttribute attr = out.getAttribute();
+			String attrName = attr.getFullyQualifiedName();		
+			outSchema.put(attrName, attr);
+				
+		}
+		
 		if(partitionBy.size() > 0) {
 			// if this is (PARTITION BY x ORDER BY y) push down slice key to sort
 			// want to slice as fine as possible to break up SMC groups
@@ -145,8 +155,8 @@ public class WindowAggregate extends Operator {
 	
 	
 	@Override
-	public Select generatePlaintextDestOnly(Select dstStatement) throws Exception {
-		dstStatement = children.get(0).generatePlaintextDestOnly(dstStatement);
+	public Select generateSQLStringDestOnly(Select dstStatement) throws Exception {
+		dstStatement = children.get(0).generateSQLStringDestOnly(dstStatement);
 		// do nothing here until SELECT clause		
 	
 		return dstStatement;
@@ -159,9 +169,9 @@ public class WindowAggregate extends Operator {
 	}
 	
 	@Override
-	public String printPlan(int recursionLevel) throws Exception{
+	public String generateAFLString(int recursionLevel) throws Exception{
 		String planStr =  "WindowAgg(";
-		planStr +=  children.get(0).printPlan(recursionLevel+1);
+		planStr +=  children.get(0).generateAFLString(recursionLevel+1);
 		planStr += winaggs + "," + partitionBy + "," + orderBy + ")";
 		return planStr;
 	}

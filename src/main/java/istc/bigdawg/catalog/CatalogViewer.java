@@ -6,6 +6,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 
 import org.apache.log4j.Logger;
 
@@ -91,13 +92,13 @@ public class CatalogViewer {
 	 * @return HashMap<Integer, ArrayList<String>>
 	 * @throws Exception
 	 */
-	public static HashMap<Integer, ArrayList<String>> getDBMappingByDB (ArrayList<String> inputs) throws Exception {
+	public static HashMap<Integer, List<String>> getDBMappingByDB (List<String> inputs) throws Exception {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		CatalogUtilities.checkConnection(cc);
 		if (inputs.size() == 0) throw new Exception("Empty inputs from getDBMapping");
 		
 		int len = inputs.size();
-		HashMap<Integer, ArrayList<String>> extraction = new HashMap<>();
+		HashMap<Integer, List<String>> extraction = new HashMap<>();
 		
 		String wherePred = new String(" lower(o.name) = lower(\'"+ inputs.get(0) + "\') ");
 		for (int i = 1; i < len; i++) {
@@ -124,14 +125,14 @@ public class CatalogViewer {
 	 * @return HashMap<String,ArrayList<String>>
 	 * @throws Exception
 	 */
-	public static HashMap<String,ArrayList<String>> getDBMappingByObj (ArrayList<String> inputs) throws Exception {
+	public static HashMap<String,List<String>> getDBMappingByObj (List<String> inputs) throws Exception {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		
 		CatalogUtilities.checkConnection(cc);
 		if (inputs.size() == 0) throw new Exception("Empty inputs from getDBMapping");
 		
 		int len = inputs.size();
-		HashMap<String, ArrayList<String>> extraction = new HashMap<>();
+		HashMap<String, List<String>> extraction = new HashMap<>();
 		
 		String wherePred = new String(" lower(o.name) = lower(\'"+ inputs.get(0) + "\') ");
 		for (int i = 1; i < len; i++) {
@@ -197,12 +198,12 @@ public class CatalogViewer {
 	 *         shim access_method
 	 * @throws Exception
 	 */
-	public static ArrayList<String> getAllShims() throws Exception {
+	public static List<String> getAllShims() throws Exception {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
 		CatalogUtilities.checkConnection(cc);
 
-		ArrayList<String> extraction = new ArrayList<String>();
+		List<String> extraction = new ArrayList<String>();
 
 		ResultSet rs = cc.execRet("select shim_id, i.scope_name island, e.name engine, sh.access_method "
 				+ "from catalog.shims sh " + "join catalog.islands i on sh.island_id = i.iid "
@@ -214,6 +215,41 @@ public class CatalogViewer {
 
 		return extraction;
 	}
+	
+	
+	
+	public static List<String> getAllEngines() throws Exception {
+		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
+		// input check
+		CatalogUtilities.checkConnection(cc);
+
+		List<String> extraction = new ArrayList<String>();
+
+		ResultSet rs = cc.execRet("select * from catalog.engines;");
+		while (rs.next()) {
+			extraction.add(rs.getString("eid") + "\t" + rs.getString("name") + "\t" + rs.getString("host")
+					+ "\t" + rs.getString("connection_properties"));
+		}
+
+		return extraction;
+	}
+	
+	public static List<String> getAllDatabases() throws Exception {
+		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
+		// input check
+		CatalogUtilities.checkConnection(cc);
+
+		List<String> extraction = new ArrayList<String>();
+
+		ResultSet rs = cc.execRet("select * from catalog.databases;");
+		while (rs.next()) {
+			extraction.add(rs.getString("dbid") + "\t" + rs.getString("engine_id") + "\t" + rs.getString("name")
+					+ "\t" + rs.getString("userid") + "\t" + rs.getString("password"));
+		}
+
+		return extraction;
+	}
+	
 
 	/**
 	 * View all casts stored in catalog.
@@ -223,12 +259,12 @@ public class CatalogViewer {
 	 *         (dst), and cast access_method
 	 * @throws Exception
 	 */
-	public static ArrayList<String> getAllCasts() throws Exception {
+	public static List<String> getAllCasts() throws Exception {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
 		CatalogUtilities.checkConnection(cc);
 
-		ArrayList<String> extraction = new ArrayList<String>();
+		List<String> extraction = new ArrayList<String>();
 
 		ResultSet rs = cc.execRet("select e1.name src, e2.name dst, c.access_method " + "from catalog.casts c "
 				+ "join catalog.engines e1 on c.src_eid = e1.eid " + "join catalog.engines e2 on c.dst_eid = e2.eid;");
@@ -247,12 +283,12 @@ public class CatalogViewer {
 	 *         physical_db, and name of engine (engine)
 	 * @throws Exception
 	 */
-	public static ArrayList<String> getAllObjects() throws Exception {
+	public static List<String> getAllObjectsByEngine() throws Exception {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
 		CatalogUtilities.checkConnection(cc);
 
-		ArrayList<String> extraction = new ArrayList<String>();
+		List<String> extraction = new ArrayList<String>();
 
 		ResultSet rs = cc.execRet("select o.name obj, o.fields, d.name physical_db, e.name engine "
 				+ "from catalog.objects o " + "left join catalog.databases d 	on o.physical_db = d.dbid "
@@ -260,6 +296,28 @@ public class CatalogViewer {
 		while (rs.next()) {
 			extraction.add(rs.getString("obj") + "\t" + rs.getString("fields") + "\t" + rs.getString("physical_db")
 					+ "\t" + rs.getString("engine"));
+		}
+
+		return extraction;
+	}
+	
+	
+	public static List<String> getAllObjects(boolean includeFields) throws Exception {
+		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
+		// input check
+		CatalogUtilities.checkConnection(cc);
+
+		List<String> extraction = new ArrayList<String>();
+
+		ResultSet rs = cc.execRet("select * from catalog.objects");
+		while (rs.next()) {
+			
+			if (includeFields)
+				extraction.add(rs.getString("oid") + "\t" + rs.getString("name") + "\t" + rs.getString("fields") 
+					+ "\t" + rs.getString("logical_db") + "\t" + rs.getString("physical_db"));
+			else 
+				extraction.add(rs.getString("oid") + "\t" + rs.getString("name") + "\t" + rs.getString("logical_db")
+					+ "\t" + rs.getString("physical_db"));
 		}
 
 		return extraction;
@@ -274,13 +332,13 @@ public class CatalogViewer {
 	 *         physical_db, physical_db
 	 * @throws Exception
 	 */
-	public static ArrayList<String> getObjectsByName(String objName) throws Exception {
+	public static List<String> getObjectsByName(String objName) throws Exception {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
 		CatalogUtilities.checkConnection(cc);
 		CatalogUtilities.checkLength(objName, 15);
 
-		ArrayList<String> extraction = new ArrayList<String>();
+		List<String> extraction = new ArrayList<String>();
 
 		ResultSet rs = cc.execRet("select o.name obj, o.fields, d1.name physical_db, d2.name physical_db "
 				+ "from catalog.objects o " + "join catalog.databases d1 on o.physical_db = d1.dbid "
@@ -303,13 +361,13 @@ public class CatalogViewer {
 	 * @return ArrayList of TSV String of db name (name), userid and password.
 	 * @throws Exception
 	 */
-	public static ArrayList<String> getDbAccessInfo(String dbName) throws Exception {
+	public static List<String> getDbAccessInfo(String dbName) throws Exception {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
 		CatalogUtilities.checkConnection(cc);
 		CatalogUtilities.checkLength(dbName, 15);
 
-		ArrayList<String> extraction = new ArrayList<String>();
+		List<String> extraction = new ArrayList<String>();
 
 		ResultSet rs = cc.execRet(
 				"select name, userid, password " + "from catalog.databases where name ilike \'%" + dbName + "%\';");
@@ -331,13 +389,13 @@ public class CatalogViewer {
 	 *         (engine).
 	 * @throws Exception
 	 */
-	public static ArrayList<String> getDbsOfEngine(String engineName) throws Exception {
+	public static List<String> getDbsOfEngine(String engineName) throws Exception {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
 		CatalogUtilities.checkConnection(cc);
 		CatalogUtilities.checkLength(engineName, 15);
 
-		ArrayList<String> extraction = new ArrayList<String>();
+		List<String> extraction = new ArrayList<String>();
 
 		ResultSet rs = cc.execRet("select d.name db, e.name engine " + "from catalog.databases d "
 				+ "join catalog.engines e 	on d.engine_id = e.eid " + "where e.name ilike \'%" + engineName + "%\' "
@@ -360,13 +418,13 @@ public class CatalogViewer {
 	 *         and shim access method (access_method)
 	 * @throws Exception
 	 */
-	public static ArrayList<String> getDbsOfIsland(String islandName) throws Exception {
+	public static List<String> getDbsOfIsland(String islandName) throws Exception {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
 		CatalogUtilities.checkConnection(cc);
 		CatalogUtilities.checkLength(islandName, 15);
 
-		ArrayList<String> extraction = new ArrayList<String>();
+		List<String> extraction = new ArrayList<String>();
 
 		ResultSet rs = cc.execRet("select d.name db, e.name engine, i.scope_name island, sh.access_method "
 				+ "from catalog.databases d " + "join catalog.shims sh 	on d.engine_id = sh.engine_id "
@@ -390,19 +448,43 @@ public class CatalogViewer {
 	 * @return ArrayList of integers of database id (dbid)
 	 * @throws Exception
 	 */
-	public static ArrayList<Integer> getDbsOfObject(String objName) throws Exception {
+	public static List<Integer> getDbsOfObject(String objName) throws Exception {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
 		CatalogUtilities.checkConnection(cc);
 		CatalogUtilities.checkLength(objName, 50);
 
-		ArrayList<Integer> extraction = new ArrayList<>();
+		List<Integer> extraction = new ArrayList<>();
 
 		ResultSet rs = cc.execRet("select d.dbid " + "from catalog.objects o "
 				+ "join catalog.databases d 	on o.physical_db = d.dbid "
 //				+ "join catalog.engines e 		on d.engine_id = e.eid "
 				+ "where o.name = \'" + objName + "\' "
 //				+ " and e.name ilike \'%postgres%\' "
+				+ "order by d.dbid;");
+
+		while (rs.next()) {
+			extraction.add(rs.getInt("dbid"));
+		}
+		rs.close();
+
+		return extraction;
+	}
+	
+	public static List<Integer> getDbsOfObject(String objName, String dbname) throws Exception {
+		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
+		// input check
+		CatalogUtilities.checkConnection(cc);
+		CatalogUtilities.checkLength(objName, 50);
+		CatalogUtilities.checkLength(objName, 30);
+
+		List<Integer> extraction = new ArrayList<>();
+
+		ResultSet rs = cc.execRet("select d.dbid " + "from catalog.objects o "
+				+ "join catalog.databases d 	on o.physical_db = d.dbid "
+				+ "join catalog.engines e 		on d.engine_id = e.eid "
+				+ "where o.name = \'" + objName + "\' "
+				+ " and e.name ilike \'%"+dbname+"%\' "
 				+ "order by d.dbid;");
 
 		while (rs.next()) {
@@ -423,7 +505,7 @@ public class CatalogViewer {
 	 *         shim_id
 	 * @throws Exception
 	 */
-	public static ArrayList<String> getShimsUseObjectsIslands(ArrayList<String> objs, ArrayList<String> islands) throws Exception {
+	public static List<String> getShimsUseObjectsIslands(List<String> objs, List<String> islands) throws Exception {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
 		CatalogUtilities.checkConnection(cc);
@@ -436,10 +518,10 @@ public class CatalogViewer {
 		for (String islName : islands)
 			CatalogUtilities.checkLength(islName, 15);
 
-		ArrayList<String> extraction = new ArrayList<String>();
-		ArrayList<String> objsdup = new ArrayList<String>();
+		List<String> extraction = new ArrayList<String>();
+		List<String> objsdup = new ArrayList<String>();
 		objsdup.addAll(objs.subList(1, objs.size()));
-		ArrayList<String> isldup = new ArrayList<String>();
+		List<String> isldup = new ArrayList<String>();
 		isldup.addAll(islands.subList(1, islands.size()));
 
 		String wherePred;
@@ -489,7 +571,7 @@ public class CatalogViewer {
 	 *         (db), island, and shim access method.
 	 * @throws Exception
 	 */
-	public static ArrayList<String> getShimsUseObjectsFieldsIslands(ArrayList<String> objs, ArrayList<String> fs, ArrayList<String> islands) throws Exception {
+	public static List<String> getShimsUseObjectsFieldsIslands(List<String> objs, List<String> fs, List<String> islands) throws Exception {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
 		CatalogUtilities.checkConnection(cc);
@@ -508,12 +590,12 @@ public class CatalogViewer {
 				throw new Exception("getShimsUseObjectsFieldsIslands - islands ArrayList is not well constructed.");
 		}
 
-		ArrayList<String> extraction = new ArrayList<String>();
-		ArrayList<String> objsdup = new ArrayList<String>();
+		List<String> extraction = new ArrayList<String>();
+		List<String> objsdup = new ArrayList<String>();
 		objsdup.addAll(objs.subList(1, objs.size()));
-		ArrayList<String> fsdup = new ArrayList<String>();
+		List<String> fsdup = new ArrayList<String>();
 		fsdup.addAll(fs.subList(1, fs.size()));
-		ArrayList<String> isldup = new ArrayList<String>();
+		List<String> isldup = new ArrayList<String>();
 		isldup.addAll(islands.subList(1, islands.size()));
 		String wherePred;
 		if (fs.size() == 0)
@@ -562,7 +644,7 @@ public class CatalogViewer {
 	 *         (src_id), destination engine id (src_id)
 	 * @throws Exception
 	 */
-	public static ArrayList<String> getOneStepCastsUseObjects(ArrayList<String> objs) throws Exception {
+	public static List<String> getOneStepCastsUseObjects(List<String> objs) throws Exception {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
 		CatalogUtilities.checkConnection(cc);
@@ -571,8 +653,8 @@ public class CatalogViewer {
 		for (String objName : objs)
 			CatalogUtilities.checkLength(objName, 15);
 
-		ArrayList<String> extraction = new ArrayList<String>();
-		ArrayList<String> objsdup = new ArrayList<String>();
+		List<String> extraction = new ArrayList<String>();
+		List<String> objsdup = new ArrayList<String>();
 		objsdup.addAll(objs.subList(1, objs.size()));
 		String wherePred = new String(" o.name ilike \'%" + objs.get(0) + "%\' ");
 		for (String objName : objsdup) {
@@ -604,7 +686,7 @@ public class CatalogViewer {
 	 *         engine name (dst) and cast access method (access_method)
 	 * @throws Exception
 	 */
-	public static ArrayList<String> getOneStepCastsUseEngineNames(ArrayList<String> src_e, ArrayList<String> dst_e) throws Exception {
+	public static List<String> getOneStepCastsUseEngineNames(List<String> src_e, List<String> dst_e) throws Exception {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
 		CatalogUtilities.checkConnection(cc);
@@ -618,10 +700,10 @@ public class CatalogViewer {
 		for (String eName : dst_e)
 			CatalogUtilities.checkLength(eName, 15);
 
-		ArrayList<String> extraction = new ArrayList<String>();
-		ArrayList<String> srcdup = new ArrayList<String>();
+		List<String> extraction = new ArrayList<String>();
+		List<String> srcdup = new ArrayList<String>();
 		srcdup.addAll(src_e.subList(1, src_e.size()));
-		ArrayList<String> dstdup = new ArrayList<String>();
+		List<String> dstdup = new ArrayList<String>();
 		dstdup.addAll(dst_e.subList(1, dst_e.size()));
 		String wherePred = new String(
 				"(e1.name ilike \'%" + src_e.get(0) + "%\' and e2.name ilike \'%" + dst_e.get(0) + "%\') ");
@@ -654,7 +736,7 @@ public class CatalogViewer {
 	 *         (access_method)
 	 * @throws Exception
 	 */
-	public static ArrayList<String> getOneStepCastsUseDbToDb(ArrayList<String> src_db, ArrayList<String> dst_db) throws Exception {
+	public static List<String> getOneStepCastsUseDbToDb(List<String> src_db, List<String> dst_db) throws Exception {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
 		CatalogUtilities.checkConnection(cc);
@@ -667,10 +749,10 @@ public class CatalogViewer {
 		for (String dbName : dst_db)
 			CatalogUtilities.checkLength(dbName, 15);
 
-		ArrayList<String> extraction = new ArrayList<String>();
-		ArrayList<String> srcdup = new ArrayList<String>();
+		List<String> extraction = new ArrayList<String>();
+		List<String> srcdup	 = new ArrayList<String>();
 		srcdup.addAll(src_db.subList(1, src_db.size()));
-		ArrayList<String> dstdup = new ArrayList<String>();
+		List<String> dstdup 	= new ArrayList<String>();
 		dstdup.addAll(dst_db.subList(1, dst_db.size()));
 		String wherePred = new String(
 				"(d1.name ilike \'%" + src_db.get(0) + "%\' and d2.name ilike \'%" + dst_db.get(0) + "%\') ");
@@ -707,7 +789,7 @@ public class CatalogViewer {
 	 *         access_method
 	 * @throws Exception
 	 */
-	public static ArrayList<String> getOneStepCastDbsUseObjectsIslands(ArrayList<String> objs, ArrayList<String> islands) throws Exception {
+	public static List<String> getOneStepCastDbsUseObjectsIslands(List<String> objs, List<String> islands) throws Exception {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
 		CatalogUtilities.checkConnection(cc);
@@ -721,10 +803,10 @@ public class CatalogViewer {
 		for (String iName : islands)
 			CatalogUtilities.checkLength(iName, 15);
 
-		ArrayList<String> extraction = new ArrayList<String>();
-		ArrayList<String> objdup = new ArrayList<String>();
+		List<String> extraction = new ArrayList<String>();
+		List<String> objdup = new ArrayList<String>();
 		objdup.addAll(objs.subList(1, objs.size()));
-		ArrayList<String> isldup = new ArrayList<String>();
+		List<String> isldup = new ArrayList<String>();
 		isldup.addAll(islands.subList(1, islands.size()));
 		String wherePred = new String(
 				"(o.name ilike \'%" + objs.get(0) + "%\' and i.scope_name ilike \'%" + islands.get(0) + "%\') ");
@@ -799,4 +881,43 @@ public class CatalogViewer {
 		return conInfo;
 	}
 
+	
+	
+	
+	/**
+	 * Used for updating catalog entries.
+	 * 
+	 * @param args
+	 */
+	public static void main(String[] args) {
+		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
+		try {
+			CatalogUtilities.checkConnection(cc);
+			
+			List<String> result;
+			
+			result = getAllEngines();
+			System.out.println("\neid\tname\thost\tconnection_properties");	
+			for (String s : result) {
+				System.out.println(s);
+			}
+			
+			result = getAllDatabases();
+			System.out.println("\ndbid\tengine_id\tname\tuserid\tpassword");	
+			for (String s : result) {
+				System.out.println(s);	
+			}
+			
+			result = getAllObjects(false);
+			System.out.println("\noid\tname\tlogical_db\tphysical_db");	
+			for (String s : result) {
+				System.out.println(s);
+			}
+			
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+	}
 }

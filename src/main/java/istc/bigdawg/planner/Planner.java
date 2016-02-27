@@ -1,5 +1,6 @@
 package istc.bigdawg.planner;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -38,7 +39,7 @@ public class Planner {
 		
 		// UNROLLING
 		logger.debug("User query received. Parsing...");
-		Map<String, String> crossIslandQuery = UserQueryParser.getUnwrappedQueriesByIslands(userinput, "BIGDAWGTAG_");
+		LinkedHashMap<String, String> crossIslandQuery = UserQueryParser.getUnwrappedQueriesByIslands(userinput);
 		
 		CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(crossIslandQuery);
 

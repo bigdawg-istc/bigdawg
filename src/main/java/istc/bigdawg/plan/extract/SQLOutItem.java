@@ -39,7 +39,26 @@ public class SQLOutItem extends CommonOutItem{
 			SQLTableExpression supplement) throws Exception {
 		super();
 		
+		String finder = expr;
+		DataObjectAttribute doa = srcSchema.get(finder);
+		while (doa == null) {
+			
+			String before = new String(finder);
+			finder = finder.replaceAll("^[_@a-zA-Z]+\\.", "");
+//			System.out.println("updated finder: "+finder);
+			
+			if (before.equals(finder))
+				throw new Exception("cannot find: "+expr);
+			doa = srcSchema.get(finder);
+		}
+		
+		
+		
+//		System.out.println("SQLOutItem: \n--"+expr+"\n--"+srcSchema+"\n");
+		
+		
 		outAttribute = new SQLAttribute();
+		outAttribute.setTypeString(doa.getTypeString());
 		
 		aggregates = new ArrayList<Function>();
 		windowedAggregates = new ArrayList<AnalyticExpression>();

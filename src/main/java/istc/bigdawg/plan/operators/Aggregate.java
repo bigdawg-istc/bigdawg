@@ -122,7 +122,7 @@ public class Aggregate extends Operator {
 		// classify each term as aggregate func or group by
 		for (String expr : output.getAttributes().keySet()) {
 			
-			CommonOutItem out = new CommonOutItem(expr, output.getAttributes().get(expr), null); // TODO CHECK THIS TODO
+			CommonOutItem out = new CommonOutItem(expr, output.getAttributes().get(expr), true, null); // TODO CHECK THIS TODO
 			DataObjectAttribute attr = out.getAttribute();
 			String attrName = attr.getName();
 			
@@ -142,6 +142,16 @@ public class Aggregate extends Operator {
 ////				groupBy.add(attr);
 //			}
 			
+		}
+		
+		// dimensions
+		for (String expr : output.getDimensions().keySet()) {
+			
+			CommonOutItem out = new CommonOutItem(expr, "Dimension", true, null);
+			DataObjectAttribute attr = out.getAttribute();
+			String attrName = attr.getFullyQualifiedName();		
+			outSchema.put(attrName, attr);
+				
 		}
 		
 
@@ -208,9 +218,9 @@ public class Aggregate extends Operator {
 	
 	
 	@Override
-	public Select generatePlaintextDestOnly(Select dstStatement) throws Exception {
+	public Select generateSQLStringDestOnly(Select dstStatement) throws Exception {
 
-		dstStatement = children.get(0).generatePlaintextDestOnly(dstStatement);
+		dstStatement = children.get(0).generateSQLStringDestOnly(dstStatement);
 				
 		PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
 		ps.setGroupByColumnReferences(parsedGroupBys);
@@ -225,10 +235,10 @@ public class Aggregate extends Operator {
 	}
 	
 	@Override
-	public String printPlan(int recursionLevel) throws Exception {
+	public String generateAFLString(int recursionLevel) throws Exception {
 		
 		String planStr =  "Aggregate(";
-		planStr += children.get(0).printPlan(recursionLevel+1);
+		planStr += children.get(0).generateAFLString(recursionLevel+1);
 		planStr +=  ", (";
 		
 		for(int i = 0; i < aggregates.size(); ++i) {
@@ -246,6 +256,12 @@ public class Aggregate extends Operator {
 		planStr +=  ")";
 		
 		return planStr;
+	}
+	
+	@Override
+	public String getTreeRepresentation(){
+		if (isPruned()) return "{PRUNED}";
+		else return "{aggregate"+children.get(0).getTreeRepresentation()+"}";
 	}
 
 };
