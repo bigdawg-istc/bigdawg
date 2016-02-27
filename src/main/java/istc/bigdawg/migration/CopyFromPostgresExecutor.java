@@ -22,7 +22,7 @@ import org.postgresql.core.BaseConnection;
  */
 public class CopyFromPostgresExecutor implements Callable<Long> {
 
-	private static Logger log = Logger.getLogger(FromPostgresToPostgres.class);
+	private static Logger log = Logger.getLogger(CopyFromPostgresExecutor.class);
 
 	private final CopyManager cpFrom;
 	private String copyFromString;

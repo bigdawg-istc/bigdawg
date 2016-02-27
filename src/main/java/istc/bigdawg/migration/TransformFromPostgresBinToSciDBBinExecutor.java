@@ -20,11 +20,10 @@ import istc.bigdawg.utils.StackTrace;
  * 
  *         Feb 26, 2016 11:14:07 AM
  */
-public class TransformFromPostgresBinToSciDBBinExecutor
-		implements Callable<Long> {
+public class TransformFromPostgresBinToSciDBBinExecutor implements Callable<Long> {
 
 	/* log */
-	private static Logger log = Logger.getLogger(FromPostgresToPostgres.class);
+	private static Logger log = Logger.getLogger(TransformFromPostgresBinToSciDBBinExecutor.class);
 
 	/* input: the path to the file with binary data from PostgreSQL */
 	private final String postgresBinFilePath;
@@ -41,8 +40,7 @@ public class TransformFromPostgresBinToSciDBBinExecutor
 	 * @param scidbBinFilePath
 	 * @param format
 	 */
-	public TransformFromPostgresBinToSciDBBinExecutor(
-			String postgresBinFilePath, String scidbBinFilePath,
+	public TransformFromPostgresBinToSciDBBinExecutor(String postgresBinFilePath, String scidbBinFilePath,
 			String format) {
 		this.postgresBinFilePath = postgresBinFilePath;
 		this.scidbBinFilePath = scidbBinFilePath;
@@ -56,40 +54,34 @@ public class TransformFromPostgresBinToSciDBBinExecutor
 	 */
 	public Long call() {
 		try {
-			return (long) RunShell.runShellReturnExitValue(new ProcessBuilder(
-					"src/main/cmigrator/postgres2scidb", "-i",
+			return (long) RunShell.runShellReturnExitValue(new ProcessBuilder("src/main/cmigrator/postgres2scidb", "-i",
 					postgresBinFilePath, "-o", scidbBinFilePath, "-f", format));
 		} catch (IOException | InterruptedException ex) {
 			ex.printStackTrace();
-			log.error(
-					"The binary transformation from PostgreSQL to SciDB failed: "
-							+ ex.getMessage() + " "
-							+ StackTrace.getFullStackTrace(ex),
-					ex);
+			log.error("The binary transformation from PostgreSQL to SciDB failed: " + ex.getMessage() + " "
+					+ StackTrace.getFullStackTrace(ex), ex);
 			return -1L;
 		}
 	}
 
 	/**
 	 * @param args
-	 * @throws ExecutionException 
-	 * @throws InterruptedException 
+	 * @throws ExecutionException
+	 * @throws InterruptedException
 	 */
 	public static void main(String[] args) throws InterruptedException, ExecutionException {
 		ExecutorService executor = null;
 		try {
-		TransformFromPostgresBinToSciDBBinExecutor transformExecutor = new TransformFromPostgresBinToSciDBBinExecutor(
-				"src/main/cmigrator/data/fromPostgresIntDoubleString.bin",
-				"src/main/cmigrator/data/toSciDBIntDoubleString.bin,",
-				"int32_t,int32_t:null,double,double:null,string,string");
-		FutureTask<Long> transformTask = new FutureTask<Long>(
-				transformExecutor);
-		int minNumberOfThreads = 1;
-		executor = Executors
-				.newFixedThreadPool(minNumberOfThreads);
-		executor.submit(transformTask);
-		long exitValue = transformTask.get();
-		System.out.println("Exit value postgres2scidb exitValue: " + exitValue);
+			TransformFromPostgresBinToSciDBBinExecutor transformExecutor = new TransformFromPostgresBinToSciDBBinExecutor(
+					"src/main/cmigrator/data/fromPostgresIntDoubleString.bin",
+					"src/main/cmigrator/data/toSciDBIntDoubleString.bin,",
+					"int32_t,int32_t:null,double,double:null,string,string");
+			FutureTask<Long> transformTask = new FutureTask<Long>(transformExecutor);
+			int minNumberOfThreads = 1;
+			executor = Executors.newFixedThreadPool(minNumberOfThreads);
+			executor.submit(transformTask);
+			long exitValue = transformTask.get();
+			System.out.println("Exit value postgres2scidb exitValue: " + exitValue);
 		} finally {
 			if (executor != null && !executor.isShutdown()) {
 				executor.shutdownNow();

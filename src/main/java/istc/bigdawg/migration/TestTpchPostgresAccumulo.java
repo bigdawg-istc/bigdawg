@@ -14,8 +14,8 @@ import org.apache.accumulo.core.client.TableNotFoundException;
 import istc.bigdawg.exceptions.AccumuloBigDawgException;
 
 /**
+ * 
  * @author Adam Dziedzic
- * 9:24:07 PM
  *
  */
 public class TestTpchPostgresAccumulo {

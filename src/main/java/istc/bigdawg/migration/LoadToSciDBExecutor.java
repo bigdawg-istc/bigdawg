@@ -18,7 +18,8 @@ import istc.bigdawg.scidb.SciDBHandler;
  */
 public class LoadToSciDBExecutor implements Callable<String> {
 
-	private static Logger log = Logger.getLogger(FromPostgresToPostgres.class);
+	/* log */
+	private static Logger log = Logger.getLogger(LoadToSciDBExecutor.class);
 
 	/* SciDB connection info */
 	private SciDBConnectionInfo connectionTo;

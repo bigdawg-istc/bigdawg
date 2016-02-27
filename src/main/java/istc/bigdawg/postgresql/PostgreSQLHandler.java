@@ -712,6 +712,27 @@ public class PostgreSQLHandler implements DBHandler {
 	public void dropTableIfExists(String tableName) throws SQLException {
 		executeStatementPostgreSQL("drop table if exists " + tableName);
 	}
+	
+		/**
+	 * Command to copy data from a table in PostgreSQL.
+	 * 
+	 * @param table
+	 *            the name of the table from which we extract data
+	 * @param delimiter
+	 *            the delimiter for the output CSV file
+	 * 
+	 * @return the command to extract data from a table in PostgreSQL
+	 */
+	public static String getExportCsvCommand(String table, String delimiter) {
+		StringBuilder copyFromStringBuf = new StringBuilder();
+		copyFromStringBuf.append("COPY ");
+		copyFromStringBuf.append(table + " ");
+		copyFromStringBuf.append("TO ");
+		copyFromStringBuf.append(" STDOUT ");
+		copyFromStringBuf
+				.append("with (format csv, delimiter '" + delimiter + "')");
+		return copyFromStringBuf.toString();
+	}
 
 	/**
 	 * Check if a table exists.

@@ -4,6 +4,8 @@
 package istc.bigdawg.migration;
 
 /**
+ * Names of flat and destination arrays used during the migration process.
+ * 
  * @author Adam Dziedzic
  * 
  *         Feb 24, 2016 11:03:35 AM
