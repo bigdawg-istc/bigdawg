@@ -26,6 +26,7 @@ import istc.bigdawg.BDConstants;
 import istc.bigdawg.BDConstants.Shim;
 import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.exceptions.MigrationException;
+import istc.bigdawg.exceptions.NoTargetArrayException;
 import istc.bigdawg.exceptions.SciDBException;
 import istc.bigdawg.postgresql.PostgreSQLColumnMetaData;
 import istc.bigdawg.query.DBHandler;
@@ -37,6 +38,10 @@ import istc.bigdawg.utils.StackTrace;
 import istc.bigdawg.utils.Tuple.Tuple2;
 
 /**
+ * SciDB Handler to execute statements in SciDB.
+ * 
+ * Note: SciDB does not support transactions.
+ * 
  * @author Adam Dziedzic
  * 
  */
@@ -46,7 +51,17 @@ public class SciDBHandler implements DBHandler {
 	private SciDBConnectionInfo conInfo;
 	private Connection connection;
 
-	public SciDBHandler() {
+	public enum Lang {
+		AQL, AFL
+	};
+
+	/**
+	 * Create a default SciDB Handler with parameters from the configuration
+	 * file.
+	 * 
+	 * @throws SQLException
+	 */
+	public SciDBHandler() throws SQLException {
 		this.conInfo = new SciDBConnectionInfo();
 		try {
 			this.connection = getConnection(conInfo);
@@ -119,6 +134,7 @@ public class SciDBHandler implements DBHandler {
 	public void close() throws SQLException {
 		if (connection != null) {
 			try {
+				connection.commit();
 				connection.close();
 				connection = null;
 			} catch (SQLException e) {
@@ -132,18 +148,46 @@ public class SciDBHandler implements DBHandler {
 	}
 
 	/**
-	 * This statement will be executed via jdbc.
+	 * This statement will be executed via jdbc in AFL language.
+	 * 
+	 * @param statement
+	 *            scidb statement
+	 * @throws SQLException
+	 */
+	public void executeStatementAFL(String stringStatement)
+			throws SQLException {
+		executeStatementSciDB(stringStatement, Lang.AFL);
+	}
+
+	/**
+	 * This statement will be executed via jdbc in AQL language.
 	 * 
 	 * @param statement
 	 *            scidb statement
 	 * @throws SQLException
 	 */
 	public void executeStatement(String stringStatement) throws SQLException {
+		executeStatementSciDB(stringStatement, Lang.AQL);
+	}
+
+	/**
+	 * Execute the statement in SciDB in the given language (AFL or AQL).
+	 * 
+	 * @param stringStatement
+	 * @param lang
+	 * @throws SQLException
+	 */
+	private void executeStatementSciDB(String stringStatement, Lang lang)
+			throws SQLException {
 		Statement statement = null;
 		try {
 			statement = connection.createStatement();
+			IStatementWrapper statementWrapper = statement
+					.unwrap(IStatementWrapper.class);
+			if (lang == Lang.AFL) {
+				statementWrapper.setAfl(true);
+			}
 			statement.execute(stringStatement);
-			statement.close();
 		} catch (SQLException ex) {
 			ex.printStackTrace();
 			// remove ' from the statement - otherwise it won't be inserted into
@@ -153,14 +197,29 @@ public class SciDBHandler implements DBHandler {
 					+ StackTrace.getFullStackTrace(ex), ex);
 			throw ex;
 		} finally {
-			if (statement != null) {
-				statement.close();
-			}
+			closeStatement(statement);
 		}
 	}
 
-	/*
-	 * (non-Javadoc)
+	/**
+	 * Commit the transaction in SciDB.
+	 * 
+	 * @throws SQLException
+	 */
+	public void commit() throws SQLException {
+		try {
+			connection.commit();
+		} catch (SQLException ex) {
+			ex.printStackTrace();
+			log.error("Could not commit for a connection to a SciDB database. "
+					+ conInfo.toString() + " " + ex.getMessage()
+					+ StackTrace.getFullStackTrace(ex), ex);
+			throw ex;
+		}
+	}
+
+	/**
+	 * The query executed via iquery (not JDBC).
 	 * 
 	 * @see istc.bigdawg.query.DBHandler#executeQuery(java.lang.String)
 	 */
@@ -225,6 +284,15 @@ public class SciDBHandler implements DBHandler {
 		return BDConstants.Shim.PSQLARRAY;
 	}
 
+	/**
+	 * Execute query in SciDB using command line iquery;
+	 * 
+	 * @param queryString
+	 * @return
+	 * @throws IOException
+	 * @throws InterruptedException
+	 * @throws SciDBException
+	 */
 	private String executeQueryScidb(String queryString)
 			throws IOException, InterruptedException, SciDBException {
 		// String sciDBUser = BigDawgConfigProperties.INSTANCE.getScidbUser();
@@ -266,6 +334,18 @@ public class SciDBHandler implements DBHandler {
 		return responseResult;
 	}
 
+	/**
+	 * Get data from SciDB by running an iquery from a command line.
+	 * 
+	 * @param queryString
+	 * @param host
+	 * @param port
+	 * @param binPath
+	 * @return the results in a form of a String
+	 * @throws IOException
+	 * @throws InterruptedException
+	 * @throws SciDBException
+	 */
 	private String getDataFromSciDB(final String queryString, final String host,
 			final String port, final String binPath)
 					throws IOException, InterruptedException, SciDBException {
@@ -283,18 +363,18 @@ public class SciDBHandler implements DBHandler {
 	 *            the arrayName string
 	 * @return map columm/attribute name to its metadata
 	 * @throws SQLException
+	 * @throws NoTargetArrayException
 	 */
 	public SciDBArrayMetaData getArrayMetaData(String arrayName)
-			throws SQLException {
+			throws SQLException, NoTargetArrayException {
 		Map<String, SciDBColumnMetaData> dimensionsMap = new HashMap<>();
 		List<SciDBColumnMetaData> dimensionsOrdered = new ArrayList<>();
 		Map<String, SciDBColumnMetaData> attributesMap = new HashMap<>();
 		List<SciDBColumnMetaData> attributesOrdered = new ArrayList<>();
-		Statement statement = null;
+		Statement statement = connection.createStatement();
 		ResultSet resultSetDimensions = null;
 		ResultSet resultSetAttributes = null;
 		try {
-			statement = connection.createStatement();
 			resultSetDimensions = statement.executeQuery(
 					"select * from dimensions(" + arrayName + ")");
 			while (!resultSetDimensions.isAfterLast()) {
@@ -308,7 +388,7 @@ public class SciDBHandler implements DBHandler {
 			}
 			resultSetAttributes = statement.executeQuery(
 					"select * from attributes(" + arrayName + ")");
-			while (!resultSetAttributes.isAfterLast()) { 
+			while (!resultSetAttributes.isAfterLast()) {
 				SciDBColumnMetaData columnMetaData = new SciDBColumnMetaData(
 						resultSetAttributes.getString(2),
 						resultSetAttributes.getString(3));
@@ -320,6 +400,10 @@ public class SciDBHandler implements DBHandler {
 			return new SciDBArrayMetaData(dimensionsMap, dimensionsOrdered,
 					attributesMap, attributesOrdered);
 		} catch (SQLException ex) {
+			if (ex.getMessage()
+					.contains("Array '" + arrayName + "' does not exist.")) {
+				throw new NoTargetArrayException();
+			}
 			ex.printStackTrace();
 			log.error("Error while trying to get meta data from SciDB. "
 					+ ex.getMessage() + " " + StackTrace.getFullStackTrace(ex),
@@ -333,7 +417,7 @@ public class SciDBHandler implements DBHandler {
 	}
 
 	/**
-	 * Close the result set
+	 * Close the result set.
 	 * 
 	 * @param resultSet
 	 * @throws SQLException
@@ -409,6 +493,43 @@ public class SciDBHandler implements DBHandler {
 			scidbTypesPattern[columnMetaData.getPosition() - 1] = newType;
 		}
 		return String.copyValueOf(scidbTypesPattern);
+	}
+
+	/**
+	 * This is similar to dropArrayIfExists. The array is removed if it exists.
+	 * Otherwise, no exception is thrown.
+	 * 
+	 * @throws SQLException
+	 */
+	public static void dropArrayIfExists(SciDBConnectionInfo conTo, String array)
+			throws SQLException {
+		Connection con = null;
+		Statement statement = null;
+		try {
+			con = SciDBHandler.getConnection(conTo);
+			statement = con.createStatement();
+			statement.execute("drop array " + array);
+		} catch (SQLException ex) {
+			/*
+			 * it can be thrown when the target array did not exists which
+			 * should be a default behavior
+			 */
+			if (ex.getMessage()
+					.contains("Array '" + array + "' does not exist.")) {
+				/* the array did not exist in the SciDB database */
+				return;
+			} else {
+				throw ex;
+			}
+		} finally {
+			if (statement != null) {
+				statement.close();
+			}
+			if (con != null) {
+				con.commit();
+				con.close();
+			}
+		}
 	}
 
 	/**

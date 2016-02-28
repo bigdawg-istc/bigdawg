@@ -3,12 +3,12 @@
  */
 package istc.bigdawg.migration;
 
-import java.io.IOException;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.FutureTask;
 
 import org.apache.log4j.Logger;
@@ -29,109 +29,56 @@ import istc.bigdawg.utils.StackTrace;
  */
 public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 
+	/*
+	 * log
+	 */
 	private static Logger logger = Logger.getLogger(FromPostgresToPostgres.class);
+	
+	private static final int minNumberOfThreads = 2;
 
 	/**
 	 * Direction for the PostgreSQL copy command.
 	 * 
 	 * @author Adam Dziedzic
-	 * 
 	 */
 	private enum DIRECTION {
 		TO, FROM
 	};
 
-	private String getCopyCommand(String table, DIRECTION direction) {
+	/**
+	 * Copy out to STDOUT. Copy in from STDIN.
+	 * 
+	 * @author Adam Dziedzic
+	 */
+	private enum STDIO {
+		STDOUT, STDIN
+	}
+
+	/**
+	 * Get the postgresql command to copy data.
+	 * 
+	 * @param table
+	 *            table from/to which you want to copy the data
+	 * @param direction
+	 *            to/from STDOUT
+	 * @return the command to copy data
+	 */
+	private String getCopyCommand(String table, DIRECTION direction, STDIO stdio) {
 		StringBuilder copyFromStringBuf = new StringBuilder();
 		copyFromStringBuf.append("COPY ");
 		copyFromStringBuf.append(table + " ");
 		copyFromStringBuf.append(direction.toString() + " ");
-		copyFromStringBuf.append("STDOUT with binary");/* with binary */
+		copyFromStringBuf
+				.append(stdio.toString() + " with binary");/* with binary */
 		return copyFromStringBuf.toString();
 	}
 
 	/**
-	 * This is run as a separate thread to copy data from PostgreSQL.
-	 * 
-	 * @author Adam Dziedzic
-	 * 
-	 *         Jan 14, 2016 6:06:36 PM
+	 * Migrate data between instances of PostgreSQL.
 	 */
-	private class CopyFromExecutor implements Callable<Long> {
-
-		private CopyManager cpFrom;
-		private String copyFromString;
-		private final PipedOutputStream output;
-
-		private CopyFromExecutor(final CopyManager cpFrom, final String copyFromString,
-				final PipedOutputStream output) {
-			this.cpFrom = cpFrom;
-			this.copyFromString = copyFromString;
-			this.output = output;
-		}
-
-		/**
-		 * Copy data from PostgreSQL.
-		 * 
-		 * @return number of extracted rows
-		 */
-		public Long call() {
-			Long countExtractedRows = 0L;
-			try {
-				countExtractedRows = cpFrom.copyOut(copyFromString, output);
-				output.close();
-			} catch (IOException | SQLException e) {
-				String msg = e.getMessage() + " Problem with thread for PostgreSQL copy manager "
-						+ "while copying (extracting) data from PostgreSQL.";
-				logger.error(msg, e);
-				e.printStackTrace();
-			}
-			return countExtractedRows;
-		}
-	}
-
-	/**
-	 * This is run in a separate thread to copy data to PostgreSQL.
-	 * 
-	 * @author Adam Dziedzic
-	 * 
-	 *         Jan 14, 2016 6:07:05 PM
-	 */
-	private class CopyToExecutor implements Callable<Long> {
-
-		private CopyManager cpTo;
-		private String copyToString;
-		private final PipedInputStream input;
-
-		public CopyToExecutor(final CopyManager cpTo, final String copyToString, final PipedInputStream input) {
-			this.cpTo = cpTo;
-			this.copyToString = copyToString;
-			this.input = input;
-		}
-
-		/**
-		 * Copy data to PostgreSQL.
-		 * 
-		 * @return number of loaded rows
-		 */
-		public Long call() {
-			Long countLoadedRows = 0L;
-			try {
-				countLoadedRows = cpTo.copyIn(copyToString, input);
-				input.close();
-			} catch (IOException | SQLException e) {
-				String msg = e.getMessage() + " Problem with thread for PostgreSQL copy manager "
-						+ "while copying data to PostgreSQL.";
-				logger.error(msg);
-				e.printStackTrace();
-			}
-			return countLoadedRows;
-		}
-	}
-
 	public MigrationResult migrate(ConnectionInfo connectionFrom, String fromTable, ConnectionInfo connectionTo,
 			String toTable) throws MigrationException {
-		logger.debug("General data migration: "+this.getClass().getName());
+		logger.debug("General data migration: " + this.getClass().getName());
 		if (connectionFrom instanceof PostgreSQLConnectionInfo && connectionTo instanceof PostgreSQLConnectionInfo) {
 			try {
 				return this.migrate((PostgreSQLConnectionInfo) connectionFrom, fromTable,
@@ -144,7 +91,7 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 	}
 
 	/**
-	 * Create a new schema and table in the connectionTo if they not exists. Get
+	 * Create a new schema and table in the connectionTo if they not exist. Get
 	 * the table definition from connectionFrom.
 	 * 
 	 * @param connectionFrom
@@ -175,11 +122,12 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 			PostgreSQLConnectionInfo connectionTo, String toTable) throws Exception {
 		long startTimeMigration = System.currentTimeMillis();
 
-		String copyFromString = getCopyCommand(fromTable, DIRECTION.TO/* STDOUT */);
-		String copyToString = getCopyCommand(toTable, DIRECTION.FROM/* STDIN */);
+		String copyFromString = getCopyCommand(fromTable, DIRECTION.TO, STDIO.STDOUT);
+		String copyToString = getCopyCommand(toTable, DIRECTION.FROM, STDIO.STDIN);
 
 		Connection conFrom = null;
 		Connection conTo = null;
+		ExecutorService executor = null;
 		try {
 			conFrom = PostgreSQLHandler.getConnection(connectionFrom);
 			conTo = PostgreSQLHandler.getConnection(connectionTo);
@@ -189,36 +137,21 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 			conTo.setAutoCommit(false);
 			createTargetTableSchema(conFrom, fromTable, conTo, toTable);
 
-			// Statement st = conTo.createStatement();
-			// st.execute("CREATE temporary TABLE d_patients (subject_id integer
-			// NOT NULL,sex character varying(1),dob timestamp without time zone
-			// NOT NULL,dod timestamp without time zone,hospital_expire_flg
-			// character varying(1) DEFAULT 'N'::character varying)");
-
-			CopyManager cpFrom = new CopyManager((BaseConnection) conFrom);
-			CopyManager cpTo = new CopyManager((BaseConnection) conTo);
-
 			final PipedOutputStream output = new PipedOutputStream();
 			final PipedInputStream input = new PipedInputStream(output);
 
-			CopyFromExecutor copyFromExecutor = new CopyFromExecutor(cpFrom, copyFromString, output);
+			CopyFromPostgresExecutor copyFromExecutor = new CopyFromPostgresExecutor(conFrom, copyFromString, output);
 			FutureTask<Long> taskCopyFromExecutor = new FutureTask<Long>(copyFromExecutor);
-			Thread copyFromThread = new Thread(taskCopyFromExecutor);
 
-			CopyToExecutor copyToExecutor = new CopyToExecutor(cpTo, copyToString, input);
+			CopyToPostgresExecutor copyToExecutor = new CopyToPostgresExecutor(conTo, copyToString, input);
 			FutureTask<Long> taskCopyToExecutor = new FutureTask<Long>(copyToExecutor);
-			Thread copyToThread = new Thread(taskCopyToExecutor);
-
-			copyFromThread.start();
-			copyToThread.start();
-
-			copyFromThread.join();
-			copyToThread.join();
-
-			conTo.commit();
-			conFrom.commit();
+			
+			executor = Executors.newFixedThreadPool(minNumberOfThreads);
+			executor.submit(taskCopyFromExecutor);
+			executor.submit(taskCopyToExecutor);
 			long countExtractedElements = taskCopyFromExecutor.get();
 			long countLoadedElements = taskCopyToExecutor.get();
+
 			long endTimeMigration = System.currentTimeMillis();
 			MigrationStatistics stats = new MigrationStatistics(connectionFrom, connectionTo, fromTable, toTable,
 					startTimeMigration, endTimeMigration, countExtractedElements, countLoadedElements,
@@ -240,6 +173,9 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 			if (conTo != null) {
 				conTo.close();
 				conTo = null;
+			}
+			if (executor != null && !executor.isShutdown()) {
+				executor.shutdownNow();
 			}
 		}
 	}

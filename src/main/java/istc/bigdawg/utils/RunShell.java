@@ -23,33 +23,63 @@ public class RunShell {
 
 	private static Logger log = Logger.getLogger(RunShell.class);
 
+	/**
+	 * Runs a shell script and returns the stream of data returned by the called
+	 * program.
+	 * 
+	 * @param procBuilder
+	 * @return the stream of data returned by the process
+	 * @throws RunShellException
+	 * @throws InterruptedException
+	 * @throws IOException
+	 */
 	public static InputStream runShell(ProcessBuilder procBuilder)
 			throws RunShellException, InterruptedException, IOException {
 		Process prop = procBuilder.start();
-		prop.waitFor();
-		int exitVal = prop.exitValue();
+		int exitVal = prop.waitFor();
 		if (exitVal != 0) {
 			throw new RunShellException("Process returned value: " + exitVal);
 		}
 		return prop.getInputStream();
 	}
 
-	public static InputStream runAccumuloScript(String filePath, String database, String table, String query)
-			throws IOException, InterruptedException, AccumuloShellScriptException {
+	/**
+	 * Run a shell script (program from a shell command line) and return the
+	 * value returned by the process.
+	 * 
+	 * @param procBuilder
+	 * @return the value (int) returned by the process
+	 * @throws IOException
+	 * @throws InterruptedException
+	 */
+	public static int runShellReturnExitValue(ProcessBuilder procBuilder)
+			throws IOException, InterruptedException {
+		Process prop = procBuilder.start();
+		prop.waitFor();
+		return prop.exitValue();
+	}
+
+	public static InputStream runAccumuloScript(String filePath,
+			String database, String table, String query) throws IOException,
+					InterruptedException, AccumuloShellScriptException {
 		try {
-			return runShell(new ProcessBuilder(filePath, database, table, query));
+			return runShell(
+					new ProcessBuilder(filePath, database, table, query));
 		} catch (RunShellException e) {
 			e.printStackTrace();
-			String msg = "Problem with the shell script: " + filePath + " database: " + database + " table: " + table
-					+ " query: " + query + " " + e.getMessage();
+			String msg = "Problem with the shell script: " + filePath
+					+ " database: " + database + " table: " + table + " query: "
+					+ query + " " + e.getMessage();
 			log.error(msg);
 			throw new AccumuloShellScriptException(msg);
 		}
 	}
 
-	public static InputStream runSciDBAFLquery(String host, String port, String binPath, String query)
-			throws IOException, InterruptedException, SciDBException {
-		String msg = "host: " + host + " query in runSciDB: " + query + " SciDB bin path: " + binPath;
+	public static InputStream runSciDBAFLquery(String host, String port,
+			String binPath, String query)
+					throws IOException, InterruptedException, SciDBException {
+		String msg = "host: " + host + " query in runSciDB: " + query
+				+ " SciDB bin path: " + binPath;
 		log.info(msg);
 		/*
 		 * there were problems with the ' so it was supposed to be rplaced with
@@ -57,11 +87,13 @@ public class RunShell {
 		 */
 		query = query.replace("^^", "'");
 		try {
-			return runShell(new ProcessBuilder(binPath + "iquery", "--host", host, "--port", port, "--afl --query",
-					query, "-o", "tsv+"));
+			return runShell(new ProcessBuilder(binPath + "iquery", "--host",
+					host, "--port", port, "--afl --query", query, "-o",
+					"tsv+"));
 		} catch (RunShellException e) {
 			e.printStackTrace();
-			msg = "Problem iquery and parameters: " + msg + " " + e.getMessage();
+			msg = "Problem iquery and parameters: " + msg + " "
+					+ e.getMessage();
 			log.error(msg);
 			throw new SciDBException(msg);
 		}
@@ -78,14 +110,16 @@ public class RunShell {
 	 * @throws IOException
 	 * @throws InterruptedException
 	 */
-	public static InputStream executeAQLcommandSciDB(String host, String port, String binPath, String command)
-			throws SciDBException, IOException, InterruptedException {
-		String msg = "command to be executed in SciDB: " + command.replace("'", "") + "; on host: " + host + " port: "
+	public static InputStream executeAQLcommandSciDB(String host, String port,
+			String binPath, String command)
+					throws SciDBException, IOException, InterruptedException {
+		String msg = "command to be executed in SciDB: "
+				+ command.replace("'", "") + "; on host: " + host + " port: "
 				+ port + " SciDB bin path: " + binPath;
 		log.info(msg);
 		try {
-			return runShell(new ProcessBuilder(binPath + "iquery", "--host", host, "--port", port, "--no-fetch",
-					"--query", command));
+			return runShell(new ProcessBuilder(binPath + "iquery", "--host",
+					host, "--port", port, "--no-fetch", "--query", command));
 		} catch (RunShellException e) {
 			e.printStackTrace();
 			msg = "Error for: " + msg + " " + e.getMessage();
@@ -100,14 +134,17 @@ public class RunShell {
 	 */
 	public static void main(String[] args) throws IOException {
 		LoggerSetup.setLogging();
-		System.out.println("Present Project Directory : " + System.getProperty("user.dir"));
+		System.out.println("Present Project Directory : "
+				+ System.getProperty("user.dir"));
 		try {
 			// InputStream
 			// inStream=run(System.getProperty("user.dir")+"/scripts/test_script/echo_script.sh");
 			// InputStream
 			// inStream=run(System.getProperty("user.dir")+"/scripts/test_script/vijay_query.sh");
-			System.out.println(BigDawgConfigProperties.INSTANCE.getAccumuloShellScript());
-			InputStream inStream = runAccumuloScript(BigDawgConfigProperties.INSTANCE.getAccumuloShellScript(),
+			System.out.println(
+					BigDawgConfigProperties.INSTANCE.getAccumuloShellScript());
+			InputStream inStream = runAccumuloScript(
+					BigDawgConfigProperties.INSTANCE.getAccumuloShellScript(),
 					"classdb01", "note_events_Tedge",
 					"Tedge('16965_recordTime_2697-08-04-00:00:00.0_recordNum_1_recordType_DISCHARGE_SUMMARY.txt,',:)");
 			// InputStream
