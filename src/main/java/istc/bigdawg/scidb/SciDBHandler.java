@@ -29,6 +29,7 @@ import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.exceptions.NoTargetArrayException;
 import istc.bigdawg.exceptions.SciDBException;
 import istc.bigdawg.postgresql.PostgreSQLColumnMetaData;
+import istc.bigdawg.postgresql.PostgreSQLTableMetaData;
 import istc.bigdawg.query.DBHandler;
 import istc.bigdawg.query.QueryResponseTupleList;
 import istc.bigdawg.utils.Constants;
@@ -468,8 +469,8 @@ public class SciDBHandler implements DBHandler {
 	 * @return a string of characters from the set: NnSsCc
 	 * 
 	 */
-	public static String getTypePatternFromPostgresTypes(
-			List<PostgreSQLColumnMetaData> columnsMetaData) {
+	public static String getTypePatternFromPostgresTypes(final PostgreSQLTableMetaData postgresTableMetaData ) {
+		final List<PostgreSQLColumnMetaData> columnsMetaData = postgresTableMetaData.getColumnsOrdered();
 		char[] scidbTypesPattern = new char[columnsMetaData.size()];
 		for (PostgreSQLColumnMetaData columnMetaData : columnsMetaData) {
 			// check the character type
@@ -478,8 +479,8 @@ public class SciDBHandler implements DBHandler {
 					|| columnMetaData.getDataType().equals("char"))
 					&& columnMetaData.getCharacterMaximumLength() == 1) {
 				newType = 'C';
-			} else if (columnMetaData.getDataType().equals("varchar")
-					|| columnMetaData.getDataType().equals("character")
+			} else if (columnMetaData.getDataType().contains("varchar")
+					|| columnMetaData.getDataType().contains("character")
 					|| columnMetaData.getDataType()
 							.contains("character varying")
 					|| columnMetaData.getDataType().equals("text")) {

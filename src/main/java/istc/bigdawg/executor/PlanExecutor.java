@@ -1,6 +1,7 @@
 package istc.bigdawg.executor;
 
 import java.sql.SQLException;
+import java.text.ParseException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -10,6 +11,7 @@ import java.util.concurrent.ExecutionException;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
+import istc.bigdawg.executor.plan.BinaryJoinExecutionNode;
 import istc.bigdawg.migration.MigrationResult;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.log4j.Logger;
@@ -106,9 +108,22 @@ class PlanExecutor {
     }
     
     private Optional<QueryResult> executeNode(ExecutionNode node) {
+        // perform shuffle join if required
+        if (node instanceof BinaryJoinExecutionNode) {
+            BinaryJoinExecutionNode joinNode = (BinaryJoinExecutionNode) node;
+            if(!joinNode.getHint().isPresent() || joinNode.getHint().get() == BinaryJoinExecutionNode.JoinAlgorithms.SHUFFLE) {
+                try {
+                    return new ShuffleJoinExecutor(joinNode).execute();
+                } catch (Exception e) {
+                    log.error(String.format("Error executing node %s", joinNode), e);
+                    return Optional.empty();
+                }
+            }
+        }
+
+        // otherwise perform local query execution/broadcast join
         // colocate dependencies, blocking until completed
         colocateDependencies(node);
-
         log.debug(String.format("Executing query node %s...", node.getTableName()));
 
         return node.getQueryString().flatMap((query) -> {

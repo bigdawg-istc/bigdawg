@@ -5,7 +5,7 @@
 
 TypeAttributeMap::TypeAttributeMap() 
 {
-  std::string nullString = ":null";
+  std::string nullString = " null";
 
   typeAttributeMap.insert(std::make_pair("int16",std::make_shared<GenericAttribute<int16_t> >(false)));
   typeAttributeMap.insert(std::make_pair("int16"+nullString,std::make_shared<GenericAttribute<int16_t> >(true)));
@@ -45,6 +45,7 @@ TypeAttributeMap::~TypeAttributeMap()
 
 std::shared_ptr<Attribute> TypeAttributeMap::getAttribute(std::string type) 
 {
+  //std::cout << "type: " << type << std::endl;
   return typeAttributeMap.at(type);
 }
 

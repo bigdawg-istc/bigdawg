@@ -15,7 +15,7 @@
 void printUsage()
 {
   fprintf(stderr,"%s\n","usage: ./postgres2scidb -i<input> -o<output> -f<format>");
-  fprintf(stderr,"%s\n","format: (<type>:[null]), for example: -fint32_t,int32_t:null,double,double:null,string,string:null");
+  fprintf(stderr,"%s\n","format: (<type>:[null]), for example: -fint32_t,int32_t null,double,double null,string,string null");
   fprintf(stderr,"%s\n","full examples:\n./postgres2scdb -istdin -ostdout -fint32_t,int32_t:null,double,double:null,string,string:null");
   fprintf(stderr,"%s\n","./postgres2scidb -i data/fromPostgresIntDoubleString.bin -o data/toSciDBIntDoubleString.bin");
 }
@@ -46,7 +46,7 @@ int main(int argc, char *argv[], char* env[])
 
   const char* defaultOut="stdout";
   const char* defaultIn="stdin";
-  const char* defaultTypes="int32_t,int32_t:null,double,double:null,string,string:null";
+  const char* defaultTypes="int32_t,int32_t null,double,double null,string,string null";
 
   char* out = (char*)defaultOut;
   char* in = (char*)defaultIn;

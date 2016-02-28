@@ -3,10 +3,16 @@
  */
 package istc.bigdawg.postgresql;
 
+import java.sql.SQLException;
+import java.text.NumberFormat;
+import java.text.ParseException;
 import java.util.Collection;
+import java.util.List;
 
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.query.DBHandler;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
 
 /**
  * @author Adam Dziedzic
@@ -123,6 +129,30 @@ public class PostgreSQLConnectionInfo implements ConnectionInfo {
 	@Override
 	public String getCleanupQuery(Collection<String> objects) {
 		return String.format(CLEANUP_STRING, String.join(", ", objects));
+	}
+
+	@Override
+	public long[] computeHistogram(String object, String attribute, double start, double end, int numBuckets) throws SQLException {
+		// TODO: handle non-numerical data
+		long[] result = new long[numBuckets];
+
+		String query = "SELECT width_bucket(%s, %s, %s, %s), COUNT(*) FROM %s GROUP BY 1 ORDER BY 1;";
+		List<List<String>> raw = new PostgreSQLHandler(this).executeQueryPostgreSQL(String.format(query, attribute, start, end, numBuckets, object)).getRows();
+
+		for(int i = 0; i < raw.size(); i++) {
+			List<String> row = raw.get(i);
+			result[Integer.parseInt(row.get(0))] = Long.parseLong(row.get(1));
+		}
+
+		return result;
+	}
+
+	@Override
+	public Pair<Number, Number> getMinMax(String object, String attribute) throws SQLException, ParseException {
+		String query = "SELECT min(%s), max(%s) FROM %s;";
+		List<String> raw = new PostgreSQLHandler(this).executeQueryPostgreSQL(String.format(query, attribute, attribute, object)).getRows().get(0);
+		NumberFormat nf = NumberFormat.getInstance();
+		return new ImmutablePair<>(nf.parse(raw.get(0)), nf.parse(raw.get(1)));
 	}
 
 	@Override

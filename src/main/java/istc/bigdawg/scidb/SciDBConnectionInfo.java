@@ -3,11 +3,14 @@
  */
 package istc.bigdawg.scidb;
 
+import java.sql.SQLException;
+import java.text.ParseException;
 import java.util.Collection;
 
 import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.query.DBHandler;
+import org.apache.commons.lang3.tuple.Pair;
 
 /**
  * @author adam
@@ -98,9 +101,20 @@ public class SciDBConnectionInfo implements ConnectionInfo {
 	 */
 	@Override
 	public String getCleanupQuery(Collection<String> objects) {
-		// TODO Auto-generated method stub
+		// TODO(ankush) Auto-generated method stub
 		throw new UnsupportedOperationException();
 	}
+
+	@Override
+	public long[] computeHistogram(String object, String attribute, double start, double end, int numBuckets) {
+		// TODO(ankush) implement histogram computation
+		throw new UnsupportedOperationException();
+	}
+
+	@Override
+	public Pair<Number, Number> getMinMax(String object, String attribute) throws SQLException, ParseException {
+		// TODO(ankush) implement min/max computation
+		throw new UnsupportedOperationException();	}
 
 	/*
 	 * (non-Javadoc)
@@ -109,8 +123,8 @@ public class SciDBConnectionInfo implements ConnectionInfo {
 	 */
 	@Override
 	public DBHandler getHandler() {
-		// TODO Auto-generated method stub
-		return null;
+		// TODO(ankush) Auto-generated method stub
+		throw new UnsupportedOperationException();
 	}
 
 	/**
