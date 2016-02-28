@@ -113,7 +113,9 @@ class PlanExecutor {
             BinaryJoinExecutionNode joinNode = (BinaryJoinExecutionNode) node;
             if(!joinNode.getHint().isPresent() || joinNode.getHint().get() == BinaryJoinExecutionNode.JoinAlgorithms.SHUFFLE) {
                 try {
-                    return new ShuffleJoinExecutor(joinNode).execute();
+                    Optional<QueryResult> result = new ShuffleJoinExecutor(joinNode).execute();
+                    markNodeAsCompleted(node);
+                    return result;
                 } catch (Exception e) {
                     log.error(String.format("Error executing node %s", joinNode), e);
                     return Optional.empty();
@@ -128,28 +130,28 @@ class PlanExecutor {
 
         return node.getQueryString().flatMap((query) -> {
             try {
-                PostgreSQLHandler handler = new PostgreSQLHandler((PostgreSQLConnectionInfo) node.getEngine());
-                Optional<QueryResult> result = handler.executePostgreSQL(query);
-
-                // record information for cleanup if non-terminal node
-                if (!plan.getTerminalTableNode().equals(node)) {
-                    // clean up the intermediate table later
-                    node.getTableName().ifPresent((table) -> temporaryTables.put(node.getEngine(), table));
-
-                    // update nodeLocations to reflect that the results are located on this node's engine
-                    resultLocations.put(node, node.getEngine());
-
-                    for (ExecutionNode dependent : plan.getDependents(node)) {
-                        locks.get(dependent).countDown();
-                    }
-                }
-
+                Optional<QueryResult> result = ((PostgreSQLHandler) node.getEngine().getHandler()).executePostgreSQL(query);
+                markNodeAsCompleted(node);
                 return result;
             } catch (SQLException e) {
                 log.error(String.format("Error executing node %s", node), e);
                 return Optional.empty();
             }
         });
+    }
+
+    private void markNodeAsCompleted(ExecutionNode node) {
+        if (!plan.getTerminalTableNode().equals(node)) {
+            // clean up the intermediate table later
+            node.getTableName().ifPresent((table) -> temporaryTables.put(node.getEngine(), table));
+
+            // update nodeLocations to reflect that the results are located on this node's engine
+            resultLocations.put(node, node.getEngine());
+
+            for (ExecutionNode dependent : plan.getDependents(node)) {
+                locks.get(dependent).countDown();
+            }
+        }
     }
 
 
