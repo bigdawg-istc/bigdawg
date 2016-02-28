@@ -69,6 +69,11 @@ public class CrossIslandQueryPlan {
 				throw new Exception("Matcher cannot find token");
 			
 			
+			// COMPUTE SIGNATURE
+			// TODO
+			
+			
+			
 			if (n.equals("A_OUTPUT")) {
 				root = newNode;
 			}

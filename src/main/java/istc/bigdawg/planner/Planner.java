@@ -14,12 +14,16 @@ import istc.bigdawg.monitoring.Monitor;
 import istc.bigdawg.packages.CrossIslandQueryNode;
 import istc.bigdawg.packages.CrossIslandQueryPlan;
 import istc.bigdawg.packages.QueriesAndPerformanceInformation;
+import istc.bigdawg.packages.QueryContainerForCommonDatabase;
 import istc.bigdawg.parsers.UserQueryParser;
 import istc.bigdawg.plan.operators.Join;
 import istc.bigdawg.plan.operators.Operator;
 import istc.bigdawg.plan.operators.SeqScan;
 import istc.bigdawg.postgresql.PostgreSQLHandler.QueryResult;
 import istc.bigdawg.schema.SQLDatabaseSingleton;
+import istc.bigdawg.utils.IslandsAndCast.Scope;
+import net.sf.jsqlparser.parser.CCJSqlParserUtil;
+import net.sf.jsqlparser.statement.select.Select;
 
 public class Planner {
 
@@ -33,16 +37,36 @@ public class Planner {
 
 	public static Response processQuery(String userinput) throws Exception {
 		
-		SQLDatabaseSingleton.getInstance().setDatabase("bigdawg_schemas", "src/main/resources/schemas/plain.sql");
-		// WE CURRENTLY NEED TO DOCUMENT WHICH TABLES ARE CREATED IN THIS FILE. 
-		// NEXT VERSION I'LL REMOVE THIS CONSTRAINT. TODO
-		
 		// UNROLLING
 		logger.debug("User query received. Parsing...");
 		LinkedHashMap<String, String> crossIslandQuery = UserQueryParser.getUnwrappedQueriesByIslands(userinput);
 		
 		CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(crossIslandQuery);
 
+		
+		
+		for (String k : ciqp.getMemberKeySet()) {
+			
+			if (k.equals("A_OUTPUT")) {
+				System.out.println("A_OUTPUT ENCOUNTERED");
+				continue;
+			}
+			
+			
+			CrossIslandQueryNode ciqn = ciqp.getMember(k);
+			int choice = getGetPerformanceAndPickTheBest(ciqn);
+			
+			
+			// currently there should be just one island, therefore one child, root.
+			QueryExecutionPlan qep = ciqp.getMember(k).getQEP(choice);
+			
+			
+			// EXECUTE THE RESULT SUB RESULT
+			logger.debug("Executing query cross-island subquery "+k+"...");
+			Executor.executePlan(qep);
+		}
+		
+		
 		// pass this to monitor, and pick your favorite
 		CrossIslandQueryNode ciqn = ciqp.getRoot();
 		int choice = getGetPerformanceAndPickTheBest(ciqn);
@@ -76,11 +100,9 @@ public class Planner {
 		int choice = 0;
 		
 		// now call the corresponding monitor function to deliver permuted.
-		// Today there IS ONLY ONE PLAN
-		// TODO generate list of QueryExecutionPlans to send to monitor
 		List<QueryExecutionPlan> qeps = ciqn.getAllQEPs();
 		Monitor.addBenchmarks(qeps, false);
-		QueriesAndPerformanceInformation qnp = Monitor.getBenchmarkPerformance(qeps); // TODO CHANGE THE QEPS SENT TO MONITOR FUNCTION
+		QueriesAndPerformanceInformation qnp = Monitor.getBenchmarkPerformance(qeps); 
 
 		// does some magic to pick out the best query, store it to the query plan queue
 
@@ -98,17 +120,14 @@ public class Planner {
 
 
 	/**
-	 * CALLED BY EXECUTOR: Receive result and send it to user
+	 * FINAL COMPILATION Receive result and send it to user
 	 * 
 	 * @param querySerial
 	 * @param result
 	 * @return 0 if no error; otherwise incomplete
 	 */
 	public static Response compileResults(int querySerial, QueryResult result) {
-		System.out.printf("[BigDAWG] PLANNER: Query %d is completed. Result:\n", querySerial);
-
-		// remove corresponding elements in the two queues
-//		queryQueue.remove(querySerial);
+		logger.debug("[BigDAWG] PLANNER: Query "+querySerial+" is completed. Result:\n");
 
 		// print the result;
 		StringBuffer out = new StringBuffer();
@@ -132,14 +151,4 @@ public class Planner {
 		return Response.status(200).entity(out.toString()).build();
 	}
 
-	
-	public static void permuteOperators(Operator root) throws Exception {
-		if (root instanceof SeqScan) {
-			
-		} else if (root instanceof Join) {
-			
-		} else {
-			throw new Exception ("Unsupported Operator!!");
-		}
-	}
 }
