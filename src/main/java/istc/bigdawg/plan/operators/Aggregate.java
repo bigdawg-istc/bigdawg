@@ -4,17 +4,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-
-
 import org.apache.jcp.xml.dsig.internal.dom.Utils;
-import istc.bigdawg.schema.SQLAttribute;
+
 import istc.bigdawg.extract.logical.SQLTableExpression;
-import istc.bigdawg.plan.SQLQueryPlan;
+import istc.bigdawg.packages.SciDBArray;
+import istc.bigdawg.plan.extract.CommonOutItem;
 import istc.bigdawg.plan.extract.SQLOutItem;
+import istc.bigdawg.schema.DataObjectAttribute;
+import istc.bigdawg.schema.SQLAttribute;
 import istc.bigdawg.utils.sqlutil.SQLUtilities;
-
-
-import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Function;
 import net.sf.jsqlparser.statement.select.PlainSelect;
@@ -42,11 +40,13 @@ public class Aggregate extends Operator {
 	// maintain state once per aggregate added
 	// apply any expressions down the line in the final selection
 	
-	Aggregate(Map<String, String> parameters, List<String> output, Operator child, SQLQueryPlan plan, SQLTableExpression supplement) throws Exception  {
+	Aggregate(Map<String, String> parameters, List<String> output, Operator child, SQLTableExpression supplement) throws Exception  {
 		super(parameters, output, child, supplement);
 
 		
 		isBlocking = true;
+		blockerCount++;
+		this.blockerID = blockerCount;
 		
 		aggregates = new ArrayList<AggregateType>();
 		aggregateExpressions = new ArrayList<String>(); 
@@ -59,8 +59,6 @@ public class Aggregate extends Operator {
 		if(aggregateFilter != null) {
 			aggregateFilter = Utils.parseIdFromSameDocumentURI(aggregateFilter); // HAVING clause
 		}
-		
-//		secureCoordination = children.get(0).secureCoordination;
 		
 		
 		// iterate over outschema and 
@@ -94,16 +92,71 @@ public class Aggregate extends Operator {
 			}
 			
 		}
-		
-
-
-		
-		
-		
-
-	
 
 	}
+	
+	
+	// for AFL
+	Aggregate(Map<String, String> parameters, SciDBArray output, Operator child) throws Exception  {
+		super(parameters, output, child);
+
+		
+		isBlocking = true;
+		blockerCount++;
+		this.blockerID = blockerCount;
+		
+		aggregates = new ArrayList<AggregateType>();
+		aggregateExpressions = new ArrayList<String>(); 
+		aggregateAliases = new ArrayList<String>(); 
+		groupBy = new ArrayList<SQLAttribute>();
+	
+		parsedAggregates = new ArrayList<Function>();
+//		parsedGroupBys = supplement.getGroupBy();
+		aggregateFilter = parameters.get("Filter");
+//		if(aggregateFilter != null) {
+//			aggregateFilter = Utils.parseIdFromSameDocumentURI(aggregateFilter); // HAVING clause
+//		}
+		
+		
+		// iterate over outschema and 
+		// classify each term as aggregate func or group by
+		for (String expr : output.getAttributes().keySet()) {
+			
+			CommonOutItem out = new CommonOutItem(expr, output.getAttributes().get(expr), true, null); // TODO CHECK THIS TODO
+			DataObjectAttribute attr = out.getAttribute();
+			String attrName = attr.getName();
+			
+			outSchema.put(attrName, attr);
+			
+			
+			// e.g., sum(y) / count(x)
+//			if(out.hasAggregate()) {
+//				List<Function> parsedAggregates = out.getAggregates();
+//				for(int j = 0; j < parsedAggregates.size(); ++j) {
+//					processFunction(parsedAggregates.get(j), attrName);
+//				}
+//				
+//				
+//			}
+//			else {
+////				groupBy.add(attr);
+//			}
+			
+		}
+		
+		// dimensions
+		for (String expr : output.getDimensions().keySet()) {
+			
+			CommonOutItem out = new CommonOutItem(expr, "Dimension", true, null);
+			DataObjectAttribute attr = out.getAttribute();
+			String attrName = attr.getFullyQualifiedName();		
+			outSchema.put(attrName, attr);
+				
+		}
+		
+
+	}
+	
 	
 	void processFunction(Function f, String alias) throws Exception  {
 		switch(f.getName()) {
@@ -157,17 +210,6 @@ public class Aggregate extends Operator {
 		
 	}
 
-	@Override
-	public List<SQLAttribute> getSliceKey()  throws JSQLParserException {
-		List<SQLAttribute> sliceKey = new ArrayList<SQLAttribute>();
-		for(SQLAttribute a : groupBy) {
-//			if(a.getSecurityPolicy().equals(SQLAttribute.SecurityPolicy.Public)) {
-				sliceKey.add(a);
-//			}
-		}
-		
-		return sliceKey;
-	}
 	
 	public void addAggregate(AggregateType a, String aFilter) {
 		aggregates.add(a);
@@ -176,9 +218,9 @@ public class Aggregate extends Operator {
 	
 	
 	@Override
-	public Select generatePlaintext(Select srcStatement, Select dstStatement) throws Exception {
+	public Select generateSQLStringDestOnly(Select dstStatement) throws Exception {
 
-		dstStatement = children.get(0).generatePlaintext(srcStatement, dstStatement);
+		dstStatement = children.get(0).generateSQLStringDestOnly(dstStatement);
 				
 		PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
 		ps.setGroupByColumnReferences(parsedGroupBys);
@@ -193,10 +235,10 @@ public class Aggregate extends Operator {
 	}
 	
 	@Override
-	public String printPlan(int recursionLevel) {
+	public String generateAFLString(int recursionLevel) throws Exception {
 		
 		String planStr =  "Aggregate(";
-		planStr += children.get(0).printPlan(recursionLevel+1);
+		planStr += children.get(0).generateAFLString(recursionLevel+1);
 		planStr +=  ", (";
 		
 		for(int i = 0; i < aggregates.size(); ++i) {
@@ -214,6 +256,12 @@ public class Aggregate extends Operator {
 		planStr +=  ")";
 		
 		return planStr;
+	}
+	
+	@Override
+	public String getTreeRepresentation(){
+		if (isPruned()) return "{PRUNED}";
+		else return "{aggregate"+children.get(0).getTreeRepresentation()+"}";
 	}
 
 };

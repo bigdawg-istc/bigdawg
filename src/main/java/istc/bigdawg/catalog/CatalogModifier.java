@@ -24,7 +24,9 @@ public class CatalogModifier {
 	 * @param newAccessMethod
 	 * @throws Exception
 	 */
-	public static void addIsland(Catalog cc, String newIsland, String newAccessMethod) throws Exception {
+	public static void addIsland(String newIsland, String newAccessMethod) throws Exception {
+		
+		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		
 		// check if cc is connected and length are correct 
 		CatalogUtilities.checkConnection(cc);
@@ -70,7 +72,9 @@ public class CatalogModifier {
 	 * @param newProperty
 	 * @throws Exception
 	 */
-	public static void addEngine(Catalog cc, String newEngine, String newHost, int newPort, String newProperty) throws Exception {
+	public static void addEngine(String newEngine, String newHost, int newPort, String newProperty) throws Exception {
+		
+		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		
 		// check if cc is connected and length are correct 
 		CatalogUtilities.checkConnection(cc);
@@ -104,7 +108,9 @@ public class CatalogModifier {
 
 	}
 	
-	public static void addShim(Catalog cc, int newIslandId, int newEngineId, String newAccessMethod) throws Exception {
+	public static void addShim(int newIslandId, int newEngineId, String newAccessMethod) throws Exception {
+		
+		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		
 		// check if cc is connected and length are correct 
 		CatalogUtilities.checkConnection(cc);
@@ -133,7 +139,9 @@ public class CatalogModifier {
 			
 	}
 	
-	public static void addCast(Catalog cc, int newSrcEid, int newDstEid, String newAccessMethod) throws Exception {
+	public static void addCast(int newSrcEid, int newDstEid, String newAccessMethod) throws Exception {
+		
+		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		
 		// check if cc is connected and length are correct 
 		CatalogUtilities.checkConnection(cc);
@@ -158,7 +166,9 @@ public class CatalogModifier {
 			
 	}
 	
-	public static void addDatabase(Catalog cc, int newEngineId, String newName, String newUserid, String newPassword) throws Exception {
+	public static void addDatabase(int newEngineId, String newName, String newUserid, String newPassword) throws Exception {
+		
+		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		
 		// check if cc is connected and length are correct 
 		CatalogUtilities.checkConnection(cc);
@@ -190,7 +200,9 @@ public class CatalogModifier {
 		cc.commit();
 	}
 	
-	public static void addObject(Catalog cc, String newName, String newFields, int newLogDB, int newPhyDB) throws Exception {
+	public static void addObject(String newName, String newFields, int newLogDB, int newPhyDB) throws Exception {
+		
+		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		
 		// check if cc is connected and length are correct 
 		CatalogUtilities.checkConnection(cc);
@@ -221,4 +233,35 @@ public class CatalogModifier {
 		cc.commit();
 	}
 
+	/**
+	 * Used for updating catalog entries.
+	 * 
+	 * @param args
+	 */
+	public static void main(String[] args) {
+		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
+		try {
+			CatalogUtilities.checkConnection(cc);
+			
+			String host = "192.168.1.13";
+			
+			cc.execNoRet("update catalog.engines set host = \'"+ host +"\' where eid = 1;"); 
+			cc.execNoRet("update catalog.engines set host = \'"+ host +"\' where eid = 2;");
+			cc.execNoRet("update catalog.engines set host = \'"+ host +"\' where eid = 4;");
+			
+//			// insert example: addObject(String newName, String newFields, int newLogDB, int newPhyDB)
+//			addObject("go_matrix", "geneid,goid,belongs", 6, 6);
+//			addObject("genes", "id,target,pos,len,func", 9, 9);
+//			addObject("patients", "id,age,gender,zipcode,disease,response", 7, 7);
+//			addObject("geo", "geneid,patientid,expr_value", 8, 8);
+
+			
+			cc.commit();
+			System.out.println("Update complete!");
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+	}
 }

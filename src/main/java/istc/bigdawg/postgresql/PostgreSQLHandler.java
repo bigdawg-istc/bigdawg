@@ -578,8 +578,7 @@ public class PostgreSQLHandler implements DBHandler {
 	 * @throws Exception
 	 */
 	public static ConnectionInfo generateConnectionInfo(int dbid) throws Exception {
-		ArrayList<String> infos = CatalogViewer.getConnectionInfo(dbid);
-		return new PostgreSQLConnectionInfo(infos.get(0), infos.get(1), infos.get(2), infos.get(3), infos.get(4));
+		return CatalogViewer.getPSQLConnectionInfo(dbid);
 	}
 
 	/**

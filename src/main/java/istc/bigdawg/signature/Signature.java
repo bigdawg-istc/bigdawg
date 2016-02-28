@@ -1,5 +1,9 @@
 package istc.bigdawg.signature;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.signature.builder.ArraySignatureBuilder;
 import istc.bigdawg.signature.builder.RelationalSignatureBuilder;
 
@@ -11,6 +15,9 @@ public class Signature {
 	private String sig3;
 	private String query;
 	private String identifier; 
+	
+	private static Pattern possibleObjectsPattern	= Pattern.compile("[_@a-zA-Z0-9]+");
+	private static Pattern tagPattern				= Pattern.compile("BIGDAWGTAG_[0-9_]+");
 	
 	/**
 	 * Construct a signature of three parts: sig1 tells about the structure, sig2 are all object references, sig3 are all constants
@@ -101,4 +108,37 @@ public class Signature {
 	}
 	
 
+	
+	public static String sig2(String input) throws Exception {
+		
+		StringBuffer stringBuffer	= new StringBuffer();
+		Matcher matcher				= possibleObjectsPattern.matcher(input);
+		StringBuffer dawgtags  		= new StringBuffer();
+		Matcher tagMatcher			= tagPattern.matcher(input);
+		
+		try {
+			// MATCHER FINES CSV
+			matcher.find();
+			stringBuffer.append(input.substring(matcher.start(), matcher.end()));
+			while (matcher.find()) {
+				stringBuffer.append(',').append(input.substring(matcher.start(), matcher.end()));
+			}
+			if (tagMatcher.find())
+				dawgtags.append(input.substring(tagMatcher.start(), tagMatcher.end()));
+			while (tagMatcher.find())
+				dawgtags.append("\t"+input.substring(tagMatcher.start(), tagMatcher.end()));
+		} catch (IllegalStateException e) {
+			return "";
+		}
+		
+		stringBuffer.append("\t").append(dawgtags);
+		String result = CatalogViewer.getObjectsFromList(stringBuffer.toString());
+		if (result.length() == 0) {
+			return dawgtags.toString();
+		} else {
+			return result.concat("\t"+dawgtags.toString());
+		}
+		
+	}
+	
 }

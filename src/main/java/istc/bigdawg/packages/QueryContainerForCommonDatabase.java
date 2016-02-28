@@ -1,42 +1,49 @@
 package istc.bigdawg.packages;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
-
 import istc.bigdawg.plan.operators.Operator;
 import istc.bigdawg.query.ConnectionInfo;
-import net.sf.jsqlparser.statement.select.Select;
 
 public class QueryContainerForCommonDatabase {
 	
-	private HashMap<String, ConnectionInfo> 	databaseConnectionInfos;
+	private String								dbid;
+	private ConnectionInfo 						databaseConnectionInfo;
 	private Operator							rootOperator;
-	private Select								select;
 	private String								pruneToken;
 	
-	public QueryContainerForCommonDatabase (Map<String, ConnectionInfo> cis, Operator o, Select srcQuery, String into) throws Exception {
+//	public QueryContainerForCommonDatabase (Map<String, ConnectionInfo> cis, Operator o, String into) throws Exception {
+	public QueryContainerForCommonDatabase (ConnectionInfo ci, String dbid, Operator o, String into) throws Exception {
 		
+		this.dbid 						= dbid;
 		this.rootOperator				= o;
-		this.select						= srcQuery;
 		this.pruneToken					= into;
-		this.databaseConnectionInfos	= new HashMap<>();
+		this.databaseConnectionInfo		= ci;
 		
-		this.databaseConnectionInfos.putAll(cis);
+//		this.databaseConnectionInfos.putAll(cis);
 		
-//		System.out.println("--> Gen select into: "+generateSelectIntoString());
 	}
 
-	public Set<String> getConnectionStrings() throws Exception {
-		return databaseConnectionInfos.keySet();
+//	public Set<String> getConnectionStrings() throws Exception {
+//		return databaseConnectionInfos.keySet();
+//	}
+//	
+//	public Map<String, ConnectionInfo> getConnectionInfos() {
+//		return databaseConnectionInfos;
+//	}
+	
+	public String getDBID() throws Exception {
+		return dbid;
 	}
 	
-	public Map<String, ConnectionInfo> getConnectionInfos() {
-		return databaseConnectionInfos;
+	public ConnectionInfo getConnectionInfo() {
+		return databaseConnectionInfo;
 	}
 	
-	public String generateSelectIntoString() throws Exception {
-		return rootOperator.generateSelectForExecutionTree(select, pruneToken);
+	public String generateSQLSelectIntoString() throws Exception {
+		return rootOperator.generateSQLSelectIntoStringForExecutionTree(pruneToken);
+	}
+	
+	public String generateAFLStoreString() throws Exception {
+		return rootOperator.generateAFLStoreStringForExecutionTree(pruneToken);
 	}
 	
 	public String getName() {

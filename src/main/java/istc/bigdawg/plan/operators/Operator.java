@@ -1,7 +1,6 @@
 package istc.bigdawg.plan.operators;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -9,20 +8,23 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import istc.bigdawg.schema.SQLAttribute;
 import istc.bigdawg.extract.logical.SQLTableExpression;
-import istc.bigdawg.plan.SQLQueryPlan;
-
-import net.sf.jsqlparser.JSQLParserException;
+import istc.bigdawg.packages.SciDBArray;
+import istc.bigdawg.schema.DataObjectAttribute;
+import istc.bigdawg.schema.SQLAttribute;
 import net.sf.jsqlparser.expression.Alias;
 import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
+import net.sf.jsqlparser.statement.select.AllColumns;
+import net.sf.jsqlparser.statement.select.AllTableColumns;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.Select;
 import net.sf.jsqlparser.statement.select.SelectBody;
 import net.sf.jsqlparser.statement.select.SelectExpressionItem;
 import net.sf.jsqlparser.statement.select.SelectItem;
+import net.sf.jsqlparser.statement.select.SelectItemVisitor;
 import net.sf.jsqlparser.statement.select.WithItem;
 
 public class Operator {
@@ -36,10 +38,12 @@ public class Operator {
 	// e.g., max, min, sort
 	// these block force sync points in our setup
 	protected boolean isBlocking; 
+	protected static int blockerCount = 0;
+	protected Integer blockerID = null;
 	
 	
 	// denoting sliced execution by op (e.g., comorbidity query)
-	protected Map<String, SQLAttribute> outSchema;
+	protected Map<String, DataObjectAttribute> outSchema;
 	
 	
 	// direct descendants
@@ -66,7 +70,7 @@ public class Operator {
 		
 		
 		// order preserving
-		outSchema = new LinkedHashMap<String, SQLAttribute>();
+		outSchema = new LinkedHashMap<String, DataObjectAttribute>();
 		children  = new ArrayList<Operator>();
 		dataObjects = new HashSet<>();
 		joinReservedObjects = new HashSet<>();
@@ -89,12 +93,32 @@ public class Operator {
 		
 	}
 
+	// for AFL
+	public Operator(Map<String, String> parameters, SciDBArray output,  
+			Operator child) {
+
+		
+		
+		// order preserving
+		outSchema = new LinkedHashMap<String, DataObjectAttribute>();
+		children  = new ArrayList<Operator>();
+		dataObjects = new HashSet<>();
+		joinReservedObjects = new HashSet<>();
+		
+		
+		if(child != null) { // check for leaf nodes
+			children.add(child);
+			child.setParent(this);
+			
+		}
+		
+	}
 	
 	public Operator(Map<String, String> parameters, List<String> output, 
 			Operator lhs, Operator rhs,
 			SQLTableExpression supplement) {
 		
-		outSchema = new LinkedHashMap<String, SQLAttribute>();
+		outSchema = new LinkedHashMap<String, DataObjectAttribute>();
 		children  = new ArrayList<Operator>();
 		dataObjects = new HashSet<>();
 		joinReservedObjects = new HashSet<>();
@@ -115,11 +139,28 @@ public class Operator {
 
 	}
 	
+	// for AFL
+	public Operator(Map<String, String> parameters, SciDBArray output, 
+			Operator lhs, Operator rhs) {
+		
+		outSchema = new LinkedHashMap<String, DataObjectAttribute>();
+		children  = new ArrayList<Operator>();
+		dataObjects = new HashSet<>();
+		joinReservedObjects = new HashSet<>();
+		
+		children.add(lhs);
+		children.add(rhs);
+
+		lhs.setParent(this);
+		rhs.setParent(this);
+
+	}
+	
 	public Operator() {
 		
 	}
 	
-	public Operator(Operator o) throws Exception {
+	public Operator(Operator o, boolean addChild) throws Exception {
 		
 		this.isCTERoot = o.isCTERoot;
 		this.isBlocking = o.isBlocking; 
@@ -134,36 +175,30 @@ public class Operator {
 		
 		this.outSchema = new LinkedHashMap<>();
 		for (String s : o.outSchema.keySet()) {
-			this.outSchema.put(new String(s), new SQLAttribute(o.outSchema.get(s)));
+			
+			if (o.outSchema.get(s) instanceof SQLAttribute) {
+				this.outSchema.put(new String(s), new SQLAttribute((SQLAttribute)o.outSchema.get(s)));
+			} else {
+				this.outSchema.put(new String(s), new DataObjectAttribute(o.outSchema.get(s)));
+			}
 		}
 		
 		this.children = new ArrayList<>();
-		for (Operator s : o.children) {
-			
-			// pruned nodes are not regenerated
-			if (s.isPruned()) {
-				this.children.add(s);
-				continue;
-			}
-			
-			if (s instanceof Join) {
-				Join j = new Join(s);
-				j.setParent(this);
-				this.children.add(j);
-			} else if (s instanceof SeqScan) {
-				SeqScan ss = new SeqScan(s);
-				ss.setParent(this);
-				this.children.add(ss);
-			} else if (s instanceof CommonSQLTableExpressionScan) {
-				CommonSQLTableExpressionScan c = new CommonSQLTableExpressionScan(s);
-				c.setParent(this);
-				this.children.add(c);
-			} else if (s instanceof Sort) {
-				Sort t = new Sort(s);
-				t.setParent(this);
-				this.children.add(t);
-			} else {
-				throw new Exception("Unsupported Operator Copy: "+s.getClass().toString());
+		
+		
+		if (addChild) {
+			for (Operator s : o.children) {
+				
+				// pruned nodes are not regenerated
+				if (s.isPruned()) {
+					this.children.add(s);
+					continue;
+				}
+				
+				Operator op = s.duplicate(addChild);
+				op.setParent(this);
+				this.children.add(op);
+				
 			}
 		}
 	}
@@ -191,81 +226,6 @@ public class Operator {
 	
 	
 	
-	
-	
-	// composed of this and everything below it on the dag
-	public List<String> getCompositeSliceNames(SQLQueryPlan q) throws JSQLParserException {
-		Set<SQLAttribute> sliceKeys = new HashSet<SQLAttribute>();
-		
-		sliceKeys = this.getCompositeSliceKey(sliceKeys);
-		
-		List<String> attrList = new ArrayList<String>();
-		for(SQLAttribute s : sliceKeys) {
-			attrList.add(s.getFullyQualifiedName());
-		}
-		
-
-		
-		return attrList;
-	}
-	
-
-	public List<SQLAttribute> getCompositeSliceKeys(SQLQueryPlan q) throws JSQLParserException {
-		Set<SQLAttribute> sliceKeys = new HashSet<SQLAttribute>();
-		
-		sliceKeys = this.getCompositeSliceKey(sliceKeys);
-		
-		List<SQLAttribute> attrList = new ArrayList<SQLAttribute>();
-		for(SQLAttribute s : sliceKeys) {
-			attrList.add(s);
-		}
-		
-		return attrList;
-
-	}
-	
-	
-	
-	protected Set<SQLAttribute> getCompositeSliceKey(Set<SQLAttribute> keys) throws JSQLParserException {
-		addSliceKeys(this, keys);
-
-		for(Operator c : children) {
-			keys = c.getCompositeSliceKey(keys);
-		}
-		if(this instanceof CommonSQLTableExpressionScan) {
-			CommonSQLTableExpressionScan cte = (CommonSQLTableExpressionScan) this;
-			Operator source = cte.getSourceStatement();
-			keys =  source.getCompositeSliceKey(keys);
-		}
-
-		return keys;
-	}
-	
-	
-	
-	private void addSliceKeys(Operator o, Set<SQLAttribute> keys) throws JSQLParserException {
-		List<SQLAttribute> l = o.getSliceKey(); 
-		if(l != null) {
-			for(SQLAttribute s : l) {
-				if(s.getSourceAttributes() == null) {
-					keys.add(s);
-				}
-				else { 
-					for(SQLAttribute t : s.getSourceAttributes()) {
-						keys.add(t);  // record their provenance
-					}
- 				}
-			}
-		}
-		
-	}
-
-	// seems like this will be overridden
-	public List<SQLAttribute> getSliceKey() throws JSQLParserException {
-		return null;
-	}
-	
-	
 	public void addChild(Operator aChild) {
 		children.add(aChild);
 	}
@@ -275,16 +235,16 @@ public class Operator {
 	}
 	
 	
-	public String generateSelectForExecutionTree(Select srcStatement, String into) throws Exception {
+	public String generateSQLSelectIntoStringForExecutionTree(String into) throws Exception {
 		
-		Select dstStatement  = this.generatePlaintext(srcStatement, null);
+		Select dstStatement  = this.generateSQLStringDestOnly(null);
 //		System.out.println("PLAIN DSTSTATEMENT: "+ ((PlainSelect) dstStatement.getSelectBody()));
 		
 		// iterate over out schema and add it to select clause
 		HashMap<String, SelectItem> selects = new HashMap<String, SelectItem>();
 
 		for(String s : outSchema.keySet()) {
-			SQLAttribute attr = new SQLAttribute(outSchema.get(s));
+			SQLAttribute attr = new SQLAttribute((SQLAttribute)outSchema.get(s));
 			
 			changeAttributeName(attr);
 			
@@ -297,12 +257,8 @@ public class Operator {
 		}
 		
 		
-		// TODO WRITE A FUNCTION TO CHANGE THE SELECT ORDERS, BASE ON THE SRCSTATEMENT, IF APPLICABLE
-		// MAKE SURE TO CHCK THE CHILDREN OPERATORS FOR THE NAMES
-		
-		
-		
-		((PlainSelect) dstStatement.getSelectBody()).setSelectItems(changeSelectItemsOrder(srcStatement, selects));
+		// this might be important TODO 
+//		((PlainSelect) dstStatement.getSelectBody()).setSelectItems(changeSelectItemsOrder(srcStatement, selects));
 		
 		
 		// dealing with WITH statment
@@ -323,36 +279,65 @@ public class Operator {
 		return ((PlainSelect) dstStatement.getSelectBody()).toString();
 	}
 	
+	
+	
+	public String generateAFLStoreStringForExecutionTree(String into) throws Exception {
+		
+		String dstString = this.generateAFLString(1); // this gets rid of "scan" if there is one
+		
+		if (into != null) {
+			dstString = "store(" + dstString + ", " + into + ")";
+		}
+		
+		return dstString;
+	}
+	
+	
 	private List<SelectItem> changeSelectItemsOrder(Select srcStatement, HashMap<String, SelectItem> selects) throws Exception {
 		List<SelectItem> orders = ((PlainSelect) srcStatement.getSelectBody()).getSelectItems();
 		List<SelectItem> holder = new ArrayList<>();
 		
-		for (SelectItem si : orders) {
-			// find the child where the pruned token or seqscan or CTE is located, make it the corresponding position
-			
-			Column c = (Column)((SelectExpressionItem)si).getExpression();
-			String out = c.getFullyQualifiedName();
-			if (selects.get(out) != null)
-				holder.add(selects.get(out));
-			else if (selects.get(out = c.getTable().getName()+ "."+ c.getColumnName()) != null)
-				holder.add(selects.get(out));
-			else {
+		SelectItemVisitor siv = new SelectItemVisitor() {
+
+			@Override
+			public void visit(AllColumns allColumns) {
+				holder.add(allColumns);
+			}
+
+			@Override
+			public void visit(AllTableColumns allTableColumns) {
+				holder.add(allTableColumns);
+			}
+
+			@Override
+			public void visit(SelectExpressionItem selectExpressionItem) {
+
+				// find the child where the pruned token or seqscan or CTE is located, make it the corresponding position
 				
-				out = c.getFullyQualifiedName();
-				
-				// well.
-				for (String s : selects.keySet()) {
-					if (s.endsWith(out)){
-						holder.add(selects.get(s));
-						break;
+				Column c = (Column) selectExpressionItem.getExpression();
+				String out = c.getFullyQualifiedName();
+				if (selects.get(out) != null)
+					holder.add(selects.get(out));
+				else if (selects.get(out = c.getTable().getName()+ "."+ c.getColumnName()) != null)
+					holder.add(selects.get(out));
+				else {
+					out = c.getFullyQualifiedName();
+					// well.
+					for (String s : selects.keySet()) {
+						if (s.endsWith(out)){
+							holder.add(selects.get(s));
+							break;
+						}
 					}
 				}
+				selects.remove(out);
 			}
-			selects.remove(out);
-				
 			
-			
-			
+		};
+		
+		
+		for (SelectItem si : orders) {
+			si.accept(siv);
 		}
 		return holder;
 	}
@@ -390,7 +375,7 @@ public class Operator {
 		if (children.size() > 0) {
 			for (Operator o : children) {
 				if (o.isPruned()) {
-					if (o.getOutSchema().containsKey(attr.getFullyQualifiedName())) {
+					if (o.getOutSchema().containsKey(attr.getName())) {
 						Expression e = attr.getExpression();
 						
 						if (e instanceof Column) {
@@ -416,49 +401,81 @@ public class Operator {
 		return false;
 	}
 	
-	// this is the implicit root of the SQL generated
-	public String generatePlaintext(Select srcStatement) throws Exception {
-		
-		Select dstStatement  = this.generatePlaintext(srcStatement, null);
-		
+	
+	protected Select generateSQLStringDestOnly(Select dstStatement) throws Exception {
+
+		// generic case
+		for(int i = 0; i < children.size(); ++i) {
+			dstStatement = children.get(i).generateSQLStringDestOnly(dstStatement);
+		}
+		return dstStatement;
+	}
+	
+	
+	/**
+	 * The bulk of work for generating SQL statement
+	 * 
+	 * @param srcStatement, used to reorder select items, place 'null' if order of SelectItems not important
+	 * @return dstStatement
+	 * @throws Exception
+	 */
+	private Select prepareForSQLGeneration(Select srcStatement) throws Exception {
+
+		clearJoinReservedObjects();
+		Select dstStatement  = this.generateSQLStringDestOnly(null);
 		
 		// iterate over out schema and add it to select clause
 		HashMap<String, SelectItem> selects = new HashMap<String, SelectItem>();
 
 		for(String s : outSchema.keySet()) {
-			SQLAttribute attr = new SQLAttribute(outSchema.get(s));
+			SQLAttribute attr = new SQLAttribute((SQLAttribute)outSchema.get(s));
 
 			// find the table where it is pruned
 			changeAttributeName(attr);
 			
 			SelectExpressionItem si = new SelectExpressionItem(attr.getExpression());
 			if(!(si.toString().equals(attr.getName()))) {
-				si.setAlias(new Alias(attr.getName()));
+				si.setAlias(new Alias(attr.getFullyQualifiedName()));
 			}
 			
 			selects.put(s, si);
 		}
 		
-		((PlainSelect) dstStatement.getSelectBody()).setSelectItems(changeSelectItemsOrder(srcStatement, selects));
+		PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
 		
+		if (srcStatement != null)
+			ps.setSelectItems(changeSelectItemsOrder(srcStatement, selects));
+		
+		return dstStatement;
+	}
+	
+	
+	// this is the implicit root of the SQL generated
+	public String generateSQLString(Select srcStatement) throws Exception {
+		
+		Select dstStatement = prepareForSQLGeneration(srcStatement);
 		return dstStatement.toString();
 
 	}
-	// each operator adds its parts to this to regenerate that 
-	// part of the query for plaintext execution
-	//  tail recursion through query plan
-	// isRoot denotes the root node in a CTE or main select statement
 	
-	// srcStatement = entire statement initially submitted by user
-	// dstStatement builds a statement that potentially contains a subset of the nodes depending on where plaintext stops in SQL execution
-	protected Select generatePlaintext(Select srcStatement, Select dstStatement) throws Exception {
-
-		// generic case
-		for(int i = 0; i < children.size(); ++i) {
-			dstStatement = children.get(i).generatePlaintext(srcStatement, dstStatement);
-		}
-		return dstStatement;
+	public String generateSQLWithWidthBucket(String widthBucketString, String into, Select srcStatement) throws Exception {
+		
+		Select dstStatement = prepareForSQLGeneration(srcStatement);
+		
+		PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
+		
+		String newWhere = "(" + ps.getWhere().toString() + ") AND ("+widthBucketString+")";
+		ps.setWhere(CCJSqlParserUtil.parseCondExpression(newWhere));
+		
+		
+		if (into != null) 
+			addInto(ps, into); 
+		
+		return dstStatement.toString();
 	}
+	
+	
+	
 	
 	protected static void addSelectItem(Expression expr, List<SelectItem> selects) {
 		boolean found = false;
@@ -478,84 +495,17 @@ public class Operator {
 	// recurse through plan and print it in nested form
 	// each op adds its part
 	// produces an plan similar to SciDB's AFL syntax
-	public String printPlan(int recursionLevel) {
+	public String generateAFLString(int recursionLevel) throws Exception {
 		return new String();
 	}
 	
-	protected static String padLeft(String s, int n) {
-		if(n > 0) {
-			return String.format("%1$" + n + "s", s);  
-		}
-		 
-		return s;
-	}
-
 	
-	public Map<String, SQLAttribute>  getOutSchema() {
+	
+	public Map<String, DataObjectAttribute>  getOutSchema() {
 		return outSchema;
 	}
 
-
-	// find any filters associated with a slice key
-	// takes in any existing filters
-	// s must be derived from just one table
-	// otherwise slice key will not be computable without distributed join
-
-	// TODO: extend this to CTE scans, for each comparison check source attributes
-	// if they all belong to source attribute's table add them to the predicate
 	
-	
-	public String getScanPredicates(SQLAttribute s) throws Exception {
-		
-		String table = null;
-		Set<SQLAttribute> sources = s.getSourceAttributes();
-		if(sources == null) {
-			table = s.getTable();
-		}
-		else {
-			for(SQLAttribute attr : sources) {
-				if(table == null) {
-					table = attr.getTable();
-				}
-				else {
-					if(!attr.getTable().equals(table)) {
-						throw new Exception("Cannot derive slice predicate from greater than one table!");
-					}
-				}
-				
-			}
-			
-		}
-		
-		
-		return getScanPredicatesHelper(table);
-			
-	}		
-		
-	private String getScanPredicatesHelper(String tableName) {
-		if(this instanceof SeqScan) {
-			SeqScan scan = ( SeqScan) this;
-			String localName = scan.srcTable;
-			if(tableName.equals(localName)) {
-				return scan.filterExpression;
-			}
-			return null;
-		}
-		
-		String ret = new String();
-		for(Operator c : children) {
-			String cPred = c.getScanPredicatesHelper(tableName);
-			if(cPred != null) {
-				ret = ret + cPred;
-			}
-		}
-		
-		if(ret.length() > 0) {
-			return ret;
-		}
-		// no predicates found
-		return null;
-	}
 	
 	// if it is blocking, this operator changes our SMC control flow
 	// e.g., c-diff can't complete part of the self-join locally because it has a sort that needs to run first.
@@ -570,10 +520,10 @@ public class Operator {
 	/**
 	 * NOTE: MODIFY THIS SO IT UPDATES MAP WITH PRUNE INFORMATION
 	 * getLocation gets a list of result locations that are possible for this operator
-	 * @return List<Integer> of dbid
+	 * @return List<String> of dbid
 	 */
-	public Map<String, ArrayList<String>> getTableLocations(Map<String, ArrayList<String>> map) {
-		Map<String, ArrayList<String>> result = new HashMap<>();
+	public Map<String, List<String>> getTableLocations(Map<String, List<String>> map) {
+		Map<String, List<String>> result = new HashMap<>();
 		for (Operator o : children) {
 			result.putAll(o.getTableLocations(map));
 		}
@@ -658,4 +608,112 @@ public class Operator {
 	public boolean isCopy(){
 		return this.isCopy;
 	};
+	
+	
+	public List<Operator> getAllBlockers(){
+		
+		List<Operator> extraction = new ArrayList<>();
+		
+		if (isBlocking) {
+			extraction.add(this);
+			return extraction;
+		}
+		
+		for (Operator c : children) {
+			extraction.addAll(c.getAllBlockers());
+		}
+		
+		
+		return extraction;
+	}
+	
+	public Integer getBlockerID() throws Exception {
+		if (!isBlocking)
+			throw new Exception("Operator Not blocking: "+this.toString());
+		return blockerID;
+	}
+	
+	private void clearJoinReservedObjects() {
+		this.joinReservedObjects.clear();
+		for (Operator c : children)
+			c.clearJoinReservedObjects();
+	}
+	
+	public Operator duplicate(boolean addChild) throws Exception {
+		if (this instanceof Join) {
+			return new Join(this, addChild);
+		} else if (this instanceof SeqScan) {
+			return new SeqScan(this, addChild);
+		} else if (this instanceof CommonSQLTableExpressionScan) {
+			return new CommonSQLTableExpressionScan(this, addChild);
+		} else if (this instanceof Sort) {
+			return new Sort(this, addChild);
+		} else {
+			throw new Exception("Unsupported Operator Copy: "+this.getClass().toString());
+		}
+	}
+	
+	// will likely get overridden
+	public String getTreeRepresentation(){
+		return "Unimplemented: "+this.getClass().toString();
+	}
+	
+	
+	public String generateSQLCreateTableStatementLocally(String name){
+		StringBuilder sb = new StringBuilder();
+		
+		sb.append("CREATE TABLE ").append(name).append(' ').append('(');
+		
+		boolean started = false;
+		
+		for (DataObjectAttribute doa : outSchema.values()) {
+			if (started == true) sb.append(',');
+			else started = true;
+			
+			sb.append(doa.generateSQLTypedString());
+		}
+		
+		sb.append(')');
+		
+		return sb.toString();
+	} 
+	
+	public String generateAFLCreateArrayStatementLocally(String name){
+		StringBuilder sb = new StringBuilder();
+		
+		List<DataObjectAttribute> attribs = new ArrayList<>();
+		List<DataObjectAttribute> dims = new ArrayList<>();
+		
+		for (DataObjectAttribute doa : outSchema.values()) {
+			if (doa.isHidden()) dims.add(doa);
+			else attribs.add(doa);
+		}
+		
+		
+		sb.append("CREATE ARRAY ").append(name).append(' ').append('<');
+		
+		boolean started = false;
+		for (DataObjectAttribute doa : attribs) {
+			if (started == true) sb.append(',');
+			else started = true;
+			
+			sb.append(doa.generateAFLTypeString());
+		}
+		
+		sb.append('>').append('[');
+		if (dims.isEmpty()) {
+			sb.append("i=0:*,10000000,0");
+		} else {
+			started = false;
+			for (DataObjectAttribute doa : dims) {
+				if (started == true) sb.append(',');
+				else started = true;
+				
+				sb.append(doa.generateAFLTypeString());
+			}
+		}
+		sb.append(']');
+		
+		return sb.toString();
+	} 
 }

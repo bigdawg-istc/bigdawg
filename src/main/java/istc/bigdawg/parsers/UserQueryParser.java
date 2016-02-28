@@ -1,7 +1,7 @@
 package istc.bigdawg.parsers;
 
-import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Stack;
 import java.util.regex.Matcher;
@@ -12,6 +12,9 @@ import istc.bigdawg.signature.Signature;
 
 public class UserQueryParser {
 			
+	static final String extractTitle = "BIGDAWGTAG_";
+	
+	
 	/**
 	 * Unrolling island calls and data casts.
 	 * This implementation assumes that the user will explicitly make island call and cast calls.
@@ -22,14 +25,16 @@ public class UserQueryParser {
 	 * @param str
 	 * @return ArrayList of Strings, each an island call or a cast call.
 	 */
-	public static Map<String, String> getUnwrappedQueriesByIslands(String str, String extractTitle) {
+	public static LinkedHashMap<String, String> getUnwrappedQueriesByIslands(String str) {
+		
+		
 		
 		Pattern mark					= Pattern.compile("(?i)(bdrel\\(|bdarray\\(|bdtext\\(|bdgraph\\(|"
 											+ "bdstream\\(|bdcast\\(|"
 											+ "(, ?(relational|graph|stream|text|array)\\))|\\(|\\))");
 		Matcher matcher					= mark.matcher(str);
 	    
-	    Map<String, String> extraction 	= new HashMap<>();
+	    LinkedHashMap<String, String> extraction 	= new LinkedHashMap<>();
 	    Stack<String> stkwrite			= new Stack<String>();
 	    Stack<Integer> stkparen			= new Stack<Integer>();
 	    
@@ -58,7 +63,7 @@ public class UserQueryParser {
 	    		} else {
 		    		// finish and extract this entry, add new variable for the prior
 		    		if (parenLevel == 1)
-		    			extraction.put("OUTPUT", stkwrite.pop() + str.substring(lastStop, matcher.end()));// + ";");
+		    			extraction.put("A_OUTPUT", stkwrite.pop() + str.substring(lastStop, matcher.end()));// + ";");
 		    		else 
 		    			extraction.put(extractTitle + extractionCounter, stkwrite.pop() + str.substring(lastStop, matcher.end()));
 		    		stkwrite.push(stkwrite.pop() + extractTitle + extractionCounter);

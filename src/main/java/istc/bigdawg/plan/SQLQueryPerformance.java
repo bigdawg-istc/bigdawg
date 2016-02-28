@@ -1,5 +1,7 @@
-package istc.bigdawg.plan.extract;
+package istc.bigdawg.plan;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -9,53 +11,36 @@ import java.util.Map;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
-import istc.bigdawg.extract.logical.SQLParseLogical;
-import istc.bigdawg.extract.logical.SQLTableExpression;
-import istc.bigdawg.plan.SQLQueryPlan;
-import istc.bigdawg.plan.operators.Operator;
-import istc.bigdawg.plan.operators.OperatorFactory;
-import istc.bigdawg.utils.sqlutil.SQLPrepareQuery;
-import istc.bigdawg.utils.sqlutil.SQLUtilities;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
+import istc.bigdawg.plan.operators.Operator;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
-//import istc.bigdawg.postgresql.PostgreSQLHandler.QueryResult;
+import istc.bigdawg.utils.sqlutil.SQLPrepareQuery;
+import istc.bigdawg.utils.sqlutil.SQLUtilities;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.Select;
 import net.sf.jsqlparser.statement.select.WithItem;
 
+public class SQLQueryPerformance {
 
-// takes in a psql plan from running
-// EXPLAIN (VERBOSE ON, FORMAT XML) SELECT ...
-// Produces a set of operators and their source / destination schemas
-// see codegen.ops for tree nodes
-
-// first pass, just parse ops - arrange for bottom up analysis
-// build one obj per SELECT block, build tree to link them together
-// second pass - map back to schema
-
-public class SQLPlanParser {
-	
-	// needed for type resolution
-	//private DatabaseSingleton catalog;
-	SQLQueryPlan queryPlan;
+	static Map<String, Map<String, List<String>>> performanceInfos = new HashMap<>();
 	
 	int skipSortCount = 0;
+	int indentation = 0;
+	int maxIndex = -1;
+	Select select = null;
 	
-	// NEW
-	Select query;
+	public SQLQueryPerformance(Select select ) {
+		this.select = select;
+	}
+	
+	
+	public String parseXMLString(String xmlString) throws Exception {
 
-    
-	// sqlPlan passes in supplement info
-	public SQLPlanParser(String xmlString, SQLQueryPlan sqlPlan, String q) throws Exception {
-	   //catalog = DatabaseSingleton.getInstance();
-		this.query = (Select) CCJSqlParserUtil.parse(q);
-		queryPlan = sqlPlan;
-		
 		DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
 		InputSource is = new InputSource();
 		is.setCharacterStream(new StringReader(xmlString));
@@ -73,59 +58,24 @@ public class SQLPlanParser {
             		Node plan = query.getChildNodes().item(j);
         		    // <Plan>
             		if(plan.getNodeName() == "Plan") {
-            			Operator root = parsePlanTail("main", plan, 0, false);
-            			queryPlan.setRootNode(root); 
-
-            			break;
+            			parsePlanTail("main", plan, 0, false);
+//            			break;
+            		} else if (plan.getNodeName() == "Planning-Time" || plan.getNodeName() == "Execution-Time") {
+        				print(plan.getNodeName() + ": " + plan.getTextContent(), 0, true);
+        				if (plan.getNodeName() == "Execution-Time") 
+        					break;
             		}
             	}
             }
            
 	    }
 			
-		    
+	    return null;   
 	}
 	
-	public static SQLQueryPlan extract(String sql) throws Exception {
-
-		String xml = sql.replace(".sql", ".xml");
-		
-		SQLPrepareQuery.generatePlan(sql, xml);
-		
-		// set up supplement
-		String query = SQLPrepareQuery.readSQL(sql);
-		SQLParseLogical parser = new SQLParseLogical(query);
-		SQLQueryPlan queryPlan = parser.getSQLQueryPlan();
-		
-		// run parser
-		@SuppressWarnings("unused")
-		SQLPlanParser p = new SQLPlanParser(xml, queryPlan, query);
-		
-		return queryPlan;
-	}
 	
-	public static SQLQueryPlan extractDirect(PostgreSQLHandler psqlh, String query) throws Exception {
-
-		String explainQuery = SQLPrepareQuery.generateExplainQueryString(query);
-		String xmlString = psqlh.generatePostgreSQLQueryXML(explainQuery);
-		
-		// set up supplement
-		SQLParseLogical parser = new SQLParseLogical(query);
-		SQLQueryPlan queryPlan = parser.getSQLQueryPlan();
-		
-		
-//		System.out.println("query: \n"+query);
-//		System.out.println("\n\nXMLString: \n"+xmlString+"\n");
-		
-		// run parser
-		@SuppressWarnings("unused")
-		SQLPlanParser p = new SQLPlanParser(xmlString, queryPlan, query);
-		
-		return queryPlan;
-	}
 	
-	// parse a single <Plan>
-	Operator parsePlanTail(String planName, Node node, int recursionLevel, boolean skipSort) throws Exception {
+	void parsePlanTail(String planName, Node node, int recursionLevel, boolean skipSort) throws Exception {
 		
 		if(node.getNodeName() != "Plan") {
 			throw new Exception("Not parsing a valid plan node!");
@@ -138,7 +88,6 @@ public class SQLPlanParser {
 		Map<String, String> parameters = new HashMap<String, String>();
 		String nodeType = null;
 		String localPlan = planName;
-		SQLTableExpression supplement = queryPlan.getSQLTableExpression(planName);
 
 		
 		NodeList children = node.getChildNodes();
@@ -148,6 +97,8 @@ public class SQLPlanParser {
 		// if node type matches scan then we have reached a leaf in the query plan
 		// scan might be seq, cte, index, etc.
 		
+		String currentNodeName = null;
+		
 		for(int j = 0; j < children.getLength(); ++j) {
 			Node c = children.item(j);
 	
@@ -156,6 +107,15 @@ public class SQLPlanParser {
 			case "Node-Type":
 				nodeType = c.getTextContent();
 				parameters.put("Node-Type", nodeType);
+				
+				currentNodeName = nodeType;
+				
+				if (!performanceInfos.containsKey(currentNodeName))
+					performanceInfos.put(currentNodeName, new HashMap<>());
+				
+				
+//				print(nodeType, recursionLevel, false);
+				
 				if(nodeType.equals("Merge Join")) {
 					
 					localSkipSort = determineLocalSortSkip(planName);
@@ -192,12 +152,31 @@ public class SQLPlanParser {
 			case "Subplan-Name":
 				localPlan = c.getTextContent(); // switch to new CTE
 				localPlan = localPlan.substring(localPlan.indexOf(" ")+1);  // chop out "CTE " prefix
-				supplement = queryPlan.getSQLTableExpression(localPlan);
 				break;
 			case "Plans":
 				int r = recursionLevel+1;
 				childOps = parsePlansTail(localPlan, c, r, localSkipSort);
 				break;
+			
+			case "Startup-Cost":
+			case "Total-Cost":
+			case "Plan-Rows":
+			case "Plan-Width":
+			case "Actual-Startup-Time":
+			case "Actual-Total-Time":
+			case "Actual-Rows":
+			case "Actual-Loops":
+			case "Relation-Name":
+				
+				if (!performanceInfos.get(currentNodeName).containsKey(c.getNodeName()))
+					performanceInfos.get(currentNodeName).put(c.getNodeName(), new ArrayList<>());
+				
+				performanceInfos.get(currentNodeName).get(c.getNodeName()).add(c.getTextContent());
+				
+			
+//				print(c.getNodeName() + ": " + c.getTextContent(), recursionLevel, true);
+				break;
+			
 				
 			default:
 				parameters.put(c.getNodeName(), c.getTextContent()); // record it for later
@@ -215,33 +194,28 @@ public class SQLPlanParser {
 		}
 		else {
 			parameters.put("sectionName", planName);
-			op =  OperatorFactory.get(nodeType, parameters, outItems, sortKeys, childOps, queryPlan, supplement);
+//			op =  OperatorFactory.get(nodeType, parameters, outItems, sortKeys, childOps, queryPlan, supplement);
 		}
 
 		
 		if(!localPlan.equals(planName)) { // we created a cte
-			op.setCTERootStatus(true);
-			queryPlan.addPlan(localPlan, op);
+//			op.setCTERootStatus(true);
+//			queryPlan.addPlan(localPlan, op);
 		}
 		
-		return op;
+//		return op;
 	}
 	
-	/**
-	 * This is used to determine whether a merge-sort should let its child skip its sort should it sees one
-	 * @param planName
-	 * @return
-	 */
 	private boolean determineLocalSortSkip (String planName) {
 		if (planName.equals("main")) {
-//			if (((PlainSelect) query.getSelectBody()).getOrderByElements() == null // || ((PlainSelect) query.getSelectBody()).getOrderByElements().isEmpty()
-//				) {
+	//		if (((PlainSelect) query.getSelectBody()).getOrderByElements() == null // || ((PlainSelect) query.getSelectBody()).getOrderByElements().isEmpty()
+	//			) {
 			return true;
-//			} 
+	//		} 
 		} else {
-			if (query.getWithItemsList() != null //&& (!query.getWithItemsList().isEmpty())
+			if (select.getWithItemsList() != null //&& (!query.getWithItemsList().isEmpty())
 					) {
-				for (WithItem w : query.getWithItemsList()) {
+				for (WithItem w : select.getWithItemsList()) {
 					if (w.getName().equals(planName)) {
 						if (((PlainSelect)w.getSelectBody()).getOrderByElements() == null // || ((PlainSelect) query.getSelectBody()).getOrderByElements().isEmpty()
 								) {
@@ -263,35 +237,83 @@ public class SQLPlanParser {
 		for(int i = 0; i < children.getLength(); ++i) {
 			Node c = children.item(i);
 			if(c.getNodeName() == "Plan") {
-				Operator o = parsePlanTail(planName, c, recursionLevel+1, skipSort);
+				
+				parsePlanTail(planName, c, recursionLevel+1, skipSort);
 				
 				// only add children that are part of the main plan, not the CTEs which are accounted for in CTEScan
-				if(!o.CTERoot()) {
-					childNodes.add(o);
-				}
+//				if(!o.CTERoot()) {
+//					childNodes.add(o);
+//				}
 			}
 		}
 		
 		return childNodes;
 	}
+	
+	public static String getXMLStringWithPerformance(PostgreSQLHandler psqlh, String query) throws Exception {
 
+		String explainQuery = SQLPrepareQuery.generateExplainQueryStringWithPerformance(query);
+		String xmlString = psqlh.generatePostgreSQLQueryXML(explainQuery);
+		
+//		System.out.println("query: \n"+query);
+//		System.out.println("\n\nXMLString: \n"+xmlString+"\n");
+		
+		return xmlString;
+	}
 	
-//	public static String padLeft(String s, int n) {
-//		if(n > 0) {
-//			return String.format("%1$" + n + "s", s);  
-//		}
-//		 
-//		return s;
-//	}
-//
-//	public static String padRight(String s, int n) {
-//		if(n > 0) {
-//		     return String.format("%1$-" + n + "s", s);  
-//		}
-//		return s;
-//		
-//	}
 	
+	private void print(String s, int recLevel, boolean dashes) {
+		
+		for (int i = 0; i < 2*recLevel; i++)
+			System.out.print(' ');
+		
+		if (dashes) 
+			System.out.print("- ");
+		
+		System.out.println(s);
+		
+	}
+	
+	public static void main(String[] args) {
+
+		try {
+			String query = "select p.id as PID, genes.id as GeneID, avg(expr_value)/3 as weighted_expr_value from geo join go_matrix on geo.geneid = go_matrix.geneid join genes on geo.geneid = genes.id join patients p on p.id = geo.patientid where (p.id <= 10 or p.id >= 30) and genes.id < 10 and goid < 3 group by p.id, genes.id order by p.id, genes.id;";
+//			String query = "SELECT * FROM patients JOIN GEO on patients.id = GEO.patientid where id <= 10;";
+//			BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+//			
+//			while (!query.toLowerCase().equals("exit")){
+				
+				System.out.println(query);
+				
+				Select select = (Select) CCJSqlParserUtil.parse(query);
+				
+				
+				PostgreSQLHandler psqlh = new PostgreSQLHandler(7); // genbase
+				
+				String XML = getXMLStringWithPerformance(psqlh, query);
+				
+				System.out.println("XML: "+XML+"\n");
+				
+				SQLQueryPerformance p = new SQLQueryPerformance(select);
+				p.parseXMLString(XML);
+				
+				System.out.println();
+				
+				for (String s1 : p.performanceInfos.keySet()) {
+					System.out.println(s1+": ");
+					for (String s2 : p.performanceInfos.get(s1).keySet()) {
+						System.out.println(" - "+s2+": "+p.performanceInfos.get(s1).get(s2));
+						
+					}
+				}
+				
+//				System.out.print("\nNext query: ");
+//				query = in.readLine();
+//				System.out.println();
+//			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		} 
+	}
+
 }
-
-	

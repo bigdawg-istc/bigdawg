@@ -5,9 +5,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import istc.bigdawg.schema.SQLAttribute;
 import istc.bigdawg.extract.logical.SQLTableExpression;
-
+import istc.bigdawg.schema.DataObjectAttribute;
+import istc.bigdawg.schema.SQLAttribute;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.AnalyticExpression;
 import net.sf.jsqlparser.expression.Expression;
@@ -18,7 +18,7 @@ import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.create.table.ColDataType;
 import net.sf.jsqlparser.util.deparser.ExpressionDeParser;
 
-public class SQLOutItem {
+public class SQLOutItem extends CommonOutItem{
 
 	// takes in the content of a <Item> field in EXPLAIN xml 
 	// keeps track of fields referenced in expression for security level 
@@ -34,11 +34,31 @@ public class SQLOutItem {
 	
 	private List<Function> aggregates;
 	private List<AnalyticExpression> windowedAggregates;
-	private String alias = null; // attr alias
-	final SQLAttribute outAttribute = new SQLAttribute();
 	
-	public SQLOutItem(String expr,  Map<String, SQLAttribute> srcSchema, 
-			SQLTableExpression supplement) throws JSQLParserException {
+	public SQLOutItem(String expr,  Map<String, DataObjectAttribute> srcSchema, 
+			SQLTableExpression supplement) throws Exception {
+		super();
+		
+		String finder = expr;
+		DataObjectAttribute doa = srcSchema.get(finder);
+		while (doa == null) {
+			
+			String before = new String(finder);
+			finder = finder.replaceAll("^[_@a-zA-Z]+\\.", "");
+//			System.out.println("updated finder: "+finder);
+			
+			if (before.equals(finder))
+				throw new Exception("cannot find: "+expr);
+			doa = srcSchema.get(finder);
+		}
+		
+		
+		
+//		System.out.println("SQLOutItem: \n--"+expr+"\n--"+srcSchema+"\n");
+		
+		
+		outAttribute = new SQLAttribute();
+		outAttribute.setTypeString(doa.getTypeString());
 		
 		aggregates = new ArrayList<Function>();
 		windowedAggregates = new ArrayList<AnalyticExpression>();
@@ -76,12 +96,32 @@ public class SQLOutItem {
 
 		// there's  no alias
 		if(alias == null) {
+//			List<String> s = Arrays.asList(expr.split("\\."));
+//			outAttribute.setName(s.get(s.size()-1));
+//			
+//			if (s.size() > 1) {
+//				switch (s.size()) {
+//				case 2:
+//					outAttribute.setDataObject(new DataObject(null, null, s.get(0)));
+//					break;
+//				case 3:
+//					outAttribute.setDataObject(new DataObject(null, s.get(0), s.get(1)));
+//					break;
+//				case 4:
+//					outAttribute.setDataObject(new DataObject(s.get(0), s.get(1), s.get(2)));
+//					break;
+//				default:
+//					throw new Exception("redundant outitem field");
+//				}
+//			}
 			alias = expr;
-		}	
-		
+		} 
+//		else {
+//			outAttribute.setName(alias);
+//		}
 		
 		outAttribute.setName(alias);
-		outAttribute.setType(null);
+		((SQLAttribute)outAttribute).setType(null);
 		
 		
 		ExpressionDeParser deparser = new ExpressionDeParser() {
@@ -91,24 +131,24 @@ public class SQLOutItem {
 				super.visit(tableColumn);
 
 				String name = tableColumn.getColumnName();	
-				SQLAttribute lookup = srcSchema.get(name);
+				SQLAttribute lookup = (SQLAttribute)srcSchema.get(name);
 				
 				// try fully qualified name
 				if(lookup == null) {
 					name = tableColumn.getFullyQualifiedName();
-					lookup = srcSchema.get(name);					
+					lookup = (SQLAttribute) srcSchema.get(name);					
 				}
 				
 				
 				outAttribute.addSourceAttribute(lookup);
 				
 				// first column that is in this expression
-				if(outAttribute.getType() == null) {
-					outAttribute.setType(lookup.getType());
+				if(((SQLAttribute)outAttribute).getType() == null) {
+					((SQLAttribute)outAttribute).setType(lookup.getType());
 				}
 				else {
 					// check to make sure it is the same type
-					assert(outAttribute.getType().getDataType() == lookup.getType().getDataType());
+					assert(((SQLAttribute)outAttribute).getType().getDataType() == lookup.getType().getDataType());
 				}
 			}
 			
@@ -119,7 +159,7 @@ public class SQLOutItem {
 				if(function.isAllColumns()) {
 					// find attribute with highest security attribute in src schema
 					// must be count(*), all others don't support this
-					   setUpAggregateAllColumns(srcSchema, outAttribute);
+					   setUpAggregateAllColumns(srcSchema, ((SQLAttribute)outAttribute));
 					}   // else (not *)  delegate got column visitor above
 			}
 		
@@ -131,8 +171,8 @@ public class SQLOutItem {
 				AnalyticExpression fullExpression = supplement.getAnalyticExpression();
 				windowedAggregates.add(fullExpression);
 				assert(aexpr.getName() == "row_number"); // all others not yet implemented
-				setUpAggregateAllColumns(srcSchema, outAttribute);  // TODO: make this more fine grained, only derived from ORDER BY, PARTITION BY and possibly aggregate
-				outAttribute.setExpression(fullExpression); // replace predecessor
+				setUpAggregateAllColumns(srcSchema, ((SQLAttribute)outAttribute));  // TODO: make this more fine grained, only derived from ORDER BY, PARTITION BY and possibly aggregate
+				((SQLAttribute)outAttribute).setExpression(fullExpression); // replace predecessor
 				
 			}
 			
@@ -142,7 +182,7 @@ public class SQLOutItem {
 		}; // end expression parser
 		
 		Expression parseExpression = CCJSqlParserUtil.parseExpression(expr);
-		outAttribute.setExpression(parseExpression);
+		((SQLAttribute)outAttribute).setExpression(parseExpression);
 		
 		
 		StringBuilder b = new StringBuilder();
@@ -155,7 +195,7 @@ public class SQLOutItem {
 	
 	// takes in alias src, determines if it has a match in src schema
 	// if so, it prefixes the column reference with the src table
-	String fullyQualify(String expr, Map<String, SQLAttribute> srcSchema) throws JSQLParserException {
+	String fullyQualify(String expr, Map<String, DataObjectAttribute> srcSchema) throws JSQLParserException {
 		
 		ExpressionDeParser deparser = new ExpressionDeParser() {
 		
@@ -193,12 +233,12 @@ public class SQLOutItem {
 
 	
 	
-	static void setUpAggregateAllColumns(Map<String, SQLAttribute> srcSchema, SQLAttribute out) {
+	static void setUpAggregateAllColumns(Map<String, DataObjectAttribute> srcSchema, SQLAttribute out) {
 		ColDataType intAttrType = new ColDataType();
 		intAttrType.setDataType("integer");
 		out.setType(intAttrType);
 		
-		for(SQLAttribute src : srcSchema.values()) {
+		for(DataObjectAttribute src : srcSchema.values()) {
 			out.addSourceAttribute(src);
 		}
 		
@@ -206,7 +246,7 @@ public class SQLOutItem {
 	}
 	
 	public SQLAttribute getAttribute() {
-		return outAttribute;
+		return ((SQLAttribute)outAttribute);
 	}
 	
 	public boolean hasAggregate() {
