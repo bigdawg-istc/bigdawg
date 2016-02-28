@@ -23,15 +23,44 @@ public class RunShell {
 
 	private static Logger log = Logger.getLogger(RunShell.class);
 
+	/**
+	 * Runs a shell script and returns the stream of data returned by the called
+	 * program.
+	 * 
+	 * @param procBuilder
+	 * @return the stream of data returned by the process
+	 * @throws RunShellException
+	 * @throws InterruptedException
+	 * @throws IOException
+	 */
 	public static InputStream runShell(ProcessBuilder procBuilder)
 			throws RunShellException, InterruptedException, IOException {
 		Process prop = procBuilder.start();
-		prop.waitFor();
-		int exitVal = prop.exitValue();
+		int exitVal = prop.waitFor();
 		if (exitVal != 0) {
 			throw new RunShellException("Process returned value: " + exitVal);
 		}
 		return prop.getInputStream();
+	}
+
+	/**
+	 * Run a shell script (program from a shell command line) and return the
+	 * value returned by the process.
+	 * 
+	 * @param procBuilder
+	 * @return the value (int) returned by the process
+	 * @throws IOException
+	 * @throws InterruptedException
+	 */
+	public static int runShellReturnExitValue(ProcessBuilder procBuilder) throws IOException, InterruptedException {
+		Process prop = procBuilder.start();
+		prop.waitFor();
+		return prop.exitValue();
+	}
+
+	/* makes a FIFO special file with name pathname */
+	public static int mkfifo(String name) throws IOException, InterruptedException {
+		return runShellReturnExitValue(new ProcessBuilder("mkfifo", name));
 	}
 
 	public static InputStream runAccumuloScript(String filePath, String database, String table, String query)

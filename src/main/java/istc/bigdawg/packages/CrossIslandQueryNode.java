@@ -58,7 +58,7 @@ public class CrossIslandQueryNode {
 		
 		if (dbSchemaHandler == null) {
 			if (scope.equals(Scope.RELATIONAL))
-				dbSchemaHandler = new PostgreSQLHandler(0, 3);
+				dbSchemaHandler = new PostgreSQLHandler(3);
 			else 
 				throw new Exception("Unsupported Island");
 		}

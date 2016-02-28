@@ -3,6 +3,10 @@
  */
 package istc.bigdawg.query;
 
+import org.apache.commons.lang3.tuple.Pair;
+
+import java.sql.SQLException;
+import java.text.ParseException;
 import java.util.Collection;
 
 /**
@@ -51,7 +55,20 @@ public interface ConnectionInfo {
 	 * @return a query that when run on the instance, removes all of the given objects.
 	 */
 	public String getCleanupQuery(Collection<String> objects);
-	
+
+	/**
+	 *
+	 * @param object the table for which the histogram should be computed
+	 * @param attribute the attribute of the table for which the histogram should be computed
+	 * @param start the minimum value contained in the histogram
+	 * @param end the maximum value contained in the histogram
+	 * @param numBuckets the number of buckets in the histogram
+     * @return an array such that the ith value is equal to the number of elements stored in the ith bucket of the histogram
+     */
+	public long[] computeHistogram(String object, String attribute, double start, double end, int numBuckets) throws SQLException;
+
+	public Pair<Number, Number> getMinMax(String object, String attribute) throws SQLException, ParseException;
+
 	public DBHandler getHandler();
 	
 }

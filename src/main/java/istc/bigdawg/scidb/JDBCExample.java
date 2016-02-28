@@ -20,10 +20,17 @@ class JDBCExample {
 
 		try {
 			Connection conn = DriverManager.getConnection("jdbc:scidb://localhost/");
+			conn.setAutoCommit(false);
 			Statement st = conn.createStatement();
 			boolean result = st.execute("load region from '/home/adam/data/tpch/tpch1G/csv/region.sci'");
 			System.out.println("result of the load statement: "+result);
-			ResultSet resLoad = st.getResultSet();
+//			ResultSet resLoad = st.getResultSet();
+//			ResultSet rsRegion = st.executeQuery("select * from region");
+//			while(!rsRegion.isAfterLast()) {
+//				System.out.println(rsRegion.getString(2));
+//				rsRegion.next();
+//			}
+			conn.commit();
 			// create array A<a:string>[x=0:2,3,0, y=0:2,3,0];
 			// select * into A from
 			// array(A, '[["a","b","c"]["d","e","f"]["123","456","789"]]');
@@ -37,7 +44,7 @@ class JDBCExample {
 			IResultSetWrapper resWrapper = res.unwrap(IResultSetWrapper.class);
 			for (int i = 1; i <= meta.getColumnCount(); i++) {
 				System.out.println(meta.getColumnName(i) + " - " + meta.getColumnTypeName(i) + " - is attribute:"
-						+ resWrapper.isColumnAttribute(i));
+						+ resWrapper.isColumnAttribute(i) + "  - is column dimension: " + resWrapper.isColumnDimension(i));
 			}
 			System.out.println("=====");
 
@@ -47,8 +54,17 @@ class JDBCExample {
 				System.out.println(res.getLong("x") + " " + res.getLong("y") + " " + res.getString("a"));
 				res.next();
 			}
+			res.close();
+			
+			ResultSet res2 = st.executeQuery("select * from test_waveform_flat");
+			res2.close();
+			st.close();
+			conn.close();
 		} catch (SQLException e) {
-			System.out.println(e);
+			e.printStackTrace();
+			System.out.println(e.getMessage().contains("does not exist"));
+			System.out.println(e.getMessage());
+			//System.out.println(e);
 		}
 		System.exit(0);
 	}

@@ -4,6 +4,7 @@
  */
 package istc.bigdawg.query;
 
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,6 +23,7 @@ import istc.bigdawg.myria.MyriaHandler;
 import istc.bigdawg.planner.Planner;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.scidb.SciDBHandler;
+import istc.bigdawg.utils.StackTrace;
 /**
  * @author Adam Dziedzic
  * 
@@ -50,9 +52,8 @@ public class QueryClient {
 	static {
 		registeredDbHandlers = new ArrayList<DBHandler>();
 		int postgreSQL1Engine=0;
-		int mimic2DB=1;
 		try {
-			registeredDbHandlers.add(new PostgreSQLHandler(postgreSQL1Engine,mimic2DB));
+			registeredDbHandlers.add(new PostgreSQLHandler(postgreSQL1Engine));
 		} catch (Exception e) {
 			e.printStackTrace();
 			String msg = "Could not register PostgreSQL handler!";
@@ -62,7 +63,12 @@ public class QueryClient {
 		}
 		registeredDbHandlers.add(new AccumuloHandler());
 		registeredDbHandlers.add(new MyriaHandler());
-		registeredDbHandlers.add(new SciDBHandler());
+		try {
+			registeredDbHandlers.add(new SciDBHandler());
+		} catch (SQLException e) {
+			e.printStackTrace();
+			log.error(e.getMessage() + " " + StackTrace.getFullStackTrace(e));
+		}
 	}
 
 	/**

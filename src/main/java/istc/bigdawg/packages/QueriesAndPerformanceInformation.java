@@ -3,9 +3,9 @@ package istc.bigdawg.packages;
 import java.util.List;
 
 public class QueriesAndPerformanceInformation {
-	public List<List<String>> qList;
-	public List<Object> pInfo;
-	public QueriesAndPerformanceInformation(List<List<String>> q, List<Object> p) {
+	public List<String> qList;
+	public List<Long> pInfo;
+	public QueriesAndPerformanceInformation(List<String> q, List<Long> p) {
 		qList = q;
 		pInfo = p;
 	}
