@@ -106,7 +106,9 @@ public class ExecutionNodeFactory {
 		} else if (nodeClass.contains("TableExecutionNode")) {
 			result = new TableExecutionNode(connectionInfo, tableName.get());
 		} else if (nodeClass.contains("BinaryJoinExecutionNode")) {
-			result = new BinaryJoinExecutionNode();
+			// TODO: look into this
+//			result = new BinaryJoinExecutionNode();
+			result = null;
 		}
 		return result;
 	}
