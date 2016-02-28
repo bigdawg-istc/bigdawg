@@ -27,7 +27,7 @@ public class TranformFromPostgresBinToSciDBBinExecutor {
 			TransformFromPostgresBinToSciDBBinExecutor transformExecutor = new TransformFromPostgresBinToSciDBBinExecutor(
 					"src/main/cmigrator/data/fromPostgresIntDoubleString.bin",
 					"src/main/cmigrator/data/toSciDBIntDoubleString.bin,",
-					"int32_t,int32_t:null,double,double:null,string,string");
+					"int32_t,int32_t null,double,double null,string,string null");
 			FutureTask<Long> transformTask = new FutureTask<Long>(
 					transformExecutor);
 			int minNumberOfThreads = 1;

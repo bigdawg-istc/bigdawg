@@ -25,17 +25,25 @@ public class LoadToSciDBExecutor implements Callable<String> {
 	private SciDBConnectionInfo connectionTo;
 	private final SciDBArrays arrays;
 	private final String scidbFilePath;
+	private String binaryFormat = null;
+
+	public LoadToSciDBExecutor(SciDBConnectionInfo connectionTo, SciDBArrays arrays, String scidbFilePath) {
+		this.connectionTo = connectionTo;
+		this.arrays = arrays;
+		this.scidbFilePath = scidbFilePath;
+	}
 
 	/**
 	 * @param connectionTo
 	 * @param arrays
 	 * @param scidbFilePath
 	 */
-	public LoadToSciDBExecutor(SciDBConnectionInfo connectionTo,
-			SciDBArrays arrays, String scidbFilePath) {
+	public LoadToSciDBExecutor(SciDBConnectionInfo connectionTo, SciDBArrays arrays, String scidbFilePath,
+			String binaryFormat) {
 		this.connectionTo = connectionTo;
 		this.arrays = arrays;
 		this.scidbFilePath = scidbFilePath;
+		this.binaryFormat = binaryFormat;
 	}
 
 	/**
@@ -67,10 +75,13 @@ public class LoadToSciDBExecutor implements Callable<String> {
 		// log.debug("Load data to SciDB: " + resultString);
 		SciDBHandler handler = new SciDBHandler(connectionTo);
 		String loadCommand = null;
-		loadCommand = "load(" + arrays.getFlat() + ", '" + scidbFilePath + "')";
+		loadCommand = "load(" + arrays.getFlat() + ", '" + scidbFilePath + "'";
+		if (binaryFormat != null) {
+			loadCommand += ",-2,'(" + binaryFormat + ")'";
+		}
+		loadCommand += ")";
 		if (arrays.getMultiDimensional() != null) {
-			loadCommand = "store(redimension(" + loadCommand + ","
-					+ arrays.getMultiDimensional() + "),"
+			loadCommand = "store(redimension(" + loadCommand + "," + arrays.getMultiDimensional() + "),"
 					+ arrays.getMultiDimensional() + ")";
 		}
 		log.debug("load command: " + loadCommand.replace("'", ""));

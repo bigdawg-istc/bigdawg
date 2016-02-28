@@ -12,8 +12,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.FutureTask;
 
 import org.apache.log4j.Logger;
-import org.postgresql.copy.CopyManager;
-import org.postgresql.core.BaseConnection;
 
 import istc.bigdawg.LoggerSetup;
 import istc.bigdawg.exceptions.MigrationException;
@@ -24,6 +22,8 @@ import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.utils.StackTrace;
 
 /**
+ * Data migration between instances of PostgreSQL.
+ * 
  * @author Adam Dziedzic
  * 
  */
@@ -35,43 +35,6 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 	private static Logger logger = Logger.getLogger(FromPostgresToPostgres.class);
 	
 	private static final int minNumberOfThreads = 2;
-
-	/**
-	 * Direction for the PostgreSQL copy command.
-	 * 
-	 * @author Adam Dziedzic
-	 */
-	private enum DIRECTION {
-		TO, FROM
-	};
-
-	/**
-	 * Copy out to STDOUT. Copy in from STDIN.
-	 * 
-	 * @author Adam Dziedzic
-	 */
-	private enum STDIO {
-		STDOUT, STDIN
-	}
-
-	/**
-	 * Get the postgresql command to copy data.
-	 * 
-	 * @param table
-	 *            table from/to which you want to copy the data
-	 * @param direction
-	 *            to/from STDOUT
-	 * @return the command to copy data
-	 */
-	private String getCopyCommand(String table, DIRECTION direction, STDIO stdio) {
-		StringBuilder copyFromStringBuf = new StringBuilder();
-		copyFromStringBuf.append("COPY ");
-		copyFromStringBuf.append(table + " ");
-		copyFromStringBuf.append(direction.toString() + " ");
-		copyFromStringBuf
-				.append(stdio.toString() + " with binary");/* with binary */
-		return copyFromStringBuf.toString();
-	}
 
 	/**
 	 * Migrate data between instances of PostgreSQL.
@@ -122,8 +85,8 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 			PostgreSQLConnectionInfo connectionTo, String toTable) throws Exception {
 		long startTimeMigration = System.currentTimeMillis();
 
-		String copyFromString = getCopyCommand(fromTable, DIRECTION.TO, STDIO.STDOUT);
-		String copyToString = getCopyCommand(toTable, DIRECTION.FROM, STDIO.STDIN);
+		String copyFromCommand = PostgreSQLHandler.getExportBinCommand(fromTable);
+		String copyToCommand = PostgreSQLHandler.getLoadBinCommand(toTable);
 
 		Connection conFrom = null;
 		Connection conTo = null;
@@ -140,10 +103,10 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 			final PipedOutputStream output = new PipedOutputStream();
 			final PipedInputStream input = new PipedInputStream(output);
 
-			CopyFromPostgresExecutor copyFromExecutor = new CopyFromPostgresExecutor(conFrom, copyFromString, output);
+			CopyFromPostgresExecutor copyFromExecutor = new CopyFromPostgresExecutor(conFrom, copyFromCommand, output);
 			FutureTask<Long> taskCopyFromExecutor = new FutureTask<Long>(copyFromExecutor);
 
-			CopyToPostgresExecutor copyToExecutor = new CopyToPostgresExecutor(conTo, copyToString, input);
+			CopyToPostgresExecutor copyToExecutor = new CopyToPostgresExecutor(conTo, copyToCommand, input);
 			FutureTask<Long> taskCopyToExecutor = new FutureTask<Long>(copyToExecutor);
 			
 			executor = Executors.newFixedThreadPool(minNumberOfThreads);

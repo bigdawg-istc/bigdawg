@@ -277,7 +277,8 @@ public class PostgreSQLHandler implements DBHandler {
 	}
 
 	/**
-	 * It executes the SQL command and releases the resources at the end, returning a QueryResult if present
+	 * It executes the SQL command and releases the resources at the end,
+	 * returning a QueryResult if present
 	 *
 	 * @param query
 	 * @return #Optional<QueryResult>
@@ -305,7 +306,7 @@ public class PostgreSQLHandler implements DBHandler {
 
 		} catch (SQLException ex) {
 			Logger lgr = Logger.getLogger(QueryClient.class.getName());
-//			ex.printStackTrace();
+			// ex.printStackTrace();
 			lgr.log(Level.ERROR, ex.getMessage() + "; query: " + query, ex);
 			throw ex;
 		} finally {
@@ -313,7 +314,7 @@ public class PostgreSQLHandler implements DBHandler {
 				this.cleanPostgreSQLResources();
 			} catch (SQLException ex) {
 				Logger lgr = Logger.getLogger(QueryClient.class.getName());
-//				ex.printStackTrace();
+				// ex.printStackTrace();
 				lgr.log(Level.INFO, ex.getMessage() + "; query: " + query, ex);
 				throw ex;
 			}
@@ -344,7 +345,7 @@ public class PostgreSQLHandler implements DBHandler {
 			return new QueryResult(rows, types, colNames);
 		} catch (SQLException ex) {
 			Logger lgr = Logger.getLogger(QueryClient.class.getName());
-//			ex.printStackTrace();
+			// ex.printStackTrace();
 			lgr.log(Level.ERROR, ex.getMessage() + "; query: " + query, ex);
 			throw ex;
 		} finally {
@@ -352,7 +353,7 @@ public class PostgreSQLHandler implements DBHandler {
 				this.cleanPostgreSQLResources();
 			} catch (SQLException ex) {
 				Logger lgr = Logger.getLogger(QueryClient.class.getName());
-//				ex.printStackTrace();
+				// ex.printStackTrace();
 				lgr.log(Level.INFO, ex.getMessage() + "; query: " + query, ex);
 				throw ex;
 			}
@@ -593,7 +594,7 @@ public class PostgreSQLHandler implements DBHandler {
 	 */
 	public PostgreSQLTableMetaData getColumnsMetaData(String tableNameInitial) throws SQLException {
 		try {
- 			this.getConnection();
+			this.getConnection();
 			PostgreSQLSchemaTableName schemaTable = new PostgreSQLSchemaTableName(tableNameInitial);
 			try {
 				preparedSt = con.prepareStatement(
@@ -603,23 +604,24 @@ public class PostgreSQLHandler implements DBHandler {
 				preparedSt.setString(1, schemaTable.getSchemaName());
 				preparedSt.setString(2, schemaTable.getTableName());
 				// postgresql logger cannot accept single quotes
-				log.debug("replace double quotes (\") with signle quotes in the query to run it in PostgreSQL: "+preparedSt.toString().replace("'", "\""));
+				log.debug("replace double quotes (\") with signle quotes in the query to run it in PostgreSQL: "
+						+ preparedSt.toString().replace("'", "\""));
 			} catch (SQLException e) {
 				e.printStackTrace();
-				log.error("PostgreSQLHandler, the query preparation failed. "+e.getMessage());
+				log.error("PostgreSQLHandler, the query preparation failed. " + e.getMessage());
 				throw e;
 			}
 			ResultSet resultSet = preparedSt.executeQuery();
-			Map<String,PostgreSQLColumnMetaData> columnsMap = new HashMap<>();
+			Map<String, PostgreSQLColumnMetaData> columnsMap = new HashMap<>();
 			List<PostgreSQLColumnMetaData> columnsOrdered = new ArrayList<>();
 			while (resultSet.next()) {
-				PostgreSQLColumnMetaData columnMetaData = new PostgreSQLColumnMetaData(resultSet.getString(1), resultSet.getInt(2),
-						resultSet.getBoolean(3), resultSet.getString(4), resultSet.getInt(5), resultSet.getInt(6),
-						resultSet.getInt(7));
+				PostgreSQLColumnMetaData columnMetaData = new PostgreSQLColumnMetaData(resultSet.getString(1),
+						resultSet.getInt(2), resultSet.getBoolean(3), resultSet.getString(4), resultSet.getInt(5),
+						resultSet.getInt(6), resultSet.getInt(7));
 				columnsMap.put(resultSet.getString(1), columnMetaData);
 				columnsOrdered.add(columnMetaData);
 			}
-			return new PostgreSQLTableMetaData(columnsMap,columnsOrdered);
+			return new PostgreSQLTableMetaData(columnsMap, columnsOrdered);
 		} finally {
 			try {
 				this.cleanPostgreSQLResources();
@@ -712,8 +714,8 @@ public class PostgreSQLHandler implements DBHandler {
 	public void dropTableIfExists(String tableName) throws SQLException {
 		executeStatementPostgreSQL("drop table if exists " + tableName);
 	}
-	
-		/**
+
+	/**
 	 * Command to copy data from a table in PostgreSQL.
 	 * 
 	 * @param table
@@ -729,9 +731,53 @@ public class PostgreSQLHandler implements DBHandler {
 		copyFromStringBuf.append(table + " ");
 		copyFromStringBuf.append("TO ");
 		copyFromStringBuf.append(" STDOUT ");
-		copyFromStringBuf
-				.append("with (format csv, delimiter '" + delimiter + "')");
+		copyFromStringBuf.append("with (format csv, delimiter '" + delimiter + "')");
 		return copyFromStringBuf.toString();
+	}
+
+	/**
+	 * Direction for the PostgreSQL copy command.
+	 * 
+	 * @author Adam Dziedzic
+	 */
+	public enum DIRECTION {
+		TO, FROM
+	};
+
+	/**
+	 * Copy out to STDOUT. Copy in from STDIN.
+	 * 
+	 * @author Adam Dziedzic
+	 */
+	public enum STDIO {
+		STDOUT, STDIN
+	}
+
+	/**
+	 * Get the postgresql command to copy data.
+	 * 
+	 * @param table
+	 *            table from/to which you want to copy the data
+	 * @param direction
+	 *            to/from STDOUT
+	 * @return the command to copy data
+	 */
+	public static String getCopyBinCommand(String table, DIRECTION direction, STDIO stdio) {
+		StringBuilder copyFromStringBuf = new StringBuilder();
+		copyFromStringBuf.append("COPY ");
+		copyFromStringBuf.append(table + " ");
+		copyFromStringBuf.append(direction.toString() + " ");
+		copyFromStringBuf
+				.append(stdio.toString() + " with binary");/* with binary */
+		return copyFromStringBuf.toString();
+	}
+	
+	public static String getExportBinCommand(String table) {
+		return getCopyBinCommand(table, DIRECTION.TO, STDIO.STDOUT);
+	}
+	
+	public static String getLoadBinCommand(String table) {
+		return getCopyBinCommand(table, DIRECTION.FROM, STDIO.STDIN);
 	}
 
 	/**

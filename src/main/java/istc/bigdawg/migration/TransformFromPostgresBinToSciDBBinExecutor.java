@@ -33,18 +33,20 @@ public class TransformFromPostgresBinToSciDBBinExecutor implements Callable<Long
 	 * the format/types of the attributes, for example:
 	 * types=int32_t,int32_t:null,double,double:null,string,string
 	 */
-	private final String format;
+	private final String binFormat;
 
 	/**
 	 * @param postgresBinFilePath
 	 * @param scidbBinFilePath
-	 * @param format
+	 * @param binFormat
+	 *            the format/types of the attributes, for example:
+	 *            types=int32_t,int32_t:null,double,double:null,string,string
 	 */
 	public TransformFromPostgresBinToSciDBBinExecutor(String postgresBinFilePath, String scidbBinFilePath,
-			String format) {
+			String binFormat) {
 		this.postgresBinFilePath = postgresBinFilePath;
 		this.scidbBinFilePath = scidbBinFilePath;
-		this.format = format;
+		this.binFormat = binFormat;
 	}
 
 	/**
@@ -55,7 +57,7 @@ public class TransformFromPostgresBinToSciDBBinExecutor implements Callable<Long
 	public Long call() {
 		try {
 			return (long) RunShell.runShellReturnExitValue(new ProcessBuilder("src/main/cmigrator/postgres2scidb", "-i",
-					postgresBinFilePath, "-o", scidbBinFilePath, "-f", format));
+					postgresBinFilePath, "-o", scidbBinFilePath, "-f", binFormat));
 		} catch (IOException | InterruptedException ex) {
 			ex.printStackTrace();
 			log.error("The binary transformation from PostgreSQL to SciDB failed: " + ex.getMessage() + " "
@@ -72,10 +74,14 @@ public class TransformFromPostgresBinToSciDBBinExecutor implements Callable<Long
 	public static void main(String[] args) throws InterruptedException, ExecutionException {
 		ExecutorService executor = null;
 		try {
+//			TransformFromPostgresBinToSciDBBinExecutor transformExecutor = new TransformFromPostgresBinToSciDBBinExecutor(
+//					"src/main/cmigrator/data/fromPostgresIntDoubleString.bin",
+//					"src/main/cmigrator/data/toSciDBIntDoubleString.bin",
+//					"int32_t,int32_t null,double,double null,string,string null");
 			TransformFromPostgresBinToSciDBBinExecutor transformExecutor = new TransformFromPostgresBinToSciDBBinExecutor(
-					"src/main/cmigrator/data/fromPostgresIntDoubleString.bin",
-					"src/main/cmigrator/data/toSciDBIntDoubleString.bin,",
-					"int32_t,int32_t:null,double,double:null,string,string");
+					"/home/adam/data/region_postgres.bin",
+					"/home/adam/data/region_scidb.bin",
+					"int64 null,string,string");
 			FutureTask<Long> transformTask = new FutureTask<Long>(transformExecutor);
 			int minNumberOfThreads = 1;
 			executor = Executors.newFixedThreadPool(minNumberOfThreads);
