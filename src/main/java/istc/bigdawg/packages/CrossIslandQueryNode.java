@@ -53,6 +53,9 @@ public class CrossIslandQueryNode {
 	
 	private Set<String> joinPredicates;
 	
+	private static final int  psqlSchemaHandlerDBID = 3;
+	private static final int  scidbSchemaHandlerDBID = 6;
+	
 	
 	public CrossIslandQueryNode (IslandsAndCast.Scope scope, String islandQuery, String name, Map<String, Operator> rootsForSchemas) throws Exception {
 		this.scope = scope;
@@ -70,7 +73,7 @@ public class CrossIslandQueryNode {
 		// create new tables or arrays for planning use
 		if (scope.equals(Scope.RELATIONAL)) {
 			this.select = (Select) CCJSqlParserUtil.parse(islandQuery);
-			dbSchemaHandler = new PostgreSQLHandler(3);
+			dbSchemaHandler = new PostgreSQLHandler(psqlSchemaHandlerDBID);
 			for (String key : rootsForSchemas.keySet()) {
 				if (children.contains(key)) {
 					System.out.println("key: "+key+"; query: "+rootsForSchemas.get(key).generateSQLCreateTableStatementLocally(key)+"\n\n");
@@ -79,7 +82,7 @@ public class CrossIslandQueryNode {
 				}
 			}
 		} else if (scope.equals(Scope.ARRAY)) {
-			dbSchemaHandler = new SciDBHandler(6);
+			dbSchemaHandler = new SciDBHandler(scidbSchemaHandlerDBID);
 			for (String key : rootsForSchemas.keySet()) {
 				if (children.contains(key)) {
 					System.out.println("key: "+key+"; query: "+rootsForSchemas.get(key).generateSQLCreateTableStatementLocally(key)+"\n\n");
@@ -188,7 +191,7 @@ public class CrossIslandQueryNode {
 		
 		
 		originalMap = CatalogViewer.getDBMappingByObj(objs);
-		
+//		originalMap.putAll(m);
 		
 		
 		// traverse add remainder
@@ -686,7 +689,12 @@ public class CrossIslandQueryNode {
 			
 			if (((SeqScan) node).getTable().getFullyQualifiedName().toLowerCase().startsWith("bigdawgtag_")){
 				ret = new ArrayList<String>();
-				ret.add("3");
+				if (scope.equals(Scope.RELATIONAL))
+					ret.add(String.valueOf(psqlSchemaHandlerDBID));						// TODO IMPORTANT. CHANGE ORIGINAL MAPPING TO INCLUDE THIS
+				else if (scope.equals(Scope.ARRAY))
+					ret.add(String.valueOf(scidbSchemaHandlerDBID));
+				else 
+					throw new Exception("Unsupported island: "+scope.name());
 			}else 
 				ret = new ArrayList<String>(originalMap.get(((SeqScan) node).getTable().getFullyQualifiedName()));
 			
@@ -753,23 +761,33 @@ public class CrossIslandQueryNode {
 		// prune c
 		c.prune(true);
 		
-		Map<String, ConnectionInfo> cis = new HashMap<>();
+//		Map<String, ConnectionInfo> cis = new HashMap<>();
+		
+		ConnectionInfo ci = null;
+		String dbid = null;
 		
 //		System.out.println("traverse result: "+traverseResult);
+		
+		if (traverseResult.size() > 1)
+			throw new Exception("traverseResult size greater than 1");
 		
 		for (String s : traverseResult) {
 			
 //			System.out.println("dbid: "+s);
 			
-			if (scope.equals(Scope.RELATIONAL))
-				cis.put(s, CatalogViewer.getPSQLConnectionInfo(Integer.parseInt(s)));
-			else if (scope.equals(Scope.ARRAY))
-				cis.put(s, CatalogViewer.getSciDBConnectionInfo(Integer.parseInt(s)));
-			else 
+			if (scope.equals(Scope.RELATIONAL)) {
+//				cis.put(s, CatalogViewer.getPSQLConnectionInfo(Integer.parseInt(s)));
+				ci = CatalogViewer.getPSQLConnectionInfo(Integer.parseInt(s));
+				dbid = s;
+			} else if (scope.equals(Scope.ARRAY)) {
+				ci = CatalogViewer.getSciDBConnectionInfo(Integer.parseInt(s));
+				dbid = s;
+			} else 
 				throw new Exception("Unsupported island code: "+scope.toString());
 		}
 		
-		queryContainer.put(c.getPruneToken(), new QueryContainerForCommonDatabase(cis, c, c.getPruneToken()));
+		
+		queryContainer.put(c.getPruneToken(), new QueryContainerForCommonDatabase(ci, dbid, c, c.getPruneToken()));
 		// ^ container added prior to root traverse
 	}
 	
@@ -793,7 +811,20 @@ public class CrossIslandQueryNode {
 		return remainderPermutations.get(index);
 	}
 	
+	public List<Operator> getAllRemainder() {
+		return remainderPermutations;
+	}
+	
+	public List<String> getRemainderLoc() {
+		return remainderLoc;
+	}
+	
 	public Map<String, QueryContainerForCommonDatabase> getQueryContainer(){
 		return queryContainer;
+	}
+	
+	
+	public String getCrossIslandQueryNodeName() {
+		return this.name;
 	}
 }

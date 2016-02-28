@@ -14,6 +14,7 @@ import istc.bigdawg.schema.DataObjectAttribute;
 import istc.bigdawg.schema.SQLAttribute;
 import net.sf.jsqlparser.expression.Alias;
 import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.AllColumns;
@@ -400,12 +401,28 @@ public class Operator {
 		return false;
 	}
 	
-	// this is the implicit root of the SQL generated
-	public String generateSQLString(Select srcStatement) throws Exception {
-		
+	
+	protected Select generateSQLStringDestOnly(Select dstStatement) throws Exception {
+
+		// generic case
+		for(int i = 0; i < children.size(); ++i) {
+			dstStatement = children.get(i).generateSQLStringDestOnly(dstStatement);
+		}
+		return dstStatement;
+	}
+	
+	
+	/**
+	 * The bulk of work for generating SQL statement
+	 * 
+	 * @param srcStatement, used to reorder select items, place 'null' if order of SelectItems not important
+	 * @return dstStatement
+	 * @throws Exception
+	 */
+	private Select prepareForSQLGeneration(Select srcStatement) throws Exception {
+
 		clearJoinReservedObjects();
 		Select dstStatement  = this.generateSQLStringDestOnly(null);
-		
 		
 		// iterate over out schema and add it to select clause
 		HashMap<String, SelectItem> selects = new HashMap<String, SelectItem>();
@@ -424,35 +441,41 @@ public class Operator {
 			selects.put(s, si);
 		}
 		
-		((PlainSelect) dstStatement.getSelectBody()).setSelectItems(changeSelectItemsOrder(srcStatement, selects));
+		PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
 		
+		if (srcStatement != null)
+			ps.setSelectItems(changeSelectItemsOrder(srcStatement, selects));
+		
+		return dstStatement;
+	}
+	
+	
+	// this is the implicit root of the SQL generated
+	public String generateSQLString(Select srcStatement) throws Exception {
+		
+		Select dstStatement = prepareForSQLGeneration(srcStatement);
 		return dstStatement.toString();
 
 	}
-	// each operator adds its parts to this to regenerate that 
-	// part of the query for plaintext execution
-	//  tail recursion through query plan
-	// isRoot denotes the root node in a CTE or main select statement
 	
-	// srcStatement = entire statement initially submitted by user
-	// dstStatement builds a statement that potentially contains a subset of the nodes depending on where plaintext stops in SQL execution
-//	protected Select generatePlaintext(Select srcStatement, Select dstStatement) throws Exception {
-//
-//		// generic case
-//		for(int i = 0; i < children.size(); ++i) {
-//			dstStatement = children.get(i).generatePlaintext(srcStatement, dstStatement);
-//		}
-//		return dstStatement;
-//	}
-	
-	protected Select generateSQLStringDestOnly(Select dstStatement) throws Exception {
-
-		// generic case
-		for(int i = 0; i < children.size(); ++i) {
-			dstStatement = children.get(i).generateSQLStringDestOnly(dstStatement);
-		}
-		return dstStatement;
+	public String generateSQLWithWidthBucket(String widthBucketString, String into, Select srcStatement) throws Exception {
+		
+		Select dstStatement = prepareForSQLGeneration(srcStatement);
+		
+		PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
+		
+		String newWhere = "(" + ps.getWhere().toString() + ") AND ("+widthBucketString+")";
+		ps.setWhere(CCJSqlParserUtil.parseCondExpression(newWhere));
+		
+		
+		if (into != null) 
+			addInto(ps, into); 
+		
+		return dstStatement.toString();
 	}
+	
+	
+	
 	
 	protected static void addSelectItem(Expression expr, List<SelectItem> selects) {
 		boolean found = false;
@@ -497,7 +520,7 @@ public class Operator {
 	/**
 	 * NOTE: MODIFY THIS SO IT UPDATES MAP WITH PRUNE INFORMATION
 	 * getLocation gets a list of result locations that are possible for this operator
-	 * @return List<Integer> of dbid
+	 * @return List<String> of dbid
 	 */
 	public Map<String, List<String>> getTableLocations(Map<String, List<String>> map) {
 		Map<String, List<String>> result = new HashMap<>();

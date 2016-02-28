@@ -29,12 +29,12 @@ public class QEPConstruction {
 		
 //		setupCrossIslandPlanConstructionTier1();
 //		setupCrossIslandPlanConstructionTier2();
-//		setupCrossIslandPlanConstructionTier3();
-//		setupCrossIslandPlanConstructionTier3NoOn();
+		setupCrossIslandPlanConstructionTier3();
+		setupCrossIslandPlanConstructionTier3NoOn();
 //		setupCrossIslandPlanConstructionTier4_1();
 //		setupCrossIslandPlanConstructionTier4_2();
-		setupCrossIslandPlanConstructionTier5_1();
-		setupCrossIslandPlanConstructionTier6();
+//		setupCrossIslandPlanConstructionTier5_1();
+//		setupCrossIslandPlanConstructionTier6();
 	}
 
 	
@@ -116,15 +116,15 @@ public class QEPConstruction {
 //	}
 //	
 //	
-//	@Test
-//	public void testCrossIslandPlanConstructionTier3() throws Exception {
-//		testCaseCrossIslandPlanConstruction("cross-3", false);
-//	}
-//	
-//	@Test
-//	public void testCrossIslandPlanConstructionTier3NoOn() throws Exception {
-//		testCaseCrossIslandPlanConstruction("cross-3-no-on", false);
-//	}
+	@Test
+	public void testCrossIslandPlanConstructionTier3() throws Exception {
+		testCaseCrossIslandPlanConstruction("cross-3", false);
+	}
+	
+	@Test
+	public void testCrossIslandPlanConstructionTier3NoOn() throws Exception {
+		testCaseCrossIslandPlanConstruction("cross-3-no-on", false);
+	}
 //	
 //	@Test
 //	public void testCrossIslandPlanConstructionTier4_1() throws Exception {
@@ -141,10 +141,10 @@ public class QEPConstruction {
 //		testCaseCrossIslandPlanConstruction("array1", false);
 //	}
 	
-	@Test
-	public void testCrossIslandPlanConstructionTier6() throws Exception {
-		testCaseCrossIslandPlanConstruction("relarray1", false);
-	}
+//	@Test
+//	public void testCrossIslandPlanConstructionTier6() throws Exception {
+//		testCaseCrossIslandPlanConstruction("relarray1", false);
+//	}
 	
 
 	@SuppressWarnings("unchecked")

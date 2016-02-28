@@ -8,6 +8,7 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.packages.QueryContainerForCommonDatabase;
 import istc.bigdawg.plan.operators.CommonSQLTableExpressionScan;
 import istc.bigdawg.plan.operators.Operator;
@@ -150,16 +151,23 @@ public class ExecutionNodeFactory {
 		ArrayList<String> edgesFrom = new ArrayList<>();
 		ArrayList<String> edgesTo = new ArrayList<>();
 		
-		String remainderDBID;
+		int remainderDBID;
 		ConnectionInfo remainderCI;
 		if (remainderLoc != null) {
 //			System.out.println("remainderLoc not null; result: "+ remainderLoc.get(0));
-			remainderCI = PostgreSQLHandler.generateConnectionInfo(Integer.parseInt(remainderLoc.get(0)));	
+			remainderDBID = Integer.parseInt(remainderLoc.get(0));
 		} else {
-			remainderDBID = container.values().iterator().next().getConnectionInfos().keySet().iterator().next();
 //			System.out.println("remainderLoc IS null; result: "+ remainderDBID);
-			remainderCI = PostgreSQLHandler.generateConnectionInfo(Integer.parseInt(remainderDBID));
+			remainderDBID = Integer.parseInt(container.values().iterator().next().getDBID());
 		}
+		
+		if (qep.getIsland().equals(Scope.RELATIONAL))
+			remainderCI = CatalogViewer.getPSQLConnectionInfo(remainderDBID);
+		else if (qep.getIsland().equals(Scope.ARRAY))
+			remainderCI = CatalogViewer.getSciDBConnectionInfo(remainderDBID);
+		else 
+			throw new Exception("Unsupported island code: "+qep.getIsland().toString());
+		
 		
 		String remainderInto = qep.getSerializedName();
 		String remainderSelectIntoString;
@@ -199,7 +207,7 @@ public class ExecutionNodeFactory {
 			else 
 				throw new Exception("Unsupported island code: "+qep.getIsland().toString());
 			
-			ConnectionInfo ci = container.get(statementName).getConnectionInfos().values().iterator().next();
+			ConnectionInfo ci = container.get(statementName).getConnectionInfo();
 			dependentNodes.put(statementName, new LocalQueryExecutionNode(selectIntoString, ci, statementName));
 			
 			edgesFrom.add(statementName);
