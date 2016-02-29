@@ -92,16 +92,16 @@ public class FromPostgresToSciDBImplementation {
 	public MigrationResult migrateBin() throws MigrationException {
 		generalMessage += "Mode: binary migration.";
 		log.info(generalMessage);
-		String postgresBinPath = SystemUtilities.getSystemTempDir() + "/bigdawg_" + fromTable + "_postgres.bin";
-		String scidbBinPath = SystemUtilities.getSystemTempDir() + "/bigdawg_" + fromTable + "_scidb.bin";
+		String postgresBinPath = SystemUtilities.getSystemTempDir() + "/bigdawg_from_" + fromTable + "_postgres.bin";
+		String scidbBinPath = SystemUtilities.getSystemTempDir() + "/bigdawg_to_" + toArray + "_scidb.bin";
 
 		ExecutorService executor = null;
 		Connection connectionPostgres = null;
 		try {
-			// RunShell.mkfifo(postgresBinPath);
-			// RunShell.mkfifo(scidbBinPath);
+			RunShell.mkfifo(postgresBinPath);
+			RunShell.mkfifo(scidbBinPath);
 			SciDBArrays arrays = prepareFlatTargetArrays();
-			executor = Executors.newFixedThreadPool(1/*3*/);
+			executor = Executors.newFixedThreadPool(3/* 3 */);
 
 			String copyFromCommand = PostgreSQLHandler.getExportBinCommand(fromTable);
 			CopyFromPostgresExecutor exportExecutor = new CopyFromPostgresExecutor(connectionFrom, copyFromCommand,
@@ -109,8 +109,8 @@ public class FromPostgresToSciDBImplementation {
 			FutureTask<Long> exportTask = new FutureTask<Long>(exportExecutor);
 			executor.submit(exportTask);
 
-			TransformFromPostgresBinToSciDBBinExecutor transformExecutor = new TransformFromPostgresBinToSciDBBinExecutor(
-					postgresBinPath, scidbBinPath, getSciDBBinFormat());
+			TransformBinExecutor transformExecutor = new TransformBinExecutor(postgresBinPath, scidbBinPath,
+					getSciDBBinFormat(), TransformBinExecutor.TYPE.FromPostgresToSciDB);
 			FutureTask<Long> transformTask = new FutureTask<Long>(transformExecutor);
 			executor.submit(transformTask);
 
@@ -129,7 +129,8 @@ public class FromPostgresToSciDBImplementation {
 					loadMessage + "No information about number of loaded rows." + " Result of transformation: "
 							+ transformationMessage,
 					false);
-		} catch (SQLException | UnsupportedTypeException | InterruptedException | ExecutionException exception) {
+		} catch (SQLException | UnsupportedTypeException | InterruptedException | ExecutionException
+				| IOException exception) {
 			MigrationException migrationException = handleException(exception);
 			throw migrationException;
 		} finally {
@@ -322,7 +323,7 @@ public class FromPostgresToSciDBImplementation {
 	}
 
 	/**
-	 * example types=int32_t,int32_t:null,double,double:null,string,string
+	 * example types=int32_t,int32_t null,double,double null,string,string null
 	 * 
 	 * @return scidb bin format for the transformation
 	 * 
@@ -337,7 +338,7 @@ public class FromPostgresToSciDBImplementation {
 			String attributeType = DataTypesFromPostgreSQLToSciDB.getSciDBTypeFromPostgreSQLType(postgresColumnType);
 			String attributeNULL = "";
 			if (postgresColumnMetaData.isNullable()) {
-				attributeNULL = ":null";
+				attributeNULL = " null";
 			}
 			binFormatBuffer.append(attributeType + attributeNULL + ",");
 		}

@@ -86,7 +86,7 @@ static bool CopyLoadRawBuf(Buffer* buffer)
   /*     printf("%o ",buffer->raw_buf[i]); */
   /*   } */
   /* 	printf("%s \n","the end of buffer show"); */
-      return (inbytes > 0);
+  return (inbytes > 0);
 }
 
 /*

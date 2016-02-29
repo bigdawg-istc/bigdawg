@@ -72,7 +72,7 @@ public class FromSciDBToPostgresTest {
 		// make sure that the target array does not exist
 		PostgreSQLHandler handler = new PostgreSQLHandler(conTo);
 		handler.dropTableIfExists(toTable);
-		migrator.migrateSingleThreadCSV(conFrom, fromArray, conTo, toTable);
+		migrator.migrate(conFrom, fromArray, conTo, toTable);
 		long postgresCountTuples = Utils.getPostgreSQLCountTuples(conTo, toTable);
 		assertEquals(numberOfCellsSciDB, postgresCountTuples);
 		// drop the created table
@@ -87,7 +87,7 @@ public class FromSciDBToPostgresTest {
 		handler.dropTableIfExists(toTable);
 		handler.createTable("create table " + toTable
 				+ " (r_regionkey BIGINT NOT NULL, r_name CHAR(25) NOT NULL, r_comment VARCHAR(152) NOT NULL);");
-		migrator.migrateSingleThreadCSV(conFrom, fromArray, conTo, toTable);
+		migrator.migrate(conFrom, fromArray, conTo, toTable);
 		long postgresCountTuples = Utils.getPostgreSQLCountTuples(conTo, toTable);
 		assertEquals(numberOfCellsSciDB, postgresCountTuples);
 		// drop the created table

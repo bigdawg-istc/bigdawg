@@ -13,7 +13,13 @@
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 
+#include <boost/log/core.hpp>
+#include <boost/log/trivial.hpp>
+#include <boost/log/expressions.hpp>
+
 #include "buffer.h"
+
+namespace logging = boost::log;
 
 class Attribute {
 
@@ -50,7 +56,9 @@ class Attribute {
   int virtual postgresReadBinaryBuffer(Buffer * buffer) = 0;
   //int virtual writeCsv(FILE *fp) = 0;
   int virtual writeCsv(std::ofstream & file) = 0;
-  int virtual sciDBWriteBinary(FILE *fp) = 0;
+  int virtual scidbWriteBinary(FILE *fp) = 0;
+  int virtual scidbReadBinary(FILE *fp) = 0;
+  int virtual postgresWriteBinary(FILE *fp) = 0; 
 };
 
 Attribute* new_clone(Attribute const& other);
@@ -70,7 +78,9 @@ class GenericAttribute : public Attribute
   int postgresReadBinary(FILE *fp);
   int postgresReadBinaryBuffer(Buffer * buffer);
   int writeCsv(std::ofstream & ofile);
-  int sciDBWriteBinary(FILE *fp);
+  int scidbWriteBinary(FILE *fp);
+  int scidbReadBinary(FILE *fp);
+  int postgresWriteBinary(FILE *fp);
 };
 
 // template specialization for strings (implemented as char*)
@@ -80,6 +90,7 @@ class GenericAttribute<char*> : public Attribute
 {
  private:
   char* value;
+  void freeValue();
  public:
   GenericAttribute(bool isNullable=false);
   ~GenericAttribute();
@@ -90,7 +101,9 @@ class GenericAttribute<char*> : public Attribute
   int postgresReadBinary(FILE *fp);
   int postgresReadBinaryBuffer(Buffer * buffer);
   int writeCsv(std::ofstream & ofile);
-  int sciDBWriteBinary(FILE *fp);
+  int scidbWriteBinary(FILE *fp);
+  int scidbReadBinary(FILE *fp);
+  int postgresWriteBinary(FILE *fp);
 };
 
 template <class T>
@@ -151,6 +164,49 @@ int GenericAttribute<T>::postgresReadBinary(FILE *fp)
 }
 
 template <class T>
+int GenericAttribute<T>::scidbReadBinary(FILE *fp)
+{
+  //std::cout << "this is type: " << boost::typeindex::type_id().pretty_name() << std::endl;
+  if(this->isNullable) 
+    {
+      /* read 1 byte that tells us if the attribute is null or not:
+	 - If a nullable attribute contains a non-null value, 
+	 the preceding null byte is -1.
+	 - If a nullable attribute contains a null value, 
+	 the preceding null byte will contain the missing reason code, 
+	 which must be between 0 and 127
+      */
+      int8_t nullValue;
+      size_t bytes_read;
+      bytes_read = fread(&nullValue,1,1,fp);
+      if(bytes_read < 1) return 1; // no more data in the input file
+      if(nullValue>=0 && nullValue <= 127)
+	{
+	  this->isNull = true;
+	  // we don't need the reason why it is null so we'll write byte 0
+	  /* A fixed-length data type that allows null values 
+	     will always consume one more byte than the datatype requires, 
+	     regardless of whether the actual value is null or non-null. 
+	     For example, an int8 will require 2 bytes and an int64 
+	     will require 9 bytes. (In the figure, see bytes 2-4 or 17-19.)
+	  */
+	}
+      else 
+	{
+	  /* if nullValue != -1: it means that there was another unexpected value 
+	     different from [-1,127] */
+	  assert(nullValue==-1);
+	}
+    }
+  size_t elements_read = fread(&(this->value),this->bytesNumber,1,fp);
+  //BOOST_LOG_TRIVIAL(debug) << "elements_read: " << elements_read;
+  //BOOST_LOG_TRIVIAL(debug) << "bytes number in the attribute: " << this->bytesNumber;
+  //BOOST_LOG_TRIVIAL(debug) << "value: " << this->value;
+  if(elements_read != 1) return 1; // no more data in the input file
+  return 0; // everything is correct: success
+}
+
+template <class T>
 int GenericAttribute<T>::writeCsv(std::ofstream & ofile)
 {
   // write nothing if the value is NULL
@@ -162,7 +218,7 @@ int GenericAttribute<T>::writeCsv(std::ofstream & ofile)
 }
 
 template <class T>
-int GenericAttribute<T>::sciDBWriteBinary(FILE *fp) 
+int GenericAttribute<T>::scidbWriteBinary(FILE *fp) 
 {
   if(this->isNullable) 
     {
@@ -182,6 +238,30 @@ int GenericAttribute<T>::sciDBWriteBinary(FILE *fp)
 	}
     }
   fwrite(&(this->value),this->bytesNumber,1,fp);
+  return 0;
+}
+
+template <class T>
+int GenericAttribute<T>::postgresWriteBinary(FILE *fp) 
+{
+  BOOST_LOG_TRIVIAL(debug) << "postgresWriteBinary is nullable: " << this->isNullable;
+  if(this->isNullable) 
+    {
+      if(this->isNull)
+	{
+	  /* -1 indicates a NULL field value */
+	  int32_t nullValue = -1;
+	  int32_t nullValuePostgres = endianness::to_postgres<int32_t>(nullValue);
+	  fwrite(&nullValuePostgres,4,1,fp);
+	  /* No value bytes follow in the NULL case. */
+	  return 0;
+	}
+    }
+  int32_t attrLengthPostgres = endianness::to_postgres<int32_t>(this->bytesNumber);
+  fwrite(&attrLengthPostgres,4,1,fp);
+  T valuePostgres = endianness::to_postgres<T>(this->value);
+  BOOST_LOG_TRIVIAL(debug) << "postgresWriteBinary bytes number: " << this->bytesNumber;
+  fwrite(&valuePostgres,this->bytesNumber,1,fp);
   return 0;
 }
 

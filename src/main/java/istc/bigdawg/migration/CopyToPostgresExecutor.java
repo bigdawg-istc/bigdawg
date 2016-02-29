@@ -3,6 +3,8 @@
  */
 package istc.bigdawg.migration;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.sql.Connection;
@@ -12,6 +14,10 @@ import java.util.concurrent.Callable;
 import org.apache.log4j.Logger;
 import org.postgresql.copy.CopyManager;
 import org.postgresql.core.BaseConnection;
+
+import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
+import istc.bigdawg.postgresql.PostgreSQLHandler;
+import istc.bigdawg.utils.StackTrace;
 
 /**
  * This is run in a separate thread to copy data to PostgreSQL.
@@ -26,11 +32,21 @@ public class CopyToPostgresExecutor implements Callable<Long> {
 
 	private CopyManager cpTo;
 	private String copyToString;
-	private final InputStream input;
+	private InputStream input;
+	private String inputFile;
 	private Connection connection;
 
-	public CopyToPostgresExecutor(Connection connection,
-			final String copyToString, InputStream input) throws SQLException {
+	public CopyToPostgresExecutor(Connection connection, final String copyToString,
+			final String inputFile) throws SQLException {
+		this.connection = connection;
+		this.copyToString = copyToString;
+		this.inputFile = inputFile;
+		this.input = null;
+		this.cpTo = new CopyManager((BaseConnection) connection);
+	}
+
+	public CopyToPostgresExecutor(Connection connection, final String copyToString, InputStream input)
+			throws SQLException {
 		this.connection = connection;
 		this.copyToString = copyToString;
 		this.input = input;
@@ -43,14 +59,24 @@ public class CopyToPostgresExecutor implements Callable<Long> {
 	 * @return number of loaded rows
 	 */
 	public Long call() {
+		if (input == null) {
+			try {
+				input = new FileInputStream(inputFile);
+			} catch (FileNotFoundException e) {
+				e.printStackTrace();
+				String msg = e.getMessage() + " Problem with thread for PostgreSQL copy manager "
+						+ "while loading data from PostgreSQL.";
+				log.error(msg + StackTrace.getFullStackTrace(e), e);
+				return -1L;
+			}
+		}
 		Long countLoadedRows = 0L;
 		try {
 			countLoadedRows = cpTo.copyIn(copyToString, input);
 			connection.commit();
 			input.close();
 		} catch (IOException | SQLException e) {
-			String msg = e.getMessage()
-					+ " Problem with thread for PostgreSQL copy manager "
+			String msg = e.getMessage() + " Problem with thread for PostgreSQL copy manager "
 					+ "while copying data to PostgreSQL.";
 			log.error(msg);
 			e.printStackTrace();

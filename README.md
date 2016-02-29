@@ -53,9 +53,16 @@ run test server
 
 
 
+# For demo of Phase 0.3
+Migration from PostgreSQL to PostgreSQL is in binary format.
 
+Migration between PostgreSQL and SciDB was implemented in CSV as well as in binary formats.
 
+It occurs that the binary migration from PostgreSQL to SciDB should be faster in binary format. This is mainly because the binary loading to SciDB does not contain any intermediary transformation while the CSV loading to SciDB contains the costly transformation from CSV to an array format.
 
+On the other hand, there is an opposite situation for data migration from SciDB to PostgreSQL. It means that we can extract data from an array that is multi-dimensional with its dimensions whereas we cannot save the array in the binary format with its dimensions. This means that a full binary export from SciDB with the dimensions would require a re-dimension and we know that it is costly. The numbers will appear soon.
+
+The next step is to build a distributed migrator so that we will be able to migrate data between nodes in a cluster. Currently, this is possible only for the migration between PostgreSQL nodes (thanks to the very convenient copy command (load,export) in PostgreSQL).
 
 # For demo of Phase 0.2:
 

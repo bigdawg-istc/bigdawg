@@ -330,7 +330,8 @@ public class SciDBHandler implements DBHandler {
 			while (!resultSetDimensions.isAfterLast()) {
 				SciDBColumnMetaData columnMetaData = new SciDBColumnMetaData(
 						resultSetDimensions.getString(2),
-						resultSetDimensions.getString(9));
+						resultSetDimensions.getString(9),
+						false);
 				dimensionsMap.put(resultSetDimensions.getString(2),
 						columnMetaData);
 				dimensionsOrdered.add(columnMetaData);
@@ -341,7 +342,8 @@ public class SciDBHandler implements DBHandler {
 			while (!resultSetAttributes.isAfterLast()) {
 				SciDBColumnMetaData columnMetaData = new SciDBColumnMetaData(
 						resultSetAttributes.getString(2),
-						resultSetAttributes.getString(3));
+						resultSetAttributes.getString(3),
+						resultSetAttributes.getBoolean(4));
 				attributesMap.put(resultSetAttributes.getString(2),
 						columnMetaData);
 				attributesOrdered.add(columnMetaData);
