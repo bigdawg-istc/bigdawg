@@ -26,6 +26,7 @@ import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.query.DBHandler;
 import istc.bigdawg.scidb.SciDBHandler;
+import istc.bigdawg.signature.Signature;
 import istc.bigdawg.signature.builder.ArraySignatureBuilder;
 import istc.bigdawg.signature.builder.RelationalSignatureBuilder;
 import istc.bigdawg.utils.IslandsAndCast;
@@ -40,6 +41,7 @@ public class CrossIslandQueryNode {
 	private String query;
 	private Select select;
 	private String name;
+	private Signature signature;
 	
 	private Map<String, QueryContainerForCommonDatabase> queryContainer;
 	private List<Operator> remainderPermutations;
@@ -99,6 +101,9 @@ public class CrossIslandQueryNode {
 		joinPredicates = new HashSet<>();
 		populateQueryContainer();
 		
+		
+//		Signature s = new Signature(rawQueryString, scope, newNode.getRemainder(0), newNode.getQueryContainer());
+		this.signature = new Signature(islandQuery, scope, getRemainder(0), getQueryContainer());
 		
 		
 		
@@ -181,11 +186,11 @@ public class CrossIslandQueryNode {
 		if (scope.equals(Scope.RELATIONAL)) {
 			SQLQueryPlan queryPlan = SQLPlanParser.extractDirect((PostgreSQLHandler)dbSchemaHandler, query);
 			root = queryPlan.getRootNode();
-			objs = new ArrayList<>(Arrays.asList(RelationalSignatureBuilder.sig2(query).split("\t")));
+			objs = new ArrayList<>(RelationalSignatureBuilder.sig2(query));
 		} else if (scope.equals(Scope.ARRAY)) {
 			AFLQueryPlan queryPlan = AFLPlanParser.extractDirect((SciDBHandler)dbSchemaHandler, query);
 			root = queryPlan.getRootNode();
-			objs = new ArrayList<>(Arrays.asList(ArraySignatureBuilder.sig2(query).split("\t")));
+			objs = new ArrayList<>(ArraySignatureBuilder.sig2(query));
 		} else 
 			throw new Exception("Unsupported island code: "+scope.toString());
 		
@@ -220,18 +225,17 @@ public class CrossIslandQueryNode {
 			
 			List<Operator> permResult = getPermutatedOperatorsWithBlock(root, jp);
 			
-			System.out.println("\n\n\nResult of Permutation: ");
-			int i = 1;
-			for (Operator o : permResult) {
-				if (scope.equals(Scope.RELATIONAL))
-					System.out.printf("%d. %s\n\n", i, o.generateSQLString(select));
-				else if (scope.equals(Scope.ARRAY))
-					System.out.printf("%d. %s\n\n", i, o.generateAFLString(0));
-				
-//				System.out.printf("%d. %s\n\n", i, o.generateSQLString(select)); // duplicate command to test modification of underlying structure
-				i++;
-			}
-			
+//			System.out.println("\n\n\nResult of Permutation: ");
+//			int i = 1;
+//			for (Operator o : permResult) {
+//				if (scope.equals(Scope.RELATIONAL))
+//					System.out.printf("%d. %s\n\n", i, o.generateSQLString(select));
+//				else if (scope.equals(Scope.ARRAY))
+//					System.out.printf("%d. %s\n\n", i, o.generateAFLString(0));
+//				
+////				System.out.printf("%d. %s\n\n", i, o.generateSQLString(select)); // duplicate command to test modification of underlying structure
+//				i++;
+//			}
 			
 			remainderPermutations.clear();
 			remainderPermutations.addAll(permResult);
@@ -811,7 +815,7 @@ public class CrossIslandQueryNode {
 		return remainderPermutations.get(index);
 	}
 	
-	public List<Operator> getAllRemainder() {
+	public List<Operator> getAllRemainders() {
 		return remainderPermutations;
 	}
 	
@@ -824,7 +828,26 @@ public class CrossIslandQueryNode {
 	}
 	
 	
+	public Select getOriginalSQLSelect() {
+		return select;
+	}
+	
 	public String getCrossIslandQueryNodeName() {
 		return this.name;
+	}
+	
+	public Signature getSignature() {
+		return signature;
+	}
+	
+	public void printSignature() {
+		int i = 1;
+		System.out.println("Signature Items: ");
+		System.out.println("- "+i+++". remainder: "+signature.getSig1());
+		System.out.println("- "+i+++". objects: "+signature.getSig2());
+		System.out.println("- "+i+++". literals: "+signature.getSig3());
+		for (String str : signature.getSig4k()) {
+			System.out.println("- "+i+++". Container object: "+str);
+		}
 	}
 }

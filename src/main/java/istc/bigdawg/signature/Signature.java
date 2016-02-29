@@ -1,23 +1,28 @@
 package istc.bigdawg.signature;
 
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
-import istc.bigdawg.catalog.CatalogViewer;
+import convenience.RTED;
+import istc.bigdawg.packages.QueryContainerForCommonDatabase;
+import istc.bigdawg.plan.operators.Operator;
 import istc.bigdawg.signature.builder.ArraySignatureBuilder;
 import istc.bigdawg.signature.builder.RelationalSignatureBuilder;
+import istc.bigdawg.utils.IslandsAndCast.Scope;
 
 public class Signature {
 	
-	private String island;
+	private Scope island;
 	private String sig1;
-	private String sig2;
-	private String sig3;
+	private List<String> sig2;
+	private List<String> sig3;
 	private String query;
-	private String identifier; 
+	private List<String> sig4k;
+//	private String identifier; 
 	
-	private static Pattern possibleObjectsPattern	= Pattern.compile("[_@a-zA-Z0-9]+");
-	private static Pattern tagPattern				= Pattern.compile("BIGDAWGTAG_[0-9_]+");
+//	private static Pattern possibleObjectsPattern	= Pattern.compile("[_@a-zA-Z0-9]+");
+//	private static Pattern tagPattern				= Pattern.compile("BIGDAWGTAG_[0-9_]+");
 	
 	/**
 	 * Construct a signature of three parts: sig1 tells about the structure, sig2 are all object references, sig3 are all constants
@@ -26,30 +31,39 @@ public class Signature {
 	 * @param island
 	 * @throws Exception
 	 */
-	public Signature(String query, String island, String identifier) throws Exception {
+	public Signature(String query, Scope island, Operator root, Map<String, QueryContainerForCommonDatabase> container) throws Exception {
 		
-		switch (island.toLowerCase()) {
-			case "relational":
-				setSig1(RelationalSignatureBuilder.sig1(query));
-				setSig2(RelationalSignatureBuilder.sig2(query));
-				setSig3(RelationalSignatureBuilder.sig3(query));
-				break;
-			case "array":
-				setSig1(ArraySignatureBuilder.sig1(query));
-				setSig2(ArraySignatureBuilder.sig2(query));
-				setSig3(ArraySignatureBuilder.sig3(query));
-				break;
-			default:
-				throw new Exception("Invalid Signature island input: "+island);
+		if (island.equals(Scope.RELATIONAL)){
+			setSig2(RelationalSignatureBuilder.sig2(query));
+			setSig3(RelationalSignatureBuilder.sig3(query));
+		} else if (island.equals(Scope.ARRAY)) {
+			setSig2(ArraySignatureBuilder.sig2(query));
+			setSig3(ArraySignatureBuilder.sig3(query));
+		} else {
+			throw new Exception("Invalid Signature island input: "+island);
 		}
+		
+		
+		List<String> cs = new ArrayList<>();
+		for (String s : container.keySet()) 
+			cs.add(container.get(s).generateTreeExpression());
+		setSig4k(cs);
+		setSig1(root.getTreeRepresentation(true));
+		
 		this.setQuery(query);
 		this.setIsland(island);
-		this.setIdentifier(identifier);
+//		this.setIdentifier(identifier);
 	}
+	
+	
+	public static double getTreeEditDistance(String s1, String s2) {
+		return RTED.computeDistance(s1, s2);
+	}
+	
 
 	public void print() {
 		System.out.println("Type       : Signature");
-		System.out.println("Identifier : "+identifier);
+//		System.out.println("Identifier : "+identifier);
 		System.out.println("Island     : "+island);
 		System.out.println("Signature 1: "+sig1);
 		System.out.println("Signature 2: "+sig2);
@@ -65,19 +79,19 @@ public class Signature {
 		this.sig1 = sig1;
 	}
 
-	public String getSig2() {
+	public List<String> getSig2() {
 		return sig2;
 	}
 
-	public void setSig2(String sig2) {
+	public void setSig2(List<String> sig2) {
 		this.sig2 = sig2;
 	}
 
-	public String getSig3() {
+	public List<String> getSig3() {
 		return sig3;
 	}
 
-	public void setSig3(String sig3) {
+	public void setSig3(List<String> sig3) {
 		this.sig3 = sig3;
 	}
 
@@ -89,56 +103,22 @@ public class Signature {
 		this.query = query;
 	}
 
-	public String getIsland() {
+	public Scope getIsland() {
 		return island;
 	}
 	
-	private void setIsland(String island) {
+	private void setIsland(Scope island) {
 		this.island = island;
 	}
-	
 
-	public String getIdentifier() {
-		return identifier;
+	public List<String> getSig4k() {
+		return sig4k;
+	}
+
+	public void setSig4k(List<String> sig4k) {
+		this.sig4k = sig4k;
 	}
 	
-
-	private void setIdentifier(String identifier) {
-		this.identifier = identifier;
-	}
 	
-
-	
-	public static String sig2(String input) throws Exception {
-		
-		StringBuffer stringBuffer	= new StringBuffer();
-		Matcher matcher				= possibleObjectsPattern.matcher(input);
-		StringBuffer dawgtags  		= new StringBuffer();
-		Matcher tagMatcher			= tagPattern.matcher(input);
-		
-		try {
-			// MATCHER FINES CSV
-			matcher.find();
-			stringBuffer.append(input.substring(matcher.start(), matcher.end()));
-			while (matcher.find()) {
-				stringBuffer.append(',').append(input.substring(matcher.start(), matcher.end()));
-			}
-			if (tagMatcher.find())
-				dawgtags.append(input.substring(tagMatcher.start(), tagMatcher.end()));
-			while (tagMatcher.find())
-				dawgtags.append("\t"+input.substring(tagMatcher.start(), tagMatcher.end()));
-		} catch (IllegalStateException e) {
-			return "";
-		}
-		
-		stringBuffer.append("\t").append(dawgtags);
-		String result = CatalogViewer.getObjectsFromList(stringBuffer.toString());
-		if (result.length() == 0) {
-			return dawgtags.toString();
-		} else {
-			return result.concat("\t"+dawgtags.toString());
-		}
-		
-	}
 	
 }

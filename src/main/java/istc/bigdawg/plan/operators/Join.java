@@ -189,6 +189,8 @@ public class Join extends Operator {
 		
 		currentWhere = joinFilter;
 		
+		
+		
 		srcSchema = new LinkedHashMap<String, DataObjectAttribute>(lhs.outSchema);
 		srcSchema.putAll(rhs.outSchema);
 		
@@ -208,6 +210,7 @@ public class Join extends Operator {
 			joinPredicateOriginal 	= new String (joinPredicate);
 		if (joinFilter != null)
 			joinFilterOriginal 		= new String (joinFilter);
+		
 	}
     
  // combine join ON clause with WHEREs that combine two tables
@@ -603,8 +606,26 @@ public class Join extends Operator {
 	};
 	
 	@Override
-	public String getTreeRepresentation(){
-		if (isPruned()) return "{PRUNED}";
-		else return "{join"+children.get(0).getTreeRepresentation()+children.get(1).getTreeRepresentation()+"}";
+	public String getTreeRepresentation(boolean isRoot){
+		if (isPruned() && (!isRoot)) return "{PRUNED}";
+		else return "{join"+children.get(0).getTreeRepresentation(false)+children.get(1).getTreeRepresentation(false)+"}";
 	}
+	
+	
+	
+	
+	
+	
+	
+	
+	// TODO UNFINISHED
+	public String getJoinPredicateLeftObject() throws Exception {
+		
+		List<String> s = Arrays.asList(joinPredicate.replaceAll("(([ <>=~!()]+)|((?i)( +((i?like)|(in)) +)))", " ").split(" +"));
+		
+		System.out.println(s);
+		
+		return null;
+	}
+	
 };

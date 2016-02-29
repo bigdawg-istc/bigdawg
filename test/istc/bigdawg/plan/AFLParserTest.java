@@ -105,7 +105,7 @@ public class AFLParserTest extends TestCase {
 		
 		System.out.println(root.generateAFLString(0));
 		
-		System.out.println("Tree representation: "+root.getTreeRepresentation()+"\n");
+		System.out.println("Tree representation: "+root.getTreeRepresentation(true)+"\n");
 		
 		
 	}

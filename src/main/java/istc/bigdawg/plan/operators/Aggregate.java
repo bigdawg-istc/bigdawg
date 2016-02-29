@@ -259,9 +259,9 @@ public class Aggregate extends Operator {
 	}
 	
 	@Override
-	public String getTreeRepresentation(){
-		if (isPruned()) return "{PRUNED}";
-		else return "{aggregate"+children.get(0).getTreeRepresentation()+"}";
+	public String getTreeRepresentation(boolean isRoot){
+		if (isPruned() && (!isRoot)) return "{PRUNED}";
+		else return "{aggregate"+children.get(0).getTreeRepresentation(false)+"}";
 	}
 
 };

@@ -11,7 +11,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import istc.bigdawg.plan.operators.Operator;
+import istc.bigdawg.signature.Signature;
 import istc.bigdawg.utils.IslandsAndCast;
+import istc.bigdawg.utils.IslandsAndCast.Scope;
 
 public class CrossIslandQueryPlan {
 	private Map<String, CrossIslandQueryNode> members;
@@ -51,14 +53,15 @@ public class CrossIslandQueryPlan {
 			Matcher queryEndMatcher = end.matcher(rawQueryString);
 			
 			CrossIslandQueryNode newNode;
+			Scope scope;
 			
 			if (islandMatcher.find() && queryEndMatcher.find()) {
 				
 				// creating the children tables for this islands
 				
-				
+				scope = IslandsAndCast.convertScope(rawQueryString.substring(islandMatcher.start(), islandMatcher.end()));
 				newNode = new CrossIslandQueryNode(
-						IslandsAndCast.convertScope(rawQueryString.substring(islandMatcher.start(), islandMatcher.end()))
+						scope
 						, rawQueryString.substring(islandMatcher.end(), queryEndMatcher.start())
 						, n
 						, rootsForSchemas);
@@ -67,10 +70,6 @@ public class CrossIslandQueryPlan {
 				
 			} else 
 				throw new Exception("Matcher cannot find token");
-			
-			
-			// COMPUTE SIGNATURE
-			// TODO
 			
 			
 			
