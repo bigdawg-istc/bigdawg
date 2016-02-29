@@ -16,11 +16,11 @@ Java 8
 
 Mvn -- version 3
 
-PostgreSQL
+PostgreSQL >= 9.4
 
-SciDB
+SciDB 14.12
 
-Accumulo
+Accumulo 1.7.1
 
 Eclipse GUI guide
 -------------------
