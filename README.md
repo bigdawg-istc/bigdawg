@@ -12,12 +12,15 @@ Might need maven3 on ubuntu 14+. See http://sysads.co.uk/2014/05/install-apache-
 
 Requires
 ----------
-Java 7
+Java 8
 
 Mvn -- version 3
 
-PostgreSQL
+PostgreSQL >= 9.4
 
+SciDB 14.12
+
+Accumulo 1.7.1
 
 Eclipse GUI guide
 -------------------
@@ -353,6 +356,3 @@ curl -H "Content-Type: application/json" -X POST -d '{"query":"checkHeartRate","
 // run code from the BigDAWG bitbucket repo on the txe server
 
 nohup mvn exec:java 2>&1 > bigdawg.log &
-
-
-
