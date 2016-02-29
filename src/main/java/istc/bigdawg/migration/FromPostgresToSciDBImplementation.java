@@ -92,6 +92,7 @@ public class FromPostgresToSciDBImplementation {
 	public MigrationResult migrateBin() throws MigrationException {
 		generalMessage += "Mode: binary migration.";
 		log.info(generalMessage);
+		System.out.println(generalMessage);
 		long startTimeMigration = System.currentTimeMillis();
 		String postgresBinPath = SystemUtilities.getSystemTempDir() + "/bigdawg_from_" + fromTable + "_postgres.bin";
 		String scidbBinPath = SystemUtilities.getSystemTempDir() + "/bigdawg_to_" + toArray + "_scidb.bin";
@@ -130,6 +131,7 @@ public class FromPostgresToSciDBImplementation {
 			String message = "bin migration from PostgreSQL to SciDB execution time: "
 					+ (endTimeMigration - startTimeMigration);
 			log.info(message);
+			System.out.println(message);
 			return new MigrationResult(extractedRowsCount, null,
 					loadMessage + "No information about number of loaded rows." + " Result of transformation: "
 							+ transformationMessage,
@@ -170,6 +172,7 @@ public class FromPostgresToSciDBImplementation {
 	public MigrationResult migrateSingleThreadCSV() throws MigrationException {
 		generalMessage += " Mode: migrateSingleThreadCSV";
 		log.info(generalMessage);
+		System.out.println(generalMessage);
 		long startTimeMigration = System.currentTimeMillis();
 		String csvFilePath = SystemUtilities.getSystemTempDir() + "/bigdawg_" + fromTable + ".csv";
 		String delimiter = "|";
