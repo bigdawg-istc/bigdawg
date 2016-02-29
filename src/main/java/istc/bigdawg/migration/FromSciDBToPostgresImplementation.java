@@ -18,6 +18,7 @@ import java.util.concurrent.FutureTask;
 
 import org.apache.log4j.Logger;
 
+import istc.bigdawg.LoggerSetup;
 import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.exceptions.NoTargetArrayException;
 import istc.bigdawg.exceptions.UnsupportedTypeException;
@@ -25,6 +26,7 @@ import istc.bigdawg.migration.datatypes.DataTypesFromSciDBToPostgreSQL;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.postgresql.PostgreSQLSchemaTableName;
+import istc.bigdawg.postgresql.PostgreSQLTableMetaData;
 import istc.bigdawg.scidb.SciDBArrayMetaData;
 import istc.bigdawg.scidb.SciDBColumnMetaData;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
@@ -249,15 +251,23 @@ public class FromSciDBToPostgresImplementation {
 		generalMessage += "Mode: binary migration.";
 		log.info(generalMessage);
 		log.info(System.getProperty("user.dir"));
-		String scidbBinPath = System.getProperty("user.dir")+"/src/main/resources/tmp/bigdawg_to_" + fromArray + "_scidb.bin";
-		String postgresBinPath = System.getProperty("user.dir")+"/src/main/resources/tmp/bigdawg_from_" + toTable + "_postgres.bin";
+		String scidbBinPath = System.getProperty("user.dir") + "/src/main/resources/tmp/bigdawg_to_" + fromArray
+				+ "_scidb.bin";
+		String postgresBinPath = System.getProperty("user.dir") + "/src/main/resources/tmp/bigdawg_from_" + toTable
+				+ "_postgres.bin";
 
 		ExecutorService executor = null;
 		Connection postgresCon = null;
 		try {
 			// problem with rights to the mkfifo
-			//RunShell.mkfifo(scidbBinPath); 
+			// RunShell.mkfifo(scidbBinPath);
 			RunShell.mkfifo(postgresBinPath);
+			PostgreSQLTableMetaData postgresTableMeta = null;
+			try {
+				postgresTableMeta = new PostgreSQLHandler(connectionTo).getColumnsMetaData(toTable);
+			} catch (SQLException ex) {
+
+			}
 
 			executor = Executors.newFixedThreadPool(3);
 
@@ -290,12 +300,12 @@ public class FromSciDBToPostgresImplementation {
 					exportMessage + " No information about number of extracted rows." + " Result of transformation: "
 							+ transformationMessage,
 					false);
-		} catch (SQLException | UnsupportedTypeException | InterruptedException | ExecutionException
-				| IOException | NoTargetArrayException exception) {
+		} catch (SQLException | UnsupportedTypeException | InterruptedException | ExecutionException | IOException
+				| NoTargetArrayException exception) {
 			MigrationException migrationException = handleException(exception);
 			throw migrationException;
 		} finally {
-			//SystemUtilities.deleteFileIfExists(postgresBinPath);
+			// SystemUtilities.deleteFileIfExists(postgresBinPath);
 			SystemUtilities.deleteFileIfExists(scidbBinPath);
 			if (executor != null && !executor.isShutdown()) {
 				executor.shutdownNow();
@@ -367,6 +377,23 @@ public class FromSciDBToPostgresImplementation {
 			 */
 			// SystemUtilities.deleteFileIfExists(csvFilePath);
 		}
+
+	/**
+	 * @param args
+	 * @throws IOException
+	 * @throws MigrationException
+	 */
+	public static void main(String[] args) throws MigrationException, IOException {
+		LoggerSetup.setLogging();
+		SciDBConnectionInfo conFrom = new SciDBConnectionInfo("localhost", "1239", "scidb", "mypassw",
+				"/opt/scidb/14.12/bin/");
+		String fromArray = "waveform";
+		PostgreSQLConnectionInfo conTo = new PostgreSQLConnectionInfo("localhost", "5431", "tpch", "postgres", "test");
+		String toTable = "waveform";
+
+		FromSciDBToPostgresImplementation migrator = new FromSciDBToPostgresImplementation(conFrom, fromArray, conTo,
+				toTable);
+		migrator.migrateBin();
 	}
 
 }

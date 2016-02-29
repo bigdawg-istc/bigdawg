@@ -74,7 +74,8 @@ public class FromPostgresToSciDBImplementationTest {
 	}
 
 	@Test
-	public void csvTestFlat() throws MigrationException, SQLException {
+	public void csvTestFlat() throws MigrationException, SQLException, IOException {
+		LoggerSetup.setLogging();
 		System.out.println("csv test flat");
 		// prepare the target array
 		SciDBHandler.dropArrayIfExists(conTo, toArray);
