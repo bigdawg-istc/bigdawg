@@ -1,17 +1,21 @@
 package istc.bigdawg.executor.plan;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import istc.bigdawg.query.ConnectionInfoParser;
-
-import istc.bigdawg.postgresql.PostgreSQLHandler;
-import istc.bigdawg.query.ConnectionInfo;
-import net.sf.jsqlparser.statement.select.Select;
+import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.packages.QueryContainerForCommonDatabase;
 import istc.bigdawg.plan.operators.CommonSQLTableExpressionScan;
 import istc.bigdawg.plan.operators.Operator;
+import istc.bigdawg.postgresql.PostgreSQLHandler;
+import istc.bigdawg.query.ConnectionInfo;
+import istc.bigdawg.query.ConnectionInfoParser;
+import istc.bigdawg.utils.IslandsAndCast.Scope;
 
 
 public class ExecutionNodeFactory {
@@ -137,86 +141,45 @@ public class ExecutionNodeFactory {
 		return result;
 	}
 	
-	@Deprecated
-	public static void addNodesAndEdgesOLD(QueryExecutionPlan qep, Map<String, ArrayList<String>> map, Map<String, Operator> withNSelect, Select srcSTMT) throws Exception {
-
-		HashMap<String, ExecutionNode> dependentNodes = new HashMap<>();
-		ArrayList<String> edgesFrom = new ArrayList<>();
-		ArrayList<String> edgesTo = new ArrayList<>();
-		
-		for (String statementName : withNSelect.keySet()) {
-
-			// root node
-			
-			String ref = map.get(statementName).get(0);
-			
-			while ((ref.charAt(0) ^ 0x30) > 0x9) { // trying to find the operator a home
-				ref = map.get(ref).get(0);
-			}
-			
-			ConnectionInfo psqlInfo = PostgreSQLHandler.generateConnectionInfo(Integer.parseInt(ref));
-			
-			Operator o = withNSelect.get(statementName);
-			String put = null; if (o instanceof CommonSQLTableExpressionScan) put = statementName;
-			String sel = o.generateSelectForExecutionTree(srcSTMT, put);
-			
-			dependentNodes.put(statementName, new LocalQueryExecutionNode(sel, psqlInfo, statementName));
-//			System.out.printf("Adding node: %s; %s\n", statementName, sel);
-			// dependences
-			for (String s : map.get(statementName)) {
-
-				String loc = map.get(s).get(0);
-				if ((loc.charAt(0) ^ 0x30) <= 0x9) {
-					dependentNodes.put(s, new TableExecutionNode(PostgreSQLHandler.generateConnectionInfo(Integer.parseInt(loc)), s));
-					edgesFrom.add(s);
-					edgesTo.add(statementName);
-					continue;
-				}
-				
-				String i = s;
-				while ((i.charAt(0) ^ 0x30) > 0x9) {
-					i = map.get(i).get(0);
-				}
-				
-				psqlInfo = PostgreSQLHandler.generateConnectionInfo(Integer.parseInt(i));
-				o 	= withNSelect.get(s);
-				put = null; if (o instanceof CommonSQLTableExpressionScan) put = s;
-				sel = o.generateSelectForExecutionTree(srcSTMT, put);
-				
-				dependentNodes.put(s, new LocalQueryExecutionNode(sel, psqlInfo, s));
-				edgesFrom.add(s);
-				edgesTo.add(statementName);
-			}
-			
-		}
-		for (String s : dependentNodes.keySet()) {
-			qep.addVertex(dependentNodes.get(s));
-		}
-		for (int i = 0; i < edgesFrom.size() ; i ++) {
-			qep.addDagEdge(dependentNodes.get(edgesFrom.get(i)), dependentNodes.get(edgesTo.get(i)));
-		}
-	}
 	
-	public static void addNodesAndEdgesNaive(QueryExecutionPlan qep, Operator remainder, List<String> remainderLoc, Map<String, QueryContainerForCommonDatabase> container, Select srcStmt) throws Exception {
-		//TODO this should take a new QEP, a local map, the remainder, the container, and something else about the query
+	
+	public static void addNodesAndEdgesNaive(QueryExecutionPlan qep, Operator remainder, List<String> remainderLoc, Map<String, 
+			QueryContainerForCommonDatabase> container) throws Exception {
+		// this should take a new QEP, a local map, the remainder, the container, and something else about the query
 		
 		HashMap<String, ExecutionNode> dependentNodes = new HashMap<>();
 		ArrayList<String> edgesFrom = new ArrayList<>();
 		ArrayList<String> edgesTo = new ArrayList<>();
 		
-		String remainderDBID;
+		int remainderDBID;
 		ConnectionInfo remainderCI;
 		if (remainderLoc != null) {
-			System.out.println("remainderLoc not null; result: "+ remainderLoc.get(0));
-			remainderCI = PostgreSQLHandler.generateConnectionInfo(Integer.parseInt(remainderLoc.get(0)));	
+//			System.out.println("remainderLoc not null; result: "+ remainderLoc.get(0));
+			remainderDBID = Integer.parseInt(remainderLoc.get(0));
 		} else {
-			remainderDBID = container.values().iterator().next().getConnectionInfos().keySet().iterator().next();
-			System.out.println("remainderLoc IS null; result: "+ remainderDBID);
-			remainderCI = PostgreSQLHandler.generateConnectionInfo(Integer.parseInt(remainderDBID));
+//			System.out.println("remainderLoc IS null; result: "+ remainderDBID);
+			remainderDBID = Integer.parseInt(container.values().iterator().next().getDBID());
 		}
 		
+		if (qep.getIsland().equals(Scope.RELATIONAL))
+			remainderCI = CatalogViewer.getPSQLConnectionInfo(remainderDBID);
+		else if (qep.getIsland().equals(Scope.ARRAY))
+			remainderCI = CatalogViewer.getSciDBConnectionInfo(remainderDBID);
+		else 
+			throw new Exception("Unsupported island code: "+qep.getIsland().toString());
+		
+		
 		String remainderInto = qep.getSerializedName();
-		String remainderSelectIntoString = remainder.generateSelectForExecutionTree(srcStmt, null);
+		String remainderSelectIntoString;
+
+		// if RELATIONAL
+		if (qep.getIsland().equals(Scope.RELATIONAL))
+			remainderSelectIntoString = remainder.generateSQLSelectIntoStringForExecutionTree(null);
+		else if (qep.getIsland().equals(Scope.ARRAY))
+			remainderSelectIntoString = remainder.generateAFLStoreStringForExecutionTree(null);
+		else 
+			throw new Exception("Unsupported island code: "+qep.getIsland().toString());
+		
 		LocalQueryExecutionNode remainderNode = new LocalQueryExecutionNode(remainderSelectIntoString, remainderCI, remainderInto);
 		dependentNodes.put(remainderInto, remainderNode);
 			
@@ -234,8 +197,17 @@ public class ExecutionNodeFactory {
 		// this function is called the naive version because it just migrates everything to a random DB -- first brought up by iterator
 		for (String statementName : container.keySet()) {
 			
-			String selectIntoString = container.get(statementName).generateSelectIntoString();
-			ConnectionInfo ci = container.get(statementName).getConnectionInfos().values().iterator().next();
+			String selectIntoString;
+			
+			// if relational
+			if (qep.getIsland().equals(Scope.RELATIONAL))
+				selectIntoString = container.get(statementName).generateSQLSelectIntoString();
+			else if (qep.getIsland().equals(Scope.ARRAY))
+				selectIntoString = container.get(statementName).generateAFLStoreString();
+			else 
+				throw new Exception("Unsupported island code: "+qep.getIsland().toString());
+			
+			ConnectionInfo ci = container.get(statementName).getConnectionInfo();
 			dependentNodes.put(statementName, new LocalQueryExecutionNode(selectIntoString, ci, statementName));
 			
 			edgesFrom.add(statementName);

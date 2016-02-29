@@ -19,7 +19,7 @@ public class ArraySignatureBuilder {
 		// reading all the SQL commands
 		BufferedReader bufferedReader = new BufferedReader(new FileReader("src/main/resources/SciDBParserTerms.csv"));
 		StringBuffer opStringBuffer	  = new StringBuffer();
-		StringBuffer objStringBuffer  = new StringBuffer();
+//		StringBuffer objStringBuffer  = new StringBuffer();
 		String line 				  = bufferedReader.readLine();
 		
 		// get raw ops
@@ -31,13 +31,13 @@ public class ArraySignatureBuilder {
 		} while(line != null);
 		
 		// get tokens, so catalog can filter non-ops
-		objStringBuffer.append("(?i)(?!(").append(opStringBuffer).append("|\\bby\\b|\\bas\\b))\\b\\[\\w.]+\\b");
+//		objStringBuffer.append("(?i)(?!(").append(opStringBuffer).append("|\\bby\\b|\\bas\\b))\\b\\[\\w.]+\\b");
 		
 		// finish ops
 		opStringBuffer.insert(0, "(?i)(").append(")");
 		
 		opPattern  = Pattern.compile(opStringBuffer.toString());
-		objPattern = Pattern.compile(objStringBuffer.toString());
+		objPattern = Pattern.compile("[\\-\\_@a-zA-Z0-9.]+");
 		litPattern = Pattern.compile("(<[^>]*>[^\\[]*[^\\]]*\\])|((?<!([a-zA-Z_]{1,10}[0-9.]{0,10}))(([0-9]*[.]?[0-9]+)))|([-][ ]*[0-9]*[.]?[0-9]+)|'[^']*'|(?i)(\\bnull\\b|\\btrue\\b|\\bfalse\\b)");
 		bufferedReader.close();
 	}

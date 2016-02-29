@@ -1,6 +1,9 @@
 package istc.bigdawg.scidb;
 
 import org.scidb.jdbc.IResultSetWrapper;
+import org.scidb.jdbc.IStatementWrapper;
+
+import com.google.common.primitives.UnsignedLong;
 
 import java.io.IOException;
 import java.sql.DriverManager;
@@ -46,12 +49,13 @@ class JDBCExample {
 				System.out.println(meta.getColumnName(i) + " - " + meta.getColumnTypeName(i) + " - is attribute:"
 						+ resWrapper.isColumnAttribute(i) + "  - is column dimension: " + resWrapper.isColumnDimension(i));
 			}
-			System.out.println("=====");
-
-			System.out.println("x y a");
-			System.out.println("-----");
+			
+//			System.out.println("=====");
+//
+//			System.out.println("x y a");
+//			System.out.println("-----");
 			while (!res.isAfterLast()) {
-				System.out.println(res.getLong("x") + " " + res.getLong("y") + " " + res.getString("a"));
+				System.out.println(res.getString("logical_plan"));//.getLong("x") + " " + res.getLong("y") + " " + res.getString("a"));
 				res.next();
 			}
 			res.close();

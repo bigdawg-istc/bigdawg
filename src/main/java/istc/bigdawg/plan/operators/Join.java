@@ -1,6 +1,7 @@
 package istc.bigdawg.plan.operators;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -10,64 +11,154 @@ import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
 
-import istc.bigdawg.schema.SQLAttribute;
 import istc.bigdawg.extract.logical.SQLExpressionHandler;
 import istc.bigdawg.extract.logical.SQLTableExpression;
-import istc.bigdawg.plan.SQLQueryPlan;
+import istc.bigdawg.packages.SciDBArray;
+import istc.bigdawg.plan.extract.CommonOutItem;
 import istc.bigdawg.plan.extract.SQLOutItem;
-import istc.bigdawg.utils.sqlutil.SQLExpressionUtils;
+import istc.bigdawg.schema.DataObjectAttribute;
 import istc.bigdawg.utils.sqlutil.SQLUtilities;
-
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.BinaryExpression;
 import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.expression.Parenthesis;
 import net.sf.jsqlparser.expression.operators.relational.EqualsTo;
 import net.sf.jsqlparser.expression.operators.relational.LikeExpression;
 import net.sf.jsqlparser.expression.operators.relational.OldOracleJoinBinaryExpression;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
+import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.Select;
 import net.sf.jsqlparser.util.SelectUtils;
 
-import net.sf.jsqlparser.schema.Column;
-
-// Join can run in 3 modes: public, split, private
-// if it is in split mode then Alice and Bob perform partial join locally 
-// and do distributed comparisons as needed
-// split join is possible when there are no blocking ops between leaf and this
 
 public class Join extends Operator {
 
 	public enum JoinType  {Left, Natural, Right};
 	
 	private String currentWhere = "";
-	private boolean lhsHasJoinPred = false;
 	private JoinType joinType = null;
 	private String joinPredicate = null;
-	private String joinFilter; 
-//	private net.sf.jsqlparser.statement.select.Join parsedJoin;
+	private String joinFilter = null; 
+	private List<String> aliases;
+	private String joinPredicateOriginal = null; // TODO determine if this is useful for constructing new remainders 
+	private String joinFilterOriginal = null; 
 	
-
-	protected Map<String, SQLAttribute> srcSchema;
+	protected Map<String, DataObjectAttribute> srcSchema;
+	protected boolean joinPredicateUpdated = false;
 	
-	public Join (Operator o) throws Exception {
-		super(o);
+	public Join (Operator o, boolean addChild) throws Exception {
+		super(o, addChild);
 		Join j = (Join) o;
-		this.currentWhere = new String(j.currentWhere);
-		this.lhsHasJoinPred = j.lhsHasJoinPred;
+		
 		this.joinType = j.joinType;
-		this.joinPredicate = new String(j.joinPredicate);
+		this.isCopy = j.isCopy;
+		
+		if (j.currentWhere == null) this.currentWhere = j.currentWhere;
+		else this.currentWhere = new String(j.currentWhere);
+		if (j.joinPredicate == null) this.joinPredicate = j.joinPredicate;
+		else this.joinPredicate = new String(j.joinPredicate);
+		
+		
+		this.srcSchema = new HashMap<>();
 		for (String s : j.srcSchema.keySet()) {
-			this.srcSchema.put(new String(s), new SQLAttribute(j.srcSchema.get(s)));
+			if (j.srcSchema.get(s) != null) 
+				this.srcSchema.put(new String(s), new DataObjectAttribute(j.srcSchema.get(s)));
+		}
+		
+		this.aliases = new ArrayList<>();
+		if (j.aliases != null) {
+			for (String a : j.aliases) {
+				this.aliases.add(new String(a));
+			}
 		}
 	}
 	
-    Join(Map<String, String> parameters, List<String> output, Operator lhs, Operator rhs, SQLQueryPlan plan, SQLTableExpression supplement) throws Exception  {
-		super(parameters, output, lhs, rhs, supplement);
+	public Join(Operator child0, Operator child1, JoinType jt, String joinPred) throws JSQLParserException {
+		this.isCTERoot = false; // TODO VERIFY
+		this.isBlocking = false; 
+		this.isPruned = false;
+		this.isCopy = true;
+		this.aliases = new ArrayList<>();
+		
+		if (jt != null) this.joinType = jt;
+		
+		if (joinPred != null) {
+			this.joinPredicate = joinPred;
+			
+		}
+
+		this.isQueryRoot = true;
+		
+		this.dataObjects = new HashSet<>();
+		this.joinReservedObjects = new HashSet<>();
+		
+		this.srcSchema = new LinkedHashMap<String, DataObjectAttribute>(child0.outSchema);
+		srcSchema.putAll(child1.outSchema);
+		
+		this.outSchema = new LinkedHashMap<String, DataObjectAttribute>(child0.outSchema);
+		outSchema.putAll(child1.outSchema);
+		
+		
+		this.children = new ArrayList<>();
+		this.children.add(child0);
+		this.children.add(child1);
+		
+		if (child0.isCopy()) child0.parent = this;
+		if (child1.isCopy()) child1.parent = this;
+		
+		child0.isQueryRoot = false;
+		child1.isQueryRoot = false;
+	}
+	
+	// for AFL
+	public Join(Map<String, String> parameters, SciDBArray output, Operator lhs, Operator rhs) throws Exception  {
+		super(parameters, output, lhs, rhs);
 
 		isBlocking = false;
 		
+		joinPredicate = parameters.get("Join-Predicate");
+		aliases = Arrays.asList(parameters.get("Children-Aliases").split(" "));
+
+		currentWhere = joinFilter;
+		
+		srcSchema = new LinkedHashMap<String, DataObjectAttribute>(lhs.outSchema);
+		srcSchema.putAll(rhs.outSchema);
+		
+		// attributes
+		for (String expr : output.getAttributes().keySet()) {
+			
+			CommonOutItem out = new CommonOutItem(expr, output.getAttributes().get(expr), false, srcSchema);
+			DataObjectAttribute attr = out.getAttribute();
+			String attrName = attr.getFullyQualifiedName();		
+			outSchema.put(attrName, attr);
+				
+		}
+		
+		// dimensions
+		for (String expr : output.getDimensions().keySet()) {
+			
+			CommonOutItem out = new CommonOutItem(expr, "Dimension", true, srcSchema);
+			DataObjectAttribute attr = out.getAttribute();
+			String attrName = attr.getFullyQualifiedName();		
+			outSchema.put(attrName, attr);
+				
+		}
+		
+//		inferJoinParameters();
+		
+		if (joinPredicate != null)
+			joinPredicateOriginal 	= new String (joinPredicate);
+		if (joinFilter != null)
+			joinFilterOriginal 		= new String (joinFilter);
+	}
+	
+	public Join (Map<String, String> parameters, List<String> output, Operator lhs, Operator rhs, SQLTableExpression supplement) throws Exception  {
+		super(parameters, output, lhs, rhs, supplement);
+
+		this.isBlocking = false;
+		this.aliases = new ArrayList<>();
 	
 		// if hash join "Hash-Cond", merge join "Merge-Cond"
 		for(String p : parameters.keySet()) {
@@ -76,6 +167,7 @@ public class Join extends Operator {
 			}
 		}
 		
+
 		// if hash join
 		joinPredicate = SQLUtilities.parseString(joinPredicate);
 		joinFilter = parameters.get("Join-Filter");
@@ -83,28 +175,21 @@ public class Join extends Operator {
 
 
 		
-		if (lhs instanceof Scan) {
-			lhsHasJoinPred = true;
-		}
-		
-		
 	
 		if(joinFilter != null && joinFilter.contains(joinPredicate)) { // remove duplicate
 			String joinClause = "(" + joinPredicate + ") AND"; // canonical form
-			System.out.println("Deleting extra " + joinPredicate);
 			if(joinFilter.contains(joinClause)) {				
 				joinFilter = joinFilter.replace(joinClause, "");
 			}
 			else {
 				joinClause = " AND (" + joinPredicate + ")";
-				
 				joinFilter = joinFilter.replace(joinClause, "");			
 			}
 		}
 		
 		currentWhere = joinFilter;
 		
-		srcSchema = new LinkedHashMap<String, SQLAttribute>(lhs.outSchema);
+		srcSchema = new LinkedHashMap<String, DataObjectAttribute>(lhs.outSchema);
 		srcSchema.putAll(rhs.outSchema);
 		
 		for(int i = 0; i < output.size(); ++i) {
@@ -112,12 +197,17 @@ public class Join extends Operator {
 			
 			SQLOutItem out = new SQLOutItem(expr, srcSchema, supplement);
 
-			SQLAttribute attr = out.getAttribute();
-			String attrName = attr.getName();		
+			DataObjectAttribute attr = out.getAttribute();
+			String attrName = attr.getFullyQualifiedName();		
 			outSchema.put(attrName, attr);
 				
 		}
 		inferJoinParameters();
+		
+		if (joinPredicate != null)
+			joinPredicateOriginal 	= new String (joinPredicate);
+		if (joinFilter != null)
+			joinFilterOriginal 		= new String (joinFilter);
 	}
     
  // combine join ON clause with WHEREs that combine two tables
@@ -206,30 +296,30 @@ public class Join extends Operator {
  		joinFilter = StringUtils.join(filters.keySet().toArray(), " AND ");
  		joinPredicate = StringUtils.join(joinOnDistinct.toArray(), " AND ");
  		
+ 		
+ 		
+ 		
+ 		BinaryExpression on = (BinaryExpression) CCJSqlParserUtil.parseCondExpression(joinPredicate);
+		
+		Expression l = on.getLeftExpression();
+		Expression r = on.getRightExpression();
+		
+		// TODO ASSUMPTION: THERE CAN ONLY BE COLUMNS OR PARENTHESIS
+		if (l.getClass().equals(Parenthesis.class)) {
+			l = ((Parenthesis) l).getExpression();
+			on.setLeftExpression(l);
+		}
+		if (r.getClass().equals(Parenthesis.class)) {
+			r = ((Parenthesis) r).getExpression();
+			on.setRightExpression(r);
+		}
+			
  	}
     
     
-	
-    
-//    @Override
-//	public List<SQLAttribute> getSliceKey() throws JSQLParserException {
-//		List<SQLAttribute> sliceKey = new ArrayList<SQLAttribute>();
-//
-//		Expression joinOn = parsedJoin.getOnExpression();
-//		if(joinOn != null) {
-//			List<String> candidateKeys = SQLExpressionUtils.getAttributes(joinOn);
-//		
-//			for(String k : candidateKeys) {
-//				SQLAttribute a = srcSchema.get(k);
-//				sliceKey.add(a);
-//			}
-//		}
-//		return sliceKey;
-//		
-//	}
 
     @Override
-	public Select generatePlaintext(Select srcStatement, Select dstStatement) throws Exception {
+	public Select generateSQLStringDestOnly(Select dstStatement) throws Exception {
 		
     	Set<String> filterSet = new HashSet<String>();
     	PlainSelect ps = null;
@@ -245,107 +335,124 @@ public class Join extends Operator {
     	Operator child0 = children.get(0);
     	Operator child1 = children.get(1);
     	
-    	if (lhsHasJoinPred) {
-    		child1 = children.get(0);
-        	child0 = children.get(1);
-    	}
     	
-    	if (child0.isPruned() || child1.isPruned()) {
-    		
-			
-			BinaryExpression on = (BinaryExpression) CCJSqlParserUtil.parseCondExpression(joinPredicate);
-			
-			Column cLeft;
-			Column cRight;
-			
-			
-			Expression l = on.getLeftExpression();
-			Expression r = on.getRightExpression();
+    	
+    	// constructing the ON expression
 
-			if (l.getClass().equals(net.sf.jsqlparser.expression.Parenthesis.class))
-				l = ((net.sf.jsqlparser.expression.Parenthesis) l).getExpression();
-			if (r.getClass().equals(net.sf.jsqlparser.expression.Parenthesis.class)) 
-				r = ((net.sf.jsqlparser.expression.Parenthesis) r).getExpression();
+    	// TODO ASSUMPTION: no more than one predicate
+    	
+    	
+    	Table t0 = new Table();
+		Table t1 = new Table();
+    	
+    	if (joinPredicate != null) {
+    		
+    		joinPredicate = updateOnExpression(joinPredicate, child0, child1, t0, t1, true);
+    		joinPredicateUpdated = true;
+    		// ^ ON predicate constructed
+    		
+    	} else {
+        	Set<String> child0ObjectSet = child0.getDataObjectNames();
+        	Set<String> child1ObjectSet = child1.getDataObjectNames();
 
-			cLeft  = ((Column) l);
-			cRight = ((Column) r);
-			
-			
-			
-    		String cLeftColName = cLeft.getTable().getName()+"."+cLeft.getColumnName();
-    		String cRightColName = cRight.getTable().getName()+"."+cRight.getColumnName();
+//    		// for debugging
+//        	System.out.printf("\nJP: %s\nchild0obj: %s\nchild1obj: %s\n\n", joinPredicate, 
+//        			child0ObjectSet, child1ObjectSet);
     		
-    		
-			Table t0 = new Table();
-    		Table t1 = new Table();
-    		
-    		
-    		if (child0.getOutSchema().containsKey(cLeftColName)) {
-    			
-    			t0.setName(cLeft.getTable().getName());
-    			t1.setName(cRight.getTable().getName());
-    			
-	    		setTableNameFromPrunedOne(child0, t0, cLeftColName, false);
-	    		setTableNameFromPrunedOne(child1, t1, cRightColName, false);
-    		
-    		} else {
-    			
-    			t0.setName(cRight.getTable().getName());
-    			t1.setName(cLeft.getTable().getName());
-    			
-    			setTableNameFromPrunedOne(child0, t0, cRightColName, false);
-	    		setTableNameFromPrunedOne(child1, t1, cLeftColName, false);
-	    		
-    		} 
-    		
-
-    		dstStatement = SelectUtils.buildSelectFromTable(t0);
-			
-			
-			if (child0.getOutSchema().containsKey(cLeftColName)) {
-				cLeft.setTable(t0);
-				cRight.setTable(t1);
-			} else {
-				cLeft.setTable(t1);
-				cRight.setTable(t0);
-			}
-			
-			joinPredicate = on.toString();
+        	t0.setName((String)child0ObjectSet.toArray()[0]);
+        	t1.setName((String)child1ObjectSet.toArray()[0]);
     	}
     	
     	
-		dstStatement = child0.generatePlaintext(srcStatement, dstStatement); // this should have already taken care of the pruning
-		ps = (PlainSelect) dstStatement.getSelectBody();
-		if (ps.getWhere() != null) filterSet.add(ps.getWhere().toString());
-	
-		dstStatement = child1.generatePlaintext(srcStatement, dstStatement); // this should have already taken care of the pruning
-		ps = (PlainSelect) dstStatement.getSelectBody();
-		if (ps.getWhere() != null) filterSet.add(ps.getWhere().toString());
 		
 		
-		// child1 of join should always be a scan
-    	assert(child1 instanceof Scan);
-    	Scan newScan = (Scan) child1;
-    	
-    	Expression expr = null;
+		
+		Expression expr = null;
     	if(joinPredicate != null && !joinPredicate.isEmpty()) {
     		expr = CCJSqlParserUtil.parseCondExpression(joinPredicate);
-    	}
-    	
-    	
-    	if (child0.isPruned() || child1.isPruned()) {
-    		Table t1 = new Table();
-    		t1.setName(child1.getPruneToken());
-    		SelectUtils.addJoin(dstStatement, t1, expr);
     	} else {
-    		SelectUtils.addJoin(dstStatement, newScan.getTable(), expr);    		
+    		expr = null;
     	}
+		
+    	
+    	
+    	
+    	
+    	
+    	
+    	// used to find the deepest object
+    	Table t = new Table();
+    	
+    	if (dstStatement == null) {
+    		
+    		// check if child0 is pruned or one of the scans
+    		// if not call child0; 
+    		if (child0.isPruned() || child0 instanceof SeqScan || child0 instanceof CommonSQLTableExpressionScan) {
+
+    			if (!(child1.isPruned() || child1 instanceof SeqScan || child1 instanceof CommonSQLTableExpressionScan)) {
+    				throw new Exception("child1 of join is not good");
+    			}
+    			
+    			// this is the bottom
+    			dstStatement = SelectUtils.buildSelectFromTable(t0);
+    			updateThisAndParentJoinReservedObjects(t0.getFullyQualifiedName());
+    			
+    			t = t1;
+    			
+    		} else {
+    			dstStatement = child0.generateSQLStringDestOnly(dstStatement); 
+    			ps = (PlainSelect) dstStatement.getSelectBody();
+    			if (ps.getWhere() != null) filterSet.add(ps.getWhere().toString());
+    			
+    			t = t1;
+	    		if (this.joinReservedObjects.contains(t1.getFullyQualifiedName())) {
+	    			t = t0;
+	    		}
+    		}
+    		
+    		
+    		
+			// leave the rest for child1;
+			
+		} else {
+			
+			
+			dstStatement = child0.generateSQLStringDestOnly(dstStatement); 
+			ps = (PlainSelect) dstStatement.getSelectBody();
+			if (ps.getWhere() != null) filterSet.add(ps.getWhere().toString());
+			
+			
+			getJoinReservedObjectsFromParents();
+			
+			
+			t = t1;
+    		if (this.joinReservedObjects.contains(t1.getFullyQualifiedName())) {
+    			t = t0;
+    		}
+			
+		}
+    	
+		
+		// finish with child 1
+    	
+		if (joinPredicate == null) addJSQLParserJoin(dstStatement, t);
+		else SelectUtils.addJoin(dstStatement, t, expr);
+		
+		updateThisAndParentJoinReservedObjects(t.getFullyQualifiedName());
+		
+		dstStatement = child1.generateSQLStringDestOnly(dstStatement); 
+		ps = (PlainSelect) dstStatement.getSelectBody();
+		if (ps.getWhere() != null) filterSet.add(ps.getWhere().toString());
+    		
+    	
+    	
+		
 		
 		if(joinFilter != null) {
 			
 			filterSet.add(joinFilter);
 
-//			// not sure if these are useful
+//			// not sure if useful
 //			if(ps.getWhere() != null) {
 //				filterSet.add(ps.getWhere().toString());
 //			}
@@ -362,11 +469,65 @@ public class Join extends Operator {
 
 	}
     
+    
+    private void updateThisAndParentJoinReservedObjects(String name) {
+    	Operator o = this;
+    	o.joinReservedObjects.add(name);
+    	while (o.parent != null) {
+    		o.parent.joinReservedObjects.add(name);
+    		o = o.parent;
+    	}
+    }
+    
+    public String updateOnExpression(String joinPred, Operator child0, Operator child1, Table t0, Table t1, boolean update) throws Exception {
+    	
+    	if ((!update) && joinPredicateUpdated)
+    		return joinPredicate;
+    	
+		BinaryExpression on = (BinaryExpression) CCJSqlParserUtil.parseCondExpression(joinPred);
+		
+		Expression l = on.getLeftExpression();
+		Expression r = on.getRightExpression();
+
+		
+		// TODO ASSUMPTION: THERE CAN ONLY BE COLUMNS OR PARENTHESES
+		if (l.getClass().equals(Parenthesis.class)) {
+			l = ((Parenthesis) l).getExpression();
+			on.setLeftExpression(l);
+		}
+		if (r.getClass().equals(Parenthesis.class)) {
+			r = ((Parenthesis) r).getExpression();
+			on.setRightExpression(r);
+		}
+			
+		
+		Column cLeft  = ((Column) l);
+		Column cRight = ((Column) r);
+		
+		
+		String cLeftColName = cLeft.getTable().getName()+"."+cLeft.getColumnName();
+		String cRightColName = cRight.getTable().getName()+"."+cRight.getColumnName();
+		
+		t0.setName(cLeft.getTable().getName());
+		t1.setName(cRight.getTable().getName());
+		
+		setTableNameFromPrunedOne(child0, t0, cLeftColName, false);
+		setTableNameFromPrunedOne(child1, t1, cRightColName, false);
+    		
+		cLeft.setTable(t0);
+		cRight.setTable(t1);
+		
+		
+		return on.toString();
+	}
+    
+    
+    
     private boolean setTableNameFromPrunedOne(Operator o, Table t, String fullyQualifiedName, boolean found) throws Exception{
 		if (o.getOutSchema().containsKey(fullyQualifiedName)) {
 			if (o.isPruned()) {
 				t.setName(o.getPruneToken());
-				System.out.printf("FOUND: FQN: %s,   outSchema: %s\n", fullyQualifiedName, o.getOutSchema());
+//				System.out.printf("FOUND: FQN: %s,   outSchema: %s\n", fullyQualifiedName, o.getOutSchema());
 				return true;
 			} else {
 				if (o.getClass().equals(Join.class)) {
@@ -380,7 +541,7 @@ public class Join extends Operator {
 	    		}
 			}
 		} else {
-			System.out.printf("NOT FOUND: FQN: %s,   outSchema: %s\n", fullyQualifiedName, o.getOutSchema());
+//			System.out.printf("NOT FOUND: FQN: %s,   outSchema: %s\n", fullyQualifiedName, o.getOutSchema());
 		}
 		
 		return false;
@@ -392,13 +553,58 @@ public class Join extends Operator {
     }
     
 	@Override
-	public String printPlan(int recursionLevel) {
-		String planStr =  "Join(";
-		planStr += children.get(0).printPlan(recursionLevel+1);
-		planStr += ",";
-		planStr +=  children.get(1).printPlan(recursionLevel+1);
-		planStr += ", " + joinPredicate + ", " + joinFilter + ")";
-		return planStr;
+	public String generateAFLString(int recursionLevel) throws Exception {
+		StringBuilder sb = new StringBuilder();
+		sb.append("cross_join(");
+		
+		if (children.get(0).isPruned())
+			sb.append(children.get(0).getPruneToken());
+		else 
+			sb.append(children.get(0).generateAFLString(recursionLevel+1));
+		
+		if (!this.aliases.isEmpty()) 
+			sb.append(" as ").append(aliases.get(0));
+		sb.append(", ");
+		
+		if (children.get(1).isPruned())
+			sb.append(children.get(1).getPruneToken());
+		else 
+			sb.append(children.get(1).generateAFLString(recursionLevel+1));
+		
+		if (!this.aliases.isEmpty()) sb.append(" as ").append(aliases.get(1));
+		
+		if (joinPredicate != null) {
+			sb.append(", ");
+			sb.append(joinPredicate.replaceAll("[<>= ()]+", " ").replace(" ", ", "));
+		}
+		
+		sb.append(')');
+		return sb.toString();
 	}
 	
+	public String getJoinPredicateOriginal() {
+		return joinPredicateOriginal;
+	}
+	public String getJoinFilterOriginal() {
+		return joinFilterOriginal;
+	}
+	
+	private void addJSQLParserJoin(Select dstStatement, Table t) {
+		net.sf.jsqlparser.statement.select.Join newJ = new net.sf.jsqlparser.statement.select.Join();
+    	newJ.setRightItem(t);
+    	newJ.setSimple(true);
+    	if (((PlainSelect) dstStatement.getSelectBody()).getJoins() == null)
+    		((PlainSelect) dstStatement.getSelectBody()).setJoins(new ArrayList<>());
+    	((PlainSelect) dstStatement.getSelectBody()).getJoins().add(newJ);
+	}
+	
+	public String getCurrentJoinPredicate(){
+		return joinPredicate;
+	};
+	
+	@Override
+	public String getTreeRepresentation(){
+		if (isPruned()) return "{PRUNED}";
+		else return "{join"+children.get(0).getTreeRepresentation()+children.get(1).getTreeRepresentation()+"}";
+	}
 };

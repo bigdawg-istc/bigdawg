@@ -5,6 +5,11 @@ CREATE TABLE IF NOT EXISTS monitoring (
 	query varchar(3000)
 );
 
+CREATE TABLE IF NOT EXISTS inputs (
+  id integer,
+  content varchar(30)
+);
+
 CREATE TABLE IF NOT EXISTS treatments (
 	disease_name varchar(30),
 	treatment varchar(30)

@@ -34,14 +34,24 @@ public class CreateTableTest extends TestCase {
 		testCaseCreateTable("catalog.engines");
 	}
 	
+	@Test
+	public void testConnectToSciDB() throws Exception {
+		testCaseConnection();
+	}
+	
 	
 	private void testCaseCreateTable(String testName) throws Exception {
 		
 		String expectedOutput = expectedOutputs.get(testName);
 		
-		String serverOutput = PostgreSQLHandler.getCreateTable(psqlci, testName);
+		fail();
+//		String serverOutput = PostgreSQLHandler.getCreateTable(psqlci, testName);
 		
-		assertEquals(expectedOutput, serverOutput);
+//		assertEquals(expectedOutput, serverOutput);
+	}
+	
+	private void testCaseConnection() {
+		
 	}
 
 }

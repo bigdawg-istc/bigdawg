@@ -29,7 +29,7 @@ public class SQLTableExpression {
     private Map<String, String>  tableAliases;
     private int analyticExpressionIdx;
     private int sortIdx; // iterate over sorts - they may come from OVER or ORDER BY
-    private Map<String, ArrayList<OrderByElement>> sortList = null;
+    private Map<String, List<OrderByElement>> sortList = null;
     private PlainSelect parsedStatement; // usually contains a WithItem, PlainSelect, or both
     private List<Join> joins;
     
@@ -51,7 +51,7 @@ public class SQLTableExpression {
     	
     	// update it for the new values
     	if(sortList != null && a.getOrderByElements().size() > 0) {
-    		createSortList();
+    		createSortList("main");
     	}
     }
 
@@ -62,7 +62,7 @@ public class SQLTableExpression {
     public void setOrderBy(List<OrderByElement> ord) {
     	orderBy = ord;
     	if(sortList != null) {
-    		createSortList();
+    		createSortList("main");
     	}
 
     	
@@ -195,18 +195,16 @@ public class SQLTableExpression {
     public Sort.SortOrder getSortOrder(List<String> sortKeys, String sectionName) throws Exception {
     	
     	if(sortList == null) {
-    		createSortList();
+    		createSortList(sectionName);
     	}
     	List<OrderByElement> sort = sortList.get(sectionName);
     	++sortIdx;
     	
     	// make sure they match
     	if(sort.size() != sortKeys.size()) {
-    		throw new Exception("Sort keys don't have the same length! " + sort + " " + sortKeys);
+    		throw new Exception("Sort keys don't have the same length! " + sort + " " + sortKeys+" "+sortList.toString());
     	}
     	
-    	    	
-   	
     	for(int i = 0; i < sort.size(); ++i) {
     		String expr = sort.get(i).getExpression().toString();
     		String aliasedExpr = attributeAliases.get(expr);
@@ -227,7 +225,7 @@ public class SQLTableExpression {
     	
     }
     
-    void createSortList() {
+    void createSortList(String sectionName) {
     	
     	sortList = new HashMap<>(); //String, ArrayList<ArrayList<OrderByElement> 
     	sortIdx = 0;
@@ -248,12 +246,13 @@ public class SQLTableExpression {
         		}
         		elements.addAll(ae.getOrderByElements());
 //        		sortList.add(elements);
-        		sortList.put(ae.getName(), elements);
+        		sortList.put(sectionName, elements);
     		}
     	}
     	
     	if(orderBy != null) {
-    		sortList.put("main", (ArrayList<OrderByElement>) orderBy);
+    		
+    		sortList.put(sectionName, orderBy);
     	}
     	
     }

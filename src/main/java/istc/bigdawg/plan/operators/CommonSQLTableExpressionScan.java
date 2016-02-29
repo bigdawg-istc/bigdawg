@@ -8,17 +8,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import net.sf.jsqlparser.JSQLParserException;
-import net.sf.jsqlparser.schema.Table;
-import net.sf.jsqlparser.statement.select.FromItem;
-import net.sf.jsqlparser.statement.select.PlainSelect;
-import net.sf.jsqlparser.statement.select.Select;
-import net.sf.jsqlparser.statement.select.WithItem;
 import istc.bigdawg.extract.logical.SQLTableExpression;
 import istc.bigdawg.plan.SQLQueryPlan;
 import istc.bigdawg.plan.extract.SQLOutItem;
+import istc.bigdawg.schema.DataObjectAttribute;
 import istc.bigdawg.schema.SQLAttribute;
-import istc.bigdawg.plan.operators.Operator;
+import net.sf.jsqlparser.schema.Table;
+import net.sf.jsqlparser.statement.select.PlainSelect;
+import net.sf.jsqlparser.statement.select.Select;
+import net.sf.jsqlparser.statement.select.WithItem;
 
 public class CommonSQLTableExpressionScan extends Scan {
 
@@ -33,17 +31,18 @@ public class CommonSQLTableExpressionScan extends Scan {
 		cteName = parameters.get("CTE-Name");
 		with = plan.getWithItem(cteName);
 		
+		this.dataObjects.add(cteName);
 		
 		// match output to base relation
-		Map<String, SQLAttribute> cteSchema = new HashMap<String, SQLAttribute>();
+		Map<String, DataObjectAttribute> cteSchema = new HashMap<String, DataObjectAttribute>();
 		// insert cte alias for schema resolution
 		// delete everything before the first dot and replace it with the tableAlias
 		sourceStatement = plan.getPlanRoot(cteName);
 		
-		Iterator<Map.Entry<String, SQLAttribute>  > schemaItr = sourceStatement.outSchema.entrySet().iterator();
+		Iterator<Map.Entry<String, DataObjectAttribute>  > schemaItr = sourceStatement.outSchema.entrySet().iterator();
 
 		while(schemaItr.hasNext()) {
-			Map.Entry<String, SQLAttribute> pair = (Map.Entry<String, SQLAttribute>) schemaItr.next();
+			Map.Entry<String, DataObjectAttribute> pair = schemaItr.next();
 			String name = pair.getKey();
 			String[] names = name.split("\\.");
 			
@@ -71,21 +70,21 @@ public class CommonSQLTableExpressionScan extends Scan {
 	}
 
 	
-	public CommonSQLTableExpressionScan(Operator o) throws Exception {
-		super(o);
+	public CommonSQLTableExpressionScan(Operator o, boolean addChild) throws Exception {
+		super(o, addChild);
 		CommonSQLTableExpressionScan c = (CommonSQLTableExpressionScan) o;
 		this.cteName = new String(c.cteName);
 		
 		Operator s = c.sourceStatement;
 		
 		if (s instanceof Join) {
-			this.sourceStatement = new Join(s);
+			this.sourceStatement = new Join(s, addChild);
 		} else if (s instanceof SeqScan) {
-			this.sourceStatement = new SeqScan(s);
+			this.sourceStatement = new SeqScan(s, addChild);
 		} else if (s instanceof CommonSQLTableExpressionScan) {
-			this.sourceStatement = new CommonSQLTableExpressionScan(s);
+			this.sourceStatement = new CommonSQLTableExpressionScan(s, addChild);
 		} else if (s instanceof Sort) {
-			this.sourceStatement = new Sort(s);
+			this.sourceStatement = new Sort(s, addChild);
 		} else {
 			if (s instanceof Aggregate) {
 			} else if (s instanceof Distinct) {
@@ -111,8 +110,8 @@ public class CommonSQLTableExpressionScan extends Scan {
 	};
 
 	@Override
-	public Select generatePlaintext(Select srcStatement, Select dstStatement) throws Exception {
-		dstStatement = super.generatePlaintext(srcStatement, dstStatement);
+	public Select generateSQLStringDestOnly(Select dstStatement) throws Exception {
+		dstStatement = super.generateSQLStringDestOnly(dstStatement);
 		 
 		List<WithItem> withs = dstStatement.getWithItemsList();
 		
@@ -140,7 +139,7 @@ public class CommonSQLTableExpressionScan extends Scan {
 			// recurse if child references any additional CTEs
 			// create new dst statement for child and grab its select body
 			
-			Select dstPrime = sourceStatement.generatePlaintext(srcStatement, null);
+			Select dstPrime = sourceStatement.generateSQLStringDestOnly(null);
 
 			List<WithItem> dstWithsPrime = dstPrime.getWithItemsList();
 			if(dstWithsPrime != null) {
@@ -162,11 +161,6 @@ public class CommonSQLTableExpressionScan extends Scan {
 	}
 	
 	
-	@Override
-	public List<SQLAttribute> getSliceKey()  throws JSQLParserException {
-		return null;
-	}
-	
 	public String toString() {
 		return "CTE scan over " + cteName + " Filter: " + filterExpression;
 	}
@@ -176,7 +170,7 @@ public class CommonSQLTableExpressionScan extends Scan {
 	}
 	
 	@Override
-	public String printPlan(int recursionLevel) {
+	public String generateAFLString(int recursionLevel) {
 		String planStr =  "CTE_Scan(" + cteName;
 		if(filterExpression != null) {
 			planStr += ", " + filterExpression;
@@ -188,12 +182,12 @@ public class CommonSQLTableExpressionScan extends Scan {
 	}
 	
 	@Override
-	public Map<String, ArrayList<String>> getTableLocations(Map<String, ArrayList<String>> locations) {
+	public Map<String, List<String>> getTableLocations(Map<String, List<String>> locations) {
 
 		// the assumption here is that there is no Nested Query
 		// since the order of execution is unforeseeable, all will become place holder
 		
-		Map<String, ArrayList<String>> result = new HashMap<>();
+		Map<String, List<String>> result = new HashMap<>();
 		Set<String> sas = new HashSet<String>();
 		ArrayList<String> outs = new ArrayList<String> ();
 		

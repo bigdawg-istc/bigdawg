@@ -8,23 +8,15 @@ import java.util.Map;
 
 import org.junit.Test;
 
-import istc.bigdawg.postgresql.PostgreSQLHandler;
-import istc.bigdawg.schema.SQLDatabaseSingleton;
-import istc.bigdawg.catalog.CatalogInitiator;
 import istc.bigdawg.catalog.CatalogInstance;
 import istc.bigdawg.catalog.CatalogViewer;
-import istc.bigdawg.executor.plan.ExecutionNode;
 import istc.bigdawg.executor.plan.ExecutionNodeFactory;
-import istc.bigdawg.executor.plan.QueryExecutionPlan;
 import istc.bigdawg.parsers.UserQueryParser;
-import istc.bigdawg.plan.SQLQueryPlan;
 import istc.bigdawg.plan.extract.SQLPlanParser;
 import istc.bigdawg.plan.operators.CommonSQLTableExpressionScan;
-import istc.bigdawg.plan.operators.Join;
 import istc.bigdawg.plan.operators.Operator;
-import istc.bigdawg.planner.Planner;
+import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.signature.Signature;
-import istc.bigdawg.signature.builder.RelationalSignatureBuilder;
 import junit.framework.TestCase;
 
 public class SQLGenerationTest  extends TestCase {
@@ -38,10 +30,10 @@ public class SQLGenerationTest  extends TestCase {
 		inputPlaintexts  = new HashMap<String, String>();
 		
 		CatalogInstance.INSTANCE.getCatalog();
-		if (psqlh == null) psqlh = new PostgreSQLHandler(0, 3);
+		if (psqlh == null) psqlh = new PostgreSQLHandler(3);
 		
 		
-		SQLDatabaseSingleton.getInstance().setDatabase("bigdawg_schemas", "src/main/resources/schemas/plain.sql");
+//		SQLDatabaseSingleton.getInstance().setDatabase("bigdawg_schemas", "src/main/resources/schemas/plain.sql");
 		
 		// ingesting the dummy schema 
 //		psqlh.populateSchemasSchema(new String(Files.readAllBytes(Paths.get("src/main/resources/plain.sql"))), false);
@@ -151,7 +143,7 @@ public class SQLGenerationTest  extends TestCase {
 		
 		
 		// UNROLLING
-		Map<String, String> islandQueries = UserQueryParser.getUnwrappedQueriesByIslands(sqlQuery, "BIGDAWGTAG_");
+		Map<String, String> islandQueries = UserQueryParser.getUnwrappedQueriesByIslands(sqlQuery);
 		
 		
 		// GET SIGNATURE AND CASTS
@@ -160,7 +152,7 @@ public class SQLGenerationTest  extends TestCase {
 		
 		// GET ALTERNATIVE EXECUTION PLANS
 		ArrayList<String> objs = new ArrayList<>(Arrays.asList(((Signature) sigsCasts.get("OUTPUT")).getSig2().split("\t")));
-		Map<String, ArrayList<String>> map = CatalogViewer.getDBMappingByObj(objs);
+		Map<String, List<String>> map = CatalogViewer.getDBMappingByObj(objs);
 		CatalogInstance.INSTANCE.closeCatalog();
 		
 		
@@ -171,12 +163,12 @@ public class SQLGenerationTest  extends TestCase {
 		// generating query tree 
 		SQLQueryPlan queryPlan = SQLPlanParser.extractDirect(psqlh, ((Signature)sigsCasts.get("OUTPUT")).getQuery());
 		Operator root = queryPlan.getRootNode();
-		Map<String, ArrayList<String>> rootTL = root.getTableLocations(map);
+		Map<String, List<String>> rootTL = root.getTableLocations(map);
 		
 		
 		
 		
-		String sql = root.generatePlaintext(queryPlan.getStatement()); // the production of AST should be root
+		String sql = root.generateSQLString(queryPlan.getStatement()); // the production of AST should be root
 		System.out.println("statement: " + queryPlan.getStatement());
 		System.out.println("generatedPlaintext: " + sql);
 		assertEquals(expectedPlaintexts.get(testName), sql);
@@ -185,7 +177,7 @@ public class SQLGenerationTest  extends TestCase {
 		
 		Map<String, Operator> out =  ExecutionNodeFactory.traverseAndPickOutWiths(root);
 		for (String s : out.keySet()){
-			System.out.println("---->>>> " + s +"; " + out.get(s).generatePlaintext(queryPlan.getStatement()));
+			System.out.println("---->>>> " + s +"; " + out.get(s).generateSQLString(queryPlan.getStatement()));
 		}
 		//*/
 		
@@ -195,7 +187,7 @@ public class SQLGenerationTest  extends TestCase {
 		
 		// demo calculating partial plans
 		int level = 0;
-		System.out.println("\nLEVEL " + level + " :: "+ root.toString() + " :: \n==>\n" + root.generatePlaintext(queryPlan.getStatement()));
+		System.out.println("\nLEVEL " + level + " :: "+ root.toString() + " :: \n==>\n" + root.generateSQLString(queryPlan.getStatement()));
 		System.out.println("TABLE LOCATIONS: "+rootTL); // this getTableLocations(...) function modifies map
 		System.out.println("---===>>> "+root.getClass().toString());
 		System.out.println("---===>>> PARENT "+root.getParent());
@@ -218,7 +210,7 @@ public class SQLGenerationTest  extends TestCase {
 			List<Operator> nextGeneration = new ArrayList<Operator>();
 			for(Operator c : treeWalker) {
 				
-				String plaintext = c.generatePlaintext(queryPlan.getStatement());
+				String plaintext = c.generateSQLString(queryPlan.getStatement());
 				System.out.println("\nLEVEL "+ level +" :: "+c.blockingStatus()+" :: "+ c.toString() + " \n==>>\n" + plaintext);
 				System.out.println("TABLE LOCATIONS: "+c.getTableLocations(map));
 				System.out.println("---===>>> "+c.getClass().toString());

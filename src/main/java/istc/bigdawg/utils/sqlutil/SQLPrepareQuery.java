@@ -45,6 +45,10 @@ public class SQLPrepareQuery {
 		return "EXPLAIN (VERBOSE ON, COSTS OFF, FORMAT XML) " + query;
 	}
 	
+	public static String generateExplainQueryStringWithPerformance(String query) throws IOException {
+		return "EXPLAIN (VERBOSE ON, ANALYZE, FORMAT XML) " + query;
+	}
+	
 	private static String generateExplainFile(String srcFilename) throws IOException {
 		String[] pathTokens = srcFilename.split("\\/");
 		String filename = "explain_" + pathTokens[pathTokens.length-1];
