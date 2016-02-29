@@ -2,7 +2,7 @@
 #define BUFFER_H
 
 #include <stdio.h>
-// imitat the buffer for copy.c from PostgreSQL
+// imitate the buffer for copy.c from PostgreSQL
 
 // #define RAW_BUF_SIZE 65536 // this is equal to the default size of the pipe
 

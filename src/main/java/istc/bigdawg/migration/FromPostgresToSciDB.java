@@ -48,10 +48,10 @@ public class FromPostgresToSciDB implements FromDatabaseToDatabase {
 		log.debug("General data migration: " + this.getClass().getName());
 		if (connectionFrom instanceof PostgreSQLConnectionInfo && connectionTo instanceof SciDBConnectionInfo) {
 			try {
-//				return new FromPostgresToSciDBImplementation((PostgreSQLConnectionInfo) connectionFrom, fromTable,
-//						(SciDBConnectionInfo) connectionTo, toArray).migrateSingleThreadCSV();
 				return new FromPostgresToSciDBImplementation((PostgreSQLConnectionInfo) connectionFrom, fromTable,
-						(SciDBConnectionInfo) connectionTo, toArray).migrateBin();
+						(SciDBConnectionInfo) connectionTo, toArray).migrateSingleThreadCSV();
+//				return new FromPostgresToSciDBImplementation((PostgreSQLConnectionInfo) connectionFrom, fromTable,
+//						(SciDBConnectionInfo) connectionTo, toArray).migrateBin();
 			} catch (MigrationException e) {
 				throw new MigrationException(e.getMessage(), e);
 			}

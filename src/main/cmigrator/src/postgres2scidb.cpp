@@ -11,11 +11,12 @@ int Postgres2Scidb::postgres2scidb(FILE* inFile, std::vector<std::shared_ptr<Att
   Postgres::readHeader(inFile);
   Buffer buffer;
   BufferNew(&buffer,inFile,BUFFER_SIZE);
+  // in each step of the loop we process one line
   while (Postgres::readColNumberBuffer(&buffer) != -1)
-    {
+    {// process each column in a line
       for (std::vector<std::shared_ptr<Attribute> >::iterator it=attributes.begin(); it != attributes.end();++it) {
 	(*it)->postgresReadBinaryBuffer(&buffer);
-	(*it)->sciDBWriteBinary(outFile);
+	(*it)->scidbWriteBinary(outFile);
       }
     }
   BufferDispose(&buffer);

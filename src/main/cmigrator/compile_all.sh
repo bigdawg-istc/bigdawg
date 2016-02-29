@@ -1,6 +1,7 @@
 # clean everything
 rm check_stdin_stdout
 rm postgres2scidb
+rm scidb2postgres
 make clean
 
 # tests
@@ -17,3 +18,5 @@ cd ${cwd}
 make
 make check_stdin_stdout
 make postgres2scidb
+make scidb2postgres
+

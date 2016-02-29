@@ -63,7 +63,7 @@ int main(int argc, char *argv[], char* env[])
       return 1;
     }
   
-  fprintf(logFile,"%s","from postgres to scidb");
+  fprintf(logFile,"%s","from postgres to scidb\n");
 
   opterr=0;
   while((c = getopt(argc,argv,"f:i:o:h")) != -1) 

@@ -13,10 +13,12 @@ package istc.bigdawg.scidb;
 public class SciDBColumnMetaData {
 	private String columnName;
 	private String columnType;
+	private boolean isNullable;
 	
-	public SciDBColumnMetaData(String columnName, String columnType) {
+	public SciDBColumnMetaData(String columnName, String columnType, boolean isNullable) {
 		this.columnName = columnName;
 		this.columnType = columnType;
+		this.isNullable = isNullable;
 	}
 
 	public String getColumnName() {
@@ -25,6 +27,10 @@ public class SciDBColumnMetaData {
 
 	public String getColumnType() {
 		return columnType;
+	}
+	
+	public boolean isNullable() {
+		return isNullable;
 	}
 
 	@Override
