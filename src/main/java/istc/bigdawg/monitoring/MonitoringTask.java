@@ -1,10 +1,12 @@
 package istc.bigdawg.monitoring;
 
+import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.executor.plan.QueryExecutionPlan;
 import istc.bigdawg.postgresql.PostgreSQLInstance;
 import istc.bigdawg.query.QueryClient;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -12,7 +14,9 @@ import java.io.InputStreamReader;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -23,38 +27,34 @@ import static istc.bigdawg.postgresql.PostgreSQLHandler.getRows;
  * Created by chenp on 11/17/2015.
  */
 public class MonitoringTask implements Runnable {
-    private static final String RETRIEVE = "SELECT query FROM monitoring WHERE lastRan=(SELECT min(lastRan) FROM monitoring) AND island='%s' ORDER BY RAND() LIMIT 1";
-    private static final double MAX_LOAD = 0.7;
-
+    private static final int CHECK_RATE_MS = 100;
     private final String island;
     private final int cores;
+    private final ScheduledExecutorService executor;
 
     /**
      * Runs in background on each machine. In lean mode, no benchmarks are run except through this.
      *
      * This is currently made with the assumption that each island resides on one machine. To adapt this, would need to add a
      * machine field to the db and choose queries based on that field..
-     * @param island
+     * @param island - String of the Scope of the island
      */
     public MonitoringTask (String island) {
+        this.executor = Executors.newScheduledThreadPool(1);
         this.island = island;
-
         int cores = 1;
-
         try {
             Process p = Runtime.getRuntime().exec("nproc");
             p.waitFor();
             BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream()));
-            StringBuffer sb = new StringBuffer();
+            StringBuilder sb = new StringBuilder();
             String line = "";
             while ((line = reader.readLine())!= null) {
-                sb.append(line + "\n");
+                sb.append(line).append("\n");
             }
             String result = sb.toString().replaceAll("[^0-9]", "");
             cores = Integer.parseInt(result);
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (InterruptedException e) {
+        } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
 
@@ -66,32 +66,34 @@ public class MonitoringTask implements Runnable {
      */
     @Override
     public void run() {
-        while(true) {
-            if (this.can_add()) {
-                try {
-                    final String query = this.getQuery();
-                    if (query != null) {
-                        Thread t1 = new Thread(new Runnable() {
-                            public void run() {
-                                try {
-                                    QueryExecutionPlan qep = QueryExecutionPlan.stringToQEP(query);
-                                    ArrayList<QueryExecutionPlan> qeps = new ArrayList<>();
-                                    qeps.add(qep);
-                                    Monitor.runBenchmarks(qeps);
-                                } catch (Exception e) {}
-                            }
-                        });
-                        t1.start();
-                    }
-                } catch (SQLException e) {}
-            } else {
-                Random r = new Random();
-                int duration = r.nextInt(100);
-                try {
-                    Thread.sleep(duration);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+        this.executor.scheduleAtFixedRate(new Task(this.island, this.cores), 0, CHECK_RATE_MS, TimeUnit.MILLISECONDS);
+    }
+}
+
+class Task implements Runnable {
+    private static final String RETRIEVE = "SELECT query FROM monitoring WHERE lastRan=(SELECT min(lastRan) FROM monitoring) AND island='%s' ORDER BY RAND() LIMIT 1";
+    private static final double MAX_LOAD = 0.7;
+    private final String island;
+    private final int cores;
+
+    Task(String island, int cores){
+        this.island = island;
+        this.cores = cores;
+    }
+
+    @Override
+    public void run(){
+        if (this.can_add()) {
+            try {
+                final String query = this.getQuery();
+                if (query != null) {
+                    QueryExecutionPlan qep = QueryExecutionPlan.stringToQEP(query);
+                    ArrayList<QueryExecutionPlan> qeps = new ArrayList<>();
+                    qeps.add(qep);
+                    Monitor.runBenchmarks(qeps);
                 }
+            } catch (SQLException | DirectedAcyclicGraph.CycleFoundException | MigrationException e) {
+                e.printStackTrace();
             }
         }
     }
@@ -108,7 +110,7 @@ public class MonitoringTask implements Runnable {
             StringBuffer sb = new StringBuffer();
             String line = "";
             while ((line = reader.readLine()) != null) {
-                sb.append(line + "\n");
+                sb.append(line).append("\n");
             }
             Pattern currentLoad = Pattern.compile("(?<=load average: )([.0-9]+)");
             Matcher m = currentLoad.matcher(sb);

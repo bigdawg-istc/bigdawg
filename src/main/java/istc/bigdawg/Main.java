@@ -3,6 +3,8 @@ package istc.bigdawg;
 import java.io.IOException;
 import java.net.URI;
 
+import istc.bigdawg.monitoring.MonitoringTask;
+import istc.bigdawg.utils.IslandsAndCast;
 import org.apache.log4j.Logger;
 import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
@@ -61,6 +63,8 @@ public class Main {
 		logger = Logger.getLogger(Main.class);
 		CatalogInstance.INSTANCE.getCatalog();
 		final HttpServer server = startServer();
+		MonitoringTask relationalTask = new MonitoringTask(IslandsAndCast.Scope.RELATIONAL.toString());
+		relationalTask.run();
 		logger.info("Server started");
 		System.out.println(String.format(
 				"Jersey app started with WADL available at " + "%sapplication.wadl\nHit enter to stop it...",
