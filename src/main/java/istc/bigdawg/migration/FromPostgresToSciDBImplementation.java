@@ -92,6 +92,7 @@ public class FromPostgresToSciDBImplementation {
 	public MigrationResult migrateBin() throws MigrationException {
 		generalMessage += "Mode: binary migration.";
 		log.info(generalMessage);
+		long startTimeMigration = System.currentTimeMillis();
 		String postgresBinPath = SystemUtilities.getSystemTempDir() + "/bigdawg_from_" + fromTable + "_postgres.bin";
 		String scidbBinPath = SystemUtilities.getSystemTempDir() + "/bigdawg_to_" + toArray + "_scidb.bin";
 
@@ -125,6 +126,10 @@ public class FromPostgresToSciDBImplementation {
 			String loadMessage = loadTask.get();
 
 			removeFlatArrayIfIntermediate(arrays);
+			long endTimeMigration = System.currentTimeMillis();
+			String message = "bin migration from PostgreSQL to SciDB execution time: "
+					+ (endTimeMigration - startTimeMigration);
+			log.info(message);
 			return new MigrationResult(extractedRowsCount, null,
 					loadMessage + "No information about number of loaded rows." + " Result of transformation: "
 							+ transformationMessage,
@@ -165,44 +170,46 @@ public class FromPostgresToSciDBImplementation {
 	public MigrationResult migrateSingleThreadCSV() throws MigrationException {
 		generalMessage += " Mode: migrateSingleThreadCSV";
 		log.info(generalMessage);
+		long startTimeMigration = System.currentTimeMillis();
 		String csvFilePath = SystemUtilities.getSystemTempDir() + "/bigdawg_" + fromTable + ".csv";
 		String delimiter = "|";
 		String scidbFilePath = SystemUtilities.getSystemTempDir() + "/bigdawg_" + fromTable + ".scidb";
 		ExecutorService executor = null;
 		Connection connectionPostgres = null;
 		try {
-
-			executor = Executors.newSingleThreadExecutor();
+			RunShell.mkfifo(csvFilePath);
+			RunShell.mkfifo(scidbFilePath);
+			executor = Executors.newFixedThreadPool(3);
 
 			CopyFromPostgresExecutor exportExecutor = new CopyFromPostgresExecutor(connectionFrom,
 					PostgreSQLHandler.getExportCsvCommand(fromTable, delimiter), csvFilePath);
 			FutureTask<Long> exportTask = new FutureTask<Long>(exportExecutor);
 			executor.submit(exportTask);
-			long extractedRowsCount = exportTask.get();
 
 			String typesPattern = SciDBHandler.getTypePatternFromPostgresTypes(postgresqlTableMetaData);
 			TransformFromCsvToSciDBExecutor csvSciDBExecutor = new TransformFromCsvToSciDBExecutor(typesPattern,
 					csvFilePath, delimiter, scidbFilePath, connectionTo.getBinPath());
 			FutureTask<Integer> csvSciDBTask = new FutureTask<Integer>(csvSciDBExecutor);
 			executor.submit(csvSciDBTask);
-			/* wait for the transformation */
-			csvSciDBTask.get();
-
-			// save the disk space
-			SystemUtilities.deleteFileIfExists(csvFilePath);
 
 			SciDBArrays arrays = prepareFlatTargetArrays();
 			LoadToSciDBExecutor loadExecutor = new LoadToSciDBExecutor(connectionTo, arrays, scidbFilePath);
 			FutureTask<String> loadTask = new FutureTask<String>(loadExecutor);
 			executor.submit(loadTask);
 
+			long extractedRowsCount = exportTask.get();
+			csvSciDBTask.get();
 			String loadMessage = loadTask.get();
 
 			removeFlatArrayIfIntermediate(arrays);
+			long endTimeMigration = System.currentTimeMillis();
+			String message = "csv migration from PostgreSQL to SciDB execution time: "
+					+ (endTimeMigration - startTimeMigration);
+			log.info(message);
 			return new MigrationResult(extractedRowsCount, null,
 					loadMessage + "No information about number of loaded rows.", false);
 		} catch (SQLException | UnsupportedTypeException | ExecutionException | InterruptedException
-				| MigrationException exception) {
+				| MigrationException | IOException exception) {
 			MigrationException migrationException = handleException(exception);
 			throw migrationException;
 		} finally {

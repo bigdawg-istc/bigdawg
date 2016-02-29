@@ -33,7 +33,8 @@ int Scidb2Postgres::scidb2postgres(FILE* inFile, std::vector<std::shared_ptr<Att
 	    else { 
 	      std::string msg ("The data for a tuple finished but the processing of all attributes/columns was not finished!");
 	      std::cerr << msg << std::endl;
-	      BOOST_LOG_TRIVIAL(error) << msg; exit(1);
+	      BOOST_LOG_TRIVIAL(error) << msg; 
+	      exit(1);
 	    }
 	  }
 	  if (it == attributes.begin()) {
