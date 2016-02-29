@@ -371,6 +371,7 @@ public class FromSciDBToPostgresImplementation {
 					throw new MigrationException(e.getMessage());
 				}
 			}
+		}
 			/*
 			 * the file was created by SciDB and we cannot remove it (another
 			 * user)
