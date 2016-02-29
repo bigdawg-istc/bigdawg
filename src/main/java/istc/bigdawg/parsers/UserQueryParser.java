@@ -8,7 +8,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import istc.bigdawg.cast.Cast;
-import istc.bigdawg.signature.Signature;
 
 public class UserQueryParser {
 			
@@ -88,6 +87,7 @@ public class UserQueryParser {
 	 * @return ArrayList of Signatures and casts
 	 * @throws Exception
 	 */
+	@Deprecated
 	public static Map<String, Object> getSignaturesAndCasts (Map<String, String> qs) throws Exception {
 		
 		Map<String, Object> output	= new HashMap<String, Object>();
@@ -113,10 +113,12 @@ public class UserQueryParser {
 				
 				switch (islandString.toLowerCase()) {
 					case "bdrel(":
-						output.put(tagString, new Signature(query, "RELATIONAL", tagString));
+//						output.put(tagString, new Signature(query, Scope.valueOf("RELATIONAL"), tagString));
+						System.out.print  ("[Unsupported]\tRELATIONAL\t");
 						break;
 					case "bdarray(":
-						output.put(tagString, new Signature(query, "ARRAY", tagString));
+//						output.put(tagString, new Signature(query, Scope.valueOf("ARRAY"), tagString));
+						System.out.print  ("[Unsupported]\tARRAY\t");
 						break;
 					case "bdtext(":
 						System.out.print  ("[Unsupported]\tTEXT\t");

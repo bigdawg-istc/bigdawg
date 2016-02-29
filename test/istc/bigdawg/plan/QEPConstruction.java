@@ -10,11 +10,9 @@ import org.junit.Test;
 import istc.bigdawg.catalog.CatalogInstance;
 import istc.bigdawg.packages.CrossIslandQueryNode;
 import istc.bigdawg.packages.CrossIslandQueryPlan;
-import istc.bigdawg.packages.QueryContainerForCommonDatabase;
 import istc.bigdawg.parsers.UserQueryParser;
+import istc.bigdawg.plan.operators.Operator;
 import istc.bigdawg.utils.IslandsAndCast.Scope;
-import net.sf.jsqlparser.parser.CCJSqlParserUtil;
-import net.sf.jsqlparser.statement.select.Select;
 
 public class QEPConstruction {
 
@@ -34,7 +32,8 @@ public class QEPConstruction {
 		setupCrossIslandPlanConstructionTier4_1();
 		setupCrossIslandPlanConstructionTier4_2();
 		setupCrossIslandPlanConstructionTier5_1();
-		setupCrossIslandPlanConstructionTier6();
+		setupCrossIslandPlanConstructionTier6_1();
+		setupCrossIslandPlanConstructionTier6_2();
 	}
 
 	
@@ -96,12 +95,20 @@ public class QEPConstruction {
 		inputs.put("array1", "bdarray(cross_join(go_matrix, genes))");
 	}
 	
-	private void setupCrossIslandPlanConstructionTier6() {
+	private void setupCrossIslandPlanConstructionTier6_1() {
 		HashMap<String, String> ba1 = new HashMap<>();
 		ba1.put("OUTPUT", "cross_join(BIGDAWGPRUNED_2, BIGDAWGPRUNED_1)");
 		
 		expectedOutputs.put("relarray1", ba1);
 		inputs.put("relarray1", "bdrel(select * from patients join geo on patients.id = geo.patientid join bdarray(cross_join(go_matrix, genes)) as g on g.id = geo.geneid)");
+	}
+	
+	private void setupCrossIslandPlanConstructionTier6_2() {
+		HashMap<String, String> ba1 = new HashMap<>();
+		ba1.put("OUTPUT", "cross_join(BIGDAWGPRUNED_2, BIGDAWGPRUNED_1)");
+		
+		expectedOutputs.put("relarray2", ba1);
+		inputs.put("relarray2", "bdrel(select * from patients join geo on patients.id = geo.patientid join bdarray(cross_join(go_matrix, genes)) as g on g.id = geo.geneid where g.id < 3)");
 	}
 	
 	
@@ -142,73 +149,55 @@ public class QEPConstruction {
 	}
 	
 	@Test
-	public void testCrossIslandPlanConstructionTier6() throws Exception {
+	public void testCrossIslandPlanConstructionTier6_1() throws Exception {
 		testCaseCrossIslandPlanConstruction("relarray1", false);
 	}
 	
+	@Test
+	public void testCrossIslandPlanConstructionTier6_2() throws Exception {
+		testCaseCrossIslandPlanConstruction("relarray2", false);
+	}
+	
 
-	@SuppressWarnings("unchecked")
 	private void testCaseCrossIslandPlanConstruction(String testName, boolean unsupportedToken) throws Exception {
 		String userinput = inputs.get(testName);
 		LinkedHashMap<String, String> crossIslandQuery = UserQueryParser.getUnwrappedQueriesByIslands(userinput);
 		
 		CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(crossIslandQuery);
 		
-		System.out.println("\n\n\nMember KeySet Size: "+ciqp.getMemberKeySet().size()+"\n\n");
+		
+		System.out.println("\n\n\nRaw query: "+userinput);
+		
+		System.out.println("\n\nMember KeySet Size: "+ciqp.getMemberKeySet().size()+"\n");
 		
 		for (String k : ciqp.getMemberKeySet()) {
 			
 			CrossIslandQueryNode n = ciqp.getMember(k);
-			String remainderText;
-			Map<String, QueryContainerForCommonDatabase> container;
-			
-			
-			
 			
 			System.out.println("Member: "+k+"; Island: "+n.getScope().toString());
 			
 			
-			
-			
-			
-			
-			
-			if (n.getScope().equals(Scope.RELATIONAL))
-				remainderText = n.getRemainder(0).generateSQLString((Select) CCJSqlParserUtil.parse(n.getQuery()));
-			else if (n.getScope().equals(Scope.ARRAY))
-				remainderText = n.getRemainder(0).generateAFLString(0);
-			else 
-				throw new Exception("Unimplemented island: "+n.getScope().toString());
-			
-			
-			
-			
-			// remainder
+			// schemas
 			if (k.toLowerCase().startsWith("bigdawgtag_")){
-				System.out.println("Root schema in SQL: "+n.getRemainder(0).generateSQLCreateTableStatementLocally(k));
-				System.out.println("Root schema in AFL: "+n.getRemainder(0).generateAFLCreateArrayStatementLocally(k));
+				System.out.println("Root schema in SQL: \n- "+n.getRemainder(0).generateSQLCreateTableStatementLocally(k));
+				System.out.println("Root schema in AFL: \n- "+n.getRemainder(0).generateAFLCreateArrayStatementLocally(k));
 			}
 			
-				
-			// container
-			container = n.getQueryContainer();
-			System.out.println("----> Gen remainder: \n- "+remainderText);
-			System.out.println("----> Gen container: ");
+			n.printSignature();
 			
-			
-			
-			for (String s: container.keySet()) {
+			System.out.println("All possible remainder permutations: ");
+			int i = 1;
+			for (Operator o : n.getAllRemainders()) {
 				if (n.getScope().equals(Scope.RELATIONAL))
-					System.out.println("- "+container.get(s).generateSQLSelectIntoString());
+					System.out.printf("%d. %s\n", i, o.generateSQLString(null));
 				else if (n.getScope().equals(Scope.ARRAY))
-					System.out.println("- "+container.get(s).generateAFLStoreString());
-				else 
-					throw new Exception("Unimplemented island: "+n.getScope().toString());
+					System.out.printf("%d. %s\n", i, o.generateAFLString(0));
+				i++;
 			}
+			
 			System.out.println("\n");
 			
 			
-			// do something with QEP?
 		}
 		
 		

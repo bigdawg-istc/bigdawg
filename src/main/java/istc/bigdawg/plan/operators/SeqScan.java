@@ -71,6 +71,7 @@ public class SeqScan extends Scan {
 			operatorName = "project";
 		else 
 			operatorName = "scan";
+		
 	}
 	
 	// for AFL
@@ -171,16 +172,22 @@ public class SeqScan extends Scan {
 	}
 	
 	@Override
-	public String getTreeRepresentation(){
+	public String getTreeRepresentation(boolean isRoot){
+		
+		if (isPruned() && (!isRoot)) {
+			return "{PRUNED}";
+		}
 		
 		StringBuilder sb = new StringBuilder();
 		sb.append('{');
-		if (children.isEmpty()){
+		if (children.isEmpty() && operatorName.equals("scan")){
 			// it is a scan
 			sb.append(this.srcTable);
+		} else if (children.isEmpty()) {
+			sb.append(operatorName).append('{').append(this.srcTable).append('}');
 		} else {
 			// filter, project
-			sb.append(operatorName).append(children.get(0).getTreeRepresentation());
+			sb.append(operatorName).append(children.get(0).getTreeRepresentation(false));
 		}
 		
 		sb.append('}');

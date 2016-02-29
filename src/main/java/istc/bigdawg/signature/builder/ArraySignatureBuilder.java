@@ -2,10 +2,12 @@ package istc.bigdawg.signature.builder;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import istc.bigdawg.catalog.Catalog;
 import istc.bigdawg.catalog.CatalogViewer;
 
 public class ArraySignatureBuilder {
@@ -61,7 +63,7 @@ public class ArraySignatureBuilder {
 		}
 	}
 
-	public static String sig2(String input) throws Exception {
+	public static List<String> sig2(String input) throws Exception {
 		if (objPattern == null) listing();
 		
 		StringBuffer stringBuffer	= new StringBuffer();
@@ -81,14 +83,14 @@ public class ArraySignatureBuilder {
 			while (tagMatcher.find())
 				dawgtags.append("\t"+input.substring(tagMatcher.start(), tagMatcher.end()));
 		} catch (IllegalStateException e) {
-			return "";
+			return new ArrayList<>();
 		}
 		
 		String result = CatalogViewer.getObjectsFromList(stringBuffer.toString());
 		if (result.length() == 0) {
-			return dawgtags.toString();
+			return Arrays.asList(dawgtags.toString().split("\t"));
 		} else {
-			return result.concat("\t"+dawgtags.toString());
+			return Arrays.asList(result.concat("\t"+dawgtags.toString()).split("\t"));
 		}
 	}
 
@@ -98,7 +100,7 @@ public class ArraySignatureBuilder {
 	 * @return TSV String of constants, including string, integer and decimal numbers, true and false, and null
 	 * @throws Exception
 	 */
-	public static String sig3(String input) throws Exception {
+	public static List<String> sig3(String input) throws Exception {
 		if (litPattern == null) listing();
 		
 		StringBuffer stringBuffer	= new StringBuffer();
@@ -112,10 +114,10 @@ public class ArraySignatureBuilder {
 					else stringBuffer.append(input.substring(matcher.start(), matcher.end()));
 				}
 			}	
-			return stringBuffer.toString().replace(" ", "");
+			return Arrays.asList(stringBuffer.toString().replace(" ", "").split("\t"));
 			
 		} catch (IllegalStateException e) {
-			return "";
+			return new ArrayList<>();
 		}
 	}
 }

@@ -8,8 +8,6 @@ import java.util.Map;
 import istc.bigdawg.extract.logical.SQLTableExpression;
 import istc.bigdawg.packages.SciDBArray;
 import istc.bigdawg.schema.DataObjectAttribute;
-import istc.bigdawg.schema.SQLAttribute;
-import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Database;
 import net.sf.jsqlparser.schema.Table;
@@ -211,8 +209,8 @@ public class Sort extends Operator {
 	}
 	
 	@Override
-	public String getTreeRepresentation(){
-		return "{sort"+children.get(0).getTreeRepresentation()+"}";
+	public String getTreeRepresentation(boolean isRoot){
+		return "{sort"+children.get(0).getTreeRepresentation(false)+"}";
 	}
 	
 };

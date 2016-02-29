@@ -654,7 +654,7 @@ public class Operator {
 	}
 	
 	// will likely get overridden
-	public String getTreeRepresentation(){
+	public String getTreeRepresentation(boolean isRoot){
 		return "Unimplemented: "+this.getClass().toString();
 	}
 	
