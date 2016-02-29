@@ -112,8 +112,8 @@ public class FromPostgresToSciDBImplementationTest {
 		// clean: remove the target array
 		SciDBHandler.dropArrayIfExists(conTo, toArray);
 	}
-	
-		@Test
+
+	@Test
 	public void binTestFlat() throws MigrationException, SQLException {
 		System.out.println("bin test flat");
 		// prepare the target array
