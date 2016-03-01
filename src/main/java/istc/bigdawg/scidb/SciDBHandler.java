@@ -512,6 +512,7 @@ public class SciDBHandler implements DBHandler {
 			con = SciDBHandler.getConnection(conTo);
 			statement = con.createStatement();
 			statement.execute("drop array " + array);
+			con.commit();
 		} catch (SQLException ex) {
 			/*
 			 * it can be thrown when the target array did not exists which
@@ -529,7 +530,6 @@ public class SciDBHandler implements DBHandler {
 				statement.close();
 			}
 			if (con != null) {
-				con.commit();
 				con.close();
 			}
 		}

@@ -61,6 +61,7 @@ public class CopyFromPostgresExecutor implements Callable<Long> {
 	 * @throws FileNotFoundException 
 	 */
 	public Long call() {
+		log.debug("start call: Copy from PostgreSQL (Executor)");
 		if (output == null) {
 			try {
 				output = new FileOutputStream(outputFile);
@@ -73,6 +74,7 @@ public class CopyFromPostgresExecutor implements Callable<Long> {
 			}
 		}
 		Long countExtractedRows = 0L;
+		log.debug("issue command to PostgreSQL: Copy from PostgreSQL (Executor)");
 		try {
 			countExtractedRows = cpFrom.copyOut(copyFromString, output);
 			connection.commit();
