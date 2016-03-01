@@ -9,6 +9,7 @@ import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
 
+import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -28,6 +29,10 @@ import istc.bigdawg.scidb.SciDBHandler;
  */
 public class FromSciDBToPostgresImplementationTest {
 
+	/* log */
+	private static Logger log = Logger
+			.getLogger(FromSciDBToPostgresImplementationTest.class);
+
 	private PostgreSQLConnectionInfo conTo = new PostgreSQLConnectionInfoTest();
 	private String toTable = "region_test_from_13255___to_postgres_bin";
 	private SciDBConnectionInfo conFrom = new SciDBConnectionInfo();
@@ -46,8 +51,8 @@ public class FromSciDBToPostgresImplementationTest {
 		SciDBHandler handler = new SciDBHandler(conFrom);
 		SciDBHandler.dropArrayIfExists(conFrom, fromArray);
 		SciDBHandler.dropArrayIfExists(conFrom, fromArray);
-		handler.executeStatementAFL(
-				"create array " + fromArray + "<r_regionkey:int64,r_name:string,r_comment:string> [i=0:*,1000000,0]");
+		handler.executeStatementAFL("create array " + fromArray
+				+ "<r_regionkey:int64,r_name:string,r_comment:string> [i=0:*,1000000,0]");
 		handler.close();
 
 		handler = new SciDBHandler(conFrom);
@@ -62,39 +67,45 @@ public class FromSciDBToPostgresImplementationTest {
 	}
 
 	@Test
-	public void testFromSciDBToPostgreSQLNoTargetTable() throws MigrationException, SQLException {
+	public void testFromSciDBToPostgreSQLNoTargetTable()
+			throws MigrationException, SQLException {
 		// make sure that the target array does not exist
 		PostgreSQLHandler handler = new PostgreSQLHandler(conTo);
 		handler.dropTableIfExists(toTable);
-		FromSciDBToPostgresImplementation migrator = new FromSciDBToPostgresImplementation(conFrom, fromArray, conTo,
-				toTable);
+		FromSciDBToPostgresImplementation migrator = new FromSciDBToPostgresImplementation(
+				conFrom, fromArray, conTo, toTable);
 		migrator.migrateBin();
-		long postgresCountTuples = Utils.getPostgreSQLCountTuples(conTo, toTable);
+		long postgresCountTuples = Utils.getPostgreSQLCountTuples(conTo,
+				toTable);
 		assertEquals(numberOfCellsSciDB, postgresCountTuples);
 		// drop the created table
 		handler.dropTableIfExists(toTable);
 	}
 
 	@Test
-	public void testFromSciDBToPostgreSQLWithPreparedTargetTable() throws MigrationException, SQLException {
+	public void testFromSciDBToPostgreSQLWithPreparedTargetTable()
+			throws MigrationException, SQLException {
 		// make sure that the target array does not exist
 		PostgreSQLHandler handler = new PostgreSQLHandler(conTo);
 		handler.dropTableIfExists(toTable);
 		handler.createTable("create table " + toTable
 				+ " (r_regionkey BIGINT NOT NULL, r_name CHAR(25) NOT NULL, r_comment VARCHAR(152) NOT NULL);");
-		FromSciDBToPostgresImplementation migrator = new FromSciDBToPostgresImplementation(conFrom, fromArray, conTo,
-				toTable);
+		FromSciDBToPostgresImplementation migrator = new FromSciDBToPostgresImplementation(
+				conFrom, fromArray, conTo, toTable);
 		migrator.migrateBin();
-		long postgresCountTuples = Utils.getPostgreSQLCountTuples(conTo, toTable);
+		long postgresCountTuples = Utils.getPostgreSQLCountTuples(conTo,
+				toTable);
 		assertEquals(numberOfCellsSciDB, postgresCountTuples);
 		// drop the created table
 		handler.dropTableIfExists(toTable);
-		System.out.println("The end of the test with prepared table in PosgreSQL.");
+		System.out.println(
+				"The end of the test with prepared table in PosgreSQL.");
 	}
 
 	@After
 	public void after() {
-		System.out.println("The end of the " + this.getClass().getName() + " test!");
+		System.out.println(
+				"The end of the " + this.getClass().getName() + " test!");
 	}
 
 }

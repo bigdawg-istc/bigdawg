@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import istc.bigdawg.BDConstants;
+import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.exceptions.NotSupportIslandException;
 import istc.bigdawg.executor.Executor;
 import istc.bigdawg.executor.plan.QueryExecutionPlan;
@@ -115,7 +116,7 @@ public class Monitor {
 		}
     }
 
-    public static void runBenchmarks(List<QueryExecutionPlan> qeps) throws Exception {
+    public static void runBenchmarks(List<QueryExecutionPlan> qeps) throws SQLException, MigrationException {
         for (QueryExecutionPlan qep: qeps) {
             Executor.executePlan(qep);
         }

@@ -1,6 +1,8 @@
 #ifndef ATTRIBUTE_H
 #define ATTRIBUTE_H
 
+#define BOOST_LOG_DYN_LINK 1
+
 #include <boost/lexical_cast.hpp>
 //#include <boost/type_index.hpp>
 #include <cstdio>
