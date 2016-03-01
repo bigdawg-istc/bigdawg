@@ -1,3 +1,5 @@
+#define BOOST_LOG_DYN_LINK 1
+
 #include <cstdio> /* also defines FILENAME_MAX */
 #include <string>
 #include <inttypes.h>
