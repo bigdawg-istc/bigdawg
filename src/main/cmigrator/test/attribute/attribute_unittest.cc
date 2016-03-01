@@ -120,7 +120,7 @@ TEST(SciDB,WriteBinaryTestStringNotNull)
   std::cout << "attribute value before writing for SciDB: " << attr.getValue() << std::endl;
   FILE * fp;
   fp = tmpfile();
-  attr.sciDBWriteBinary(fp);
+  attr.scidbWriteBinary(fp);
   rewind(fp);
   
   // now check what is in the file after writing values for SciDB
@@ -153,7 +153,7 @@ TEST(SciDB,WriteBinaryTestStringNullableWithValue)
   std::cout << "attribute value before writing for SciDB: " << attr.getValue() << std::endl;
   FILE * fp;
   fp = tmpfile();
-  attr.sciDBWriteBinary(fp);
+  attr.scidbWriteBinary(fp);
   rewind(fp);
 
   // now check the written file for SciDB
