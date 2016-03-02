@@ -218,9 +218,9 @@ public class Aggregate extends Operator {
 	
 	
 	@Override
-	public Select generateSQLStringDestOnly(Select dstStatement) throws Exception {
+	public Select generateSQLStringDestOnly(Select dstStatement, boolean stopAtJoin) throws Exception {
 
-		dstStatement = children.get(0).generateSQLStringDestOnly(dstStatement);
+		dstStatement = children.get(0).generateSQLStringDestOnly(dstStatement, stopAtJoin);
 				
 		PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
 		ps.setGroupByColumnReferences(parsedGroupBys);

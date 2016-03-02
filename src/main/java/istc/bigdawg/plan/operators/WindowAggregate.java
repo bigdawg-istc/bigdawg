@@ -155,8 +155,8 @@ public class WindowAggregate extends Operator {
 	
 	
 	@Override
-	public Select generateSQLStringDestOnly(Select dstStatement) throws Exception {
-		dstStatement = children.get(0).generateSQLStringDestOnly(dstStatement);
+	public Select generateSQLStringDestOnly(Select dstStatement, boolean stopAtJoin) throws Exception {
+		dstStatement = children.get(0).generateSQLStringDestOnly(dstStatement, stopAtJoin);
 		// do nothing here until SELECT clause		
 	
 		return dstStatement;

@@ -237,7 +237,7 @@ public class Operator {
 	
 	public String generateSQLSelectIntoStringForExecutionTree(String into) throws Exception {
 		
-		Select dstStatement  = this.generateSQLStringDestOnly(null);
+		Select dstStatement  = this.generateSQLStringDestOnly(null, false);
 //		System.out.println("PLAIN DSTSTATEMENT: "+ ((PlainSelect) dstStatement.getSelectBody()));
 		
 		// iterate over out schema and add it to select clause
@@ -402,11 +402,11 @@ public class Operator {
 	}
 	
 	
-	protected Select generateSQLStringDestOnly(Select dstStatement) throws Exception {
+	protected Select generateSQLStringDestOnly(Select dstStatement, boolean stopAtJoin) throws Exception {
 
 		// generic case
 		for(int i = 0; i < children.size(); ++i) {
-			dstStatement = children.get(i).generateSQLStringDestOnly(dstStatement);
+			dstStatement = children.get(i).generateSQLStringDestOnly(dstStatement, stopAtJoin);
 		}
 		return dstStatement;
 	}
@@ -422,7 +422,7 @@ public class Operator {
 	private Select prepareForSQLGeneration(Select srcStatement) throws Exception {
 
 		clearJoinReservedObjects();
-		Select dstStatement  = this.generateSQLStringDestOnly(null);
+		Select dstStatement  = this.generateSQLStringDestOnly(null, false);
 		
 		// iterate over out schema and add it to select clause
 		HashMap<String, SelectItem> selects = new HashMap<String, SelectItem>();
@@ -716,4 +716,21 @@ public class Operator {
 		
 		return sb.toString();
 	} 
+	
+	
+	public Operator generateSQLStatementForPresentNonJoinSegment(StringBuilder sb) throws Exception {
+		
+		if ( ! this.getClass().equals(Join.class)) {
+			sb.append(this.generateSQLStringDestOnly(null, true).toString()); 
+		}
+
+		// find the join		
+		Operator child = this;
+		while (child != null && (!child.getClass().equals(Join.class))) {
+			// then there could be one child only
+			child = child.getChildren().get(0);
+		}
+		
+		return child;
+	}
 }

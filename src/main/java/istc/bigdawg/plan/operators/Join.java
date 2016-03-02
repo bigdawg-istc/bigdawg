@@ -48,6 +48,12 @@ public class Join extends Operator {
 	protected Map<String, DataObjectAttribute> srcSchema;
 	protected boolean joinPredicateUpdated = false;
 	
+	
+	protected static int maxJoinSerial = 0;
+	protected Integer joinID = null;
+	
+	
+	
 	public Join (Operator o, boolean addChild) throws Exception {
 		super(o, addChild);
 		Join j = (Join) o;
@@ -322,8 +328,13 @@ public class Join extends Operator {
     
 
     @Override
-	public Select generateSQLStringDestOnly(Select dstStatement) throws Exception {
+	public Select generateSQLStringDestOnly(Select dstStatement, boolean stopAtJoin) throws Exception {
 		
+    	if (stopAtJoin)
+    		return SelectUtils.buildSelectFromTable(new Table(getJoinToken()));
+    	
+    	
+    	
     	Set<String> filterSet = new HashSet<String>();
     	PlainSelect ps = null;
     	
@@ -403,7 +414,7 @@ public class Join extends Operator {
     			t = t1;
     			
     		} else {
-    			dstStatement = child0.generateSQLStringDestOnly(dstStatement); 
+    			dstStatement = child0.generateSQLStringDestOnly(dstStatement, stopAtJoin); 
     			ps = (PlainSelect) dstStatement.getSelectBody();
     			if (ps.getWhere() != null) filterSet.add(ps.getWhere().toString());
     			
@@ -420,7 +431,7 @@ public class Join extends Operator {
 		} else {
 			
 			
-			dstStatement = child0.generateSQLStringDestOnly(dstStatement); 
+			dstStatement = child0.generateSQLStringDestOnly(dstStatement, stopAtJoin); 
 			ps = (PlainSelect) dstStatement.getSelectBody();
 			if (ps.getWhere() != null) filterSet.add(ps.getWhere().toString());
 			
@@ -443,7 +454,7 @@ public class Join extends Operator {
 		
 		updateThisAndParentJoinReservedObjects(t.getFullyQualifiedName());
 		
-		dstStatement = child1.generateSQLStringDestOnly(dstStatement); 
+		dstStatement = child1.generateSQLStringDestOnly(dstStatement, stopAtJoin); 
 		ps = (PlainSelect) dstStatement.getSelectBody();
 		if (ps.getWhere() != null) filterSet.add(ps.getWhere().toString());
     		
@@ -612,6 +623,16 @@ public class Join extends Operator {
 	}
 	
 	
+	public String getJoinToken() {
+		
+		if (joinID == null) {
+			maxJoinSerial ++;
+			joinID = maxJoinSerial;
+		}
+		
+		return "BIGDAWGJOINTOKEN_"+joinID;
+	}
+	
 	
 	
 	
@@ -627,5 +648,6 @@ public class Join extends Operator {
 		
 		return null;
 	}
+	
 	
 };
