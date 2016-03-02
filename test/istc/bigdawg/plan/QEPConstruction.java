@@ -8,6 +8,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import istc.bigdawg.catalog.CatalogInstance;
+import istc.bigdawg.monitoring.Monitor;
 import istc.bigdawg.packages.CrossIslandQueryNode;
 import istc.bigdawg.packages.CrossIslandQueryPlan;
 import istc.bigdawg.parsers.UserQueryParser;
@@ -197,6 +198,12 @@ public class QEPConstruction {
 			
 			System.out.println("\n");
 			
+			
+			
+			
+			 
+			// qeps and benchmarks
+			Monitor.addBenchmarks(n.getAllQEPs(), true);
 			
 		}
 		

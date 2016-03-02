@@ -119,7 +119,7 @@ public class Scan extends Operator {
 	}
 	
 	@Override
-	public Select generateSQLStringDestOnly(Select dstStatement) throws Exception {
+	public Select generateSQLStringDestOnly(Select dstStatement, boolean stopAtJoin) throws Exception {
 
 		if(dstStatement == null) {
 			dstStatement = SelectUtils.buildSelectFromTable(table);
