@@ -12,6 +12,7 @@ import istc.bigdawg.plan.operators.Operator;
 import istc.bigdawg.scidb.SciDBHandler;
 import junit.framework.TestCase;
 
+
 public class AFLParserTest extends TestCase {
 	private static Map<String, String> expectedOutputs;
 	private static Map<String, String> input1;
@@ -94,7 +95,7 @@ public class AFLParserTest extends TestCase {
 		System.out.println("\nTree edit distnance: ");
 		System.out.println("Tree1: "+input1.get(testname));
 		System.out.println("Tree2: "+input2.get(testname));
-		System.out.println("Distance: "+RTED.computeDistance(input1.get(testname), input2.get(testname)));
+		System.out.println("Distance: "+ RTED.computeDistance(input1.get(testname), input2.get(testname)));
 	}
 	
 	
