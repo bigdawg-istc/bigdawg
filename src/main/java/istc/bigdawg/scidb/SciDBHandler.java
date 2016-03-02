@@ -400,7 +400,7 @@ public class SciDBHandler implements DBHandler {
 				attributesOrdered.add(columnMetaData);
 				resultSetAttributes.next();
 			}
-			return new SciDBArrayMetaData(dimensionsMap, dimensionsOrdered,
+			return new SciDBArrayMetaData(arrayName, dimensionsMap, dimensionsOrdered,
 					attributesMap, attributesOrdered);
 		} catch (SQLException ex) {
 			if (ex.getMessage()

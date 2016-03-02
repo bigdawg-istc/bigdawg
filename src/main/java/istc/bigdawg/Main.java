@@ -5,6 +5,8 @@ import java.net.URI;
 
 import istc.bigdawg.monitoring.MonitoringTask;
 import istc.bigdawg.utils.IslandsAndCast;
+import jline.internal.Log;
+
 import org.apache.log4j.Logger;
 import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
@@ -61,6 +63,7 @@ public class Main {
 		// System.out.println("The end of class-paths.");
 		LoggerSetup.setLogging();
 		logger = Logger.getLogger(Main.class);
+		logger.info("Starting application ...");
 		CatalogInstance.INSTANCE.getCatalog();
 		final HttpServer server = startServer();
 		MonitoringTask relationalTask = new MonitoringTask(IslandsAndCast.Scope.RELATIONAL.toString());

@@ -31,7 +31,7 @@ public class LoggerSetup {
 					"log4j property file '" + log4JPropertyFile + "' not found in the classpath");
 		}
 		PropertyConfigurator.configure(prop);
-		logger.info("Starting application. Logging was configured!");
+		logger.info("Logging was configured!");
 	}
 
 }

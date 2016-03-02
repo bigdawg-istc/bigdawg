@@ -87,10 +87,11 @@ public class FromPostgresToSciDBImplementation {
 		try {
 			this.postgresqlTableMetaData = new PostgreSQLHandler(connectionFrom)
 					.getColumnsMetaData(fromTable);
-		} catch (SQLException e) {
-			throw new MigrationException(errMessage
-					+ " Extraction of the attribute types from PostgreSQL failed. "
-					+ e.getMessage());
+		} catch (SQLException postgresException) {
+			MigrationException migrateException = handleException(
+					postgresException, "Extraction of meta data on the table: "
+							+ fromTable + " in PostgreSQL failed. ");
+			throw migrateException;
 		}
 	}
 
@@ -137,8 +138,7 @@ public class FromPostgresToSciDBImplementation {
 				String message = "Check the C++ migrator! It might need to be compiled and checked separately!";
 				log.error(message);
 				throw new MigrationException(message);
-			}
-			else {
+			} else {
 				transformationMessage = "Transformation finished successfuly!";
 			}
 			long extractedRowsCount = exportTask.get();
@@ -158,7 +158,8 @@ public class FromPostgresToSciDBImplementation {
 					false);
 		} catch (SQLException | UnsupportedTypeException | InterruptedException
 				| ExecutionException | IOException exception) {
-			MigrationException migrationException = handleException(exception);
+			MigrationException migrationException = handleException(exception,
+					"Migration in binary Format failed. ");
 			throw migrationException;
 		} finally {
 			SystemUtilities.deleteFileIfExists(postgresBinPath);
@@ -242,7 +243,8 @@ public class FromPostgresToSciDBImplementation {
 		} catch (SQLException | UnsupportedTypeException | ExecutionException
 				| InterruptedException | MigrationException
 				| IOException exception) {
-			MigrationException migrationException = handleException(exception);
+			MigrationException migrationException = handleException(exception,
+					"Migration in CSV format failed. ");
 			throw migrationException;
 		} finally {
 			SystemUtilities.deleteFileIfExists(csvFilePath);
@@ -272,10 +274,11 @@ public class FromPostgresToSciDBImplementation {
 	 *            the exception that was raised during migration
 	 * @return the MigrationException
 	 */
-	private MigrationException handleException(Exception exception) {
+	private MigrationException handleException(Exception exception,
+			String message) {
 		/* this log with stack trace is for UnsupportedTypeException */
 		log.error(StackTrace.getFullStackTrace(exception));
-		String msg = errMessage + exception.getMessage()
+		String msg = message + errMessage + exception.getMessage()
 				+ " PostgreSQL connection: " + connectionFrom.toString()
 				+ " fromTable: " + fromTable + " SciDBConnection: "
 				+ connectionTo.toString() + " to array:" + toArray;
@@ -323,55 +326,6 @@ public class FromPostgresToSciDBImplementation {
 		SciDBHandler handler = new SciDBHandler(connectionTo);
 		handler.executeStatement("drop array " + arrayName);
 		handler.close();
-	}
-
-	/**
-	 * Check if this is a flat array in SciDB. It also verifies if the mapping
-	 * from a table in PostgreSQL to an array in SciDB.
-	 * 
-	 * @param scidbArrayMetaData
-	 * @return
-	 * @throws MigrationException
-	 */
-	private boolean isFlatArray(SciDBArrayMetaData scidbArrayMetaData)
-			throws MigrationException {
-		List<SciDBColumnMetaData> scidbDimensionsOrdered = scidbArrayMetaData
-				.getDimensionsOrdered();
-		// check if this is the flat array only
-		if (scidbDimensionsOrdered.size() != 1) {
-			return false;
-		}
-		List<SciDBColumnMetaData> scidbAttributesOrdered = scidbArrayMetaData
-				.getAttributesOrdered();
-		List<PostgreSQLColumnMetaData> postgresColumnsOrdered = postgresqlTableMetaData
-				.getColumnsOrdered();
-		if (scidbAttributesOrdered.size() == postgresColumnsOrdered.size()) {
-			/*
-			 * check if the flat array attributes are at the same order as
-			 * columns in PostgreSQL
-			 */
-			for (int i = 0; i < scidbAttributesOrdered.size(); ++i) {
-				if (!scidbAttributesOrdered.get(i).getColumnName()
-						.equals(postgresColumnsOrdered.get(i).getName())) {
-					String msg = "The attribute "
-							+ postgresColumnsOrdered.get(i).getName()
-							+ " from PostgreSQL's table: " + fromTable
-							+ " is not matched in the same ORDER with attribute/dimension in the array in SciDB: "
-							+ toArray + " (position " + i
-							+ " PostgreSQL is for the attribute "
-							+ postgresColumnsOrdered.get(i).getName()
-							+ " whereas the position " + i
-							+ " in the array in SciDB is: "
-							+ scidbAttributesOrdered.get(i).getColumnName()
-							+ ").";
-					log.error(msg);
-					throw new MigrationException(msg);
-				}
-			}
-			return true;
-		}
-		return false;
-
 	}
 
 	/**
@@ -464,7 +418,8 @@ public class FromPostgresToSciDBImplementation {
 			return new SciDBArrays(toArray, null);
 		}
 		handler.close();
-		if (isFlatArray(arrayMetaData)) {
+		if (PostgreSQLSciDBMigrationUtils.isFlatArray(arrayMetaData,
+				postgresqlTableMetaData)) {
 			return new SciDBArrays(toArray, null);
 		}
 		/*
