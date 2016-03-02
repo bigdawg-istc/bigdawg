@@ -1,5 +1,6 @@
 package istc.bigdawg.executor;
 
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.text.ParseException;
 import java.util.*;
@@ -209,13 +210,19 @@ class PlanExecutor {
 
     private void dropTemporaryTables() throws SQLException {
         synchronized(temporaryTables) {
+            Multimap<ConnectionInfo, String> removed = HashMultimap.create();
+
             for (ConnectionInfo c : temporaryTables.keySet()) {
                 Collection<String> tables = temporaryTables.get(c);
 
                 log.debug(String.format("Cleaning up %s by removing %s...", c, tables));
                 ((PostgreSQLHandler) c.getHandler()).executeStatementPostgreSQL(c.getCleanupQuery(tables));
 
-                temporaryTables.removeAll(c);
+                removed.putAll(c, tables);
+            }
+
+            for (Map.Entry<ConnectionInfo, String> entry : removed.entries()) {
+                temporaryTables.remove(entry.getKey(), entry.getValue());
             }
         }
 
