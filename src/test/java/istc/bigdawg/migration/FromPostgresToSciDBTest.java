@@ -22,6 +22,7 @@ import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfoTest;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
+import istc.bigdawg.scidb.SciDBConnectionInfo;
 import istc.bigdawg.scidb.SciDBHandler;
 
 /**
@@ -61,7 +62,8 @@ public class FromPostgresToSciDBTest {
 		Connection con = PostgreSQLHandler.getConnection(conFrom);
 		con.setAutoCommit(false);
 		CopyManager cpTo = new CopyManager((BaseConnection) con);
-		InputStream input = FromPostgresToSciDBTest.class.getClassLoader().getResourceAsStream("region.csv");
+		InputStream input = FromPostgresToSciDBTest.class.getClassLoader()
+				.getResourceAsStream("region.csv");
 		// FileInputStream input = new FileInputStream(new
 		// File("./region.csv"));
 		// CHECK IF THE INPUT STREAM CONTAINS THE REQUIRED DATA
@@ -70,7 +72,10 @@ public class FromPostgresToSciDBTest {
 		// input.read(buffer, 0, size);
 		// String in = new String(buffer, StandardCharsets.UTF_8);
 		// System.out.println(in);
-		numberOfRowsPostgres = cpTo.copyIn("Copy " + fromTable + " from STDIN with (format csv, delimiter '|')", input);
+		numberOfRowsPostgres = cpTo.copyIn(
+				"Copy " + fromTable
+						+ " from STDIN with (format csv, delimiter '|')",
+				input);
 		con.commit();
 		con.close();
 		assertEquals(5, numberOfRowsPostgres);
@@ -84,12 +89,13 @@ public class FromPostgresToSciDBTest {
 	 * @throws SQLException
 	 * @throws MigrationException
 	 */
-	public void testFromPostgresToSciDBPreparedArray() throws SQLException, MigrationException {
+	public void testFromPostgresToSciDBPreparedArray()
+			throws SQLException, MigrationException {
 		// prepare the target array
 		SciDBHandler.dropArrayIfExists(conTo, toArray);
 		SciDBHandler handler = new SciDBHandler(conTo);
-		handler.executeStatement(
-				"create array " + toArray + " <r_regionkey:int64,r_name:string,r_comment:string> [i=0:*,1000000,0]");
+		handler.executeStatement("create array " + toArray
+				+ " <r_regionkey:int64,r_name:string,r_comment:string> [i=0:*,1000000,0]");
 		handler.commit();
 		handler.close();
 		/*
@@ -109,7 +115,8 @@ public class FromPostgresToSciDBTest {
 	 * @param toArray
 	 * @throws SQLException
 	 */
-	private void checkNumberOfElements(SciDBConnectionInfo conTo, String toArray) throws SQLException {
+	private void checkNumberOfElements(SciDBConnectionInfo conTo,
+			String toArray) throws SQLException {
 		long numberOfCellsSciDB = Utils.getNumberOfCellsSciDB(conTo, toArray);
 		assertEquals(numberOfRowsPostgres, numberOfCellsSciDB);
 	}
@@ -122,7 +129,8 @@ public class FromPostgresToSciDBTest {
 	 * @throws MigrationException
 	 * @throws SQLException
 	 */
-	public void testFromPostgresToSciDBNoTargetArray() throws MigrationException, SQLException {
+	public void testFromPostgresToSciDBNoTargetArray()
+			throws MigrationException, SQLException {
 		// make sure that the target array does not exist
 		SciDBHandler.dropArrayIfExists(conTo, toArray);
 		migrator.migrate(conFrom, fromTable, conTo, toArray);
@@ -139,12 +147,13 @@ public class FromPostgresToSciDBTest {
 	 * @throws MigrationException
 	 * @throws SQLException
 	 */
-	public void testFromPostgresToSciDBMultiDimensionalTargetArray() throws MigrationException, SQLException {
+	public void testFromPostgresToSciDBMultiDimensionalTargetArray()
+			throws MigrationException, SQLException {
 		// prepare the target array
 		SciDBHandler.dropArrayIfExists(conTo, toArray);
 		SciDBHandler handler = new SciDBHandler(conTo);
-		handler.executeStatement(
-				"create array " + toArray + " <r_name:string,r_comment:string> [r_regionkey=0:*,1000000,0]");
+		handler.executeStatement("create array " + toArray
+				+ " <r_name:string,r_comment:string> [r_regionkey=0:*,1000000,0]");
 		handler.commit();
 		handler.close();
 		/*

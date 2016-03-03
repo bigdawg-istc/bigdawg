@@ -16,7 +16,7 @@ import istc.bigdawg.scidb.SciDBHandler;
  * 
  *         Feb 26, 2016 4:39:08 PM
  */
-public class ExportBinFromSciDBExecutor implements Callable<String> {
+public class ExportFromSciDBExecutor implements Callable<String> {
 
 	/* log */
 	private static Logger log = Logger.getLogger(LoadToSciDBExecutor.class);
@@ -25,13 +25,16 @@ public class ExportBinFromSciDBExecutor implements Callable<String> {
 	private SciDBConnectionInfo connection;
 	private final String array;
 	private final String scidbFilePath;
-	private final String binaryFormat;
+	private final String format;
+	private boolean isBinary;
 
-	public ExportBinFromSciDBExecutor(SciDBConnectionInfo connection, String array, String scidbFilePath, String binaryFormat) {
+	public ExportFromSciDBExecutor(SciDBConnectionInfo connection, String array,
+			String scidbFilePath, String format, boolean isBinary) {
 		this.connection = connection;
 		this.array = array;
 		this.scidbFilePath = scidbFilePath;
-		this.binaryFormat = binaryFormat;
+		this.format = format;
+		this.isBinary = isBinary;
 	}
 
 	/**
@@ -46,10 +49,19 @@ public class ExportBinFromSciDBExecutor implements Callable<String> {
 	 */
 	public String call() throws SQLException {
 		SciDBHandler handler = new SciDBHandler(connection);
-		String saveCommand = null;
-		saveCommand = "save(" + array + ", '" + scidbFilePath + "',-2,'(" + binaryFormat + ")')";
-		log.debug("load command: " + saveCommand.replace("'", ""));
-		handler.executeStatementAFL(saveCommand);
+		StringBuilder saveCommand = new StringBuilder();
+		saveCommand.append("save(" + array + ", '" + scidbFilePath + "'");
+		saveCommand.append(",-2,'");
+		if (isBinary) {
+			saveCommand.append("(" + format + ")");
+		}
+		else {
+			saveCommand.append(format);
+		}
+		saveCommand.append("')");
+		String saveCommandFinal = saveCommand.toString();
+		log.debug("save command: " + saveCommandFinal.replace("'", ""));
+		handler.executeStatementAFL(saveCommandFinal);
 		handler.commit();
 		handler.close();
 		return "Data successfuly exported from SciDB";

@@ -31,17 +31,21 @@ public class SystemUtilities {
 
 	/**
 	 * 
-	 * @return true if file was deleted
+	 * @return true if file was deleted, false if the file was not deleted
+	 *         because it did not exist
+	 * @throws IOException
 	 */
-	public static boolean deleteFileIfExists(String fileName) {
+	public static boolean deleteFileIfExists(String fileName)
+			throws IOException {
 		try {
-			Files.deleteIfExists(FileSystems.getDefault().getPath(fileName));
+			return Files
+					.deleteIfExists(FileSystems.getDefault().getPath(fileName));
 		} catch (IOException e) {
 			e.printStackTrace();
-			log.error(e.getMessage() + " Could nor remove file: " + fileName + StackTrace.getFullStackTrace(e));
-			return false;
+			log.error(e.getMessage() + " Could nor remove file: " + fileName
+					+ StackTrace.getFullStackTrace(e));
+			throw e;
 		}
-		return true;
 	}
 
 }

@@ -20,6 +20,7 @@ import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfoTest;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
+import istc.bigdawg.scidb.SciDBConnectionInfo;
 import istc.bigdawg.scidb.SciDBHandler;
 
 /**
@@ -48,6 +49,7 @@ public class FromSciDBToPostgresImplementationTest {
 	 */
 	public void loadDataToSciDB() throws SQLException, IOException {
 		LoggerSetup.setLogging();
+		log.info("load data to SciDB");
 		SciDBHandler handler = new SciDBHandler(conFrom);
 		SciDBHandler.dropArrayIfExists(conFrom, fromArray);
 		SciDBHandler.dropArrayIfExists(conFrom, fromArray);

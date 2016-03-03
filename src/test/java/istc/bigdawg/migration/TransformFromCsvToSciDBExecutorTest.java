@@ -10,7 +10,6 @@ import java.io.IOException;
 import org.apache.log4j.Logger;
 import org.junit.Test;
 
-import istc.bigdawg.LoggerSetupForTests;
 import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
 
@@ -26,7 +25,6 @@ public class TransformFromCsvToSciDBExecutorTest {
 	
 	@Test
 	public void testTransformation() throws MigrationException, IOException {
-		LoggerSetupForTests.setTestLogging();
 		SciDBConnectionInfo connectionInfo = new SciDBConnectionInfo();
 		String scidbBinPath = connectionInfo.getBinPath();
 		String typesPattern = "NSS";
