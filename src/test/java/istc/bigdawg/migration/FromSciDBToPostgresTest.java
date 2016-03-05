@@ -19,6 +19,7 @@ import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfoTest;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
+import istc.bigdawg.scidb.SciDBConnectionInfoTest;
 import istc.bigdawg.scidb.SciDBHandler;
 
 /**
@@ -31,7 +32,7 @@ public class FromSciDBToPostgresTest {
 	private FromSciDBToPostgres migrator = new FromSciDBToPostgres();
 	private PostgreSQLConnectionInfo conTo = new PostgreSQLConnectionInfoTest();
 	private String toTable = "region_test_from_13255_";
-	private SciDBConnectionInfo conFrom = new SciDBConnectionInfo();
+	private SciDBConnectionInfo conFrom = new SciDBConnectionInfoTest();
 	private String fromArray = "region_test_from_13255_";
 	private long numberOfCellsSciDB = 0;
 
