@@ -12,6 +12,7 @@ import istc.bigdawg.monitoring.Monitor;
 import istc.bigdawg.packages.CrossIslandQueryNode;
 import istc.bigdawg.packages.CrossIslandQueryPlan;
 import istc.bigdawg.parsers.UserQueryParser;
+import istc.bigdawg.plan.operators.Join;
 import istc.bigdawg.plan.operators.Operator;
 import istc.bigdawg.utils.IslandsAndCast.Scope;
 
@@ -33,8 +34,8 @@ public class QEPConstruction {
 		setupCrossIslandPlanConstructionTier4_1();
 		setupCrossIslandPlanConstructionTier4_2();
 		setupCrossIslandPlanConstructionTier5_1();
-		setupCrossIslandPlanConstructionTier6_1();
-		setupCrossIslandPlanConstructionTier6_2();
+//		setupCrossIslandPlanConstructionTier6_1();
+//		setupCrossIslandPlanConstructionTier6_2();
 	}
 
 	
@@ -149,15 +150,15 @@ public class QEPConstruction {
 		testCaseCrossIslandPlanConstruction("array1", false);
 	}
 	
-	@Test
-	public void testCrossIslandPlanConstructionTier6_1() throws Exception {
-		testCaseCrossIslandPlanConstruction("relarray1", false);
-	}
-	
-	@Test
-	public void testCrossIslandPlanConstructionTier6_2() throws Exception {
-		testCaseCrossIslandPlanConstruction("relarray2", false);
-	}
+//	@Test
+//	public void testCrossIslandPlanConstructionTier6_1() throws Exception {
+//		testCaseCrossIslandPlanConstruction("relarray1", false);
+//	}
+//	
+//	@Test
+//	public void testCrossIslandPlanConstructionTier6_2() throws Exception {
+//		testCaseCrossIslandPlanConstruction("relarray2", false);
+//	}
 	
 
 	private void testCaseCrossIslandPlanConstruction(String testName, boolean unsupportedToken) throws Exception {
@@ -193,6 +194,11 @@ public class QEPConstruction {
 					System.out.printf("%d. %s\n", i, o.generateSQLString(null));
 				else if (n.getScope().equals(Scope.ARRAY))
 					System.out.printf("%d. %s\n", i, o.generateAFLString(0));
+				
+				if (o instanceof Join) {
+					Join j = (Join)o;
+					j.getJoinPredicateObjectsForBinaryExecutionNode();
+				}
 				i++;
 			}
 			

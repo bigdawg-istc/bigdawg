@@ -22,8 +22,15 @@ import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.BinaryExpression;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Parenthesis;
+import net.sf.jsqlparser.expression.operators.relational.Between;
 import net.sf.jsqlparser.expression.operators.relational.EqualsTo;
+import net.sf.jsqlparser.expression.operators.relational.GreaterThan;
+import net.sf.jsqlparser.expression.operators.relational.GreaterThanEquals;
+import net.sf.jsqlparser.expression.operators.relational.InExpression;
 import net.sf.jsqlparser.expression.operators.relational.LikeExpression;
+import net.sf.jsqlparser.expression.operators.relational.MinorThan;
+import net.sf.jsqlparser.expression.operators.relational.MinorThanEquals;
+import net.sf.jsqlparser.expression.operators.relational.NotEqualsTo;
 import net.sf.jsqlparser.expression.operators.relational.OldOracleJoinBinaryExpression;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
@@ -58,6 +65,8 @@ public class Join extends Operator {
 		super(o, addChild);
 		Join j = (Join) o;
 		
+		this.joinID = j.joinID;
+		
 		this.joinType = j.joinType;
 		this.isCopy = j.isCopy;
 		
@@ -87,6 +96,10 @@ public class Join extends Operator {
 		this.isPruned = false;
 		this.isCopy = true;
 		this.aliases = new ArrayList<>();
+		
+		maxJoinSerial++;
+		this.joinID = maxJoinSerial;
+		 
 		
 		if (jt != null) this.joinType = jt;
 		
@@ -122,6 +135,9 @@ public class Join extends Operator {
 	public Join(Map<String, String> parameters, SciDBArray output, Operator lhs, Operator rhs) throws Exception  {
 		super(parameters, output, lhs, rhs);
 
+		maxJoinSerial++;
+		this.joinID = maxJoinSerial;
+		
 		isBlocking = false;
 		
 		joinPredicate = parameters.get("Join-Predicate");
@@ -165,6 +181,9 @@ public class Join extends Operator {
 
 		this.isBlocking = false;
 		this.aliases = new ArrayList<>();
+		
+		maxJoinSerial++;
+		this.joinID = maxJoinSerial;
 	
 		// if hash join "Hash-Cond", merge join "Merge-Cond"
 		for(String p : parameters.keySet()) {
@@ -635,18 +654,73 @@ public class Join extends Operator {
 	
 	
 	
-	
-	
-	
-	
-	// TODO UNFINISHED
-	public String getJoinPredicateLeftObject() throws Exception {
+	/**
+	 * This one only supports equal sign and Column expressions
+	 * @return
+	 * @throws Exception
+	 */
+	public List<String> getJoinPredicateObjectsForBinaryExecutionNode() throws Exception {
 		
-		List<String> s = Arrays.asList(joinPredicate.replaceAll("(([ <>=~!()]+)|((?i)( +((i?like)|(in)) +)))", " ").split(" +"));
+		List<String> ret = new ArrayList<String>();
 		
-		System.out.println(s);
+		if (joinPredicate == null || joinPredicate.length() == 0)
+			return ret;
 		
-		return null;
+		
+		Set<String> leftChildObjects = this.getChildren().get(0).getDataObjectNames();
+
+//		System.out.println("---> Left Child objects: "+leftChildObjects.toString());
+//		System.out.println("---> Right Child objects: "+rightChildObjects.toString());
+//		System.out.println("---> joinPredicate: "+joinPredicate);
+		
+		Expression e = CCJSqlParserUtil.parseCondExpression(joinPredicate);
+		
+		
+		while (e instanceof Parenthesis)
+			e = ((Parenthesis)e).getExpression();
+		
+//		System.out.println("e class: "+e.getClass().toString());
+		
+		if (e instanceof EqualsTo) {
+			ret.add("=");
+		} else if (e instanceof LikeExpression) {
+			ret.add("LIKE");
+		} else if (e instanceof InExpression) {
+			ret.add("IN");
+		} else if (e instanceof GreaterThanEquals) {
+			ret.add(">=");
+		} else if (e instanceof GreaterThan) {
+			ret.add(">");
+		} else if (e instanceof MinorThanEquals) {
+			ret.add("<=");
+		} else if (e instanceof MinorThan) {
+			ret.add("<");
+		} else if (e instanceof NotEqualsTo) {
+			ret.add("<>");
+		} else if (e instanceof Between) {
+			ret.add("BETWEEN");
+		} else {
+			ret.add("UNKNOWN");
+			System.out.println("Unknown joinPredicate operator: "+e.toString());
+		};
+		
+		
+		// TODO SUPPORT MORE THAN COLUMN?
+		
+		Column left = (Column)((EqualsTo)e).getLeftExpression();
+		Column right = (Column)((EqualsTo)e).getRightExpression();
+		
+		if (leftChildObjects.contains(left.getTable().getName()) || leftChildObjects.contains(left.getTable().getFullyQualifiedName())) {
+			ret.add(String.format("{%s, %s}", left.getTable().getFullyQualifiedName(),left.getColumnName()));
+			ret.add(String.format("{%s, %s}", right.getTable().getFullyQualifiedName(),right.getColumnName()));
+		} else {
+			ret.add(String.format("{%s, %s}", right.getTable().getFullyQualifiedName(),right.getColumnName()));
+			ret.add(String.format("{%s, %s}", left.getTable().getFullyQualifiedName(),left.getColumnName()));
+		}
+		
+//		System.out.println("---> joinPredicate ret: "+ret.toString()+"\n\n\n");
+		
+		return ret;
 	}
 	
 	
