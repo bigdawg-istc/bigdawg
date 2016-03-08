@@ -20,6 +20,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.jgrapht.Graphs;
 import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
 import org.jgrapht.graph.DefaultEdge;
+import scala.collection.immutable.IntMap;
 
 
 public class ExecutionNodeFactory {
@@ -68,16 +69,27 @@ public class ExecutionNodeFactory {
 		Pattern engine = Pattern.compile("(?<=ENGINE:\\()[^\\)]*(?=\\))");
 		Pattern nodeType = Pattern.compile("(?<=NODETYPE:)[^\\)]*(?=\\))");
 
+		// Get the type of ExecutionNode
+		String nodeClass = "LocalQueryExecutionNode";
+		Matcher m = nodeType.matcher(representation);
+		if (m.find()) {
+			nodeClass = m.group();
+		}
+
+		if (nodeClass.contains("BinaryJoinExecutionNode")) {
+			return BinaryJoinExecutionNode.stringTo(representation);
+		}
+
 		// Extract the query
 		Optional<String> query = Optional.empty();
 		if (representation.contains("QUERY:")) {
 			if (representation.contains("TABLE:")) {
-				Matcher m = queryTable.matcher(representation);
+				m = queryTable.matcher(representation);
 				if (m.find()) {
 					query = Optional.of(m.group());
 				}
 			} else {
-				Matcher m = queryEngine.matcher(representation);
+				m = queryEngine.matcher(representation);
 				if (m.find()) {
 					query = Optional.of(m.group());
 				}
@@ -87,36 +99,27 @@ public class ExecutionNodeFactory {
 		// Extract the tableName
 		Optional<String> tableName = Optional.empty();
 		if (representation.contains("TABLE:")){
-			Matcher m = table.matcher(representation);
+			m = table.matcher(representation);
 			if (m.find()) {
 				tableName = Optional.of(m.group());
 			}
 		}
 
 		// Extract the ConnectionInfo
-		Matcher m = engine.matcher(representation);
+		m = engine.matcher(representation);
 		String engineInfo = "";
 		if (m.find()) {
 			engineInfo = m.group();
 		}
 		ConnectionInfo connectionInfo = ConnectionInfoParser.stringToConnectionInfo(engineInfo);
 
-		// Get the type of ExecutionNode
-		String nodeClass = "LocalQueryExecutionNode";
-		m = nodeType.matcher(representation);
-		if (m.find()) {
-			nodeClass = m.group();
-		}
+
 
 		ExecutionNode result = null;
 		if (nodeClass.contains("LocalQueryExecutionNode")) {
 			result = new LocalQueryExecutionNode(query.get(), connectionInfo, tableName.get());
 		} else if (nodeClass.contains("TableExecutionNode")) {
 			result = new TableExecutionNode(connectionInfo, tableName.get());
-		} else if (nodeClass.contains("BinaryJoinExecutionNode")) {
-			// TODO: look into this
-//			result = new BinaryJoinExecutionNode();
-			result = null;
 		}
 		return result;
 	}
