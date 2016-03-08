@@ -16,7 +16,7 @@ public class TableExecutionNode implements ExecutionNode {
     /**
      * Create an ExecutionNode representing a single table on a given engine.
      * 
-     * @param engineId
+     * @param engine
      *            the database engine where the table is located
      * @param tableName
      *            the name of the table on the specified database engine (must

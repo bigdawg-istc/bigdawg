@@ -1,21 +1,25 @@
 package istc.bigdawg.executor.plan;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.google.common.collect.Sets;
 import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.packages.QueryContainerForCommonDatabase;
 import istc.bigdawg.plan.operators.CommonSQLTableExpressionScan;
+import istc.bigdawg.plan.operators.Join;
 import istc.bigdawg.plan.operators.Operator;
-import istc.bigdawg.postgresql.PostgreSQLHandler;
+import istc.bigdawg.executor.plan.BinaryJoinExecutionNode.JoinOperand;
+import istc.bigdawg.executor.plan.BinaryJoinExecutionNode;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.query.ConnectionInfoParser;
 import istc.bigdawg.utils.IslandsAndCast.Scope;
+
+import org.apache.commons.lang3.StringUtils;
+import org.jgrapht.Graphs;
+import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
+import org.jgrapht.graph.DefaultEdge;
 
 
 public class ExecutionNodeFactory {
@@ -140,8 +144,113 @@ public class ExecutionNodeFactory {
 		}
 		return result;
 	}
-	
-	
+
+	private static OperatorTree buildOperatorSubgraph(Operator op, ConnectionInfo engine, String dest) throws Exception {
+		StringBuilder sb = new StringBuilder();
+		Join joinOp = op.generateSQLStatementForPresentNonJoinSegment(sb);
+		OperatorTree result = new OperatorTree();
+		LocalQueryExecutionNode lqn = new LocalQueryExecutionNode(sb.toString(), engine, dest);
+
+		result.addVertex(lqn);
+		result.exitPoint = lqn;
+
+		if (joinOp != null) {
+			// Get left and right child operators of joinOp
+			Operator left = joinOp.getChildren().get(0);
+			Operator right = joinOp.getChildren().get(1);
+
+			// Break apart Join Predicate Objects into usable Strings
+			List<String> predicateObjects = joinOp.getJoinPredicateObjectsForBinaryExecutionNode();
+			String comparator = predicateObjects.get(0);
+			String leftTable = StringUtils.substringBetween(predicateObjects.get(1), "{", ",");
+			String leftAttribute = StringUtils.substringBetween(predicateObjects.get(1), " ", "}");
+
+			String rightTable = StringUtils.substringBetween(predicateObjects.get(1), "{", ",");
+			String rightAttribute = StringUtils.substringBetween(predicateObjects.get(1), " ", "}");
+
+			// TODO(ankush): allow for multiple types of engines (not just SQL)
+
+			// TODO(jack): verify this is the correct destination table desired for the JOIN upon completion
+			String joinDestinationTable = joinOp.getJoinToken();
+
+			// TODO(jack): verify this is the correct mechanism for generating a query for computing this join as a regular broadcast join rather than a shuffle join
+			String broadcastQuery = joinOp.generateSQLSelectIntoStringForExecutionTree(joinDestinationTable);
+
+			// TODO(jack): verify that this mechanism for coming up with the queries to run on each shuffle node makes sense with the Operator model
+			String shuffleLeftJoinQuery = joinOp.generateSQLSelectIntoStringForExecutionTree(joinDestinationTable + "_LEFTRESULTS").replace(rightTable, joinDestinationTable + "_RIGHTPARTIAL");
+			String shuffleRightJoinQuery = joinOp.generateSQLSelectIntoStringForExecutionTree(joinDestinationTable + "_RIGHTRESULTS").replace(leftTable, joinDestinationTable + "_LEFTPARTIAL");
+
+			JoinOperand leftOp = new JoinOperand(engine, leftTable, leftAttribute, shuffleLeftJoinQuery);
+			JoinOperand rightOp = new JoinOperand(engine, rightTable, rightAttribute, shuffleRightJoinQuery);
+			BinaryJoinExecutionNode joinNode = new BinaryJoinExecutionNode(broadcastQuery, engine, joinDestinationTable, leftOp, rightOp, comparator);
+			result.addVertex(joinNode);
+
+			OperatorTree leftSubtree = buildOperatorSubgraph(left, engine, leftTable);
+			Graphs.addGraph(result, leftSubtree);
+			result.addEdge(leftSubtree.exitPoint, joinNode);
+
+			OperatorTree rightSubtree = buildOperatorSubgraph(right, engine, rightTable);
+			Graphs.addGraph(result, rightSubtree);
+			result.addEdge(rightSubtree.exitPoint, joinNode);
+
+			result.entryPoints = Sets.union(leftSubtree.entryPoints, rightSubtree.entryPoints);
+		} else {
+			result.entryPoints = Collections.singleton(lqn);
+		}
+
+		return result;
+	}
+
+	public static void addNodesAndEdgesWithJoinHandling(QueryExecutionPlan qep, Operator remainder, List<String> remainderLoc, Map<String,
+			QueryContainerForCommonDatabase> containers) throws Exception {
+
+		int remainderDBID;
+		if (remainderLoc != null) {
+			remainderDBID = Integer.parseInt(remainderLoc.get(0));
+		} else {
+			remainderDBID = Integer.parseInt(containers.values().iterator().next().getDBID());
+		}
+
+		ConnectionInfo remainderCI;
+		if (qep.getIsland().equals(Scope.RELATIONAL))
+			remainderCI = CatalogViewer.getPSQLConnectionInfo(remainderDBID);
+		else if (qep.getIsland().equals(Scope.ARRAY))
+			remainderCI = CatalogViewer.getSciDBConnectionInfo(remainderDBID);
+		else
+			throw new Exception("Unsupported island code: " + qep.getIsland().toString());
+
+		String remainderInto = qep.getSerializedName();
+
+		OperatorTree operatorTree = buildOperatorSubgraph(remainder, remainderCI, remainderInto);
+
+		Graphs.addGraph(qep, operatorTree);
+
+		qep.setTerminalTableName(remainderInto);
+		qep.setTerminalTableNode(operatorTree.exitPoint);
+
+		// if remainderLoc is not null, then there are no containers
+		if (remainderLoc != null) {
+			return;
+		}
+
+		for(Map.Entry<String, QueryContainerForCommonDatabase> entry : containers.entrySet()) {
+			String table = entry.getKey();
+			QueryContainerForCommonDatabase container = entry.getValue();
+
+			String selectIntoString;
+			if (qep.getIsland().equals(Scope.RELATIONAL))
+				selectIntoString = container.generateSQLSelectIntoString();
+			else if (qep.getIsland().equals(Scope.ARRAY))
+				selectIntoString = container.generateAFLStoreString();
+			else
+				throw new Exception("Unsupported island code: " + qep.getIsland().toString());
+
+			LocalQueryExecutionNode localQueryNode = new LocalQueryExecutionNode(selectIntoString, container.getConnectionInfo(), table);
+
+			qep.addVertex(localQueryNode);
+			operatorTree.entryPoints.forEach((v) -> qep.addEdge(localQueryNode, v));
+		}
+	}
 	
 	public static void addNodesAndEdgesNaive(QueryExecutionPlan qep, Operator remainder, List<String> remainderLoc, Map<String, 
 			QueryContainerForCommonDatabase> container) throws Exception {

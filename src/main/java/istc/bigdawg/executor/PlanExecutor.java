@@ -109,11 +109,14 @@ class PlanExecutor {
     }
     
     private Optional<QueryResult> executeNode(ExecutionNode node) {
-        // perform shuffle join if required
-        if (node instanceof BinaryJoinExecutionNode) {
+        // perform shuffle join if equijoin and hint doesn't specify otherwise
+        if (node instanceof BinaryJoinExecutionNode &&
+                ((BinaryJoinExecutionNode) node).getHint().orElse(BinaryJoinExecutionNode.JoinAlgorithms.SHUFFLE) == BinaryJoinExecutionNode.JoinAlgorithms.SHUFFLE &&
+                ((BinaryJoinExecutionNode) node).isEquiJoin()) {
             BinaryJoinExecutionNode joinNode = (BinaryJoinExecutionNode) node;
             if(!joinNode.getHint().isPresent() || joinNode.getHint().get() == BinaryJoinExecutionNode.JoinAlgorithms.SHUFFLE) {
                 try {
+                    // TODO(ankush): colocate non-operand dependencies!
                     Optional<QueryResult> result = new ShuffleJoinExecutor(joinNode).execute();
                     markNodeAsCompleted(node);
                     return result;
@@ -123,8 +126,8 @@ class PlanExecutor {
                 }
             }
         }
+        // otherwise execute as local query execution (same as broadcast join)
 
-        // otherwise perform local query execution/broadcast join
         // colocate dependencies, blocking until completed
         colocateDependencies(node);
         log.debug(String.format("Executing query node %s...", node.getTableName()));

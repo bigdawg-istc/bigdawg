@@ -2,9 +2,12 @@ package istc.bigdawg.executor;
 
 import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.executor.plan.BinaryJoinExecutionNode;
+import istc.bigdawg.executor.plan.LocalQueryExecutionNode;
 import istc.bigdawg.executor.plan.QueryExecutionPlan;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
+import istc.bigdawg.utils.IslandsAndCast;
 import org.apache.commons.lang3.tuple.Pair;
+import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
 
 import java.sql.SQLException;
 import java.text.ParseException;
@@ -16,7 +19,7 @@ public class ShuffleJoinExecutor {
     private BinaryJoinExecutionNode node;
     private double min;
     private double max;
-    private static final int NUM_BUCKETS = 10;
+    private static final int NUM_BUCKETS = 100;
 
     public ShuffleJoinExecutor(BinaryJoinExecutionNode node) throws SQLException, ParseException {
         this.node = node;
@@ -85,20 +88,47 @@ public class ShuffleJoinExecutor {
     }
 
     private String getPartitionQuery(BinaryJoinExecutionNode.JoinOperand operand, Collection<Integer> bucketsToInclude, String dest) {
-        String query = "SELECT * INTO %s FROM %s WHERE %s IN %s;";
+        String query = "SELECT * INTO %s FROM %s WHERE width_bucket(%s, %s, %s, %s) IN %s;";
         String desiredBuckets = "(" + bucketsToInclude.stream().map(i -> i.toString()).collect(Collectors.joining(", ")) + ")";
-        return String.format(query, dest, operand.table, operand.attribute, desiredBuckets);
+        return String.format(query, dest, operand.table, operand.attribute, min, max, NUM_BUCKETS, desiredBuckets);
     }
 
     private QueryExecutionPlan createQueryExecutionPlan(ShuffleJoinPartitionAssignments assignments) {
-        // TODO: create LocalQueryExecutionNode to perform getPartitionQuery(left, assignments.getBucketsForJoinOperand(right), "sendToRight")
-        // TODO: create LocalQueryExecutionNode to perform getPartitionQuery(right, assignments.getBucketsForJoinOperand(left), "sendToLeft")
+        QueryExecutionPlan plan = new QueryExecutionPlan(IslandsAndCast.Scope.RELATIONAL/* TODO: get island?*/);
 
-        // TODO: create LocalQueryExecutionNode to perform left.getQueryString(sendToLeft, "leftResults")
-        // TODO: create LocalQueryExecutionNode to perform right.getQueryString(sendToRight, "rightResults")
+        String sendToRightDestination = this.node.getTableName().get() + "_LEFTPARTIAL";
+        String sendToRightQuery = getPartitionQuery(node.getLeft(), assignments.getBucketsForJoinOperand(node.getRight()), sendToRightDestination);
+        LocalQueryExecutionNode sendToRight = new LocalQueryExecutionNode(sendToRightQuery, node.getLeft().engine, sendToRightDestination);
 
-        // TODO: SELECT * INTO node.getTableName().get() FROM leftResults UNION ALL SELECT * FROM rightResults
-        return null;
+        String sendToLeftDestination = this.node.getTableName().get() + "_RIGHTPARTIAL";
+        String sendToLeftQuery = getPartitionQuery(node.getLeft(), assignments.getBucketsForJoinOperand(node.getLeft()), sendToLeftDestination);
+        LocalQueryExecutionNode sendToLeft = new LocalQueryExecutionNode(sendToLeftQuery, node.getLeft().engine, sendToLeftDestination);
+
+        String rightResultDestination = this.node.getTableName().get() + "_RIGHTRESULTS";
+        String rightQueryString = node.getRight().getQueryString();
+        LocalQueryExecutionNode rightResults = new LocalQueryExecutionNode(rightQueryString, node.getRight().engine, rightResultDestination);
+
+        String leftResultDestination = this.node.getTableName().get() + "_LEFTRESULTS";
+        String leftQueryString = node.getLeft().getQueryString();
+        LocalQueryExecutionNode leftResults = new LocalQueryExecutionNode(leftQueryString, node.getLeft().engine, leftResultDestination);
+
+        LocalQueryExecutionNode union = new LocalQueryExecutionNode(node.getShuffleUnionString(leftResultDestination, rightResultDestination), node.getEngine(), node.getTableName().get());
+
+        plan.addNode(sendToRight);
+        plan.addNode(sendToLeft);
+        plan.addNode(rightResults);
+        plan.addNode(leftResults);
+
+        plan.addNode(union);
+        plan.setTerminalTableName(union.getTableName().get());
+        plan.setTerminalTableNode(union);
+
+        plan.addEdge(sendToRight, rightResults);
+        plan.addEdge(sendToLeft, leftResults);
+        plan.addEdge(leftResults, union);
+        plan.addEdge(rightResults, union);
+
+        return plan;
     }
 
     public Optional<PostgreSQLHandler.QueryResult> execute() throws SQLException, MigrationException {

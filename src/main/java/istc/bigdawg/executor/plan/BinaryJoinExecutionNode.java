@@ -1,6 +1,5 @@
 package istc.bigdawg.executor.plan;
 
-import java.text.MessageFormat;
 import java.util.Optional;
 
 import com.google.common.base.Objects;
@@ -26,27 +25,25 @@ public class BinaryJoinExecutionNode implements ExecutionNode {
     /**
      * Contains information that the Executor needs in order to make decisions about how to best perform the binary join
      */
-    public class JoinOperand {
+    public static class JoinOperand {
         public final ConnectionInfo engine;
         public final String table;
         public final String attribute;
 
         /**
-         * Query if the join were to be executed on this engine with parameters {0} = other operand and {1} = destination table
-         *
-         * Example: "SELECT * FROM table JOIN {0} ON table.attrib = {0}.attrib INTO {1}"
+         * Query to be executed assuming the other table is in a _RIGHTPARTIAL or _LEFTPARTIAL, and the result goes into a _RIGHTRESULT or _LEFTRESULT
          */
-        public final String joinTemplate;
+        private final String localJoinQuery;
 
-        public JoinOperand(ConnectionInfo engine, String table, String attribute, String joinTemplate) {
+        public JoinOperand(ConnectionInfo engine, String table, String attribute, String localJoinQuery) {
             this.engine = engine;
             this.table = table;
             this.attribute = attribute;
-            this.joinTemplate = joinTemplate;
+            this.localJoinQuery = localJoinQuery;
         }
 
-        public String getQueryString(String inputTable, String outputTable) {
-            return MessageFormat.format(joinTemplate, inputTable, outputTable);
+        public String getQueryString() {
+            return localJoinQuery;
         }
 
         @Override
@@ -71,22 +68,28 @@ public class BinaryJoinExecutionNode implements ExecutionNode {
     final ConnectionInfo destinationEngine;
     final String destinationTable;
     final String broadcastQuery;
+    final String comparator;
 
-    public BinaryJoinExecutionNode(String broadcastQuery, ConnectionInfo destinationEngine, String destinationTable, JoinOperand left, JoinOperand right, Optional<JoinAlgorithms> hint) {
+    public BinaryJoinExecutionNode(String broadcastQuery, ConnectionInfo destinationEngine, String destinationTable, JoinOperand left, JoinOperand right, String comparator, Optional<JoinAlgorithms> hint) {
         this.broadcastQuery = broadcastQuery;
         this.destinationEngine = destinationEngine;
         this.destinationTable = destinationTable;
         this.left = left;
         this.right = right;
         this.hint = hint;
+        this.comparator = comparator;
     }
 
-    public BinaryJoinExecutionNode(String broadcastQuery, ConnectionInfo destinationEngine, String destinationTable, JoinOperand left, JoinOperand right) {
-        this(broadcastQuery, destinationEngine, destinationTable, left, right, Optional.empty());
+    public BinaryJoinExecutionNode(String broadcastQuery, ConnectionInfo destinationEngine, String destinationTable, JoinOperand left, JoinOperand right, String comparator) {
+        this(broadcastQuery, destinationEngine, destinationTable, left, right, comparator, Optional.empty());
     }
 
-    public BinaryJoinExecutionNode(String broadcastQuery, ConnectionInfo destinationEngine, String destinationTable, JoinOperand left, JoinOperand right, JoinAlgorithms hint) {
-        this(broadcastQuery, destinationEngine, destinationTable, left, right, Optional.of(hint));
+    public BinaryJoinExecutionNode(String broadcastQuery, ConnectionInfo destinationEngine, String destinationTable, JoinOperand left, JoinOperand right, String comparator, JoinAlgorithms hint) {
+        this(broadcastQuery, destinationEngine, destinationTable, left, right, comparator, Optional.of(hint));
+    }
+
+    public String getShuffleUnionString(String leftResults, String rightResults) {
+        return "SELECT * INTO " + this.destinationTable + " FROM " + leftResults + " UNION ALL SELECT * FROM " + rightResults + ";";
     }
 
     public JoinOperand getLeft(){
@@ -99,6 +102,10 @@ public class BinaryJoinExecutionNode implements ExecutionNode {
 
     public Optional<JoinAlgorithms> getHint() {
         return this.hint;
+    }
+
+    public boolean isEquiJoin() {
+        return this.comparator.equals("=");
     }
 
     /*

@@ -718,7 +718,7 @@ public class Operator {
 	} 
 	
 	
-	public Operator generateSQLStatementForPresentNonJoinSegment(StringBuilder sb) throws Exception {
+	public Join generateSQLStatementForPresentNonJoinSegment(StringBuilder sb) throws Exception {
 		
 		if ( ! this.getClass().equals(Join.class)) {
 			sb.append(this.generateSQLStringDestOnly(null, true).toString()); 
@@ -731,6 +731,6 @@ public class Operator {
 			child = child.getChildren().get(0);
 		}
 		
-		return child;
+		return (Join) child;
 	}
 }
