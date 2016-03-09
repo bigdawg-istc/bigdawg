@@ -38,7 +38,7 @@ import istc.bigdawg.utils.StackTrace;
  * 
  * @author Adam Dziedzic
  */
-public class FromPostgresToSciDBImplementation {
+public class FromPostgresToSciDBImplementation implements MigrationImplementation {
 	/* log */
 	private static Logger log = Logger
 			.getLogger(FromPostgresToSciDBImplementation.class);
@@ -460,6 +460,14 @@ public class FromPostgresToSciDBImplementation {
 		String newFlatIntermediateArray = toArray + "__flat__";
 		createFlatArray(newFlatIntermediateArray);
 		return new SciDBArrays(newFlatIntermediateArray, toArray);
+	}
+
+	/* (non-Javadoc)
+	 * @see istc.bigdawg.migration.MigrationImplementation#migrate()
+	 */
+	@Override
+	public MigrationResult migrate() throws MigrationException {
+		return migrateSingleThreadCSV();
 	}
 
 }
