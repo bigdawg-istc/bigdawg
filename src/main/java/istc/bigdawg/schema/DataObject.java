@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import istc.bigdawg.packages.SciDBArray;
+import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.statement.create.table.ColumnDefinition;
 import net.sf.jsqlparser.statement.create.table.CreateTable;
 
@@ -28,7 +29,7 @@ public class DataObject {
 		this.attributes = new LinkedHashMap<String, DataObjectAttribute>();
 	}
 	
-	public DataObject(DataObject o) {
+	public DataObject(DataObject o) throws JSQLParserException {
 		if (o.database != null) this.database = new String(o.database);
 		if (o.schema != null) this.schema = new String(o.schema);
 		if (o.name != null) this.name = new String(o.name);

@@ -8,6 +8,7 @@ import java.util.Map;
 import istc.bigdawg.extract.logical.SQLTableExpression;
 import istc.bigdawg.schema.DataObjectAttribute;
 import istc.bigdawg.schema.SQLAttribute;
+import istc.bigdawg.utils.sqlutil.SQLExpressionUtils;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.AnalyticExpression;
 import net.sf.jsqlparser.expression.Expression;
@@ -39,26 +40,35 @@ public class SQLOutItem extends CommonOutItem{
 			SQLTableExpression supplement) throws Exception {
 		super();
 		
-		String finder = expr;
-		DataObjectAttribute doa = srcSchema.get(finder);
-		while (doa == null) {
+		String typeStr;
+		if (expr.indexOf("::") >= 0) {
+			typeStr = expr.substring(expr.lastIndexOf("::")+2).replaceAll("[)]", "");
+		} else {
+			String finder = expr;
+			finder = finder.replaceAll("::[ \\w]+", "");
 			
-			String before = new String(finder);
-			finder = finder.replaceAll("^[_@a-zA-Z]+\\.", "");
-//			System.out.println("updated finder: "+finder);
-			
-			if (before.equals(finder))
-				throw new Exception("cannot find: "+expr);
-			doa = srcSchema.get(finder);
+			DataObjectAttribute doa = srcSchema.get(finder);
+			while (doa == null) {
+				
+				String before = new String(finder);
+				finder = finder.replaceAll("^[_@a-zA-Z]+\\.", "");
+				
+				if (before.equals(finder)) {
+					// shaving the front doesn't work, it's probably a function or other type of expression
+					finder = SQLExpressionUtils.getAttributes((Expression)CCJSqlParserUtil.parseExpression(finder)).get(0);
+					if (finder.equals(before))
+						throw new Exception("cannot find: "+expr);
+				}
+				doa = srcSchema.get(finder);
+			}
+			typeStr = doa.getTypeString();
 		}
-		
-		
 		
 //		System.out.println("SQLOutItem: \n--"+expr+"\n--"+srcSchema+"\n");
 		
 		
 		outAttribute = new SQLAttribute();
-		outAttribute.setTypeString(doa.getTypeString());
+		outAttribute.setTypeString(typeStr);
 		
 		aggregates = new ArrayList<Function>();
 		windowedAggregates = new ArrayList<AnalyticExpression>();
@@ -69,6 +79,8 @@ public class SQLOutItem extends CommonOutItem{
 		
 		// get rid of any psql param placeholders
 		expr = expr.replace("?", " ");
+		expr = expr.replaceAll("::[ \\w]+", "");
+		outAttribute.setExpression(expr);
 		
 		
 		// if plan is fully qualified (i.e., has joins)
@@ -90,39 +102,22 @@ public class SQLOutItem extends CommonOutItem{
 					alias = aliases.get(s);
 				}
 			}
-			
 		}
 		
 
 		// there's  no alias
 		if(alias == null) {
-//			List<String> s = Arrays.asList(expr.split("\\."));
-//			outAttribute.setName(s.get(s.size()-1));
-//			
-//			if (s.size() > 1) {
-//				switch (s.size()) {
-//				case 2:
-//					outAttribute.setDataObject(new DataObject(null, null, s.get(0)));
-//					break;
-//				case 3:
-//					outAttribute.setDataObject(new DataObject(null, s.get(0), s.get(1)));
-//					break;
-//				case 4:
-//					outAttribute.setDataObject(new DataObject(s.get(0), s.get(1), s.get(2)));
-//					break;
-//				default:
-//					throw new Exception("redundant outitem field");
-//				}
-//			}
-			alias = expr;
+			String after = expr.replaceAll("[(][.\\w]+[)]", "");
+//			System.out.println("expr before: "+expr);
+//			System.out.println("expr after : "+after);
+			if (expr.equals(after))
+				alias = expr;
+			else
+				alias = after.replaceAll("[*-+/\\. ()]", "");
 		} 
-//		else {
-//			outAttribute.setName(alias);
-//		}
 		
 		outAttribute.setName(alias);
 		((SQLAttribute)outAttribute).setType(null);
-		
 		
 		ExpressionDeParser deparser = new ExpressionDeParser() {
 		
@@ -172,7 +167,11 @@ public class SQLOutItem extends CommonOutItem{
 				windowedAggregates.add(fullExpression);
 				assert(aexpr.getName() == "row_number"); // all others not yet implemented
 				setUpAggregateAllColumns(srcSchema, ((SQLAttribute)outAttribute));  // TODO: make this more fine grained, only derived from ORDER BY, PARTITION BY and possibly aggregate
-				((SQLAttribute)outAttribute).setExpression(fullExpression); // replace predecessor
+				try {
+					outAttribute.setExpression(fullExpression);
+				} catch (JSQLParserException e) {
+					e.printStackTrace();
+				} // replace predecessor
 				
 			}
 			
@@ -189,7 +188,6 @@ public class SQLOutItem extends CommonOutItem{
 		deparser.setBuffer(b);
 		parseExpression.accept(deparser); // adjusts outAttribute for winagg case
 		  
-
 		
 	}
 	

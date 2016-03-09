@@ -2,6 +2,7 @@ package istc.bigdawg.schema;
 
 
 
+import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.statement.create.table.ColDataType;
 import net.sf.jsqlparser.statement.create.table.ColumnDefinition;
@@ -17,7 +18,6 @@ public class SQLAttribute extends DataObjectAttribute {
 	
 	
 		private ColDataType type;
-		private Expression expr;  // for provenance of out columns in SELECT statements
 		
 		SQLAttribute(ColDataType t, String n) {
 			super(n);
@@ -35,10 +35,9 @@ public class SQLAttribute extends DataObjectAttribute {
 			
 		}
 		
-		public SQLAttribute(SQLAttribute sa) {
+		public SQLAttribute(SQLAttribute sa) throws JSQLParserException {
 			super(sa);
 			this.type = sa.type;
-			this.expr = sa.expr;
 			typeString = type.getDataType();
 		}
 
@@ -54,14 +53,6 @@ public class SQLAttribute extends DataObjectAttribute {
 		public void setType(ColDataType src) {
 			type = src;
 			
-		}
-		
-		public void setExpression(Expression e) {
-			expr = e;
-		}
-		
-		public Expression getExpression() {
-			return expr;
 		}
 		
 		public String toString() {

@@ -34,8 +34,10 @@ public class QEPConstruction {
 		setupCrossIslandPlanConstructionTier4_1();
 		setupCrossIslandPlanConstructionTier4_2();
 		setupCrossIslandPlanConstructionTier5_1();
-//		setupCrossIslandPlanConstructionTier6_1();
-//		setupCrossIslandPlanConstructionTier6_2();
+		setupCrossIslandPlanConstructionTier6_1();
+		setupCrossIslandPlanConstructionTier6_2();
+		setupCrossIslandPlanConstructionAggTier1();
+		setupCrossIslandPlanConstructionAggTier2();
 	}
 
 	
@@ -106,50 +108,66 @@ public class QEPConstruction {
 	}
 	
 	private void setupCrossIslandPlanConstructionTier6_2() {
-		HashMap<String, String> ba1 = new HashMap<>();
-		ba1.put("OUTPUT", "cross_join(BIGDAWGPRUNED_2, BIGDAWGPRUNED_1)");
-		
-		expectedOutputs.put("relarray2", ba1);
+//		HashMap<String, String> ba1 = new HashMap<>();
+//		ba1.put("OUTPUT", "cross_join(BIGDAWGPRUNED_2, BIGDAWGPRUNED_1)");
+//		
+//		expectedOutputs.put("relarray2", ba1);
 		inputs.put("relarray2", "bdrel(select * from patients join geo on patients.id = geo.patientid join bdarray(cross_join(go_matrix, genes)) as g on g.id = geo.geneid where g.id < 3)");
 	}
 	
-	
-	@Test
-	public void testCrossIslandPlanConstructionTier1() throws Exception {
-		testCaseCrossIslandPlanConstruction("cross-1", false);
+	private void setupCrossIslandPlanConstructionAggTier1() {
+//		HashMap<String, String> ba1 = new HashMap<>();
+//		ba1.put("OUTPUT", "cross_join(BIGDAWGPRUNED_2, BIGDAWGPRUNED_1)");
+//		
+//		expectedOutputs.put("aggsql1", ba1);
+		inputs.put("aggsql1", "bdrel(select p.id, avg(g.expr_value) AS a from patients AS p join geo AS g on p.id = g.patientid where p.id < 3 group by p.id order by p.id)");
 	}
 	
-	@Test
-	public void testCrossIslandPlanConstructionTier2() throws Exception {
-		testCaseCrossIslandPlanConstruction("cross-2", false);
+	private void setupCrossIslandPlanConstructionAggTier2() {
+//		HashMap<String, String> ba1 = new HashMap<>();
+//		ba1.put("OUTPUT", "cross_join(BIGDAWGPRUNED_2, BIGDAWGPRUNED_1)");
+//		
+//		expectedOutputs.put("aggsql1", ba1);
+		inputs.put("aggsql2", "bdrel(select p.id, avg(g.expr_value)/avg(g.expr_value)+3 AS a from patients AS p join geo AS g on p.id = g.patientid where p.id < 3 group by p.id order by p.id)");
 	}
 	
 	
-	@Test
-	public void testCrossIslandPlanConstructionTier3() throws Exception {
-		testCaseCrossIslandPlanConstruction("cross-3", false);
-	}
-	
-	@Test
-	public void testCrossIslandPlanConstructionTier3NoOn() throws Exception {
-		testCaseCrossIslandPlanConstruction("cross-3-no-on", false);
-	}
-	
-	@Test
-	public void testCrossIslandPlanConstructionTier4_1() throws Exception {
-		testCaseCrossIslandPlanConstruction("order-by-1", false);
-	}
-	
-	@Test
-	public void testCrossIslandPlanConstructionTier4_2() throws Exception {
-		testCaseCrossIslandPlanConstruction("order-by-2", false);
-	}
-	
-	@Test
-	public void testCrossIslandPlanConstructionTier5_1() throws Exception {
-		testCaseCrossIslandPlanConstruction("array1", false);
-	}
-	
+//	@Test
+//	public void testCrossIslandPlanConstructionTier1() throws Exception {
+//		testCaseCrossIslandPlanConstruction("cross-1", false);
+//	}
+//	
+//	@Test
+//	public void testCrossIslandPlanConstructionTier2() throws Exception {
+//		testCaseCrossIslandPlanConstruction("cross-2", false);
+//	}
+//	
+//	
+//	@Test
+//	public void testCrossIslandPlanConstructionTier3() throws Exception {
+//		testCaseCrossIslandPlanConstruction("cross-3", false);
+//	}
+//	
+//	@Test
+//	public void testCrossIslandPlanConstructionTier3NoOn() throws Exception {
+//		testCaseCrossIslandPlanConstruction("cross-3-no-on", false);
+//	}
+//	
+//	@Test
+//	public void testCrossIslandPlanConstructionTier4_1() throws Exception {
+//		testCaseCrossIslandPlanConstruction("order-by-1", false);
+//	}
+//	
+//	@Test
+//	public void testCrossIslandPlanConstructionTier4_2() throws Exception {
+//		testCaseCrossIslandPlanConstruction("order-by-2", false);
+//	}
+//	
+//	@Test
+//	public void testCrossIslandPlanConstructionTier5_1() throws Exception {
+//		testCaseCrossIslandPlanConstruction("array1", false);
+//	}
+//	
 //	@Test
 //	public void testCrossIslandPlanConstructionTier6_1() throws Exception {
 //		testCaseCrossIslandPlanConstruction("relarray1", false);
@@ -159,6 +177,16 @@ public class QEPConstruction {
 //	public void testCrossIslandPlanConstructionTier6_2() throws Exception {
 //		testCaseCrossIslandPlanConstruction("relarray2", false);
 //	}
+	
+	@Test
+	public void testCrossIslandPlanConstructionAggTier1() throws Exception {
+		testCaseCrossIslandPlanConstruction("aggsql1", false);
+	}
+
+	@Test
+	public void testCrossIslandPlanConstructionAggTier2() throws Exception {
+		testCaseCrossIslandPlanConstruction("aggsql2", false);
+	}
 	
 
 	private void testCaseCrossIslandPlanConstruction(String testName, boolean unsupportedToken) throws Exception {
@@ -203,9 +231,6 @@ public class QEPConstruction {
 			}
 			
 			System.out.println("\n");
-			
-			
-			
 			
 			 
 			// qeps and benchmarks

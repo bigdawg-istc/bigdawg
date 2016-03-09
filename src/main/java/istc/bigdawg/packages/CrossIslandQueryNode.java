@@ -17,6 +17,7 @@ import istc.bigdawg.plan.AFLQueryPlan;
 import istc.bigdawg.plan.SQLQueryPlan;
 import istc.bigdawg.plan.extract.AFLPlanParser;
 import istc.bigdawg.plan.extract.SQLPlanParser;
+import istc.bigdawg.plan.operators.Aggregate;
 import istc.bigdawg.plan.operators.Join;
 import istc.bigdawg.plan.operators.Join.JoinType;
 import istc.bigdawg.plan.operators.Operator;
@@ -70,7 +71,7 @@ public class CrossIslandQueryNode {
 //		System.out.println("CrossIslandChildren: "+children.toString());
 //		System.out.println("RootsForSchemas: "+rootsForSchemas.toString());
 		
-		
+		System.out.println("Island query: " + islandQuery);
 		
 		// create new tables or arrays for planning use
 		if (scope.equals(Scope.RELATIONAL)) {
@@ -748,6 +749,12 @@ public class CrossIslandQueryNode {
 			List<String> result = traverse(node.getChildren().get(0));
 			if (result != null) ret = new ArrayList<String>(result); 
 		
+		} else if (node instanceof Aggregate) {
+			
+			// blocking come into effect
+			List<String> result = traverse(node.getChildren().get(0));
+			if (result != null) ret = new ArrayList<String>(result); 
+			
 		} else {
 			 throw new Exception("unsupported Operator in CrossIslandQueryNode");
 		}

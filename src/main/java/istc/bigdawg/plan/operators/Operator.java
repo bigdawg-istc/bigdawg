@@ -8,12 +8,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import istc.bigdawg.extract.logical.SQLExpressionHandler;
 import istc.bigdawg.extract.logical.SQLTableExpression;
 import istc.bigdawg.packages.SciDBArray;
 import istc.bigdawg.schema.DataObjectAttribute;
 import istc.bigdawg.schema.SQLAttribute;
+import istc.bigdawg.utils.sqlutil.SQLExpressionUtils;
 import net.sf.jsqlparser.expression.Alias;
+import net.sf.jsqlparser.expression.BinaryExpression;
 import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.expression.Function;
+import net.sf.jsqlparser.expression.Parenthesis;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
@@ -42,7 +47,6 @@ public class Operator {
 	protected Integer blockerID = null;
 	
 	
-	// denoting sliced execution by op (e.g., comorbidity query)
 	protected Map<String, DataObjectAttribute> outSchema;
 	
 	
@@ -60,6 +64,7 @@ public class Operator {
 	
 	protected Set<String> dataObjects;
 	protected Set<String> joinReservedObjects;
+	protected Set<String> objectAliases = null;
 	protected boolean isCopy = false;  // used in building permutations; only remainder join operators could attain true, so far
 	
 	
@@ -237,29 +242,7 @@ public class Operator {
 	
 	public String generateSQLSelectIntoStringForExecutionTree(String into) throws Exception {
 		
-		Select dstStatement  = this.generateSQLStringDestOnly(null, false);
-//		System.out.println("PLAIN DSTSTATEMENT: "+ ((PlainSelect) dstStatement.getSelectBody()));
-		
-		// iterate over out schema and add it to select clause
-		HashMap<String, SelectItem> selects = new HashMap<String, SelectItem>();
-
-		for(String s : outSchema.keySet()) {
-			SQLAttribute attr = new SQLAttribute((SQLAttribute)outSchema.get(s));
-			
-			changeAttributeName(attr);
-			
-			SelectExpressionItem si = new SelectExpressionItem(attr.getExpression());
-			if(!(si.toString().equals(attr.getName()))) {
-				si.setAlias(new Alias(attr.getName()));
-			}
-			
-			selects.put(s, si);
-		}
-		
-		
-		// this might be important TODO 
-//		((PlainSelect) dstStatement.getSelectBody()).setSelectItems(changeSelectItemsOrder(srcStatement, selects));
-		
+		Select dstStatement  = prepareForSQLGeneration(null);
 		
 		// dealing with WITH statment
 		if (into != null) {
@@ -314,23 +297,48 @@ public class Operator {
 
 				// find the child where the pruned token or seqscan or CTE is located, make it the corresponding position
 				
-				Column c = (Column) selectExpressionItem.getExpression();
-				String out = c.getFullyQualifiedName();
-				if (selects.get(out) != null)
-					holder.add(selects.get(out));
-				else if (selects.get(out = c.getTable().getName()+ "."+ c.getColumnName()) != null)
-					holder.add(selects.get(out));
-				else {
-					out = c.getFullyQualifiedName();
-					// well.
-					for (String s : selects.keySet()) {
-						if (s.endsWith(out)){
-							holder.add(selects.get(s));
-							break;
+				Expression e = selectExpressionItem.getExpression();
+				
+				
+				SQLExpressionHandler deparser = new SQLExpressionHandler() {
+					@Override
+					public void visit(Column tableColumn) {
+						String out = tableColumn.getFullyQualifiedName();
+						if (selects.get(out) != null)
+							holder.add(selects.get(out));
+						else if (selects.get(out = tableColumn.getTable().getName()+ "."+ tableColumn.getColumnName()) != null)
+							holder.add(selects.get(out));
+						else {
+							out = tableColumn.getFullyQualifiedName();
+							// well.
+							for (String s : selects.keySet()) {
+								if (s.endsWith(out)){
+									holder.add(selects.get(s));
+									break;
+								}
+							}
 						}
+						selects.remove(out);
 					}
-				}
-				selects.remove(out);
+					
+					@Override
+					public void visit(Parenthesis parenthesis) {
+						parenthesis.getExpression().accept(this);
+					}
+					
+					@Override
+					public void visit(Function function) {
+						holder.add(selectExpressionItem);
+					}
+					
+					@Override
+					protected void visitBinaryExpression(BinaryExpression binaryExpression, String operator) {
+						holder.add(selectExpressionItem);
+					}
+				};
+				
+				e.accept(deparser);
+				
 			}
 			
 		};
@@ -372,25 +380,31 @@ public class Operator {
 		//     if so check if it bears the name; 
 		//         if so, change the attribute name 
 
+		Expression e = attr.getSQLExpression();
+		Set<String> attribs = new HashSet<>(SQLExpressionUtils.getAttributes(e));
+		boolean ret = false;
+		
 		if (children.size() > 0) {
 			for (Operator o : children) {
 				if (o.isPruned()) {
+					
 					if (o.getOutSchema().containsKey(attr.getName())) {
-						Expression e = attr.getExpression();
 						
-						if (e instanceof Column) {
-							Table t = new Table();
-							t.setName(o.getPruneToken());
-							
-							Column newE = new Column(t, ((Column)e).getColumnName());
-							
-							attr.setName(newE.toString());
-							attr.setExpression(newE);
-						} else {
-							throw new Exception ("Unsupported column type: "+e.getClass().toString());
-						}
+						Set<String> replacementSet = new HashSet<String>(this.objectAliases);
+						replacementSet.add(attr.getName());
+						SQLExpressionUtils.renameAttributes(e, replacementSet, o.getPruneToken());
+						
+						attr.setExpression(e.toString());
 						
 						return true;
+					} else if (attribs.removeAll(o.getOutSchema().keySet())) {
+						
+						Set<String> replacementSet = new HashSet<String>(this.objectAliases);
+						replacementSet.add(attr.getName());
+						SQLExpressionUtils.renameAttributes(e, replacementSet, o.getPruneToken());
+						
+						attr.setExpression(e.toString());
+						ret = true;
 					}
 				} else {
 					if ( o.changeAttributeName(attr) ) return true;
@@ -398,7 +412,7 @@ public class Operator {
 			}
 		}
 		
-		return false;
+		return ret;
 	}
 	
 	
@@ -427,25 +441,33 @@ public class Operator {
 		// iterate over out schema and add it to select clause
 		HashMap<String, SelectItem> selects = new HashMap<String, SelectItem>();
 
+		updateObjectAliases(false);
+		
+		List<SelectItem> selectItemList = new ArrayList<>(); 
+		
 		for(String s : outSchema.keySet()) {
 			SQLAttribute attr = new SQLAttribute((SQLAttribute)outSchema.get(s));
 
 			// find the table where it is pruned
 			changeAttributeName(attr);
 			
-			SelectExpressionItem si = new SelectExpressionItem(attr.getExpression());
-			if(!(si.toString().equals(attr.getName()))) {
+			SelectExpressionItem si = new SelectExpressionItem(attr.getSQLExpression());
+			
+			if(!(si.toString().equals(attr.getName())) && !(attr.getSQLExpression() instanceof Column)) {
 				si.setAlias(new Alias(attr.getFullyQualifiedName()));
 			}
 			
-			selects.put(s, si);
+			if (srcStatement == null)
+				selectItemList.add(si);
+			else 
+				selects.put(s, si);
 		}
 		
 		PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
-		
 		if (srcStatement != null)
 			ps.setSelectItems(changeSelectItemsOrder(srcStatement, selects));
-		
+		else 
+			ps.setSelectItems(selectItemList);
 		return dstStatement;
 	}
 	
@@ -648,6 +670,8 @@ public class Operator {
 			return new CommonSQLTableExpressionScan(this, addChild);
 		} else if (this instanceof Sort) {
 			return new Sort(this, addChild);
+		} else if (this instanceof Aggregate) {
+			return new Aggregate(this, addChild);
 		} else {
 			throw new Exception("Unsupported Operator Copy: "+this.getClass().toString());
 		}
@@ -656,6 +680,67 @@ public class Operator {
 	// will likely get overridden
 	public String getTreeRepresentation(boolean isRoot){
 		return "Unimplemented: "+this.getClass().toString();
+	}
+	
+//	public void updateOutItems() throws Exception {
+//		
+//		List<Operator> treeWalker;
+//		for (String n : outSchema.keySet()) {
+//			
+//			treeWalker = children;
+//			boolean found = false;
+//			Expression e = null;
+//			if (outSchema.get(n).getExpressionString() == null) 
+//				e = CCJSqlParserUtil.parseExpression(n);
+//			else 
+//				e = CCJSqlParserUtil.parseExpression(outSchema.get(n).getExpressionString());
+//			
+//			while (treeWalker.size() > 0 && (!found)) {
+//				List<Operator> nextGeneration = new ArrayList<>();
+//				
+//				for (Operator o : treeWalker) {
+//					if (o.isPruned()) {
+//						
+//						if (e instanceof Column) {
+//							
+//							Column c = (Column)e; // TODO
+//							
+//							if (o.getOutSchema().containsKey(c.getFullyQualifiedName())) {
+//								c.setTable(new Table(o.getPruneToken()));
+//								found = true;
+//								break;
+//							}
+//							
+//						} else 
+//							throw new Exception("Operator: OutItem expr class: "+e.getClass().toString()+"; e: "+e.toString());
+//						
+//					} else {
+//						nextGeneration.addAll(o.children);
+//					}
+//				}
+//				treeWalker = nextGeneration;
+//			}
+//		}
+//	}
+//	
+	public void updateObjectAliases(boolean lazy) {
+		
+		if (lazy && this.objectAliases != null)
+			return;
+		
+		objectAliases = new HashSet<String>();
+		if (this instanceof Scan && ((Scan)this).tableAlias != null) {
+			objectAliases.add(((Scan)this).tableAlias);
+		} else if (this instanceof Join) {
+			
+			children.get(1).updateObjectAliases(lazy);
+			objectAliases.addAll(children.get(1).objectAliases);
+		} 
+
+		if (children.size() != 0) {
+			children.get(0).updateObjectAliases(lazy);
+			objectAliases.addAll(children.get(0).objectAliases);
+		}
 	}
 	
 	
