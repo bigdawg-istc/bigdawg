@@ -48,6 +48,9 @@ public class FromPostgresToSciDB implements FromDatabaseToDatabase {
 		log.debug("General data migration: " + this.getClass().getName());
 		if (connectionFrom instanceof PostgreSQLConnectionInfo && connectionTo instanceof SciDBConnectionInfo) {
 			try {
+				//TODO
+				// return NetworkSend(new FromPostgresToSciDBImplmentation(),connectionTo.getHost());
+				// IO utils copyLarge - https://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/IOUtils.html
 				return new FromPostgresToSciDBImplementation((PostgreSQLConnectionInfo) connectionFrom, fromTable,
 						(SciDBConnectionInfo) connectionTo, toArray).migrateSingleThreadCSV();
 //				return new FromPostgresToSciDBImplementation((PostgreSQLConnectionInfo) connectionFrom, fromTable,

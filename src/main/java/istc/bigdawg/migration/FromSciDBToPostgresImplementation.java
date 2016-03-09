@@ -37,10 +37,9 @@ import istc.bigdawg.utils.StackTrace;
  * @author Adam Dziedzic
  * 
  */
-public class FromSciDBToPostgresImplementation {
+public class FromSciDBToPostgresImplementation implements MigrationImplementation {
 	/* log */
-	private static Logger log = Logger
-			.getLogger(FromSciDBToPostgresImplementation.class);
+	private static Logger log = Logger.getLogger(FromSciDBToPostgresImplementation.class);
 
 	/* General message about the action in the class. */
 	private String generalMessage = "Data migration from SciDB to PostgreSQL";
@@ -60,9 +59,8 @@ public class FromSciDBToPostgresImplementation {
 	private ExecutorService executor = null;
 	private Connection connectionPostgres = null;
 
-	public FromSciDBToPostgresImplementation(SciDBConnectionInfo connectionFrom,
-			String fromArray, PostgreSQLConnectionInfo connectionTo,
-			String toTable) throws MigrationException {
+	public FromSciDBToPostgresImplementation(SciDBConnectionInfo connectionFrom, String fromArray,
+			PostgreSQLConnectionInfo connectionTo, String toTable) throws MigrationException {
 		this.connectionFrom = connectionFrom;
 		this.fromArray = fromArray;
 		this.connectionTo = connectionTo;
@@ -72,9 +70,8 @@ public class FromSciDBToPostgresImplementation {
 			this.scidbArrayMetaData = handler.getArrayMetaData(fromArray);
 			handler.close();
 		} catch (SQLException | NoTargetArrayException scidbException) {
-			MigrationException migrateException = handleException(
-					scidbException, "Extraction of meta data on the array: "
-							+ fromArray + " in SciDB failed. ");
+			MigrationException migrateException = handleException(scidbException,
+					"Extraction of meta data on the array: " + fromArray + " in SciDB failed. ");
 			throw migrateException;
 		}
 	}
@@ -109,23 +106,18 @@ public class FromSciDBToPostgresImplementation {
 	 *             the given type is not supported
 	 */
 	private String getCreatePostgreSQLTableStatementFromSciDBArrayForCsv()
-			throws NoTargetArrayException, SQLException,
-			UnsupportedTypeException {
-		List<SciDBColumnMetaData> dimensions = scidbArrayMetaData
-				.getDimensionsOrdered();
-		List<SciDBColumnMetaData> attributes = scidbArrayMetaData
-				.getAttributesOrdered();
+			throws NoTargetArrayException, SQLException, UnsupportedTypeException {
+		List<SciDBColumnMetaData> dimensions = scidbArrayMetaData.getDimensionsOrdered();
+		List<SciDBColumnMetaData> attributes = scidbArrayMetaData.getAttributesOrdered();
 		List<SciDBColumnMetaData> columns = new ArrayList<>();
 		columns.addAll(dimensions);
 		columns.addAll(attributes);
 		StringBuilder createTableStringBuf = new StringBuilder();
-		createTableStringBuf
-				.append("create table if not exists " + toTable + " (");
+		createTableStringBuf.append("create table if not exists " + toTable + " (");
 		for (SciDBColumnMetaData column : columns) {
 			String colName = column.getColumnName();
 			String scidbType = column.getColumnType();
-			String postgresType = DataTypesFromSciDBToPostgreSQL
-					.getSciDBTypeFromPostgreSQLType(scidbType);
+			String postgresType = DataTypesFromSciDBToPostgreSQL.getSciDBTypeFromPostgreSQLType(scidbType);
 			createTableStringBuf.append(colName + " " + postgresType + ",");
 		}
 		createTableStringBuf.deleteCharAt(createTableStringBuf.length() - 1);
@@ -143,20 +135,16 @@ public class FromSciDBToPostgresImplementation {
 	 * @throws UnsupportedTypeException
 	 */
 	private String getCreatePostgreSQLTableStatementFromSciDBArrayForBin()
-			throws NoTargetArrayException, SQLException,
-			UnsupportedTypeException {
-		List<SciDBColumnMetaData> attributes = scidbArrayMetaData
-				.getAttributesOrdered();
+			throws NoTargetArrayException, SQLException, UnsupportedTypeException {
+		List<SciDBColumnMetaData> attributes = scidbArrayMetaData.getAttributesOrdered();
 		List<SciDBColumnMetaData> columns = new ArrayList<>();
 		columns.addAll(attributes);
 		StringBuilder createTableStringBuf = new StringBuilder();
-		createTableStringBuf
-				.append("create table if not exists " + toTable + " (");
+		createTableStringBuf.append("create table if not exists " + toTable + " (");
 		for (SciDBColumnMetaData column : columns) {
 			String colName = column.getColumnName();
 			String scidbType = column.getColumnType();
-			String postgresType = DataTypesFromSciDBToPostgreSQL
-					.getSciDBTypeFromPostgreSQLType(scidbType);
+			String postgresType = DataTypesFromSciDBToPostgreSQL.getSciDBTypeFromPostgreSQLType(scidbType);
 			createTableStringBuf.append(colName + " " + postgresType + ",");
 		}
 		createTableStringBuf.deleteCharAt(createTableStringBuf.length() - 1);
@@ -181,12 +169,9 @@ public class FromSciDBToPostgresImplementation {
 	 * @throws UnsupportedTypeException
 	 * @throws NoTargetArrayException
 	 */
-	private void createTargetTableSchema(Connection postgresCon,
-			String createTableStatement) throws SQLException {
-		PostgreSQLSchemaTableName schemaTable = new PostgreSQLSchemaTableName(
-				toTable);
-		PostgreSQLHandler.executeStatement(postgresCon,
-				"create schema if not exists " + schemaTable.getSchemaName());
+	private void createTargetTableSchema(Connection postgresCon, String createTableStatement) throws SQLException {
+		PostgreSQLSchemaTableName schemaTable = new PostgreSQLSchemaTableName(toTable);
+		PostgreSQLHandler.executeStatement(postgresCon, "create schema if not exists " + schemaTable.getSchemaName());
 		PostgreSQLHandler.executeStatement(postgresCon, createTableStatement);
 	}
 
@@ -197,13 +182,11 @@ public class FromSciDBToPostgresImplementation {
 	 * @throws NoTargetArrayException
 	 * @throws SQLException
 	 */
-	private String getSciDBBinFormat()
-			throws NoTargetArrayException, SQLException {
+	private String getSciDBBinFormat() throws NoTargetArrayException, SQLException {
 		SciDBHandler handler = new SciDBHandler(connectionFrom);
 		SciDBArrayMetaData arrayMetaData = handler.getArrayMetaData(fromArray);
 		handler.close();
-		List<SciDBColumnMetaData> attributes = arrayMetaData
-				.getAttributesOrdered();
+		List<SciDBColumnMetaData> attributes = arrayMetaData.getAttributesOrdered();
 		StringBuilder binBuf = new StringBuilder();
 		for (SciDBColumnMetaData attribute : attributes) {
 			binBuf.append(attribute.getColumnType());
@@ -229,25 +212,19 @@ public class FromSciDBToPostgresImplementation {
 		generalMessage += "Mode: binary migration.";
 		log.info(generalMessage);
 		try {
-			scidbPipe = Pipe.INSTANCE.createAndGetFullName(
-					this.getClass().getName() + "_fromSciDB_" + fromArray);
-			postgresPipe = Pipe.INSTANCE.createAndGetFullName(
-					this.getClass().getName() + "_toPostgres_" + toTable);
+			scidbPipe = Pipe.INSTANCE.createAndGetFullName(this.getClass().getName() + "_fromSciDB_" + fromArray);
+			postgresPipe = Pipe.INSTANCE.createAndGetFullName(this.getClass().getName() + "_toPostgres_" + toTable);
 
 			executor = Executors.newFixedThreadPool(3);
 
-			ExportFromSciDBExecutor exportExecutor = new ExportFromSciDBExecutor(
-					connectionFrom, fromArray, scidbPipe, getSciDBBinFormat(),
-					true);
-			FutureTask<String> exportTask = new FutureTask<String>(
-					exportExecutor);
+			ExportFromSciDBExecutor exportExecutor = new ExportFromSciDBExecutor(connectionFrom, fromArray, scidbPipe,
+					getSciDBBinFormat(), true);
+			FutureTask<String> exportTask = new FutureTask<String>(exportExecutor);
 			executor.submit(exportTask);
 
-			TransformBinExecutor transformExecutor = new TransformBinExecutor(
-					scidbPipe, postgresPipe, getSciDBBinFormat(),
-					TransformBinExecutor.TYPE.FromSciDBToPostgres);
-			FutureTask<Long> transformTask = new FutureTask<Long>(
-					transformExecutor);
+			TransformBinExecutor transformExecutor = new TransformBinExecutor(scidbPipe, postgresPipe,
+					getSciDBBinFormat(), TransformBinExecutor.TYPE.FromSciDBToPostgres);
+			FutureTask<Long> transformTask = new FutureTask<Long>(transformExecutor);
 			executor.submit(transformTask);
 
 			/* TODO you'll have to prepare the target array */
@@ -256,8 +233,8 @@ public class FromSciDBToPostgresImplementation {
 			String createTableStatement = getCreatePostgreSQLTableStatementFromSciDBArrayForBin();
 			createTargetTableSchema(connectionPostgres, createTableStatement);
 			String copyToCommand = PostgreSQLHandler.getLoadBinCommand(toTable);
-			CopyToPostgresExecutor loadExecutor = new CopyToPostgresExecutor(
-					connectionPostgres, copyToCommand, postgresPipe);
+			CopyToPostgresExecutor loadExecutor = new CopyToPostgresExecutor(connectionPostgres, copyToCommand,
+					postgresPipe);
 			FutureTask<Long> loadTask = new FutureTask<Long>(loadExecutor);
 			executor.submit(loadTask);
 
@@ -265,20 +242,15 @@ public class FromSciDBToPostgresImplementation {
 			long transformationResult = transformTask.get();
 			long loadedRowsCount = loadTask.get();
 
-			String transformationMessage = transformationResult == 0 ? "correct"
-					: "incorrect";
+			String transformationMessage = transformationResult == 0 ? "correct" : "incorrect";
 
 			return new MigrationResult(null, loadedRowsCount,
-					exportMessage
-							+ " No information about number of extracted rows."
-							+ " Result of transformation: "
+					exportMessage + " No information about number of extracted rows." + " Result of transformation: "
 							+ transformationMessage,
 					false);
-		} catch (SQLException | UnsupportedTypeException | InterruptedException
-				| ExecutionException | IOException | NoTargetArrayException
-				| RunShellException exception) {
-			MigrationException migrationException = handleException(exception,
-					"Migration in binry format failed. ");
+		} catch (SQLException | UnsupportedTypeException | InterruptedException | ExecutionException | IOException
+				| NoTargetArrayException | RunShellException exception) {
+			MigrationException migrationException = handleException(exception, "Migration in binry format failed. ");
 			throw migrationException;
 		} finally {
 			cleanResources();
@@ -295,16 +267,14 @@ public class FromSciDBToPostgresImplementation {
 			try {
 				Pipe.INSTANCE.deletePipeIfExists(postgresPipe);
 			} catch (IOException e) {
-				throw new MigrationException("Could not remove pipe: "
-						+ postgresPipe + " " + e.getMessage());
+				throw new MigrationException("Could not remove pipe: " + postgresPipe + " " + e.getMessage());
 			}
 		}
 		if (scidbPipe != null) {
 			try {
 				Pipe.INSTANCE.deletePipeIfExists(scidbPipe);
 			} catch (IOException e) {
-				throw new MigrationException("Could not remove pipe: "
-						+ scidbPipe + " " + e.getMessage());
+				throw new MigrationException("Could not remove pipe: " + scidbPipe + " " + e.getMessage());
 			}
 		}
 		if (executor != null && !executor.isShutdown()) {
@@ -315,8 +285,7 @@ public class FromSciDBToPostgresImplementation {
 				connectionPostgres.close();
 			} catch (SQLException e) {
 				e.printStackTrace();
-				String msg = "Could not close connection to PostgreSQL!"
-						+ e.getMessage() + " " + generalMessage;
+				String msg = "Could not close connection to PostgreSQL!" + e.getMessage() + " " + generalMessage;
 				log.error(msg);
 				throw new MigrationException(msg);
 			}
@@ -324,13 +293,11 @@ public class FromSciDBToPostgresImplementation {
 	}
 
 	/** Handle the internal exception in the migrator */
-	private MigrationException handleException(Exception exception,
-			String message) {
+	private MigrationException handleException(Exception exception, String message) {
 		/* this log with stack trace is for UnsupportedTypeException */
 		log.error(StackTrace.getFullStackTrace(exception));
-		String msg = message + exception.getMessage() + " " + errMessage
-				+ " SciDB connection: " + connectionFrom.toString()
-				+ " from array: " + fromArray + " PostgreSQL Connection: "
+		String msg = message + exception.getMessage() + " " + errMessage + " SciDB connection: "
+				+ connectionFrom.toString() + " from array: " + fromArray + " PostgreSQL Connection: "
 				+ connectionTo.toString() + " to table:" + toTable;
 		log.error(msg);
 		return new MigrationException(msg);
@@ -348,15 +315,12 @@ public class FromSciDBToPostgresImplementation {
 			executor = Executors.newFixedThreadPool(2);
 
 			/* we use only one pipe here */
-			scidbPipe = Pipe.INSTANCE.createAndGetFullName(
-					this.getClass().getName() + "_fromSciDB_" + fromArray);
+			scidbPipe = Pipe.INSTANCE.createAndGetFullName(this.getClass().getName() + "_fromSciDB_" + fromArray);
 
 			String defultCsvFormat = "csv+";
-			ExportFromSciDBExecutor exportExecutor = new ExportFromSciDBExecutor(
-					connectionFrom, fromArray, scidbPipe, defultCsvFormat,
-					false);
-			FutureTask<String> exportTask = new FutureTask<String>(
-					exportExecutor);
+			ExportFromSciDBExecutor exportExecutor = new ExportFromSciDBExecutor(connectionFrom, fromArray, scidbPipe,
+					defultCsvFormat, false);
+			FutureTask<String> exportTask = new FutureTask<String>(exportExecutor);
 			executor.submit(exportTask);
 
 			/* TODO you'll have to prepare the source array */
@@ -364,9 +328,8 @@ public class FromSciDBToPostgresImplementation {
 			connectionPostgres.setAutoCommit(false);
 			String createTableStatement = getCreatePostgreSQLTableStatementFromSciDBArrayForCsv();
 			createTargetTableSchema(connectionPostgres, createTableStatement);
-			CopyToPostgresExecutor loadExecutor = new CopyToPostgresExecutor(
-					connectionPostgres, getCopyToPostgreSQLCsvCommand(toTable),
-					scidbPipe);
+			CopyToPostgresExecutor loadExecutor = new CopyToPostgresExecutor(connectionPostgres,
+					getCopyToPostgreSQLCsvCommand(toTable), scidbPipe);
 			FutureTask<Long> loadTask = new FutureTask<Long>(loadExecutor);
 			executor.submit(loadTask);
 
@@ -378,18 +341,24 @@ public class FromSciDBToPostgresImplementation {
 					+ (endTimeMigration - startTimeMigration);
 			log.info(message);
 			return new MigrationResult(null, loadedRowsCount,
-					exportMessage
-							+ " No information about number of extracted rows.",
-					false);
-		} catch (SQLException | NoTargetArrayException
-				| UnsupportedTypeException | InterruptedException
+					exportMessage + " No information about number of extracted rows.", false);
+		} catch (SQLException | NoTargetArrayException | UnsupportedTypeException | InterruptedException
 				| ExecutionException | RunShellException | IOException ex) {
-			log.error(errMessage + " " + ex.getMessage()
-					+ StackTrace.getFullStackTrace(ex));
+			log.error(errMessage + " " + ex.getMessage() + StackTrace.getFullStackTrace(ex));
 			throw new MigrationException(errMessage + " " + ex.getMessage());
 		} finally {
 			cleanResources();
 		}
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see istc.bigdawg.migration.MigrationImplementation#migrate()
+	 */
+	@Override
+	public MigrationResult migrate() throws MigrationException {
+		return migrateBin();
 	}
 
 	/**
@@ -397,18 +366,16 @@ public class FromSciDBToPostgresImplementation {
 	 * @throws IOException
 	 * @throws MigrationException
 	 */
-	public static void main(String[] args)
-			throws MigrationException, IOException {
+	public static void main(String[] args) throws MigrationException, IOException {
 		LoggerSetup.setLogging();
-		SciDBConnectionInfo conFrom = new SciDBConnectionInfo("localhost",
-				"1239", "scidb", "mypassw", "/opt/scidb/14.12/bin/");
+		SciDBConnectionInfo conFrom = new SciDBConnectionInfo("localhost", "1239", "scidb", "mypassw",
+				"/opt/scidb/14.12/bin/");
 		String fromArray = "waveform";
-		PostgreSQLConnectionInfo conTo = new PostgreSQLConnectionInfo(
-				"localhost", "5431", "test", "pguser", "test");
+		PostgreSQLConnectionInfo conTo = new PostgreSQLConnectionInfo("localhost", "5431", "test", "pguser", "test");
 		String toTable = "waveform";
 
-		FromSciDBToPostgresImplementation migrator = new FromSciDBToPostgresImplementation(
-				conFrom, fromArray, conTo, toTable);
+		FromSciDBToPostgresImplementation migrator = new FromSciDBToPostgresImplementation(conFrom, fromArray, conTo,
+				toTable);
 		migrator.migrateBin();
 	}
 

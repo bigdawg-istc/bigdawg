@@ -34,7 +34,7 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 	 */
 	private static Logger logger = Logger.getLogger(FromPostgresToPostgres.class);
 	
-	private static final int minNumberOfThreads = 2;
+	private static final int numberOfThreads = 2;
 
 	/**
 	 * Migrate data between instances of PostgreSQL.
@@ -109,7 +109,7 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 			CopyToPostgresExecutor copyToExecutor = new CopyToPostgresExecutor(conTo, copyToCommand, input);
 			FutureTask<Long> taskCopyToExecutor = new FutureTask<Long>(copyToExecutor);
 			
-			executor = Executors.newFixedThreadPool(minNumberOfThreads);
+			executor = Executors.newFixedThreadPool(numberOfThreads);
 			executor.submit(taskCopyFromExecutor);
 			executor.submit(taskCopyToExecutor);
 			long countExtractedElements = taskCopyFromExecutor.get();
@@ -153,7 +153,7 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 		FromPostgresToPostgres migrator = new FromPostgresToPostgres();
 		PostgreSQLConnectionInfo conInfoFrom = new PostgreSQLConnectionInfo("localhost", "5431", "mimic2", "pguser",
 				"test");
-		PostgreSQLConnectionInfo conInfoTo = new PostgreSQLConnectionInfo("localhost", "5430", "mimic2_copy", "pguser",
+		PostgreSQLConnectionInfo conInfoTo = new PostgreSQLConnectionInfo("madison", "5431", "mimic2_copy", "pguser",
 				"test");
 		MigrationResult result;
 		try {
