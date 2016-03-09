@@ -31,6 +31,8 @@ sudo update-alternatives --config javac
 # maven dependecies
 mvn dependency:build-classpath
 
+# set the ulimit: http://posidev.com/blog/2009/06/04/set-ulimit-parameters-on-ubuntu/
+
 
 
 

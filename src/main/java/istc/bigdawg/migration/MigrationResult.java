@@ -3,13 +3,19 @@
  */
 package istc.bigdawg.migration;
 
+import java.io.Serializable;
+
 /**
  * Results from a migration execution.
  * 
  * @author Adam Dziedzic
  */
-public class MigrationResult {
+public class MigrationResult implements Serializable {
 
+	/**
+	 * the objects of the class are serializable
+	 */
+	private static final long serialVersionUID = 1L;
 	private Long countExtractedElements;
 	private Long countLoadedElements;
 	private String message;
@@ -29,7 +35,8 @@ public class MigrationResult {
 		this.isError = false;
 	}
 
-	public MigrationResult(Long countExtractedRows, Long countLoadedRows, String message, boolean isError) {
+	public MigrationResult(Long countExtractedRows, Long countLoadedRows,
+			String message, boolean isError) {
 		this.countExtractedElements = countExtractedRows;
 		this.countLoadedElements = countLoadedRows;
 		this.message = message;
@@ -69,4 +76,63 @@ public class MigrationResult {
 		return countLoadedElements;
 	}
 
+	/* (non-Javadoc)
+	 * @see java.lang.Object#toString()
+	 */
+	@Override
+	public String toString() {
+		return "MigrationResult [countExtractedElements="
+				+ countExtractedElements + ", countLoadedElements="
+				+ countLoadedElements + ", message=" + message + ", isError="
+				+ isError + "]";
+	}
+
+	/* (non-Javadoc)
+	 * @see java.lang.Object#hashCode()
+	 */
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((countExtractedElements == null) ? 0
+				: countExtractedElements.hashCode());
+		result = prime * result + ((countLoadedElements == null) ? 0
+				: countLoadedElements.hashCode());
+		result = prime * result + (isError ? 1231 : 1237);
+		result = prime * result + ((message == null) ? 0 : message.hashCode());
+		return result;
+	}
+
+	/* (non-Javadoc)
+	 * @see java.lang.Object#equals(java.lang.Object)
+	 */
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		MigrationResult other = (MigrationResult) obj;
+		if (countExtractedElements == null) {
+			if (other.countExtractedElements != null)
+				return false;
+		} else if (!countExtractedElements.equals(other.countExtractedElements))
+			return false;
+		if (countLoadedElements == null) {
+			if (other.countLoadedElements != null)
+				return false;
+		} else if (!countLoadedElements.equals(other.countLoadedElements))
+			return false;
+		if (isError != other.isError)
+			return false;
+		if (message == null) {
+			if (other.message != null)
+				return false;
+		} else if (!message.equals(other.message))
+			return false;
+		return true;
+	}
+	
 }

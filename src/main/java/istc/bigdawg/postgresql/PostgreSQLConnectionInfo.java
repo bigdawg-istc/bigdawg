@@ -9,17 +9,23 @@ import java.text.ParseException;
 import java.util.Collection;
 import java.util.List;
 
-import istc.bigdawg.query.ConnectionInfo;
-import istc.bigdawg.query.DBHandler;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 
+import istc.bigdawg.query.ConnectionInfo;
+import istc.bigdawg.query.DBHandler;
+
 /**
- * @author Adam Dziedzic
+ * Information about connection to an instance of PostgreSQL.
  * 
- *
+ * @author Adam Dziedzic
  */
 public class PostgreSQLConnectionInfo implements ConnectionInfo {
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 
 	private String host;
 	private String port;
@@ -29,7 +35,8 @@ public class PostgreSQLConnectionInfo implements ConnectionInfo {
 
 	private static final String CLEANUP_STRING = "DROP TABLE %s;";
 
-	public PostgreSQLConnectionInfo(String host, String port, String database, String user, String password) {
+	public PostgreSQLConnectionInfo(String host, String port, String database,
+			String user, String password) {
 		this.host = host;
 		this.port = port;
 		this.database = database;
@@ -38,7 +45,8 @@ public class PostgreSQLConnectionInfo implements ConnectionInfo {
 	}
 
 	public String getUrl() {
-		return "jdbc:postgresql://" + getHost() + ":" + getPort() + "/" + getDatabase();
+		return "jdbc:postgresql://" + getHost() + ":" + getPort() + "/"
+				+ getDatabase();
 	}
 
 	public void setHost(String host) {
@@ -132,14 +140,18 @@ public class PostgreSQLConnectionInfo implements ConnectionInfo {
 	}
 
 	@Override
-	public long[] computeHistogram(String object, String attribute, double start, double end, int numBuckets) throws SQLException {
+	public long[] computeHistogram(String object, String attribute,
+			double start, double end, int numBuckets) throws SQLException {
 		// TODO: handle non-numerical data
 		long[] result = new long[numBuckets];
 
 		String query = "SELECT width_bucket(%s, %s, %s, %s), COUNT(*) FROM %s GROUP BY 1 ORDER BY 1;";
-		List<List<String>> raw = new PostgreSQLHandler(this).executeQueryPostgreSQL(String.format(query, attribute, start, end, numBuckets, object)).getRows();
+		List<List<String>> raw = new PostgreSQLHandler(this)
+				.executeQueryPostgreSQL(String.format(query, attribute, start,
+						end, numBuckets, object))
+				.getRows();
 
-		for(int i = 0; i < raw.size(); i++) {
+		for (int i = 0; i < raw.size(); i++) {
 			List<String> row = raw.get(i);
 			result[Integer.parseInt(row.get(0))] = Long.parseLong(row.get(1));
 		}
@@ -148,9 +160,13 @@ public class PostgreSQLConnectionInfo implements ConnectionInfo {
 	}
 
 	@Override
-	public Pair<Number, Number> getMinMax(String object, String attribute) throws SQLException, ParseException {
+	public Pair<Number, Number> getMinMax(String object, String attribute)
+			throws SQLException, ParseException {
 		String query = "SELECT min(%s), max(%s) FROM %s;";
-		List<String> raw = new PostgreSQLHandler(this).executeQueryPostgreSQL(String.format(query, attribute, attribute, object)).getRows().get(0);
+		List<String> raw = new PostgreSQLHandler(this)
+				.executeQueryPostgreSQL(
+						String.format(query, attribute, attribute, object))
+				.getRows().get(0);
 		NumberFormat nf = NumberFormat.getInstance();
 		return new ImmutablePair<>(nf.parse(raw.get(0)), nf.parse(raw.get(1)));
 	}
@@ -164,9 +180,11 @@ public class PostgreSQLConnectionInfo implements ConnectionInfo {
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + ((database == null) ? 0 : database.hashCode());
+		result = prime * result
+				+ ((database == null) ? 0 : database.hashCode());
 		result = prime * result + ((host == null) ? 0 : host.hashCode());
-		result = prime * result + ((password == null) ? 0 : password.hashCode());
+		result = prime * result
+				+ ((password == null) ? 0 : password.hashCode());
 		result = prime * result + ((port == null) ? 0 : port.hashCode());
 		result = prime * result + ((user == null) ? 0 : user.hashCode());
 		return result;

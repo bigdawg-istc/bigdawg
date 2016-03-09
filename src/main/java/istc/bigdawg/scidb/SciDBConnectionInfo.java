@@ -13,11 +13,17 @@ import istc.bigdawg.query.DBHandler;
 import org.apache.commons.lang3.tuple.Pair;
 
 /**
- * @author adam
+ * Connection information about the SciDB database.
+ * 
+ * @author Adam Dziedzic
  *
  */
 public class SciDBConnectionInfo implements ConnectionInfo {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 	private String host;
 	private String port;
 	private String user;

@@ -13,6 +13,11 @@ import istc.bigdawg.properties.BigDawgConfigProperties;
 public class PostgreSQLConnectionInfoTest extends PostgreSQLConnectionInfo {
 
 	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
+	/**
 	 * @param host
 	 * @param port
 	 * @param database

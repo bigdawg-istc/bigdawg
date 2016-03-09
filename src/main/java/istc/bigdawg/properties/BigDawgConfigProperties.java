@@ -45,6 +45,8 @@ public enum BigDawgConfigProperties {
 	private String myriaHost;
 	private String myriaPort;
 	private String myriaContentType;
+	
+	private String networkMessagePort;
 
 	private BigDawgConfigProperties() throws AssertionError {
 		Properties prop = new Properties();
@@ -108,6 +110,8 @@ public enum BigDawgConfigProperties {
 		this.scidbTestPassword = prop.getProperty("main.scidb.test.password");
 		this.scidbTestUser = prop.getProperty("main.scidb.test.user");
 		this.scidbTestBinPath = prop.getProperty("main.scidb.test.bin_path");
+		
+		this.networkMessagePort = prop.getProperty("main.network.message.port");
 	}
 
 	/**
@@ -321,6 +325,13 @@ public enum BigDawgConfigProperties {
 	 */
 	public String getScidbTestBinPath() {
 		return scidbTestBinPath;
+	}
+
+	/**
+	 * @return the networkMessagePort
+	 */
+	public String getNetworkMessagePort() {
+		return networkMessagePort;
 	}
 
 }
