@@ -147,7 +147,8 @@ public class CrossIslandQueryNode {
 		
 //		Select srcStmt = (Select) CCJSqlParserUtil.parse(query);
 		QueryExecutionPlan qep = new QueryExecutionPlan(scope); 
-		ExecutionNodeFactory.addNodesAndEdgesNaive( qep, remainderPermutations.get(perm), remainderLoc, queryContainer);
+		ExecutionNodeFactory.addNodesAndEdgesWithJoinHandling(qep, remainderPermutations.get(perm), remainderLoc, queryContainer); 
+//		ExecutionNodeFactory.addNodesAndEdgesNaive( qep, remainderPermutations.get(perm), remainderLoc, queryContainer);
 		
 		return qep;
 	}
@@ -162,7 +163,8 @@ public class CrossIslandQueryNode {
 		
 		for (int i = 0; i < remainderPermutations.size(); i++ ){
 			QueryExecutionPlan qep = new QueryExecutionPlan(scope); 
-			ExecutionNodeFactory.addNodesAndEdgesNaive( qep, remainderPermutations.get(i), remainderLoc, queryContainer);
+			ExecutionNodeFactory.addNodesAndEdgesWithJoinHandling(qep, remainderPermutations.get(i), remainderLoc, queryContainer); 
+//			ExecutionNodeFactory.addNodesAndEdgesNaive( qep, remainderPermutations.get(i), remainderLoc, queryContainer);
 			qepl.add(qep);
 		}
 		
