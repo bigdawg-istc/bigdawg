@@ -36,8 +36,9 @@ public class CopyToPostgresExecutor implements Callable<Long> {
 	private String inputFile;
 	private Connection connection;
 
-	public CopyToPostgresExecutor(Connection connection, final String copyToString,
-			final String inputFile) throws SQLException {
+	public CopyToPostgresExecutor(Connection connection,
+			final String copyToString, final String inputFile)
+					throws SQLException {
 		this.connection = connection;
 		this.copyToString = copyToString;
 		this.inputFile = inputFile;
@@ -45,8 +46,8 @@ public class CopyToPostgresExecutor implements Callable<Long> {
 		this.cpTo = new CopyManager((BaseConnection) connection);
 	}
 
-	public CopyToPostgresExecutor(Connection connection, final String copyToString, InputStream input)
-			throws SQLException {
+	public CopyToPostgresExecutor(Connection connection,
+			final String copyToString, InputStream input) throws SQLException {
 		this.connection = connection;
 		this.copyToString = copyToString;
 		this.input = input;
@@ -64,7 +65,8 @@ public class CopyToPostgresExecutor implements Callable<Long> {
 				input = new FileInputStream(inputFile);
 			} catch (FileNotFoundException e) {
 				e.printStackTrace();
-				String msg = e.getMessage() + " Problem with thread for PostgreSQL copy manager "
+				String msg = e.getMessage()
+						+ " Problem with thread for PostgreSQL copy manager "
 						+ "while loading data from PostgreSQL.";
 				log.error(msg + StackTrace.getFullStackTrace(e), e);
 				return -1L;
@@ -76,9 +78,14 @@ public class CopyToPostgresExecutor implements Callable<Long> {
 			input.close();
 			connection.commit();
 		} catch (IOException | SQLException e) {
-			String msg = e.getMessage() + " Problem with thread for PostgreSQL copy manager "
+			String msg = e.getMessage()
+					+ " Problem with thread for PostgreSQL copy manager "
 					+ "while copying data to PostgreSQL.";
-			log.error(msg);
+			/*
+			 * remove the quotes - our postgresql database for logs cannot accept
+			 * such input
+			 */
+			log.error(msg.replace("'", ""));
 			e.printStackTrace();
 		}
 		return countLoadedRows;

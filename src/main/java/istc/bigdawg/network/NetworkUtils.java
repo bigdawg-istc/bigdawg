@@ -11,11 +11,14 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
 import java.net.UnknownHostException;
 
 import org.apache.log4j.Logger;
 
 import istc.bigdawg.exceptions.NetworkException;
+import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.utils.StackTrace;
 
 /**
@@ -39,6 +42,8 @@ public class NetworkUtils {
 	static {
 		try {
 			THIS_HOST_ADDRESS = InetAddress.getLocalHost();
+			TIMEOUT = BigDawgConfigProperties.INSTANCE
+					.getNetworkRequestTimeout();
 		} catch (UnknownHostException e) {
 			e.printStackTrace();
 		}
@@ -88,6 +93,27 @@ public class NetworkUtils {
 					+ "). " + ex.getMessage();
 			log.error(message + StackTrace.getFullStackTrace(ex));
 			throw new NetworkException(message);
+		}
+	}
+
+	/**
+	 * Check if the given address is pointing to this local machine.
+	 * 
+	 * @param addr
+	 *            the address to be checked
+	 * @return true if the address is pointing to the local machine, false
+	 *         otherwise
+	 */
+	public static boolean isThisMyIpAddress(InetAddress addr) {
+		/* check if the address is a valid special local or loop back */
+		if (addr.isAnyLocalAddress() || addr.isLoopbackAddress()) {
+			return true;
+		}
+		/* check if the address is defined on any interface */
+		try {
+			return NetworkInterface.getByInetAddress(addr) != null;
+		} catch (SocketException ex) {
+			return false;
 		}
 	}
 

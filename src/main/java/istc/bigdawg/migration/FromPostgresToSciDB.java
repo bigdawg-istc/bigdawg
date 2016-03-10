@@ -3,6 +3,8 @@
  */
 package istc.bigdawg.migration;
 
+import static istc.bigdawg.network.NetworkUtils.isThisMyIpAddress;
+
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -69,45 +71,10 @@ public class FromPostgresToSciDB
 				 */
 				String hostname = connectionTo.getHost();
 				log.debug("SciDB hostname: " + hostname);
-				if (!hostname.equals("localhost")
-						|| !hostname.equals("127.0.0.1")) {
-					InetAddress address = InetAddress.getByName(hostname);
-					/*
-					 * the following method getLocalHost() might not be the
-					 * right one to use, the machine can have many network
-					 * interfaces
-					 */
-					InetAddress localAddress = InetAddress.getLocalHost();
-					/*
-					 * if SciDB is not on this server then send the message to
-					 * the server where the SciDB instance resides
-					 */
-					log.debug("localAddress: " + localAddress + " ip address: "
-							+ localAddress.getHostAddress());
-					log.debug("scidb address (address): " + address + " ip address: " + address.getHostAddress());
-					if (!address.getHostAddress()
-							.equals(localAddress.getHostAddress())) {
-						log.debug("Migration will be executed remotely.");
-						Object result = NetworkOut.send(this, hostname);
-						if (result instanceof MigrationResult) {
-							return (MigrationResult) result;
-						}
-						if (result instanceof MigrationException) {
-							throw (MigrationException) result;
-						}
-						if (result instanceof NetworkException) {
-							NetworkException ex = (NetworkException) result;
-							log.error("Problem on the other host: "
-									+ ex.getMessage());
-							throw new MigrationException(
-									"Problem on the other host: "
-											+ ex.getMessage());
-						}
-						String message = "Migration was executed on a remote host but the returned result is unexepcted: "
-								+ result.toString();
-						log.error(message);
-						throw new MigrationException(message);
-					}
+				if (!isThisMyIpAddress(InetAddress.getByName(hostname))) {
+					log.debug("Migration will be executed remotely.");
+					Object result = NetworkOut.send(this, hostname);
+					return processResult(result);
 				}
 				/* execute the migration locally */
 				log.debug("Migration will be executed locally.");
@@ -118,6 +85,7 @@ public class FromPostgresToSciDB
 			}
 		}
 		return null;
+
 	}
 
 	/**
@@ -151,7 +119,8 @@ public class FromPostgresToSciDB
 				"scidb", "mypassw", "/opt/scidb/14.12/bin/");
 		String toArray = "region2";
 		FromPostgresToSciDB migrator = new FromPostgresToSciDB();
-		migrator.migrate(conFrom, fromTable, conTo, toArray);
+		MigrationResult result = migrator.migrate(conFrom, fromTable, conTo, toArray);
+		System.out.println("migration result: " + result);
 	}
 
 }

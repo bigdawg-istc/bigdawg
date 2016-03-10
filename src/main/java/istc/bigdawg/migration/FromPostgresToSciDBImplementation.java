@@ -160,7 +160,7 @@ public class FromPostgresToSciDBImplementation
 			log.info(message);
 			System.out.println(message);
 			return new MigrationResult(extractedRowsCount, null,
-					loadMessage + "No information about number of loaded rows."
+					loadMessage + " No information about number of loaded rows."
 							+ " Result of transformation: "
 							+ transformationMessage,
 					false);
@@ -472,7 +472,12 @@ public class FromPostgresToSciDBImplementation
 	 */
 	@Override
 	public MigrationResult migrate() throws MigrationException {
-		return migrateBin();
+		/*
+		 * the CSV migration is used for debugging and development, if you want
+		 * to go much faster then change it to migrateBin() but then the C++
+		 * migrator has to be compiled on each machine where bigdawg is running
+		 */
+		return migrateSingleThreadCSV();
 	}
 
 	/**

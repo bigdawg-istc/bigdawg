@@ -358,7 +358,7 @@ public class FromSciDBToPostgresImplementation implements MigrationImplementatio
 	 */
 	@Override
 	public MigrationResult migrate() throws MigrationException {
-		return migrateBin();
+		return migrateSingleThreadCSV();
 	}
 
 	/**
