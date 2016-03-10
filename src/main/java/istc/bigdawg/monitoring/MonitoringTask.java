@@ -71,7 +71,7 @@ public class MonitoringTask implements Runnable {
 }
 
 class Task implements Runnable {
-    private static final String RETRIEVE = "SELECT query FROM monitoring WHERE lastRan=(SELECT min(lastRan) FROM monitoring) AND island='%s' ORDER BY RAND() LIMIT 1";
+    private static final String RETRIEVE = "SELECT query FROM monitoring WHERE lastRan=(SELECT min(lastRan) FROM monitoring) AND island='%s' ORDER BY RANDOM() LIMIT 1";
     private static final double MAX_LOAD = 0.7;
     private final String island;
     private final int cores;
