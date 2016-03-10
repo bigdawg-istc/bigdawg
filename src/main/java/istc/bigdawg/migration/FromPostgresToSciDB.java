@@ -3,12 +3,18 @@
  */
 package istc.bigdawg.migration;
 
+import static istc.bigdawg.network.NetworkUtils.isThisMyIpAddress;
+
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 
 import org.apache.log4j.Logger;
 
 import istc.bigdawg.LoggerSetup;
 import istc.bigdawg.exceptions.MigrationException;
+import istc.bigdawg.exceptions.NetworkException;
+import istc.bigdawg.network.NetworkOut;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
@@ -19,7 +25,18 @@ import istc.bigdawg.scidb.SciDBConnectionInfo;
  * @author Adam Dziedzic
  *
  */
-public class FromPostgresToSciDB implements FromDatabaseToDatabase {
+public class FromPostgresToSciDB
+		implements FromDatabaseToDatabase, MigrationNetworkRequest {
+
+	/**
+	 * the object of the class is serializable
+	 */
+	private static final long serialVersionUID = 1L;
+
+	private PostgreSQLConnectionInfo connectionFrom;
+	private String fromTable;
+	private SciDBConnectionInfo connectionTo;
+	private String toArray;
 
 	/* log */
 	private static Logger log = Logger.getLogger(FromPostgresToSciDB.class);
@@ -27,39 +44,64 @@ public class FromPostgresToSciDB implements FromDatabaseToDatabase {
 	/**
 	 * This is migration from PostgreSQL to SciDB.
 	 * 
-	 * @param connectionFrom
-	 *            the connection to PostgreSQL
-	 * @param fromTable
-	 *            the name of the table in PostgreSQL to be migrated
-	 * @param connectionTo
-	 *            the connection to SciDB database
-	 * @param arrayTo
-	 *            the name of the array in SciDB
+	 * @param connectionFrom the connection to PostgreSQL @param fromTable the
+	 * name of the table in PostgreSQL to be migrated @param connectionTo the
+	 * connection to SciDB database @param arrayTo the name of the array in
+	 * SciDB
 	 * 
-	 * @see istc.bigdawg.migration.FromDatabaseToDatabase#migrate(istc.bigdawg.query.
-	 *      ConnectionInfo, java.lang.String, istc.bigdawg.query.ConnectionInfo,
-	 *      java.lang.String)
-	 * 
-	 * 
+	 * @see
+	 * istc.bigdawg.migration.FromDatabaseToDatabase#migrate(istc.bigdawg.query.
+	 * ConnectionInfo, java.lang.String, istc.bigdawg.query.ConnectionInfo,
+	 * java.lang.String
 	 */
 	@Override
-	public MigrationResult migrate(ConnectionInfo connectionFrom, String fromTable, ConnectionInfo connectionTo,
-			String toArray) throws MigrationException {
+	public MigrationResult migrate(ConnectionInfo connectionFrom,
+			String fromTable, ConnectionInfo connectionTo, String toArray)
+					throws MigrationException {
 		log.debug("General data migration: " + this.getClass().getName());
-		if (connectionFrom instanceof PostgreSQLConnectionInfo && connectionTo instanceof SciDBConnectionInfo) {
+		if (connectionFrom instanceof PostgreSQLConnectionInfo
+				&& connectionTo instanceof SciDBConnectionInfo) {
 			try {
-				//TODO
-				// return NetworkSend(new FromPostgresToSciDBImplmentation(),connectionTo.getHost());
-				// IO utils copyLarge - https://commons.apache.org/proper/commons-io/apidocs/org/apache/commons/io/IOUtils.html
-				return new FromPostgresToSciDBImplementation((PostgreSQLConnectionInfo) connectionFrom, fromTable,
-						(SciDBConnectionInfo) connectionTo, toArray).migrateSingleThreadCSV();
-//				return new FromPostgresToSciDBImplementation((PostgreSQLConnectionInfo) connectionFrom, fromTable,
-//						(SciDBConnectionInfo) connectionTo, toArray).migrateBin();
-			} catch (MigrationException e) {
+				this.connectionFrom = (PostgreSQLConnectionInfo) connectionFrom;
+				this.fromTable = fromTable;
+				this.connectionTo = (SciDBConnectionInfo) connectionTo;
+				this.toArray = toArray;
+				/*
+				 * check if the address is not a local host
+				 */
+				String hostname = connectionTo.getHost();
+				log.debug("SciDB hostname: " + hostname);
+				if (!isThisMyIpAddress(InetAddress.getByName(hostname))) {
+					log.debug("Migration will be executed remotely.");
+					Object result = NetworkOut.send(this, hostname);
+					return processResult(result);
+				}
+				/* execute the migration locally */
+				log.debug("Migration will be executed locally.");
+				return execute();
+			} catch (MigrationException | UnknownHostException
+					| NetworkException e) {
 				throw new MigrationException(e.getMessage(), e);
 			}
 		}
 		return null;
+
+	}
+
+	/**
+	 * Execute the migration
+	 * 
+	 * @return
+	 * @throws MigrationException
+	 */
+	public MigrationResult execute() throws MigrationException {
+		if (this.connectionFrom == null || this.fromTable == null
+				|| this.connectionTo == null || this.toArray == null) {
+			throw new MigrationException("The object was not initialized");
+		}
+		FromPostgresToSciDBImplementation migrator = new FromPostgresToSciDBImplementation(
+				connectionFrom, fromTable, connectionTo, toArray);
+		return migrator.migrate();
 	}
 
 	/**
@@ -67,16 +109,18 @@ public class FromPostgresToSciDB implements FromDatabaseToDatabase {
 	 * @throws IOException
 	 * @throws MigrationException
 	 */
-	public static void main(String[] args) throws MigrationException, IOException {
+	public static void main(String[] args)
+			throws MigrationException, IOException {
 		LoggerSetup.setLogging();
-		PostgreSQLConnectionInfo conFrom = new PostgreSQLConnectionInfo("localhost", "5431", "tpch", "postgres",
-				"test");
+		PostgreSQLConnectionInfo conFrom = new PostgreSQLConnectionInfo(
+				"madison", "5431", "test", "postgres", "test");
 		String fromTable = "region";
-		SciDBConnectionInfo conTo = new SciDBConnectionInfo("localhost", "1239", "scidb", "mypassw",
-				"/opt/scidb/14.12/bin/");
+		SciDBConnectionInfo conTo = new SciDBConnectionInfo("madison", "1239",
+				"scidb", "mypassw", "/opt/scidb/14.12/bin/");
 		String toArray = "region2";
 		FromPostgresToSciDB migrator = new FromPostgresToSciDB();
-		migrator.migrate(conFrom, fromTable, conTo, toArray);
+		MigrationResult result = migrator.migrate(conFrom, fromTable, conTo, toArray);
+		System.out.println("migration result: " + result);
 	}
 
 }

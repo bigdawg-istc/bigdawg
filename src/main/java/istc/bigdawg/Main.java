@@ -3,17 +3,16 @@ package istc.bigdawg;
 import java.io.IOException;
 import java.net.URI;
 
-import istc.bigdawg.monitoring.MonitoringTask;
-import istc.bigdawg.utils.IslandsAndCast;
-import jline.internal.Log;
-
 import org.apache.log4j.Logger;
 import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
 import org.glassfish.jersey.server.ResourceConfig;
 
-import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.catalog.CatalogInstance;
+import istc.bigdawg.migration.MigratorTask;
+import istc.bigdawg.monitoring.MonitoringTask;
+import istc.bigdawg.properties.BigDawgConfigProperties;
+import istc.bigdawg.utils.IslandsAndCast;
 
 /**
  * Main class.
@@ -68,12 +67,14 @@ public class Main {
 		final HttpServer server = startServer();
 		MonitoringTask relationalTask = new MonitoringTask(IslandsAndCast.Scope.RELATIONAL.toString());
 		relationalTask.run();
+		MigratorTask migratorTask = new MigratorTask();
 		logger.info("Server started");
 		System.out.println(String.format(
 				"Jersey app started with WADL available at " + "%sapplication.wadl\nHit enter to stop it...",
 				BASE_URI));
 		System.in.read();
 		CatalogInstance.INSTANCE.closeCatalog();
+		migratorTask.close();
 		server.shutdownNow();
 	}
 }

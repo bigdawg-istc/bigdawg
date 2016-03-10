@@ -8,6 +8,8 @@ import java.util.Properties;
 public enum BigDawgConfigProperties {
 	INSTANCE;
 
+	public static final String PROJECT_NAME = "BigDawg";
+
 	private String grizzlyIpAddress;
 	private String grizzlyPort;
 
@@ -45,6 +47,9 @@ public enum BigDawgConfigProperties {
 	private String myriaHost;
 	private String myriaPort;
 	private String myriaContentType;
+
+	private String networkMessagePort;
+	private int networkRequestTimeout;
 
 	private BigDawgConfigProperties() throws AssertionError {
 		Properties prop = new Properties();
@@ -108,6 +113,9 @@ public enum BigDawgConfigProperties {
 		this.scidbTestPassword = prop.getProperty("main.scidb.test.password");
 		this.scidbTestUser = prop.getProperty("main.scidb.test.user");
 		this.scidbTestBinPath = prop.getProperty("main.scidb.test.bin_path");
+
+		this.networkMessagePort = prop.getProperty("main.network.message.port");
+		this.networkRequestTimeout = Integer.valueOf(prop.getProperty("main.network.request.timeout"));
 	}
 
 	/**
@@ -321,6 +329,22 @@ public enum BigDawgConfigProperties {
 	 */
 	public String getScidbTestBinPath() {
 		return scidbTestBinPath;
+	}
+
+	/**
+	 * @return the networkMessagePort
+	 */
+	public String getNetworkMessagePort() {
+		return networkMessagePort;
+	}
+
+	/**
+	 * @return the timeout in ms: how long should we wait for reply (this if for
+	 *         heart beat message to check if a remote machine is up and
+	 *         running)
+	 */
+	public int getNetworkRequestTimeout() {
+		return networkRequestTimeout;
 	}
 
 }

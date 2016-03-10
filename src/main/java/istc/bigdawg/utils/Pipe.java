@@ -3,11 +3,11 @@
  */
 package istc.bigdawg.utils;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.lang3.SystemUtils;
+import org.apache.log4j.Logger;
 
 import istc.bigdawg.exceptions.RunShellException;
 
@@ -23,6 +23,9 @@ import istc.bigdawg.exceptions.RunShellException;
  */
 public enum Pipe {
 	INSTANCE;
+
+	/* log */
+	private static Logger log = Logger.getLogger(Pipe.class);
 
 	/**
 	 * global counter for the pipes - each new pipe has to have a different
@@ -45,9 +48,9 @@ public enum Pipe {
 	 */
 	synchronized public String createAndGetFullName(String pipeName)
 			throws IOException, InterruptedException, RunShellException {
-		String fullName = System.getProperty("user.dir")
-				+ "/src/main/resources/tmp/bigdawg_" + pipeName + "_"
+		String fullName = System.getProperty("user.dir") + "/src/main/resources/tmp/bigdawg_" + pipeName + "_"
 				+ globalCounter.incrementAndGet();
+		log.debug("full path name for the pipe: " + fullName);
 		/* if a test/execution fails then a pipe can still exists */
 		this.deletePipeIfExists(fullName);
 		if (SystemUtils.IS_OS_LINUX || SystemUtils.IS_OS_MAC) {
@@ -56,8 +59,7 @@ public enum Pipe {
 			// debug */
 			RunShell.runShell(new ProcessBuilder("chmod", "a+rw", fullName));
 		} else {
-			throw new RuntimeException(
-					"The platforms (such as Windows, Solaris) are not supported.");
+			throw new RuntimeException("The platforms (such as Windows, Solaris) are not supported.");
 		}
 		/*
 		 * For windows: SystemUtils.IS_OS_WINDOWS_7 or
@@ -78,8 +80,7 @@ public enum Pipe {
 	 *         because it did not exist
 	 * @throws IOException
 	 */
-	synchronized public boolean deletePipeIfExists(String pipeNameFull)
-			throws IOException {
+	synchronized public boolean deletePipeIfExists(String pipeNameFull) throws IOException {
 		return SystemUtilities.deleteFileIfExists(pipeNameFull);
 	}
 

@@ -38,7 +38,9 @@ import istc.bigdawg.utils.StackTrace;
  * 
  * @author Adam Dziedzic
  */
-public class FromPostgresToSciDBImplementation implements MigrationImplementation {
+public class FromPostgresToSciDBImplementation
+		implements MigrationImplementation {
+
 	/* log */
 	private static Logger log = Logger
 			.getLogger(FromPostgresToSciDBImplementation.class);
@@ -158,12 +160,13 @@ public class FromPostgresToSciDBImplementation implements MigrationImplementatio
 			log.info(message);
 			System.out.println(message);
 			return new MigrationResult(extractedRowsCount, null,
-					loadMessage + "No information about number of loaded rows."
+					loadMessage + " No information about number of loaded rows."
 							+ " Result of transformation: "
 							+ transformationMessage,
 					false);
 		} catch (SQLException | UnsupportedTypeException | InterruptedException
-				| ExecutionException | IOException | RunShellException exception) {
+				| ExecutionException | IOException
+				| RunShellException exception) {
 			MigrationException migrationException = handleException(exception,
 					"Migration in binary Format failed. ");
 			throw migrationException;
@@ -228,8 +231,8 @@ public class FromPostgresToSciDBImplementation implements MigrationImplementatio
 					loadMessage + "No information about number of loaded rows.",
 					false);
 		} catch (SQLException | UnsupportedTypeException | ExecutionException
-				| InterruptedException | MigrationException
-				| IOException | RunShellException exception) {
+				| InterruptedException | MigrationException | IOException
+				| RunShellException exception) {
 			MigrationException migrationException = handleException(exception,
 					"Migration in CSV format failed. ");
 			throw migrationException;
@@ -462,12 +465,116 @@ public class FromPostgresToSciDBImplementation implements MigrationImplementatio
 		return new SciDBArrays(newFlatIntermediateArray, toArray);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see istc.bigdawg.migration.MigrationImplementation#migrate()
 	 */
 	@Override
 	public MigrationResult migrate() throws MigrationException {
+		/*
+		 * the CSV migration is used for debugging and development, if you want
+		 * to go much faster then change it to migrateBin() but then the C++
+		 * migrator has to be compiled on each machine where bigdawg is running
+		 */
 		return migrateSingleThreadCSV();
+	}
+
+	/**
+	 * @return the connectionFrom
+	 */
+	public PostgreSQLConnectionInfo getConnectionFrom() {
+		return connectionFrom;
+	}
+
+	/**
+	 * @return the fromTable
+	 */
+	public String getFromTable() {
+		return fromTable;
+	}
+
+	/**
+	 * @return the connectionTo
+	 */
+	public SciDBConnectionInfo getConnectionTo() {
+		return connectionTo;
+	}
+
+	/**
+	 * @return the toArray
+	 */
+	public String getToArray() {
+		return toArray;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.lang.Object#toString()
+	 */
+	@Override
+	public String toString() {
+		return "FromPostgresToSciDBImplementation [connectionFrom="
+				+ connectionFrom + ", fromTable=" + fromTable
+				+ ", connectionTo=" + connectionTo + ", toArray=" + toArray
+				+ "]";
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.lang.Object#hashCode()
+	 */
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result
+				+ ((connectionFrom == null) ? 0 : connectionFrom.hashCode());
+		result = prime * result
+				+ ((connectionTo == null) ? 0 : connectionTo.hashCode());
+		result = prime * result
+				+ ((fromTable == null) ? 0 : fromTable.hashCode());
+		result = prime * result + ((toArray == null) ? 0 : toArray.hashCode());
+		return result;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.lang.Object#equals(java.lang.Object)
+	 */
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		FromPostgresToSciDBImplementation other = (FromPostgresToSciDBImplementation) obj;
+		if (connectionFrom == null) {
+			if (other.connectionFrom != null)
+				return false;
+		} else if (!connectionFrom.equals(other.connectionFrom))
+			return false;
+		if (connectionTo == null) {
+			if (other.connectionTo != null)
+				return false;
+		} else if (!connectionTo.equals(other.connectionTo))
+			return false;
+		if (fromTable == null) {
+			if (other.fromTable != null)
+				return false;
+		} else if (!fromTable.equals(other.fromTable))
+			return false;
+		if (toArray == null) {
+			if (other.toArray != null)
+				return false;
+		} else if (!toArray.equals(other.toArray))
+			return false;
+		return true;
 	}
 
 }
