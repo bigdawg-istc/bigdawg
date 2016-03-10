@@ -95,46 +95,7 @@ public class SQLExpressionUtils {
 		return attributes;
 	}
 	
-	public static void renameAttributes(Expression expr, String originalTableName, String replacement) throws JSQLParserException {
-		
-		SQLExpressionHandler deparser = new SQLExpressionHandler() {
-	        
-			@Override
-			public void visit(Column tableColumn) {
-				if (tableColumn.getTable().getName().equals(originalTableName))
-					tableColumn.getTable().setName(replacement);
-			}
-			
-			@Override
-		    public void visit(Parenthesis parenthesis) {
-		        parenthesis.getExpression().accept(this);
-		    }
-			
-			@Override
-			protected void visitBinaryExpression(BinaryExpression binaryExpression, String operator) {
-		        binaryExpression.getLeftExpression().accept(this);
-		        binaryExpression.getRightExpression().accept(this);
-			}
-			
-			@Override
-		    public void visit(ExpressionList expressionList) {
-		        for (Iterator<Expression> iter = expressionList.getExpressions().iterator(); iter.hasNext();) {
-		            Expression expression = iter.next();
-		            expression.accept(this);
-		        }
-		    }
-			
-			@Override
-			public void visit(Function function) {
-				function.getParameters().accept(this);
-			}
-			
-			
-	    };
-	    
-	    expr.accept(deparser);
-	    
-	}
+	
 	
 	public static void renameAttributes(Expression expr, Set<String> originalTableNameSet, String replacement) throws JSQLParserException {
 		
@@ -142,7 +103,7 @@ public class SQLExpressionUtils {
 	        
 			@Override
 			public void visit(Column tableColumn) {
-				if (originalTableNameSet.contains(tableColumn.getTable().getName()))
+				if (originalTableNameSet == null || originalTableNameSet.contains(tableColumn.getTable().getName()))
 					tableColumn.getTable().setName(replacement);
 			}
 			

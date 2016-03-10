@@ -152,11 +152,22 @@ public class ExecutionNodeFactory {
 	private static OperatorTree buildOperatorSubgraph(Operator op, ConnectionInfo engine, String dest) throws Exception {
 		StringBuilder sb = new StringBuilder();
 		Join joinOp = op.generateSQLStatementForPresentNonJoinSegment(sb);
+		
+		// TODO CHANGE NAME OF JOIN'S CHILDREN 
+		
 		OperatorTree result = new OperatorTree();
-		LocalQueryExecutionNode lqn = new LocalQueryExecutionNode(sb.toString(), engine, dest);
+		
+		//--- TODO WHAT IF op IS A JOIN? SOLUTION PART 1
+		LocalQueryExecutionNode lqn = null;
 
-		result.addVertex(lqn);
-		result.exitPoint = lqn;
+		if (sb.toString().length() > 0) {
+			// this and joinOp == null will not happen at the same time
+			lqn = new LocalQueryExecutionNode(sb.toString(), engine, dest);
+			result.addVertex(lqn);
+			result.exitPoint = lqn;
+		}
+		//--- END OF PART 1/2 OF SOLUTION
+		
 
 		if (joinOp != null) {
 			// Get left and right child operators of joinOp
@@ -197,6 +208,13 @@ public class ExecutionNodeFactory {
 			JoinOperand rightOp = new JoinOperand(engine, rightTable, rightAttribute, shuffleRightJoinQuery);
 			BinaryJoinExecutionNode joinNode = new BinaryJoinExecutionNode(broadcastQuery, engine, joinDestinationTable, leftOp, rightOp, comparator);
 			result.addVertex(joinNode);
+			
+			//--- TODO WHAT IF op IS A JOIN? SOLUTION PART 2/2
+			if (sb.toString().length() == 0) {
+				result.exitPoint = joinNode;
+			}
+			//--- END OF PART 2/2 OF SOLUTION
+			
 
 			OperatorTree leftSubtree = buildOperatorSubgraph(left, engine, leftTable);
 			Graphs.addGraph(result, leftSubtree);

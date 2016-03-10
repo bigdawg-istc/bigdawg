@@ -14,6 +14,7 @@ import istc.bigdawg.packages.SciDBArray;
 import istc.bigdawg.schema.DataObjectAttribute;
 import istc.bigdawg.schema.SQLAttribute;
 import istc.bigdawg.utils.sqlutil.SQLExpressionUtils;
+import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Alias;
 import net.sf.jsqlparser.expression.BinaryExpression;
 import net.sf.jsqlparser.expression.Expression;
@@ -24,6 +25,7 @@ import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.AllColumns;
 import net.sf.jsqlparser.statement.select.AllTableColumns;
+import net.sf.jsqlparser.statement.select.OrderByElement;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.Select;
 import net.sf.jsqlparser.statement.select.SelectBody;
@@ -805,15 +807,44 @@ public class Operator {
 	
 	public Join generateSQLStatementForPresentNonJoinSegment(StringBuilder sb) throws Exception {
 		
-		if ( ! this.getClass().equals(Join.class)) {
-			sb.append(this.generateSQLStringDestOnly(null, true).toString()); 
-		}
-
 		// find the join		
 		Operator child = this;
-		while (child != null && (!child.getClass().equals(Join.class))) {
+		while (child != null && (!child.getClass().equals(Join.class))) 
 			// then there could be one child only
 			child = child.getChildren().get(0);
+		
+		
+		if ( !this.getClass().equals(Join.class) && child != null) {
+			// TODO targeted strike? CURRENTLY WASH EVERYTHING // Set<String> names = child.getDataObjectNames();
+			Select outputSelect 		= this.generateSQLStringDestOnly(null, true);
+			String joinToken 			= ((Join)child).getJoinToken();
+			
+			PlainSelect ps 				= (PlainSelect) outputSelect.getSelectBody();
+			List<OrderByElement> obes 	= ps.getOrderByElements();
+			List<Expression> gbes 		= ps.getGroupByColumnReferences();
+			List<SelectItem> sis 		= ps.getSelectItems();
+			
+			// CHANGE ORDER BY
+			if (obes != null && !obes.isEmpty()) 
+				for (OrderByElement obe : obes) 
+					SQLExpressionUtils.renameAttributes(obe.getExpression(), null, joinToken);
+			
+			// CHANGE GROUP BY and SELECT ITEM
+			if (gbes != null && !gbes.isEmpty()) {
+				for (Expression gbe : gbes) 
+					SQLExpressionUtils.renameAttributes(gbe, null, joinToken);
+				for (SelectItem si : sis) {
+					SelectItemVisitor siv = new SelectItemVisitor() {
+						@Override public void visit(AllColumns allColumns) {}
+						@Override public void visit(AllTableColumns allTableColumns) {}
+						@Override public void visit(SelectExpressionItem selectExpressionItem) {
+							try {
+								SQLExpressionUtils.renameAttributes(selectExpressionItem.getExpression(), null, joinToken);
+							} catch (JSQLParserException e) {e.printStackTrace();}}};
+					si.accept(siv);
+				}
+			}
+			sb.append(outputSelect);
 		}
 		
 		return (Join) child;
