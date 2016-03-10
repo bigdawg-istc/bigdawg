@@ -113,9 +113,9 @@ public class FromPostgresToSciDB
 			throws MigrationException, IOException {
 		LoggerSetup.setLogging();
 		PostgreSQLConnectionInfo conFrom = new PostgreSQLConnectionInfo(
-				"localhost", "5431", "tpch", "postgres", "test");
+				"madison", "5431", "test", "postgres", "test");
 		String fromTable = "region";
-		SciDBConnectionInfo conTo = new SciDBConnectionInfo("localhost", "1239",
+		SciDBConnectionInfo conTo = new SciDBConnectionInfo("madison", "1239",
 				"scidb", "mypassw", "/opt/scidb/14.12/bin/");
 		String toArray = "region2";
 		FromPostgresToSciDB migrator = new FromPostgresToSciDB();

@@ -31,7 +31,7 @@ public class NetworkIn implements Runnable {
 		// Socket to talk to clients
 		ZMQ.Socket responder = context.socket(ZMQ.REP);
 		try {
-			responder.bind("tcp://*:"
+			responder.bind("tcp://" + BigDawgConfigProperties.INSTANCE.getGrizzlyIpAddress() + ":"
 					+ BigDawgConfigProperties.INSTANCE.getNetworkMessagePort());
 
 			while (!Thread.currentThread().isInterrupted()) {
@@ -48,12 +48,10 @@ public class NetworkIn implements Runnable {
 					// Send reply back
 					boolean isSuccess = responder.send(serialize(result), 0);
 					if (!isSuccess) {
-						log.error(
-								"ZeroMQ: The response was not sent properly!");
+						log.error("ZeroMQ: The response was not sent properly!");
 					}
 				} catch (NetworkException ex) {
-					String message = "The request could not be processed properly! "
-							+ ex.getMessage();
+					String message = "The request could not be processed properly! " + ex.getMessage();
 					handleException(message, ex, responder);
 				} catch (Exception ex) {
 					ex.printStackTrace();
@@ -75,8 +73,7 @@ public class NetworkIn implements Runnable {
 	 * @param ex
 	 * @param responder
 	 */
-	private void handleException(String message, Exception ex,
-			ZMQ.Socket responder) {
+	private void handleException(String message, Exception ex, ZMQ.Socket responder) {
 		log.error(message);
 		byte[] exBytes = message.getBytes();
 		/* try to send the exception message */
@@ -88,8 +85,7 @@ public class NetworkIn implements Runnable {
 		}
 		boolean isSuccess = responder.send(exBytes, 0);
 		if (!isSuccess) {
-			log.error(
-					"ZeroMQ: The response (from NetworkException) was not sent properly!");
+			log.error("ZeroMQ: The response (from NetworkException) was not sent properly!");
 		}
 	}
 

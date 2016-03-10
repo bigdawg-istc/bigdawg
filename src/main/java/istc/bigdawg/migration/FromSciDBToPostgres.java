@@ -98,7 +98,7 @@ public class FromSciDBToPostgres
 				"1239", "scidb", "mypassw", "/opt/scidb/14.12/bin/");
 		String arrayFrom = "region2";
 		PostgreSQLConnectionInfo conTo = new PostgreSQLConnectionInfo(
-				"madison", "5431", "test", "postgres", "test");
+				"localhost", "5431", "test", "postgres", "test");
 		String tableTo = "region";
 		MigrationResult result = migrator.migrate(conFrom, arrayFrom, conTo, tableTo);
 		System.out.println(result);
