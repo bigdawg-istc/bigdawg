@@ -94,6 +94,7 @@ class Task implements Runnable {
                 }
             } catch (SQLException | DirectedAcyclicGraph.CycleFoundException | MigrationException e) {
                 e.printStackTrace();
+                throw new RuntimeException(e);
             }
         }
     }

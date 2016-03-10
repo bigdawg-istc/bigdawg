@@ -15,8 +15,6 @@ import org.apache.log4j.Logger;
 import org.postgresql.copy.CopyManager;
 import org.postgresql.core.BaseConnection;
 
-import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
-import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.utils.StackTrace;
 
 /**
