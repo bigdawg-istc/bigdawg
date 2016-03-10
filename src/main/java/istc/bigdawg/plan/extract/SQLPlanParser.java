@@ -114,8 +114,8 @@ public class SQLPlanParser {
 		SQLQueryPlan queryPlan = parser.getSQLQueryPlan();
 		
 		
-//		System.out.println("query: \n"+query);
-//		System.out.println("\n\nXMLString: \n"+xmlString+"\n");
+		System.out.println("query: \n"+query);
+		System.out.println("\n\nXMLString: \n"+xmlString+"\n");
 		
 		// run parser
 		@SuppressWarnings("unused")

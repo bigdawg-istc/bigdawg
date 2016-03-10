@@ -15,6 +15,7 @@ import istc.bigdawg.executor.plan.BinaryJoinExecutionNode;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.query.ConnectionInfoParser;
 import istc.bigdawg.utils.IslandsAndCast.Scope;
+import net.sf.jsqlparser.statement.select.Select;
 
 import org.apache.commons.lang3.StringUtils;
 import org.jgrapht.Graphs;
@@ -173,13 +174,22 @@ public class ExecutionNodeFactory {
 
 			// TODO(ankush): allow for multiple types of engines (not just SQL)
 
-			// TODO(jack): verify this is the correct destination table desired for the JOIN upon completion
+			// (jack): verify this is the correct destination table desired for the JOIN upon completion --- CHECK
 			String joinDestinationTable = joinOp.getJoinToken();
 
-			// TODO(jack): verify this is the correct mechanism for generating a query for computing this join as a regular broadcast join rather than a shuffle join
+			// (jack): verify this is the correct mechanism for generating a query for --- CHECK 
+			// computing this join as a regular broadcast join rather than a shuffle join
 			String broadcastQuery = joinOp.generateSQLSelectIntoStringForExecutionTree(joinDestinationTable);
 
-			// TODO(jack): verify that this mechanism for coming up with the queries to run on each shuffle node makes sense with the Operator model
+			// TODO(jack): verify that this mechanism for coming up with the queries to 
+			// run on each shuffle node makes sense with the Operator model
+			
+			// TODO@Ankush: you mentioned that you want to separate the data depends on bins or betweens, this
+			// might help you: [from Operator.java] generateSQLWithWidthBucket(String widthBucketString, String into, Select srcStatement)
+			// also, what you're doing here is that you want to only replace the `leftTable' and `rightTable' with the result of the 
+			// other Shuffle Join Query, and not bother with other things, right? 
+			
+			
 			String shuffleLeftJoinQuery = joinOp.generateSQLSelectIntoStringForExecutionTree(joinDestinationTable + "_LEFTRESULTS").replace(rightTable, joinDestinationTable + "_RIGHTPARTIAL");
 			String shuffleRightJoinQuery = joinOp.generateSQLSelectIntoStringForExecutionTree(joinDestinationTable + "_RIGHTRESULTS").replace(leftTable, joinDestinationTable + "_LEFTPARTIAL");
 
