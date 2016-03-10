@@ -100,20 +100,20 @@ public class Planner {
 		int choice = 0;
 		
 		// now call the corresponding monitor function to deliver permuted.
-		List<QueryExecutionPlan> qeps = ciqn.getAllQEPs();
-		Monitor.addBenchmarks(qeps, false);
-		QueriesAndPerformanceInformation qnp = Monitor.getBenchmarkPerformance(qeps); 
-
-		// does some magic to pick out the best query, store it to the query plan queue
-
-		long minDuration = Long.MAX_VALUE;
-		for (int i = 0; i < qnp.qList.size(); i++){
-			long currentDuration = qnp.pInfo.get(i);
-			if (currentDuration < minDuration){
-				minDuration = currentDuration;
-				choice = i;
-			}
-		}
+//		List<QueryExecutionPlan> qeps = ciqn.getAllQEPs();
+//		Monitor.addBenchmarks(qeps, false);
+//		QueriesAndPerformanceInformation qnp = Monitor.getBenchmarkPerformance(qeps); 
+//
+//		// does some magic to pick out the best query, store it to the query plan queue
+//
+//		long minDuration = Long.MAX_VALUE;
+//		for (int i = 0; i < qnp.qList.size(); i++){
+//			long currentDuration = qnp.pInfo.get(i);
+//			if (currentDuration < minDuration){
+//				minDuration = currentDuration;
+//				choice = i;
+//			}
+//		}
 		
 		return choice;
 	};

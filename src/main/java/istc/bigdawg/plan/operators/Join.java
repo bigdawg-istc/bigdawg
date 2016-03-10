@@ -17,6 +17,7 @@ import istc.bigdawg.packages.SciDBArray;
 import istc.bigdawg.plan.extract.CommonOutItem;
 import istc.bigdawg.plan.extract.SQLOutItem;
 import istc.bigdawg.schema.DataObjectAttribute;
+import istc.bigdawg.utils.sqlutil.SQLExpressionUtils;
 import istc.bigdawg.utils.sqlutil.SQLUtilities;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.BinaryExpression;
@@ -483,7 +484,42 @@ public class Join extends Operator {
 		
 		if(joinFilter != null) {
 			
-			filterSet.add(joinFilter);
+			String jf = joinFilter; 
+			
+			Expression e = CCJSqlParserUtil.parseCondExpression(joinFilter);
+			List<String> filterRelatedTables = SQLExpressionUtils.getAttributes(e); 
+			
+			List<Operator> treeWalker = new ArrayList<>(this.children);
+			List<Operator> nextGen;
+
+			this.updateObjectAliases(true);
+			
+			while (!treeWalker.isEmpty()) {
+				nextGen = new ArrayList<>();
+				for (Operator o : treeWalker) {
+					if (o.isPruned()) {
+						
+						Set<String> aliasesAndNames = new HashSet<>(o.objectAliases);
+						aliasesAndNames.addAll(o.dataObjects);
+						Set<String> duplicate = new HashSet<>(aliasesAndNames);
+						
+						if (aliasesAndNames.removeAll(filterRelatedTables)){
+							SQLExpressionUtils.renameAttributes(e, duplicate, o.getPruneToken());
+						}
+						
+						
+					} else {
+						nextGen.addAll(o.children);
+					}
+				}
+				
+				treeWalker = nextGen;
+			}
+			
+			jf = e.toString();
+			
+			
+			filterSet.add(jf);
 
 //			// not sure if useful
 //			if(ps.getWhere() != null) {

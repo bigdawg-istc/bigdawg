@@ -215,6 +215,11 @@ public class QEPConstruction {
 			
 			n.printSignature();
 			
+			for (String s : n.getQueryContainer().keySet()){
+				System.out.println("Container select into: "+n.getQueryContainer().get(s).generateSQLSelectIntoString());
+			};
+			
+			
 			System.out.println("All possible remainder permutations: ");
 			int i = 1;
 			for (Operator o : n.getAllRemainders()) {

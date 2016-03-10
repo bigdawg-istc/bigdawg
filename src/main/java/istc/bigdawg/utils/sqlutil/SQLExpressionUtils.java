@@ -18,6 +18,7 @@ import net.sf.jsqlparser.expression.Parenthesis;
 import net.sf.jsqlparser.expression.SignedExpression;
 import net.sf.jsqlparser.expression.TimeValue;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
+import net.sf.jsqlparser.expression.operators.relational.OldOracleJoinBinaryExpression;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
 
@@ -111,6 +112,12 @@ public class SQLExpressionUtils {
 		    public void visit(Parenthesis parenthesis) {
 		        parenthesis.getExpression().accept(this);
 		    }
+			
+			@Override
+			public void visitOldOracleJoinBinaryExpression(OldOracleJoinBinaryExpression expression, String operator) {
+				expression.getLeftExpression().accept(this);
+				expression.getRightExpression().accept(this);
+			}
 			
 			@Override
 			protected void visitBinaryExpression(BinaryExpression binaryExpression, String operator) {

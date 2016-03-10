@@ -8,9 +8,10 @@ import java.util.Set;
 
 import istc.bigdawg.extract.logical.SQLTableExpression;
 import istc.bigdawg.packages.SciDBArray;
-import istc.bigdawg.utils.sqlutil.SQLUtilities;
+import istc.bigdawg.utils.sqlutil.SQLExpressionUtils;
 import net.sf.jsqlparser.expression.Alias;
 import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.PlainSelect;
@@ -19,8 +20,9 @@ import net.sf.jsqlparser.util.SelectUtils;
 
 public class Scan extends Operator {
 	
-	protected String filterExpression = null;
-	protected Set<String> filterSet;
+//	protected String filterExpressionString = null;
+	protected Expression filterExpression = null;
+	protected Set<Expression> filterSet;
 	protected String srcTable;
 	
 	protected String tableAlias;  //may be query-specific, need to derive it here
@@ -39,9 +41,9 @@ public class Scan extends Operator {
 		}
 		tableAlias = parameters.get("Alias");
 		
-		if(parameters.get("Filter") != null) {
-			filterExpression = SQLUtilities.parseString(parameters.get("Filter"));
-			filterSet = new HashSet<String>();
+		if (parameters.get("Filter") != null) {
+			filterExpression = CCJSqlParserUtil.parseCondExpression(parameters.get("Filter"));
+			filterSet = new HashSet<Expression>();
 			filterSet.add(filterExpression);
 		}
 		
@@ -70,9 +72,13 @@ public class Scan extends Operator {
 		tableAlias = parameters.get("Alias");
 		
 		if(parameters.get("Filter") != null) {
-			filterExpression = SQLUtilities.parseString(parameters.get("Filter"));
-			filterSet = new HashSet<String>();
+			
+			filterExpression = CCJSqlParserUtil.parseCondExpression(parameters.get("Filter"));
+			filterSet = new HashSet<Expression>();
 			filterSet.add(filterExpression);
+//			filterExpressionString = SQLUtilities.parseString(parameters.get("Filter"));
+//			filterSet = new HashSet<String>();
+//			filterSet.add(filterExpressionString);
 		}
 		
 		table = new Table(srcTable); // new one to accommodate aliasing
@@ -90,14 +96,15 @@ public class Scan extends Operator {
 		super(o, addChild);
 		Scan sc = (Scan) o;
 		
-		if (sc.filterExpression != null) this.filterExpression = new String(sc.filterExpression);
+		if (sc.filterExpression != null) 
+			this.filterExpression = CCJSqlParserUtil.parseCondExpression(sc.filterExpression.toString());
 		this.srcTable = new String(sc.srcTable);
 		this.tableAlias = new String(sc.tableAlias);
 
 		if (sc.filterSet != null) {
 			this.filterSet = new HashSet<>();
-			for (String s : sc.filterSet) {
-				this.filterSet.add(new String(s));
+			for (Expression s : sc.filterSet) {
+				this.filterSet.add(CCJSqlParserUtil.parseCondExpression(s.toString()));
 			}
 		}
 		this.table = new Table();
@@ -125,32 +132,30 @@ public class Scan extends Operator {
 			dstStatement = SelectUtils.buildSelectFromTable(table);
 		}
 		
-		if(filterExpression != null && !isPruned) {
+		if (filterExpression != null && !isPruned()) { // used to have a !isPruned;
 			PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
 			
+			Expression e = null; 
 			if(ps.getWhere() != null) {
-				filterExpression = "";
-				for (String s : filterSet) {
-					if (filterExpression.equals("")) {
-						filterExpression = s;
+				for (Expression s : filterSet) {
+					if (e == null) {
+						e = s;
 					} else {
-						filterExpression = filterExpression + " AND " + s;
+						e = new AndExpression(e, s); 
 					}
 				}
+			} else {
+				e = filterExpression;
 			}
 			
 			try {
-				Expression where = 	CCJSqlParserUtil.parseCondExpression(filterExpression);
+				Expression where = 	e;
 				ps.setWhere(where);
-			} catch (Exception e) {
-				System.out.println(filterExpression.toString());
+			} catch (Exception ex) {
+				ex.printStackTrace();
+				System.out.println("exception: "+filterExpression.toString());
 			}
-			
-			
-
 		}
-		
-
 		return dstStatement;
 
 		

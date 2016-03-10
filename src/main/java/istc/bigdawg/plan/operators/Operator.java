@@ -438,7 +438,10 @@ public class Operator {
 	private Select prepareForSQLGeneration(Select srcStatement) throws Exception {
 
 		clearJoinReservedObjects();
+		boolean originalPruneStatus = this.isPruned();
+		this.prune(false);
 		Select dstStatement  = this.generateSQLStringDestOnly(null, false);
+		this.prune(originalPruneStatus);
 		
 		// iterate over out schema and add it to select clause
 		HashMap<String, SelectItem> selects = new HashMap<String, SelectItem>();
@@ -684,47 +687,6 @@ public class Operator {
 		return "Unimplemented: "+this.getClass().toString();
 	}
 	
-//	public void updateOutItems() throws Exception {
-//		
-//		List<Operator> treeWalker;
-//		for (String n : outSchema.keySet()) {
-//			
-//			treeWalker = children;
-//			boolean found = false;
-//			Expression e = null;
-//			if (outSchema.get(n).getExpressionString() == null) 
-//				e = CCJSqlParserUtil.parseExpression(n);
-//			else 
-//				e = CCJSqlParserUtil.parseExpression(outSchema.get(n).getExpressionString());
-//			
-//			while (treeWalker.size() > 0 && (!found)) {
-//				List<Operator> nextGeneration = new ArrayList<>();
-//				
-//				for (Operator o : treeWalker) {
-//					if (o.isPruned()) {
-//						
-//						if (e instanceof Column) {
-//							
-//							Column c = (Column)e; // TODO
-//							
-//							if (o.getOutSchema().containsKey(c.getFullyQualifiedName())) {
-//								c.setTable(new Table(o.getPruneToken()));
-//								found = true;
-//								break;
-//							}
-//							
-//						} else 
-//							throw new Exception("Operator: OutItem expr class: "+e.getClass().toString()+"; e: "+e.toString());
-//						
-//					} else {
-//						nextGeneration.addAll(o.children);
-//					}
-//				}
-//				treeWalker = nextGeneration;
-//			}
-//		}
-//	}
-//	
 	public void updateObjectAliases(boolean lazy) {
 		
 		if (lazy && this.objectAliases != null)
@@ -849,4 +811,5 @@ public class Operator {
 		
 		return (Join) child;
 	}
+	
 }
