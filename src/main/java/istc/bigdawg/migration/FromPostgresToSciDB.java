@@ -71,7 +71,7 @@ public class FromPostgresToSciDB
 				 */
 				String hostname = connectionTo.getHost();
 				log.debug("SciDB hostname: " + hostname);
-				if (!isThisMyIpAddress(InetAddress.getByName(hostname))) {
+				if (isThisMyIpAddress(InetAddress.getByName(hostname))) {
 					log.debug("Migration will be executed remotely.");
 					Object result = NetworkOut.send(this, hostname);
 					return processResult(result);
@@ -112,10 +112,12 @@ public class FromPostgresToSciDB
 	public static void main(String[] args)
 			throws MigrationException, IOException {
 		LoggerSetup.setLogging();
+//		PostgreSQLConnectionInfo conFrom = new PostgreSQLConnectionInfo(
+//				"205.208.123.58", "5431", "test", "postgres", "test");
 		PostgreSQLConnectionInfo conFrom = new PostgreSQLConnectionInfo(
-				"madison", "5431", "test", "postgres", "test");
+				"localhost", "5431", "test", "postgres", "test");
 		String fromTable = "region";
-		SciDBConnectionInfo conTo = new SciDBConnectionInfo("madison", "1239",
+		SciDBConnectionInfo conTo = new SciDBConnectionInfo("205.208.123.58", "1239",
 				"scidb", "mypassw", "/opt/scidb/14.12/bin/");
 		String toArray = "region2";
 		FromPostgresToSciDB migrator = new FromPostgresToSciDB();

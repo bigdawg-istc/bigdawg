@@ -105,11 +105,11 @@
 		</dependency>
 
 		<dependency>
-			<groupId>scidb</groupId>
-			<artifactId>org.scidb.jdbc</artifactId>
+			<groupId>org.scidb.jdbc</groupId>
+			<artifactId>scidb</artifactId>
 			<version>1.0</version>
-			<scope>system</scope>
-			<systemPath>${project.basedir}/src/main/resources/org.scidb.jdbc-1.0.jar</systemPath>
+<!-- 			<scope>system</scope> -->
+<!-- 			<systemPath>${project.basedir}/src/main/resources/org.scidb.jdbc-1.0.jar</systemPath> -->
 		</dependency>
 
 
@@ -150,13 +150,10 @@
 			<type>test-jar</type>
 		</dependency>
 
-
 		<dependency>
-			<groupId>RTED</groupId>
-			<artifactId>RTED</artifactId>
+			<groupId>rted</groupId>
+			<artifactId>rted</artifactId>
 			<version>1.2</version>
-			<scope>system</scope>
-			<systemPath>${project.basedir}/src/main/resources/RTED_v1.2.jar</systemPath>
 		</dependency>
 
 		<!-- JeroMQ Pure Java implementation of libzmq (https://github.com/zeromq/jeromq) -->
@@ -180,6 +177,11 @@
 		<repository>
 			<id>neo4j-public</id>
 			<url>http://m2.neo4j.org/content/groups/public</url>
+		</repository>
+		<repository>
+    		<id>in-project</id>
+    		<name>in-project-maven-repository</name>
+    		<url>file://${project.basedir}/src/main/resources/mvn-repo/</url>
 		</repository>
 	</repositories>
 
@@ -216,6 +218,7 @@
 						<filtering>true</filtering>
 						<includes>
 							<include>*.properties</include>
+							<include>*.jar</include>
 						</includes>
 					</resource>
 				</resources>

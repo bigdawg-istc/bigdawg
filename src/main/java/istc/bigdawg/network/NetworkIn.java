@@ -31,8 +31,10 @@ public class NetworkIn implements Runnable {
 		// Socket to talk to clients
 		ZMQ.Socket responder = context.socket(ZMQ.REP);
 		try {
-			responder.bind("tcp://" + BigDawgConfigProperties.INSTANCE.getGrizzlyIpAddress() + ":"
-					+ BigDawgConfigProperties.INSTANCE.getNetworkMessagePort());
+			String fullAddress = "tcp://" + BigDawgConfigProperties.INSTANCE.getGrizzlyIpAddress() + ":"
+					+ BigDawgConfigProperties.INSTANCE.getNetworkMessagePort();
+			log.debug(fullAddress);
+			responder.bind(fullAddress);
 
 			while (!Thread.currentThread().isInterrupted()) {
 				// Wait for next request from the client

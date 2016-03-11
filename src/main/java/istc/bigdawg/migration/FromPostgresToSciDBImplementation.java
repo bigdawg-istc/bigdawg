@@ -398,7 +398,7 @@ public class FromPostgresToSciDBImplementation
 		createArrayStringBuf.deleteCharAt(createArrayStringBuf.length() - 1);
 		/* " r_regionkey:int64,r_name:string,r_comment:string> );" */
 		/* this is by default 1 mln cells in a chunk */
-		createArrayStringBuf.append("> [i=0:*,1000000,0]");
+		createArrayStringBuf.append("> [flat_dimension=0:*,1000000,0]");
 		SciDBHandler handler = new SciDBHandler(connectionTo);
 		handler.executeStatement(createArrayStringBuf.toString());
 		handler.commit();
