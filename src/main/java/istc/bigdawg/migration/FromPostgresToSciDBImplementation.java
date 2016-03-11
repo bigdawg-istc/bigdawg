@@ -228,7 +228,7 @@ public class FromPostgresToSciDBImplementation
 					+ (endTimeMigration - startTimeMigration);
 			log.info(message);
 			return new MigrationResult(extractedRowsCount, null,
-					loadMessage + "No information about number of loaded rows.",
+					loadMessage + " No information about number of loaded rows.",
 					false);
 		} catch (SQLException | UnsupportedTypeException | ExecutionException
 				| InterruptedException | MigrationException | IOException
