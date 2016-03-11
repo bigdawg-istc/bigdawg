@@ -13,6 +13,7 @@ public enum BigDawgConfigProperties {
 	private String grizzlyIpAddress;
 	private String grizzlyPort;
 
+	private int postgresSchemaServerDBID;
 	private String postgreSQLURL;
 	private String postgreSQLUser;
 	private String postgreSQLPassword;
@@ -29,6 +30,7 @@ public enum BigDawgConfigProperties {
 	private String accumuloUser;
 	private String accumuloPasswordToken;
 
+	private int scidbSchemaServerDBID;
 	private String scidbHostname;
 	private String scidbPort;
 	private String scidbUser;
@@ -73,6 +75,7 @@ public enum BigDawgConfigProperties {
 		this.grizzlyIpAddress = prop.getProperty("main.grizzly.ipaddress");
 		this.grizzlyPort = prop.getProperty("main.grizzly.port");
 
+		this.postgresSchemaServerDBID = Integer.parseInt(prop.getProperty("main.postgresql.dbid.schema"));
 		this.postgreSQLURL = prop.getProperty("main.postgresql.url");
 		this.postgreSQLUser = prop.getProperty("main.postgresql.user");
 		this.postgreSQLPassword = prop.getProperty("main.postgresql.password");
@@ -102,6 +105,7 @@ public enum BigDawgConfigProperties {
 		this.myriaPort = prop.getProperty("main.myria.port");
 		this.myriaContentType = prop.getProperty("main.myria.content.type");
 
+		this.scidbSchemaServerDBID = Integer.parseInt(prop.getProperty("main.scidb.dbid.schema"));
 		this.scidbHostname = prop.getProperty("main.scidb.hostname");
 		this.scidbPort = prop.getProperty("main.scidb.port");
 		this.scidbPassword = prop.getProperty("main.scidb.password");
@@ -191,6 +195,14 @@ public enum BigDawgConfigProperties {
 	public String getPostgreSQLURL() {
 		return postgreSQLURL;
 	}
+	
+	public int getPostgresSchemaServerDBID() {
+		return postgresSchemaServerDBID;
+	}
+	
+	public int getSciDBSchemaServerDBID() {
+		return scidbSchemaServerDBID;
+	}
 
 	/**
 	 * @return the grizzlyIpAddress
@@ -260,6 +272,8 @@ public enum BigDawgConfigProperties {
 	public String getScidbPort() {
 		return scidbPort;
 	}
+	
+	
 
 	/**
 	 * @return the postgreSQLTestHost

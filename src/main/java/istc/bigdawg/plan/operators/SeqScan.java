@@ -11,6 +11,7 @@ import istc.bigdawg.plan.extract.CommonOutItem;
 import istc.bigdawg.plan.extract.SQLOutItem;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
+import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.schema.DataObject;
 import istc.bigdawg.schema.DataObjectAttribute;
 import istc.bigdawg.schema.SQLAttribute;
@@ -19,7 +20,7 @@ import net.sf.jsqlparser.statement.create.table.CreateTable;
 
 public class SeqScan extends Scan {
 
-	
+	private static int defaultSchemaServerDBID = BigDawgConfigProperties.INSTANCE.getPostgresSchemaServerDBID();
 	
 	private String operatorName = null;
 	
@@ -42,7 +43,7 @@ public class SeqScan extends Scan {
 //		System.out.println(schemaAndName);
 		
 		if (super.srcTable.toLowerCase().startsWith("bigdawgtag_")) {
-			dbid = 3;
+			dbid = defaultSchemaServerDBID;
 		} else 
 			dbid = CatalogViewer.getDbsOfObject(schemaAndName, "postgres").get(0);
 		

@@ -24,6 +24,7 @@ import istc.bigdawg.plan.operators.Operator;
 import istc.bigdawg.plan.operators.SeqScan;
 import istc.bigdawg.plan.operators.Sort;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
+import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.query.DBHandler;
 import istc.bigdawg.scidb.SciDBHandler;
@@ -56,8 +57,8 @@ public class CrossIslandQueryNode {
 	
 	private Set<String> joinPredicates;
 	
-	private static final int  psqlSchemaHandlerDBID = 3;
-	private static final int  scidbSchemaHandlerDBID = 6;
+	private static final int  psqlSchemaHandlerDBID = BigDawgConfigProperties.INSTANCE.getPostgresSchemaServerDBID();
+	private static final int  scidbSchemaHandlerDBID = BigDawgConfigProperties.INSTANCE.getSciDBSchemaServerDBID();
 	
 	
 	public CrossIslandQueryNode (IslandsAndCast.Scope scope, String islandQuery, String name, Map<String, Operator> rootsForSchemas) throws Exception {
