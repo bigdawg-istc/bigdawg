@@ -12,6 +12,7 @@ import java.util.concurrent.FutureTask;
 
 import org.apache.log4j.Logger;
 
+import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.utils.RunShell;
 import istc.bigdawg.utils.StackTrace;
 
@@ -35,6 +36,9 @@ public class TransformBinExecutor implements Callable<Long> {
 	 */
 	private final String binFormat;
 
+	/** the default value for the path to the cmigrator for development */
+	private final static String DEV_CMIGRATOR_PATH = "dev";
+
 	/**
 	 * the type of migration: specify between which databases it should be
 	 * executed
@@ -42,13 +46,20 @@ public class TransformBinExecutor implements Callable<Long> {
 	private final TYPE type;
 
 	public enum TYPE {
-		FromPostgresToSciDB(
-				"src/main/cmigrator/postgres2scidb"), FromSciDBToPostgres(
-						"src/main/cmigrator/scidb2postgres");
+		/** the type is the name of the c++ program which executes a given migration type */
+		FromPostgresToSciDB("postgres2scidb"), FromSciDBToPostgres("scidb2postgres");
+		
+		/** this represents the full path to the c++ migrator */
 		private final String path;
 
-		private TYPE(String path) {
-			this.path = path;
+		private TYPE(String type) {
+			String cmigratorPath = BigDawgConfigProperties.INSTANCE.getCmigratorDir();
+			String path = "src/main/cmigrator";
+			if (!cmigratorPath.equals(DEV_CMIGRATOR_PATH)) {
+				path = cmigratorPath;
+			}
+			this.path = path + "/" + type;
+			log.debug("cmigrator path: " + this.path);
 		}
 
 		public String toString() {
@@ -64,8 +75,7 @@ public class TransformBinExecutor implements Callable<Long> {
 	 *            the format/types of the attributes, for example:
 	 *            types=int32_t,int32_t:null,double,double:null,string,string
 	 */
-	public TransformBinExecutor(String inputBinPath, String outputBinPath,
-			String binFormat, TYPE type) {
+	public TransformBinExecutor(String inputBinPath, String outputBinPath, String binFormat, TYPE type) {
 		this.inputBinPath = inputBinPath;
 		this.outputBinPath = outputBinPath;
 		this.binFormat = binFormat;
@@ -79,16 +89,14 @@ public class TransformBinExecutor implements Callable<Long> {
 	 */
 	public Long call() {
 		try {
-			log.debug("transformation command: " + type.toString() + "-i"
-					+ inputBinPath + "-o" + outputBinPath + "-f" + binFormat);
+			log.debug("transformation command: " + type.toString() + "-i" + inputBinPath + "-o" + outputBinPath + "-f"
+					+ binFormat);
 			return (long) RunShell.runShellReturnExitValue(
-					new ProcessBuilder(type.toString(), "-i", inputBinPath,
-							"-o", outputBinPath, "-f", binFormat));
+					new ProcessBuilder(type.toString(), "-i", inputBinPath, "-o", outputBinPath, "-f", binFormat));
 		} catch (IOException | InterruptedException ex) {
 			ex.printStackTrace();
-			log.error("The binary transformation " + type.name() + " failed: "
-					+ ex.getMessage() + " " + StackTrace.getFullStackTrace(ex),
-					ex);
+			log.error("The binary transformation " + type.name() + " failed: " + ex.getMessage() + " "
+					+ StackTrace.getFullStackTrace(ex), ex);
 			return -1L;
 		}
 	}
@@ -98,8 +106,7 @@ public class TransformBinExecutor implements Callable<Long> {
 	 * @throws ExecutionException
 	 * @throws InterruptedException
 	 */
-	public static void main(String[] args)
-			throws InterruptedException, ExecutionException {
+	public static void main(String[] args) throws InterruptedException, ExecutionException {
 		ExecutorService executor = null;
 		try {
 			// TransformFromPostgresBinToSciDBBinExecutor transformExecutor =
@@ -108,16 +115,12 @@ public class TransformBinExecutor implements Callable<Long> {
 			// "src/main/cmigrator/data/toSciDBIntDoubleString.bin",
 			// "int32_t,int32_t null,double,double null,string,string null");
 			executor = Executors.newSingleThreadExecutor();
-			TransformBinExecutor transformExecutor = new TransformBinExecutor(
-					"/home/adam/data/region_postgres.bin",
-					"/home/adam/data/region_scidb.bin",
-					"int64 null,string,string", TYPE.FromPostgresToSciDB);
-			FutureTask<Long> transformTask = new FutureTask<Long>(
-					transformExecutor);
+			TransformBinExecutor transformExecutor = new TransformBinExecutor("/home/adam/data/region_postgres.bin",
+					"/home/adam/data/region_scidb.bin", "int64 null,string,string", TYPE.FromPostgresToSciDB);
+			FutureTask<Long> transformTask = new FutureTask<Long>(transformExecutor);
 			executor.submit(transformTask);
 			long exitValue = transformTask.get();
-			System.out.println(
-					"Exit value postgres2scidb exitValue: " + exitValue);
+			System.out.println("Exit value postgres2scidb exitValue: " + exitValue);
 		} finally {
 			if (executor != null && !executor.isShutdown()) {
 				executor.shutdownNow();

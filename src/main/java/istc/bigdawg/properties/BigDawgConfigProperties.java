@@ -54,6 +54,7 @@ public enum BigDawgConfigProperties {
 	private int networkRequestTimeout;
 
 	private String migratorTempDir;
+	private String cmigratorDir;
 
 	private BigDawgConfigProperties() throws AssertionError {
 		Properties prop = new Properties();
@@ -115,6 +116,7 @@ public enum BigDawgConfigProperties {
 		this.networkMessagePort = prop.getProperty("main.network.message.port");
 		this.networkRequestTimeout = Integer.valueOf(prop.getProperty("main.network.request.timeout"));
 		this.migratorTempDir = prop.getProperty("main.migrator.temp.dir");
+		this.cmigratorDir = prop.getProperty("main.cmigrator.dir");
 	}
 
 	/**
@@ -358,6 +360,10 @@ public enum BigDawgConfigProperties {
 	 */
 	public String getMigratorTempDir() {
 		return migratorTempDir;
+	}
+
+	public String getCmigratorDir() {
+		return cmigratorDir;
 	}
 
 }
