@@ -104,9 +104,7 @@ public class CrossIslandQueryNode {
 		populateQueryContainer();
 		
 		
-//		Signature s = new Signature(rawQueryString, scope, newNode.getRemainder(0), newNode.getQueryContainer());
 		this.signature = new Signature(islandQuery, scope, getRemainder(0), getQueryContainer());
-		
 		
 		
 		// removing temporary schema plates
@@ -145,8 +143,6 @@ public class CrossIslandQueryNode {
 		// use perm to pick a specific permutation
 		if (perm >= remainderPermutations.size()) throw new Exception ("Permutation reference index out of bound");
 		
-		
-//		Select srcStmt = (Select) CCJSqlParserUtil.parse(query);
 		QueryExecutionPlan qep = new QueryExecutionPlan(scope); 
 		ExecutionNodeFactory.addNodesAndEdgesWithJoinHandling(qep, remainderPermutations.get(perm), remainderLoc, queryContainer); 
 //		ExecutionNodeFactory.addNodesAndEdgesNaive( qep, remainderPermutations.get(perm), remainderLoc, queryContainer);
@@ -157,10 +153,6 @@ public class CrossIslandQueryNode {
 	public List<QueryExecutionPlan> getAllQEPs() throws Exception {
 		
 		List<QueryExecutionPlan> qepl = new ArrayList<>();
-		
-		// after permutation, the same SELECT this might not work
-		// but we'll see
-//		Select srcStmt = (Select) CCJSqlParserUtil.parse(query);
 		
 		for (int i = 0; i < remainderPermutations.size(); i++ ){
 			QueryExecutionPlan qep = new QueryExecutionPlan(scope); 
@@ -200,8 +192,6 @@ public class CrossIslandQueryNode {
 		
 		
 		originalMap = CatalogViewer.getDBMappingByObj(objs);
-//		originalMap.putAll(m);
-		
 		
 		// traverse add remainder
 		remainderLoc = traverse(root); // this populated everything
@@ -210,25 +200,10 @@ public class CrossIslandQueryNode {
 		
 		
 		if (remainderLoc == null && root.getDataObjectNames().size() > 1) {
-
-			
-			// Permutation happens here! it should use remainderPermutaions.get(0) as a basis and generate all other possible ones.
-			// 1. support WITH ; 
-			// 2. CHANGE SORT RELATED CODE
-			//
-			// Permutations are done according to the structure of remainders.
-			// if remainderLoc is not null, then there is only one permutation
-			// otherwise, one should be able to specify an index to construct a QEP
-			
-			// get on expressions for every join;
-			// figure out possible relative ordering -- which one must be presented first and which one later --- pruning?
-			// :: joinPredicates
-			// convert joinPredicates into a set of rules? TODO
-			// convert into 
-			
 			
 			List<Operator> permResult = getPermutatedOperatorsWithBlock(root, jp);
 			
+//			// debug
 //			System.out.println("\n\n\nResult of Permutation: ");
 //			int i = 1;
 //			for (Operator o : permResult) {
@@ -370,23 +345,15 @@ public class CrossIslandQueryNode {
 							} else if (increment) {
 								increment = incrementStartingPoints(id, pos, blockerTrees, startingPoints);
 							}
-							
 						}
 						
 						extraction.add(dupe);
-						
 					}
-					
 				}
 			} else {
-				// it is as is
 				extraction.addAll(permutationsOfLeaves);
 			}
-			
-			
 		}
-		
-		
 		return extraction;
 	}
 	
@@ -416,12 +383,9 @@ public class CrossIslandQueryNode {
 		
 
 		if (len == 1) {
-			// the case of one
 			extraction.add(ops.get(0));
-			
-			System.out.println("---------- case of one: "+ops.get(0).getOutSchema().toString());
-			
-			
+//			// debug
+//			System.out.println("---------- case of one: "+ops.get(0).getOutSchema().toString());
 			return extraction;
 			
 		} else if (len == 2) {
@@ -440,10 +404,7 @@ public class CrossIslandQueryNode {
 		int k0;
 		int k1;
 		for (int i = 1; i < len ; i ++ ) {
-			// i+1, start at 2, is the permutation tuples we're working on
 			newEntry = new ArrayList<Operator>();
-			
-			
 
 			for (j0 = i - 1; j0 >= 0 ; j0 --) {
 				// j0 and j1 are the two to be joined
@@ -471,9 +432,6 @@ public class CrossIslandQueryNode {
 //									System.out.printf("--->>>>>>> equal %d. ", l);
 //								}
 								
-								// condition being, the right does not have entry, or that it does and contains some on the left
-								// if the left is also a join, 
-								
 								addNewEntry(k0o, k1o, joinPredConnections, newEntry);
 								 
 							}
@@ -496,25 +454,18 @@ public class CrossIslandQueryNode {
 							
 							if (isDisj(k0o, k1o)) {
 								
-								// TODO this is where you check conditions
-								// well, currently we do not prune search space
-								
 //								// debug
 //								if (i == len-1) {
 //									l ++;
 //									System.out.printf("--->>>>>>> not %d. ", l);
 //								}
-								
 								addNewEntry(k0o, k1o, joinPredConnections, newEntry);
-								
 							}
 						}
 					}
 				}
 			}
-			
 			permutations.add(newEntry);
-			
 		}
 		
 		extraction.addAll(permutations.get(permutations.size()-1));
@@ -565,9 +516,6 @@ public class CrossIslandQueryNode {
 		
 		o1ns.retainAll(jc.keySet());
 		
-//		System.out.println("\n\n\nSTARTS HERE!!!\n");
-//		
-		
 		Operator o1Temp = o1;
 		Operator o2Temp = o2;
 		
@@ -581,33 +529,21 @@ public class CrossIslandQueryNode {
 			
 			Set<String> ks = jc.get(s).keySet();
 			
-//			System.out.printf("old o2ns: %s\n", o2ns);
-			
 			o2ns.retainAll(ks);
-			
-			
-//			System.out.printf("s: %s;     keySet: %s;       \nget: %s;      o2ns: %s\n", s, ks, jc.get(s), o2ns);
 			
 			if (!o2ns.isEmpty()) {
 				
 				
 				String key = o2ns.iterator().next();
 				
-//				System.out.println("key: "+key);
-				
-				
 				while (used.contains(key)) {
 					key = o2ns.iterator().next();
-//					System.out.println("key: "+key);
 				}
 				
 				String pred = jc.get(s).get(key);
 				jc.get(s).remove(key);
 				jc.get(key).remove(s);
 				
-//				System.out.println("\n\nENDS HERE, MATCH!!!");
-//				System.out.printf("o1 data and o2 data: %s     %s \n\n\n", o1.getDataObjectNames(), o2.getDataObjectNames());
-//				
 				// this is the final checking of whether we need to prune it
 				if (o1Temp instanceof Join && (!(o2Temp instanceof Join)) 
 						&& (((Join) o1Temp).getCurrentJoinPredicate() == null)) {
@@ -622,10 +558,6 @@ public class CrossIslandQueryNode {
 			o2ns = new HashSet<>(o2nsOriginal);
 		}
 		
-		
-//		System.out.println();
-//		System.out.println("\n\nENDS HERE, NO MATCH!!!");
-//		System.out.printf("o1 data and o2 data: %s     %s \n\n\n", o1.getDataObjectNames(), o2.getDataObjectNames());
 		return new Join(o1Temp, o2Temp, jt, null);
 	}
 	
@@ -656,8 +588,6 @@ public class CrossIslandQueryNode {
 			if (!result.containsKey(temp1))
 				result.put(temp1, new HashMap<>());
 			
-//			String connector = s.substring(spl.get(0).length(), s.length()-spl.get(1).length());
-			
 			result.get(temp0).put(temp1, s);
 			result.get(temp1).put(temp0, s);
 		}
@@ -676,7 +606,7 @@ public class CrossIslandQueryNode {
 		// seqscan: must be in the same server
 		// join: if both from the same node then yes; otherwise part of the stem
 		// sort: BLOCKING
-		// xx aggregate: BLOCKING
+		// aggregate: BLOCKING
 		// xx distinct, aggregate, window aggregate: BLOCKING, if they are on the same node, then give as is; otherwise it's on the stem
 		// xx With: check the parent node
 		
@@ -691,9 +621,6 @@ public class CrossIslandQueryNode {
 		ArrayList<String> ret = null;
 		
 		if (node instanceof SeqScan) {
-			
-//			System.out.println(((SeqScan) node).getTable().getFullyQualifiedName());
-//			System.out.println(originalMap);
 			
 			if (((SeqScan) node).getTable().getFullyQualifiedName().toLowerCase().startsWith("bigdawgtag_")){
 				ret = new ArrayList<String>();
@@ -764,7 +691,6 @@ public class CrossIslandQueryNode {
 		
 		
 		if (node.isQueryRoot()) {
-			// this status is set at SQLQueryPlan
 			remainderPermutations.add(node);
 		}
 		
@@ -775,22 +701,15 @@ public class CrossIslandQueryNode {
 		// prune c
 		c.prune(true);
 		
-//		Map<String, ConnectionInfo> cis = new HashMap<>();
-		
 		ConnectionInfo ci = null;
 		String dbid = null;
-		
-//		System.out.println("traverse result: "+traverseResult);
 		
 		if (traverseResult.size() > 1)
 			throw new Exception("traverseResult size greater than 1");
 		
 		for (String s : traverseResult) {
 			
-//			System.out.println("dbid: "+s);
-			
 			if (scope.equals(Scope.RELATIONAL)) {
-//				cis.put(s, CatalogViewer.getPSQLConnectionInfo(Integer.parseInt(s)));
 				ci = CatalogViewer.getPSQLConnectionInfo(Integer.parseInt(s));
 				dbid = s;
 			} else if (scope.equals(Scope.ARRAY)) {
@@ -800,9 +719,7 @@ public class CrossIslandQueryNode {
 				throw new Exception("Unsupported island code: "+scope.toString());
 		}
 		
-		
 		queryContainer.put(c.getPruneToken(), new QueryContainerForCommonDatabase(ci, dbid, c, c.getPruneToken()));
-		// ^ container added prior to root traverse
 	}
 	
 	public Set<String> getChildren() {

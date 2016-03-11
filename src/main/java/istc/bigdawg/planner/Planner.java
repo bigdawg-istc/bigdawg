@@ -2,7 +2,6 @@ package istc.bigdawg.planner;
 
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 import javax.ws.rs.core.Response;
 
@@ -10,28 +9,14 @@ import org.apache.log4j.Logger;
 
 import istc.bigdawg.executor.Executor;
 import istc.bigdawg.executor.plan.QueryExecutionPlan;
-import istc.bigdawg.monitoring.Monitor;
 import istc.bigdawg.packages.CrossIslandQueryNode;
 import istc.bigdawg.packages.CrossIslandQueryPlan;
-import istc.bigdawg.packages.QueriesAndPerformanceInformation;
-import istc.bigdawg.packages.QueryContainerForCommonDatabase;
 import istc.bigdawg.parsers.UserQueryParser;
-import istc.bigdawg.plan.operators.Join;
-import istc.bigdawg.plan.operators.Operator;
-import istc.bigdawg.plan.operators.SeqScan;
 import istc.bigdawg.postgresql.PostgreSQLHandler.QueryResult;
-import istc.bigdawg.schema.SQLDatabaseSingleton;
-import istc.bigdawg.utils.IslandsAndCast.Scope;
-import net.sf.jsqlparser.parser.CCJSqlParserUtil;
-import net.sf.jsqlparser.statement.select.Select;
 
 public class Planner {
 
 	private static Logger logger = Logger.getLogger(Planner.class.getName());
-//	private static LinkedHashMap<Integer, List<String>> queryQueue = new LinkedHashMap<>(); // queries
-//																									// to
-//																									// be
-//																									// executed
 	private static Integer maxSerial = 0;
 
 
@@ -76,14 +61,7 @@ public class Planner {
 		QueryExecutionPlan qep = ciqp.getRoot().getQEP(choice);
 		
 		
-		
-//		System.out.println("QueryExecutionPlan:: ");
-//		for (ExecutionNode v : qep.vertexSet()) {
-//			System.out.print(v.getTableName()+"\t\t----- "+ v.getQueryString()+"\n");
-//		};
-//		
-		
-		// EXECUTE TEH RESULT
+		// EXECUTE THE RESULT
 		logger.debug("Executing query execution tree...");
 		return compileResults(ciqp.getSerial(), Executor.executePlan(qep));
 	}
