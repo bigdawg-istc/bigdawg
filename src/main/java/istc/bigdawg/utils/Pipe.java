@@ -10,6 +10,7 @@ import org.apache.commons.lang3.SystemUtils;
 import org.apache.log4j.Logger;
 
 import istc.bigdawg.exceptions.RunShellException;
+import istc.bigdawg.properties.BigDawgConfigProperties;
 
 /**
  * This it the pipe for the migrations. It creates a mkfifo in the local file
@@ -48,7 +49,9 @@ public enum Pipe {
 	 */
 	synchronized public String createAndGetFullName(String pipeName)
 			throws IOException, InterruptedException, RunShellException {
-		String fullName = System.getProperty("user.dir") + "/src/main/resources/tmp/bigdawg_" + pipeName + "_"
+//		String fullName = System.getProperty("user.dir") + "/src/main/resources/tmp/bigdawg_" + pipeName + "_"
+//				+ globalCounter.incrementAndGet();
+		String fullName = BigDawgConfigProperties.INSTANCE.getMigratorTempDir() +"/" + pipeName + "_"
 				+ globalCounter.incrementAndGet();
 		log.debug("full path name for the pipe: " + fullName);
 		/* if a test/execution fails then a pipe can still exists */

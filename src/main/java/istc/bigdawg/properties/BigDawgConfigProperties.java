@@ -53,11 +53,12 @@ public enum BigDawgConfigProperties {
 	private String networkMessagePort;
 	private int networkRequestTimeout;
 
+	private String migratorTempDir;
+
 	private BigDawgConfigProperties() throws AssertionError {
 		Properties prop = new Properties();
 		String propFileName = "bigdawg-config.properties";
-		InputStream inputStream = BigDawgConfigProperties.class.getClassLoader()
-				.getResourceAsStream(propFileName);
+		InputStream inputStream = BigDawgConfigProperties.class.getClassLoader().getResourceAsStream(propFileName);
 		if (inputStream != null) {
 			try {
 				prop.load(inputStream);
@@ -67,8 +68,7 @@ public enum BigDawgConfigProperties {
 			}
 		} else {
 			FileNotFoundException e = new FileNotFoundException(
-					"property file '" + propFileName
-							+ "' not found in the classpath");
+					"property file '" + propFileName + "' not found in the classpath");
 			e.printStackTrace();
 			throw new AssertionError(e);
 		}
@@ -82,22 +82,16 @@ public enum BigDawgConfigProperties {
 
 		this.postgreSQLTestHost = prop.getProperty("main.postgresql.test.host");
 		this.postgreSQLTestPort = prop.getProperty("main.postgresql.test.port");
-		this.postgreSQLTestDatabase = prop
-				.getProperty("main.postgresql.test.database");
+		this.postgreSQLTestDatabase = prop.getProperty("main.postgresql.test.database");
 		this.postgreSQLTestUser = prop.getProperty("main.postgresql.test.user");
-		this.postgreSQLTestPassword = prop
-				.getProperty("main.postgresql.test.password");
+		this.postgreSQLTestPassword = prop.getProperty("main.postgresql.test.password");
 
-		this.accumuloIstanceType = prop
-				.getProperty("main.accumulo.instanceType");
-		this.accumuloIstanceName = prop
-				.getProperty("main.accumulo.instanceName");
+		this.accumuloIstanceType = prop.getProperty("main.accumulo.instanceType");
+		this.accumuloIstanceName = prop.getProperty("main.accumulo.instanceName");
 		this.accumuloZooKeepers = prop.getProperty("main.accumulo.zooKeepers");
 		this.accumuloUser = prop.getProperty("main.accumulo.user");
-		this.accumuloPasswordToken = prop
-				.getProperty("main.accumulo.passwordToken");
-		this.accumuloShellScript = prop
-				.getProperty("main.accumulo.shell.script");
+		this.accumuloPasswordToken = prop.getProperty("main.accumulo.passwordToken");
+		this.accumuloShellScript = prop.getProperty("main.accumulo.shell.script");
 
 		this.sStoreURL = prop.getProperty("main.sstore.alerturl");
 
@@ -120,6 +114,7 @@ public enum BigDawgConfigProperties {
 
 		this.networkMessagePort = prop.getProperty("main.network.message.port");
 		this.networkRequestTimeout = Integer.valueOf(prop.getProperty("main.network.request.timeout"));
+		this.migratorTempDir = prop.getProperty("main.migrator.temp.dir");
 	}
 
 	/**
@@ -195,11 +190,11 @@ public enum BigDawgConfigProperties {
 	public String getPostgreSQLURL() {
 		return postgreSQLURL;
 	}
-	
+
 	public int getPostgresSchemaServerDBID() {
 		return postgresSchemaServerDBID;
 	}
-	
+
 	public int getSciDBSchemaServerDBID() {
 		return scidbSchemaServerDBID;
 	}
@@ -219,10 +214,8 @@ public enum BigDawgConfigProperties {
 	}
 
 	public String getBaseURI() {
-		String baseURI = "http://"
-				+ BigDawgConfigProperties.INSTANCE.getGrizzlyIpAddress() + ":"
-				+ BigDawgConfigProperties.INSTANCE.getGrizzlyPort()
-				+ "/bigdawg/";
+		String baseURI = "http://" + BigDawgConfigProperties.INSTANCE.getGrizzlyIpAddress() + ":"
+				+ BigDawgConfigProperties.INSTANCE.getGrizzlyPort() + "/bigdawg/";
 		return baseURI;
 	}
 
@@ -272,8 +265,6 @@ public enum BigDawgConfigProperties {
 	public String getScidbPort() {
 		return scidbPort;
 	}
-	
-	
 
 	/**
 	 * @return the postgreSQLTestHost
@@ -359,6 +350,14 @@ public enum BigDawgConfigProperties {
 	 */
 	public int getNetworkRequestTimeout() {
 		return networkRequestTimeout;
+	}
+
+	/**
+	 * @return get the temporary dir where the pipes for migration can be
+	 *         created
+	 */
+	public String getMigratorTempDir() {
+		return migratorTempDir;
 	}
 
 }
