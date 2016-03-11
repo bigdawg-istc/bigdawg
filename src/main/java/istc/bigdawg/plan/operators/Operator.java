@@ -771,12 +771,12 @@ public class Operator {
 		
 		// find the join		
 		Operator child = this;
-		while (!child.getChildren().isEmpty() && (!child.getClass().equals(Join.class))) 
+		while ((!child.getChildren().isEmpty()) && (!child.getClass().equals(Join.class))) 
 			// then there could be one child only
 			child = child.getChildren().get(0);
 		
 		
-		if ( !this.getClass().equals(Join.class) && !child.getChildren().isEmpty()) {
+		if ( !this.getClass().equals(Join.class) && (!child.getChildren().isEmpty())) {
 			// TODO targeted strike? CURRENTLY WASH EVERYTHING // Set<String> names = child.getDataObjectNames();
 			Select outputSelect 		= this.generateSQLStringDestOnly(null, true);
 			String joinToken 			= ((Join)child).getJoinToken();
@@ -807,6 +807,8 @@ public class Operator {
 				}
 			}
 			sb.append(outputSelect);
+		} else if (child.getChildren().isEmpty()) {
+			sb.append(this.generateSQLStringDestOnly(null, true));
 		}
 		
 		if (child instanceof Join)
