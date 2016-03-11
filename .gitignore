@@ -25,3 +25,9 @@ installation/data
 hs_err_pid*
 
 .idea
+# c++/c object files
+*.o
+src/main/cmigrator/postgres2scidb
+src/main/cmigrator/scidb2postgres
+
+

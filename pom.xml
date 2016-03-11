@@ -218,7 +218,7 @@
 						<filtering>true</filtering>
 						<includes>
 							<include>*.properties</include>
-							<include>*.jar</include>
+							<!-- <include>*.jar</include> -->
 						</includes>
 					</resource>
 				</resources>
