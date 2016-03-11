@@ -1,8 +1,6 @@
 package istc.bigdawg.executor;
 
-import java.sql.Connection;
 import java.sql.SQLException;
-import java.text.ParseException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -22,7 +20,6 @@ import istc.bigdawg.executor.plan.ExecutionNode;
 import istc.bigdawg.executor.plan.QueryExecutionPlan;
 import istc.bigdawg.migration.Migrator;
 import istc.bigdawg.monitoring.Monitor;
-import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.postgresql.PostgreSQLHandler.QueryResult;
 import istc.bigdawg.query.ConnectionInfo;
@@ -116,7 +113,8 @@ class PlanExecutor {
             BinaryJoinExecutionNode joinNode = (BinaryJoinExecutionNode) node;
             if(!joinNode.getHint().isPresent() || joinNode.getHint().get() == BinaryJoinExecutionNode.JoinAlgorithms.SHUFFLE) {
                 try {
-                    // TODO(ankush): colocate non-operand dependencies!
+                    colocateDependencies(node, Arrays.asList(joinNode.getLeft().table, joinNode.getRight().table));
+
                     Optional<QueryResult> result = new ShuffleJoinExecutor(joinNode).execute();
                     markNodeAsCompleted(node);
                     return result;
@@ -129,7 +127,7 @@ class PlanExecutor {
         // otherwise execute as local query execution (same as broadcast join)
 
         // colocate dependencies, blocking until completed
-        colocateDependencies(node);
+        colocateDependencies(node, Collections.emptySet());
         log.debug(String.format("Executing query node %s...", node.getTableName()));
 
         return node.getQueryString().flatMap((query) -> {
@@ -166,7 +164,7 @@ class PlanExecutor {
      *
      * @param node
      */
-    private void colocateDependencies(ExecutionNode node) {
+    private void colocateDependencies(ExecutionNode node, Collection<String> ignoreTables) {
         // Block until dependencies are all resolved
         try {
             log.debug(String.format("Waiting for dependencies of query node %s to be resolved", node));
@@ -179,7 +177,7 @@ class PlanExecutor {
         log.debug(String.format("Colocating dependencies of query node %s", node));
 
         CompletableFuture[] futures = plan.getDependencies(node).stream()
-                .filter(d -> !resultLocations.containsEntry(d, node.getEngine()) && d.getTableName().isPresent())
+                .filter(d -> !resultLocations.containsEntry(d, node.getEngine()) && d.getTableName().isPresent() && !ignoreTables.contains(d.getTableName().get()))
                 .map((d) -> {
                     // computeIfAbsent gets a previous migration's Future, or creates one if it doesn't already exist
                     return migrations.computeIfAbsent(new ImmutablePair<>(d.getTableName().get(), node.getEngine()), (k) -> {
