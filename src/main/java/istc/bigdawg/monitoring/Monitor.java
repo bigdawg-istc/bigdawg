@@ -127,7 +127,7 @@ public class Monitor {
         handler.executeStatementPostgreSQL(String.format(UPDATE, endTime, endTime-startTime, qep.getIsland(), QueryExecutionPlan.qepToString(qep)));
     }
 
-    public void addMigrationStats(MigrationStatistics stats) throws SQLException {
+    public static void addMigrationStats(MigrationStatistics stats) throws SQLException {
         PostgreSQLHandler handler = new PostgreSQLHandler();
         String fromLoc = ConnectionInfoParser.connectionInfoToString(stats.getConnectionFrom());
         String toLoc = ConnectionInfoParser.connectionInfoToString(stats.getConnectionTo());
