@@ -38,7 +38,7 @@ public class FromPostgresToSciDBTest {
 	private FromPostgresToSciDB migrator = new FromPostgresToSciDB();
 	private PostgreSQLConnectionInfo conFrom = new PostgreSQLConnectionInfoTest();
 	private String fromTable = "region_test_from_13241";
-	private SciDBConnectionInfo conTo = new SciDBConnectionInfo();
+	private SciDBConnectionInfo conTo = new SciDBConnectionInfoTest();
 	// private SciDBConnectionInfo conTo = new
 	// SciDBConnectionInfo("localhost","1239", "scidb", "mypassw",
 	// "/opt/scidb/14.12/bin/");

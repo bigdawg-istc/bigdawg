@@ -22,6 +22,7 @@ import istc.bigdawg.exceptions.NoTargetArrayException;
 import istc.bigdawg.exceptions.RunShellException;
 import istc.bigdawg.exceptions.UnsupportedTypeException;
 import istc.bigdawg.migration.datatypes.DataTypesFromPostgreSQLToSciDB;
+import istc.bigdawg.monitoring.Monitor;
 import istc.bigdawg.postgresql.PostgreSQLColumnMetaData;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
@@ -138,19 +139,25 @@ public class FromPostgresToSciDBImplementation implements MigrationImplementatio
 			} else {
 				transformationMessage = "Transformation finished successfuly!";
 			}
-			long extractedRowsCount = exportTask.get();
+			long countExtractedElements = exportTask.get();
 
 			String loadMessage = loadTask.get();
 
 			PostgreSQLSciDBMigrationUtils.removeIntermediateArrays(connectionTo, "clean the intermediate arrays",
 					createdArrays);
 			long endTimeMigration = System.currentTimeMillis();
-			String message = "bin migration from PostgreSQL to SciDB execution time: "
-					+ (endTimeMigration - startTimeMigration);
-			log.info(message);
-			System.out.println(message);
-			return new MigrationResult(extractedRowsCount, null,
-					loadMessage + " No information about number of loaded rows." + " Result of transformation: "
+			long durationMsec = endTimeMigration - startTimeMigration;
+			MigrationStatistics stats = new MigrationStatistics(connectionFrom, connectionTo, fromTable, toArray,
+					startTimeMigration, endTimeMigration, null, countExtractedElements, this.getClass().getName());
+			Monitor.addMigrationStats(stats);
+			log.debug("Migration result,connectionFrom," + connectionFrom.toString() + ",connectionTo,"
+					+ connectionTo.toString() + ",fromTable," + fromTable + ",toArrat," + toArray
+					+ ",startTimeMigration," + startTimeMigration + ",endTimeMigration," + endTimeMigration
+					+ ",countExtractedElements," + "N/A" + ",countLoadedElements," + countExtractedElements
+					+ ",durationMsec," + durationMsec + ","
+					+ Thread.currentThread().getStackTrace()[1].getMethodName());
+			return new MigrationResult(countExtractedElements, null,
+					loadMessage + " No information about the number of loaded rows." + " Result of transformation: "
 							+ transformationMessage,
 					false);
 		} catch (SQLException | UnsupportedTypeException | InterruptedException | ExecutionException | IOException
@@ -197,17 +204,24 @@ public class FromPostgresToSciDBImplementation implements MigrationImplementatio
 			FutureTask<String> loadTask = new FutureTask<String>(loadExecutor);
 			executor.submit(loadTask);
 
-			long extractedRowsCount = exportTask.get();
+			long countExtractedElements = exportTask.get();
 			csvSciDBTask.get();
 			String loadMessage = loadTask.get();
 
 			PostgreSQLSciDBMigrationUtils.removeIntermediateArrays(connectionTo, "clean the intermediate arrays",
 					createdArrays);
 			long endTimeMigration = System.currentTimeMillis();
-			String message = "csv migration from PostgreSQL to SciDB execution time: "
-					+ (endTimeMigration - startTimeMigration);
-			log.info(message);
-			return new MigrationResult(extractedRowsCount, null,
+			long durationMsec = endTimeMigration - startTimeMigration;
+			MigrationStatistics stats = new MigrationStatistics(connectionFrom, connectionTo, fromTable, toArray,
+					startTimeMigration, endTimeMigration, null, countExtractedElements, this.getClass().getName());
+			Monitor.addMigrationStats(stats);
+			log.debug("Migration result,connectionFrom," + connectionFrom.toString() + ",connectionTo,"
+					+ connectionTo.toString() + ",fromTable," + fromTable + ",toArrat," + toArray
+					+ ",startTimeMigration," + startTimeMigration + ",endTimeMigration," + endTimeMigration
+					+ ",countExtractedElements," + "N/A" + ",countLoadedElements," + countExtractedElements
+					+ ",durationMsec," + durationMsec + ","
+					+ Thread.currentThread().getStackTrace()[1].getMethodName());
+			return new MigrationResult(countExtractedElements, null,
 					loadMessage + " No information about number of loaded rows.", false);
 		} catch (SQLException | UnsupportedTypeException | ExecutionException | InterruptedException
 				| MigrationException | IOException | RunShellException exception) {

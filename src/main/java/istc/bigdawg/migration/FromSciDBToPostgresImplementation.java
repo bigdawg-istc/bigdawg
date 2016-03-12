@@ -23,6 +23,7 @@ import istc.bigdawg.exceptions.NoTargetArrayException;
 import istc.bigdawg.exceptions.RunShellException;
 import istc.bigdawg.exceptions.UnsupportedTypeException;
 import istc.bigdawg.migration.datatypes.DataTypesFromSciDBToPostgreSQL;
+import istc.bigdawg.monitoring.Monitor;
 import istc.bigdawg.postgresql.PostgreSQLColumnMetaData;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
@@ -272,6 +273,8 @@ public class FromSciDBToPostgresImplementation implements MigrationImplementatio
 	public MigrationResult migrateBin() throws MigrationException {
 		generalMessage += "Mode: binary migration.";
 		log.info(generalMessage);
+
+		long startTimeMigration = System.currentTimeMillis();
 		try {
 			establishMigrationType();
 			SciDBArrays arrays = null;
@@ -282,7 +285,7 @@ public class FromSciDBToPostgresImplementation implements MigrationImplementatio
 				createFlatArray(newFlatIntermediateArray);
 				arrays = new SciDBArrays(newFlatIntermediateArray, fromArray);
 				format = getSciDBBinFormat(newFlatIntermediateArray);
-				createTableStatement =  getCreatePostgreSQLTableStatementFromSciDBAttributesAndDimensions();
+				createTableStatement = getCreatePostgreSQLTableStatementFromSciDBAttributesAndDimensions();
 			} else { /*
 						 * this is a flat array so we have to export only the
 						 * attributes
@@ -317,14 +320,26 @@ public class FromSciDBToPostgresImplementation implements MigrationImplementatio
 
 			String exportMessage = exportTask.get();
 			long transformationResult = transformTask.get();
-			long loadedRowsCount = loadTask.get();
+			long countLoadedElements = loadTask.get();
 
 			String transformationMessage = transformationResult == 0 ? "correct" : "incorrect";
 			PostgreSQLSciDBMigrationUtils.removeIntermediateArrays(connectionFrom, "clean the intermediate arrays",
 					createdArrays);
-			return new MigrationResult(null, loadedRowsCount,
-					exportMessage + " No information about number of extracted rows." + " Result of transformation: "
-							+ transformationMessage,
+			long endTimeMigration = System.currentTimeMillis();
+			long durationMsec = endTimeMigration - startTimeMigration;
+			MigrationStatistics stats = new MigrationStatistics(connectionFrom, connectionTo, fromArray, toTable,
+					startTimeMigration, endTimeMigration, null, countLoadedElements, this.getClass().getName());
+			Monitor.addMigrationStats(stats);
+			log.debug("Migration result,connectionFrom," + connectionFrom.toString() + ",connectionTo,"
+					+ connectionTo.toSimpleString() + ",fromArray," + fromArray + ",toTable," + toTable
+					+ ",startTimeMigration," + startTimeMigration + ",endTimeMigration," + endTimeMigration
+					+ ",countExtractedElements," + "N/A" + ",countLoadedElements," + countLoadedElements
+					+ ",durationMsec," + durationMsec + ","
+					+ Thread.currentThread().getStackTrace()[1].getMethodName());
+
+			return new MigrationResult(null, countLoadedElements,
+					exportMessage + " No information about the number of extracted rows."
+							+ " Result of transformation: " + transformationMessage,
 					false);
 		} catch (SQLException | UnsupportedTypeException | InterruptedException | ExecutionException | IOException
 				| NoTargetArrayException | RunShellException exception) {
@@ -426,14 +441,21 @@ public class FromSciDBToPostgresImplementation implements MigrationImplementatio
 			executor.submit(loadTask);
 
 			String exportMessage = exportTask.get();
-			long loadedRowsCount = loadTask.get();
+			Long countLoadedElements = loadTask.get();
 
 			long endTimeMigration = System.currentTimeMillis();
-			String message = "migration from SciDB to PostgreSQL execution time: "
-					+ (endTimeMigration - startTimeMigration);
-			log.info(message);
-			return new MigrationResult(null, loadedRowsCount,
-					exportMessage + " No information about number of extracted rows.", false);
+			long durationMsec = endTimeMigration - startTimeMigration;
+			MigrationStatistics stats = new MigrationStatistics(connectionFrom, connectionTo, fromArray, toTable,
+					startTimeMigration, endTimeMigration, null, countLoadedElements, this.getClass().getName());
+			Monitor.addMigrationStats(stats);
+			log.debug("Migration result,connectionFrom," + connectionFrom.toString() + ",connectionTo,"
+					+ connectionTo.toSimpleString() + ",fromArray," + fromArray + ",toTable," + toTable
+					+ ",startTimeMigration," + startTimeMigration + ",endTimeMigration," + endTimeMigration
+					+ ",countExtractedElements," + "N/A" + ",countLoadedElements," + countLoadedElements
+					+ ",durationMsec," + durationMsec + ","
+					+ Thread.currentThread().getStackTrace()[1].getMethodName());
+			return new MigrationResult(null, countLoadedElements,
+					exportMessage + " No information about the number of extracted items from SciDB.", false);
 		} catch (SQLException | NoTargetArrayException | UnsupportedTypeException | InterruptedException
 				| ExecutionException | RunShellException | IOException ex) {
 			log.error(errMessage + " " + ex.getMessage() + StackTrace.getFullStackTrace(ex));
