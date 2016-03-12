@@ -51,13 +51,14 @@ public class SQLOutItem extends CommonOutItem{
 			while (doa == null) {
 				
 				String before = new String(finder);
-				finder = finder.replaceAll("^[_@a-zA-Z]+\\.", "");
+				finder = finder.replaceAll("^[_@a-zA-Z0-9]+\\.", "");
 				
 				if (before.equals(finder)) {
 					// shaving the front doesn't work, it's probably a function or other type of expression
 					finder = SQLExpressionUtils.getAttributes((Expression)CCJSqlParserUtil.parseExpression(finder)).get(0);
-					if (finder.equals(before))
-						throw new Exception("cannot find: "+expr);
+					if (finder.equals(before)) {
+						throw new Exception("cannot find: "+expr+"; finder: "+finder+"; srcSchema: "+srcSchema.toString());
+					}
 				}
 				doa = srcSchema.get(finder);
 			}
