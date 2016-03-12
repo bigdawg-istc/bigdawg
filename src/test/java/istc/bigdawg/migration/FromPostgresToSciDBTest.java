@@ -22,7 +22,7 @@ import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfoTest;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
-import istc.bigdawg.scidb.SciDBConnectionInfo;
+import istc.bigdawg.scidb.SciDBConnectionInfoTest;
 import istc.bigdawg.scidb.SciDBHandler;
 import istc.bigdawg.utils.Utils;
 
