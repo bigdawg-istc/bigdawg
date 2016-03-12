@@ -22,6 +22,9 @@ pguser=pguser
 port_1=5431
 port_2=5430
 
+postgres1_bin=${downloads_dir}/postgres1/bin
+postgres2_bin=${downloads_dir}/postgres2/bin
+
 function setDB {
     postgres_version=$1
     port=$2
@@ -52,13 +55,17 @@ function install_postgres {
 
     setDB postgres1 ${port_1}
     setDB postgres2 ${port_2}
+
+    cd ${postgres1_bin}
+    ./createuser -p ${port_1} -s -e -d postgres
+
+    cd ${postgres2_bin}
+    ./createuser -p ${port_2} -s -e -d postgres
 }
 
 #install_postgres
 
-postgres1_bin=${downloads_dir}/postgres1/bin
 cd ${postgres1_bin}
-./createuser -p ${port_1} -s -e -d postgres
 ./psql -p ${port_1} -c "alter role postgres with password 'test'" -d template1
 
 # clean
@@ -85,10 +92,8 @@ bash ${catalog_resource}/recreate_catalog.sh ${catalog_resource} ${downloads_dir
 # tests
 ./psql -p ${port_1} -c "create database test owner ${pguser}" -d template1 -U postgres
 
-postgres2_bin=${downloads_dir}/postgres2/bin
 database2=mimic2_copy
 cd ${postgres2_bin}
-./createuser -p ${port_2} -s -e -d postgres
 ./psql -p ${port_2} -c "alter role postgres with password 'test'" -d template1
 
 # clean the databases
