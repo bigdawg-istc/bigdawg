@@ -243,7 +243,7 @@ public class CatalogModifier {
 		try {
 			CatalogUtilities.checkConnection(cc);
 			
-			String host = "localhost";
+			String host = "10.105.79.183";
 			
 			cc.execNoRet("update catalog.engines set host = \'"+ host +"\' where eid = 1;"); 
 			cc.execNoRet("update catalog.engines set host = \'"+ host +"\' where eid = 2;");

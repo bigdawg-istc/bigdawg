@@ -133,6 +133,20 @@ public class PostgreSQLConnectionInfo implements ConnectionInfo {
 
 		return result.toString();
 	}
+	
+	public String toSimpleString() {
+		StringBuilder result = new StringBuilder();
+
+		result.append(this.getClass().getName() + " Object {");
+		result.append(" Host: " + this.getHost());
+		result.append(" Port: " + this.getPort());
+		result.append(" Database: " + this.getDatabase());
+		result.append(" User: " + this.getUser());
+		result.append(" Password: This is a secret!");
+		result.append("}");
+
+		return result.toString();
+	}
 
 	@Override
 	public String getCleanupQuery(Collection<String> objects) {

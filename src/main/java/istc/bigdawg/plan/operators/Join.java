@@ -193,6 +193,8 @@ public class Join extends Operator {
 			}
 		}
 		
+		System.out.println("JOIN: paramters: " + parameters );
+		
 
 		// if hash join
 		joinPredicate = SQLUtilities.parseString(joinPredicate);

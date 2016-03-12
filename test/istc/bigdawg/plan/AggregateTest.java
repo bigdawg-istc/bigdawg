@@ -32,6 +32,7 @@ public class AggregateTest {
 		setupAggTier1();
 		setupAggTier2();
 		setupAggTier3();
+		setupAggTier4();
 	}
 	
 	private void setupAggTier1() {
@@ -57,6 +58,14 @@ public class AggregateTest {
 		expectedOutputs.put("aggTier3", ba1);
 		inputs.put("aggTier3", "SELECT gender, avg(response)/avg(gender)+3 AS avg_r, count(gender) AS avg_gender FROM patients GROUP BY gender, disease;");
 	}
+	
+	private void setupAggTier4() {
+		HashMap<String, String> ba1 = new HashMap<>();
+		ba1.put("OUTPUT", "SELECT p1.gender, avg(p1.response) + 3 AS avg_r, count(p2.gender) AS avg_gender FROM patients AS p1 JOIN patients AS p2 ON p1.id < p2.id GROUP BY p1.gender, p2.disease;;");
+		
+		expectedOutputs.put("aggTier4", ba1);
+		inputs.put("aggTier4", "SELECT p1.gender, avg(p1.response)+3 AS avg_r, count(p2.gender) AS avg_gender FROM patients AS p1 JOIN patients AS p2 ON p1.id < p2.id GROUP BY p1.gender, p2.disease;");
+	}
 
 	@Test
 	public void testAgg1() {
@@ -72,6 +81,12 @@ public class AggregateTest {
 	public void testAgg3() {
 		runTestCase("aggTier3");
 	}
+
+	@Test
+	public void testAgg4() {
+		runTestCase("aggTier4");
+	}
+	
 	
 	public void runTestCase(String testname) {
 		try {
