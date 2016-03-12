@@ -26,9 +26,6 @@ public class DataTypesFromSciDBToPostgreSQL {
 		map.put("int16", "smallint");
 		map.put("int32", "integer");
 		map.put("int64", "bigint");
-		map.put("int16", "smallserial");
-		map.put("int32", "serial");
-		map.put("int64", "bigserial");
 		// float
 		map.put("float", "real");
 		map.put("double", "double precision");
@@ -47,7 +44,7 @@ public class DataTypesFromSciDBToPostgreSQL {
 	 * @return
 	 * @throws UnsupportedTypeException
 	 */
-	public static String getSciDBTypeFromPostgreSQLType(String scidbType)
+	public static String getPostgreSQLTypeFromSciDBType(String scidbType)
 			throws UnsupportedTypeException {
 		String postgresType = map.get(scidbType);
 		if (postgresType != null) {

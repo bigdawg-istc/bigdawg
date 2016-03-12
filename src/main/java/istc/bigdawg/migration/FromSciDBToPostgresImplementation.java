@@ -7,7 +7,9 @@ import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -21,9 +23,11 @@ import istc.bigdawg.exceptions.NoTargetArrayException;
 import istc.bigdawg.exceptions.RunShellException;
 import istc.bigdawg.exceptions.UnsupportedTypeException;
 import istc.bigdawg.migration.datatypes.DataTypesFromSciDBToPostgreSQL;
+import istc.bigdawg.postgresql.PostgreSQLColumnMetaData;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.postgresql.PostgreSQLSchemaTableName;
+import istc.bigdawg.postgresql.PostgreSQLTableMetaData;
 import istc.bigdawg.scidb.SciDBArrayMetaData;
 import istc.bigdawg.scidb.SciDBColumnMetaData;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
@@ -40,6 +44,12 @@ import istc.bigdawg.utils.StackTrace;
 public class FromSciDBToPostgresImplementation implements MigrationImplementation {
 	/* log */
 	private static Logger log = Logger.getLogger(FromSciDBToPostgresImplementation.class);
+
+	enum MigrationType {
+		FULL /* export dimensions and attributes from SciDB */, FLAT
+		/* export only the attributes from SciDB */}
+
+	private MigrationType migrationType;
 
 	/* General message about the action in the class. */
 	private String generalMessage = "Data migration from SciDB to PostgreSQL";
@@ -59,12 +69,21 @@ public class FromSciDBToPostgresImplementation implements MigrationImplementatio
 	private ExecutorService executor = null;
 	private Connection connectionPostgres = null;
 
+	/*
+	 * These are the arrays that were created during migration of data from
+	 * PostgreSQL to SciDB. If something fails on the way, then the arrays
+	 * should be removed.
+	 */
+	private Set<String> createdArrays = new HashSet<>();
+
 	public FromSciDBToPostgresImplementation(SciDBConnectionInfo connectionFrom, String fromArray,
 			PostgreSQLConnectionInfo connectionTo, String toTable) throws MigrationException {
 		this.connectionFrom = connectionFrom;
 		this.fromArray = fromArray;
 		this.connectionTo = connectionTo;
 		this.toTable = toTable;
+		/* by default export all the data from SciDB */
+		this.migrationType = MigrationType.FULL;
 		try {
 			SciDBHandler handler = new SciDBHandler(connectionFrom);
 			this.scidbArrayMetaData = handler.getArrayMetaData(fromArray);
@@ -95,8 +114,36 @@ public class FromSciDBToPostgresImplementation implements MigrationImplementatio
 	}
 
 	/**
+	 * No dimensions;
+	 * 
+	 * @return
+	 * @throws NoTargetArrayException
+	 * @throws SQLException
+	 * @throws UnsupportedTypeException
+	 */
+	private String getCreatePostgreSQLTableStatementFromSciDBAttributes()
+			throws NoTargetArrayException, SQLException, UnsupportedTypeException {
+		List<SciDBColumnMetaData> attributes = scidbArrayMetaData.getAttributesOrdered();
+		List<SciDBColumnMetaData> columns = new ArrayList<>();
+		columns.addAll(attributes);
+		StringBuilder createTableStringBuf = new StringBuilder();
+		createTableStringBuf.append("create table if not exists " + toTable + " (");
+		for (SciDBColumnMetaData column : columns) {
+			String colName = column.getColumnName();
+			String scidbType = column.getColumnType();
+			String postgresType = DataTypesFromSciDBToPostgreSQL.getPostgreSQLTypeFromSciDBType(scidbType);
+			createTableStringBuf.append(colName + " " + postgresType + ",");
+		}
+		createTableStringBuf.deleteCharAt(createTableStringBuf.length() - 1);
+		createTableStringBuf.append(")");
+		log.debug("create table command: " + createTableStringBuf.toString());
+		return createTableStringBuf.toString();
+	}
+
+	/**
 	 * Get a string representing the "create table" command in PostgreSQL. The
-	 * create table command is created based on an existing array in SciDB.
+	 * create table command is created based on an existing array in SciDB from
+	 * its dimensions and attributes.
 	 * 
 	 * @return the create table command
 	 * 
@@ -104,8 +151,9 @@ public class FromSciDBToPostgresImplementation implements MigrationImplementatio
 	 * @throws NoTargetArrayException
 	 * @throws UnsupportedTypeException
 	 *             the given type is not supported
+	 * @throws MigrationException
 	 */
-	private String getCreatePostgreSQLTableStatementFromSciDBArrayForCsv()
+	private String getCreatePostgreSQLTableStatementFromSciDBAttributesAndDimensions()
 			throws NoTargetArrayException, SQLException, UnsupportedTypeException {
 		List<SciDBColumnMetaData> dimensions = scidbArrayMetaData.getDimensionsOrdered();
 		List<SciDBColumnMetaData> attributes = scidbArrayMetaData.getAttributesOrdered();
@@ -117,34 +165,7 @@ public class FromSciDBToPostgresImplementation implements MigrationImplementatio
 		for (SciDBColumnMetaData column : columns) {
 			String colName = column.getColumnName();
 			String scidbType = column.getColumnType();
-			String postgresType = DataTypesFromSciDBToPostgreSQL.getSciDBTypeFromPostgreSQLType(scidbType);
-			createTableStringBuf.append(colName + " " + postgresType + ",");
-		}
-		createTableStringBuf.deleteCharAt(createTableStringBuf.length() - 1);
-		createTableStringBuf.append(")");
-		log.debug("create table command: " + createTableStringBuf.toString());
-		return createTableStringBuf.toString();
-	}
-
-	/**
-	 * No dimensions;
-	 * 
-	 * @return
-	 * @throws NoTargetArrayException
-	 * @throws SQLException
-	 * @throws UnsupportedTypeException
-	 */
-	private String getCreatePostgreSQLTableStatementFromSciDBArrayForBin()
-			throws NoTargetArrayException, SQLException, UnsupportedTypeException {
-		List<SciDBColumnMetaData> attributes = scidbArrayMetaData.getAttributesOrdered();
-		List<SciDBColumnMetaData> columns = new ArrayList<>();
-		columns.addAll(attributes);
-		StringBuilder createTableStringBuf = new StringBuilder();
-		createTableStringBuf.append("create table if not exists " + toTable + " (");
-		for (SciDBColumnMetaData column : columns) {
-			String colName = column.getColumnName();
-			String scidbType = column.getColumnType();
-			String postgresType = DataTypesFromSciDBToPostgreSQL.getSciDBTypeFromPostgreSQLType(scidbType);
+			String postgresType = DataTypesFromSciDBToPostgreSQL.getPostgreSQLTypeFromSciDBType(scidbType);
 			createTableStringBuf.append(colName + " " + postgresType + ",");
 		}
 		createTableStringBuf.deleteCharAt(createTableStringBuf.length() - 1);
@@ -182,9 +203,9 @@ public class FromSciDBToPostgresImplementation implements MigrationImplementatio
 	 * @throws NoTargetArrayException
 	 * @throws SQLException
 	 */
-	private String getSciDBBinFormat() throws NoTargetArrayException, SQLException {
+	private String getSciDBBinFormat(String array) throws NoTargetArrayException, SQLException {
 		SciDBHandler handler = new SciDBHandler(connectionFrom);
-		SciDBArrayMetaData arrayMetaData = handler.getArrayMetaData(fromArray);
+		SciDBArrayMetaData arrayMetaData = handler.getArrayMetaData(array);
 		handler.close();
 		List<SciDBColumnMetaData> attributes = arrayMetaData.getAttributesOrdered();
 		StringBuilder binBuf = new StringBuilder();
@@ -201,6 +222,46 @@ public class FromSciDBToPostgresImplementation implements MigrationImplementatio
 	}
 
 	/**
+	 * Decide the migration type (transfer (only the attributes) or (attributes
+	 * and dimensions)).
+	 * 
+	 * @throws MigrationException
+	 *             {@link MigrationException}
+	 */
+	private void establishMigrationType() throws MigrationException {
+		PostgreSQLHandler postgresHandler = new PostgreSQLHandler(connectionTo);
+		try {
+			if (postgresHandler.existsTable(new PostgreSQLSchemaTableName(toTable))) {
+				PostgreSQLTableMetaData tableMetaData = postgresHandler.getColumnsMetaData(toTable);
+				// can we migrate only the attributes from the SciDB array
+				List<SciDBColumnMetaData> scidbColumnsOrdered = scidbArrayMetaData.getAttributesOrdered();
+				List<PostgreSQLColumnMetaData> postgresColumnsOrdered = tableMetaData.getColumnsOrdered();
+				if (postgresColumnsOrdered.size() == scidbColumnsOrdered.size() && PostgreSQLSciDBMigrationUtils
+						.areAttributesSameAsColumns(scidbArrayMetaData, tableMetaData)) {
+					migrationType = MigrationType.FLAT;
+				} /*
+					 * check if the dimensions and the attributes in the array
+					 * match the columns in the table
+					 */
+				else {
+					/*
+					 * verify the dimensions and attributes in the array with
+					 * the columns in the table
+					 */
+					PostgreSQLSciDBMigrationUtils.areDimensionsAndAttributesSameAsColumns(scidbArrayMetaData,
+							tableMetaData);
+					migrationType = MigrationType.FULL;
+				}
+			} else {
+				migrationType = MigrationType.FULL;
+			}
+		} catch (SQLException ex) {
+			String message = "Problem with data extraction from PostgreSQL. " + ex.getMessage();
+			throw new MigrationException(message);
+		}
+	}
+
+	/**
 	 * This works only for a flat array.
 	 * 
 	 * @return {@link MigrationResult} with information about the migration
@@ -212,25 +273,41 @@ public class FromSciDBToPostgresImplementation implements MigrationImplementatio
 		generalMessage += "Mode: binary migration.";
 		log.info(generalMessage);
 		try {
+			establishMigrationType();
+			SciDBArrays arrays = null;
+			String format = null;
+			String createTableStatement = null;
+			if (migrationType == MigrationType.FULL) {
+				String newFlatIntermediateArray = fromArray + "__flat__";
+				createFlatArray(newFlatIntermediateArray);
+				arrays = new SciDBArrays(newFlatIntermediateArray, fromArray);
+				format = getSciDBBinFormat(newFlatIntermediateArray);
+				createTableStatement =  getCreatePostgreSQLTableStatementFromSciDBAttributesAndDimensions();
+			} else { /*
+						 * this is a flat array so we have to export only the
+						 * attributes
+						 */
+				arrays = new SciDBArrays(fromArray, null);
+				format = getSciDBBinFormat(fromArray);
+				createTableStatement = getCreatePostgreSQLTableStatementFromSciDBAttributes();
+			}
+
 			scidbPipe = Pipe.INSTANCE.createAndGetFullName(this.getClass().getName() + "_fromSciDB_" + fromArray);
 			postgresPipe = Pipe.INSTANCE.createAndGetFullName(this.getClass().getName() + "_toPostgres_" + toTable);
 
 			executor = Executors.newFixedThreadPool(3);
-
-			ExportFromSciDBExecutor exportExecutor = new ExportFromSciDBExecutor(connectionFrom, fromArray, scidbPipe,
-					getSciDBBinFormat(), true);
+			ExportFromSciDBExecutor exportExecutor = new ExportFromSciDBExecutor(connectionFrom, arrays, scidbPipe,
+					format, true);
 			FutureTask<String> exportTask = new FutureTask<String>(exportExecutor);
 			executor.submit(exportTask);
 
-			TransformBinExecutor transformExecutor = new TransformBinExecutor(scidbPipe, postgresPipe,
-					getSciDBBinFormat(), TransformBinExecutor.TYPE.FromSciDBToPostgres);
+			TransformBinExecutor transformExecutor = new TransformBinExecutor(scidbPipe, postgresPipe, format,
+					TransformBinExecutor.TYPE.FromSciDBToPostgres);
 			FutureTask<Long> transformTask = new FutureTask<Long>(transformExecutor);
 			executor.submit(transformTask);
 
-			/* TODO you'll have to prepare the target array */
 			connectionPostgres = PostgreSQLHandler.getConnection(connectionTo);
 			connectionPostgres.setAutoCommit(false);
-			String createTableStatement = getCreatePostgreSQLTableStatementFromSciDBArrayForBin();
 			createTargetTableSchema(connectionPostgres, createTableStatement);
 			String copyToCommand = PostgreSQLHandler.getLoadBinCommand(toTable);
 			CopyToPostgresExecutor loadExecutor = new CopyToPostgresExecutor(connectionPostgres, copyToCommand,
@@ -243,14 +320,15 @@ public class FromSciDBToPostgresImplementation implements MigrationImplementatio
 			long loadedRowsCount = loadTask.get();
 
 			String transformationMessage = transformationResult == 0 ? "correct" : "incorrect";
-
+			PostgreSQLSciDBMigrationUtils.removeIntermediateArrays(connectionFrom, "clean the intermediate arrays",
+					createdArrays);
 			return new MigrationResult(null, loadedRowsCount,
 					exportMessage + " No information about number of extracted rows." + " Result of transformation: "
 							+ transformationMessage,
 					false);
 		} catch (SQLException | UnsupportedTypeException | InterruptedException | ExecutionException | IOException
 				| NoTargetArrayException | RunShellException exception) {
-			MigrationException migrationException = handleException(exception, "Migration in binry format failed. ");
+			MigrationException migrationException = handleException(exception, "Migration in binary format failed. ");
 			throw migrationException;
 		} finally {
 			cleanResources();
@@ -300,6 +378,11 @@ public class FromSciDBToPostgresImplementation implements MigrationImplementatio
 				+ connectionFrom.toString() + " from array: " + fromArray + " PostgreSQL Connection: "
 				+ connectionTo.toString() + " to table:" + toTable;
 		log.error(msg);
+		try {
+			PostgreSQLSciDBMigrationUtils.removeIntermediateArrays(connectionFrom, msg, createdArrays);
+		} catch (MigrationException ex) {
+			return ex;
+		}
 		return new MigrationException(msg);
 	}
 
@@ -312,21 +395,30 @@ public class FromSciDBToPostgresImplementation implements MigrationImplementatio
 	public MigrationResult migrateSingleThreadCSV() throws MigrationException {
 		try {
 			long startTimeMigration = System.currentTimeMillis();
+
+			establishMigrationType();
+			SciDBArrays arrays = null;
+			String createTableStatement = null;
+			if (migrationType == MigrationType.FLAT) {
+				arrays = new SciDBArrays(fromArray, null);
+				createTableStatement = getCreatePostgreSQLTableStatementFromSciDBAttributes();
+			} else { /* multidimensional array - MigrationType.FULL */
+				arrays = new SciDBArrays(null, fromArray);
+				createTableStatement = getCreatePostgreSQLTableStatementFromSciDBAttributesAndDimensions();
+			}
 			executor = Executors.newFixedThreadPool(2);
 
 			/* we use only one pipe here */
 			scidbPipe = Pipe.INSTANCE.createAndGetFullName(this.getClass().getName() + "_fromSciDB_" + fromArray);
 
 			String defultCsvFormat = "csv+";
-			ExportFromSciDBExecutor exportExecutor = new ExportFromSciDBExecutor(connectionFrom, fromArray, scidbPipe,
+			ExportFromSciDBExecutor exportExecutor = new ExportFromSciDBExecutor(connectionFrom, arrays, scidbPipe,
 					defultCsvFormat, false);
 			FutureTask<String> exportTask = new FutureTask<String>(exportExecutor);
 			executor.submit(exportTask);
 
-			/* TODO you'll have to prepare the source array */
 			connectionPostgres = PostgreSQLHandler.getConnection(connectionTo);
 			connectionPostgres.setAutoCommit(false);
-			String createTableStatement = getCreatePostgreSQLTableStatementFromSciDBArrayForCsv();
 			createTargetTableSchema(connectionPostgres, createTableStatement);
 			CopyToPostgresExecutor loadExecutor = new CopyToPostgresExecutor(connectionPostgres,
 					getCopyToPostgreSQLCsvCommand(toTable), scidbPipe);
@@ -351,6 +443,43 @@ public class FromSciDBToPostgresImplementation implements MigrationImplementatio
 		}
 	}
 
+	/**
+	 * Create a flat array in SciDB from the meta info about the
+	 * multidimensional array.
+	 * 
+	 * @throws SQLException
+	 * @throws UnsupportedTypeException
+	 * @throws MigrationException
+	 */
+	private void createFlatArray(String flatArrayName)
+			throws SQLException, UnsupportedTypeException, MigrationException {
+		StringBuilder createArrayStringBuf = new StringBuilder();
+		createArrayStringBuf.append("create array " + flatArrayName + " <");
+		List<SciDBColumnMetaData> scidbColumnsOrdered = new ArrayList<SciDBColumnMetaData>();
+		scidbColumnsOrdered.addAll(scidbArrayMetaData.getDimensionsOrdered());
+		scidbColumnsOrdered.addAll(scidbArrayMetaData.getAttributesOrdered());
+		for (SciDBColumnMetaData column : scidbColumnsOrdered) {
+			String attributeName = column.getColumnName();
+			String attributeType = column.getColumnType();
+			String attributeNULL = "";
+			if (column.isNullable()) {
+				attributeNULL = " NULL";
+			}
+			createArrayStringBuf.append(attributeName + ":" + attributeType + attributeNULL + ",");
+		}
+
+		/* delete the last comma "," */
+		createArrayStringBuf.deleteCharAt(createArrayStringBuf.length() - 1);
+		/* " r_regionkey:int64,r_name:string,r_comment:string> );" */
+		/* this is by default 1 mln cells in a chunk */
+		createArrayStringBuf.append("> [_flat_dimension_=0:*,1000000,0]");
+		SciDBHandler handler = new SciDBHandler(connectionFrom);
+		handler.executeStatement(createArrayStringBuf.toString());
+		handler.commit();
+		handler.close();
+		createdArrays.add(flatArrayName);
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -372,7 +501,7 @@ public class FromSciDBToPostgresImplementation implements MigrationImplementatio
 				"/opt/scidb/14.12/bin/");
 		String fromArray = "waveform";
 		PostgreSQLConnectionInfo conTo = new PostgreSQLConnectionInfo("localhost", "5431", "test", "pguser", "test");
-		String toTable = "waveform";
+		String toTable = "waveformFromSciDB";
 
 		FromSciDBToPostgresImplementation migrator = new FromSciDBToPostgresImplementation(conFrom, fromArray, conTo,
 				toTable);

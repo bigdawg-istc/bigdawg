@@ -24,6 +24,7 @@ import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
 import istc.bigdawg.scidb.SciDBHandler;
+import istc.bigdawg.utils.Utils;
 
 /**
  * Test the migration from PostgreSQL to SciDB.

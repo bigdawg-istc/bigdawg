@@ -23,15 +23,15 @@ public class ExportFromSciDBExecutor implements Callable<String> {
 
 	/* SciDB connection info */
 	private SciDBConnectionInfo connection;
-	private final String array;
+	private final SciDBArrays arrays;
 	private final String scidbFilePath;
 	private final String format;
 	private boolean isBinary;
 
-	public ExportFromSciDBExecutor(SciDBConnectionInfo connection, String array,
-			String scidbFilePath, String format, boolean isBinary) {
+	public ExportFromSciDBExecutor(SciDBConnectionInfo connection, SciDBArrays arrays, String scidbFilePath,
+			String format, boolean isBinary) {
 		this.connection = connection;
-		this.array = array;
+		this.arrays = arrays;
 		this.scidbFilePath = scidbFilePath;
 		this.format = format;
 		this.isBinary = isBinary;
@@ -50,17 +50,33 @@ public class ExportFromSciDBExecutor implements Callable<String> {
 	public String call() throws SQLException {
 		SciDBHandler handler = new SciDBHandler(connection);
 		StringBuilder saveCommand = new StringBuilder();
-		saveCommand.append("save(" + array + ", '" + scidbFilePath + "'");
-		saveCommand.append(",-2,'");
-		if (isBinary) {
+		String saveCommandFinal = null;
+		if (!isBinary) {
+			String csvFormat = "csv+";
+			String array = arrays.getMultiDimensional();
+			/* this is only a flat array so export only the attributes */
+			if (arrays.getFlat() != null) {
+				csvFormat = "csv";
+				array = arrays.getFlat();
+			}
+			saveCommandFinal = "save(" + array + ",'" + scidbFilePath + "',-2,'" + csvFormat + "')";
+		} else { /* this is the binary migration */
+			String array = null;
+			if (arrays.getMultiDimensional() != null) {
+				String multiDimArray = arrays.getMultiDimensional();
+				String flatArray = arrays.getFlat();
+				array = "store(redimension(" + multiDimArray + "," + flatArray + ")," + flatArray + ")";
+			} else {
+				/* only the flat array */
+				array = arrays.getFlat();
+			}
+			saveCommand.append("save(" + array + ", '" + scidbFilePath + "'");
+			saveCommand.append(",-2,'");
 			saveCommand.append("(" + format + ")");
+			saveCommand.append("')");
+			saveCommandFinal = saveCommand.toString();
 		}
-		else {
-			saveCommand.append(format);
-		}
-		saveCommand.append("')");
-		String saveCommandFinal = saveCommand.toString();
-		log.debug("save command: " + saveCommandFinal.replace("'", ""));
+		log.debug("save command: " + saveCommandFinal.replace("'", "*"));
 		handler.executeStatementAFL(saveCommandFinal);
 		handler.commit();
 		handler.close();
