@@ -5,8 +5,6 @@ initial_dir=$(pwd)
 mkdir Downloads
 cd Downloads
 downloads_dir=$(pwd)
-wget https://ftp.postgresql.org/pub/source/v9.4.5/postgresql-9.4.5.tar.gz
-tar -xf postgresql-9.4.5.tar.gz
 
 # get catalog resource 
 resources=${initial_dir}/../src/main/resources/
@@ -19,6 +17,10 @@ log_db=logs
 
 # main user
 pguser=pguser
+
+# ports for postgres
+port_1=5431
+port_2=5430
 
 function setDB {
     postgres_version=$1
@@ -42,11 +44,17 @@ function setDB {
     ./pg_ctl -w start -l postgres.log -D ${postgres_data}
     cd ${init_dir}
 }
-port_1=5431
-port_2=5430
 
-#setDB postgres1 ${port_1}
-#setDB postgres2 ${port_2}
+function install_postgres {
+    cd ${downloads_dir}
+    wget https://ftp.postgresql.org/pub/source/v9.4.5/postgresql-9.4.5.tar.gz
+    tar -xf postgresql-9.4.5.tar.gz
+
+    setDB postgres1 ${port_1}
+    setDB postgres2 ${port_2}
+}
+
+#install_postgres
 
 postgres1_bin=${downloads_dir}/postgres1/bin
 cd ${postgres1_bin}
