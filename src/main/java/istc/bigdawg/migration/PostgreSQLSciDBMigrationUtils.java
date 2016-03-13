@@ -151,10 +151,10 @@ public class PostgreSQLSciDBMigrationUtils {
 	 *            information about this special action)
 	 * @throws MigrationException
 	 */
-	public static void removeIntermediateArrays(SciDBConnectionInfo connection, String msg, Set<String> createdArrays)
+	public static void removeArrays(SciDBConnectionInfo connection, String msg, Set<String> arrays)
 			throws MigrationException {
-		/* try to clean the environment: remove the created arrays */
-		for (String array : createdArrays) {
+		/* remove the arrays */
+		for (String array : arrays) {
 			try {
 				PostgreSQLSciDBMigrationUtils.removeArray(connection, array);
 			} catch (SQLException e1) {
@@ -164,7 +164,7 @@ public class PostgreSQLSciDBMigrationUtils {
 				throw new MigrationException(msg);
 			}
 		}
-		createdArrays.clear();
+		arrays.clear();
 	}
 
 }
