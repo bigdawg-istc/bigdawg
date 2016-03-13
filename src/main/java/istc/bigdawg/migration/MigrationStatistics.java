@@ -36,7 +36,7 @@ public class MigrationStatistics {
 	 * @param message
 	 */
 	public MigrationStatistics(ConnectionInfo connectionFrom, ConnectionInfo connectionTo, String objectFrom, String objectTo,
-			long startTimeMigration, long endTimeMigration, long countExtractedElements, long countLoadedElements,
+			long startTimeMigration, long endTimeMigration, Long countExtractedElements, Long countLoadedElements,
 			String message) {
 		this.connectionFrom = connectionFrom;
 		this.connectionTo = connectionTo;

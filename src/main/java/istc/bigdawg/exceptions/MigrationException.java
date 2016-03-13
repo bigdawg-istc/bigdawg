@@ -4,9 +4,9 @@
 package istc.bigdawg.exceptions;
 
 /**
- * @author Adam Dziedzic
+ * Problem with a data migration.
  * 
- *
+ * @author Adam Dziedzic
  */
 public class MigrationException extends BigDawgException {
 

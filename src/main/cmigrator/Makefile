@@ -5,8 +5,8 @@ SRC_DIR=src
 CC=g++
 LIBS=-lm -lboost_log -lboost_thread -lboost_system -lboost_log_setup -lpthread
 
-CFLAGS=-I$(IDIR) -Wall -pedantic -L/usr/include/boost -DBOOST_LOG_DYN_LINK -std=c++11 -ggdb # -g with debug
-# CFLAGS=-I$(IDIR) -Wall -pedantic -L/usr/include/boost -DBOOST_LOG_DYN_LINK -std=c++11 -O2 # -O2 for tests with optimization
+#CFLAGS=-I$(IDIR) -Wall -pedantic -L/usr/include/boost -DBOOST_LOG_DYN_LINK -std=c++11 -ggdb # -g with debug
+CFLAGS=-I$(IDIR) -Wall -pedantic -L/usr/include/boost -DBOOST_LOG_DYN_LINK -std=c++11 -O2 # -O2 for tests with optimization
 
 FINAL_PROGRAM=data-migrator
 POSTGRES_TO_SCIDB=postgres2scidb

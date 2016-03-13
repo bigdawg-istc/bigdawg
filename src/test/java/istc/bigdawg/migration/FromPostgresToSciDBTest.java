@@ -22,8 +22,9 @@ import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfoTest;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
-import istc.bigdawg.scidb.SciDBConnectionInfo;
+import istc.bigdawg.scidb.SciDBConnectionInfoTest;
 import istc.bigdawg.scidb.SciDBHandler;
+import istc.bigdawg.utils.Utils;
 
 /**
  * Test the migration from PostgreSQL to SciDB.
@@ -37,7 +38,7 @@ public class FromPostgresToSciDBTest {
 	private FromPostgresToSciDB migrator = new FromPostgresToSciDB();
 	private PostgreSQLConnectionInfo conFrom = new PostgreSQLConnectionInfoTest();
 	private String fromTable = "region_test_from_13241";
-	private SciDBConnectionInfo conTo = new SciDBConnectionInfo();
+	private SciDBConnectionInfo conTo = new SciDBConnectionInfoTest();
 	// private SciDBConnectionInfo conTo = new
 	// SciDBConnectionInfo("localhost","1239", "scidb", "mypassw",
 	// "/opt/scidb/14.12/bin/");

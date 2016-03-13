@@ -1,7 +1,7 @@
 /**
  * 
  */
-package istc.bigdawg.migration;
+package istc.bigdawg.utils;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
