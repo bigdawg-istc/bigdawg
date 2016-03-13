@@ -95,7 +95,7 @@ function load_csv_postgres {
     # load csv data to postgresql
     START=$(date +%s.%N)
     psql -U ${user} -d ${database} -p ${port} -a -c "drop table if exists ${postgresql_table}"
-    psql -U ${user} -d ${database} -p ${port} -a -c "begin; create table ${postgresql_table} (a bigint not null, b bigint not null, val double precision not null); copy ${postgresql_table} from '${csv_file}' with (format csv, freeze); commit;"
+    psql -U ${user} -d ${database} -p ${port} -a -c "begin; create table ${postgresql_table} (a bigint not null, b bigint not null, val double precision not null); copy ${postgresql_table} from '${csv_file}' with (format csv, header true, freeze); commit;"
     END=$(date +%s.%N)
     DIFF_POSTGRES_CSV=$(echo "$END - $START" | bc)
 
