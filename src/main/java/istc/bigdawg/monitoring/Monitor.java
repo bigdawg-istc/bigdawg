@@ -20,7 +20,7 @@ public class Monitor {
     private static final String INSERT = "INSERT INTO monitoring (island, query, lastRan, duration) SELECT '%s', '%s', -1, -1 WHERE NOT EXISTS (SELECT 1 FROM monitoring WHERE island='%s' AND query='%s')";
     private static final String DELETE = "DELETE FROM monitoring WHERE island='%s' AND query='%s'";
     private static final String UPDATE = "UPDATE monitoring SET lastRan=%d, duration=%d WHERE island='%s' AND query='%s'";
-    private static final String RETRIEVE = "SELECT duration FROM monitoring WHERE island = '%s' AND query = '%s'";
+    private static final String RETRIEVE = "SELECT duration FROM monitoring WHERE island='%s' AND query='%s'";
     private static final String MIGRATE = "INSERT INTO migrationstats(fromLoc, toLoc, objectFrom, objectTo, startTime, endTime, countExtracted, countLoaded, message) VALUES ('%s', '%s', '%s', '%s', %d, %d, %d, %d, '%s')";
     private static final String RETRIEVEMIGRATE = "SELECT objectFrom, objectTo, startTime, endTime, countExtracted, countLoaded, message FROM migrationstats WHERE fromLoc='%s' AND toLoc='%s'";
 
