@@ -96,6 +96,65 @@ public class SQLExpressionUtils {
 		return attributes;
 	}
 	
+public static List<String> getColumnNamesInAllForms(Expression expr) throws JSQLParserException {
+		
+		final List<String> attributes = new ArrayList<String>();
+	
+		SQLExpressionHandler deparser = new SQLExpressionHandler() {
+	        
+			@Override
+			public void visit(Column tableColumn) {
+				attributes.add(tableColumn.getTable().getName());
+				if (tableColumn.getTable().getSchemaName() != null)
+					attributes.add(tableColumn.getTable().getSchemaName()+"."+tableColumn.getTable().getName());
+				attributes.add(tableColumn.getTable().getFullyQualifiedName());
+			}
+			
+			@Override
+		    public void visit(Parenthesis parenthesis) {
+		        parenthesis.getExpression().accept(this);
+		    }
+			
+			@Override
+			public void visitOldOracleJoinBinaryExpression(OldOracleJoinBinaryExpression expression, String operator) {
+				expression.getLeftExpression().accept(this);
+				expression.getRightExpression().accept(this);
+			}
+			
+			@Override
+			protected void visitBinaryExpression(BinaryExpression binaryExpression, String operator) {
+		        binaryExpression.getLeftExpression().accept(this);
+		        binaryExpression.getRightExpression().accept(this);
+			}
+			
+			@Override
+		    public void visit(ExpressionList expressionList) {
+		        for (Iterator<Expression> iter = expressionList.getExpressions().iterator(); iter.hasNext();) {
+		            Expression expression = iter.next();
+		            expression.accept(this);
+		        }
+		    }
+			
+			@Override
+			public void visit(Function function) {
+				function.getParameters().accept(this);
+			}
+			
+			@Override
+			public void visit(SignedExpression se) {
+				se.getExpression().accept(this);
+			}
+			
+			@Override public void visit(LongValue lv) {};
+			@Override public void visit(DoubleValue lv) {};
+			@Override public void visit(HexValue lv) {};
+			@Override public void visit(NullValue lv) {};
+			@Override public void visit(TimeValue lv) {};
+	    };
+	    
+	    expr.accept(deparser);
+	    return attributes;
+	}
 	
 	
 	public static void renameAttributes(Expression expr, Set<String> originalTableNameSet, String replacement) throws JSQLParserException {

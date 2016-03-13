@@ -296,6 +296,8 @@ public class Aggregate extends Operator {
 	public void updateGroupByElements() throws Exception {
 		
 		List<Operator> treeWalker;
+		if (parsedGroupBys == null)
+			return;
 		for (Expression gb : parsedGroupBys) {
 			
 			treeWalker = children;
