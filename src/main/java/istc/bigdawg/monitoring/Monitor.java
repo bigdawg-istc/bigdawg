@@ -134,8 +134,8 @@ public class Monitor {
         // Only for testing purposes.Uncomment when necessary.
 /*        try {
             File temp = File.createTempFile("queries", ".tmp");
-            BufferedWriter bw = new BufferedWriter(new FileWriter(temp));
-            bw.write(String.format("%d %s %s", endTime-startTime, qep.getIsland(), qepString));
+            BufferedWriter bw = new BufferedWriter(new FileWriter(temp,true));
+            bw.write(String.format("%d %s %s\n", endTime-startTime, qep.getIsland(), qepString));
             bw.close();
         } catch (IOException e) {
             e.printStackTrace();
