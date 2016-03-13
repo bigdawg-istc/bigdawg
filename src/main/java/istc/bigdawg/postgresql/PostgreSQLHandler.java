@@ -345,7 +345,9 @@ public class PostgreSQLHandler implements DBHandler {
 			this.getConnection();
 
 			log.debug("\n\nquery: " + query + "");
-			log.debug("ConnectionInfo: " + this.conInfo.toString() + "\n");
+			if (this.conInfo != null){
+				log.debug("ConnectionInfo: " + this.conInfo.toString() + "\n");
+			}
 
 			st = con.createStatement();
 			rs = st.executeQuery(query);
