@@ -1,5 +1,6 @@
 # go to bigdawgmiddle directory
 # Adam Dziedzic
+# logs=# select * from logs where logger like '%FromSciDBToPostgresImplementation%' and message like 'Migration result,%Bin%FULL' order by time desc;
 
 initial_dir=$(pwd)
 mkdir Downloads
@@ -106,6 +107,9 @@ cd ${postgres2_bin}
 ./psql -p ${port_2} -c "create database ${database2} owner ${pguser}" -d template1
 ./psql -p ${port_2} -c "create schema mimic2v26" -d ${database2} -U pguser
 ./psql -p ${port_2} -f ${initial_dir}/../scripts/mimic2_sql/d_patients.sql -d ${database2}
+
+# tests
+./psql -p ${port_2} -c "create database test owner ${pguser}" -d template1 -U postgres
 
 # schemas
 bash ${schemas_resource}/recreate_schemas.sh ${schemas_resource} ${downloads_dir} ${port_1} ${port_2} ${catalog_db} ${postgres1_bin} ${postgres2_bin}

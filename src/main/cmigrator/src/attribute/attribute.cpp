@@ -164,7 +164,7 @@ int GenericAttribute<char*>::scidbReadBinary(FILE *fp)
     if (this->bytesNumber != 0) {
       std::string msg ("The null byte indicated null value but the string size is different than zero!");
       std::cerr << msg << std::endl;
-      BOOST_LOG_TRIVIAL(error) << msg; 
+      //BOOST_LOG_TRIVIAL(error) << msg; 
       exit(1); 
     }
     return 0;
