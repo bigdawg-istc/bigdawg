@@ -15,6 +15,7 @@ import org.apache.log4j.Logger;
 import org.postgresql.copy.CopyManager;
 import org.postgresql.core.BaseConnection;
 
+import istc.bigdawg.utils.LogUtils;
 import istc.bigdawg.utils.StackTrace;
 
 /**
@@ -83,7 +84,7 @@ public class CopyToPostgresExecutor implements Callable<Long> {
 			 * remove the quotes - our postgresql database for logs cannot accept
 			 * such input
 			 */
-			log.error(msg.replace("'", ""));
+			log.error(LogUtils.replace(msg));
 			e.printStackTrace();
 		}
 		return countLoadedRows;

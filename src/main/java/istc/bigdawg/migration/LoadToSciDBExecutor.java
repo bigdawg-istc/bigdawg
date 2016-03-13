@@ -10,6 +10,7 @@ import org.apache.log4j.Logger;
 
 import istc.bigdawg.scidb.SciDBConnectionInfo;
 import istc.bigdawg.scidb.SciDBHandler;
+import istc.bigdawg.utils.LogUtils;
 
 /**
  * @author Adam Dziedzic
@@ -84,7 +85,7 @@ public class LoadToSciDBExecutor implements Callable<String> {
 			loadCommand = "store(redimension(" + loadCommand + "," + arrays.getMultiDimensional() + "),"
 					+ arrays.getMultiDimensional() + ")";
 		}
-		log.debug("load command: " + loadCommand.replace("'", ""));
+		log.debug("load command: " + LogUtils.replace(loadCommand));
 		handler.executeStatementAFL(loadCommand);
 		handler.commit();
 		handler.close();

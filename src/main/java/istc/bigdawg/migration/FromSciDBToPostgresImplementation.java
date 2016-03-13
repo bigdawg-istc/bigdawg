@@ -33,6 +33,7 @@ import istc.bigdawg.scidb.SciDBArrayMetaData;
 import istc.bigdawg.scidb.SciDBColumnMetaData;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
 import istc.bigdawg.scidb.SciDBHandler;
+import istc.bigdawg.utils.LogUtils;
 import istc.bigdawg.utils.Pipe;
 import istc.bigdawg.utils.StackTrace;
 
@@ -110,7 +111,7 @@ public class FromSciDBToPostgresImplementation implements MigrationImplementatio
 		copyTo.append(" from STDIN with ");
 		copyTo.append("(format csv, delimiter ',', header true, quote \"'\")");
 		String copyCommand = copyTo.toString();
-		log.debug(copyCommand.replace("'", ""));
+		log.debug(LogUtils.replace(copyCommand));
 		return copyCommand;
 	}
 

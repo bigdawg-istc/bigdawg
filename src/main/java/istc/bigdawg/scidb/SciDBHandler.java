@@ -33,6 +33,7 @@ import istc.bigdawg.postgresql.PostgreSQLTableMetaData;
 import istc.bigdawg.query.DBHandler;
 import istc.bigdawg.query.QueryResponseTupleList;
 import istc.bigdawg.utils.Constants;
+import istc.bigdawg.utils.LogUtils;
 import istc.bigdawg.utils.ObjectMapperResource;
 import istc.bigdawg.utils.RunShell;
 import istc.bigdawg.utils.StackTrace;
@@ -194,7 +195,7 @@ public class SciDBHandler implements DBHandler {
 			// remove ' from the statement - otherwise it won't be inserted into
 			// log table in Postgres
 			log.error(ex.getMessage() + "; statement to be executed: "
-					+ stringStatement.replace("'", "") + " " + " "
+					+ LogUtils.replace(stringStatement) + " " + " "
 					+ StackTrace.getFullStackTrace(ex), ex);
 			throw ex;
 		} finally {
