@@ -1,5 +1,9 @@
 package istc.bigdawg.monitoring;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -124,7 +128,18 @@ public class Monitor {
 
     public void finishedBenchmark(QueryExecutionPlan qep, long startTime, long endTime) throws SQLException {
         PostgreSQLHandler handler = new PostgreSQLHandler();
-        handler.executeStatementPostgreSQL(String.format(UPDATE, endTime, endTime-startTime, qep.getIsland(), QueryExecutionPlan.qepToString(qep)));
+        String qepString = QueryExecutionPlan.qepToString(qep);
+        handler.executeStatementPostgreSQL(String.format(UPDATE, endTime, endTime-startTime, qep.getIsland(), qepString));
+
+        // Only for testing purposes.Uncomment when necessary.
+/*        try {
+            File temp = File.createTempFile("queries", ".tmp");
+            BufferedWriter bw = new BufferedWriter(new FileWriter(temp));
+            bw.write(String.format("%d %s %s", endTime-startTime, qep.getIsland(), qepString));
+            bw.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }*/
     }
 
     public static void addMigrationStats(MigrationStatistics stats) throws SQLException {
