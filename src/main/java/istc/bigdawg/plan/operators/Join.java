@@ -169,7 +169,7 @@ public class Join extends Operator {
 				
 		}
 		
-//		inferJoinParameters();
+		inferJoinParameters();
 		
 		if (joinPredicate != null)
 			joinPredicateOriginal 	= new String (joinPredicate);
@@ -192,19 +192,19 @@ public class Join extends Operator {
 				joinPredicate = parameters.get(p);
 			}
 		}
+		joinFilter = parameters.get("Join-Filter");
 		
-		System.out.println("JOIN: paramters: " + parameters );
 		
-
+//		System.out.println("JOIN: paramters: " + parameters );
+		
 		// if hash join
 		joinPredicate = SQLUtilities.parseString(joinPredicate);
-		joinFilter = parameters.get("Join-Filter");
 		joinFilter = SQLUtilities.parseString(joinFilter);
 
 
 		
 	
-		if(joinFilter != null && joinFilter.contains(joinPredicate)) { // remove duplicate
+		if(joinFilter != null && joinPredicate != null && joinFilter.contains(joinPredicate)) { // remove duplicate
 			String joinClause = "(" + joinPredicate + ") AND"; // canonical form
 			if(joinFilter.contains(joinClause)) {				
 				joinFilter = joinFilter.replace(joinClause, "");
@@ -214,6 +214,7 @@ public class Join extends Operator {
 				joinFilter = joinFilter.replace(joinClause, "");			
 			}
 		}
+		
 		
 		currentWhere = joinFilter;
 		
@@ -392,8 +393,8 @@ public class Join extends Operator {
         	Set<String> child1ObjectSet = child1.getDataObjectNames();
 
 //    		// for debugging
-//        	System.out.printf("\nJP: %s\nchild0obj: %s\nchild1obj: %s\n\n", joinPredicate, 
-//        			child0ObjectSet, child1ObjectSet);
+        	System.out.printf("\nJP: %s\nchild0obj: %s\nchild1obj: %s\n\n", joinPredicate, 
+        			child0ObjectSet, child1ObjectSet);
     		
         	t0.setName((String)child0ObjectSet.toArray()[0]);
         	t1.setName((String)child1ObjectSet.toArray()[0]);
@@ -445,8 +446,6 @@ public class Join extends Operator {
 	    			t = t0;
 	    		}
     		}
-    		
-    		
     		
 			// leave the rest for child1;
 			
@@ -550,74 +549,66 @@ public class Join extends Operator {
     	}
     }
     
+    private boolean replaceTableNameWithPruneName(Operator child, Expression e, Table t, List<String> itemsSet) throws Exception {
+		if (child.isPruned()) {
+			// does child have any of those names? 
+			Set<String> names = new HashSet<>(child.getDataObjectNames());
+			names.addAll(child.objectAliases);
+			names.retainAll(itemsSet);
+			if (names.size() > 0) {
+				SQLExpressionUtils.renameAttributes(e, names, child.getPruneToken());
+				t.setName(child.getPruneToken());
+				return true;
+			} else 
+				return false;
+		} else {
+			boolean ret = false;
+			for (Operator o : child.getChildren()) {
+				ret = ret || replaceTableNameWithPruneName(o, e, t, itemsSet);
+			}
+			return ret;
+		}
+	}
+    
+    private boolean findAndGetTableName(Operator child, Table t, List<String> itemsSet) throws Exception {
+    	
+		Set<String> names = new HashSet<>(child.getDataObjectNames());
+		child.updateObjectAliases(true);
+		names.addAll(child.objectAliases);
+		names.retainAll(itemsSet);
+		if (names.size() > 0) {
+			if (child instanceof Scan) {
+				t.setName(((Scan)child).getTable().toString());
+			} else if (child.getChildren().size() > 0) {
+				return findAndGetTableName(child.getChildren().get(0), t, itemsSet);
+			}
+			return false;
+		} else {
+			boolean ret = false;
+			for (Operator o : child.getChildren()) {
+				ret = ret || findAndGetTableName(o, t, itemsSet);
+			}
+			return ret;
+		}    	
+    }
+    
     public String updateOnExpression(String joinPred, Operator child0, Operator child1, Table t0, Table t1, boolean update) throws Exception {
     	
     	if ((!update) && joinPredicateUpdated)
     		return joinPredicate;
     	
-		BinaryExpression on = (BinaryExpression) CCJSqlParserUtil.parseCondExpression(joinPred);
+    	Expression expr = CCJSqlParserUtil.parseCondExpression(joinPred);
+		List<String> itemsSet = SQLExpressionUtils.getColumnNamesInAllForms(expr);
 		
-		Expression l = on.getLeftExpression();
-		Expression r = on.getRightExpression();
-
+		if (!replaceTableNameWithPruneName(child0, expr, t0, itemsSet))
+			findAndGetTableName(child0, t0, itemsSet);
+		if (!replaceTableNameWithPruneName(child1, expr, t1, itemsSet))
+			findAndGetTableName(child1, t1, itemsSet);
 		
-		// TODO ASSUMPTION: THERE CAN ONLY BE COLUMNS OR PARENTHESES
-		if (l.getClass().equals(Parenthesis.class)) {
-			l = ((Parenthesis) l).getExpression();
-			on.setLeftExpression(l);
-		}
-		if (r.getClass().equals(Parenthesis.class)) {
-			r = ((Parenthesis) r).getExpression();
-			on.setRightExpression(r);
-		}
-			
-		
-		Column cLeft  = ((Column) l);
-		Column cRight = ((Column) r);
-		
-		
-		String cLeftColName = cLeft.getTable().getName()+"."+cLeft.getColumnName();
-		String cRightColName = cRight.getTable().getName()+"."+cRight.getColumnName();
-		
-		t0.setName(cLeft.getTable().getName());
-		t1.setName(cRight.getTable().getName());
-		
-		setTableNameFromPrunedOne(child0, t0, cLeftColName, false);
-		setTableNameFromPrunedOne(child1, t1, cRightColName, false);
-    		
-		cLeft.setTable(t0);
-		cRight.setTable(t1);
-		
-		
-		return on.toString();
+		return expr.toString();
 	}
     
     
-    
-    private boolean setTableNameFromPrunedOne(Operator o, Table t, String fullyQualifiedName, boolean found) throws Exception{
-		if (o.getOutSchema().containsKey(fullyQualifiedName)) {
-			if (o.isPruned()) {
-				t.setName(o.getPruneToken());
-//				System.out.printf("FOUND: FQN: %s,   outSchema: %s\n", fullyQualifiedName, o.getOutSchema());
-				return true;
-			} else {
-				if (o.getClass().equals(Join.class)) {
-	    			if (setTableNameFromPrunedOne(o.getChildren().get(0), t, fullyQualifiedName, found)) 
-	    				return true;
-	    			else 
-	    				return setTableNameFromPrunedOne(o.getChildren().get(1), t, fullyQualifiedName, found);
-	    		} else {
-	    			if (o.getChildren().size() == 0) return false;
-	    			return setTableNameFromPrunedOne(o.getChildren().get(0), t, fullyQualifiedName, found);
-	    		}
-			}
-		} else {
-//			System.out.printf("NOT FOUND: FQN: %s,   outSchema: %s\n", fullyQualifiedName, o.getOutSchema());
-		}
-		
-		return false;
-    }
-	
     public String toString() {
     		return "Joining " + children.get(0).toString() + " x " + children.get(1).toString() 
     				+ " type " + joinType + " predicates " + joinPredicate + " filters " + currentWhere;

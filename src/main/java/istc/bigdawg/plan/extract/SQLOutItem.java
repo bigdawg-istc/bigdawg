@@ -40,7 +40,7 @@ public class SQLOutItem extends CommonOutItem{
 			SQLTableExpression supplement) throws Exception {
 		super();
 		
-		String typeStr;
+		String typeStr = null;
 		if (expr.indexOf("::") >= 0) {
 			typeStr = expr.substring(expr.lastIndexOf("::")+2).replaceAll("[)]", "");
 		} else {
@@ -51,25 +51,37 @@ public class SQLOutItem extends CommonOutItem{
 			while (doa == null) {
 				
 				String before = new String(finder);
-				finder = finder.replaceAll("^[_@a-zA-Z0-9]+\\.", "");
+				finder = finder.replaceAll("^([_@a-zA-Z0-9]+\\.)", "");
 				
 				if (before.equals(finder)) {
 					// shaving the front doesn't work, it's probably a function or other type of expression
-					finder = SQLExpressionUtils.getAttributes((Expression)CCJSqlParserUtil.parseExpression(finder)).get(0);
+					List<String> resultStrings = SQLExpressionUtils.getAttributes(CCJSqlParserUtil.parseExpression(finder));
+					if (resultStrings.size() > 0)
+						finder = resultStrings.get(0);
+					else 
+						break;
 					if (finder.equals(before)) {
 						throw new Exception("cannot find: "+expr+"; finder: "+finder+"; srcSchema: "+srcSchema.toString());
 					}
 				}
 				doa = srcSchema.get(finder);
 			}
-			typeStr = doa.getTypeString();
+			if (doa != null)
+				typeStr = doa.getTypeString();
 		}
 		
 //		System.out.println("SQLOutItem: \n--"+expr+"\n--"+srcSchema+"\n");
 		
 		
 		outAttribute = new SQLAttribute();
-		outAttribute.setTypeString(typeStr);
+		if (typeStr != null)
+			outAttribute.setTypeString(typeStr);
+		else {
+			// so far we've only observed count(*) causing trouble. Take note:
+			outAttribute.setTypeString("integer");
+		}
+		
+		
 		
 		aggregates = new ArrayList<Function>();
 		windowedAggregates = new ArrayList<AnalyticExpression>();
@@ -89,6 +101,7 @@ public class SQLOutItem extends CommonOutItem{
 		// aliases are original values to new values
 		String firstAttrName = srcSchema.keySet().iterator().next();
 		Map<String, String> aliases = new HashMap<String, String>();
+		
 		if(supplement != null) {	
 			aliases = supplement.getAliases();
 		}
@@ -108,7 +121,7 @@ public class SQLOutItem extends CommonOutItem{
 
 		// there's  no alias
 		if(alias == null) {
-			String after = expr.replaceAll("[(][.\\w]+[)]", "");
+			String after = expr.replaceAll("[(][*.\\w]+[)]", "");
 //			System.out.println("expr before: "+expr);
 //			System.out.println("expr after : "+after);
 			if (expr.equals(after))

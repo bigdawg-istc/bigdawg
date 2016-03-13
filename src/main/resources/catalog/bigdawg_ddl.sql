@@ -51,7 +51,7 @@ CREATE TABLE IF NOT EXISTS catalog.scidbbinpaths (
 CREATE TABLE IF NOT EXISTS catalog.objects (
        oid integer PRIMARY KEY,
        name varchar(50), -- name of the object
-       fields varchar(300), -- csv of the field names, e.g. "dbid,\"engine id\",name,userid,password"
+       fields varchar(800), -- csv of the field names, e.g. "dbid,\"engine id\",name,userid,password"
        logical_db integer REFERENCES catalog.databases(dbid), -- how was the object created                                                                                               
        physical_db integer REFERENCES catalog.databases(dbid) -- where is it located now?                                                                                                 
 );
