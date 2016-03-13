@@ -17,6 +17,11 @@ public class SciDBConnectionInfoTest extends SciDBConnectionInfo {
 	/**
 	 * 
 	 */
+	private static final long serialVersionUID = 1L;
+
+	/**
+	 * 
+	 */
 	public SciDBConnectionInfoTest() {
 		super(BigDawgConfigProperties.INSTANCE.getScidbTestHostname(),
 				BigDawgConfigProperties.INSTANCE.getScidbTestPort(),

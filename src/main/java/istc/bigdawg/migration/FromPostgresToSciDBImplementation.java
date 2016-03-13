@@ -50,6 +50,11 @@ public class FromPostgresToSciDBImplementation implements MigrationImplementatio
 	/* General error message when the migration fails in the class. */
 	private static String errMessage = generalMessage + " failed! ";
 
+	enum MigrationType {
+		FULL /* export dimensions and attributes from SciDB */, FLAT
+		/* export only the attributes from SciDB */}
+
+	private MigrationType migrationType;
 	/*
 	 * These are the arrays that were created during migration of data from
 	 * PostgreSQL to SciDB. If something fails on the way, then the arrays
@@ -150,12 +155,12 @@ public class FromPostgresToSciDBImplementation implements MigrationImplementatio
 			MigrationStatistics stats = new MigrationStatistics(connectionFrom, connectionTo, fromTable, toArray,
 					startTimeMigration, endTimeMigration, null, countExtractedElements, this.getClass().getName());
 			Monitor.addMigrationStats(stats);
-			log.debug("Migration result,connectionFrom," + connectionFrom.toString() + ",connectionTo,"
-					+ connectionTo.toString() + ",fromTable," + fromTable + ",toArrat," + toArray
+			log.debug("Migration result,connectionFrom," + connectionFrom.toSimpleString() + ",connectionTo,"
+					+ connectionTo.toString() + ",fromTable," + fromTable + ",toArray," + toArray
 					+ ",startTimeMigration," + startTimeMigration + ",endTimeMigration," + endTimeMigration
-					+ ",countExtractedElements," + "N/A" + ",countLoadedElements," + countExtractedElements
-					+ ",durationMsec," + durationMsec + ","
-					+ Thread.currentThread().getStackTrace()[1].getMethodName());
+					+ ",countExtractedElements," + countExtractedElements + ",countLoadedElements," + "N/A"
+					+ ",durationMsec," + durationMsec + "," + Thread.currentThread().getStackTrace()[1].getMethodName()
+					+ "," + migrationType.toString());
 			return new MigrationResult(countExtractedElements, null,
 					loadMessage + " No information about the number of loaded rows." + " Result of transformation: "
 							+ transformationMessage,
@@ -215,12 +220,12 @@ public class FromPostgresToSciDBImplementation implements MigrationImplementatio
 			MigrationStatistics stats = new MigrationStatistics(connectionFrom, connectionTo, fromTable, toArray,
 					startTimeMigration, endTimeMigration, null, countExtractedElements, this.getClass().getName());
 			Monitor.addMigrationStats(stats);
-			log.debug("Migration result,connectionFrom," + connectionFrom.toString() + ",connectionTo,"
-					+ connectionTo.toString() + ",fromTable," + fromTable + ",toArrat," + toArray
+			log.debug("Migration result,connectionFrom," + connectionFrom.toSimpleString() + ",connectionTo,"
+					+ connectionTo.toString() + ",fromTable," + fromTable + ",toArray," + toArray
 					+ ",startTimeMigration," + startTimeMigration + ",endTimeMigration," + endTimeMigration
-					+ ",countExtractedElements," + "N/A" + ",countLoadedElements," + countExtractedElements
-					+ ",durationMsec," + durationMsec + ","
-					+ Thread.currentThread().getStackTrace()[1].getMethodName());
+					+ ",countExtractedElements," + countExtractedElements + ",countLoadedElements," + "N/A"
+					+ ",durationMsec," + durationMsec + "," + Thread.currentThread().getStackTrace()[1].getMethodName()
+					+ "," + migrationType.toString());
 			return new MigrationResult(countExtractedElements, null,
 					loadMessage + " No information about number of loaded rows.", false);
 		} catch (SQLException | UnsupportedTypeException | ExecutionException | InterruptedException
@@ -360,6 +365,7 @@ public class FromPostgresToSciDBImplementation implements MigrationImplementatio
 	private SciDBArrays prepareFlatTargetArrays() throws MigrationException, SQLException, UnsupportedTypeException {
 		SciDBHandler handler = new SciDBHandler(connectionTo);
 		SciDBArrayMetaData arrayMetaData = null;
+		migrationType = MigrationType.FULL;
 		try {
 			arrayMetaData = handler.getArrayMetaData(toArray);
 		} catch (NoTargetArrayException e) {
@@ -369,11 +375,13 @@ public class FromPostgresToSciDBImplementation implements MigrationImplementatio
 			 * by default is flat.
 			 */
 			createFlatArray(toArray);
+			migrationType = MigrationType.FLAT;
 			/* the data should be loaded to the default flat array */
 			return new SciDBArrays(toArray, null);
 		}
 		handler.close();
 		if (PostgreSQLSciDBMigrationUtils.isFlatArray(arrayMetaData, postgresqlTableMetaData)) {
+			migrationType = MigrationType.FLAT;
 			return new SciDBArrays(toArray, null);
 		}
 		/*

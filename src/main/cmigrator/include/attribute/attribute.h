@@ -246,7 +246,7 @@ int GenericAttribute<T>::scidbWriteBinary(FILE *fp)
 template <class T>
 int GenericAttribute<T>::postgresWriteBinary(FILE *fp) 
 {
-  BOOST_LOG_TRIVIAL(debug) << "postgresWriteBinary is nullable: " << this->isNullable;
+  //BOOST_LOG_TRIVIAL(debug) << "postgresWriteBinary is nullable: " << this->isNullable;
   if(this->isNullable) 
     {
       if(this->isNull)
@@ -262,7 +262,7 @@ int GenericAttribute<T>::postgresWriteBinary(FILE *fp)
   int32_t attrLengthPostgres = endianness::to_postgres<int32_t>(this->bytesNumber);
   fwrite(&attrLengthPostgres,4,1,fp);
   T valuePostgres = endianness::to_postgres<T>(this->value);
-  BOOST_LOG_TRIVIAL(debug) << "postgresWriteBinary bytes number: " << this->bytesNumber;
+  //BOOST_LOG_TRIVIAL(debug) << "postgresWriteBinary bytes number: " << this->bytesNumber;
   fwrite(&valuePostgres,this->bytesNumber,1,fp);
   return 0;
 }

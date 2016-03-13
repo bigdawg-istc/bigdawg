@@ -334,8 +334,8 @@ public class FromSciDBToPostgresImplementation implements MigrationImplementatio
 					+ connectionTo.toSimpleString() + ",fromArray," + fromArray + ",toTable," + toTable
 					+ ",startTimeMigration," + startTimeMigration + ",endTimeMigration," + endTimeMigration
 					+ ",countExtractedElements," + "N/A" + ",countLoadedElements," + countLoadedElements
-					+ ",durationMsec," + durationMsec + ","
-					+ Thread.currentThread().getStackTrace()[1].getMethodName());
+					+ ",durationMsec," + durationMsec + "," + Thread.currentThread().getStackTrace()[1].getMethodName()
+					+ "," + migrationType.toString());
 
 			return new MigrationResult(null, countLoadedElements,
 					exportMessage + " No information about the number of extracted rows."
@@ -452,8 +452,8 @@ public class FromSciDBToPostgresImplementation implements MigrationImplementatio
 					+ connectionTo.toSimpleString() + ",fromArray," + fromArray + ",toTable," + toTable
 					+ ",startTimeMigration," + startTimeMigration + ",endTimeMigration," + endTimeMigration
 					+ ",countExtractedElements," + "N/A" + ",countLoadedElements," + countLoadedElements
-					+ ",durationMsec," + durationMsec + ","
-					+ Thread.currentThread().getStackTrace()[1].getMethodName());
+					+ ",durationMsec," + durationMsec + "," + Thread.currentThread().getStackTrace()[1].getMethodName()
+					+ "," + migrationType.toString());
 			return new MigrationResult(null, countLoadedElements,
 					exportMessage + " No information about the number of extracted items from SciDB.", false);
 		} catch (SQLException | NoTargetArrayException | UnsupportedTypeException | InterruptedException
