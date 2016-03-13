@@ -17,10 +17,10 @@ import istc.bigdawg.query.ConnectionInfoParser;
 import istc.bigdawg.utils.IslandsAndCast.Scope;
 
 public class Monitor {
-    private static final String INSERT = "INSERT INTO monitoring(island, query, lastRan, duration) VALUES ('%s', '%s', -1, -1)";
+    private static final String INSERT = "INSERT INTO monitoring (island, query, lastRan, duration) SELECT '%s', '%s', -1, -1 WHERE NOT EXISTS (SELECT 1 FROM monitoring WHERE island='%s' AND query='%s')";
     private static final String DELETE = "DELETE FROM monitoring WHERE island='%s' AND query='%s'";
     private static final String UPDATE = "UPDATE monitoring SET lastRan=%d, duration=%d WHERE island='%s' AND query='%s'";
-    private static final String RETRIEVE = "SELECT duration FROM monitoring WHERE island='%s' AND query='%s'";
+    private static final String RETRIEVE = "SELECT duration FROM monitoring WHERE island = '%s' AND query = '%s'";
     private static final String MIGRATE = "INSERT INTO migrationstats(fromLoc, toLoc, objectFrom, objectTo, startTime, endTime, countExtracted, countLoaded, message) VALUES ('%s', '%s', '%s', '%s', %d, %d, %d, %d, '%s')";
     private static final String RETRIEVEMIGRATE = "SELECT objectFrom, objectTo, startTime, endTime, countExtracted, countLoaded, message FROM migrationstats WHERE fromLoc='%s' AND toLoc='%s'";
 
@@ -77,7 +77,7 @@ public class Monitor {
             queries.add(qepString);
             PostgreSQLHandler handler = new PostgreSQLHandler();
             try {
-                PostgreSQLHandler.QueryResult qresult = handler.executeQueryPostgreSQL(String.format(RETRIEVE, qep.getIsland(), qepString));
+                PostgreSQLHandler.QueryResult qresult = handler.executeQueryPostgreSQL(String.format(RETRIEVE, qep.getIsland().toString(), qepString));
                 List<List<String>> rows = qresult.getRows();
                 long duration = Long.MAX_VALUE;
                 for (List<String> row: rows){
@@ -99,7 +99,7 @@ public class Monitor {
     private static boolean insert(String query, Scope island) throws NotSupportIslandException {
         PostgreSQLHandler handler = new PostgreSQLHandler();
         try {
-			handler.executeStatementPostgreSQL(String.format(INSERT, island.toString(), query));
+			handler.executeStatementPostgreSQL(String.format(INSERT, island.toString(), query, island.toString(), query));
 			return true;
 		} catch (SQLException e) {
 			return false;
