@@ -237,7 +237,7 @@ public class BinaryJoinExecutionNode implements ExecutionNode {
      */
     @Override
     public ConnectionInfo getEngine() {
-        throw new UnsupportedOperationException();
+        return this.destinationEngine;
     }
 
     /*
@@ -247,7 +247,7 @@ public class BinaryJoinExecutionNode implements ExecutionNode {
      */
     @Override
     public Optional<String> getTableName() {
-        throw new UnsupportedOperationException();
+        return Optional.of(this.destinationTable);
     }
 
     /*
@@ -257,7 +257,7 @@ public class BinaryJoinExecutionNode implements ExecutionNode {
      */
     @Override
     public Optional<String> getQueryString() {
-        throw new UnsupportedOperationException();
+        return Optional.of(this.broadcastQuery);
     }
 
 }

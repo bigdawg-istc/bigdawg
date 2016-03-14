@@ -1,6 +1,7 @@
 package istc.bigdawg.signature;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -12,6 +13,9 @@ import istc.bigdawg.signature.builder.RelationalSignatureBuilder;
 import istc.bigdawg.utils.IslandsAndCast.Scope;
 
 public class Signature {
+	
+	private static String fieldSeparator = "|||||";
+	private static String elementSeparator = "&&&&&";
 	
 	private Scope island;
 	private String sig1;
@@ -56,19 +60,48 @@ public class Signature {
 	}
 	
 	
+	public Signature(String s) throws Exception{
+
+		List<String> parsed = Arrays.asList(s.split(fieldSeparator));
+		if (parsed.size() != 5 && parsed.size() != 6) {
+			throw new Exception("Ill-formed input string; cannot recover signature; String: "+s);
+		}
+		try {
+			this.island = Scope.valueOf(parsed.get(0));
+			this.sig1 = new String(parsed.get(1));
+			this.sig2 = Arrays.asList(parsed.get(2).split(elementSeparator));
+			this.sig3 = Arrays.asList(parsed.get(3).split(elementSeparator));
+			this.query = new String(parsed.get(4));
+			if (parsed.size() == 5)
+				this.sig4k = new ArrayList<>();
+			else
+				this.sig4k = Arrays.asList(parsed.get(5).split(elementSeparator));
+		} catch (Exception e) {
+			e.printStackTrace();
+			throw new Exception("Ill-formed input string; cannot recover signature; String: "+s);
+		}
+	}
+	
 	public static double getTreeEditDistance(String s1, String s2) {
 		return RTED.computeDistance(s1, s2);
 	}
 	
-
+	@Override
+	public String toString() {
+		
+		StringBuilder sb = new StringBuilder();
+		sb.append("Signature:\n");
+		sb.append("Island       : ").append(island.toString()).append('\n');
+		sb.append("Signature 1  : ").append(sig1.toString()).append('\n');
+		sb.append("Signature 2  : ").append(sig2.toString()).append('\n');
+		sb.append("Signature 3  : ").append(sig3.toString()).append('\n');
+		sb.append("Query        : ").append(query).append('\n');
+		sb.append("Signature 4-k: ").append(sig4k.toString()).append('\n');
+		
+		return sb.toString();
+	}
 	public void print() {
-		System.out.println("Type       : Signature");
-//		System.out.println("Identifier : "+identifier);
-		System.out.println("Island     : "+island);
-		System.out.println("Signature 1: "+sig1);
-		System.out.println("Signature 2: "+sig2);
-		System.out.println("Signature 3: "+sig3);
-		System.out.println("Query      : "+query);
+		System.out.println(this.toString());
 	}
 	
 	public String getSig1() {
@@ -118,6 +151,23 @@ public class Signature {
 	public void setSig4k(List<String> sig4k) {
 		this.sig4k = sig4k;
 	}
+	
+	public String toRecoverableString() {
+		StringBuilder sb = new StringBuilder();
+		
+		sb.append(island.toString());
+		sb.append(fieldSeparator).append(sig1);
+		sb.append(fieldSeparator).append(String.join(elementSeparator, sig2));
+		sb.append(fieldSeparator).append(String.join(elementSeparator, sig3));
+		sb.append(fieldSeparator).append(query);
+		
+		if (sig4k.size() > 0)
+			sb.append(fieldSeparator).append(String.join(elementSeparator, sig4k));
+		
+		return sb.toString();
+	}
+	
+	
 	
 	
 	

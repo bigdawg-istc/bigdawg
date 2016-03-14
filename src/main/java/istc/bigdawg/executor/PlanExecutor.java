@@ -107,25 +107,27 @@ class PlanExecutor {
     
     private Optional<QueryResult> executeNode(ExecutionNode node) {
         // perform shuffle join if equijoin and hint doesn't specify otherwise
-        if (node instanceof BinaryJoinExecutionNode &&
-                ((BinaryJoinExecutionNode) node).getHint().orElse(BinaryJoinExecutionNode.JoinAlgorithms.SHUFFLE) == BinaryJoinExecutionNode.JoinAlgorithms.SHUFFLE &&
-                ((BinaryJoinExecutionNode) node).isEquiJoin()) {
-            BinaryJoinExecutionNode joinNode = (BinaryJoinExecutionNode) node;
-            if(!joinNode.getHint().isPresent() || joinNode.getHint().get() == BinaryJoinExecutionNode.JoinAlgorithms.SHUFFLE) {
-                try {
-                    colocateDependencies(node, Arrays.asList(joinNode.getLeft().table, joinNode.getRight().table));
+        // TODO(ankush): re-enable this and debug
+//        if (node instanceof BinaryJoinExecutionNode &&
+//                ((BinaryJoinExecutionNode) node).getHint().orElse(BinaryJoinExecutionNode.JoinAlgorithms.SHUFFLE) == BinaryJoinExecutionNode.JoinAlgorithms.SHUFFLE &&
+//                ((BinaryJoinExecutionNode) node).isEquiJoin()) {
+//            BinaryJoinExecutionNode joinNode = (BinaryJoinExecutionNode) node;
+//            if(!joinNode.getHint().isPresent() || joinNode.getHint().get() == BinaryJoinExecutionNode.JoinAlgorithms.SHUFFLE) {
+//                try {
+//                    colocateDependencies(node, Arrays.asList(joinNode.getLeft().table, joinNode.getRight().table));
+//
+//                    Optional<QueryResult> result = new ShuffleJoinExecutor(joinNode).execute();
+//                    markNodeAsCompleted(node);
+//                    return result;
+//                } catch (Exception e) {
+//                    log.error(String.format("Error executing node %s", joinNode), e);
+//                    return Optional.empty();
+//                }
+//            }
+//        }
 
-                    Optional<QueryResult> result = new ShuffleJoinExecutor(joinNode).execute();
-                    markNodeAsCompleted(node);
-                    return result;
-                } catch (Exception e) {
-                    log.error(String.format("Error executing node %s", joinNode), e);
-                    return Optional.empty();
-                }
-            }
-        }
+
         // otherwise execute as local query execution (same as broadcast join)
-
         // colocate dependencies, blocking until completed
         colocateDependencies(node, Collections.emptySet());
         log.debug(String.format("Executing query node %s...", node.getTableName()));
@@ -227,7 +229,7 @@ class PlanExecutor {
             }
         }
 
-        log.debug(String.format("Temporary tables for query plan %s have been removed", plan));
+        log.debug(String.format("Temporary tables for query plan %s have been removed", plan.getSerializedName()));
     }
 
 

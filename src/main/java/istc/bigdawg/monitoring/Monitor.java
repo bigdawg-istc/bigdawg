@@ -18,10 +18,11 @@ import istc.bigdawg.packages.QueriesAndPerformanceInformation;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.query.ConnectionInfoParser;
+import istc.bigdawg.signature.Signature;
 import istc.bigdawg.utils.IslandsAndCast.Scope;
 
 public class Monitor {
-    private static final String INSERT = "INSERT INTO monitoring (island, query, lastRan, duration) SELECT '%s', '%s', -1, -1 WHERE NOT EXISTS (SELECT 1 FROM monitoring WHERE island='%s' AND query='%s')";
+    private static final String INSERT = "INSERT INTO monitoring (island, signature, query, lastRan, duration) SELECT '%s', '%s', '%s', -1, -1 WHERE NOT EXISTS (SELECT 1 FROM monitoring WHERE island='%s' AND signature='%s')";
     private static final String DELETE = "DELETE FROM monitoring WHERE island='%s' AND query='%s'";
     private static final String UPDATE = "UPDATE monitoring SET lastRan=%d, duration=%d WHERE island='%s' AND query='%s'";
     private static final String RETRIEVE = "SELECT duration FROM monitoring WHERE island='%s' AND query='%s'";
@@ -29,15 +30,15 @@ public class Monitor {
     private static final String MIGRATE = "INSERT INTO migrationstats(fromLoc, toLoc, objectFrom, objectTo, startTime, endTime, countExtracted, countLoaded, message) VALUES ('%s', '%s', '%s', '%s', %d, %d, %d, %d, '%s')";
     private static final String RETRIEVEMIGRATE = "SELECT objectFrom, objectTo, startTime, endTime, countExtracted, countLoaded, message FROM migrationstats WHERE fromLoc='%s' AND toLoc='%s'";
 
-    public static boolean addBenchmarks(List<QueryExecutionPlan> qeps, boolean lean) {
+    public static boolean addBenchmarks(List<QueryExecutionPlan> qeps, Signature signature, boolean lean) {
         BDConstants.Shim[] shims = BDConstants.Shim.values();
-        return addBenchmarks(qeps, lean, shims);
+        return addBenchmarks(qeps, signature, lean, shims);
     }
 
-    public static boolean addBenchmarks(List<QueryExecutionPlan> qeps, boolean lean, BDConstants.Shim[] shims) {
+    public static boolean addBenchmarks(List<QueryExecutionPlan> qeps, Signature signature, boolean lean, BDConstants.Shim[] shims) {
         for (QueryExecutionPlan qep: qeps) {
             try {
-                if (!insert(QueryExecutionPlan.qepToString(qep), qep.getIsland())) {
+                if (!insert(QueryExecutionPlan.qepToString(qep), signature, qep.getIsland())) {
                     return false;
                 }
             } catch (NotSupportIslandException e) {
@@ -122,10 +123,10 @@ public class Monitor {
         return new QueriesAndPerformanceInformation(queries, perfInfo);
     }
 
-    private static boolean insert(String query, Scope island) throws NotSupportIslandException {
+    private static boolean insert(String query, Signature signature, Scope island) throws NotSupportIslandException {
         PostgreSQLHandler handler = new PostgreSQLHandler();
         try {
-			handler.executeStatementPostgreSQL(String.format(INSERT, island.toString(), query, island.toString(), query));
+			handler.executeStatementPostgreSQL(String.format(INSERT, island.toString(), signature.toRecoverableString(), query, island.toString(), signature.toRecoverableString()));
 			return true;
 		} catch (SQLException e) {
 			return false;
