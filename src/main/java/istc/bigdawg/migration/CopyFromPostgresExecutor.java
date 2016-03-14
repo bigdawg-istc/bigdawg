@@ -3,6 +3,7 @@
  */
 package istc.bigdawg.migration;
 
+import java.io.BufferedOutputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -64,7 +65,7 @@ public class CopyFromPostgresExecutor implements Callable<Long> {
 		log.debug("start call: Copy from PostgreSQL (Executor)");
 		if (output == null) {
 			try {
-				output = new FileOutputStream(outputFile);
+				output = new BufferedOutputStream(new FileOutputStream(outputFile));
 			} catch (FileNotFoundException e) {
 				e.printStackTrace();
 				String msg = e.getMessage() + " Problem with thread for PostgreSQL copy manager "
@@ -77,6 +78,8 @@ public class CopyFromPostgresExecutor implements Callable<Long> {
 		log.debug("issue command to PostgreSQL: Copy from PostgreSQL (Executor)");
 		try {
 			countExtractedRows = cpFrom.copyOut(copyFromString, output);
+			//log.debug("psql statement: " + copyFromString);
+			//PostgreSQLHandler.executeStatement(connection, copyFromString);
 			connection.commit();
 			output.close();
 		} catch (IOException | SQLException e) {

@@ -3,6 +3,7 @@
  */
 package istc.bigdawg.migration;
 
+import java.io.BufferedInputStream;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -61,7 +62,7 @@ public class CopyToPostgresExecutor implements Callable<Long> {
 	public Long call() {
 		if (input == null) {
 			try {
-				input = new FileInputStream(inputFile);
+				input = new BufferedInputStream(new FileInputStream(inputFile));
 			} catch (FileNotFoundException e) {
 				e.printStackTrace();
 				String msg = e.getMessage()

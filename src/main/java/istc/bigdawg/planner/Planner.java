@@ -86,7 +86,7 @@ public class Planner {
 			// now call the corresponding monitor function to deliver permuted.
 			List<QueryExecutionPlan> qeps = ciqn.getAllQEPs();
 			Signature signature = ciqn.getSignature();
-			Monitor.addBenchmarks(qeps, signature, false);
+			Monitor.addBenchmarks(qeps, signature, true);
 			QueriesAndPerformanceInformation qnp = Monitor.getBenchmarkPerformance(qeps);
 	
 			// does some magic to pick out the best query, store it to the query plan queue
@@ -101,6 +101,13 @@ public class Planner {
 			}
 		} else {
 			Log.debug("Running in production mode!!!");
+			Signature signature = ciqn.getSignature();
+
+			Signature closest = Monitor.getClosestSignature(signature);
+			QueriesAndPerformanceInformation qnp = Monitor.getBenchmarkPerformance(closest);
+
+			// TODO does some magic to match the best query from the closest
+			// signature to a query plan for the current query
 		}
 		
 		return choice;

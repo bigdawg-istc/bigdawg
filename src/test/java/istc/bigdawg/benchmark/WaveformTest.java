@@ -22,8 +22,10 @@ import istc.bigdawg.migration.FromPostgresToSciDBImplementation;
 import istc.bigdawg.migration.FromSciDBToPostgresImplementation;
 import istc.bigdawg.migration.LoadToSciDBExecutor;
 import istc.bigdawg.migration.SciDBArrays;
+import istc.bigdawg.migration.TransformBinExecutor;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfoTest;
+import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
 import istc.bigdawg.scidb.SciDBConnectionInfoTest;
 
@@ -86,7 +88,8 @@ public class WaveformTest {
 	public void loadToSciDB() throws InterruptedException, ExecutionException {
 		long startTimeMigration = System.currentTimeMillis();
 		ExecutorService executor = Executors.newFixedThreadPool(1);
-		LoadToSciDBExecutor loadExecutor = new LoadToSciDBExecutor(conSciDB, new SciDBArrays(array,null), "/tmp/to_scidb.bin");
+		LoadToSciDBExecutor loadExecutor = new LoadToSciDBExecutor(conSciDB, new SciDBArrays(array, null),
+				"/tmp/scidb.bin","int64,int64,double");
 		FutureTask<String> loadTask = new FutureTask<String>(loadExecutor);
 		executor.submit(loadTask);
 		String loadMessage = loadTask.get();
@@ -95,6 +98,30 @@ public class WaveformTest {
 		long endTimeMigration = System.currentTimeMillis();
 		long durationMsec = endTimeMigration - startTimeMigration;
 		log.debug("loading to SciDB (msec): " + durationMsec);
+	}
+
+	@Test
+	public void exportPostgres() throws SQLException, InterruptedException, ExecutionException {
+		ExecutorService executor = Executors.newFixedThreadPool(1);
+		String copyFromCommand = PostgreSQLHandler.getExportBinCommand(table);
+		CopyFromPostgresExecutor exportExecutor = new CopyFromPostgresExecutor(conPostgres, copyFromCommand,
+				"/tmp/postgres.bin");
+		FutureTask<Long> exportTask = new FutureTask<Long>(exportExecutor);
+		executor.submit(exportTask);
+		long countExtractedElements = exportTask.get();
+		log.debug("number of extracted rows: " + countExtractedElements);
+		executor.shutdown();
+	}
+
+	@Test
+	public void transformPostgresScidb() throws InterruptedException, ExecutionException {
+		ExecutorService executor = Executors.newFixedThreadPool(1);
+		TransformBinExecutor transformExecutor = new TransformBinExecutor("/tmp/postgres.bin", "/tmp/scidb.bin",
+				"int64,int64,double", TransformBinExecutor.TYPE.FromPostgresToSciDB);
+		FutureTask<Long> transformTask = new FutureTask<Long>(transformExecutor);
+		executor.submit(transformTask);
+		transformTask.get();
+		executor.shutdown();
 	}
 
 }
