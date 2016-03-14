@@ -127,6 +127,7 @@ public class FromPostgresToSciDBImplementation implements MigrationImplementatio
 			executor = Executors.newFixedThreadPool(3/* 3 */);
 
 			String copyFromCommand = PostgreSQLHandler.getExportBinCommand(fromTable);
+			//String copyFromCommand = "copy from " + fromTable + " to " + postgresPipe + " with (format binary, freeze)";
 			CopyFromPostgresExecutor exportExecutor = new CopyFromPostgresExecutor(connectionFrom, copyFromCommand,
 					postgresPipe);
 			FutureTask<Long> exportTask = new FutureTask<Long>(exportExecutor);
