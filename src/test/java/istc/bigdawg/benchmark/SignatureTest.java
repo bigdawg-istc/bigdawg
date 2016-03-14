@@ -1,5 +1,6 @@
 package istc.bigdawg.benchmark;
 
+import istc.bigdawg.monitoring.Monitor;
 import istc.bigdawg.planner.Planner;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
@@ -51,7 +52,13 @@ public class SignatureTest {
             }
         }
 
-        // TODO(peinan): somehow block until everything completes if in training mode
+        while(!Monitor.allQueriesDone()){
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     public Map<String, Pair<Long, Long>> processResults() {
