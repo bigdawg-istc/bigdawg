@@ -35,6 +35,7 @@ import istc.bigdawg.scidb.SciDBConnectionInfo;
 import istc.bigdawg.scidb.SciDBHandler;
 import istc.bigdawg.utils.LogUtils;
 import istc.bigdawg.utils.Pipe;
+import istc.bigdawg.utils.SessionIdentifierGenerator;
 import istc.bigdawg.utils.StackTrace;
 
 /**
@@ -286,7 +287,8 @@ public class FromSciDBToPostgresImplementation implements MigrationImplementatio
 			String format = null;
 			String createTableStatement = null;
 			if (migrationType == MigrationType.FULL) {
-				String newFlatIntermediateArray = fromArray + "__flat__";
+				String newFlatIntermediateArray = fromArray + "__bigdawg__flat__"
+				+ SessionIdentifierGenerator.INSTANCE.nextRandom26CharString();
 				createFlatArray(newFlatIntermediateArray);
 				intermediateArrays.add(newFlatIntermediateArray);
 				arrays = new SciDBArrays(newFlatIntermediateArray, fromArray);

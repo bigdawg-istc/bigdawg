@@ -32,6 +32,7 @@ import istc.bigdawg.scidb.SciDBColumnMetaData;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
 import istc.bigdawg.scidb.SciDBHandler;
 import istc.bigdawg.utils.Pipe;
+import istc.bigdawg.utils.SessionIdentifierGenerator;
 import istc.bigdawg.utils.StackTrace;
 
 /**
@@ -154,11 +155,14 @@ public class FromPostgresToSciDBImplementation implements MigrationImplementatio
 
 			String loadMessage = loadTask.get();
 
-			/** the migration was successful so only clear the intermediate arrays */
+			/**
+			 * the migration was successful so only clear the intermediate
+			 * arrays
+			 */
 			PostgreSQLSciDBMigrationUtils.removeArrays(connectionTo, "clean the intermediate arrays",
 					intermediateArrays);
 			createdArrays.removeAll(intermediateArrays);
-			
+
 			long endTimeMigration = System.currentTimeMillis();
 			long durationMsec = endTimeMigration - startTimeMigration;
 			MigrationStatistics stats = new MigrationStatistics(connectionFrom, connectionTo, fromTable, toArray,
@@ -222,11 +226,14 @@ public class FromPostgresToSciDBImplementation implements MigrationImplementatio
 			csvSciDBTask.get();
 			String loadMessage = loadTask.get();
 
-			/** the migration was successful so only clear the intermediate arrays */
+			/**
+			 * the migration was successful so only clear the intermediate
+			 * arrays
+			 */
 			PostgreSQLSciDBMigrationUtils.removeArrays(connectionTo, "clean the intermediate arrays",
 					intermediateArrays);
 			createdArrays.removeAll(intermediateArrays);
-			
+
 			long endTimeMigration = System.currentTimeMillis();
 			long durationMsec = endTimeMigration - startTimeMigration;
 			MigrationStatistics stats = new MigrationStatistics(connectionFrom, connectionTo, fromTable, toArray,
@@ -300,7 +307,10 @@ public class FromPostgresToSciDBImplementation implements MigrationImplementatio
 				+ connectionTo.toString() + " to array:" + toArray;
 		log.error(msg);
 		try {
-			/** there was an exception so the migration failed and the created arrays should be removed */
+			/**
+			 * there was an exception so the migration failed and the created
+			 * arrays should be removed
+			 */
 			PostgreSQLSciDBMigrationUtils.removeArrays(connectionTo, msg, createdArrays);
 		} catch (MigrationException ex) {
 			return ex;
@@ -417,10 +427,10 @@ public class FromPostgresToSciDBImplementation implements MigrationImplementatio
 						+ fromTable + " is not matched with any attribute/dimension in the array in SciDB: " + toArray);
 			}
 		}
-		String newFlatIntermediateArray = toArray + "__flat__";
-		createFlatArray(newFlatIntermediateArray);
-		intermediateArrays.add(newFlatIntermediateArray);
-		return new SciDBArrays(newFlatIntermediateArray, toArray);
+		String newFlatIntermediateArrayName = toArray + "__bigdawg__flat__"
+				+ SessionIdentifierGenerator.INSTANCE.nextRandom26CharString();
+		createFlatArray(newFlatIntermediateArrayName);
+		return new SciDBArrays(newFlatIntermediateArrayName, toArray);
 	}
 
 	/*

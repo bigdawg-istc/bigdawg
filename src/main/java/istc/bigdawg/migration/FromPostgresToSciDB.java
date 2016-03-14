@@ -113,13 +113,13 @@ public class FromPostgresToSciDB
 			throws MigrationException, IOException {
 		LoggerSetup.setLogging();
 		PostgreSQLConnectionInfo conFrom = new PostgreSQLConnectionInfo(
-				"205.208.123.58", "5431", "test", "postgres", "test");
+				"localhost", "5431", "test", "postgres", "test");
 //		PostgreSQLConnectionInfo conFrom = new PostgreSQLConnectionInfo(
 //				"localhost", "5431", "test", "postgres", "test");
-		String fromTable = "region";
-		SciDBConnectionInfo conTo = new SciDBConnectionInfo("francisco", "1239",
+		String fromTable = "test_waveform2";
+		SciDBConnectionInfo conTo = new SciDBConnectionInfo("localhost", "1239",
 				"scidb", "mypassw", "/opt/scidb/14.12/bin/");
-		String toArray = "region2";
+		String toArray = "test_waveform2";
 		FromPostgresToSciDB migrator = new FromPostgresToSciDB();
 		MigrationResult result = migrator.migrate(conFrom, fromTable, conTo, toArray);
 		System.out.println("migration result: " + result);
