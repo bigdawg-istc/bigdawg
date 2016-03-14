@@ -5,6 +5,7 @@ import istc.bigdawg.planner.Planner;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.log4j.Logger;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -26,6 +27,16 @@ public class SignatureTest {
 
     private final Map<String, Pair<Long, Long>> results = new HashMap<>();
 
+    @Before
+    private void setup(){
+    	trainingQueries.add("bdrel(SELECT count(*) FROM mimic2v26.d_patients);");
+    	trainingQueries.add("bdrel(SELECT sex, count(subject_id) FROM mimic2v26.d_patients);");
+    	
+    	testQueries.add("bdrel(SELECT count(*) FROM mimic2v26.icd9);");
+    	testQueries.add("bdrel(SELECT subject_id, count(hadm_id) FROM mimic2v26.icd9);");    	
+    }
+    
+    
     @Test
     public void testSignature() {
         runBenchmark();
@@ -44,13 +55,12 @@ public class SignatureTest {
     }
 
     public void runQueries(Collection<String> tests, boolean isTrainingMode) {
-        // TODO(jack): some mechanism to control if the Planner is in training or expansive mode using isTrainingMode
 
         for(String test : testQueries) {
             long runtime;
             long start = System.currentTimeMillis();
             try {
-                Planner.processQuery(test);
+                Planner.processQuery(test, isTrainingMode);
                 runtime = System.currentTimeMillis() - start;
             } catch (Exception e) {
                 e.printStackTrace();

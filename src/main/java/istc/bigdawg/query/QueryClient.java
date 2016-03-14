@@ -105,7 +105,7 @@ public class QueryClient {
 //				if (handler.getShim() == parsed.getShim()) {
 					//return handler.executeQuery(queryString);
 					try {
-						return Planner.processQuery(istream);
+						return Planner.processQuery(istream, false);
 					} catch (Exception e) {
 						e.printStackTrace();
 						return Response.status(412).entity(e.getMessage()).build();

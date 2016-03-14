@@ -8,6 +8,7 @@ import javax.ws.rs.core.Response;
 import istc.bigdawg.monitoring.Monitor;
 import istc.bigdawg.packages.QueriesAndPerformanceInformation;
 import org.apache.log4j.Logger;
+import org.mortbay.log.Log;
 
 import istc.bigdawg.executor.Executor;
 import istc.bigdawg.executor.plan.QueryExecutionPlan;
@@ -19,10 +20,10 @@ import istc.bigdawg.postgresql.PostgreSQLHandler.QueryResult;
 public class Planner {
 
 	private static Logger logger = Logger.getLogger(Planner.class.getName());
-	private static Integer maxSerial = 0;
+//	private static Integer maxSerial = 0;
 
 
-	public static Response processQuery(String userinput) throws Exception {
+	public static Response processQuery(String userinput, boolean isTrainingMode) throws Exception {
 		
 		// UNROLLING
 		logger.debug("User query received. Parsing...");
@@ -35,13 +36,13 @@ public class Planner {
 		for (String k : ciqp.getMemberKeySet()) {
 			
 			if (k.equals("A_OUTPUT")) {
-				System.out.println("A_OUTPUT ENCOUNTERED");
+				// this is the root; save for later. 
 				continue;
 			}
 			
 			
 			CrossIslandQueryNode ciqn = ciqp.getMember(k);
-			int choice = getGetPerformanceAndPickTheBest(ciqn);
+			int choice = getGetPerformanceAndPickTheBest(ciqn, isTrainingMode);
 			
 			
 			// currently there should be just one island, therefore one child, root.
@@ -56,7 +57,7 @@ public class Planner {
 		
 		// pass this to monitor, and pick your favorite
 		CrossIslandQueryNode ciqn = ciqp.getRoot();
-		int choice = getGetPerformanceAndPickTheBest(ciqn);
+		int choice = getGetPerformanceAndPickTheBest(ciqn, isTrainingMode);
 		
 		
 		// currently there should be just one island, therefore one child, root.
@@ -75,24 +76,29 @@ public class Planner {
 	 * 
 	 * @param userinput
 	 */
-	public static int getGetPerformanceAndPickTheBest(CrossIslandQueryNode ciqn) throws Exception {
+	public static int getGetPerformanceAndPickTheBest(CrossIslandQueryNode ciqn, boolean isTrainingMode) throws Exception {
 		
 		int choice = 0;
 		
-		// now call the corresponding monitor function to deliver permuted.
-		List<QueryExecutionPlan> qeps = ciqn.getAllQEPs();
-		Monitor.addBenchmarks(qeps, false);
-		QueriesAndPerformanceInformation qnp = Monitor.getBenchmarkPerformance(qeps); 
-
-		// does some magic to pick out the best query, store it to the query plan queue
-
-		long minDuration = Long.MAX_VALUE;
-		for (int i = 0; i < qnp.qList.size(); i++){
-			long currentDuration = qnp.pInfo.get(i);
-			if (currentDuration < minDuration){
-				minDuration = currentDuration;
-				choice = i;
+		if (isTrainingMode) {
+			Log.debug("Running in Training Mode...");
+			// now call the corresponding monitor function to deliver permuted.
+			List<QueryExecutionPlan> qeps = ciqn.getAllQEPs();
+			Monitor.addBenchmarks(qeps, false);
+			QueriesAndPerformanceInformation qnp = Monitor.getBenchmarkPerformance(qeps); 
+	
+			// does some magic to pick out the best query, store it to the query plan queue
+	
+			long minDuration = Long.MAX_VALUE;
+			for (int i = 0; i < qnp.qList.size(); i++){
+				long currentDuration = qnp.pInfo.get(i);
+				if (currentDuration < minDuration){
+					minDuration = currentDuration;
+					choice = i;
+				}
 			}
+		} else {
+			Log.debug("Running in production mode!!!");
 		}
 		
 		return choice;
