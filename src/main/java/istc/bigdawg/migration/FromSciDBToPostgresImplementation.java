@@ -33,6 +33,7 @@ import istc.bigdawg.scidb.SciDBArrayMetaData;
 import istc.bigdawg.scidb.SciDBColumnMetaData;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
 import istc.bigdawg.scidb.SciDBHandler;
+import istc.bigdawg.utils.LogUtils;
 import istc.bigdawg.utils.Pipe;
 import istc.bigdawg.utils.StackTrace;
 
@@ -71,11 +72,15 @@ public class FromSciDBToPostgresImplementation implements MigrationImplementatio
 	private Connection connectionPostgres = null;
 
 	/*
-	 * These are the arrays that were created during migration of data from
-	 * PostgreSQL to SciDB. If something fails on the way, then the arrays
-	 * should be removed.
+	 * These are the intermediate (additional) arrays that were created during
+	 * migration of data from PostgreSQL to SciDB. If something fails on the way
+	 * or at the end of the migration process, the arrays should be removed.
+	 * 
+	 * On the other hand, the tables in PostgreSQL are created within a
+	 * transaction so if something goes wrong in PostgreSQL, then the database
+	 * itself takes care of cleaning the created but not loaded tables.
 	 */
-	private Set<String> createdArrays = new HashSet<>();
+	private Set<String> intermediateArrays = new HashSet<>();
 
 	public FromSciDBToPostgresImplementation(SciDBConnectionInfo connectionFrom, String fromArray,
 			PostgreSQLConnectionInfo connectionTo, String toTable) throws MigrationException {
@@ -110,7 +115,7 @@ public class FromSciDBToPostgresImplementation implements MigrationImplementatio
 		copyTo.append(" from STDIN with ");
 		copyTo.append("(format csv, delimiter ',', header true, quote \"'\")");
 		String copyCommand = copyTo.toString();
-		log.debug(copyCommand.replace("'", ""));
+		log.debug(LogUtils.replace(copyCommand));
 		return copyCommand;
 	}
 
@@ -283,6 +288,7 @@ public class FromSciDBToPostgresImplementation implements MigrationImplementatio
 			if (migrationType == MigrationType.FULL) {
 				String newFlatIntermediateArray = fromArray + "__flat__";
 				createFlatArray(newFlatIntermediateArray);
+				intermediateArrays.add(newFlatIntermediateArray);
 				arrays = new SciDBArrays(newFlatIntermediateArray, fromArray);
 				format = getSciDBBinFormat(newFlatIntermediateArray);
 				createTableStatement = getCreatePostgreSQLTableStatementFromSciDBAttributesAndDimensions();
@@ -323,8 +329,8 @@ public class FromSciDBToPostgresImplementation implements MigrationImplementatio
 			long countLoadedElements = loadTask.get();
 
 			String transformationMessage = transformationResult == 0 ? "correct" : "incorrect";
-			PostgreSQLSciDBMigrationUtils.removeIntermediateArrays(connectionFrom, "clean the intermediate arrays",
-					createdArrays);
+			PostgreSQLSciDBMigrationUtils.removeArrays(connectionFrom, "clean the intermediate arrays",
+					intermediateArrays);
 			long endTimeMigration = System.currentTimeMillis();
 			long durationMsec = endTimeMigration - startTimeMigration;
 			MigrationStatistics stats = new MigrationStatistics(connectionFrom, connectionTo, fromArray, toTable,
@@ -394,7 +400,7 @@ public class FromSciDBToPostgresImplementation implements MigrationImplementatio
 				+ connectionTo.toString() + " to table:" + toTable;
 		log.error(msg);
 		try {
-			PostgreSQLSciDBMigrationUtils.removeIntermediateArrays(connectionFrom, msg, createdArrays);
+			PostgreSQLSciDBMigrationUtils.removeArrays(connectionFrom, msg, intermediateArrays);
 		} catch (MigrationException ex) {
 			return ex;
 		}
@@ -494,12 +500,11 @@ public class FromSciDBToPostgresImplementation implements MigrationImplementatio
 		createArrayStringBuf.deleteCharAt(createArrayStringBuf.length() - 1);
 		/* " r_regionkey:int64,r_name:string,r_comment:string> );" */
 		/* this is by default 1 mln cells in a chunk */
-		createArrayStringBuf.append("> [_flat_dimension_=0:*,1000000,0]");
+		createArrayStringBuf.append("> [_flat_dimension_=0:*," + Long.MAX_VALUE + ",0]");
 		SciDBHandler handler = new SciDBHandler(connectionFrom);
 		handler.executeStatement(createArrayStringBuf.toString());
 		handler.commit();
 		handler.close();
-		createdArrays.add(flatArrayName);
 	}
 
 	/*

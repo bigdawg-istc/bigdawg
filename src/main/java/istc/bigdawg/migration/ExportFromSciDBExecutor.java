@@ -10,6 +10,7 @@ import org.apache.log4j.Logger;
 
 import istc.bigdawg.scidb.SciDBConnectionInfo;
 import istc.bigdawg.scidb.SciDBHandler;
+import istc.bigdawg.utils.LogUtils;
 
 /**
  * @author Adam Dziedzic
@@ -76,7 +77,7 @@ public class ExportFromSciDBExecutor implements Callable<String> {
 			saveCommand.append("')");
 			saveCommandFinal = saveCommand.toString();
 		}
-		log.debug("save command: " + saveCommandFinal.replace("'", "*"));
+		log.debug("save command: " + LogUtils.replace(saveCommandFinal));
 		handler.executeStatementAFL(saveCommandFinal);
 		handler.commit();
 		handler.close();

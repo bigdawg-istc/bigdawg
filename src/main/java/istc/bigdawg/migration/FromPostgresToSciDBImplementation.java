@@ -62,6 +62,12 @@ public class FromPostgresToSciDBImplementation implements MigrationImplementatio
 	 */
 	private Set<String> createdArrays = new HashSet<>();
 
+	/**
+	 * These are intermediate arrays (flat) created for migration and should be
+	 * always removed at the end of the migration process.
+	 */
+	private Set<String> intermediateArrays = new HashSet<>();
+
 	private PostgreSQLConnectionInfo connectionFrom;
 	private String fromTable;
 	private SciDBConnectionInfo connectionTo;
@@ -148,8 +154,11 @@ public class FromPostgresToSciDBImplementation implements MigrationImplementatio
 
 			String loadMessage = loadTask.get();
 
-			PostgreSQLSciDBMigrationUtils.removeIntermediateArrays(connectionTo, "clean the intermediate arrays",
-					createdArrays);
+			/** the migration was successful so only clear the intermediate arrays */
+			PostgreSQLSciDBMigrationUtils.removeArrays(connectionTo, "clean the intermediate arrays",
+					intermediateArrays);
+			createdArrays.removeAll(intermediateArrays);
+			
 			long endTimeMigration = System.currentTimeMillis();
 			long durationMsec = endTimeMigration - startTimeMigration;
 			MigrationStatistics stats = new MigrationStatistics(connectionFrom, connectionTo, fromTable, toArray,
@@ -213,8 +222,11 @@ public class FromPostgresToSciDBImplementation implements MigrationImplementatio
 			csvSciDBTask.get();
 			String loadMessage = loadTask.get();
 
-			PostgreSQLSciDBMigrationUtils.removeIntermediateArrays(connectionTo, "clean the intermediate arrays",
-					createdArrays);
+			/** the migration was successful so only clear the intermediate arrays */
+			PostgreSQLSciDBMigrationUtils.removeArrays(connectionTo, "clean the intermediate arrays",
+					intermediateArrays);
+			createdArrays.removeAll(intermediateArrays);
+			
 			long endTimeMigration = System.currentTimeMillis();
 			long durationMsec = endTimeMigration - startTimeMigration;
 			MigrationStatistics stats = new MigrationStatistics(connectionFrom, connectionTo, fromTable, toArray,
@@ -288,7 +300,8 @@ public class FromPostgresToSciDBImplementation implements MigrationImplementatio
 				+ connectionTo.toString() + " to array:" + toArray;
 		log.error(msg);
 		try {
-			PostgreSQLSciDBMigrationUtils.removeIntermediateArrays(connectionTo, msg, createdArrays);
+			/** there was an exception so the migration failed and the created arrays should be removed */
+			PostgreSQLSciDBMigrationUtils.removeArrays(connectionTo, msg, createdArrays);
 		} catch (MigrationException ex) {
 			return ex;
 		}
@@ -406,6 +419,7 @@ public class FromPostgresToSciDBImplementation implements MigrationImplementatio
 		}
 		String newFlatIntermediateArray = toArray + "__flat__";
 		createFlatArray(newFlatIntermediateArray);
+		intermediateArrays.add(newFlatIntermediateArray);
 		return new SciDBArrays(newFlatIntermediateArray, toArray);
 	}
 

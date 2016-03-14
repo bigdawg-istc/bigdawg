@@ -95,7 +95,7 @@ function load_csv_postgres {
     # load csv data to postgresql
     START=$(date +%s.%N)
     psql -U ${user} -d ${database} -p ${port} -a -c "drop table if exists ${postgresql_table}"
-    psql -U ${user} -d ${database} -p ${port} -a -c "begin; create table ${postgresql_table} (a bigint not null, b bigint not null, val double precision not null); copy ${postgresql_table} from '${csv_file}' with (format csv, freeze); commit;"
+    psql -U ${user} -d ${database} -p ${port} -a -c "begin; create table ${postgresql_table} (a bigint not null, b bigint not null, val double precision not null); copy ${postgresql_table} from '${csv_file}' with (format csv, header true, freeze); commit;"
     END=$(date +%s.%N)
     DIFF_POSTGRES_CSV=$(echo "$END - $START" | bc)
 
@@ -162,18 +162,6 @@ for size in 0001 001; do # 5 10 15 20 30 1 2 5 10 15 20 30; 1 2 5 10 15 20 1 2 5
 
     # from table to multidimensional array
     load_csv_postgres
-
-    iquery -aq "remove(${scidb_array});";
-    iquery -aq "create array ${scidb_array} <val:double> [a=0:*,1000,0,b=0:*,1000,0];"
-    prepare_environment
-    mvn -Dtest=WaveformTest#testFromPostgresToSciDBCsv test -P dev
-
-    iquery -aq "remove(${scidb_array});";
-    iquery -aq "create array ${scidb_array} <val:double> [a=0:*,1000,0,b=0:*,1000,0];"
-    prepare_environment
-    mvn -Dtest=WaveformTest#testFromPostgresToSciDBBin test -P dev
-
-    # from table to multidimensional array
 
     iquery -aq "remove(${scidb_array});";
     iquery -aq "create array ${scidb_array} <val:double> [a=0:*,1000,0,b=0:*,1000,0];"
