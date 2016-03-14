@@ -147,9 +147,14 @@ public class Monitor {
         // based on the dimensions we care about
         List<Signature> signatures = getAllSignatures();
         Signature closest = null;
-        int distance = Integer.MAX_VALUE;
+        double distance = Double.MAX_VALUE;
         for (Signature current: signatures){
             // compare them and pick the closest Signature
+            double curDist = signature.compare(current);
+            if (curDist < distance){
+                distance = curDist;
+                closest = current;
+            }
         }
         return closest;
     }

@@ -104,10 +104,24 @@ public class Planner {
 			Signature signature = ciqn.getSignature();
 
 			Signature closest = Monitor.getClosestSignature(signature);
-			QueriesAndPerformanceInformation qnp = Monitor.getBenchmarkPerformance(closest);
+			if (closest != null){
+				Log.debug("Closest query found");
+				QueriesAndPerformanceInformation qnp = Monitor.getBenchmarkPerformance(closest);
 
-			// TODO does some magic to match the best query from the closest
-			// signature to a query plan for the current query
+				// TODO does some magic to match the best query from the closest
+				// signature to a query plan for the current query
+				// Placeholder:
+				long minDuration = Long.MAX_VALUE;
+				for (int i = 0; i < qnp.qList.size(); i++){
+					long currentDuration = qnp.pInfo.get(i);
+					if (currentDuration < minDuration){
+						minDuration = currentDuration;
+						choice = i;
+					}
+				}
+			} else {
+				Log.debug("No queries that are even slightly similar");
+			}
 		}
 		
 		return choice;
