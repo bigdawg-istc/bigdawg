@@ -142,7 +142,10 @@ public class FromPostgresToSciDBImplementation implements MigrationImplementatio
 			FutureTask<String> loadTask = new FutureTask<String>(loadExecutor);
 			executor.submit(loadTask);
 
+			long countExtractedElements = exportTask.get();
 			long transformationResult = transformTask.get();
+			String loadMessage = loadTask.get();
+
 			String transformationMessage;
 			if (transformationResult != 0) {
 				String message = "Check the C++ migrator! It might need to be compiled and checked separately!";
@@ -151,9 +154,6 @@ public class FromPostgresToSciDBImplementation implements MigrationImplementatio
 			} else {
 				transformationMessage = "Transformation finished successfuly!";
 			}
-			long countExtractedElements = exportTask.get();
-
-			String loadMessage = loadTask.get();
 
 			/**
 			 * the migration was successful so only clear the intermediate

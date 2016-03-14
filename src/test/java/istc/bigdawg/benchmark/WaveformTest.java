@@ -5,6 +5,10 @@ package istc.bigdawg.benchmark;
 
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.FutureTask;
 
 import org.apache.log4j.Logger;
 import org.junit.Before;
@@ -16,6 +20,8 @@ import istc.bigdawg.migration.CopyFromPostgresExecutor;
 import istc.bigdawg.migration.FromPostgresToPostgres;
 import istc.bigdawg.migration.FromPostgresToSciDBImplementation;
 import istc.bigdawg.migration.FromSciDBToPostgresImplementation;
+import istc.bigdawg.migration.LoadToSciDBExecutor;
+import istc.bigdawg.migration.SciDBArrays;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfoTest;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
@@ -74,6 +80,21 @@ public class WaveformTest {
 		PostgreSQLConnectionInfo conFrom = new PostgreSQLConnectionInfo("localhost", "5431", "test", "pguser", "test");
 		PostgreSQLConnectionInfo conTo = new PostgreSQLConnectionInfo("localhost", "5430", "test", "pguser", "test");
 		new FromPostgresToPostgres().migrate(conFrom, table, conTo, table);
+	}
+
+	@Test
+	public void loadToSciDB() throws InterruptedException, ExecutionException {
+		long startTimeMigration = System.currentTimeMillis();
+		ExecutorService executor = Executors.newFixedThreadPool(1);
+		LoadToSciDBExecutor loadExecutor = new LoadToSciDBExecutor(conSciDB, new SciDBArrays(array,null), "/tmp/to_scidb.bin");
+		FutureTask<String> loadTask = new FutureTask<String>(loadExecutor);
+		executor.submit(loadTask);
+		String loadMessage = loadTask.get();
+		log.debug(loadMessage);
+		executor.shutdown();
+		long endTimeMigration = System.currentTimeMillis();
+		long durationMsec = endTimeMigration - startTimeMigration;
+		log.debug("loading to SciDB (msec): " + durationMsec);
 	}
 
 }

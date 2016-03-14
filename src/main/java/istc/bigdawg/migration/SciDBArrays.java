@@ -10,7 +10,7 @@ package istc.bigdawg.migration;
  * 
  *         Feb 24, 2016 11:03:35 AM
  */
-class SciDBArrays {
+public class SciDBArrays {
 
 	private String flat;
 	private String multiDimensional;
