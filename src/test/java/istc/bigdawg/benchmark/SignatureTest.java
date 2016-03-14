@@ -28,7 +28,7 @@ public class SignatureTest {
     private final Map<String, Pair<Long, Long>> results = new HashMap<>();
 
     @Before
-    private void setup(){
+    public void setup(){
     	trainingQueries.add("bdrel(SELECT count(*) FROM mimic2v26.d_patients);");
     	trainingQueries.add("bdrel(SELECT sex, count(subject_id) FROM mimic2v26.d_patients);");
     	
