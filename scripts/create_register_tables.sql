@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS alertevent (
 CREATE TABLE IF NOT EXISTS monitoring (
   monitorID serial PRIMARY KEY,
   island varchar(50),
+  signature varchar(800),
   query varchar(2000),
   lastRan bigint,
   duration bigint

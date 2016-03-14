@@ -7,6 +7,7 @@ import javax.ws.rs.core.Response;
 
 import istc.bigdawg.monitoring.Monitor;
 import istc.bigdawg.packages.QueriesAndPerformanceInformation;
+import istc.bigdawg.signature.Signature;
 import org.apache.log4j.Logger;
 import org.mortbay.log.Log;
 
@@ -84,8 +85,9 @@ public class Planner {
 			Log.debug("Running in Training Mode...");
 			// now call the corresponding monitor function to deliver permuted.
 			List<QueryExecutionPlan> qeps = ciqn.getAllQEPs();
-			Monitor.addBenchmarks(qeps, false);
-			QueriesAndPerformanceInformation qnp = Monitor.getBenchmarkPerformance(qeps); 
+			Signature signature = ciqn.getSignature();
+			Monitor.addBenchmarks(qeps, signature, false);
+			QueriesAndPerformanceInformation qnp = Monitor.getBenchmarkPerformance(qeps);
 	
 			// does some magic to pick out the best query, store it to the query plan queue
 	
