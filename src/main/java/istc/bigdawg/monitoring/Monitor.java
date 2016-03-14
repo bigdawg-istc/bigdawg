@@ -27,6 +27,7 @@ public class Monitor {
     private static final String UPDATE = "UPDATE monitoring SET lastRan=%d, duration=%d WHERE island='%s' AND query='%s'";
     private static final String RETRIEVE = "SELECT duration FROM monitoring WHERE island='%s' AND query='%s'";
     private static final String SIGRETRIEVE = "SELECT duration, query FROM monitoring WHERE signature='%s'";
+    private static final String SIGS = "SELECT DISTINCT(signature) FROM monitoring";
     private static final String MINDURATION = "SELECT min(duration) FROM monitoring";
     private static final String MIGRATE = "INSERT INTO migrationstats(fromLoc, toLoc, objectFrom, objectTo, startTime, endTime, countExtracted, countLoaded, message) VALUES ('%s', '%s', '%s', '%s', %d, %d, %d, %d, '%s')";
     private static final String RETRIEVEMIGRATE = "SELECT objectFrom, objectTo, startTime, endTime, countExtracted, countLoaded, message FROM migrationstats WHERE fromLoc='%s' AND toLoc='%s'";
@@ -122,6 +123,35 @@ public class Monitor {
         }
         System.out.printf("[BigDAWG] MONITOR: Performance information generated.\n");
         return new QueriesAndPerformanceInformation(queries, perfInfo);
+    }
+
+    public static List<Signature> getAllSignatures() {
+        List<Signature> signatures = new ArrayList<>();
+
+        PostgreSQLHandler handler = new PostgreSQLHandler();
+        try {
+            PostgreSQLHandler.QueryResult qresult = handler.executeQueryPostgreSQL(SIGS);
+            List<List<String>> rows = qresult.getRows();for (List<String> row: rows){
+                String signature = row.get(0);
+                signatures.add(new Signature(signature));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return signatures;
+    }
+
+    public static Signature getClosestSignature(Signature signature) {
+        // TODO This needs to be changed to be much more efficient.
+        // We need a way to do similarity in postgres (likely indexing on signature)
+        // based on the dimensions we care about
+        List<Signature> signatures = getAllSignatures();
+        Signature closest = null;
+        int distance = Integer.MAX_VALUE;
+        for (Signature current: signatures){
+            // compare them and pick the closest Signature
+        }
+        return closest;
     }
 
     public static QueriesAndPerformanceInformation getBenchmarkPerformance(Signature signature) {
