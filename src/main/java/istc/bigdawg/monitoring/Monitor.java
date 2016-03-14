@@ -1,5 +1,9 @@
 package istc.bigdawg.monitoring;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -21,6 +25,7 @@ public class Monitor {
     private static final String DELETE = "DELETE FROM monitoring WHERE island='%s' AND query='%s'";
     private static final String UPDATE = "UPDATE monitoring SET lastRan=%d, duration=%d WHERE island='%s' AND query='%s'";
     private static final String RETRIEVE = "SELECT duration FROM monitoring WHERE island='%s' AND query='%s'";
+    private static final String MINDURATION = "SELECT min(duration) FROM monitoring";
     private static final String MIGRATE = "INSERT INTO migrationstats(fromLoc, toLoc, objectFrom, objectTo, startTime, endTime, countExtracted, countLoaded, message) VALUES ('%s', '%s', '%s', '%s', %d, %d, %d, %d, '%s')";
     private static final String RETRIEVEMIGRATE = "SELECT objectFrom, objectTo, startTime, endTime, countExtracted, countLoaded, message FROM migrationstats WHERE fromLoc='%s' AND toLoc='%s'";
 
@@ -64,6 +69,27 @@ public class Monitor {
             } catch (NotSupportIslandException e) {
                 e.printStackTrace();
             }
+        }
+        return true;
+    }
+
+    public static boolean allQueriesDone() {
+        PostgreSQLHandler handler = new PostgreSQLHandler();
+        try {
+            PostgreSQLHandler.QueryResult qresult = handler.executeQueryPostgreSQL(MINDURATION);
+            List<List<String>> rows = qresult.getRows();
+            long minDuration = Long.MAX_VALUE;
+            for (List<String> row: rows){
+                long currentDuration = Long.parseLong(row.get(0));
+                if (currentDuration < minDuration){
+                    minDuration = currentDuration;
+                }
+            }
+            if (minDuration < 0){
+                return false;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
         return true;
     }
@@ -124,7 +150,18 @@ public class Monitor {
 
     public void finishedBenchmark(QueryExecutionPlan qep, long startTime, long endTime) throws SQLException {
         PostgreSQLHandler handler = new PostgreSQLHandler();
-        handler.executeStatementPostgreSQL(String.format(UPDATE, endTime, endTime-startTime, qep.getIsland(), QueryExecutionPlan.qepToString(qep)));
+        String qepString = QueryExecutionPlan.qepToString(qep);
+        handler.executeStatementPostgreSQL(String.format(UPDATE, endTime, endTime-startTime, qep.getIsland(), qepString));
+
+        // Only for testing purposes.Uncomment when necessary.
+/*        try {
+            File temp = File.createTempFile("queries", ".tmp");
+            BufferedWriter bw = new BufferedWriter(new FileWriter(temp,true));
+            bw.write(String.format("%d %s %s\n", endTime-startTime, qep.getIsland(), qepString));
+            bw.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }*/
     }
 
     public static void addMigrationStats(MigrationStatistics stats) throws SQLException {
