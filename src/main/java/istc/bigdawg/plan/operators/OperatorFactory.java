@@ -26,6 +26,7 @@ public class OperatorFactory {
 			case "Nested Loop":
 			case "Merge Join":
 				return new Join(parameters, output, children.get(0), children.get(1), supplement);
+			case "Index Scan":
 			case "Seq Scan":
 				return new SeqScan(parameters, output, null, supplement);
 			case "Sort":
@@ -34,6 +35,7 @@ public class OperatorFactory {
 				return new WindowAggregate(parameters, output, children.get(0), supplement);
 				
 			default: // skip it, only designed for 1:1 io like hash and materialize
+				System.out.println("---> opType from OperatorFactory: "+opType);
 				return children.get(0);
 		}
 		

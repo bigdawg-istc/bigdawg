@@ -483,7 +483,7 @@ public class Join extends Operator {
     	
 		
 		
-		if(joinFilter != null) {
+		if(joinFilter != null && !joinFilter.isEmpty()) {
 			
 			String jf = joinFilter; 
 			
