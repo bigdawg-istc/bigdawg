@@ -288,16 +288,16 @@ public class FromSciDBToPostgresImplementation implements MigrationImplementatio
 			String createTableStatement = null;
 			if (migrationType == MigrationType.FULL) {
 				String newFlatIntermediateArray = fromArray + "__bigdawg__flat__"
-				+ SessionIdentifierGenerator.INSTANCE.nextRandom26CharString();
+						+ SessionIdentifierGenerator.INSTANCE.nextRandom26CharString();
 				createFlatArray(newFlatIntermediateArray);
 				intermediateArrays.add(newFlatIntermediateArray);
 				arrays = new SciDBArrays(newFlatIntermediateArray, fromArray);
 				format = getSciDBBinFormat(newFlatIntermediateArray);
 				createTableStatement = getCreatePostgreSQLTableStatementFromSciDBAttributesAndDimensions();
-			} else { /*
-						 * this is a flat array so we have to export only the
-						 * attributes
-						 */
+			} else {
+				/*
+				 * this is a flat array so we have to export only the attributes
+				 */
 				arrays = new SciDBArrays(fromArray, null);
 				format = getSciDBBinFormat(fromArray);
 				createTableStatement = getCreatePostgreSQLTableStatementFromSciDBAttributes();
