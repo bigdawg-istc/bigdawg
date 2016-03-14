@@ -229,7 +229,7 @@ class PlanExecutor {
             }
         }
 
-        log.debug(String.format("Temporary tables for query plan %s have been removed", plan));
+        log.debug(String.format("Temporary tables for query plan %s have been removed", plan.getSerializedName()));
     }
 
 
