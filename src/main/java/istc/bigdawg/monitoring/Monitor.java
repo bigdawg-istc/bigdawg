@@ -22,10 +22,12 @@ import istc.bigdawg.signature.Signature;
 import istc.bigdawg.utils.IslandsAndCast.Scope;
 
 public class Monitor {
-    private static final String INSERT = "INSERT INTO monitoring (island, signature, query, lastRan, duration) SELECT '%s', '%s', '%s', -1, -1 WHERE NOT EXISTS (SELECT 1 FROM monitoring WHERE island='%s' AND signature='%s')";
+    private static final String INSERT = "INSERT INTO monitoring (island, signature, query, lastRan, duration) SELECT '%s', '%s', '%s', -1, -1 WHERE NOT EXISTS (SELECT 1 FROM monitoring WHERE island='%s' AND query='%s')";
     private static final String DELETE = "DELETE FROM monitoring WHERE island='%s' AND query='%s'";
     private static final String UPDATE = "UPDATE monitoring SET lastRan=%d, duration=%d WHERE island='%s' AND query='%s'";
     private static final String RETRIEVE = "SELECT duration FROM monitoring WHERE island='%s' AND query='%s'";
+    private static final String SIGRETRIEVE = "SELECT duration, query FROM monitoring WHERE signature='%s'";
+    private static final String SIGS = "SELECT DISTINCT(signature) FROM monitoring";
     private static final String MINDURATION = "SELECT min(duration) FROM monitoring";
     private static final String MIGRATE = "INSERT INTO migrationstats(fromLoc, toLoc, objectFrom, objectTo, startTime, endTime, countExtracted, countLoaded, message) VALUES ('%s', '%s', '%s', '%s', %d, %d, %d, %d, '%s')";
     private static final String RETRIEVEMIGRATE = "SELECT objectFrom, objectTo, startTime, endTime, countExtracted, countLoaded, message FROM migrationstats WHERE fromLoc='%s' AND toLoc='%s'";
@@ -123,10 +125,68 @@ public class Monitor {
         return new QueriesAndPerformanceInformation(queries, perfInfo);
     }
 
+    public static List<Signature> getAllSignatures() {
+        List<Signature> signatures = new ArrayList<>();
+
+        PostgreSQLHandler handler = new PostgreSQLHandler();
+        try {
+            PostgreSQLHandler.QueryResult qresult = handler.executeQueryPostgreSQL(SIGS);
+            List<List<String>> rows = qresult.getRows();for (List<String> row: rows){
+                String signature = row.get(0);
+                signatures.add(new Signature(signature));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return signatures;
+    }
+
+    public static Signature getClosestSignature(Signature signature) {
+        // TODO This needs to be changed to be much more efficient.
+        // We need a way to do similarity in postgres (likely indexing on signature)
+        // based on the dimensions we care about
+        List<Signature> signatures = getAllSignatures();
+        Signature closest = null;
+        double distance = Double.MAX_VALUE;
+        for (Signature current: signatures){
+            // compare them and pick the closest Signature
+            double curDist = signature.compare(current);
+            if (curDist < distance){
+                distance = curDist;
+                closest = current;
+            }
+        }
+        return closest;
+    }
+
+    public static QueriesAndPerformanceInformation getBenchmarkPerformance(Signature signature) {
+        List<String> queries = new ArrayList<>();
+        List<Long> perfInfo = new ArrayList<>();
+
+        PostgreSQLHandler handler = new PostgreSQLHandler();
+        try {
+            PostgreSQLHandler.QueryResult qresult = handler.executeQueryPostgreSQL(String.format(SIGRETRIEVE, signature.toRecoverableString()));
+            List<List<String>> rows = qresult.getRows();
+            for (List<String> row: rows){
+                long duration = Long.parseLong(row.get(0));
+                if (duration < 0){
+                    duration = Long.MAX_VALUE;
+                }
+                String qep = row.get(1);
+                perfInfo.add(duration);
+                queries.add(qep);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        System.out.printf("[BigDAWG] MONITOR: Performance information generated.\n");
+        return new QueriesAndPerformanceInformation(queries, perfInfo);
+    }
+
     private static boolean insert(String query, Signature signature, Scope island) throws NotSupportIslandException {
         PostgreSQLHandler handler = new PostgreSQLHandler();
         try {
-			handler.executeStatementPostgreSQL(String.format(INSERT, island.toString(), signature.toRecoverableString(), query, island.toString(), signature.toRecoverableString()));
+			handler.executeStatementPostgreSQL(String.format(INSERT, island.toString(), signature.toRecoverableString(), query, island.toString(), query));
 			return true;
 		} catch (SQLException e) {
 			return false;

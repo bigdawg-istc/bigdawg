@@ -168,6 +168,54 @@ public class Signature {
 	}
 	
 	
+	public double compare(Signature sig) {
+		double dist = 0;
+		
+		List<String> l2;
+		List<String> l4k2 = new ArrayList<>(sig.sig4k);
+		int size;
+		
+		// sig1
+		dist = getTreeEditDistance(sig1, sig.sig1);
+		
+		// sig2
+		if (sig2.size() > sig.sig2.size()) {
+			l2 = new ArrayList<>(sig2);
+			l2.retainAll(sig.sig2);
+			size = sig2.size();
+		} else { 
+			l2 = new ArrayList<>(sig.sig2);
+			l2.retainAll(sig2);
+			size = sig.sig2.size();
+		}
+		dist *= ((double)l2.size()) / size;
+		
+		// sig3
+		dist += (sig3.size() > sig.sig3.size()) ? sig3.size() - sig.sig3.size() : sig.sig3.size() - sig3.size();
+		
+		// sig4k
+		dist += sig4k.size() < sig.sig4k.size() ? sig.sig4k.size() - sig4k.size() : sig4k.size() - sig.sig4k.size();
+		for (int i = 0 ; i < sig4k.size() ; i++ ) {
+			double result = Double.MAX_VALUE;
+			int j = 0;
+			int holder = -1;
+			while (!l4k2.isEmpty() && j < l4k2.size()) {
+				double temp = getTreeEditDistance(sig4k.get(i), l4k2.get(j));
+				if (temp < result) {
+					result = temp;
+					holder = j;
+				}
+				j++;
+			}
+			if (holder > 0) { 
+				l4k2.remove(holder);
+				dist += result;
+			} else 
+				break;
+		}
+		
+		return dist;
+	}
 	
 	
 	
