@@ -431,6 +431,7 @@ public class FromPostgresToSciDBImplementation implements MigrationImplementatio
 		String newFlatIntermediateArrayName = toArray + "__bigdawg__flat__"
 				+ SessionIdentifierGenerator.INSTANCE.nextRandom26CharString();
 		createFlatArray(newFlatIntermediateArrayName);
+		intermediateArrays.add(newFlatIntermediateArrayName);
 		return new SciDBArrays(newFlatIntermediateArrayName, toArray);
 	}
 

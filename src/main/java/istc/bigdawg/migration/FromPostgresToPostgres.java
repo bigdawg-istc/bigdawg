@@ -149,9 +149,7 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 					+ countExtractedElements + ",countLoadedElements,"
 					+ countLoadedElements + ",durationMsec," + durationMsec);
 			/**
-			 * log table query: copy (select time,message from logs where
-			 * message like 'Migration result,%' order by time desc) to
-			 * '/tmp/migration_log.csv' with (format csv);
+			 * log table query: copy (select time,message from logs where message like 'Migration result,%' order by time desc) to '/tmp/migration_log.csv' with (format csv);
 			 */
 			return new MigrationResult(countExtractedElements,
 					countLoadedElements);
