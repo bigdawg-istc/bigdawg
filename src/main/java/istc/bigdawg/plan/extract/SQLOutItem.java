@@ -1,9 +1,14 @@
 package istc.bigdawg.plan.extract;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import com.beust.jcommander.Parameters;
 
 import istc.bigdawg.extract.logical.SQLTableExpression;
 import istc.bigdawg.schema.DataObjectAttribute;
@@ -13,6 +18,7 @@ import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.AnalyticExpression;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Function;
+import net.sf.jsqlparser.parser.CCJSqlParser;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
@@ -61,6 +67,20 @@ public class SQLOutItem extends CommonOutItem{
 					else 
 						break;
 					if (finder.equals(before)) {
+						for (String s : srcSchema.keySet()) {
+							if (finder.equals(srcSchema.get(s).getExpressionString()) || expr.equals(srcSchema.get(s).getExpressionString())) {
+								doa = srcSchema.get(s); 
+								break;
+							}
+						}	
+					
+						if (doa != null) break;
+						
+						// else not found
+						System.out.println("cannot find: "+expr+"; finder: "+finder+"; srcSchema: ");
+						for (String s : srcSchema.keySet()) {
+							System.out.println("-- "+s+"; "+srcSchema.get(s).getSQLExpression());
+						}
 						throw new Exception("cannot find: "+expr+"; finder: "+finder+"; srcSchema: "+srcSchema.toString());
 					}
 				}
@@ -69,9 +89,6 @@ public class SQLOutItem extends CommonOutItem{
 			if (doa != null)
 				typeStr = doa.getTypeString();
 		}
-		
-//		System.out.println("SQLOutItem: \n--"+expr+"\n--"+srcSchema+"\n");
-		
 		
 		outAttribute = new SQLAttribute();
 		if (typeStr != null)
@@ -82,17 +99,30 @@ public class SQLOutItem extends CommonOutItem{
 		}
 		
 		
-		
 		aggregates = new ArrayList<Function>();
 		windowedAggregates = new ArrayList<AnalyticExpression>();
 
-		if(supplement != null) {
-			alias = supplement.getAlias(expr);
-		}
+		
 		
 		// get rid of any psql param placeholders
 		expr = expr.replace("?", " ");
-		expr = expr.replaceAll("::[ \\w]+", "");
+		
+		expr = SQLExpressionUtils.removeExpressionDataTypeArtifactAndConvertLike(expr);
+		
+		if(supplement != null) {
+			alias = supplement.getAlias(expr);
+			if (alias == null) {
+				Expression expres = CCJSqlParserUtil.parseExpression(expr);
+//				System.out.println("expr: "+expr+"\nsupplement: ");
+//				for (String s : supplement.getAliases().keySet()){
+//					System.out.println("-- "+s+"; "+supplement.getAlias(s));
+//				}
+				SQLExpressionUtils.removeExcessiveParentheses(expres);
+				expr = expres.toString();
+				alias = supplement.getAlias(expr);
+			}
+		}
+		
 		outAttribute.setExpression(expr);
 		
 		
@@ -121,13 +151,25 @@ public class SQLOutItem extends CommonOutItem{
 
 		// there's  no alias
 		if(alias == null) {
-			String after = expr.replaceAll("[(][*.\\w]+[)]", "");
-//			System.out.println("expr before: "+expr);
-//			System.out.println("expr after : "+after);
-			if (expr.equals(after))
+			
+			String after = expr.replaceAll("[(][*_.'\\w]+[)]", "");
+			if (expr.equals(after) && !expr.contains("(")) {
 				alias = expr;
-			else
-				alias = after.replaceAll("[*-+/\\. ()]", "");
+			} else if (expr.contains("(")) {
+				for (String key : srcSchema.keySet()) {
+					if (srcSchema.get(key).getExpressionString().contains(expr)) {
+						alias = key;
+						break;
+					}
+				}
+				if (alias == null) {
+					alias = after.replaceAll("[*_\\-+/\\. (),'=]", "").replaceAll("^[0-9]+", "");
+					alias = alias.substring(0, (20 < alias.length() ? 20 : alias.length()));
+				}
+			} else {
+				alias = after.replaceAll("[*_\\-+/\\. (),'=]", "").replaceAll("^[0-9]+", "");
+				alias = alias.substring(0, (20 < alias.length() ? 20 : alias.length()));
+			}
 		} 
 		
 		outAttribute.setName(alias);
@@ -148,6 +190,38 @@ public class SQLOutItem extends CommonOutItem{
 					lookup = (SQLAttribute) srcSchema.get(name);					
 				}
 				
+				if (lookup == null){
+					
+					for (DataObjectAttribute doa : srcSchema.values()) {
+						try {
+							if (doa.getSQLExpression() != null && 
+									SQLExpressionUtils.getAttributes(doa.getSQLExpression()).contains(name)){
+								for (DataObjectAttribute doa2: doa.getSourceAttributes()) {
+									
+									if (name.contains(doa2.getName())){
+										lookup = (SQLAttribute) doa2;
+										
+										break;
+									}
+								}
+							}
+						} catch (JSQLParserException e) {
+							e.printStackTrace();
+						}
+						if (lookup != null)
+							break;
+					}
+				}
+//				else 
+					
+				if (lookup == null)  {
+					System.out.println("(SQLAttribute) srcSchema.get(name), name = "+tableColumn.getFullyQualifiedName() + "; alias: "+alias);
+					
+					System.out.println("srcSchema: ");
+					for (String s : srcSchema.keySet()) {
+						System.out.println("-- "+s+"; "+srcSchema.get(s).getSQLExpression());
+					}
+				}
 				
 				outAttribute.addSourceAttribute(lookup);
 				
@@ -219,11 +293,10 @@ public class SQLOutItem extends CommonOutItem{
 					for(String s : srcSchema.keySet()) {
 						final String[] names = s.split("\\.");
 
-
-						if(tableColumn.getColumnName().equalsIgnoreCase(names[1])) { // happens just once
+						if (names.length > 1 && tableColumn.getColumnName().equalsIgnoreCase(names[1])) { // happens just once
 							final Table t = new Table(names[0]);
 							tableColumn.setTable(t);
-						}
+						} 
 					}
 										
 				}

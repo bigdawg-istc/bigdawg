@@ -211,21 +211,21 @@ public class CatalogModifier {
 		
 		// check for existing record
 		ResultSet rs = cc.execRet("SELECT * FROM catalog.objects WHERE "
-								+ "name = \'"		+ newName 		+ "\' AND "
-								+ "fields = \'"		+ newFields		+ "\' AND "
-								+ "logical_db = "	+ newLogDB 		+ " AND "
-								+ "physical_db = "	+ newPhyDB		+ ";");
+								+ "name = \'"		+ newName.toLowerCase() 	+ "\' AND "
+								+ "fields = \'"		+ newFields.toLowerCase()	+ "\' AND "
+								+ "logical_db = "	+ newLogDB 					+ " AND "
+								+ "physical_db = "	+ newPhyDB					+ ";");
 		if ( !rs.next() ) {
 			// add new record
         	rs 			= cc.execRet("SELECT max(oid) m from catalog.objects;");
         	int newpos  = 0; 
         	if (rs.next() && rs.getString(1) != null) newpos = rs.getInt("m") + 1;
         	cc.execNoRet("INSERT INTO catalog.objects (oid, name, fields, logical_db, physical_db) "
-	        			+ "VALUES ("+ newpos 			+ ", "
-							+ "\'"	+ newName 		+ "\', "
-	    					+ "\'"	+ newFields 	+ "\', "
-	    							+ newLogDB 		+ ", "
-	    							+ newPhyDB 		+ ");");
+	        			+ "VALUES ("+ newpos 					+ ", "
+							+ "\'"	+ newName.toLowerCase() 	+ "\', "
+	    					+ "\'"	+ newFields.toLowerCase() 	+ "\', "
+	    							+ newLogDB 					+ ", "
+	    							+ newPhyDB 					+ ");");
         }
         rs.close();
 
@@ -249,11 +249,23 @@ public class CatalogModifier {
 			cc.execNoRet("update catalog.engines set host = \'"+ host +"\' where eid = 2;");
 			cc.execNoRet("update catalog.engines set host = \'"+ host +"\' where eid = 4;");
 			
-//			// insert example: addObject(String newName, String newFields, int newLogDB, int newPhyDB)
+			// insert example: addObject(String newName, String newFields, int newLogDB, int newPhyDB)
+
+//			// Genbase insert
 //			addObject("go_matrix", "geneid,goid,belongs", 6, 6);
 //			addObject("genes", "id,target,pos,len,func", 9, 9);
 //			addObject("patients", "id,age,gender,zipcode,disease,response", 7, 7);
 //			addObject("geo", "geneid,patientid,expr_value", 8, 8);
+			
+//			// TPCH insert
+//			addObject("REGION", "R_REGIONKEY,R_NAME,R_COMMENT", 10,10);
+//			addObject("NATION", "N_NATIONKEY,N_NAME,N_REGIONKEY,N_COMMENT", 10, 10);
+//			addObject("PART","P_PARTKEY,P_NAME,P_MFGR,P_BRAND,P_TYPE,P_SIZE,P_CONTAINER,P_RETAILPRICE,P_COMMEN", 10, 10);
+//			addObject("SUPPLIER","S_SUPPKEY,S_NAME,S_ADDRESS,S_NATIONKEY,S_PHONE,S_ACCTBAL,S_COMMENT",10,10);
+//			addObject("PARTSUPP","PS_PARTKEY,PS_SUPPKEY,PS_AVAILQTY,PS_SUPPLYCOST,PS_COMMENT",10,10);
+//			addObject("CUSTOMER","C_CUSTKEY,C_NAME,C_ADDRESS,C_NATIONKEY,C_PHONE,C_ACCTBAL,C_MKTSEGMENT,C_COMMEN",10,10);
+//			addObject("ORDERS","O_ORDERKEY,O_CUSTKEY,O_ORDERSTATUS,O_TOTALPRICE,O_ORDERDATE,O_ORDERPRIORITY,O_CLERK,O_SHIPPRIORITY,O_COMMEN",10,10);
+//			addObject("LINEITEM","L_ORDERKEY,L_PARTKEY,L_SUPPKEY,L_LINENUMBER,L_QUANTITY,L_EXTENDEDPRICE,L_DISCOUNT,L_TAX,L_RETURNFLAG,L_LINESTATUS,L_SHIPDATE,L_COMMITDATE,L_RECEIPTDATE,L_SHIPINSTRUCT,L_SHIPMODE,L_COMMENT",10,10);
 			
 			cc.commit();
 			System.out.println("Update complete!");

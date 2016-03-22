@@ -202,6 +202,7 @@ public class DataObjectAttribute {
 	}
 	
 	public String getExpressionString() throws Exception {
+		if (expression == null) return null;
 		return expression.toString();
 	}
 	

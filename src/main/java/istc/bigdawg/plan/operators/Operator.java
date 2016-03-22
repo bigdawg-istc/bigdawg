@@ -602,7 +602,7 @@ public class Operator {
 			return temps;
 		}
 		
-		if (!(this instanceof SeqScan || this instanceof CommonSQLTableExpressionScan)) {
+		if (!(this instanceof Scan)) {
 			this.dataObjects.clear();
 			for (Operator o : children) {
 				this.dataObjects.addAll(o.getDataObjectNames());
@@ -610,6 +610,30 @@ public class Operator {
 		}
 		
 		return dataObjects;
+	}
+	
+	public Map<String, String> getDataObjectAliasesOrNames() throws Exception {
+		
+		if (isPruned) {
+			Map<String, String> temps = new HashMap<>();
+			temps.put(getPruneToken(), getPruneToken());
+			return temps;
+		}
+		
+		Map<String, String> aliasOrString = new HashMap<>();
+		if (this.children.size() > 0) {
+			
+			for (Operator o : children) {
+				aliasOrString.putAll(o.getDataObjectAliasesOrNames());
+			}
+		} else {
+			if (((Scan)this).tableAlias != null && !((Scan)this).tableAlias.isEmpty())
+				aliasOrString.put(((Scan)this).tableAlias, ((Scan)this).srcTable);
+			else 
+				aliasOrString.put(((Scan)this).srcTable, ((Scan)this).srcTable);
+		}
+		
+		return aliasOrString;
 	}
 	
 	public List<Operator> getDataObjects() {
@@ -620,7 +644,7 @@ public class Operator {
 			return extraction;
 		}
 		
-		if (!(this instanceof SeqScan || this instanceof CommonSQLTableExpressionScan)) {
+		if (!(this instanceof Scan )) {
 			for (Operator o : children) {
 				extraction.addAll(o.getDataObjects());
 			}

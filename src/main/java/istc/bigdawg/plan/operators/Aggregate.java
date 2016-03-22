@@ -1,6 +1,7 @@
 package istc.bigdawg.plan.operators;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -12,11 +13,13 @@ import istc.bigdawg.plan.extract.CommonOutItem;
 import istc.bigdawg.plan.extract.SQLOutItem;
 import istc.bigdawg.schema.DataObjectAttribute;
 import istc.bigdawg.schema.SQLAttribute;
+import istc.bigdawg.utils.sqlutil.SQLExpressionUtils;
 import istc.bigdawg.utils.sqlutil.SQLUtilities;
 import net.sf.jsqlparser.expression.Alias;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Function;
 import net.sf.jsqlparser.expression.KeepExpression;
+import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.AllColumns;
@@ -34,7 +37,7 @@ public class Aggregate extends Operator {
 	// can address complex expressions by adding a step after aggregate
 	// create a list of aggregations to perform
 	
-	public enum AggregateType { MIN, MAX, COUNT, COUNT_DISTINCT, AVG, SUM};
+	public enum AggregateType { MIN, MAX, COUNT, COUNT_DISTINCT, AVG, SUM, WIDTH_BUCKET, DATE_PART};
 	private List<SQLAttribute> groupBy;
 	private List<String> aggregateExpressions; // e.g., COUNT(SOMETHING)
 	private List<AggregateType>  aggregates; 
@@ -62,12 +65,24 @@ public class Aggregate extends Operator {
 		groupBy = new ArrayList<SQLAttribute>();
 	
 		parsedAggregates = new ArrayList<Function>();
-		parsedGroupBys = supplement.getGroupBy();
+		parsedGroupBys = new ArrayList<>();
 		aggregateFilter = parameters.get("Filter");
 		if(aggregateFilter != null) {
 			aggregateFilter = Utils.parseIdFromSameDocumentURI(aggregateFilter); // HAVING clause
 		}
 		
+		if (parameters.get("Group-Key") != null) {
+			List<String> groupBysFromXML = Arrays.asList(SQLExpressionUtils
+					.removeExpressionDataTypeArtifactAndConvertLike(parameters.get("Group-Key")).split("\n")); 
+	
+			for (String s : groupBysFromXML) {
+				s = s.trim();
+				if (s.isEmpty()) continue;
+				Expression expr = CCJSqlParserUtil.parseExpression(s);
+				SQLExpressionUtils.removeExcessiveParentheses(expr);
+				parsedGroupBys.add(expr);
+			}
+		}
 		
 		// iterate over outschema and 
 		// classify each term as aggregate func or group by
@@ -91,10 +106,13 @@ public class Aggregate extends Operator {
 					processFunction(parsedAggregates.get(j), attrName);
 				}
 				
-				
+//				System.out.println("-->>> out.getAggregates(): "+parsedAggregates);
 			}
 			else {
 				groupBy.add(attr);
+				
+//				System.out.println("-- groupBy.add(attr): "+attr.getName()+"; "+attr.getExpressionString());
+				
 				/*if(attr.getSecurityPolicy() != Attribute.SecurityPolicy.Public) {
 					throw new Exception("Aggregation must only group by public attributes.");
 				}*/
@@ -223,6 +241,12 @@ public class Aggregate extends Operator {
 						aggregates.add(AggregateType.COUNT_DISTINCT); }
 				else {
 					aggregates.add(AggregateType.COUNT); }
+				break;
+			case "width_bucket":
+				aggregates.add(AggregateType.WIDTH_BUCKET);
+				break;
+			case "date_part":
+				aggregates.add(AggregateType.DATE_PART);
 				break;
 			default:
 				throw new Exception("Unknown aggregate type " + f.getName());

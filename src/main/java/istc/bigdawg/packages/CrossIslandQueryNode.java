@@ -20,6 +20,7 @@ import istc.bigdawg.plan.extract.SQLPlanParser;
 import istc.bigdawg.plan.operators.Aggregate;
 import istc.bigdawg.plan.operators.Join;
 import istc.bigdawg.plan.operators.Join.JoinType;
+import istc.bigdawg.plan.operators.Limit;
 import istc.bigdawg.plan.operators.Operator;
 import istc.bigdawg.plan.operators.SeqScan;
 import istc.bigdawg.plan.operators.Sort;
@@ -673,18 +674,12 @@ public class CrossIslandQueryNode {
 			if (((Join)node).getJoinPredicateOriginal() != null && (!((Join)node).getJoinPredicateOriginal().isEmpty()))
 				joinPredicates.add(((Join)node).updateOnExpression(((Join)node).getJoinPredicateOriginal(), child0, child1, new Table(), new Table(), true));
 			
-		} else if (node instanceof Sort) {
+		} else if (node instanceof Sort || node instanceof Aggregate || node instanceof Limit) {
 			
 			// blocking come into effect
 			List<String> result = traverse(node.getChildren().get(0));
 			if (result != null) ret = new ArrayList<String>(result); 
 		
-		} else if (node instanceof Aggregate) {
-			
-			// blocking come into effect
-			List<String> result = traverse(node.getChildren().get(0));
-			if (result != null) ret = new ArrayList<String>(result); 
-			
 		} else {
 			 throw new Exception("unsupported Operator in CrossIslandQueryNode");
 		}

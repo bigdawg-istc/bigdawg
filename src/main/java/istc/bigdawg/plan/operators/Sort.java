@@ -8,6 +8,9 @@ import java.util.Map;
 import istc.bigdawg.extract.logical.SQLTableExpression;
 import istc.bigdawg.packages.SciDBArray;
 import istc.bigdawg.schema.DataObjectAttribute;
+import istc.bigdawg.utils.sqlutil.SQLExpressionUtils;
+import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Database;
 import net.sf.jsqlparser.schema.Table;
@@ -61,37 +64,46 @@ public class Sort extends Operator {
 			// only simple expressions supported, no additional arithmetic ops
 		}
 		
-		orderByElements = supplement.getOrderByClause();
+		orderByElements = new ArrayList<>();
 		
+		for (String s : sortKeys) {
+			Expression e = CCJSqlParserUtil.parseExpression(SQLExpressionUtils.removeExpressionDataTypeArtifactAndConvertLike(s));
+			SQLExpressionUtils.removeExcessiveParentheses(e);
+			OrderByElement obe = new OrderByElement();
+			obe.setExpression(e);
+			orderByElements.add(obe);
+		}
+		
+//		orderByElements = supplement.getOrderByClause();
+//		System.out.println("---> parameters.get(\"Sort-Key\")"+ parameters.get("Sort-Key"));
 		
 		// append all table names
-		for (int i = 0; i < orderByElements.size(); ++i) {
-			Column c = (Column)orderByElements.get(i).getExpression();
-			
-			
-			String[] s = sortKeys.get(i).split("\\.");
-			
-			if (c.getColumnName().equals(s[s.length-1])) {
-				
-				switch (s.length) {
-				case 1:
-					// no need to change anything
-					break;
-				case 2:
-					c.setTable(new Table(s[0]));
-					break;
-				case 3:
-					c.setTable(new Table(s[0], s[1]));
-					break;
-				case 4:
-					c.setTable(new Table(new Database(s[0]), s[1], s[2]));
-					break;
-				default:
-					throw new Exception("Too many components in order by's sortkey; key: "+sortKeys.get(i));
-				}
-			} else 
-				throw new Exception("Elements mismatch between sortKeys and orderByElements: "+sortKeys+" "+orderByElements);
-		}
+//		for (int i = 0; i < orderByElements.size(); ++i) {
+//			Column c = (Column)orderByElements.get(i).getExpression();
+//			String[] s = sortKeys.get(i).split("\\.");
+//			if (c.getColumnName().equals(s[s.length-1])) {
+//				
+//				switch (s.length) {
+//				case 1:
+//					// no need to change anything
+//					break;
+//				case 2:
+//					c.setTable(new Table(s[0]));
+//					break;
+//				case 3:
+//					c.setTable(new Table(s[0], s[1]));
+//					break;
+//				case 4:
+//					c.setTable(new Table(new Database(s[0]), s[1], s[2]));
+//					break;
+//				default:
+//					throw new Exception("Too many components in order by's sortkey; key: "+sortKeys.get(i));
+//				}
+//			} else {
+//				System.out.println("--> Sort failure: srcSchema: "+outSchema);
+//				throw new Exception("Elements mismatch between sortKeys and orderByElements: "+sortKeys+" "+orderByElements);
+//			}
+//		}
 	
 	}
 	

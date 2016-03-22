@@ -2,11 +2,13 @@ package istc.bigdawg.extract.logical;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import istc.bigdawg.extract.logical.SQLExpressionHandler;
 import istc.bigdawg.extract.logical.SQLHandler;
 import istc.bigdawg.plan.SQLQueryPlan;
-
+import istc.bigdawg.utils.sqlutil.SQLPrepareQuery;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.select.PlainSelect;
@@ -20,10 +22,13 @@ public class SQLParseLogical {
 
     
     private SQLQueryPlan queryPlan;
-
     
+
 	public SQLParseLogical(String query) throws JSQLParserException {
-		Select select = (Select) CCJSqlParserUtil.parse(query);	
+		
+		String q = SQLPrepareQuery.preprocessDateAndTime(query);
+		
+		Select select = (Select) CCJSqlParserUtil.parse(q);	
 		queryPlan = new SQLQueryPlan();
 		queryPlan.setLogicalStatement(select);
 		
@@ -72,6 +77,7 @@ public class SQLParseLogical {
 		
 		
 	}
+	
 	
 	public SQLQueryPlan getSQLQueryPlan() {
 		return queryPlan;

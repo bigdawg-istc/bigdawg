@@ -9,21 +9,22 @@ import java.util.Map;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
-import istc.bigdawg.extract.logical.SQLParseLogical;
-import istc.bigdawg.extract.logical.SQLTableExpression;
-import istc.bigdawg.plan.SQLQueryPlan;
-import istc.bigdawg.plan.operators.Operator;
-import istc.bigdawg.plan.operators.OperatorFactory;
-import istc.bigdawg.utils.sqlutil.SQLPrepareQuery;
-import istc.bigdawg.utils.sqlutil.SQLUtilities;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
+import istc.bigdawg.extract.logical.SQLParseLogical;
+import istc.bigdawg.extract.logical.SQLTableExpression;
+import istc.bigdawg.plan.SQLQueryPlan;
+import istc.bigdawg.plan.operators.Operator;
+import istc.bigdawg.plan.operators.OperatorFactory;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
+import istc.bigdawg.utils.sqlutil.SQLPrepareQuery;
+import istc.bigdawg.utils.sqlutil.SQLUtilities;
 //import istc.bigdawg.postgresql.PostgreSQLHandler.QueryResult;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
+import net.sf.jsqlparser.statement.select.Limit;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.Select;
 import net.sf.jsqlparser.statement.select.WithItem;
@@ -53,8 +54,19 @@ public class SQLPlanParser {
 	// sqlPlan passes in supplement info
 	public SQLPlanParser(String xmlString, SQLQueryPlan sqlPlan, String q) throws Exception {
 	   //catalog = DatabaseSingleton.getInstance();
-		this.query = (Select) CCJSqlParserUtil.parse(q);
+		String qprocessed = SQLPrepareQuery.preprocessDateAndTime(q);
+		this.query = (Select) CCJSqlParserUtil.parse(qprocessed);
 		queryPlan = sqlPlan;
+		
+		Map<String, String> extraInformation = new HashMap<>();
+		if (((PlainSelect)this.query.getSelectBody()).getLimit() != null) {
+			Limit lim = ((PlainSelect)this.query.getSelectBody()).getLimit();
+			if (lim.isLimitAll()) extraInformation.put("LimitAll", "ALL");
+			else if (lim.isLimitNull()) extraInformation.put("LimitNull", "NULL");
+			else extraInformation.put("LimitCount", Long.toString(lim.getRowCount()));
+			if (lim.getOffset() > 0) extraInformation.put("LimitOffset", Long.toString(lim.getOffset()));
+			
+		}
 		
 		DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
 		InputSource is = new InputSource();
@@ -73,7 +85,7 @@ public class SQLPlanParser {
             		Node plan = query.getChildNodes().item(j);
         		    // <Plan>
             		if(plan.getNodeName() == "Plan") {
-            			Operator root = parsePlanTail("main", plan, 0, false);
+            			Operator root = parsePlanTail("main", plan, extraInformation, 0, false);
             			queryPlan.setRootNode(root); 
 
             			break;
@@ -125,7 +137,7 @@ public class SQLPlanParser {
 	}
 	
 	// parse a single <Plan>
-	Operator parsePlanTail(String planName, Node node, int recursionLevel, boolean skipSort) throws Exception {
+	Operator parsePlanTail(String planName, Node node, Map<String, String> extraInformation, int recursionLevel, boolean skipSort) throws Exception {
 		
 		if(node.getNodeName() != "Plan") {
 			throw new Exception("Not parsing a valid plan node!");
@@ -157,9 +169,9 @@ public class SQLPlanParser {
 				nodeType = c.getTextContent();
 				parameters.put("Node-Type", nodeType);
 				if(nodeType.equals("Merge Join")) {
-					
 					localSkipSort = determineLocalSortSkip(planName);
-					
+				} else if (nodeType.equals("Limit")) {
+					parameters.putAll(extraInformation);
 				}
 				break;
 	
@@ -196,7 +208,7 @@ public class SQLPlanParser {
 				break;
 			case "Plans":
 				int r = recursionLevel+1;
-				childOps = parsePlansTail(localPlan, c, r, localSkipSort);
+				childOps = parsePlansTail(localPlan, c, extraInformation, r, localSkipSort);
 				break;
 				
 			default:
@@ -256,14 +268,14 @@ public class SQLPlanParser {
 	}
 	
 	// handle a <Plans> op, might return a list
-	List<Operator> parsePlansTail(String planName, Node node, int recursionLevel, boolean skipSort) throws Exception {
+	List<Operator> parsePlansTail(String planName, Node node, Map<String, String> extraInformation, int recursionLevel, boolean skipSort) throws Exception {
 		NodeList children = node.getChildNodes();
 		List<Operator> childNodes = new ArrayList<Operator>();
 		
 		for(int i = 0; i < children.getLength(); ++i) {
 			Node c = children.item(i);
 			if(c.getNodeName() == "Plan") {
-				Operator o = parsePlanTail(planName, c, recursionLevel+1, skipSort);
+				Operator o = parsePlanTail(planName, c, extraInformation, recursionLevel+1, skipSort);
 				
 				// only add children that are part of the main plan, not the CTEs which are accounted for in CTEScan
 				if(!o.CTERoot()) {

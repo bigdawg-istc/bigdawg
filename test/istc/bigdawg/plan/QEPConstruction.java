@@ -38,6 +38,7 @@ public class QEPConstruction {
 		setupCrossIslandPlanConstructionTier6_2();
 		setupCrossIslandPlanConstructionAggTier1();
 		setupCrossIslandPlanConstructionAggTier2();
+		setupCrossIslandPlanConstructionTPCH2();
 	}
 
 	
@@ -131,6 +132,10 @@ public class QEPConstruction {
 		inputs.put("aggsql2", "bdrel(select p.id, avg(g.expr_value)/avg(g.expr_value)+3 AS a from patients AS p join geo AS g on p.id = g.patientid where p.id < 3 group by p.id order by p.id)");
 	}
 	
+	private void setupCrossIslandPlanConstructionTPCH2() {
+		inputs.put("tpch2", "bdrel(select s_acctbal, s_name, n_name, p_partkey, p_mfgr, s_address, s_phone, s_comment from part, supplier, partsupp, nation, region where p_partkey = ps_partkey and s_suppkey = ps_suppkey and p_size = 14 and p_type like '%BRASS' and s_nationkey = n_nationkey and n_regionkey = r_regionkey and r_name = 'AMERICA' and ps_supplycost = ( select min(ps_supplycost) from partsupp, supplier, nation, region where p_partkey = ps_partkey and s_suppkey = ps_suppkey and s_nationkey = n_nationkey and n_regionkey = r_regionkey and r_name = 'AMERICA') order by s_acctbal desc, n_name, s_name, p_partkey)");
+	};
+	
 	
 //	@Test
 //	public void testCrossIslandPlanConstructionTier1() throws Exception {
@@ -177,15 +182,20 @@ public class QEPConstruction {
 //	public void testCrossIslandPlanConstructionTier6_2() throws Exception {
 //		testCaseCrossIslandPlanConstruction("relarray2", false);
 //	}
+//	
+//	@Test
+//	public void testCrossIslandPlanConstructionAggTier1() throws Exception {
+//		testCaseCrossIslandPlanConstruction("aggsql1", false);
+//	}
+//
+//	@Test
+//	public void testCrossIslandPlanConstructionAggTier2() throws Exception {
+//		testCaseCrossIslandPlanConstruction("aggsql2", false);
+//	}
 	
 	@Test
-	public void testCrossIslandPlanConstructionAggTier1() throws Exception {
-		testCaseCrossIslandPlanConstruction("aggsql1", false);
-	}
-
-	@Test
-	public void testCrossIslandPlanConstructionAggTier2() throws Exception {
-		testCaseCrossIslandPlanConstruction("aggsql2", false);
+	public void testCrossIslandPlanConstructionTPCH2() throws Exception {
+		testCaseCrossIslandPlanConstruction("tpch2", false);
 	}
 	
 

@@ -16,7 +16,7 @@ public class OperatorFactory {
 			case "Aggregate":
 			case "HashAggregate":
 			case "GroupAggregate":
-				if(supplement.hasDistinct()) {
+				if(supplement != null && supplement.hasDistinct()) {
 					return new Distinct(parameters, output, children.get(0), supplement);
 				}
 				return new Aggregate(parameters, output, children.get(0), supplement);
@@ -33,9 +33,10 @@ public class OperatorFactory {
 				return new Sort(parameters, output, sortKeys, children.get(0), supplement);					
 			case "WindowAgg":
 				return new WindowAggregate(parameters, output, children.get(0), supplement);
-				
+			case "Limit":
+				return new Limit(parameters, output, children.get(0), supplement);
 			default: // skip it, only designed for 1:1 io like hash and materialize
-				System.out.println("---> opType from OperatorFactory: "+opType);
+//				System.out.println("---> opType from OperatorFactory: "+opType);
 				return children.get(0);
 		}
 		

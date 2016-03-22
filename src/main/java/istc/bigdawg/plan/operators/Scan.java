@@ -5,6 +5,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import istc.bigdawg.extract.logical.SQLTableExpression;
 import istc.bigdawg.packages.SciDBArray;
@@ -23,6 +25,7 @@ public class Scan extends Operator {
 //	protected String filterExpressionString = null;
 	protected Expression filterExpression = null;
 	protected Set<Expression> filterSet;
+	protected Expression indexCond = null;
 	protected String srcTable;
 	
 	protected String tableAlias;  //may be query-specific, need to derive it here
@@ -42,9 +45,22 @@ public class Scan extends Operator {
 		tableAlias = parameters.get("Alias");
 		
 		if (parameters.get("Filter") != null) {
-			filterExpression = CCJSqlParserUtil.parseCondExpression(parameters.get("Filter"));
+			
+			String s = SQLExpressionUtils.removeExpressionDataTypeArtifactAndConvertLike(parameters.get("Filter"));
+			
+			filterExpression = CCJSqlParserUtil.parseCondExpression(s);
+			SQLExpressionUtils.removeExcessiveParentheses(filterExpression);
+			
 			filterSet = new HashSet<Expression>();
 			filterSet.add(filterExpression);
+			
+		}
+		
+		if (parameters.get("Index-Cond") != null) {
+			String s = SQLExpressionUtils.removeExpressionDataTypeArtifactAndConvertLike(parameters.get("Index-Cond"));
+			
+			indexCond = CCJSqlParserUtil.parseCondExpression(s);
+			SQLExpressionUtils.removeExcessiveParentheses(indexCond);
 		}
 		
 		table = new Table(srcTable); // new one to accommodate aliasing
@@ -144,18 +160,49 @@ public class Scan extends Operator {
 						e = new AndExpression(e, s); 
 					}
 				}
+				e = new AndExpression(ps.getWhere(), e);
 			} else {
 				e = filterExpression;
 			}
 			
 			try {
-				Expression where = 	e;
-				ps.setWhere(where);
+				ps.setWhere(e);
 			} catch (Exception ex) {
 				ex.printStackTrace();
-				System.out.println("exception: "+filterExpression.toString());
+				System.out.println("filterSet exception: "+filterExpression.toString());
 			}
 		}
+		
+		if (indexCond != null) { // used to have a !isPruned;
+			
+			Expression ic = null;
+			
+			if (isPruned) {
+				ic = CCJSqlParserUtil.parseCondExpression(indexCond.toString());
+				Set<String> names = new HashSet<>();
+				names.add(this.srcTable);
+				names.add(this.tableAlias);
+				SQLExpressionUtils.renameAttributes(ic, names, this.getPruneToken());
+			} else 
+				ic = indexCond;
+			
+			PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
+			
+			Expression e = null; 
+			if(ps.getWhere() != null) {
+				e = new AndExpression(ps.getWhere(), ic);
+			} else {
+				e = ic;
+			}
+			
+			try {
+				ps.setWhere(e);
+			} catch (Exception ex) {
+				ex.printStackTrace();
+				System.out.println("indexCond exception: "+indexCond.toString());
+			}
+		}
+		
 		return dstStatement;
 
 		

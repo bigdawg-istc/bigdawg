@@ -51,7 +51,16 @@ public class SeqScan extends Scan {
 		
 		Connection con = PostgreSQLHandler.getConnection(((PostgreSQLConnectionInfo)PostgreSQLHandler.generateConnectionInfo(dbid)));
 		
-		CreateTable create = (CreateTable) CCJSqlParserUtil.parse(PostgreSQLHandler.getCreateTable(con, schemaAndName));
+		String createTableString = PostgreSQLHandler.getCreateTable(con, schemaAndName).replaceAll("\\scharacter[\\(]", " char(");
+		CreateTable create = null;
+		try {
+		create = (CreateTable) CCJSqlParserUtil.parse(createTableString);
+		} catch (Exception e) {
+			e.printStackTrace();
+			throw e;
+		}
+		
+		
 		DataObject baseTable = new DataObject(create); 
 		
 		for(int i = 0; i < output.size(); ++i) {
