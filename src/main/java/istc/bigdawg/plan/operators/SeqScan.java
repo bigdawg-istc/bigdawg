@@ -15,6 +15,8 @@ import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.schema.DataObject;
 import istc.bigdawg.schema.DataObjectAttribute;
 import istc.bigdawg.schema.SQLAttribute;
+import istc.bigdawg.utils.sqlutil.SQLExpressionUtils;
+import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.create.table.CreateTable;
 
@@ -182,7 +184,7 @@ public class SeqScan extends Scan {
 	}
 	
 	@Override
-	public String getTreeRepresentation(boolean isRoot){
+	public String getTreeRepresentation(boolean isRoot) throws Exception{
 		
 		if (isPruned() && (!isRoot)) {
 			return "{PRUNED}";
@@ -199,7 +201,7 @@ public class SeqScan extends Scan {
 			// filter, project
 			sb.append(operatorName).append(children.get(0).getTreeRepresentation(false));
 		}
-		
+		if (filterExpression != null) sb.append(SQLExpressionUtils.parseCondForTree(filterExpression));
 		sb.append('}');
 		
 		return sb.toString();

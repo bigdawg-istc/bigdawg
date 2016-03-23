@@ -5,15 +5,19 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-import istc.bigdawg.schema.SQLDatabaseSingleton;
 import istc.bigdawg.schema.SQLAttribute;
 import istc.bigdawg.schema.SQLDatabase;
+import istc.bigdawg.schema.SQLDatabaseSingleton;
 
 public class SQLUtilities {
 
 	// extract expression from XML string
+	private static Pattern inPattern = Pattern.compile("\\'\\{.*\\}\\'");
 	
 	public static String parseString(String src) {
 		
@@ -34,8 +38,24 @@ public class SQLUtilities {
 		
 		dst = dst.replaceAll("::integer", "");
 		dst = dst.replaceAll("\\[\\]", "");
+		
+		Matcher m = inPattern.matcher(dst);
+		if (m.find()) {
+			List<String> l = Arrays.asList(dst.substring(m.start()+2, m.end()-2).replaceAll("[\"]", "'").split(","));
+			for (int i = 0; i < l.size(); i++) {
+				l.set(i, '\''+l.get(i).trim()+'\'');
+			}
+			StringBuilder sb = new StringBuilder().append(dst);
+			sb.replace(m.start(), m.end(), String.join(", ", l));
+			dst = sb.toString().replaceAll("\\'\\'", "'");
+		}
+		
 		dst = dst.replaceAll("\\'\\{", "");  // remove psql optimizer notation
 		dst = dst.replaceAll("\\}\\'", "");
+		
+		
+		
+		
 		dst = dst.replaceAll(" = ANY", " IN"); // convert to form that JSQLParser accepts
 		
 		

@@ -61,6 +61,9 @@ public class Scan extends Operator {
 			
 			indexCond = CCJSqlParserUtil.parseCondExpression(s);
 			SQLExpressionUtils.removeExcessiveParentheses(indexCond);
+			
+			if (filterSet == null) filterSet = new HashSet<Expression>();
+			filterSet.add(filterExpression);
 		}
 		
 		table = new Table(srcTable); // new one to accommodate aliasing
@@ -202,6 +205,7 @@ public class Scan extends Operator {
 				System.out.println("indexCond exception: "+indexCond.toString());
 			}
 		}
+		
 		
 		return dstStatement;
 

@@ -1,6 +1,7 @@
 package istc.bigdawg.plan.operators;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -10,9 +11,9 @@ import istc.bigdawg.packages.SciDBArray;
 import istc.bigdawg.schema.DataObjectAttribute;
 import istc.bigdawg.utils.sqlutil.SQLExpressionUtils;
 import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.expression.Parenthesis;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
-import net.sf.jsqlparser.schema.Database;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.OrderByElement;
 import net.sf.jsqlparser.statement.select.PlainSelect;
@@ -44,33 +45,47 @@ public class Sort extends Operator {
 		// 2) as an ORDER BY clause
 		// instantiate iterator to get the right one
 		// iterate from first OVER --> ORDER BY
-
 		
 		sortOrder = supplement.getSortOrder(keys, parameters.get("sectionName"));
 		sortKeys = keys;
-		
-//		secureCoordination = children.get(0).secureCoordination;
 		outSchema = new LinkedHashMap<String, DataObjectAttribute>(child.outSchema);
-		
 		
 		// match with previous schema to get any aliases to propagate
 		for(int i = 0; i < sortKeys.size(); ++i) {
 			String a = supplement.getAlias(sortKeys.get(i));
-			if(a != null) {
+			if(a != null) 
 				sortKeys.set(i, a);
-			}
-			
-			// if we sort on a protected or private key, then go to SMC
-			// only simple expressions supported, no additional arithmetic ops
 		}
 		
 		orderByElements = new ArrayList<>();
 		
+		// pick out the outitems that are not columns
+		Map<String, String> outExps = new HashMap<>();
+		for (String s : outSchema.keySet()) {
+			if (!s.equals(outSchema.get(s).getExpressionString()))
+				outExps.put(s, outSchema.get(s).getExpressionString());
+		}
+		
 		for (String s : sortKeys) {
 			Expression e = CCJSqlParserUtil.parseExpression(SQLExpressionUtils.removeExpressionDataTypeArtifactAndConvertLike(s));
 			SQLExpressionUtils.removeExcessiveParentheses(e);
+			
+			while (e instanceof Parenthesis)
+				e = ((Parenthesis) e).getExpression();
+			
+			if (!(e instanceof Column) && outExps.containsValue(e.toString()))
+				for (String str : outExps.keySet())
+					e = new Column(str);
+			
 			OrderByElement obe = new OrderByElement();
 			obe.setExpression(e);
+			if (s.endsWith("DESC")) {
+				obe.setAscDescPresent(true);
+				obe.setAsc(false);
+			} else if (s.endsWith("ASC")) {
+				obe.setAscDescPresent(true);
+				obe.setAsc(true);
+			}
 			orderByElements.add(obe);
 		}
 		
@@ -152,9 +167,7 @@ public class Sort extends Operator {
 		updateOrderByElements();
 		
 		if(!isWinAgg) {
-			PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
-			ps.setOrderByElements(orderByElements);
-			
+			((PlainSelect) dstStatement.getSelectBody()).setOrderByElements(orderByElements);
 		}
 
 		return dstStatement;
@@ -221,7 +234,7 @@ public class Sort extends Operator {
 	}
 	
 	@Override
-	public String getTreeRepresentation(boolean isRoot){
+	public String getTreeRepresentation(boolean isRoot) throws Exception{
 		return "{sort"+children.get(0).getTreeRepresentation(false)+"}";
 	}
 	

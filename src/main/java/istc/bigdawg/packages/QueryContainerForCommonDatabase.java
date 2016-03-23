@@ -46,7 +46,7 @@ public class QueryContainerForCommonDatabase {
 		return rootOperator.generateAFLStoreStringForExecutionTree(pruneToken);
 	}
 	
-	public String generateTreeExpression() {
+	public String generateTreeExpression() throws Exception {
 		return rootOperator.getTreeRepresentation(true);
 	}
 	

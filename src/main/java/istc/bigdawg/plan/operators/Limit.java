@@ -125,7 +125,7 @@ public class Limit extends Operator {
 	}
 	
 	@Override
-	public String getTreeRepresentation(boolean isRoot){
+	public String getTreeRepresentation(boolean isRoot) throws Exception{
 		if (isPruned() && (!isRoot)) return "{PRUNED}";
 		else return "{limit"+children.get(0).getTreeRepresentation(false)+"}";
 	}

@@ -18,12 +18,13 @@ import istc.bigdawg.plan.extract.CommonOutItem;
 import istc.bigdawg.plan.extract.SQLOutItem;
 import istc.bigdawg.schema.DataObjectAttribute;
 import istc.bigdawg.utils.sqlutil.SQLExpressionUtils;
-import istc.bigdawg.utils.sqlutil.SQLUtilities;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Alias;
 import net.sf.jsqlparser.expression.BinaryExpression;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Parenthesis;
+import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
+import net.sf.jsqlparser.expression.operators.conditional.OrExpression;
 import net.sf.jsqlparser.expression.operators.relational.Between;
 import net.sf.jsqlparser.expression.operators.relational.EqualsTo;
 import net.sf.jsqlparser.expression.operators.relational.GreaterThan;
@@ -46,7 +47,6 @@ public class Join extends Operator {
 
 	public enum JoinType  {Left, Natural, Right};
 	
-	private String currentWhere = "";
 	private JoinType joinType = null;
 	private String joinPredicate = null;
 	private String joinFilter = null; 
@@ -72,8 +72,6 @@ public class Join extends Operator {
 		this.joinType = j.joinType;
 		this.isCopy = j.isCopy;
 		
-		if (j.currentWhere == null) this.currentWhere = j.currentWhere;
-		else this.currentWhere = new String(j.currentWhere);
 		if (j.joinPredicate == null) this.joinPredicate = j.joinPredicate;
 		else this.joinPredicate = new String(j.joinPredicate);
 		
@@ -145,8 +143,6 @@ public class Join extends Operator {
 		joinPredicate = parameters.get("Join-Predicate");
 		aliases = Arrays.asList(parameters.get("Children-Aliases").split(" "));
 
-		currentWhere = joinFilter;
-		
 		srcSchema = new LinkedHashMap<String, DataObjectAttribute>(lhs.outSchema);
 		srcSchema.putAll(rhs.outSchema);
 		
@@ -187,42 +183,6 @@ public class Join extends Operator {
 		maxJoinSerial++;
 		this.joinID = maxJoinSerial;
 	
-		// if hash join "Hash-Cond", merge join "Merge-Cond"
-		for(String p : parameters.keySet()) {
-			if(p.endsWith("Cond")) {
-				joinPredicate = parameters.get(p);
-			}
-		}
-		joinFilter = parameters.get("Join-Filter");
-				
-		if (joinFilter != null) 
-			joinFilter = joinFilter.replaceAll("::\\w+( \\w+)*", "");
-		
-//		System.out.println("joinFilter: " + joinFilter);
-		
-		// if hash join
-		joinPredicate = SQLUtilities.parseString(joinPredicate);
-		joinFilter = SQLUtilities.parseString(joinFilter);
-
-
-		
-	
-		if(joinFilter != null && joinPredicate != null && joinFilter.contains(joinPredicate)) { // remove duplicate
-			String joinClause = "(" + joinPredicate + ") AND"; // canonical form
-			if(joinFilter.contains(joinClause)) {				
-				joinFilter = joinFilter.replace(joinClause, "");
-			}
-			else {
-				joinClause = " AND (" + joinPredicate + ")";
-				joinFilter = joinFilter.replace(joinClause, "");			
-			}
-		}
-		
-		
-		currentWhere = joinFilter;
-		
-		
-		
 		srcSchema = new LinkedHashMap<String, DataObjectAttribute>(lhs.outSchema);
 		srcSchema.putAll(rhs.outSchema);
 		
@@ -236,6 +196,26 @@ public class Join extends Operator {
 			outSchema.put(attrName, attr);
 				
 		}
+		
+		// process join predicates and join filters
+		// if hash join "Hash-Cond", merge join "Merge-Cond"
+		for(String p : parameters.keySet()) 
+			if(p.endsWith("Cond")) 
+				joinPredicate = parameters.get(p);
+		joinFilter = parameters.get("Join-Filter");
+		if (joinFilter != null) joinFilter = SQLExpressionUtils.removeExpressionDataTypeArtifactAndConvertLike(joinFilter);
+		if (joinPredicate != null) joinPredicate = SQLExpressionUtils.removeExpressionDataTypeArtifactAndConvertLike(joinPredicate);
+	
+		if(joinFilter != null && joinPredicate != null && joinFilter.contains(joinPredicate)) { // remove duplicate
+			String joinClause = "(" + joinPredicate + ") AND"; // canonical form
+			if(joinFilter.contains(joinClause)) 			
+				joinFilter = joinFilter.replace(joinClause, "");
+			else {
+				joinClause = " AND (" + joinPredicate + ")";
+				joinFilter = joinFilter.replace(joinClause, "");			
+			}
+		} 
+		
 		inferJoinParameters();
 		
 		if (joinPredicate != null)
@@ -245,110 +225,23 @@ public class Join extends Operator {
 		
 	}
     
- // combine join ON clause with WHEREs that combine two tables
+	// combine join ON clause with WHEREs that combine two tables
  	// if a predicate references data that is not public, move it to the filter
  	// collect equality predicates over public attributes in joinPredicate
  	// only supports AND in predicates, not OR or NOT
  	private void inferJoinParameters() throws Exception {
  		
- 		if(joinFilter == null && joinPredicate == null) {
- 			return;
- 		}
+ 		if(joinFilter == null && joinPredicate == null) return;
+ 		if (joinFilter == null || joinFilter.length() == 0) { joinFilter = joinPredicate; return;} 
+ 		else if (joinPredicate == null || joinPredicate.length() == 0) return;
  		
- 		if(joinFilter != null && (joinFilter.matches(" OR ") || joinFilter.matches(" NOT "))) {
- 			throw new Exception("OR and NOT predicates not yet implemented for joins.");
- 		}
+ 		Expression jf = CCJSqlParserUtil.parseCondExpression(joinFilter);
+ 		Expression jp = CCJSqlParserUtil.parseCondExpression(joinPredicate);
  		
- 		if(joinPredicate != null && (joinPredicate.matches(" OR ") || joinPredicate.matches(" NOT "))) {
- 			throw new Exception("OR and NOT predicates not yet implemented for joins.");
- 		}
-
+ 		if (jf instanceof OrExpression) jf = new Parenthesis(jf);
+ 		if (jp instanceof OrExpression) jp = new Parenthesis(jp);
  		
- 		final List<EqualsTo> allEqualities = new ArrayList<EqualsTo>();
- 		final List<BinaryExpression> allComparisons = new ArrayList<BinaryExpression>();
- 		
- 		String allJoins = new String();
- 		
- 		if(joinPredicate != null) {
- 			allJoins += joinPredicate;
- 			if(joinFilter != null && joinFilter.length() > 0) {
- 				allJoins += " AND ";
- 			}
- 		} else if (joinFilter != null && joinFilter.length() > 0) 
-	 		allJoins += joinFilter;
- 		
- 	    
- 	    
- 		SQLExpressionHandler deparser = new SQLExpressionHandler() {
- 	        
- 		    @Override
- 		    public void visit(EqualsTo equalsTo) {
- 		    	super.visit(equalsTo);
- 		    	allEqualities.add(equalsTo);
- 		    }
- 			
- 		    @Override
- 		    public void visit(LikeExpression likeExpression) {
- 		    	super.visit(likeExpression);
- 		    	allComparisons.add(likeExpression);
- 		    }
- 		    
- 		    @Override
- 		    public void visitOldOracleJoinBinaryExpression(OldOracleJoinBinaryExpression expression, String operator) {
- 		    	super.visitOldOracleJoinBinaryExpression(expression, operator);
- 		    	allComparisons.add(expression);
-
- 		    }
- 		    
- 	    };
-
- 	    StringBuilder b = new StringBuilder();
- 	    deparser.setBuffer(b);
- 	    
- 	    
- 	    Expression expr = CCJSqlParserUtil.parseCondExpression(allJoins);
- 	    expr.accept(deparser);
-
- 	    
- 	    
- 	    Map<String, Integer> joinOn = new LinkedHashMap<String, Integer>();
- 	    Map<String, Integer> filters = new LinkedHashMap<String, Integer>();
- 	    
- 	    List<EqualsTo> publicEqualities = new ArrayList<EqualsTo>();
- 	    for (EqualsTo eq : allEqualities) {
-    		joinOn.put(eq.toString(), 1);
-    		publicEqualities.add(eq);	  
- 	    }
- 	    
- 	    Set<String> joinOnDistinct = joinOn.keySet();
- 	    
- 	    for(int i = 0; i < allComparisons.size(); ++i) {
- 	    	if(!publicEqualities.contains(allComparisons.get(i))) {
- 	    		filters.put(allComparisons.get(i).toString(), 1);
- 	    	}
- 	    }
- 	
-
- 		joinFilter = StringUtils.join(filters.keySet().toArray(), " AND ");
- 		joinPredicate = StringUtils.join(joinOnDistinct.toArray(), " AND ");
- 		
- 		
- 		
- 		
- 		BinaryExpression on = (BinaryExpression) CCJSqlParserUtil.parseCondExpression(joinPredicate);
-		
-		Expression l = on.getLeftExpression();
-		Expression r = on.getRightExpression();
-		
-		// TODO ASSUMPTION: THERE CAN ONLY BE COLUMNS OR PARENTHESIS
-		if (l.getClass().equals(Parenthesis.class)) {
-			l = ((Parenthesis) l).getExpression();
-			on.setLeftExpression(l);
-		}
-		if (r.getClass().equals(Parenthesis.class)) {
-			r = ((Parenthesis) r).getExpression();
-			on.setRightExpression(r);
-		}
+ 		joinFilter = (new AndExpression(jf, jp)).toString();
 			
  	}
     
@@ -362,8 +255,8 @@ public class Join extends Operator {
     	
     	
     	
-    	Set<String> filterSet = new HashSet<String>();
-    	PlainSelect ps = null;
+//    	Set<String> filterSet = new HashSet<String>();
+//    	PlainSelect ps = null;
     	
 		if (isPruned) {
 			Table t = new Table();
@@ -415,12 +308,12 @@ public class Join extends Operator {
     	}
 		
 		
-		Expression expr = null;
-    	if(joinPredicate != null && !joinPredicate.isEmpty()) {
-    		expr = CCJSqlParserUtil.parseCondExpression(joinPredicate);
-    	} else {
-    		expr = null;
-    	}
+//		Expression expr = null;
+//    	if(joinPredicate != null && !joinPredicate.isEmpty()) {
+//    		expr = CCJSqlParserUtil.parseCondExpression(joinPredicate);
+//    	} else {
+//    		expr = null;
+//    	}
     	
     	
     	
@@ -438,7 +331,7 @@ public class Join extends Operator {
     			}
     			
     			// this is the bottom
-    			dstStatement = SelectUtils.buildSelectFromTable(t0);
+    			dstStatement = children.get(0).generateSQLStringDestOnly(null, stopAtJoin);
     			
     			if (t0.getAlias() != null) updateThisAndParentJoinReservedObjects(t0.getAlias().getName());
     			else updateThisAndParentJoinReservedObjects(t0.getName());
@@ -447,8 +340,8 @@ public class Join extends Operator {
     			
     		} else {
     			dstStatement = child0.generateSQLStringDestOnly(dstStatement, stopAtJoin); 
-    			ps = (PlainSelect) dstStatement.getSelectBody();
-    			if (ps.getWhere() != null) filterSet.add(ps.getWhere().toString());
+//    			ps = (PlainSelect) dstStatement.getSelectBody();
+//    			if (ps.getWhere() != null) filterSet.add(ps.getWhere().toString());
     			
     			t = t1;
 	    		if (t1.getAlias() != null && this.joinReservedObjects.contains(t1.getAlias().getName())) t = t0;
@@ -462,8 +355,8 @@ public class Join extends Operator {
 			
 			
 			dstStatement = child0.generateSQLStringDestOnly(dstStatement, stopAtJoin); 
-			ps = (PlainSelect) dstStatement.getSelectBody();
-			if (ps.getWhere() != null) filterSet.add(ps.getWhere().toString());
+//			ps = (PlainSelect) dstStatement.getSelectBody();
+//			if (ps.getWhere() != null) filterSet.add(ps.getWhere().toString());
 			
 			
 			getJoinReservedObjectsFromParents();
@@ -486,14 +379,12 @@ public class Join extends Operator {
 		updateThisAndParentJoinReservedObjects(t.getFullyQualifiedName());
 		
 		dstStatement = child1.generateSQLStringDestOnly(dstStatement, stopAtJoin); 
-		ps = (PlainSelect) dstStatement.getSelectBody();
-		if (ps.getWhere() != null) {
-			if (expr != null) filterSet.add(expr.toString());
-			filterSet.add(ps.getWhere().toString());
-		}
+//		ps = (PlainSelect) dstStatement.getSelectBody();
+//		if (ps.getWhere() != null) {
+//			if (expr != null) filterSet.add(expr.toString());
+//			filterSet.add(ps.getWhere().toString());
+//		}
     		
-    	
-    	
 		
 		
 		if(joinFilter != null && !joinFilter.isEmpty()) {
@@ -521,33 +412,38 @@ public class Join extends Operator {
 							SQLExpressionUtils.renameAttributes(e, duplicate, o.getPruneToken());
 						}
 						
-						
 					} else {
 						nextGen.addAll(o.children);
 					}
 				}
-				
 				treeWalker = nextGen;
 			}
 			
 			jf = e.toString();
 			
 			
-			filterSet.add(jf);
+//			Set<String> filterSet = new HashSet<>()
+//			
+//			filterSet.add(jf);
 
 //			// not sure if useful
 //			if(ps.getWhere() != null) {
 //				filterSet.add(ps.getWhere().toString());
 //			}
 			
-			currentWhere = StringUtils.join(filterSet, " AND ");
+			String currentWhere = jf;// StringUtils.join(filterSet, " AND ");
 			
 			if (!currentWhere.isEmpty()) {
 				Expression where = 	CCJSqlParserUtil.parseCondExpression(currentWhere);
-				ps.setWhere(where);
+				
+				PlainSelect ps = ((PlainSelect) dstStatement.getSelectBody());
+				if (ps.getWhere() == null) ps.setWhere(where);
+				else ps.setWhere(new AndExpression(where, ps.getWhere()));
 			}
 
 		}
+		
+//		System.out.println("-- Join: "+dstStatement.toString()+"\n");
 		
 		return dstStatement;
 
@@ -625,7 +521,7 @@ public class Join extends Operator {
     
     public String toString() {
     		return "Joining " + children.get(0).toString() + " x " + children.get(1).toString() 
-    				+ " type " + joinType + " predicates " + joinPredicate + " filters " + currentWhere;
+    				+ " type " + joinType + " predicates " + joinPredicate + " filters " + joinFilter;
     }
     
 	@Override
@@ -679,9 +575,34 @@ public class Join extends Operator {
 	};
 	
 	@Override
-	public String getTreeRepresentation(boolean isRoot){
+	public String getTreeRepresentation(boolean isRoot) throws Exception{
 		if (isPruned() && (!isRoot)) return "{PRUNED}";
-		else return "{join"+children.get(0).getTreeRepresentation(false)+children.get(1).getTreeRepresentation(false)+"}";
+		else {
+			StringBuilder sb = new StringBuilder();
+			sb.append("{join").append(children.get(0).getTreeRepresentation(false)).append(children.get(1).getTreeRepresentation(false));
+
+			if (joinFilter != null && !joinFilter.isEmpty()) {
+				Expression e = CCJSqlParserUtil.parseCondExpression(joinFilter);
+				SQLExpressionUtils.removeExcessiveParentheses(e);
+				sb.append(SQLExpressionUtils.parseCondForTree(e));
+			}
+			
+			List<Operator> treeWalker = this.getChildren();
+			while (!treeWalker.isEmpty()) {
+				List<Operator> nextgen = new ArrayList<>();
+				for (Operator o : treeWalker) {
+					if (o instanceof Join) continue;
+					if (o instanceof Scan && ((Scan) o).indexCond != null) {
+						sb.append(SQLExpressionUtils.parseCondForTree(((Scan)o).indexCond));
+					} else {
+						nextgen.addAll(o.getChildren());
+					}
+				}
+				treeWalker = nextgen;
+			}
+			sb.append('}');
+			return sb.toString();
+		}
 	}
 	
 	

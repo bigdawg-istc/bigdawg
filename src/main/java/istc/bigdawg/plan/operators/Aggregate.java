@@ -2,6 +2,7 @@ package istc.bigdawg.plan.operators;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -19,6 +20,7 @@ import net.sf.jsqlparser.expression.Alias;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Function;
 import net.sf.jsqlparser.expression.KeepExpression;
+import net.sf.jsqlparser.expression.Parenthesis;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
@@ -71,19 +73,6 @@ public class Aggregate extends Operator {
 			aggregateFilter = Utils.parseIdFromSameDocumentURI(aggregateFilter); // HAVING clause
 		}
 		
-		if (parameters.get("Group-Key") != null) {
-			List<String> groupBysFromXML = Arrays.asList(SQLExpressionUtils
-					.removeExpressionDataTypeArtifactAndConvertLike(parameters.get("Group-Key")).split("\n")); 
-	
-			for (String s : groupBysFromXML) {
-				s = s.trim();
-				if (s.isEmpty()) continue;
-				Expression expr = CCJSqlParserUtil.parseExpression(s);
-				SQLExpressionUtils.removeExcessiveParentheses(expr);
-				parsedGroupBys.add(expr);
-			}
-		}
-		
 		// iterate over outschema and 
 		// classify each term as aggregate func or group by
 		for(int i = 0; i < output.size(); ++i) {
@@ -118,6 +107,38 @@ public class Aggregate extends Operator {
 				}*/
 			}
 			
+		}
+		
+		
+		if (parameters.get("Group-Key") != null) {
+			
+			// pick out the outitems that are not columns
+			Map<String, String> outExps = new HashMap<>();
+			for (String s : outSchema.keySet()) {
+				if (!s.equals(outSchema.get(s).getExpressionString()))
+					outExps.put(s, outSchema.get(s).getExpressionString());
+			}
+			
+			
+			List<String> groupBysFromXML = Arrays.asList(SQLExpressionUtils
+					.removeExpressionDataTypeArtifactAndConvertLike(parameters.get("Group-Key")).split("\n")); 
+	
+			for (String s : groupBysFromXML) {
+				s = s.trim();
+				if (s.isEmpty()) continue;
+				Expression e = CCJSqlParserUtil.parseExpression(s);
+				SQLExpressionUtils.removeExcessiveParentheses(e);
+				
+				while (e instanceof Parenthesis)
+					e = ((Parenthesis) e).getExpression();
+				
+				if (!(e instanceof Column) && outExps.containsValue(e.toString()))
+					for (String str : outExps.keySet())
+						e = new Column(str);
+				
+				
+				parsedGroupBys.add(e);
+			}
 		}
 
 	}
@@ -390,9 +411,22 @@ public class Aggregate extends Operator {
 	}
 	
 	@Override
-	public String getTreeRepresentation(boolean isRoot){
+	public String getTreeRepresentation(boolean isRoot) throws Exception{
 		if (isPruned() && (!isRoot)) return "{PRUNED}";
-		else return "{aggregate"+children.get(0).getTreeRepresentation(false)+"}";
+		else {
+			StringBuilder sb = new StringBuilder();
+			sb.append("{aggregate").append(children.get(0).getTreeRepresentation(false));
+			
+			for (String alias: outSchema.keySet()) {
+				Expression e = outSchema.get(alias).getSQLExpression();
+				SQLExpressionUtils.removeExcessiveParentheses(e);
+				if (e instanceof Column) continue;
+				sb.append(SQLExpressionUtils.parseCondForTree(e));
+			}
+
+			sb.append('}');
+			return sb.toString();
+		}
 	}
 
 };

@@ -1,14 +1,10 @@
 package istc.bigdawg.plan.extract;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import com.beust.jcommander.Parameters;
+import java.util.Random;
 
 import istc.bigdawg.extract.logical.SQLTableExpression;
 import istc.bigdawg.schema.DataObjectAttribute;
@@ -18,7 +14,6 @@ import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.AnalyticExpression;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Function;
-import net.sf.jsqlparser.parser.CCJSqlParser;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
@@ -164,11 +159,15 @@ public class SQLOutItem extends CommonOutItem{
 				}
 				if (alias == null) {
 					alias = after.replaceAll("[*_\\-+/\\. (),'=]", "").replaceAll("^[0-9]+", "");
-					alias = alias.substring(0, (20 < alias.length() ? 20 : alias.length()));
+					Random rand = new Random();
+					int randomNum = rand.nextInt(200);
+					alias = alias.substring(0, (20 < alias.length() ? 20 : alias.length())) + randomNum;
 				}
 			} else {
 				alias = after.replaceAll("[*_\\-+/\\. (),'=]", "").replaceAll("^[0-9]+", "");
-				alias = alias.substring(0, (20 < alias.length() ? 20 : alias.length()));
+				Random rand = new Random();
+				int randomNum = rand.nextInt(200);
+				alias = alias.substring(0, (20 < alias.length() ? 20 : alias.length()))+randomNum;
 			}
 		} 
 		
