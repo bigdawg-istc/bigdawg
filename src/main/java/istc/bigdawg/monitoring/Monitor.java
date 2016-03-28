@@ -106,7 +106,7 @@ public class Monitor {
             queries.add(qepString);
             PostgreSQLHandler handler = new PostgreSQLHandler();
             try {
-                PostgreSQLHandler.QueryResult qresult = handler.executeQueryPostgreSQL(String.format(RETRIEVE, qep.getIsland().toString(), qepString));
+                PostgreSQLHandler.QueryResult qresult = handler.executeQueryPostgreSQL(String.format(RETRIEVE, qep.getIsland().toString(), qepString.replace("'", "******")));
                 List<List<String>> rows = qresult.getRows();
                 long duration = Long.MAX_VALUE;
                 for (List<String> row: rows){
@@ -172,7 +172,7 @@ public class Monitor {
                 if (duration < 0){
                     duration = Long.MAX_VALUE;
                 }
-                String qep = row.get(1);
+                String qep = row.get(1).replace("******", "'");
                 perfInfo.add(duration);
                 queries.add(qep);
             }
@@ -186,7 +186,8 @@ public class Monitor {
     private static boolean insert(String query, Signature signature, Scope island) throws NotSupportIslandException {
         PostgreSQLHandler handler = new PostgreSQLHandler();
         try {
-			handler.executeStatementPostgreSQL(String.format(INSERT, island.toString(), signature.toRecoverableString(), query, island.toString(), query));
+            String escapedQuery = query.replace("'", "******");
+			handler.executeStatementPostgreSQL(String.format(INSERT, island.toString(), signature.toRecoverableString(), escapedQuery, island.toString(), escapedQuery));
 			return true;
 		} catch (SQLException e) {
 			return false;
@@ -196,7 +197,8 @@ public class Monitor {
     private static boolean delete(String query, Scope island) throws NotSupportIslandException {
         PostgreSQLHandler handler = new PostgreSQLHandler();
         try {
-			handler.executeStatementPostgreSQL(String.format(DELETE, island.toString(), query));
+            String escapedQuery = query.replace("'", "******");
+			handler.executeStatementPostgreSQL(String.format(DELETE, island.toString(), escapedQuery));
 			return true;
 		} catch (SQLException e) {
 			return false;
@@ -211,7 +213,7 @@ public class Monitor {
 
     public void finishedBenchmark(QueryExecutionPlan qep, long startTime, long endTime) throws SQLException {
         PostgreSQLHandler handler = new PostgreSQLHandler();
-        String qepString = QueryExecutionPlan.qepToString(qep);
+        String qepString = QueryExecutionPlan.qepToString(qep).replace("'", "******");
         handler.executeStatementPostgreSQL(String.format(UPDATE, endTime, endTime-startTime, qep.getIsland(), qepString));
 
         // Only for testing purposes.Uncomment when necessary.
