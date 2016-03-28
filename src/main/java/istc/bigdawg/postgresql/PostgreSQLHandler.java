@@ -205,6 +205,11 @@ public class PostgreSQLHandler implements DBHandler {
 		return Response.status(200).entity(out).build();
 	}
 
+	public String computeDateArithmetic(String s) throws Exception {
+		QueryResult qr = executeQueryPostgreSQL("select date("+s+");");
+		return qr.getRows().get(0).get(0);
+	}
+	
 	/**
 	 * Clean resource after a query/statement was executed in PostgreSQL.
 	 * 

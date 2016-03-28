@@ -27,6 +27,8 @@ public class OperatorFactory {
 			case "Merge Join":
 				return new Join(parameters, output, children.get(0), children.get(1), supplement);
 			case "Index Scan":
+			case "Index Only Scan":
+			case "Subquery Scan":
 			case "Seq Scan":
 				return new SeqScan(parameters, output, null, supplement);
 			case "Sort":

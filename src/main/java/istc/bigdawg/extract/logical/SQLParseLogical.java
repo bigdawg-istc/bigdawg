@@ -24,7 +24,7 @@ public class SQLParseLogical {
     private SQLQueryPlan queryPlan;
     
 
-	public SQLParseLogical(String query) throws JSQLParserException {
+	public SQLParseLogical(String query) throws Exception {
 		
 		String q = SQLPrepareQuery.preprocessDateAndTime(query);
 		

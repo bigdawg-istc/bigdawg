@@ -69,13 +69,16 @@ public class Sort extends Operator {
 		for (String s : sortKeys) {
 			Expression e = CCJSqlParserUtil.parseExpression(SQLExpressionUtils.removeExpressionDataTypeArtifactAndConvertLike(s));
 			SQLExpressionUtils.removeExcessiveParentheses(e);
+			while (e instanceof Parenthesis) e = ((Parenthesis) e).getExpression();
 			
-			while (e instanceof Parenthesis)
-				e = ((Parenthesis) e).getExpression();
+			String estr = e.toString();
 			
-			if (!(e instanceof Column) && outExps.containsValue(e.toString()))
-				for (String str : outExps.keySet())
-					e = new Column(str);
+			if (e instanceof Column && outExps.containsKey(estr))
+				e = CCJSqlParserUtil.parseExpression(outExps.get(estr));
+			else if (!(e instanceof Column) && outExps.containsValue(estr))
+				for (String str : outExps.keySet()) 
+					if (outExps.get(str).contains(estr))
+						e = new Column(str);
 			
 			OrderByElement obe = new OrderByElement();
 			obe.setExpression(e);

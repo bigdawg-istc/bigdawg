@@ -408,6 +408,21 @@ public class Operator {
 						attr.setExpression(e.toString());
 						ret = true;
 					}
+				} else if (o instanceof Aggregate && ((Aggregate)o).aggregateID != null) {
+					
+					
+					// TODO REDO: change the entire expression to match the output of children aggregates 
+					// TODO SOLVE DUPLICATION PROBLEM
+					
+					if (o.getOutSchema().containsKey(attr.getName()) || attribs.removeAll(o.getOutSchema().keySet())) {
+						
+						if (e instanceof Column) ((Column)e).setTable(new Table(((Aggregate)o).getAggregateToken()));
+						else e = new Column(new Table(((Aggregate)o).getAggregateToken()), attr.getName());
+						
+						attr.setExpression(e.toString());
+						ret = true;
+						break;
+					}
 				} else {
 					if ( o.changeAttributeName(attr) ) return true;
 				}
@@ -531,8 +546,6 @@ public class Operator {
 	public Map<String, DataObjectAttribute>  getOutSchema() {
 		return outSchema;
 	}
-
-	
 	
 	// if it is blocking, this operator changes our SMC control flow
 	// e.g., c-diff can't complete part of the self-join locally because it has a sort that needs to run first.
@@ -615,13 +628,13 @@ public class Operator {
 	public Map<String, String> getDataObjectAliasesOrNames() throws Exception {
 		
 		if (isPruned) {
-			Map<String, String> temps = new HashMap<>();
+			Map<String, String> temps = new LinkedHashMap<>();
 			temps.put(getPruneToken(), getPruneToken());
 			return temps;
 		}
 		
-		Map<String, String> aliasOrString = new HashMap<>();
-		if (this.children.size() > 0) {
+		Map<String, String> aliasOrString = new LinkedHashMap<>();
+		if (this.children.size() > 0 ) {
 			
 			for (Operator o : children) {
 				aliasOrString.putAll(o.getDataObjectAliasesOrNames());
@@ -706,10 +719,7 @@ public class Operator {
 		}
 	}
 	
-	// will likely get overridden
-	public String getTreeRepresentation(boolean isRoot) throws Exception{
-		return "Unimplemented: "+this.getClass().toString();
-	}
+	
 	
 	public void updateObjectAliases(boolean lazy) {
 		
@@ -841,4 +851,64 @@ public class Operator {
 			return null;
 	}
 	
+	// will likely get overridden
+	public String getTreeRepresentation(boolean isRoot) throws Exception{
+		throw new Exception("Unimplemented: "+this.getClass().toString());
+	}
+	
+	// half will be overriden
+	public Map<String, Set<String>> getObjectToExpressionMappingForSignature() throws Exception{
+		return children.get(0).getObjectToExpressionMappingForSignature();
+	}
+	
+	public void removeCTEEntriesFromObjectToExpressionMapping(Map<String, Set<String>> entry) {
+		for (Operator o: children)
+			o.removeCTEEntriesFromObjectToExpressionMapping(entry);
+	}
+	
+	/**
+	 * Serves only getObjectToExpressionMappingForSignature()
+	 * @param e
+	 * @param out
+	 * @throws Exception 
+	 */
+	protected void addToOut(Expression e, Map<String, Set<String>> out) throws Exception {
+		
+		Map<String, String> aliasMapping = this.getDataObjectAliasesOrNames();
+		while (e instanceof Parenthesis) e = ((Parenthesis)e).getExpression();
+		SQLExpressionUtils.restoreTableNamesFromAliasForSignature(e, aliasMapping);
+		
+		
+		Set<String> names = SQLExpressionUtils.getAllTableNamesForSignature(e, aliasMapping);
+		for (String n : names) {
+			
+			if (out.get(n) == null) {
+				Set<String> addition = new HashSet<>();
+				addition.add(e.toString());
+				out.put(n, addition);
+			} else {
+				out.get(n).add(e.toString());
+			}
+		}
+	}
+	
+	public Expression resolveAggregatesInFilter(String e, boolean goParent, Operator lastHopOp, Set<String> names, StringBuilder sb) throws Exception {
+		
+		if (goParent && parent != null) 
+			return parent.resolveAggregatesInFilter(e, goParent, this, names, sb);
+		else if (!goParent) {
+			Expression exp = null;
+			for (Operator o : children) {
+				if (o == lastHopOp) break;
+				if ((exp = o.resolveAggregatesInFilter(e, goParent, this, names, sb)) != null) return exp;
+			}
+		} 
+		
+		return null;
+	} 
+	
+	public void seekScanAndProcessAggregateInFilter() throws Exception {
+		for (Operator o : children) 
+			o.seekScanAndProcessAggregateInFilter();
+	}
 }

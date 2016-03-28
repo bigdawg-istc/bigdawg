@@ -75,7 +75,7 @@ public class CommonSQLTableExpressionScan extends Scan {
 		CommonSQLTableExpressionScan c = (CommonSQLTableExpressionScan) o;
 		this.cteName = new String(c.cteName);
 		
-		Operator s = c.sourceStatement;
+		Operator s = c.sourceStatement.duplicate(true);
 		
 		if (s instanceof Join) {
 			this.sourceStatement = new Join(s, addChild);
@@ -208,5 +208,23 @@ public class CommonSQLTableExpressionScan extends Scan {
 		locations.put(cteName, outs);
 		
 		return result;
+	}
+	
+	@Override
+	public String getTreeRepresentation(boolean isRoot) throws Exception{
+		return "{with{"+this.cteName+"}"+this.sourceStatement.getTreeRepresentation(false)+"}";
+	}
+	
+	@Override
+	public Map<String, Set<String>> getObjectToExpressionMappingForSignature() throws Exception{
+		return sourceStatement.getObjectToExpressionMappingForSignature();
+	}
+	
+	@Override
+	public void removeCTEEntriesFromObjectToExpressionMapping(Map<String, Set<String>> entry) {
+		
+		if (entry.containsKey(cteName))
+			entry.remove(cteName);
+		sourceStatement.removeCTEEntriesFromObjectToExpressionMapping(entry);
 	}
 };

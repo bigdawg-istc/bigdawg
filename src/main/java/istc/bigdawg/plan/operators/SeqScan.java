@@ -201,7 +201,7 @@ public class SeqScan extends Scan {
 			// filter, project
 			sb.append(operatorName).append(children.get(0).getTreeRepresentation(false));
 		}
-		if (filterExpression != null) sb.append(SQLExpressionUtils.parseCondForTree(filterExpression));
+//		if (filterExpression != null) sb.append(SQLExpressionUtils.parseCondForTree(filterExpression));
 		sb.append('}');
 		
 		return sb.toString();

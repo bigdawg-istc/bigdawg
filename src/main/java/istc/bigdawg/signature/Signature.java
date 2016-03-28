@@ -2,8 +2,11 @@ package istc.bigdawg.signature;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import convenience.RTED;
 import istc.bigdawg.packages.QueryContainerForCommonDatabase;
@@ -11,6 +14,12 @@ import istc.bigdawg.plan.operators.Operator;
 import istc.bigdawg.signature.builder.ArraySignatureBuilder;
 import istc.bigdawg.signature.builder.RelationalSignatureBuilder;
 import istc.bigdawg.utils.IslandsAndCast.Scope;
+import istc.bigdawg.utils.sqlutil.SQLExpressionUtils;
+import net.sf.jsqlparser.JSQLParserException;
+import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.expression.Parenthesis;
+import net.sf.jsqlparser.parser.CCJSqlParserUtil;
+import net.sf.jsqlparser.schema.Column;
 
 public class Signature {
 	
@@ -23,6 +32,7 @@ public class Signature {
 	private List<String> sig3;
 	private String query;
 	private List<String> sig4k;
+	private List<Map<String, Set<String>>> objectExpressionMapping = null;
 //	private String identifier; 
 	
 //	private static Pattern possibleObjectsPattern	= Pattern.compile("[_@a-zA-Z0-9]+");
@@ -47,16 +57,23 @@ public class Signature {
 			throw new Exception("Invalid Signature island input: "+island);
 		}
 		
+		objectExpressionMapping = new ArrayList<>();
+		if (container.isEmpty() ) {
+			Map<String, Set<String>> mapping = root.getObjectToExpressionMappingForSignature();
+			root.removeCTEEntriesFromObjectToExpressionMapping(mapping);
+			objectExpressionMapping.add(mapping);
+		}
 		
 		List<String> cs = new ArrayList<>();
-		for (String s : container.keySet()) 
+		for (String s : container.keySet()) {
 			cs.add(container.get(s).generateTreeExpression());
+			objectExpressionMapping.add(container.get(s).generateObjectToExpressionMapping());
+		}
 		setSig4k(cs);
 		setSig1(root.getTreeRepresentation(true));
 		
 		this.setQuery(query);
 		this.setIsland(island);
-//		this.setIdentifier(identifier);
 	}
 	
 	
@@ -150,6 +167,89 @@ public class Signature {
 
 	public void setSig4k(List<String> sig4k) {
 		this.sig4k = sig4k;
+	}
+	
+	public List<Map<String, Set<String>>> getObjectToExpressionMapping() {
+		return objectExpressionMapping;
+	}
+	
+	public List<Map<String, Set<String>>> getTreesOfObjectToExpressionMapping() throws JSQLParserException {
+		
+		List<Map<String, Set<String>>> ret = new ArrayList<>();
+		for (Map<String, Set<String>> mapping : objectExpressionMapping) {
+			Map<String, Set<String>> addition = new HashMap<>();
+			for (String obj : mapping.keySet()) {
+				Set<String> expr = new HashSet<>();
+				for (String exp : mapping.get(obj)) {
+					expr.add(SQLExpressionUtils.parseCondForTree(CCJSqlParserUtil.parseCondExpression(exp)));
+				}
+				addition.put(obj, expr);
+			}
+			ret.add(addition);
+		}
+		
+		return ret;
+	}
+	
+	public List<Map<String, Set<String>>> getTreesOfStrippedDownObjectToExpressionMapping() throws JSQLParserException {
+		
+		List<Map<String, Set<String>>> ret = new ArrayList<>();
+		for (Map<String, Set<String>> mapping : objectExpressionMapping) {
+			Map<String, Set<String>> addition = new HashMap<>();
+			for (String obj : mapping.keySet()) {
+				Set<String> expr = new HashSet<>();
+				for (String exp : mapping.get(obj)) {
+					
+					Expression e = SQLExpressionUtils.stripDownExpressionForSignature(CCJSqlParserUtil.parseCondExpression(exp));
+					while (e instanceof Parenthesis) e = ((Parenthesis)e).getExpression();
+					if (e instanceof Column) continue;
+					
+					expr.add(SQLExpressionUtils.parseCondForTree(e));
+				}
+				addition.put(obj, expr);
+			}
+			ret.add(addition);
+		}
+		
+		return ret;
+	}
+	
+	public static void printO2EMapping(Operator o) throws Exception {
+		Map<String, Set<String>> m = o.getObjectToExpressionMappingForSignature();
+		o.removeCTEEntriesFromObjectToExpressionMapping(m);
+		System.out.println("Mapping: ");
+		for (String s : m.keySet()) {
+			System.out.printf("-- %s:\n",s);
+			for (String s2 : m.get(s)) {
+				String e;
+				try {
+					e = SQLExpressionUtils.parseCondForTree(CCJSqlParserUtil.parseCondExpression(s2));
+				} catch (JSQLParserException ex) {
+					e = SQLExpressionUtils.parseCondForTree(CCJSqlParserUtil.parseExpression(s2));
+				}
+				System.out.printf("  - %s\n",e);
+			}
+		}
+	}
+	
+	public static void printStrippedO2EMapping(Operator o) throws Exception {
+		Map<String, Set<String>> m = o.getObjectToExpressionMappingForSignature();
+		o.removeCTEEntriesFromObjectToExpressionMapping(m);
+		System.out.println("Stripped down function: ");
+		for (String s : m.keySet()) {
+			System.out.printf("-- %s:\n",s);
+			for (String s2 : m.get(s)) {
+				Expression e;
+				try {
+					e = SQLExpressionUtils.stripDownExpressionForSignature(CCJSqlParserUtil.parseCondExpression(s2));
+				} catch (JSQLParserException ex) {
+					e = SQLExpressionUtils.stripDownExpressionForSignature(CCJSqlParserUtil.parseExpression(s2));
+				}
+				while (e instanceof Parenthesis) e = ((Parenthesis)e).getExpression();
+				if (e instanceof Column) continue;
+				System.out.printf("  - %s\n",SQLExpressionUtils.parseCondForTree(e));
+			}
+		}
 	}
 	
 	public String toRecoverableString() {

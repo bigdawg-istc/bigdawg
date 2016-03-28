@@ -28,13 +28,17 @@ public class SQLQueryPlan {
 		tableExpressions = new HashMap<String, SQLTableExpression>();
 	}
 	
-	
+
 	
 	public SQLQueryPlan(Operator root) {
 		planRoots = new HashMap<String, Operator>();
 		rootNode = root;
 		root.setQueryRoot();
 	}
+	
+	public Map<String, Operator> getPlanRoots() {
+		return planRoots;
+	};
 	
 	public void setRootNode(Operator o) {
 		rootNode = o;

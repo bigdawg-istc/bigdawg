@@ -9,9 +9,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.lang3.StringUtils;
-
-import istc.bigdawg.extract.logical.SQLExpressionHandler;
 import istc.bigdawg.extract.logical.SQLTableExpression;
 import istc.bigdawg.packages.SciDBArray;
 import istc.bigdawg.plan.extract.CommonOutItem;
@@ -20,11 +17,9 @@ import istc.bigdawg.schema.DataObjectAttribute;
 import istc.bigdawg.utils.sqlutil.SQLExpressionUtils;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Alias;
-import net.sf.jsqlparser.expression.BinaryExpression;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Parenthesis;
 import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
-import net.sf.jsqlparser.expression.operators.conditional.OrExpression;
 import net.sf.jsqlparser.expression.operators.relational.Between;
 import net.sf.jsqlparser.expression.operators.relational.EqualsTo;
 import net.sf.jsqlparser.expression.operators.relational.GreaterThan;
@@ -34,7 +29,6 @@ import net.sf.jsqlparser.expression.operators.relational.LikeExpression;
 import net.sf.jsqlparser.expression.operators.relational.MinorThan;
 import net.sf.jsqlparser.expression.operators.relational.MinorThanEquals;
 import net.sf.jsqlparser.expression.operators.relational.NotEqualsTo;
-import net.sf.jsqlparser.expression.operators.relational.OldOracleJoinBinaryExpression;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
@@ -177,6 +171,15 @@ public class Join extends Operator {
 	public Join (Map<String, String> parameters, List<String> output, Operator lhs, Operator rhs, SQLTableExpression supplement) throws Exception  {
 		super(parameters, output, lhs, rhs, supplement);
 
+		// mending non-canoncial ordering
+		if (children.get(0) instanceof Scan && !(children.get(1) instanceof Scan)) {
+			Operator child0 = children.get(1);
+			Operator child1 = children.get(0);
+			children.clear();
+			children.add(child0);
+			children.add(child1);
+		}
+		
 		this.isBlocking = false;
 		this.aliases = new ArrayList<>();
 		
@@ -203,7 +206,7 @@ public class Join extends Operator {
 			if(p.endsWith("Cond")) 
 				joinPredicate = parameters.get(p);
 		joinFilter = parameters.get("Join-Filter");
-		if (joinFilter != null) joinFilter = SQLExpressionUtils.removeExpressionDataTypeArtifactAndConvertLike(joinFilter);
+		if (joinFilter != null)  joinFilter = SQLExpressionUtils.removeExpressionDataTypeArtifactAndConvertLike(joinFilter);
 		if (joinPredicate != null) joinPredicate = SQLExpressionUtils.removeExpressionDataTypeArtifactAndConvertLike(joinPredicate);
 	
 		if(joinFilter != null && joinPredicate != null && joinFilter.contains(joinPredicate)) { // remove duplicate
@@ -223,6 +226,11 @@ public class Join extends Operator {
 		if (joinFilter != null)
 			joinFilterOriginal 		= new String (joinFilter);
 		
+		for (Operator o : children) {
+			if (o instanceof Aggregate) {
+				((Aggregate)o).setSingledOutAggregate();
+			}
+		}
 	}
     
 	// combine join ON clause with WHEREs that combine two tables
@@ -232,17 +240,16 @@ public class Join extends Operator {
  	private void inferJoinParameters() throws Exception {
  		
  		if(joinFilter == null && joinPredicate == null) return;
- 		if (joinFilter == null || joinFilter.length() == 0) { joinFilter = joinPredicate; return;} 
- 		else if (joinPredicate == null || joinPredicate.length() == 0) return;
- 		
- 		Expression jf = CCJSqlParserUtil.parseCondExpression(joinFilter);
- 		Expression jp = CCJSqlParserUtil.parseCondExpression(joinPredicate);
- 		
- 		if (jf instanceof OrExpression) jf = new Parenthesis(jf);
- 		if (jp instanceof OrExpression) jp = new Parenthesis(jp);
- 		
- 		joinFilter = (new AndExpression(jf, jp)).toString();
-			
+ 		if (joinPredicate != null && joinPredicate.length() > 0) { 
+ 			Expression jp = CCJSqlParserUtil.parseCondExpression(joinPredicate);
+ 			SQLExpressionUtils.removeExcessiveParentheses(jp);
+ 			joinPredicate = jp.toString(); 
+ 		}
+ 		if (joinFilter != null && joinFilter.length() > 0) {
+ 			Expression jf = CCJSqlParserUtil.parseCondExpression(joinFilter);
+ 			SQLExpressionUtils.removeExcessiveParentheses(jf);
+ 			joinFilter = jf.toString(); 
+ 		}
  	}
     
     
@@ -253,10 +260,6 @@ public class Join extends Operator {
     	if (stopAtJoin)
     		return SelectUtils.buildSelectFromTable(new Table(getJoinToken()));
     	
-    	
-    	
-//    	Set<String> filterSet = new HashSet<String>();
-//    	PlainSelect ps = null;
     	
 		if (isPruned) {
 			Table t = new Table();
@@ -272,9 +275,6 @@ public class Join extends Operator {
     	
     	
     	// constructing the ON expression
-
-    	// TODO ASSUMPTION: no more than one predicate
-    	
     	
     	Table t0 = new Table();
 		Table t1 = new Table();
@@ -290,8 +290,8 @@ public class Join extends Operator {
         	Map<String, String> child1ObjectMap = child1.getDataObjectAliasesOrNames();
 
 //    		// for debugging
-//        	System.out.printf("\nJP: %s\nchild0obj: %s\nchild1obj: %s\n\n", joinPredicate, 
-//        			child0ObjectSet, child1ObjectSet);
+//        	System.out.printf("\nJF: %s; JP: %s\nchild0obj: %s\nchild1obj: %s\n\n", joinFilter, joinPredicate, 
+//        			child0ObjectMap, child1ObjectMap);
     		
         	String s = (String)child0ObjectMap.keySet().toArray()[0];
         	
@@ -305,17 +305,15 @@ public class Join extends Operator {
         	if (! s.equals(child1ObjectMap.get(s)))
         		t1.setAlias(new Alias(s));
         	t1.setName(child1ObjectMap.get(s));
+        	
     	}
-		
-		
-//		Expression expr = null;
-//    	if(joinPredicate != null && !joinPredicate.isEmpty()) {
-//    		expr = CCJSqlParserUtil.parseCondExpression(joinPredicate);
-//    	} else {
-//    		expr = null;
-//    	}
-    	
-    	
+
+//		// for debugging
+//    	Map<String, String> child0ObjectMap = child0.getDataObjectAliasesOrNames();
+//    	Map<String, String> child1ObjectMap = child1.getDataObjectAliasesOrNames();
+//    	System.out.printf("\nJF: %s; JP: %s\nchild0obj: %s\nchild1obj: %s\n\n", joinFilter, joinPredicate, 
+//    			child0ObjectMap, child1ObjectMap);
+
     	
     	// used to find the deepest object
     	Table t;
@@ -327,7 +325,7 @@ public class Join extends Operator {
     		if (child0.isPruned() || child0 instanceof Scan) {
 
     			if (!(child1.isPruned() || child1 instanceof Scan)) {
-    				throw new Exception("child1 of join is not good");
+    				throw new Exception("child0 class: "+child0.getClass().toString()+"; child1 class: "+child1.getClass().toString());
     			}
     			
     			// this is the bottom
@@ -340,8 +338,6 @@ public class Join extends Operator {
     			
     		} else {
     			dstStatement = child0.generateSQLStringDestOnly(dstStatement, stopAtJoin); 
-//    			ps = (PlainSelect) dstStatement.getSelectBody();
-//    			if (ps.getWhere() != null) filterSet.add(ps.getWhere().toString());
     			
     			t = t1;
 	    		if (t1.getAlias() != null && this.joinReservedObjects.contains(t1.getAlias().getName())) t = t0;
@@ -355,17 +351,12 @@ public class Join extends Operator {
 			
 			
 			dstStatement = child0.generateSQLStringDestOnly(dstStatement, stopAtJoin); 
-//			ps = (PlainSelect) dstStatement.getSelectBody();
-//			if (ps.getWhere() != null) filterSet.add(ps.getWhere().toString());
-			
 			
 			getJoinReservedObjectsFromParents();
-			
-			
+						
 			t = t1;
     		if (t1.getAlias() != null && this.joinReservedObjects.contains(t1.getAlias().getName())) t = t0;
     		else if (t1.getAlias() == null && this.joinReservedObjects.contains(t1.getName())) t = t0;
-    		
 			
 		}
     	
@@ -373,25 +364,19 @@ public class Join extends Operator {
 		// finish with child 1
     	
     	addJSQLParserJoin(dstStatement, t);
-//		if (joinPredicate == null) addJSQLParserJoin(dstStatement, t);
-//		else SelectUtils.addJoin(dstStatement, t, expr);
-		
-		updateThisAndParentJoinReservedObjects(t.getFullyQualifiedName());
+    	
+    	if (t.getAlias() == null) updateThisAndParentJoinReservedObjects(t.getFullyQualifiedName());
+    	else updateThisAndParentJoinReservedObjects(t.getAlias().getName());
 		
 		dstStatement = child1.generateSQLStringDestOnly(dstStatement, stopAtJoin); 
-//		ps = (PlainSelect) dstStatement.getSelectBody();
-//		if (ps.getWhere() != null) {
-//			if (expr != null) filterSet.add(expr.toString());
-//			filterSet.add(ps.getWhere().toString());
-//		}
-    		
 		
-		
-		if(joinFilter != null && !joinFilter.isEmpty()) {
+		if(joinFilter != null || joinPredicate != null) {
+
+			String jf = joinFilter;
+			if (jf == null || jf.length() == 0) jf = joinPredicate;
+			else if (joinPredicate != null && joinPredicate.length() > 0) jf = jf + " AND " + joinPredicate; 
 			
-			String jf = joinFilter; 
-			
-			Expression e = CCJSqlParserUtil.parseCondExpression(joinFilter);
+			Expression e = CCJSqlParserUtil.parseCondExpression(jf);
 			List<String> filterRelatedTables = SQLExpressionUtils.getAttributes(e); 
 			
 			List<Operator> treeWalker = new ArrayList<>(this.children);
@@ -403,47 +388,30 @@ public class Join extends Operator {
 				nextGen = new ArrayList<>();
 				for (Operator o : treeWalker) {
 					if (o.isPruned()) {
-						
 						Set<String> aliasesAndNames = new HashSet<>(o.objectAliases);
 						aliasesAndNames.addAll(o.dataObjects);
 						Set<String> duplicate = new HashSet<>(aliasesAndNames);
-						
-						if (aliasesAndNames.removeAll(filterRelatedTables)){
+						if (aliasesAndNames.removeAll(filterRelatedTables))
 							SQLExpressionUtils.renameAttributes(e, duplicate, o.getPruneToken());
-						}
-						
-					} else {
+					} else 
 						nextGen.addAll(o.children);
-					}
 				}
 				treeWalker = nextGen;
 			}
 			
 			jf = e.toString();
 			
-			
-//			Set<String> filterSet = new HashSet<>()
-//			
-//			filterSet.add(jf);
-
-//			// not sure if useful
-//			if(ps.getWhere() != null) {
-//				filterSet.add(ps.getWhere().toString());
-//			}
-			
 			String currentWhere = jf;// StringUtils.join(filterSet, " AND ");
 			
 			if (!currentWhere.isEmpty()) {
 				Expression where = 	CCJSqlParserUtil.parseCondExpression(currentWhere);
-				
 				PlainSelect ps = ((PlainSelect) dstStatement.getSelectBody());
 				if (ps.getWhere() == null) ps.setWhere(where);
 				else ps.setWhere(new AndExpression(where, ps.getWhere()));
 			}
-
 		}
 		
-//		System.out.println("-- Join: "+dstStatement.toString()+"\n");
+//		System.out.println("\n-- Join: "+dstStatement.toString()+"\n");
 		
 		return dstStatement;
 
@@ -471,7 +439,19 @@ public class Join extends Operator {
 				return true;
 			} else 
 				return false;
-		} else {
+		} else if (child instanceof Aggregate && ((Aggregate)child).aggregateID != null) {
+			// does child have any of those names? 
+			Set<String> names = new HashSet<>(child.getDataObjectAliasesOrNames().keySet());
+//			names.addAll(child.objectAliases);
+			
+			names.retainAll(itemsSet);
+			if (names.size() > 0) {
+				SQLExpressionUtils.renameAttributes(e, names, ((Aggregate)child).getAggregateToken());
+				t.setName(((Aggregate)child).getAggregateToken());
+				return true;
+			} else 
+				return false;
+		}else {
 			boolean ret = false;
 			for (Operator o : child.getChildren()) {
 				ret = ret || replaceTableNameWithPruneName(o, e, t, itemsSet);
@@ -515,6 +495,7 @@ public class Join extends Operator {
 		if (!replaceTableNameWithPruneName(child1, expr, t1, itemsSet))
 			findAndGetTableName(child1, t1, itemsSet);
 		
+		
 		return expr.toString();
 	}
     
@@ -547,7 +528,7 @@ public class Join extends Operator {
 		
 		if (joinPredicate != null) {
 			sb.append(", ");
-			sb.append(joinPredicate.replaceAll("[<>= ()]+", " ").replace(" ", ", "));
+			sb.append(joinFilter.replaceAll("[<>= ()]+", " ").replace("\\s+", ", "));
 		}
 		
 		sb.append(')');
@@ -581,25 +562,25 @@ public class Join extends Operator {
 			StringBuilder sb = new StringBuilder();
 			sb.append("{join").append(children.get(0).getTreeRepresentation(false)).append(children.get(1).getTreeRepresentation(false));
 
-			if (joinFilter != null && !joinFilter.isEmpty()) {
-				Expression e = CCJSqlParserUtil.parseCondExpression(joinFilter);
-				SQLExpressionUtils.removeExcessiveParentheses(e);
-				sb.append(SQLExpressionUtils.parseCondForTree(e));
-			}
-			
-			List<Operator> treeWalker = this.getChildren();
-			while (!treeWalker.isEmpty()) {
-				List<Operator> nextgen = new ArrayList<>();
-				for (Operator o : treeWalker) {
-					if (o instanceof Join) continue;
-					if (o instanceof Scan && ((Scan) o).indexCond != null) {
-						sb.append(SQLExpressionUtils.parseCondForTree(((Scan)o).indexCond));
-					} else {
-						nextgen.addAll(o.getChildren());
-					}
-				}
-				treeWalker = nextgen;
-			}
+//			if (joinFilter != null && !joinFilter.isEmpty()) {
+//				Expression e = CCJSqlParserUtil.parseCondExpression(joinFilter);
+//				SQLExpressionUtils.removeExcessiveParentheses(e);
+//				sb.append(SQLExpressionUtils.parseCondForTree(e));
+//			}
+//			
+//			List<Operator> treeWalker = this.getChildren();
+//			while (!treeWalker.isEmpty()) {
+//				List<Operator> nextgen = new ArrayList<>();
+//				for (Operator o : treeWalker) {
+//					if (o instanceof Join) continue;
+//					if (o instanceof Scan && ((Scan) o).indexCond != null) {
+//						sb.append(SQLExpressionUtils.parseCondForTree(((Scan)o).indexCond));
+//					} else {
+//						nextgen.addAll(o.getChildren());
+//					}
+//				}
+//				treeWalker = nextgen;
+//			}
 			sb.append('}');
 			return sb.toString();
 		}
@@ -687,5 +668,85 @@ public class Join extends Operator {
 		return ret;
 	}
 	
+	@Override
+	public Map<String, Set<String>> getObjectToExpressionMappingForSignature() throws Exception{
+		
+		Map<String, Set<String>> out = children.get(0).getObjectToExpressionMappingForSignature();
+		Map<String, Set<String>> temp = children.get(1).getObjectToExpressionMappingForSignature();
+		
+		for (String s : temp.keySet()) {
+			if (out.containsKey(s)) 
+				out.get(s).addAll(temp.get(s));
+			else 
+				out.put(s, temp.get(s));
+		}
+
+		// joinFilter
+		if (joinFilter != null) {
+			addToOut(CCJSqlParserUtil.parseCondExpression(joinFilter), out);
+		}
+		
+		// joinPredicate
+		if (joinPredicate != null) {
+			addToOut(CCJSqlParserUtil.parseCondExpression(joinPredicate), out);
+		}
+		
+		return out;
+	}
 	
+	@Override
+	public Expression resolveAggregatesInFilter(String e, boolean goParent, Operator lastHopOp, Set<String> names, StringBuilder sb) throws Exception {
+		
+		Expression exp = null;
+		if (parent != null && lastHopOp != parent && (exp = parent.resolveAggregatesInFilter(e, true, this, names, sb)) != null) 
+			return exp;
+		for (Operator o : children) {
+			if (goParent && o == lastHopOp) continue;
+			if ((exp = o.resolveAggregatesInFilter(e, false, this, names, sb)) != null) return exp;
+		}
+		return exp;
+		
+	} 
+	
+	@Override
+	public void seekScanAndProcessAggregateInFilter() throws Exception {
+		
+		if (joinFilter != null) {
+			joinFilter = processFilterForAggregateEntry(joinFilter);
+		}
+		
+		if (joinPredicate != null) {
+			joinPredicate = processFilterForAggregateEntry(joinPredicate);
+		}
+		
+		super.seekScanAndProcessAggregateInFilter();
+	}
+	
+	private String processFilterForAggregateEntry(String s) throws Exception {
+		
+		
+		
+		Expression e = CCJSqlParserUtil.parseCondExpression(s);
+		
+		if (!SQLExpressionUtils.isFunctionPresentInCondExpression(e)) return s;
+		
+		Expression left = SQLExpressionUtils.getOneSideOfBinaryCondExpression(e, true);
+		while (left instanceof Parenthesis) left = ((Parenthesis) left).getExpression();
+		
+		StringBuilder sb = new StringBuilder();
+		Set<String> names = new HashSet<>();
+		Expression result = resolveAggregatesInFilter(left.toString(), true, this, names, sb);
+		if (result != null) {
+			SQLExpressionUtils.setOneSideOfBinaryCondExpression(result, e, true);
+		}
+		
+		Expression right = SQLExpressionUtils.getOneSideOfBinaryCondExpression(e, false);
+		while (right instanceof Parenthesis) right = ((Parenthesis) right).getExpression();
+		result = resolveAggregatesInFilter(right.toString(), true, this, names, sb);
+		if (result != null) {
+			SQLExpressionUtils.setOneSideOfBinaryCondExpression(result, e, false);
+		}
+		
+		return e.toString();
+	}
 };

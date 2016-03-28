@@ -5,17 +5,21 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import istc.bigdawg.extract.logical.SQLTableExpression;
 import istc.bigdawg.packages.SciDBArray;
 import istc.bigdawg.utils.sqlutil.SQLExpressionUtils;
 import net.sf.jsqlparser.expression.Alias;
+import net.sf.jsqlparser.expression.BinaryExpression;
 import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.expression.Function;
+import net.sf.jsqlparser.expression.Parenthesis;
 import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
+import net.sf.jsqlparser.expression.operators.relational.OldOracleJoinBinaryExpression;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
+import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
+import net.sf.jsqlparser.statement.select.AllColumns;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.Select;
 import net.sf.jsqlparser.util.SelectUtils;
@@ -51,6 +55,8 @@ public class Scan extends Operator {
 			filterExpression = CCJSqlParserUtil.parseCondExpression(s);
 			SQLExpressionUtils.removeExcessiveParentheses(filterExpression);
 			
+//			System.out.println("---> filterExpression: "+filterExpression);
+			
 			filterSet = new HashSet<Expression>();
 			filterSet.add(filterExpression);
 			
@@ -62,8 +68,10 @@ public class Scan extends Operator {
 			indexCond = CCJSqlParserUtil.parseCondExpression(s);
 			SQLExpressionUtils.removeExcessiveParentheses(indexCond);
 			
+//			System.out.println("---> indexCond: "+indexCond);
+			
 			if (filterSet == null) filterSet = new HashSet<Expression>();
-			filterSet.add(filterExpression);
+			filterSet.add(indexCond);
 		}
 		
 		table = new Table(srcTable); // new one to accommodate aliasing
@@ -74,7 +82,6 @@ public class Scan extends Operator {
 			table.setAlias(new Alias(tableAlias));
 		}
 
-		
 	}
 	
 	// for AFL
@@ -164,14 +171,14 @@ public class Scan extends Operator {
 					}
 				}
 				e = new AndExpression(ps.getWhere(), e);
-			} else {
+			} else 
 				e = filterExpression;
-			}
+			
+//			if ( e != null) resolveFunctionExpression(e);
 			
 			try {
 				ps.setWhere(e);
 			} catch (Exception ex) {
-				ex.printStackTrace();
 				System.out.println("filterSet exception: "+filterExpression.toString());
 			}
 		}
@@ -201,7 +208,6 @@ public class Scan extends Operator {
 			try {
 				ps.setWhere(e);
 			} catch (Exception ex) {
-				ex.printStackTrace();
 				System.out.println("indexCond exception: "+indexCond.toString());
 			}
 		}
@@ -223,6 +229,49 @@ public class Scan extends Operator {
 		if (table.getSchemaName() != null) schemaAndName = table.getSchemaName() + "." +schemaAndName;
 		result.put(schemaAndName, locations.get(schemaAndName));
 		return result;
+	}
+	
+	@Override
+	public Map<String, Set<String>> getObjectToExpressionMappingForSignature() throws Exception{
+		
+		Map<String, Set<String>> out = new HashMap<>();
+		
+		// filter
+		if (filterExpression != null) {
+			addToOut(CCJSqlParserUtil.parseCondExpression(filterExpression.toString()), out);
+		}
+		
+		// join condition
+		if (indexCond != null) {
+			addToOut(CCJSqlParserUtil.parseCondExpression(indexCond.toString()), out);
+		}
+		
+		return out;
+	}
+	
+	
+	
+	@Override
+	public void seekScanAndProcessAggregateInFilter() throws Exception {
+		
+		if (filterExpression == null) return;
+		
+		if (!SQLExpressionUtils.isFunctionPresentInCondExpression(filterExpression)) return;
+		
+		List<Expression> exp = SQLExpressionUtils.locateFunctionInCondExpression(filterExpression);
+		while (!exp.isEmpty()) {
+			StringBuilder sb = new StringBuilder();
+			Set<String> names = new HashSet<>();
+			Expression result = resolveAggregatesInFilter(exp.get(0).toString(), true, this, names, sb);
+			if (result != null) {
+				SQLExpressionUtils.updateFunctionInCondExpression(result, exp.get(1));
+				exp = SQLExpressionUtils.locateFunctionInCondExpression(filterExpression);
+				SQLExpressionUtils.renameAttributes(indexCond, names, sb.toString());
+				
+			} else {
+				break;
+			}
+		}
 	}
 
 }

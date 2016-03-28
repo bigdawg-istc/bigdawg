@@ -1,5 +1,8 @@
 package istc.bigdawg.packages;
 
+import java.util.Map;
+import java.util.Set;
+
 import istc.bigdawg.plan.operators.Operator;
 import istc.bigdawg.query.ConnectionInfo;
 
@@ -52,5 +55,11 @@ public class QueryContainerForCommonDatabase {
 	
 	public String getName() {
 		return pruneToken;
+	}
+	
+	public Map<String, Set<String>> generateObjectToExpressionMapping() throws Exception {
+		Map<String, Set<String>> mapping = rootOperator.getObjectToExpressionMappingForSignature();
+		rootOperator.removeCTEEntriesFromObjectToExpressionMapping(mapping);
+		return mapping;
 	}
 }

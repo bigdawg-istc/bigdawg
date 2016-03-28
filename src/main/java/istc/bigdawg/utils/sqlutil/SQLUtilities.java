@@ -34,6 +34,7 @@ public class SQLUtilities {
 		dst = dst.replaceAll("&gt;", ">");
 		dst = dst.replaceAll("::text", "");
 		
+		dst = dst.replaceAll("!~~", "not like");
 		dst = dst.replaceAll("~~", "like");
 		
 		dst = dst.replaceAll("::integer", "");

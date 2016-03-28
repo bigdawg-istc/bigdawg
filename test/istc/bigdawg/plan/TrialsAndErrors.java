@@ -1,21 +1,24 @@
 package istc.bigdawg.plan;
 
+import java.util.Map;
 import java.util.Scanner;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.junit.Before;
 import org.junit.Test;
 
-import convenience.RTED;
 import istc.bigdawg.catalog.CatalogInstance;
 import istc.bigdawg.plan.extract.SQLPlanParser;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
+import istc.bigdawg.signature.Signature;
 import istc.bigdawg.utils.sqlutil.SQLExpressionUtils;
 import istc.bigdawg.utils.sqlutil.SQLPrepareQuery;
 import net.sf.jsqlparser.expression.Expression;
-import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
+import net.sf.jsqlparser.expression.Parenthesis;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
+import net.sf.jsqlparser.schema.Column;
 
 public class TrialsAndErrors {
 	
@@ -78,7 +81,9 @@ public class TrialsAndErrors {
 		System.out.println("Builder -- Type query or \"quit\" to exit: ");
 		Scanner scanner = new Scanner(System.in);
 		String query = scanner.nextLine();
-//		String query = "select sum(l_extendedprice* (1 - l_discount)) as revenue from lineitem, part where ( p_partkey = l_partkey and p_brand = 'Brand#13'  and p_container in ('SM CASE', 'SM BOX', 'SM PACK', 'SM PKG') and l_quantity >= 30 and l_quantity <= 30 + 10 and p_size between 1 and 5 and l_shipmode in ('AIR', 'AIR REG') and l_shipinstruct = 'DELIVER IN PERSON' ) or ( p_partkey = l_partkey and p_brand = 'Brand#55' and p_container in ('MED BAG', 'MED BOX', 'MED PKG', 'MED PACK') and l_quantity >= 10 and l_quantity <= 10 + 10 and p_size between 1 and 10 and l_shipmode in ('AIR', 'AIR REG') and l_shipinstruct = 'DELIVER IN PERSON' ) or ( p_partkey = l_partkey and p_brand = 'Brand#11' and p_container in ('LG CASE', 'LG BOX', 'LG PACK', 'LG PKG') and l_quantity >= 40 and l_quantity <= 40 + 10 and p_size between 1 and 15 and l_shipmode in ('AIR', 'AIR REG') and l_shipinstruct = 'DELIVER IN PERSON' );";
+//		String query = "select l_returnflag, l_linestatus, sum(l_quantity) as sum_qty, sum(l_extendedprice) as sum_base_price, sum(l_extendedprice * (1 - l_discount)) as sum_disc_price, sum(l_extendedprice * (1 - l_discount) * (1 + l_tax)) as sum_charge, avg(l_quantity) as avg_qty, avg(l_extendedprice) as avg_price, avg(l_discount) as avg_disc, count(*) as count_order from lineitem where l_shipdate <= date '1998-12-01' - interval '1' day group by l_returnflag, l_linestatus order by l_returnflag, l_linestatus;";
+		
+//		String query = "SELECT lineitem.l_orderkey, sum(lineitem.l_extendedprice * (1 - lineitem.l_discount)) AS revenue, orders.o_orderdate, orders.o_shippriority FROM orders, customer, lineitem WHERE (orders.o_custkey = customer.c_custkey) AND (orders.o_orderdate < '1996-01-02') AND (customer.c_mktsegment = 'AUTOMOBILE') AND (lineitem.l_shipdate > '1996-01-02') AND (lineitem.l_orderkey = orders.o_orderkey) GROUP BY lineitem.l_orderkey, orders.o_orderdate, orders.o_shippriority ORDER BY revenue DESC, orders.o_orderdate;";
 		while (!query.toLowerCase().equals("quit")) {
 			
 			SQLQueryPlan queryPlan = SQLPlanParser.extractDirect(psqlh, query);
@@ -86,8 +91,15 @@ public class TrialsAndErrors {
 			
 			System.out.println(queryPlan.getRootNode().getTreeRepresentation(true) + "\n");
 			
-			System.out.println(RTED.computeDistance(queryPlan.getRootNode().getTreeRepresentation(true), "{{}{}}"));
+			Signature.printO2EMapping(queryPlan.getRootNode());
 			
+			System.out.println();
+			
+			Signature.printStrippedO2EMapping(queryPlan.getRootNode());
+			
+//			System.out.println(RTED.computeDistance(queryPlan.getRootNode().getTreeRepresentation(true), "{}"));
+			
+//			break;
 			query = scanner.nextLine();
 			
 		}
@@ -101,19 +113,10 @@ public class TrialsAndErrors {
 		if ( !runRegex ) return;
 		
 		String s = "where l_shipdate <= dAte '1998-12-01' - interval '1' day group by";
-//		String s = "(lineitem.l_shipdate &lt;= '1998-11-30 00:00:00'::timestamp without time zone)";
-//		System.out.println(s.replaceAll("::\\w+( \\w+)*", ""));
 		
 		StringBuilder sb = new StringBuilder();
 		sb.append(s);
-		
-		Pattern p2 = Pattern.compile("(?i)(date '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]')");
-		Matcher m2 = p2.matcher(s);
-		if (m2.find()) {
-			sb.replace(m2.start(), m2.end(), "{d"+s.substring(m2.start()+4, m2.end())+"}");
-			System.out.println("--> DATE: "+sb.toString());
-		}
-		
+
 		Pattern pDayInterval = Pattern.compile("(?i)(interval '[0-9]+\\s?((hour)|(hours)|(day)|(days)|(month)|(months))?'(\\s((hour)|(hours)|(day)|(days)|(month)|(months)))?)");
 		Matcher m3 = pDayInterval.matcher(sb);
 		

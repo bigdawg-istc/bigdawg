@@ -3,23 +3,20 @@ package istc.bigdawg.utils.sqlutil;
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.io.PrintWriter;
-import java.net.URL;
 import java.util.Arrays;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
-import istc.bigdawg.schema.SQLDatabaseSingleton;
-import istc.bigdawg.schema.SQLDatabase;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.Statement;
+import istc.bigdawg.postgresql.PostgreSQLHandler;
+import istc.bigdawg.properties.BigDawgConfigProperties;
+import istc.bigdawg.schema.SQLDatabase;
+import istc.bigdawg.schema.SQLDatabaseSingleton;
+import net.sf.jsqlparser.JSQLParserException;
+import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 
 
 
@@ -28,6 +25,9 @@ public class SQLPrepareQuery {
 
 	static int xmlCounter = 0; // TODO CREATE A CLEARNER TO DELETE ALL THESE TEMP FILES
 	private static Pattern pdate = Pattern.compile("(?i)(date '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]')");
+	private static Pattern pinterval = Pattern.compile("(?i)(date '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]' +[+] +interval '[0-9]+' ((days)|(day)|(months)|(month)|(years)|(year)))");
+	
+	private static int defaultSchemaServerDBID = BigDawgConfigProperties.INSTANCE.getPostgresSchemaServerDBID();
 	
 	public static String readSQL(String filename) throws IOException {
 		BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(filename)));
@@ -53,19 +53,28 @@ public class SQLPrepareQuery {
 		return "EXPLAIN (VERBOSE ON, ANALYZE, FORMAT XML) " + query;
 	}
 	
-	public static String preprocessDateAndTime(String query) {
+	public static String preprocessDateAndTime(String query) throws Exception {
 		
 		StringBuilder sb = new StringBuilder();
 		
 		sb.append(query.toLowerCase());
 		
+		
+		Matcher minterval = pinterval.matcher(sb);
+		while (minterval.find()) {
+			PostgreSQLHandler psqlh = new PostgreSQLHandler(defaultSchemaServerDBID);
+			sb.replace(minterval.start(), minterval.end(), "'"+psqlh.computeDateArithmetic(sb.substring(minterval.start(), minterval.end()))+"'");
+//			sb.replace(mdate.start(), mdate.end(), "{d"+sb.substring(mdate.start()+4, mdate.end())+"}");
+			minterval.reset(sb);
+		}
+		
 		Matcher mdate = pdate.matcher(query);
 		while (mdate.find()) {
-			sb.replace(mdate.start(), mdate.end(), "{d"+sb.substring(mdate.start()+4, mdate.end())+"}");
+			sb.replace(mdate.start(), mdate.end(), sb.substring(mdate.start()+4, mdate.end()));
 			mdate.reset(sb);
 		}
 		
-//		Pattern pDayInterval = Pattern.compile("(?i)(interval '[0-9]+\\s?((hour)|(hours)|(day)|(days)|(month)|(months))?'(\\s((hour)|(hours)|(day)|(days)|(month)|(months)))?)");
+		
 		
 		
 		return sb.toString();

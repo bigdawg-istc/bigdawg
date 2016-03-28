@@ -3,8 +3,10 @@ package istc.bigdawg.plan.operators;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.jcp.xml.dsig.internal.dom.Utils;
 
@@ -19,17 +21,18 @@ import istc.bigdawg.utils.sqlutil.SQLUtilities;
 import net.sf.jsqlparser.expression.Alias;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Function;
-import net.sf.jsqlparser.expression.KeepExpression;
 import net.sf.jsqlparser.expression.Parenthesis;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.AllColumns;
-import net.sf.jsqlparser.statement.select.OrderByElement;
+import net.sf.jsqlparser.statement.select.FromItem;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.Select;
 import net.sf.jsqlparser.statement.select.SelectExpressionItem;
 import net.sf.jsqlparser.statement.select.SelectItem;
+import net.sf.jsqlparser.statement.select.SubSelect;
+import net.sf.jsqlparser.util.SelectUtils;
 
 
 // TODO: expressions on aggregates - e.g., COUNT(*) / COUNT(v > 5)
@@ -47,6 +50,10 @@ public class Aggregate extends Operator {
 	private List<Function> parsedAggregates;
 	private List<Expression> parsedGroupBys;
 	private String aggregateFilter = null; // HAVING clause
+	
+	private static int maxAggregateID = 0;
+	private static final String aggergateNamePrefix = "BIGDAWGAGGREGATE_";
+	protected Integer aggregateID = null;
 	
 	
 	// TODO: write ObliVM aggregate as a for loop over values, 
@@ -70,7 +77,11 @@ public class Aggregate extends Operator {
 		parsedGroupBys = new ArrayList<>();
 		aggregateFilter = parameters.get("Filter");
 		if(aggregateFilter != null) {
-			aggregateFilter = Utils.parseIdFromSameDocumentURI(aggregateFilter); // HAVING clause
+			aggregateFilter = SQLExpressionUtils.removeExpressionDataTypeArtifactAndConvertLike(aggregateFilter);
+			Expression e = CCJSqlParserUtil.parseCondExpression(Utils.parseIdFromSameDocumentURI(aggregateFilter));
+			SQLExpressionUtils.removeExcessiveParentheses(e);
+			aggregateFilter = e.toString(); // HAVING clause
+			
 		}
 		
 		// iterate over outschema and 
@@ -95,16 +106,10 @@ public class Aggregate extends Operator {
 					processFunction(parsedAggregates.get(j), attrName);
 				}
 				
-//				System.out.println("-->>> out.getAggregates(): "+parsedAggregates);
 			}
 			else {
 				groupBy.add(attr);
 				
-//				System.out.println("-- groupBy.add(attr): "+attr.getName()+"; "+attr.getExpressionString());
-				
-				/*if(attr.getSecurityPolicy() != Attribute.SecurityPolicy.Public) {
-					throw new Exception("Aggregation must only group by public attributes.");
-				}*/
 			}
 			
 		}
@@ -123,19 +128,32 @@ public class Aggregate extends Operator {
 			List<String> groupBysFromXML = Arrays.asList(SQLExpressionUtils
 					.removeExpressionDataTypeArtifactAndConvertLike(parameters.get("Group-Key")).split("\n")); 
 	
+			
 			for (String s : groupBysFromXML) {
 				s = s.trim();
 				if (s.isEmpty()) continue;
 				Expression e = CCJSqlParserUtil.parseExpression(s);
 				SQLExpressionUtils.removeExcessiveParentheses(e);
 				
-				while (e instanceof Parenthesis)
-					e = ((Parenthesis) e).getExpression();
+				while (e instanceof Parenthesis) e = ((Parenthesis) e).getExpression();
 				
-				if (!(e instanceof Column) && outExps.containsValue(e.toString()))
+				String estr = e.toString();
+				if (!(e instanceof Column))// && outExps.containsValue(estr))
 					for (String str : outExps.keySet())
-						e = new Column(str);
-				
+						if (outExps.get(str).contains(estr)) {
+							// get it's children to stand-out as a subselect
+							Set<String> names = new HashSet<>();
+							StringBuilder sb = new StringBuilder();
+							e = children.get(0).resolveAggregatesInFilter(estr, false, this, names, sb);
+							
+							if (e == null) {
+								// then we look for the weird expression from outItem
+								e = new Column(str);
+							}
+								
+							break;
+						}
+							
 				
 				parsedGroupBys.add(e);
 			}
@@ -307,18 +325,34 @@ public class Aggregate extends Operator {
 		aggregateExpressions.add(aFilter);
 	}
 	
+	public String getAggregateToken() {
+		if (aggregateID == null)
+			return null;
+		else
+			return aggergateNamePrefix + aggregateID;
+	}
+	
+	public void setSingledOutAggregate() {
+		if (aggregateID == null) {
+			maxAggregateID ++;
+			aggregateID = maxAggregateID;
+		}
+	}
 	
 	@Override
 	public Select generateSQLStringDestOnly(Select dstStatement, boolean stopAtJoin) throws Exception {
 
-		dstStatement = children.get(0).generateSQLStringDestOnly(dstStatement, stopAtJoin);
+		Select originalDST = dstStatement;
+		
+		if (aggregateID == null) dstStatement = children.get(0).generateSQLStringDestOnly(dstStatement, stopAtJoin);
+		else dstStatement = children.get(0).generateSQLStringDestOnly(null, stopAtJoin);
 				
 		PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
 
 		if (ps.getSelectItems().get(0) instanceof AllColumns)
 			ps.getSelectItems().remove(0);
+		
 		for (String alias: outSchema.keySet()) {
-			
 			
 			Expression e = outSchema.get(alias).getSQLExpression();
 			SelectItem s = new SelectExpressionItem(e);
@@ -330,13 +364,68 @@ public class Aggregate extends Operator {
 		}
 		
 		updateGroupByElements();
-		
 		ps.setGroupByColumnReferences(parsedGroupBys);
+		if (aggregateFilter != null)
+			ps.setHaving(CCJSqlParserUtil.parseCondExpression(aggregateFilter));
 		
-		return dstStatement;
+		if (aggregateID == null) return dstStatement;
+		if (originalDST == null) {
+			
+			SubSelect ss = makeNewSubSelectUpdateDST(dstStatement);
+			originalDST = SelectUtils.buildSelectFromTable(new Table()); // immediately replaced
+			((PlainSelect)originalDST.getSelectBody()).setFromItem(ss);
+			
+			return originalDST;
+		}
 		
+		SubSelect ss = makeNewSubSelectUpdateDST(dstStatement);
+		net.sf.jsqlparser.statement.select.Join insert = new net.sf.jsqlparser.statement.select.Join();
+		insert.setRightItem(ss);
+		insert.setSimple(true);
+		
+		PlainSelect pselect = (PlainSelect)originalDST.getSelectBody();
+		
+		if (pselect.getJoins() != null) {
+			boolean isFound = false;
+			
+			Map<String, String> aliasMapping = this.getDataObjectAliasesOrNames();
+			
+			for (int pos = 0; pos < pselect.getJoins().size(); pos++) { 
+				FromItem r = pselect.getJoins().get(pos).getRightItem();
+				if (!(r instanceof Table)) continue;
+				
+				Table t = (Table)r;
+				if (t.getName().equals(this.getAggregateToken())) {
+					pselect.getJoins().remove(pos);
+					isFound = true;
+				} else if (t.getAlias() != null && aliasMapping.containsKey(t.getAlias().getName()) && 
+						aliasMapping.get(t.getAlias().getName()).equals(t.getName())) {
+					pselect.getJoins().remove(pos);
+					isFound = true;
+				}
+			}
+			if (!isFound) {
+				for (int pos = 0; pos < pselect.getJoins().size(); pos++) { 
+					if (pselect.getJoins().get(pos).isSimple()) {
+						pselect.getJoins().add(pos, insert);
+						break;
+					}
+				}
+			} else {
+				pselect.getJoins().add(insert);
+			}
+		}
+		
+		return originalDST;
 	}
 	
+	private SubSelect makeNewSubSelectUpdateDST(Select dstStatement) {
+		SubSelect ss = new SubSelect();
+		ss.setAlias(new Alias(this.getAggregateToken()));
+		ss.setSelectBody(dstStatement.getSelectBody());
+//		if (dstStatement.getWithItemsList() != null) ss.setWithItemsList(dstStatement.getWithItemsList());
+		return ss;
+	}
 	
 	public void updateGroupByElements() throws Exception {
 		
@@ -417,16 +506,65 @@ public class Aggregate extends Operator {
 			StringBuilder sb = new StringBuilder();
 			sb.append("{aggregate").append(children.get(0).getTreeRepresentation(false));
 			
-			for (String alias: outSchema.keySet()) {
-				Expression e = outSchema.get(alias).getSQLExpression();
-				SQLExpressionUtils.removeExcessiveParentheses(e);
-				if (e instanceof Column) continue;
-				sb.append(SQLExpressionUtils.parseCondForTree(e));
-			}
+//			for (String alias: outSchema.keySet()) {
+//				Expression e = outSchema.get(alias).getSQLExpression();
+//				SQLExpressionUtils.removeExcessiveParentheses(e);
+//				if (e instanceof Column) continue;
+//				sb.append(SQLExpressionUtils.parseCondForTree(e));
+//			}
 
 			sb.append('}');
 			return sb.toString();
 		}
 	}
+	
+	@Override
+	public Map<String, Set<String>> getObjectToExpressionMappingForSignature() throws Exception{
+		
+		Map<String, Set<String>> out = children.get(0).getObjectToExpressionMappingForSignature();
+		
+		// outItem
+		for (String s : outSchema.keySet()) {
+			Expression e = outSchema.get(s).getSQLExpression();
+			if (!(e instanceof Column || e instanceof AllColumns)) {
+				addToOut(e, out);
+			};
+		}
+		
+		
+		// having
+		if (aggregateFilter != null) {
+			addToOut(CCJSqlParserUtil.parseCondExpression(aggregateFilter), out);
+		}
+		
+		return out;
+	}
 
+	@Override
+	public Expression resolveAggregatesInFilter(String e, boolean goParent, Operator lastHopOp, Set<String> names, StringBuilder sb) throws Exception {
+		
+		for (String s: outSchema.keySet()) {
+			Expression exp = outSchema.get(s).getSQLExpression();
+			while (exp instanceof Parenthesis)
+				exp = ((Parenthesis)exp).getExpression();
+			if (e.equalsIgnoreCase(exp.toString())) {
+				setSingledOutAggregate();
+				
+				Map<String, String> namesAndAliases = this.getDataObjectAliasesOrNames();
+				names.addAll(namesAndAliases.keySet());
+				
+				sb.append(this.getAggregateToken());
+				return new Column(new Table(getAggregateToken()), s);
+			}
+		}
+
+		return super.resolveAggregatesInFilter(e, goParent, this, names, sb);
+	}
+	
+//	@Override
+//	public void seekScanAndProcessAggregateInFilter() throws Exception {
+//		for (Operator o : children) 
+//			o.seekScanAndProcessAggregateInFilter();
+//	}
+	
 };

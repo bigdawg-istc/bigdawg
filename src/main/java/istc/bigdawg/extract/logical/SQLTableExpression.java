@@ -32,6 +32,7 @@ public class SQLTableExpression {
     private Map<String, List<OrderByElement>> sortList = null;
     private PlainSelect parsedStatement; // usually contains a WithItem, PlainSelect, or both
     private List<Join> joins;
+    private boolean outerSortProcessed = false;
     
     String name = null;
 	
@@ -280,5 +281,13 @@ public class SQLTableExpression {
 	
 	public String getTableAlias(String n) {
 		return tableAliases.get(n);
+	}
+	
+	public boolean hasOuterSortBeenProcessed () {
+		return outerSortProcessed;
+	}
+	
+	public void setOuterSortProcesssed(boolean processed) {
+		outerSortProcessed = processed;
 	}
 }

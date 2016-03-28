@@ -1,8 +1,10 @@
 package istc.bigdawg.utils.sqlutil;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -30,7 +32,7 @@ import net.sf.jsqlparser.expression.operators.relational.MultiExpressionList;
 import net.sf.jsqlparser.expression.operators.relational.OldOracleJoinBinaryExpression;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
-import net.sf.jsqlparser.statement.select.AllColumns;
+import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.Select;
 import net.sf.jsqlparser.statement.select.SelectVisitor;
@@ -414,6 +416,175 @@ public static List<String> getColumnNamesInAllForms(Expression expr) throws JSQL
 		
 		return expr;
 	}
+	
+	public static Set<String> getAllTableNamesForSignature(Expression expr, Map<String, String> aliasMapping) {
+		Set<String> ret = new HashSet<>();
+		
+		SQLExpressionHandler deparser = new SQLExpressionHandler() {
+	        
+			@Override
+			public void visit(Column tableColumn) {
+				if (tableColumn.getTable() != null && tableColumn.getTable().getName() != null) {
+					if (!(tableColumn.getTable().getName().startsWith("BIGDAWGAGGREGATE") || tableColumn.getTable().getName().startsWith("BIGDAWGPRUNED"))) {
+						
+						if (aliasMapping.get(tableColumn.getTable().getName()) == null) 
+							ret.add(tableColumn.getTable().getName()); 
+						else 
+							ret.add(aliasMapping.get(tableColumn.getTable().getName()));
+					}
+						
+				} else if (aliasMapping.size() == 1) {
+					String alias = ((String)aliasMapping.keySet().toArray()[0]);
+					if (tableColumn.getTable() == null) tableColumn.setTable(new Table(alias));
+					else tableColumn.getTable().setName(alias);
+				}
+			}
+			
+			@Override
+		    public void visit(Parenthesis parenthesis) {
+		        parenthesis.getExpression().accept(this);
+		    }
+			
+			@Override
+		    public void visit(InExpression in) {
+		        in.getLeftExpression().accept(this);
+		    }
+			
+			@Override
+			public void visitOldOracleJoinBinaryExpression(OldOracleJoinBinaryExpression expression, String operator) {
+				expression.getLeftExpression().accept(this);
+				expression.getRightExpression().accept(this);
+			}
+			
+			@Override
+			protected void visitBinaryExpression(BinaryExpression binaryExpression, String operator) {
+		        binaryExpression.getLeftExpression().accept(this);
+		        binaryExpression.getRightExpression().accept(this);
+			}
+			
+			@Override
+		    public void visit(ExpressionList expressionList) {
+		        for (Iterator<Expression> iter = expressionList.getExpressions().iterator(); iter.hasNext();) {
+		            Expression expression = iter.next();
+		            expression.accept(this);
+		        }
+		    }
+			
+			@Override
+			public void visit(Function function) {
+				if (function.getParameters() != null) function.getParameters().accept(this);
+			}
+			
+			@Override
+			public void visit(SignedExpression se) {
+				se.getExpression().accept(this);
+			}
+			
+			@Override
+		    public void visit(CaseExpression caseExpression) {
+		        if (caseExpression.getSwitchExpression() != null) caseExpression.getSwitchExpression().accept(this);
+		        for (int i = 0; i < caseExpression.getWhenClauses().size(); i++) {
+		        	((WhenClause)caseExpression.getWhenClauses().get(i)).getWhenExpression().accept(this);
+		        	((WhenClause)caseExpression.getWhenClauses().get(i)).getThenExpression().accept(this);;
+		        }
+		        if (caseExpression.getElseExpression() != null) caseExpression.getElseExpression().accept(this);
+		    }
+			
+			@Override public void visit(LongValue lv) {};
+			@Override public void visit(DoubleValue lv) {};
+			@Override public void visit(HexValue lv) {};
+			@Override public void visit(NullValue lv) {};
+			@Override public void visit(TimeValue lv) {};
+			@Override public void visit(StringValue sv) {};
+	    };
+	    
+	    expr.accept(deparser);
+		
+		return ret;
+	}
+	
+	public static void restoreTableNamesFromAliasForSignature(Expression expr, Map<String, String> aliasMapping) {
+		SQLExpressionHandler deparser = new SQLExpressionHandler() {
+	        
+			@Override
+			public void visit(Column tableColumn) {
+				if (tableColumn.getTable() != null && tableColumn.getTable().getName() != null) {
+					
+					if ( tableColumn.getTable().getName().startsWith("BIGDAWGAGGREGATE_"))
+						tableColumn.getTable().setName("BIGDAWGAGGREGATE");
+					else if ( tableColumn.getTable().getName().startsWith("BIGDAWGPRUNED_")) 
+						tableColumn.getTable().setName("BIGDAWGPRUNED");
+					else 
+						tableColumn.getTable().setName(aliasMapping.get(tableColumn.getTable().getName()));
+				} else if (aliasMapping.size() == 1) {
+					String alias = ((String)aliasMapping.keySet().toArray()[0]);
+					if (tableColumn.getTable() == null) tableColumn.setTable(new Table(alias));
+					else tableColumn.getTable().setName(alias);
+				}
+			}
+			
+			@Override
+		    public void visit(Parenthesis parenthesis) {
+		        parenthesis.getExpression().accept(this);
+		    }
+			
+			@Override
+			public void visit(InExpression in) {
+				if ( in.getLeftExpression() != null )
+					in.getLeftExpression().accept(this);
+			}
+			
+			@Override
+			public void visitOldOracleJoinBinaryExpression(OldOracleJoinBinaryExpression expression, String operator) {
+				expression.getLeftExpression().accept(this);
+				expression.getRightExpression().accept(this);
+			}
+			
+			@Override
+			protected void visitBinaryExpression(BinaryExpression binaryExpression, String operator) {
+		        binaryExpression.getLeftExpression().accept(this);
+		        binaryExpression.getRightExpression().accept(this);
+			}
+			
+			@Override
+		    public void visit(ExpressionList expressionList) {
+		        for (Iterator<Expression> iter = expressionList.getExpressions().iterator(); iter.hasNext();) {
+		            Expression expression = iter.next();
+		            expression.accept(this);
+		        }
+		    }
+			
+			@Override
+			public void visit(Function function) {
+				
+				if (function.getParameters() != null) function.getParameters().accept(this);
+			}
+			
+			@Override
+			public void visit(SignedExpression se) {
+				se.getExpression().accept(this);
+			}
+			
+			@Override
+		    public void visit(CaseExpression caseExpression) {
+		        if (caseExpression.getSwitchExpression() != null) caseExpression.getSwitchExpression().accept(this);
+		        for (int i = 0; i < caseExpression.getWhenClauses().size(); i++) {
+		        	((WhenClause)caseExpression.getWhenClauses().get(i)).getWhenExpression().accept(this);
+		        	((WhenClause)caseExpression.getWhenClauses().get(i)).getThenExpression().accept(this);;
+		        }
+		        if (caseExpression.getElseExpression() != null) caseExpression.getElseExpression().accept(this);
+		    }
+			
+			@Override public void visit(LongValue lv) {};
+			@Override public void visit(DoubleValue lv) {};
+			@Override public void visit(HexValue lv) {};
+			@Override public void visit(NullValue lv) {};
+			@Override public void visit(TimeValue lv) {};
+			@Override public void visit(StringValue sv) {};
+	    };
+	    
+	    expr.accept(deparser);
+	}
 
 	/** 
 	 * This is supposed to be run only once per query, for cleaning up the original query of SubSelects
@@ -421,6 +592,7 @@ public static List<String> getColumnNamesInAllForms(Expression expr) throws JSQL
 	 * @return
 	 * @throws JSQLParserException
 	 */
+	@Deprecated
 	public static String rewriteSubSelectIntoWith(String query) throws JSQLParserException {
 		Select s = (Select) CCJSqlParserUtil.parse(query);
 		
@@ -586,7 +758,7 @@ public static List<String> getColumnNamesInAllForms(Expression expr) throws JSQL
 			
 			@Override
 		    public void visit(Parenthesis parenthesis) {
-				sb.append("{parenthesis");
+				sb.append("{");
 		        parenthesis.getExpression().accept(this);
 		        sb.append('}');
 		    }
@@ -685,6 +857,366 @@ public static List<String> getColumnNamesInAllForms(Expression expr) throws JSQL
 		e.accept(deparser);
 		
 		return sb.toString();
+	}
+	
+	public static boolean isFunctionPresentInCondExpression(Expression e) {
+		List<Boolean> ret = new ArrayList<>();
+		ret.add(false);
+		
+		SQLExpressionHandler deparser = new SQLExpressionHandler() {
+	        
+			@Override public void visit(Function function) {ret.set(0, true);}
+			@Override public void visit(Parenthesis parenthesis) {parenthesis.getExpression().accept(this);}
+			@Override public void visit(SignedExpression se) {se.getExpression().accept(this);}
+			
+			@Override
+			public void visitOldOracleJoinBinaryExpression(OldOracleJoinBinaryExpression expression, String operator) {
+				expression.getLeftExpression().accept(this);
+				expression.getRightExpression().accept(this);
+			}
+			
+			@Override
+			protected void visitBinaryExpression(BinaryExpression expression, String operator) {
+		        expression.getLeftExpression().accept(this);
+				expression.getRightExpression().accept(this);
+			}
+			
+			@Override
+			public void visit(InExpression ie) {
+				ie.getLeftExpression().accept(this);
+				if (ie.getLeftItemsList() != null) ie.getLeftItemsList().accept(this);
+				if (ie.getRightItemsList() != null) ie.getRightItemsList().accept(this);
+			}
+			
+			@Override
+		    public void visit(CaseExpression caseExpression) {
+		        if (caseExpression.getSwitchExpression() != null) caseExpression.getSwitchExpression().accept(this);
+		        for (int i = 0; i < caseExpression.getWhenClauses().size(); i++) {
+		        	((WhenClause)caseExpression.getWhenClauses().get(i)).getWhenExpression().accept(this);
+		        	((WhenClause)caseExpression.getWhenClauses().get(i)).getThenExpression().accept(this);;
+		        }
+		        if (caseExpression.getElseExpression() != null) caseExpression.getElseExpression().accept(this);
+		    }
+			
+			@Override public void visit(Column tableColumn) {}
+			@Override public void visit(LongValue lv) {};
+			@Override public void visit(DoubleValue lv) {};
+			@Override public void visit(HexValue lv) {};
+			@Override public void visit(NullValue lv) {};
+			@Override public void visit(TimeValue lv) {};
+			@Override public void visit(StringValue sv) {};
+			@Override public void visit(ExpressionList expressionList) {}
+	    };
+		
+		e.accept(deparser);
+		
+		return ret.get(0);
+	}
+	
+	public static List<Expression> locateFunctionInCondExpression(Expression e){
+		
+		List<Expression> result = new ArrayList<>();
+		
+		SQLExpressionHandler deparser = new SQLExpressionHandler() {
+	        
+			@Override
+		    public void visit(Parenthesis parenthesis) {
+				if (parenthesis.getExpression() instanceof Function) {
+					result.add(parenthesis.getExpression());
+					result.add(parenthesis);
+				}
+				else parenthesis.getExpression().accept(this);
+		    }
+			
+			@Override
+			public void visitOldOracleJoinBinaryExpression(OldOracleJoinBinaryExpression expression, String operator) {
+				
+				if (expression.getLeftExpression() instanceof Function) {
+					result.add(expression.getLeftExpression());
+					result.add(expression);
+					return;
+				} else expression.getLeftExpression().accept(this);
+				
+				if (expression.getRightExpression() instanceof Function) {
+					result.add(expression.getRightExpression());
+					result.add(expression);
+				} else expression.getRightExpression().accept(this);
+			}
+			
+			@Override
+			protected void visitBinaryExpression(BinaryExpression expression, String operator) {
+		        if (expression.getLeftExpression() instanceof Function) {
+					result.add(expression.getLeftExpression());
+					result.add(expression);
+					return;
+				} else expression.getLeftExpression().accept(this);
+				
+				if (expression.getRightExpression() instanceof Function) {
+					result.add(expression.getRightExpression());
+					result.add(expression);
+				} else expression.getRightExpression().accept(this);
+			}
+			
+			@Override
+			public void visit(SignedExpression se) {
+				if (se.getExpression() instanceof Function) {
+					result.add(se.getExpression());
+					result.add(se);
+				}
+				else se.getExpression().accept(this);
+			}
+			
+			@Override
+			public void visit(InExpression ie) {
+				if (ie.getLeftExpression() instanceof Function) {
+					result.add(ie.getLeftExpression());
+					result.add(ie);
+				} else ie.getLeftExpression().accept(this);
+				
+				if (ie.getLeftItemsList() != null) ie.getLeftItemsList().accept(this);
+				if (ie.getRightItemsList() != null) ie.getRightItemsList().accept(this);
+			}
+			
+			@Override
+		    public void visit(CaseExpression caseExpression) {
+		        if (caseExpression.getSwitchExpression() != null) {
+		        	caseExpression.getSwitchExpression().accept(this);
+		        }
+		        for (int i = 0; i < caseExpression.getWhenClauses().size(); i++) {
+		        	((WhenClause)caseExpression.getWhenClauses().get(i)).getWhenExpression().accept(this);
+		        	((WhenClause)caseExpression.getWhenClauses().get(i)).getThenExpression().accept(this);;
+		        }
+		        if (caseExpression.getElseExpression() != null) {
+		        	Expression el = caseExpression.getElseExpression();
+		        	if (el instanceof Function) {
+						result.add(el);
+						result.add(caseExpression);
+					}
+					else el.accept(this);
+		        }
+		    }
+			
+			@Override public void visit(Column tableColumn) {}
+			@Override public void visit(LongValue lv) {};
+			@Override public void visit(DoubleValue lv) {};
+			@Override public void visit(HexValue lv) {};
+			@Override public void visit(NullValue lv) {};
+			@Override public void visit(TimeValue lv) {};
+			@Override public void visit(StringValue sv) {};
+			@Override public void visit(ExpressionList expressionList) {}
+			@Override public void visit(Function function) {}
+	    };
+		
+		e.accept(deparser);
+		return result;
+	}
+	
+	public static void updateFunctionInCondExpression(Expression substitution, Expression parent){
+		
+		SQLExpressionHandler deparser = new SQLExpressionHandler() {
+	        
+			@Override
+		    public void visit(Parenthesis parenthesis) {
+				parenthesis.setExpression(substitution);
+		    }
+			
+			@Override
+			public void visitOldOracleJoinBinaryExpression(OldOracleJoinBinaryExpression expression, String operator) {
+				if (expression.getLeftExpression() instanceof Function) {
+					expression.setLeftExpression(substitution);
+				} else if (expression.getRightExpression() instanceof Function || expression.getLeftExpression() instanceof Column) {
+					expression.setRightExpression(substitution);
+				} 
+			}
+			
+			@Override
+			protected void visitBinaryExpression(BinaryExpression expression, String operator) {
+				if (expression.getLeftExpression() instanceof Function) {
+					expression.setLeftExpression(substitution);
+				} else if (expression.getRightExpression() instanceof Function || expression.getLeftExpression() instanceof Column) {
+					expression.setRightExpression(substitution);
+				} 
+			}
+			
+			@Override
+			public void visit(SignedExpression se) {
+				se.setExpression(substitution);
+			}
+			
+			@Override
+		    public void visit(CaseExpression caseExpression) {
+		        caseExpression.setElseExpression(substitution);
+		    }
+			
+			@Override public void visit(Column tableColumn) {}
+			@Override public void visit(LongValue lv) {};
+			@Override public void visit(DoubleValue lv) {};
+			@Override public void visit(HexValue lv) {};
+			@Override public void visit(NullValue lv) {};
+			@Override public void visit(TimeValue lv) {};
+			@Override public void visit(StringValue sv) {};
+			@Override public void visit(ExpressionList expressionList) {}
+			@Override public void visit(Function function) {}
+	    };
+		
+		parent.accept(deparser);
+	}
+	
+	public static Expression getOneSideOfBinaryCondExpression(Expression parent, boolean left){
+		
+		List<Expression> ret = new ArrayList<>();
+		SQLExpressionHandler deparser = new SQLExpressionHandler() {
+			
+			@Override public void visit(Parenthesis p) {p.getExpression().accept(this);}
+			
+			@Override
+			public void visitOldOracleJoinBinaryExpression(OldOracleJoinBinaryExpression expression, String operator) {
+				if (left) ret.add(expression.getLeftExpression());
+				else ret.add(expression.getRightExpression());
+			}
+			
+			@Override
+			protected void visitBinaryExpression(BinaryExpression expression, String operator) {
+				if (left) ret.add(expression.getLeftExpression());
+				else ret.add(expression.getRightExpression());
+			}
+		};
+		parent.accept(deparser);
+		if (ret.isEmpty()) return null;
+		else {
+			Expression result = ret.get(0);
+			while (result instanceof Parenthesis)
+				result = ((Parenthesis) result).getExpression();
+			return result;
+		}
+	}
+	
+	public static void setOneSideOfBinaryCondExpression(Expression sub, Expression parent, boolean left){
+		
+		SQLExpressionHandler deparser = new SQLExpressionHandler() {
+			
+			@Override public void visit(Parenthesis p) {p.getExpression().accept(this);}
+			
+			@Override
+			public void visitOldOracleJoinBinaryExpression(OldOracleJoinBinaryExpression expression, String operator) {
+				if (left) expression.setLeftExpression(sub);
+				else expression.setRightExpression(sub);
+			}
+			
+			@Override
+			protected void visitBinaryExpression(BinaryExpression expression, String operator) {
+				if (left) expression.setLeftExpression(sub);
+				else expression.setRightExpression(sub);
+			}
+		};
+		parent.accept(deparser);
+	}
+	
+	public static Expression stripDownExpressionForSignature(Expression expr) {
+		
+		if (expr instanceof Function)
+			expr = ((Function)expr).getParameters().getExpressions().get(0);
+		
+		SQLExpressionHandler deparser = new SQLExpressionHandler() {
+	        
+			private Expression getFirstExpression(Expression e) {
+				return ((Function) e).getParameters().getExpressions().get(0);
+			}
+			
+			@Override
+		    public void visit(Parenthesis parenthesis) {
+				while (parenthesis.getExpression() instanceof Function)
+					parenthesis.setExpression(getFirstExpression(parenthesis.getExpression()));
+		        parenthesis.getExpression().accept(this);
+		    }
+			
+			@Override
+		    public void visit(InExpression in) {
+				while (in.getLeftExpression() instanceof Function)
+					in.setLeftExpression(getFirstExpression(in.getLeftExpression()));
+		        in.getLeftExpression().accept(this);
+		    }
+			
+			@Override
+			public void visitOldOracleJoinBinaryExpression(OldOracleJoinBinaryExpression expression, String operator) {
+				while (expression.getLeftExpression() instanceof Function)
+					expression.setLeftExpression(getFirstExpression(expression.getLeftExpression()));
+				expression.getLeftExpression().accept(this);
+				
+				while (expression.getRightExpression() instanceof Function)
+					expression.setRightExpression(getFirstExpression(expression.getRightExpression()));
+				expression.getRightExpression().accept(this);
+			}
+			
+			@Override
+			protected void visitBinaryExpression(BinaryExpression expression, String operator) {
+				while (expression.getLeftExpression() instanceof Function)
+					expression.setLeftExpression(getFirstExpression(expression.getLeftExpression()));
+				expression.getLeftExpression().accept(this);
+				
+				while (expression.getRightExpression() instanceof Function)
+					expression.setRightExpression(getFirstExpression(expression.getRightExpression()));
+				expression.getRightExpression().accept(this);
+			}
+			
+			@Override
+		    public void visit(ExpressionList expressionList) {
+				System.out.println("Reached Expression List; This shouldn't happen");
+//		        for (Iterator<Expression> iter = expressionList.getExpressions().iterator(); iter.hasNext();) {
+//		            Expression expression = iter.next();
+//		            expression.accept(this);
+//		        }
+		    }
+			
+			@Override
+			public void visit(Function function) {
+				System.out.println("Reached Function; This shouldn't happen");
+			}
+			
+			@Override
+			public void visit(SignedExpression se) {
+				while (se.getExpression() instanceof Function)
+					se.setExpression(getFirstExpression(se.getExpression()));
+				se.getExpression().accept(this);
+			}
+			
+			@Override
+		    public void visit(CaseExpression caseExpression) {
+		        if (caseExpression.getSwitchExpression() != null) {
+		        	while (caseExpression.getSwitchExpression() instanceof Function)
+		        		caseExpression.setSwitchExpression(getFirstExpression(caseExpression.getSwitchExpression()));
+		        	caseExpression.getSwitchExpression().accept(this);
+		        }
+		        for (int i = 0; i < caseExpression.getWhenClauses().size(); i++) {
+		        	
+		        	WhenClause wc = (WhenClause)caseExpression.getWhenClauses().get(i);
+		        	while (wc.getWhenExpression() instanceof Function)
+		        		wc.setWhenExpression(getFirstExpression(wc.getWhenExpression()));
+		        	wc.getWhenExpression().accept(this);
+
+		        	while (wc.getThenExpression() instanceof Function)
+		        		wc.setThenExpression(getFirstExpression(wc.getThenExpression()));
+		        	wc.getThenExpression().accept(this);
+		        }
+		        if (caseExpression.getElseExpression() != null) {
+		        	
+		        	while (caseExpression.getElseExpression() instanceof Function)
+		        		caseExpression.setElseExpression(getFirstExpression(caseExpression.getElseExpression()));
+		        	caseExpression.getElseExpression().accept(this);
+		        }
+		    }
+			
+			@Override public void visit(Column tableColumn) {}
+			@Override public void visit(LongValue lv) {};
+			@Override public void visit(DoubleValue lv) {};
+			@Override public void visit(HexValue lv) {};
+			@Override public void visit(NullValue lv) {};
+			@Override public void visit(TimeValue lv) {};
+			@Override public void visit(StringValue sv) {};
+	    };
+	    
+	    expr.accept(deparser);
+	    return expr;
 	}
 	
 	private static String getNewSubSelectToken() {

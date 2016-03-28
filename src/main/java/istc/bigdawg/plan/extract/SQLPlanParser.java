@@ -54,6 +54,7 @@ public class SQLPlanParser {
 	// sqlPlan passes in supplement info
 	public SQLPlanParser(String xmlString, SQLQueryPlan sqlPlan, String q) throws Exception {
 	   //catalog = DatabaseSingleton.getInstance();
+		
 		String qprocessed = SQLPrepareQuery.preprocessDateAndTime(q);
 		this.query = (Select) CCJSqlParserUtil.parse(qprocessed);
 		queryPlan = sqlPlan;
@@ -94,7 +95,11 @@ public class SQLPlanParser {
             }
            
 	    }
-			
+		
+	    // resolve any aggregate in where
+	    queryPlan.getRootNode().seekScanAndProcessAggregateInFilter();
+	    for (String s : queryPlan.getPlanRoots().keySet())
+	    	queryPlan.getPlanRoot(s).seekScanAndProcessAggregateInFilter();
 		    
 	}
 	
@@ -176,7 +181,7 @@ public class SQLPlanParser {
 				break;
 	
 			case "Strategy":
-				if(c.getTextContent().equals("Sorted") && nodeType.equals("Aggregate")) {
+				if(c.getTextContent().equals("Sorted") && nodeType.equals("Aggregate") && (supplement.getOrderByClause() == null || supplement.hasOuterSortBeenProcessed())) {
 					localSkipSort = true;
 				}
 			
@@ -199,7 +204,7 @@ public class SQLPlanParser {
 						  sortKeys.add(s);
 					  }
 				  }
-				  
+				  supplement.setOuterSortProcesssed(true);
 				  break;
 			case "Subplan-Name":
 				localPlan = c.getTextContent(); // switch to new CTE
