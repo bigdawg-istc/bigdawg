@@ -3,6 +3,7 @@ package istc.bigdawg.plan.operators;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import istc.bigdawg.extract.logical.SQLTableExpression;
 import istc.bigdawg.packages.SciDBArray;
@@ -155,8 +156,8 @@ public class WindowAggregate extends Operator {
 	
 	
 	@Override
-	public Select generateSQLStringDestOnly(Select dstStatement, boolean stopAtJoin) throws Exception {
-		dstStatement = children.get(0).generateSQLStringDestOnly(dstStatement, stopAtJoin);
+	public Select generateSQLStringDestOnly(Select dstStatement, boolean stopAtJoin, Set<String> allowedScans) throws Exception {
+		dstStatement = children.get(0).generateSQLStringDestOnly(dstStatement, stopAtJoin, allowedScans);
 		// do nothing here until SELECT clause		
 	
 		return dstStatement;

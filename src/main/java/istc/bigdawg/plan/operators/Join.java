@@ -20,15 +20,7 @@ import net.sf.jsqlparser.expression.Alias;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Parenthesis;
 import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
-import net.sf.jsqlparser.expression.operators.relational.Between;
 import net.sf.jsqlparser.expression.operators.relational.EqualsTo;
-import net.sf.jsqlparser.expression.operators.relational.GreaterThan;
-import net.sf.jsqlparser.expression.operators.relational.GreaterThanEquals;
-import net.sf.jsqlparser.expression.operators.relational.InExpression;
-import net.sf.jsqlparser.expression.operators.relational.LikeExpression;
-import net.sf.jsqlparser.expression.operators.relational.MinorThan;
-import net.sf.jsqlparser.expression.operators.relational.MinorThanEquals;
-import net.sf.jsqlparser.expression.operators.relational.NotEqualsTo;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
@@ -255,7 +247,7 @@ public class Join extends Operator {
     
 
     @Override
-	public Select generateSQLStringDestOnly(Select dstStatement, boolean stopAtJoin) throws Exception {
+	public Select generateSQLStringDestOnly(Select dstStatement, boolean stopAtJoin, Set<String> allowedScans) throws Exception {
 		
     	if (stopAtJoin)
     		return SelectUtils.buildSelectFromTable(new Table(getJoinToken()));
@@ -329,7 +321,7 @@ public class Join extends Operator {
     			}
     			
     			// this is the bottom
-    			dstStatement = children.get(0).generateSQLStringDestOnly(null, stopAtJoin);
+    			dstStatement = children.get(0).generateSQLStringDestOnly(null, stopAtJoin, allowedScans);
     			
     			if (t0.getAlias() != null) updateThisAndParentJoinReservedObjects(t0.getAlias().getName());
     			else updateThisAndParentJoinReservedObjects(t0.getName());
@@ -337,7 +329,7 @@ public class Join extends Operator {
     			t = t1;
     			
     		} else {
-    			dstStatement = child0.generateSQLStringDestOnly(dstStatement, stopAtJoin); 
+    			dstStatement = child0.generateSQLStringDestOnly(dstStatement, stopAtJoin, allowedScans); 
     			
     			t = t1;
 	    		if (t1.getAlias() != null && this.joinReservedObjects.contains(t1.getAlias().getName())) t = t0;
@@ -350,7 +342,7 @@ public class Join extends Operator {
 		} else {
 			
 			
-			dstStatement = child0.generateSQLStringDestOnly(dstStatement, stopAtJoin); 
+			dstStatement = child0.generateSQLStringDestOnly(dstStatement, stopAtJoin, allowedScans); 
 			
 			getJoinReservedObjectsFromParents();
 						
@@ -368,7 +360,7 @@ public class Join extends Operator {
     	if (t.getAlias() == null) updateThisAndParentJoinReservedObjects(t.getFullyQualifiedName());
     	else updateThisAndParentJoinReservedObjects(t.getAlias().getName());
 		
-		dstStatement = child1.generateSQLStringDestOnly(dstStatement, stopAtJoin); 
+		dstStatement = child1.generateSQLStringDestOnly(dstStatement, stopAtJoin, allowedScans); 
 		
 		if(joinFilter != null || joinPredicate != null) {
 
@@ -377,7 +369,9 @@ public class Join extends Operator {
 			else if (joinPredicate != null && joinPredicate.length() > 0) jf = jf + " AND " + joinPredicate; 
 			
 			Expression e = CCJSqlParserUtil.parseCondExpression(jf);
-			List<String> filterRelatedTables = SQLExpressionUtils.getAttributes(e); 
+			List<Column> filterRelatedTablesExpr = SQLExpressionUtils.getAttributes(e); 
+			List<String> filterRelatedTables = new ArrayList<>();
+			for (Column c : filterRelatedTablesExpr) filterRelatedTables.add(c.getFullyQualifiedName());
 			
 			List<Operator> treeWalker = new ArrayList<>(this.children);
 			List<Operator> nextGen;
@@ -608,8 +602,63 @@ public class Join extends Operator {
 		
 		List<String> ret = new ArrayList<String>();
 		
-		if (joinPredicate == null || joinPredicate.length() == 0)
-			return ret;
+		if (joinPredicate == null || joinPredicate.length() == 0) {
+			
+			Map<String, Expression> left = this.getChildren().get(0).getChildrenIndexConds();
+			Map<String, Expression> right = this.getChildren().get(1).getChildrenIndexConds();
+
+			Expression extraction = null;
+			Column leftColumn = null;
+			Column rightColumn = null;
+			
+			boolean found = false; 
+			for (String s : left.keySet()) {
+				if (left.get(s) == null ) continue;
+				List<Column> ls = SQLExpressionUtils.getAttributes(left.get(s));
+				
+				for (Column c : ls) {
+					String s2 = c.getTable().getName();
+					if (right.containsKey(s2)) {
+						extraction = left.get(s);
+						for (Column c2 : ls) if (c2.getTable().getName().equals(s)) {leftColumn = c2; break;}
+						for (Column c2 : ls) if (c2.getTable().getName().equals(s2)) {rightColumn = c2; break;}
+						found = true;
+						break;
+					}
+				}
+				if (found) break;
+			}
+			
+			found = false;
+			if (extraction == null) {
+				for (String s : right.keySet()) {
+					if (right.get(s) == null ) continue;
+					List<Column> ls = SQLExpressionUtils.getAttributes(right.get(s));
+					
+					for (Column c : ls) {
+						String s2 = c.getTable().getName();
+						if (left.containsKey(s2)) {
+							extraction = right.get(s);
+							for (Column c2 : ls) if (c2.getTable().getName().equals(s2)) {leftColumn = c2; break;}
+							for (Column c2 : ls) if (c2.getTable().getName().equals(s)) {rightColumn = c2; break;}
+							found = true;
+							break;
+						}
+					}
+					if (found) break;
+				}
+			}
+			
+			if (extraction == null) return ret;
+			
+			while (extraction instanceof Parenthesis) extraction = ((Parenthesis)extraction).getExpression();
+			ret.add(SQLExpressionUtils.getBinaryExpressionOperatorToken(extraction));
+			ret.add(String.format("{%s, %s}", leftColumn.getTable().getFullyQualifiedName(),leftColumn.getColumnName()));
+			ret.add(String.format("{%s, %s}", rightColumn.getTable().getFullyQualifiedName(),rightColumn.getColumnName()));
+			
+        	return ret;
+		}
+			
 		
 		
 		Set<String> leftChildObjects = this.getChildren().get(0).getDataObjectNames();
@@ -624,30 +673,8 @@ public class Join extends Operator {
 		while (e instanceof Parenthesis)
 			e = ((Parenthesis)e).getExpression();
 		
-//		System.out.println("e class: "+e.getClass().toString());
 		
-		if (e instanceof EqualsTo) {
-			ret.add("=");
-		} else if (e instanceof LikeExpression) {
-			ret.add("LIKE");
-		} else if (e instanceof InExpression) {
-			ret.add("IN");
-		} else if (e instanceof GreaterThanEquals) {
-			ret.add(">=");
-		} else if (e instanceof GreaterThan) {
-			ret.add(">");
-		} else if (e instanceof MinorThanEquals) {
-			ret.add("<=");
-		} else if (e instanceof MinorThan) {
-			ret.add("<");
-		} else if (e instanceof NotEqualsTo) {
-			ret.add("<>");
-		} else if (e instanceof Between) {
-			ret.add("BETWEEN");
-		} else {
-			ret.add("UNKNOWN");
-			System.out.println("Unknown joinPredicate operator: "+e.toString());
-		};
+		ret.add(SQLExpressionUtils.getBinaryExpressionOperatorToken(e));
 		
 		
 		// TODO SUPPORT MORE THAN COLUMN?
@@ -692,6 +719,45 @@ public class Join extends Operator {
 		}
 		
 		return out;
+	}
+	
+	@Override
+	protected Map<String, Expression> getChildrenIndexConds() throws Exception {
+		Map<String, Expression> left = this.getChildren().get(0).getChildrenIndexConds();
+		Map<String, Expression> right = this.getChildren().get(1).getChildrenIndexConds();
+		
+		boolean found = false; 
+		for (String s : left.keySet()) {
+			if (left.get(s) == null ) continue;
+			List<Column> ls = SQLExpressionUtils.getAttributes(left.get(s));
+			for (Column c : ls) {
+				String s2 = c.getTable().getName();
+				if (right.containsKey(s2)) {
+					left.replace(s, null);
+					found = true;
+					break;
+				}
+			}
+			if (found) break;
+		}
+		
+		found = false; 
+		for (String s : right.keySet()) {
+			if (right.get(s) == null ) continue;
+			List<Column> ls = SQLExpressionUtils.getAttributes(right.get(s));
+			for (Column c : ls) {
+				String s2 = c.getTable().getName();
+				if (left.containsKey(s2)) {
+					right.replace(s, null);
+					found = true;
+					break;
+				}
+			}
+			if (found) break;
+		}
+		
+		left.putAll(right);
+		return left;
 	}
 	
 	@Override

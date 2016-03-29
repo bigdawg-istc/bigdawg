@@ -1,5 +1,6 @@
 package istc.bigdawg.plan.operators;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -10,16 +11,11 @@ import istc.bigdawg.extract.logical.SQLTableExpression;
 import istc.bigdawg.packages.SciDBArray;
 import istc.bigdawg.utils.sqlutil.SQLExpressionUtils;
 import net.sf.jsqlparser.expression.Alias;
-import net.sf.jsqlparser.expression.BinaryExpression;
 import net.sf.jsqlparser.expression.Expression;
-import net.sf.jsqlparser.expression.Function;
-import net.sf.jsqlparser.expression.Parenthesis;
 import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
-import net.sf.jsqlparser.expression.operators.relational.OldOracleJoinBinaryExpression;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
-import net.sf.jsqlparser.statement.select.AllColumns;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.Select;
 import net.sf.jsqlparser.util.SelectUtils;
@@ -152,7 +148,7 @@ public class Scan extends Operator {
 	}
 	
 	@Override
-	public Select generateSQLStringDestOnly(Select dstStatement, boolean stopAtJoin) throws Exception {
+	public Select generateSQLStringDestOnly(Select dstStatement, boolean stopAtJoin, Set<String> allowedScans) throws Exception {
 
 		if(dstStatement == null) {
 			dstStatement = SelectUtils.buildSelectFromTable(table);
@@ -183,32 +179,42 @@ public class Scan extends Operator {
 			}
 		}
 		
-		if (indexCond != null) { // used to have a !isPruned;
+		if (indexCond != null ) { // used to have a !isPruned;
 			
-			Expression ic = null;
+			List<Column> cs = SQLExpressionUtils.getAttributes(indexCond);
+			List<String> ss = new ArrayList<>();
+			for (Column c : cs)  ss.add(c.getTable().getName());
+			ss.remove(this.srcTable);
+			if (tableAlias != null) ss.remove(tableAlias);
+			ss.retainAll(allowedScans);
 			
-			if (isPruned) {
-				ic = CCJSqlParserUtil.parseCondExpression(indexCond.toString());
-				Set<String> names = new HashSet<>();
-				names.add(this.srcTable);
-				names.add(this.tableAlias);
-				SQLExpressionUtils.renameAttributes(ic, names, this.getPruneToken());
-			} else 
-				ic = indexCond;
 			
-			PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
-			
-			Expression e = null; 
-			if(ps.getWhere() != null) {
-				e = new AndExpression(ps.getWhere(), ic);
-			} else {
-				e = ic;
-			}
-			
-			try {
-				ps.setWhere(e);
-			} catch (Exception ex) {
-				System.out.println("indexCond exception: "+indexCond.toString());
+			if (!ss.isEmpty()) {
+				Expression ic = null;
+				
+				if (isPruned) {
+					ic = CCJSqlParserUtil.parseCondExpression(indexCond.toString());
+					Set<String> names = new HashSet<>();
+					names.add(this.srcTable);
+					names.add(this.tableAlias);
+					SQLExpressionUtils.renameAttributes(ic, names, this.getPruneToken());
+				} else 
+					ic = indexCond;
+				
+				PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
+				
+				Expression e = null; 
+				if(ps.getWhere() != null) {
+					e = new AndExpression(ps.getWhere(), ic);
+				} else {
+					e = ic;
+				}
+				
+				try {
+					ps.setWhere(e);
+				} catch (Exception ex) {
+					System.out.println("indexCond exception: "+indexCond.toString());
+				}
 			}
 		}
 		
@@ -230,6 +236,14 @@ public class Scan extends Operator {
 		result.put(schemaAndName, locations.get(schemaAndName));
 		return result;
 	}
+	
+	@Override
+	protected Map<String, Expression> getChildrenIndexConds() throws Exception {
+		Map<String, Expression> ret = new HashMap<>();
+		ret.put((this.tableAlias != null ? this.tableAlias : this.srcTable), indexCond);
+		return ret;
+	}
+	
 	
 	@Override
 	public Map<String, Set<String>> getObjectToExpressionMappingForSignature() throws Exception{

@@ -2,9 +2,9 @@ package istc.bigdawg.plan.operators;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import istc.bigdawg.extract.logical.SQLTableExpression;
-import istc.bigdawg.plan.SQLQueryPlan;
 import istc.bigdawg.plan.extract.SQLOutItem;
 import istc.bigdawg.schema.DataObjectAttribute;
 import istc.bigdawg.schema.SQLAttribute;
@@ -46,9 +46,9 @@ public class Distinct extends Operator {
 
 	
 	@Override
-	public Select generateSQLStringDestOnly(Select dstStatement, boolean stopAtJoin) throws Exception {
+	public Select generateSQLStringDestOnly(Select dstStatement, boolean stopAtJoin, Set<String> allowedScans) throws Exception {
 		
-		dstStatement = children.get(0).generateSQLStringDestOnly(dstStatement, stopAtJoin);
+		dstStatement = children.get(0).generateSQLStringDestOnly(dstStatement, stopAtJoin, allowedScans);
 		
 		PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
 		ps.setDistinct(new net.sf.jsqlparser.statement.select.Distinct());

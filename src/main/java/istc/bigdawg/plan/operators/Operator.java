@@ -383,7 +383,11 @@ public class Operator {
 		//         if so, change the attribute name 
 
 		Expression e = attr.getSQLExpression();
-		Set<String> attribs = new HashSet<>(SQLExpressionUtils.getAttributes(e));
+		Set<Column> attribsExpr = new HashSet<>(SQLExpressionUtils.getAttributes(e));
+		Set<String> attribs = new HashSet<>();
+		
+		for (Column c : attribsExpr) attribs.add(c.getFullyQualifiedName());
+		
 		boolean ret = false;
 		
 		if (children.size() > 0) {
@@ -433,12 +437,11 @@ public class Operator {
 	}
 	
 	
-	protected Select generateSQLStringDestOnly(Select dstStatement, boolean stopAtJoin) throws Exception {
-
+	protected Select generateSQLStringDestOnly(Select dstStatement, boolean stopAtJoin, Set<String> allowedScans) throws Exception {
+		
 		// generic case
-		for(int i = 0; i < children.size(); ++i) {
-			dstStatement = children.get(i).generateSQLStringDestOnly(dstStatement, stopAtJoin);
-		}
+		for (Operator o : children)
+			dstStatement = o.generateSQLStringDestOnly(dstStatement, stopAtJoin, allowedScans);
 		return dstStatement;
 	}
 	
@@ -455,7 +458,7 @@ public class Operator {
 		clearJoinReservedObjects();
 		boolean originalPruneStatus = this.isPruned();
 		this.prune(false);
-		Select dstStatement  = this.generateSQLStringDestOnly(null, false);
+		Select dstStatement  = this.generateSQLStringDestOnly(null, false, this.getDataObjectAliasesOrNames().keySet());
 		this.prune(originalPruneStatus);
 		
 		// iterate over out schema and add it to select clause
@@ -634,6 +637,10 @@ public class Operator {
 		}
 		
 		Map<String, String> aliasOrString = new LinkedHashMap<>();
+		
+		if (this instanceof Aggregate && ((Aggregate)this).aggregateID != null)
+			aliasOrString.put(((Aggregate)this).getAggregateToken(), ((Aggregate)this).getAggregateToken());
+		
 		if (this.children.size() > 0 ) {
 			
 			for (Operator o : children) {
@@ -812,7 +819,7 @@ public class Operator {
 		
 		if ( !this.getClass().equals(Join.class) && (!child.getChildren().isEmpty())) {
 			// TODO targeted strike? CURRENTLY WASH EVERYTHING // Set<String> names = child.getDataObjectNames();
-			Select outputSelect 		= this.generateSQLStringDestOnly(null, true);
+			Select outputSelect 		= this.generateSQLStringDestOnly(null, true, this.getDataObjectAliasesOrNames().keySet());
 			String joinToken 			= ((Join)child).getJoinToken();
 			
 			PlainSelect ps 				= (PlainSelect) outputSelect.getSelectBody();
@@ -842,7 +849,7 @@ public class Operator {
 			}
 			sb.append(outputSelect);
 		} else if (child.getChildren().isEmpty()) {
-			sb.append(this.generateSQLStringDestOnly(null, true));
+			sb.append(this.generateSQLStringDestOnly(null, true, this.getDataObjectAliasesOrNames().keySet()));
 		}
 		
 		if (child instanceof Join)
@@ -910,5 +917,9 @@ public class Operator {
 	public void seekScanAndProcessAggregateInFilter() throws Exception {
 		for (Operator o : children) 
 			o.seekScanAndProcessAggregateInFilter();
+	}
+	
+	protected Map<String, Expression> getChildrenIndexConds() throws Exception {
+		return this.getChildren().get(0).getChildrenIndexConds();
 	}
 }

@@ -56,9 +56,9 @@ public class SQLOutItem extends CommonOutItem{
 				
 				if (before.equals(finder)) {
 					// shaving the front doesn't work, it's probably a function or other type of expression
-					List<String> resultStrings = SQLExpressionUtils.getAttributes(CCJSqlParserUtil.parseExpression(finder));
+					List<Column> resultStrings = SQLExpressionUtils.getAttributes(CCJSqlParserUtil.parseExpression(finder));
 					if (resultStrings.size() > 0)
-						finder = resultStrings.get(0);
+						finder = resultStrings.get(0).getFullyQualifiedName();
 					else 
 						break;
 					if (finder.equals(before)) {

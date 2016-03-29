@@ -26,9 +26,17 @@ import net.sf.jsqlparser.expression.TimeValue;
 import net.sf.jsqlparser.expression.WhenClause;
 import net.sf.jsqlparser.expression.operators.arithmetic.Division;
 import net.sf.jsqlparser.expression.operators.arithmetic.Multiplication;
+import net.sf.jsqlparser.expression.operators.relational.Between;
+import net.sf.jsqlparser.expression.operators.relational.EqualsTo;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
+import net.sf.jsqlparser.expression.operators.relational.GreaterThan;
+import net.sf.jsqlparser.expression.operators.relational.GreaterThanEquals;
 import net.sf.jsqlparser.expression.operators.relational.InExpression;
+import net.sf.jsqlparser.expression.operators.relational.LikeExpression;
+import net.sf.jsqlparser.expression.operators.relational.MinorThan;
+import net.sf.jsqlparser.expression.operators.relational.MinorThanEquals;
 import net.sf.jsqlparser.expression.operators.relational.MultiExpressionList;
+import net.sf.jsqlparser.expression.operators.relational.NotEqualsTo;
 import net.sf.jsqlparser.expression.operators.relational.OldOracleJoinBinaryExpression;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
@@ -221,9 +229,9 @@ public class SQLExpressionUtils {
 	}
 
 	
-	public static List<String> getAttributes(Expression expr) throws JSQLParserException {
+	public static List<Column> getAttributes(Expression expr) throws JSQLParserException {
 		
-		final List<String> attributes = new ArrayList<String>();
+		final List<Column> attributes = new ArrayList<>();
 
 
 		SQLExpressionHandler deparser = new SQLExpressionHandler() {
@@ -232,7 +240,7 @@ public class SQLExpressionUtils {
 			@Override
 			public void visit(Column tableColumn) {
 				super.visit(tableColumn);
-				attributes.add(tableColumn.getFullyQualifiedName());
+				attributes.add(tableColumn);
 			}
 			
 	    };
@@ -244,9 +252,9 @@ public class SQLExpressionUtils {
 		return attributes;
 	}
 	
-public static List<String> getColumnNamesInAllForms(Expression expr) throws JSQLParserException {
+	public static List<String> getColumnNamesInAllForms(Expression expr) throws JSQLParserException {
 		
-		final List<String> attributes = new ArrayList<String>();
+		final Set<String> attributes = new HashSet<String>();
 	
 		SQLExpressionHandler deparser = new SQLExpressionHandler() {
 	        
@@ -312,7 +320,7 @@ public static List<String> getColumnNamesInAllForms(Expression expr) throws JSQL
 	    };
 	    
 	    expr.accept(deparser);
-	    return attributes;
+	    return new ArrayList<>(attributes);
 	}
 	
 	
@@ -1224,4 +1232,30 @@ public static List<String> getColumnNamesInAllForms(Expression expr) throws JSQL
 		return subSelectToken + subSelectCount;
 	}
 	
+	public static String getBinaryExpressionOperatorToken(Expression e) {
+		String ret = null;
+		if (e instanceof EqualsTo) {
+			ret = "=";
+		} else if (e instanceof LikeExpression) {
+			ret = "LIKE";
+		} else if (e instanceof InExpression) {
+			ret = "IN";
+		} else if (e instanceof GreaterThanEquals) {
+			ret = ">=";
+		} else if (e instanceof GreaterThan) {
+			ret = ">";
+		} else if (e instanceof MinorThanEquals) {
+			ret = "<=";
+		} else if (e instanceof MinorThan) {
+			ret = "<";
+		} else if (e instanceof NotEqualsTo) {
+			ret = "<>";
+		} else if (e instanceof Between) {
+			ret = "BETWEEN";
+		} else {
+			ret = "UNKNOWN";
+			System.out.println("Unknown binary expression operator: "+e.toString());
+		};
+		return ret;
+	}
 }

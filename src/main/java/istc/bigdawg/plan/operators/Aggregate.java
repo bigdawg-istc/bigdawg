@@ -340,12 +340,12 @@ public class Aggregate extends Operator {
 	}
 	
 	@Override
-	public Select generateSQLStringDestOnly(Select dstStatement, boolean stopAtJoin) throws Exception {
+	public Select generateSQLStringDestOnly(Select dstStatement, boolean stopAtJoin, Set<String> allowedScans) throws Exception {
 
 		Select originalDST = dstStatement;
 		
-		if (aggregateID == null) dstStatement = children.get(0).generateSQLStringDestOnly(dstStatement, stopAtJoin);
-		else dstStatement = children.get(0).generateSQLStringDestOnly(null, stopAtJoin);
+		if (aggregateID == null) dstStatement = children.get(0).generateSQLStringDestOnly(dstStatement, stopAtJoin, allowedScans);
+		else dstStatement = children.get(0).generateSQLStringDestOnly(null, stopAtJoin, allowedScans);
 				
 		PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
 
@@ -561,10 +561,10 @@ public class Aggregate extends Operator {
 		return super.resolveAggregatesInFilter(e, goParent, this, names, sb);
 	}
 	
-//	@Override
-//	public void seekScanAndProcessAggregateInFilter() throws Exception {
-//		for (Operator o : children) 
-//			o.seekScanAndProcessAggregateInFilter();
-//	}
-	
+	@Override
+	protected Map<String, Expression> getChildrenIndexConds() throws Exception {
+		Map<String, Expression> ret = this.getChildren().get(0).getChildrenIndexConds();
+		ret.put(getAggregateToken(), null);
+		return ret;
+	}
 };

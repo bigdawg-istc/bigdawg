@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import istc.bigdawg.extract.logical.SQLTableExpression;
 import istc.bigdawg.packages.SciDBArray;
@@ -29,7 +30,7 @@ public class Sort extends Operator {
 	private SortOrder sortOrder;
 	
 	private List<OrderByElement> orderByElements;
-	private List<String> sortOrderStrings;
+//	private List<String> sortOrderStrings;
 	
 	protected boolean isWinAgg = false; // is it part of a windowed aggregate or an ORDER BY clause?
 	
@@ -164,8 +165,8 @@ public class Sort extends Operator {
 	}
 	
 	@Override
-	public Select generateSQLStringDestOnly(Select dstStatement, boolean stopAtJoin) throws Exception {
-		dstStatement = children.get(0).generateSQLStringDestOnly(dstStatement, stopAtJoin);
+	public Select generateSQLStringDestOnly(Select dstStatement, boolean stopAtJoin, Set<String> allowedScans) throws Exception {
+		dstStatement = children.get(0).generateSQLStringDestOnly(dstStatement, stopAtJoin, allowedScans);
 
 		updateOrderByElements();
 		

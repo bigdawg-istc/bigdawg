@@ -1,8 +1,8 @@
 package istc.bigdawg.plan;
 
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -11,14 +11,11 @@ import org.junit.Test;
 
 import istc.bigdawg.catalog.CatalogInstance;
 import istc.bigdawg.plan.extract.SQLPlanParser;
+import istc.bigdawg.plan.operators.Join;
+import istc.bigdawg.plan.operators.Operator;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.signature.Signature;
-import istc.bigdawg.utils.sqlutil.SQLExpressionUtils;
 import istc.bigdawg.utils.sqlutil.SQLPrepareQuery;
-import net.sf.jsqlparser.expression.Expression;
-import net.sf.jsqlparser.expression.Parenthesis;
-import net.sf.jsqlparser.parser.CCJSqlParserUtil;
-import net.sf.jsqlparser.schema.Column;
 
 public class TrialsAndErrors {
 	
@@ -32,9 +29,9 @@ public class TrialsAndErrors {
 		CatalogInstance.INSTANCE.getCatalog();
 		
 //		setupQueryExplainer();
-		setupQueryBuilder();
+//		setupQueryBuilder();
 //		setupRegexTester();
-//		setupTreeWalker();
+		setupTreeWalker();
 	}
 	
 	public void setupQueryExplainer() {
@@ -80,27 +77,29 @@ public class TrialsAndErrors {
 		PostgreSQLHandler psqlh = new PostgreSQLHandler(3);
 		System.out.println("Builder -- Type query or \"quit\" to exit: ");
 		Scanner scanner = new Scanner(System.in);
-		String query = scanner.nextLine();
+//		String query = scanner.nextLine();
 //		String query = "select l_returnflag, l_linestatus, sum(l_quantity) as sum_qty, sum(l_extendedprice) as sum_base_price, sum(l_extendedprice * (1 - l_discount)) as sum_disc_price, sum(l_extendedprice * (1 - l_discount) * (1 + l_tax)) as sum_charge, avg(l_quantity) as avg_qty, avg(l_extendedprice) as avg_price, avg(l_discount) as avg_disc, count(*) as count_order from lineitem where l_shipdate <= date '1998-12-01' - interval '1' day group by l_returnflag, l_linestatus order by l_returnflag, l_linestatus;";
 		
-//		String query = "SELECT lineitem.l_orderkey, sum(lineitem.l_extendedprice * (1 - lineitem.l_discount)) AS revenue, orders.o_orderdate, orders.o_shippriority FROM orders, customer, lineitem WHERE (orders.o_custkey = customer.c_custkey) AND (orders.o_orderdate < '1996-01-02') AND (customer.c_mktsegment = 'AUTOMOBILE') AND (lineitem.l_shipdate > '1996-01-02') AND (lineitem.l_orderkey = orders.o_orderkey) GROUP BY lineitem.l_orderkey, orders.o_orderdate, orders.o_shippriority ORDER BY revenue DESC, orders.o_orderdate;";
+		String query = "SELECT supplier.s_acctbal, supplier.s_name, nation.n_name, part.p_partkey, part.p_mfgr, supplier.s_address, supplier.s_phone, supplier.s_comment FROM (SELECT partsupp_1.ps_partkey, min(partsupp_1.ps_supplycost) AS minsuppcost FROM nation AS nation_1, region AS region_1, supplier AS supplier_1, partsupp AS partsupp_1 WHERE (supplier_1.s_nationkey = nation_1.n_nationkey) AND (nation_1.n_regionkey = region_1.r_regionkey) AND (region_1.r_name = 'AMERICA') AND (partsupp_1.ps_suppkey = supplier_1.s_suppkey) GROUP BY partsupp_1.ps_partkey) AS BIGDAWGAGGREGATE_1, partsupp, part, supplier, nation, region WHERE ((BIGDAWGAGGREGATE_1.minsuppcost) = partsupp.ps_supplycost) AND (partsupp.ps_partkey = BIGDAWGAGGREGATE_1.ps_partkey) AND ((part.p_type LIKE '%BRASS') AND (part.p_size = 14)) AND (part.p_partkey = partsupp.ps_partkey) AND (part.p_partkey = partsupp.ps_partkey) AND (supplier.s_suppkey = partsupp.ps_suppkey) AND (nation.n_nationkey = supplier.s_nationkey) AND (region.r_name = 'AMERICA') AND (region.r_regionkey = nation.n_regionkey) AND (region.r_regionkey = nation.n_regionkey) ORDER BY supplier.s_acctbal DESC, nation.n_name, supplier.s_name, part.p_partkey;";
 		while (!query.toLowerCase().equals("quit")) {
 			
 			SQLQueryPlan queryPlan = SQLPlanParser.extractDirect(psqlh, query);
-			System.out.println(queryPlan.getRootNode().generateSQLString(null) + "\n");
 			
-			System.out.println(queryPlan.getRootNode().getTreeRepresentation(true) + "\n");
+			Operator root = queryPlan.getRootNode();
+			System.out.println(root.generateSQLString(null) + "\n");
 			
-			Signature.printO2EMapping(queryPlan.getRootNode());
+			System.out.println(root.getTreeRepresentation(true) + "\n");
+			
+			Signature.printO2EMapping(root);
 			
 			System.out.println();
 			
-			Signature.printStrippedO2EMapping(queryPlan.getRootNode());
+			Signature.printStrippedO2EMapping(root);
 			
-//			System.out.println(RTED.computeDistance(queryPlan.getRootNode().getTreeRepresentation(true), "{}"));
+//			System.out.println(RTED.computeDistance(root.getTreeRepresentation(true), "{}"));
 			
-//			break;
-			query = scanner.nextLine();
+			break;
+//			query = scanner.nextLine();
 			
 		}
 		scanner.close();
@@ -140,21 +139,36 @@ public class TrialsAndErrors {
 	public void testWalker() throws Exception {
 		
 		if ( !runWalker ) return;
+
+		String query = "SELECT supplier.s_acctbal, supplier.s_name, nation.n_name, part.p_partkey, part.p_mfgr, supplier.s_address, supplier.s_phone, supplier.s_comment FROM (SELECT partsupp_1.ps_partkey, min(partsupp_1.ps_supplycost) AS minsuppcost FROM nation AS nation_1, region AS region_1, supplier AS supplier_1, partsupp AS partsupp_1 WHERE (supplier_1.s_nationkey = nation_1.n_nationkey) AND (nation_1.n_regionkey = region_1.r_regionkey) AND (region_1.r_name = 'AMERICA') AND (partsupp_1.ps_suppkey = supplier_1.s_suppkey) GROUP BY partsupp_1.ps_partkey) AS BIGDAWGAGGREGATE_1, partsupp, part, supplier, nation, region WHERE ((BIGDAWGAGGREGATE_1.minsuppcost) = partsupp.ps_supplycost) AND (partsupp.ps_partkey = BIGDAWGAGGREGATE_1.ps_partkey) AND ((part.p_type LIKE '%BRASS') AND (part.p_size = 14)) AND (part.p_partkey = partsupp.ps_partkey) AND (part.p_partkey = partsupp.ps_partkey) AND (supplier.s_suppkey = partsupp.ps_suppkey) AND (nation.n_nationkey = supplier.s_nationkey) AND (region.r_name = 'AMERICA') AND (region.r_regionkey = nation.n_regionkey) AND (region.r_regionkey = nation.n_regionkey) ORDER BY supplier.s_acctbal DESC, nation.n_name, supplier.s_name, part.p_partkey;";
+
+		PostgreSQLHandler psqlh = new PostgreSQLHandler(3);
+		SQLQueryPlan queryPlan = SQLPlanParser.extractDirect(psqlh, query);
 		
-//		PostgreSQLHandler psqlh = new PostgreSQLHandler(3);
-//		System.out.println("Walker -- Type query or \"quit\" to exit: ");
-//		Scanner scanner = new Scanner(System.in);
-//		String query = scanner.nextLine();
-//		
-//		Expression e = null;
-//		Select sel = null;
-//		
-//		scanner.close();
+		Operator root = queryPlan.getRootNode();
+		System.out.println(root.generateSQLString(null) + "\n");
 		
-		String query = "exists ( select * from lineitem where l_orderkey = o_orderkey and l_commitdate < l_receiptdate)";
-		Expression e = CCJSqlParserUtil.parseCondExpression(query);
+		List<Operator> walker = new ArrayList<>();
+		walker.add(root);
+		while (!walker.isEmpty()) {
+			List<Operator> nextgen = new ArrayList<>();
+			
+			for (Operator o: walker) {
+				
+				if (o instanceof Join) {
+					System.out.println("Join encounter: ");
+					System.out.println("Printing: "+((Join)o).getJoinPredicateObjectsForBinaryExecutionNode());
+					System.out.println();
+
+				}
+				
+				
+				nextgen.addAll(o.getChildren());
+			}
+			
+			walker = nextgen;
+		}
 		
-		System.out.println(e.getClass()+"; "+e.toString());
 	}
 	
 	public void printIndentation(int recLevel) {
