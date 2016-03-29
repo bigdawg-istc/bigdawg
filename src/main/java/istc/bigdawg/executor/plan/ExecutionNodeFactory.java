@@ -18,13 +18,11 @@ import istc.bigdawg.utils.IslandsAndCast.Scope;
 import net.sf.jsqlparser.statement.select.Select;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.log4j.Logger;
 import org.jgrapht.Graphs;
-import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
-import org.jgrapht.graph.DefaultEdge;
-import scala.collection.immutable.IntMap;
-
 
 public class ExecutionNodeFactory {
+	static final Logger log = Logger.getLogger(ExecutionNodeFactory.class.getName());
 
 	private static int maxSerial = 0;
 
@@ -163,6 +161,7 @@ public class ExecutionNodeFactory {
 		if (sb.toString().length() > 0) {
 			// this and joinOp == null will not happen at the same time
 			lqn = new LocalQueryExecutionNode(sb.toString(), engine, dest);
+			log.debug(String.format("Created new LocalQueryExecutionNode for %s", sb.toString()));
 			result.addVertex(lqn);
 			result.exitPoint = lqn;
 		}
@@ -206,6 +205,8 @@ public class ExecutionNodeFactory {
 
 			JoinOperand leftOp = new JoinOperand(engine, leftTable, leftAttribute, shuffleLeftJoinQuery);
 			JoinOperand rightOp = new JoinOperand(engine, rightTable, rightAttribute, shuffleRightJoinQuery);
+
+			log.debug(String.format("Created join node for query %s with left dependency on %s and right dependency on %s", broadcastQuery, leftTable, rightTable));
 			BinaryJoinExecutionNode joinNode = new BinaryJoinExecutionNode(broadcastQuery, engine, joinDestinationTable, leftOp, rightOp, comparator);
 			result.addVertex(joinNode);
 			
