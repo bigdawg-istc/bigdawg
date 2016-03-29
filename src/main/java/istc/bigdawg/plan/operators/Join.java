@@ -261,6 +261,8 @@ public class Join extends Operator {
 			return dstStatement;
 		}
     	
+		allowedScans = this.getDataObjectAliasesOrNames().keySet();
+		
     	Operator child0 = children.get(0);
     	Operator child1 = children.get(1);
     	

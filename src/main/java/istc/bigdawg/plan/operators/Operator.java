@@ -25,6 +25,8 @@ import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.AllColumns;
 import net.sf.jsqlparser.statement.select.AllTableColumns;
+import net.sf.jsqlparser.statement.select.FromItemVisitor;
+import net.sf.jsqlparser.statement.select.LateralSubSelect;
 import net.sf.jsqlparser.statement.select.OrderByElement;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.Select;
@@ -32,6 +34,9 @@ import net.sf.jsqlparser.statement.select.SelectBody;
 import net.sf.jsqlparser.statement.select.SelectExpressionItem;
 import net.sf.jsqlparser.statement.select.SelectItem;
 import net.sf.jsqlparser.statement.select.SelectItemVisitor;
+import net.sf.jsqlparser.statement.select.SubJoin;
+import net.sf.jsqlparser.statement.select.SubSelect;
+import net.sf.jsqlparser.statement.select.ValuesList;
 import net.sf.jsqlparser.statement.select.WithItem;
 
 public class Operator {
@@ -822,31 +827,8 @@ public class Operator {
 			Select outputSelect 		= this.generateSQLStringDestOnly(null, true, this.getDataObjectAliasesOrNames().keySet());
 			String joinToken 			= ((Join)child).getJoinToken();
 			
-			PlainSelect ps 				= (PlainSelect) outputSelect.getSelectBody();
-			List<OrderByElement> obes 	= ps.getOrderByElements();
-			List<Expression> gbes 		= ps.getGroupByColumnReferences();
-			List<SelectItem> sis 		= ps.getSelectItems();
+			updateJoinTokens((PlainSelect) outputSelect.getSelectBody(), joinToken);
 			
-			// CHANGE ORDER BY
-			if (obes != null && !obes.isEmpty()) 
-				for (OrderByElement obe : obes) 
-					SQLExpressionUtils.renameAttributes(obe.getExpression(), null, joinToken);
-			
-			// CHANGE GROUP BY and SELECT ITEM
-			if (gbes != null && !gbes.isEmpty()) {
-				for (Expression gbe : gbes) 
-					SQLExpressionUtils.renameAttributes(gbe, null, joinToken);
-				for (SelectItem si : sis) {
-					SelectItemVisitor siv = new SelectItemVisitor() {
-						@Override public void visit(AllColumns allColumns) {}
-						@Override public void visit(AllTableColumns allTableColumns) {}
-						@Override public void visit(SelectExpressionItem selectExpressionItem) {
-							try {
-								SQLExpressionUtils.renameAttributes(selectExpressionItem.getExpression(), null, joinToken);
-							} catch (JSQLParserException e) {e.printStackTrace();}}};
-					si.accept(siv);
-				}
-			}
 			sb.append(outputSelect);
 		} else if (child.getChildren().isEmpty()) {
 			sb.append(this.generateSQLStringDestOnly(null, true, this.getDataObjectAliasesOrNames().keySet()));
@@ -856,6 +838,47 @@ public class Operator {
 			return (Join) child;
 		else 
 			return null;
+	}
+	
+	private void updateJoinTokens(PlainSelect ps, String joinToken) throws Exception {
+		List<OrderByElement> obes 	= ps.getOrderByElements();
+		List<Expression> gbes 		= ps.getGroupByColumnReferences();
+		List<SelectItem> sis 		= ps.getSelectItems();
+		
+		// CHANGE ORDER BY
+		if (obes != null && !obes.isEmpty()) 
+			for (OrderByElement obe : obes) 
+				SQLExpressionUtils.renameAttributes(obe.getExpression(), null, joinToken);
+		
+		// CHANGE GROUP BY and SELECT ITEM
+		if (gbes != null && !gbes.isEmpty()) {
+			for (Expression gbe : gbes) 
+				SQLExpressionUtils.renameAttributes(gbe, null, joinToken);
+			for (SelectItem si : sis) {
+				SelectItemVisitor siv = new SelectItemVisitor() {
+					@Override public void visit(AllColumns allColumns) {}
+					@Override public void visit(AllTableColumns allTableColumns) {}
+					@Override public void visit(SelectExpressionItem selectExpressionItem) {
+						try {
+							SQLExpressionUtils.renameAttributes(selectExpressionItem.getExpression(), null, joinToken);
+						} catch (JSQLParserException e) {e.printStackTrace();}}};
+				si.accept(siv);
+			}
+		}
+		
+		// CHANGE FROM AND JOINS
+		ps.getFromItem().accept(new FromItemVisitor() {
+			@Override public void visit(Table tableName) {}
+			@Override public void visit(ValuesList valuesList) {}
+			@Override public void visit(SubJoin subjoin) {subjoin.getLeft().accept(this);}
+			@Override public void visit(LateralSubSelect lateralSubSelect) {lateralSubSelect.getSubSelect().accept(this);}
+
+			@Override
+			public void visit(SubSelect subSelect) {
+				try { updateJoinTokens((PlainSelect)subSelect.getSelectBody(), joinToken);
+				} catch (Exception e) { e.printStackTrace(); }
+			}
+		});;
 	}
 	
 	// will likely get overridden

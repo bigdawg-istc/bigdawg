@@ -155,27 +155,39 @@ public class Scan extends Operator {
 		}
 		
 		if (filterExpression != null && !isPruned()) { // used to have a !isPruned;
-			PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
 			
-			Expression e = null; 
-			if(ps.getWhere() != null) {
-				for (Expression s : filterSet) {
-					if (e == null) {
-						e = s;
-					} else {
-						e = new AndExpression(e, s); 
+			List<Column> cs = SQLExpressionUtils.getAttributes(filterExpression);
+			List<String> ss = new ArrayList<>();
+			for (Column c : cs)  ss.add(c.getTable().getName());
+			ss.remove(this.srcTable);
+			if (tableAlias != null) ss.remove(tableAlias);
+			ss.removeAll(allowedScans);
+			
+			
+			if (ss.isEmpty()) {
+			
+				PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
+				
+				Expression e = null; 
+				if(ps.getWhere() != null) {
+					for (Expression s : filterSet) {
+						if (e == null) {
+							e = s;
+						} else {
+							e = new AndExpression(e, s); 
+						}
 					}
+					e = new AndExpression(ps.getWhere(), e);
+				} else 
+					e = filterExpression;
+				
+	//			if ( e != null) resolveFunctionExpression(e);
+				
+				try {
+					ps.setWhere(e);
+				} catch (Exception ex) {
+					System.out.println("filterSet exception: "+filterExpression.toString());
 				}
-				e = new AndExpression(ps.getWhere(), e);
-			} else 
-				e = filterExpression;
-			
-//			if ( e != null) resolveFunctionExpression(e);
-			
-			try {
-				ps.setWhere(e);
-			} catch (Exception ex) {
-				System.out.println("filterSet exception: "+filterExpression.toString());
 			}
 		}
 		
@@ -186,10 +198,10 @@ public class Scan extends Operator {
 			for (Column c : cs)  ss.add(c.getTable().getName());
 			ss.remove(this.srcTable);
 			if (tableAlias != null) ss.remove(tableAlias);
-			ss.retainAll(allowedScans);
+			ss.removeAll(allowedScans);
 			
 			
-			if (!ss.isEmpty()) {
+			if (ss.isEmpty()) {
 				Expression ic = null;
 				
 				if (isPruned) {
