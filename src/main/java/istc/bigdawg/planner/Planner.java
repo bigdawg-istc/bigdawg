@@ -78,19 +78,17 @@ public class Planner {
 	 * @param userinput
 	 */
 	public static int getGetPerformanceAndPickTheBest(CrossIslandQueryNode ciqn, boolean isTrainingMode) throws Exception {
-		
 		int choice = 0;
+		List<QueryExecutionPlan> qeps = ciqn.getAllQEPs();
+		Signature signature = ciqn.getSignature();
 		
 		if (isTrainingMode) {
 			Log.debug("Running in Training Mode...");
 			// now call the corresponding monitor function to deliver permuted.
-			List<QueryExecutionPlan> qeps = ciqn.getAllQEPs();
-			Signature signature = ciqn.getSignature();
-			Monitor.addBenchmarks(qeps, signature, true);
+			Monitor.addBenchmarks(qeps, signature, false);
 			QueriesAndPerformanceInformation qnp = Monitor.getBenchmarkPerformance(qeps);
 	
 			// does some magic to pick out the best query, store it to the query plan queue
-	
 			long minDuration = Long.MAX_VALUE;
 			for (int i = 0; i < qnp.qList.size(); i++){
 				long currentDuration = qnp.pInfo.get(i);
@@ -101,16 +99,18 @@ public class Planner {
 			}
 		} else {
 			Log.debug("Running in production mode!!!");
-			Signature signature = ciqn.getSignature();
-
 			Signature closest = Monitor.getClosestSignature(signature);
+			double distance = signature.compare(closest);
+			Log.debug("Minimum distance between queries: " + distance);
 			if (closest != null){
 				Log.debug("Closest query found");
 				QueriesAndPerformanceInformation qnp = Monitor.getBenchmarkPerformance(closest);
 
 				// TODO does some magic to match the best query from the closest
 				// signature to a query plan for the current query
-				// Placeholder:
+				// Placeholder: This assumes that the order of
+				// permutations for a similar query will be the
+				// same as that of the current query
 				long minDuration = Long.MAX_VALUE;
 				for (int i = 0; i < qnp.qList.size(); i++){
 					long currentDuration = qnp.pInfo.get(i);
@@ -121,6 +121,7 @@ public class Planner {
 				}
 			} else {
 				Log.debug("No queries that are even slightly similar");
+				Monitor.addBenchmarks(qeps, signature, true);
 			}
 		}
 		
