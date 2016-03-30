@@ -1,9 +1,5 @@
 package istc.bigdawg.monitoring;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,6 +16,8 @@ import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.query.ConnectionInfoParser;
 import istc.bigdawg.signature.Signature;
 import istc.bigdawg.utils.IslandsAndCast.Scope;
+
+import org.mortbay.log.Log;
 
 public class Monitor {
     private static final String INSERT = "INSERT INTO monitoring (island, signature, query, lastRan, duration) SELECT '%s', '%s', '%s', -1, -1 WHERE NOT EXISTS (SELECT 1 FROM monitoring WHERE island='%s' AND query='%s')";
@@ -136,6 +134,7 @@ public class Monitor {
                 signatures.add(new Signature(signature));
             }
         } catch (Exception e) {
+            Log.debug(e.getMessage());
             e.printStackTrace();
         }
         return signatures;

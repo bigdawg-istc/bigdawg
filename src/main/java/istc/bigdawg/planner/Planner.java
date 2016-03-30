@@ -100,10 +100,10 @@ public class Planner {
 		} else {
 			Log.debug("Running in production mode!!!");
 			Signature closest = Monitor.getClosestSignature(signature);
-			double distance = signature.compare(closest);
-			Log.debug("Minimum distance between queries: " + distance);
 			if (closest != null){
 				Log.debug("Closest query found");
+				double distance = signature.compare(closest);
+				Log.debug("Minimum distance between queries: " + distance);
 				QueriesAndPerformanceInformation qnp = Monitor.getBenchmarkPerformance(closest);
 
 				// TODO does some magic to match the best query from the closest
