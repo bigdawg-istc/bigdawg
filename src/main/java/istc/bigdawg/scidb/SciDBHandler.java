@@ -517,7 +517,7 @@ public class SciDBHandler implements DBHandler {
 		} catch (SQLException ex) {
 			/*
 			 * it can be thrown when the target array did not exists which
-			 * should be a default behavior
+			 * should be a default behavior';
 			 */
 			if (ex.getMessage()
 					.contains("Array '" + array + "' does not exist.")) {

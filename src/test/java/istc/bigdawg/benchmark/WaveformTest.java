@@ -36,7 +36,7 @@ import istc.bigdawg.scidb.SciDBConnectionInfoTest;
  */
 public class WaveformTest {
 
-	private static Logger log = Logger.getLogger(CopyFromPostgresExecutor.class);
+	private static Logger log = Logger.getLogger(WaveformTest.class);
 
 	private String array = "test_waveform";
 	private String table = "test_waveform";
