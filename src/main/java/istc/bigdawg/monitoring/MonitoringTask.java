@@ -151,7 +151,7 @@ class Task implements Runnable {
             if (rows.size() > 0){
                 List<String> query = rows.get(0);
                 if (query.size() > queryCol){
-                    return query.get(queryCol).replace("**", "'");
+                    return query.get(queryCol).replace(Monitor.stringSeparator, "'");
                 }
             }
             return null;
