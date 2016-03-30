@@ -24,7 +24,9 @@ import net.sf.jsqlparser.schema.Column;
 public class Signature {
 	
 	private static String fieldSeparator = "|||||";
+	private static String fieldSeparatorRest = "[|][|][|][|][|]";
 	private static String elementSeparator = "&&&&&";
+	private static String elementSeparatorRest = "[&][&][&][&][&]";
 	
 	private Scope island;
 	private String sig1;
@@ -79,20 +81,20 @@ public class Signature {
 	
 	public Signature(String s) throws Exception{
 
-		List<String> parsed = Arrays.asList(s.split(fieldSeparator));
+		List<String> parsed = Arrays.asList(s.split(fieldSeparatorRest));
 		if (parsed.size() != 5 && parsed.size() != 6) {
 			throw new Exception("Ill-formed input string; cannot recover signature; String: "+s);
 		}
 		try {
 			this.island = Scope.valueOf(parsed.get(0));
 			this.sig1 = new String(parsed.get(1));
-			this.sig2 = Arrays.asList(parsed.get(2).split(elementSeparator));
-			this.sig3 = Arrays.asList(parsed.get(3).split(elementSeparator));
+			this.sig2 = Arrays.asList(parsed.get(2).split(elementSeparatorRest));
+			this.sig3 = Arrays.asList(parsed.get(3).split(elementSeparatorRest));
 			this.query = new String(parsed.get(4));
 			if (parsed.size() == 5)
 				this.sig4k = new ArrayList<>();
 			else
-				this.sig4k = Arrays.asList(parsed.get(5).split(elementSeparator));
+				this.sig4k = Arrays.asList(parsed.get(5).split(elementSeparatorRest));
 		} catch (Exception e) {
 			e.printStackTrace();
 			throw new Exception("Ill-formed input string; cannot recover signature; String: "+s);
