@@ -130,7 +130,7 @@ public class Monitor {
         try {
             PostgreSQLHandler.QueryResult qresult = handler.executeQueryPostgreSQL(SIGS);
             List<List<String>> rows = qresult.getRows();for (List<String> row: rows){
-                String signature = row.get(0);
+                String signature = row.get(0).replace("**", "'");
                 signatures.add(new Signature(signature));
             }
         } catch (Exception e) {
@@ -164,14 +164,15 @@ public class Monitor {
 
         PostgreSQLHandler handler = new PostgreSQLHandler();
         try {
-            PostgreSQLHandler.QueryResult qresult = handler.executeQueryPostgreSQL(String.format(SIGRETRIEVE, signature.toRecoverableString()));
+            String escapedSignature = signature.toRecoverableString().replace("'", "**");
+            PostgreSQLHandler.QueryResult qresult = handler.executeQueryPostgreSQL(String.format(SIGRETRIEVE, escapedSignature));
             List<List<String>> rows = qresult.getRows();
             for (List<String> row: rows){
                 long duration = Long.parseLong(row.get(0));
                 if (duration < 0){
                     duration = Long.MAX_VALUE;
                 }
-                String qep = row.get(1).replace("******", "'");
+                String qep = row.get(1).replace("**", "'");
                 perfInfo.add(duration);
                 queries.add(qep);
             }
@@ -185,8 +186,9 @@ public class Monitor {
     private static boolean insert(String query, Signature signature, Scope island) throws NotSupportIslandException {
         PostgreSQLHandler handler = new PostgreSQLHandler();
         try {
-            String escapedQuery = query.replace("'", "******");
-			handler.executeStatementPostgreSQL(String.format(INSERT, island.toString(), signature.toRecoverableString(), escapedQuery, island.toString(), escapedQuery));
+            String escapedQuery = query.replace("'", "**");
+            String escapedSignature = signature.toRecoverableString().replace("'", "**");
+			handler.executeStatementPostgreSQL(String.format(INSERT, island.toString(), escapedSignature, escapedQuery, island.toString(), escapedQuery));
 			return true;
 		} catch (SQLException e) {
 			return false;
@@ -196,7 +198,7 @@ public class Monitor {
     private static boolean delete(String query, Scope island) throws NotSupportIslandException {
         PostgreSQLHandler handler = new PostgreSQLHandler();
         try {
-            String escapedQuery = query.replace("'", "******");
+            String escapedQuery = query.replace("'", "**");
 			handler.executeStatementPostgreSQL(String.format(DELETE, island.toString(), escapedQuery));
 			return true;
 		} catch (SQLException e) {
@@ -212,7 +214,7 @@ public class Monitor {
 
     public void finishedBenchmark(QueryExecutionPlan qep, long startTime, long endTime) throws SQLException {
         PostgreSQLHandler handler = new PostgreSQLHandler();
-        String qepString = QueryExecutionPlan.qepToString(qep).replace("'", "******");
+        String qepString = QueryExecutionPlan.qepToString(qep).replace("'", "**");
         handler.executeStatementPostgreSQL(String.format(UPDATE, endTime, endTime-startTime, qep.getIsland(), qepString));
 
         // Only for testing purposes.Uncomment when necessary.
