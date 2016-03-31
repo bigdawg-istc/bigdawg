@@ -24,7 +24,7 @@ public class Scan extends Operator {
 	
 //	protected String filterExpressionString = null;
 	protected Expression filterExpression = null;
-	protected Set<Expression> filterSet;
+//	protected Set<Expression> filterSet;
 	protected Expression indexCond = null;
 	protected String srcTable;
 	
@@ -52,9 +52,9 @@ public class Scan extends Operator {
 			SQLExpressionUtils.removeExcessiveParentheses(filterExpression);
 			
 //			System.out.println("---> filterExpression: "+filterExpression);
-			
-			filterSet = new HashSet<Expression>();
-			filterSet.add(filterExpression);
+//			
+//			filterSet = new HashSet<Expression>();
+//			filterSet.add(filterExpression);
 			
 		}
 		
@@ -66,8 +66,8 @@ public class Scan extends Operator {
 			
 //			System.out.println("---> indexCond: "+indexCond);
 			
-			if (filterSet == null) filterSet = new HashSet<Expression>();
-			filterSet.add(indexCond);
+//			if (filterSet == null) filterSet = new HashSet<Expression>();
+//			filterSet.add(indexCond);
 		}
 		
 		table = new Table(srcTable); // new one to accommodate aliasing
@@ -96,8 +96,8 @@ public class Scan extends Operator {
 		if(parameters.get("Filter") != null) {
 			
 			filterExpression = CCJSqlParserUtil.parseCondExpression(parameters.get("Filter"));
-			filterSet = new HashSet<Expression>();
-			filterSet.add(filterExpression);
+//			filterSet = new HashSet<Expression>();
+//			filterSet.add(filterExpression);
 //			filterExpressionString = SQLUtilities.parseString(parameters.get("Filter"));
 //			filterSet = new HashSet<String>();
 //			filterSet.add(filterExpressionString);
@@ -123,12 +123,12 @@ public class Scan extends Operator {
 		this.srcTable = new String(sc.srcTable);
 		this.tableAlias = new String(sc.tableAlias);
 
-		if (sc.filterSet != null) {
-			this.filterSet = new HashSet<>();
-			for (Expression s : sc.filterSet) {
-				this.filterSet.add(CCJSqlParserUtil.parseCondExpression(s.toString()));
-			}
-		}
+//		if (sc.filterSet != null) {
+//			this.filterSet = new HashSet<>();
+//			for (Expression s : sc.filterSet) {
+//				this.filterSet.add(CCJSqlParserUtil.parseCondExpression(s.toString()));
+//			}
+//		}
 		this.table = new Table();
 		try {
 			this.table.setName(new String(sc.table.getName()));
@@ -148,7 +148,7 @@ public class Scan extends Operator {
 	}
 	
 	@Override
-	public Select generateSQLStringDestOnly(Select dstStatement, boolean stopAtJoin, Set<String> allowedScans) throws Exception {
+	public Select generateSQLStringDestOnly(Select dstStatement, Boolean stopAtJoin, Set<String> allowedScans) throws Exception {
 
 		if(dstStatement == null) {
 			dstStatement = SelectUtils.buildSelectFromTable(table);
@@ -170,18 +170,18 @@ public class Scan extends Operator {
 				
 				Expression e = null; 
 				if(ps.getWhere() != null) {
-					for (Expression s : filterSet) {
-						if (e == null) {
-							e = s;
-						} else {
-							e = new AndExpression(e, s); 
-						}
-					}
-					e = new AndExpression(ps.getWhere(), e);
+//					for (Expression s : filterSet) {
+//						if (e == null) {
+//							e = s;
+//						} else {
+//							e = new AndExpression(e, s); 
+//						}
+//					}
+					e = new AndExpression(ps.getWhere(), filterExpression);
 				} else 
 					e = filterExpression;
 				
-	//			if ( e != null) resolveFunctionExpression(e);
+				if ( e != null) e = CCJSqlParserUtil.parseCondExpression(e.toString());
 				
 				try {
 					ps.setWhere(e);
@@ -209,7 +209,7 @@ public class Scan extends Operator {
 					Set<String> names = new HashSet<>();
 					names.add(this.srcTable);
 					names.add(this.tableAlias);
-					SQLExpressionUtils.renameAttributes(ic, names, this.getPruneToken());
+					SQLExpressionUtils.renameAttributes(ic, names, null, this.getPruneToken());
 				} else 
 					ic = indexCond;
 				
@@ -222,6 +222,8 @@ public class Scan extends Operator {
 					e = ic;
 				}
 				
+				e = CCJSqlParserUtil.parseCondExpression(e.toString());
+
 				try {
 					ps.setWhere(e);
 				} catch (Exception ex) {
@@ -229,7 +231,6 @@ public class Scan extends Operator {
 				}
 			}
 		}
-		
 		
 		return dstStatement;
 
@@ -260,16 +261,20 @@ public class Scan extends Operator {
 	@Override
 	public Map<String, Set<String>> getObjectToExpressionMappingForSignature() throws Exception{
 		
+		Operator parent = this;
+		while (!parent.isBlocking && parent.parent != null ) parent = parent.parent;
+		Map<String, String> aliasMapping = parent.getDataObjectAliasesOrNames();
+		
 		Map<String, Set<String>> out = new HashMap<>();
 		
 		// filter
-		if (filterExpression != null) {
-			addToOut(CCJSqlParserUtil.parseCondExpression(filterExpression.toString()), out);
+		if (filterExpression != null && !SQLExpressionUtils.containsArtificiallyConstructedTables(filterExpression)) {
+			addToOut(CCJSqlParserUtil.parseCondExpression(filterExpression.toString()), out, aliasMapping);
 		}
 		
 		// join condition
-		if (indexCond != null) {
-			addToOut(CCJSqlParserUtil.parseCondExpression(indexCond.toString()), out);
+		if (indexCond != null && !SQLExpressionUtils.containsArtificiallyConstructedTables(indexCond)) {
+			addToOut(CCJSqlParserUtil.parseCondExpression(indexCond.toString()), out, aliasMapping);
 		}
 		
 		return out;
@@ -292,7 +297,7 @@ public class Scan extends Operator {
 			if (result != null) {
 				SQLExpressionUtils.updateFunctionInCondExpression(result, exp.get(1));
 				exp = SQLExpressionUtils.locateFunctionInCondExpression(filterExpression);
-				SQLExpressionUtils.renameAttributes(indexCond, names, sb.toString());
+				SQLExpressionUtils.renameAttributes(indexCond, names, null, sb.toString());
 				
 			} else {
 				break;

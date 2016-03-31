@@ -247,9 +247,9 @@ public class Operator {
 	}
 	
 	
-	public String generateSQLSelectIntoStringForExecutionTree(String into) throws Exception {
+	public String generateSQLSelectIntoStringForExecutionTree(String into, Boolean stopAtJoin) throws Exception {
 		
-		Select dstStatement  = prepareForSQLGeneration(null);
+		Select dstStatement  = prepareForSQLGeneration(null, stopAtJoin);
 		
 		// dealing with WITH statment
 		if (into != null) {
@@ -403,7 +403,7 @@ public class Operator {
 						
 						Set<String> replacementSet = new HashSet<String>(this.objectAliases);
 						replacementSet.add(attr.getName());
-						SQLExpressionUtils.renameAttributes(e, replacementSet, o.getPruneToken());
+						SQLExpressionUtils.renameAttributes(e, replacementSet, null, o.getPruneToken());
 						
 						attr.setExpression(e.toString());
 						
@@ -412,7 +412,7 @@ public class Operator {
 						
 						Set<String> replacementSet = new HashSet<String>(this.objectAliases);
 						replacementSet.add(attr.getName());
-						SQLExpressionUtils.renameAttributes(e, replacementSet, o.getPruneToken());
+						SQLExpressionUtils.renameAttributes(e, replacementSet, null, o.getPruneToken());
 						
 						attr.setExpression(e.toString());
 						ret = true;
@@ -442,7 +442,7 @@ public class Operator {
 	}
 	
 	
-	protected Select generateSQLStringDestOnly(Select dstStatement, boolean stopAtJoin, Set<String> allowedScans) throws Exception {
+	protected Select generateSQLStringDestOnly(Select dstStatement, Boolean stopAtJoin, Set<String> allowedScans) throws Exception {
 		
 		// generic case
 		for (Operator o : children)
@@ -458,12 +458,12 @@ public class Operator {
 	 * @return dstStatement
 	 * @throws Exception
 	 */
-	private Select prepareForSQLGeneration(Select srcStatement) throws Exception {
+	private Select prepareForSQLGeneration(Select srcStatement, Boolean stopAtJoin) throws Exception {
 
 		clearJoinReservedObjects();
 		boolean originalPruneStatus = this.isPruned();
 		this.prune(false);
-		Select dstStatement  = this.generateSQLStringDestOnly(null, false, this.getDataObjectAliasesOrNames().keySet());
+		Select dstStatement  = this.generateSQLStringDestOnly(null, stopAtJoin, this.getDataObjectAliasesOrNames().keySet());
 		this.prune(originalPruneStatus);
 		
 		// iterate over out schema and add it to select clause
@@ -496,21 +496,23 @@ public class Operator {
 			ps.setSelectItems(changeSelectItemsOrder(srcStatement, selects));
 		else 
 			ps.setSelectItems(selectItemList);
-		return dstStatement;
+		
+		if (stopAtJoin == null) stopAtJoin = true;
+		return postProcGenSQLStopJoin(dstStatement, stopAtJoin);
 	}
 	
 	
 	// this is the implicit root of the SQL generated
 	public String generateSQLString(Select srcStatement) throws Exception {
 		
-		Select dstStatement = prepareForSQLGeneration(srcStatement);
+		Select dstStatement = prepareForSQLGeneration(srcStatement, false);
 		return dstStatement.toString();
 
 	}
 	
 	public String generateSQLWithWidthBucket(String widthBucketString, String into, Select srcStatement) throws Exception {
 		
-		Select dstStatement = prepareForSQLGeneration(srcStatement);
+		Select dstStatement = prepareForSQLGeneration(srcStatement, false);
 		
 		PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
 		
@@ -827,11 +829,51 @@ public class Operator {
 			Select outputSelect 		= this.generateSQLStringDestOnly(null, true, this.getDataObjectAliasesOrNames().keySet());
 			String joinToken 			= ((Join)child).getJoinToken();
 			
-			updateJoinTokens((PlainSelect) outputSelect.getSelectBody(), joinToken);
+			Map<String, String> ane = this.getChildren().get(0).getDataObjectAliasesOrNames();
+			Set<String> childAliases = ane.keySet();
+			Set<String> childAliasesAndNames = new HashSet<>(ane.keySet());
+			for (String s : ane.values()) childAliasesAndNames.add(s);
 			
+			
+			updateJoinTokens((PlainSelect) outputSelect.getSelectBody(), childAliases, childAliasesAndNames, joinToken);
+			if (outputSelect.getWithItemsList() != null) 
+				for (WithItem wi : outputSelect.getWithItemsList())
+					updateJoinTokens(((PlainSelect)wi.getSelectBody()), childAliases, childAliasesAndNames, joinToken);
 			sb.append(outputSelect);
 		} else if (child.getChildren().isEmpty()) {
 			sb.append(this.generateSQLStringDestOnly(null, true, this.getDataObjectAliasesOrNames().keySet()));
+		} else {
+			// this.getClass().equals(Join.class) && (!child.getChildren().isEmpty())
+			
+			System.out.printf("\n\nJoin case: \nchild0: %s; %s;\n%s\n\nchild1: %s; %s;\n%s\n\n\n", 
+					children.get(0).getClass().getSimpleName(), 
+					children.get(0).generateSQLStringDestOnly(null, true, children.get(0).getDataObjectAliasesOrNames().keySet()), 
+					children.get(0).getTreeRepresentation(true), 
+					children.get(1).getClass().getSimpleName(), 
+					children.get(1).generateSQLStringDestOnly(null, true, children.get(1).getDataObjectAliasesOrNames().keySet()),
+					children.get(1).getTreeRepresentation(true));
+			
+			
+			Select outputSelect = this.generateSQLStringDestOnly(null, null, this.getDataObjectAliasesOrNames().keySet());
+//			Expression where = ((PlainSelect)outputSelect.getSelectBody()).getWhere();
+			
+			for (Operator childchild : children) {
+				while ((!childchild.getChildren().isEmpty()) && !childchild.getClass().equals(Join.class)) 
+					childchild = childchild.getChildren().get(0);
+				
+				if (!childchild.getChildren().isEmpty()) {
+					Map<String, String> anecc = childchild.getDataObjectAliasesOrNames();
+					Set<String> childAliases = anecc.keySet();
+					Set<String> childAliasesAndNames = new HashSet<>(anecc.keySet());
+					for (String s : anecc.values()) childAliasesAndNames.add(s);
+					updateJoinTokens(((PlainSelect)outputSelect.getSelectBody()), childAliases, childAliasesAndNames, ((Join)childchild).getJoinToken());
+					if (outputSelect.getWithItemsList() != null) 
+						for (WithItem wi : outputSelect.getWithItemsList())
+							updateJoinTokens(((PlainSelect)wi.getSelectBody()), childAliases, childAliasesAndNames, ((Join)childchild).getJoinToken());
+				}
+			}
+			
+			sb.append(outputSelect);
 		}
 		
 		if (child instanceof Join)
@@ -840,34 +882,41 @@ public class Operator {
 			return null;
 	}
 	
-	private void updateJoinTokens(PlainSelect ps, String joinToken) throws Exception {
+	protected void updateJoinTokens(PlainSelect ps, Set<String> originalAliases, Set<String> aliasesAndNames, String joinToken) throws Exception {
 		List<OrderByElement> obes 	= ps.getOrderByElements();
 		List<Expression> gbes 		= ps.getGroupByColumnReferences();
 		List<SelectItem> sis 		= ps.getSelectItems();
+		Expression where = ps.getWhere();
+		Expression having = ps.getHaving();
+		
+		// CHANGE WHERE AND HAVING
+		if (where != null) SQLExpressionUtils.renameAttributes(where, originalAliases, aliasesAndNames, joinToken);
+		if (having != null) SQLExpressionUtils.renameAttributes(having, originalAliases, aliasesAndNames, joinToken);
 		
 		// CHANGE ORDER BY
 		if (obes != null && !obes.isEmpty()) 
 			for (OrderByElement obe : obes) 
-				SQLExpressionUtils.renameAttributes(obe.getExpression(), null, joinToken);
+				SQLExpressionUtils.renameAttributes(obe.getExpression(), originalAliases, aliasesAndNames, joinToken);
 		
 		// CHANGE GROUP BY and SELECT ITEM
 		if (gbes != null && !gbes.isEmpty()) {
 			for (Expression gbe : gbes) 
-				SQLExpressionUtils.renameAttributes(gbe, null, joinToken);
-			for (SelectItem si : sis) {
-				SelectItemVisitor siv = new SelectItemVisitor() {
-					@Override public void visit(AllColumns allColumns) {}
-					@Override public void visit(AllTableColumns allTableColumns) {}
-					@Override public void visit(SelectExpressionItem selectExpressionItem) {
-						try {
-							SQLExpressionUtils.renameAttributes(selectExpressionItem.getExpression(), null, joinToken);
-						} catch (JSQLParserException e) {e.printStackTrace();}}};
-				si.accept(siv);
-			}
+				SQLExpressionUtils.renameAttributes(gbe, originalAliases, aliasesAndNames, joinToken);
+		}
+		for (SelectItem si : sis) {
+			SelectItemVisitor siv = new SelectItemVisitor() {
+				@Override public void visit(AllColumns allColumns) {}
+				@Override public void visit(AllTableColumns allTableColumns) {}
+				@Override public void visit(SelectExpressionItem selectExpressionItem) {
+					try {
+						SQLExpressionUtils.renameAttributes(selectExpressionItem.getExpression(), originalAliases, aliasesAndNames, joinToken);
+					} catch (JSQLParserException e) {e.printStackTrace();}}};
+			si.accept(siv);
 		}
 		
 		// CHANGE FROM AND JOINS
-		ps.getFromItem().accept(new FromItemVisitor() {
+		
+		FromItemVisitor fv = new FromItemVisitor() {
 			@Override public void visit(Table tableName) {}
 			@Override public void visit(ValuesList valuesList) {}
 			@Override public void visit(SubJoin subjoin) {subjoin.getLeft().accept(this);}
@@ -875,11 +924,39 @@ public class Operator {
 
 			@Override
 			public void visit(SubSelect subSelect) {
-				try { updateJoinTokens((PlainSelect)subSelect.getSelectBody(), joinToken);
+				try { updateJoinTokens((PlainSelect)subSelect.getSelectBody(), originalAliases, aliasesAndNames, joinToken);
 				} catch (Exception e) { e.printStackTrace(); }
 			}
-		});;
+		};
+		
+		ps.getFromItem().accept(fv);
+		if (ps.getJoins() != null)
+			for (net.sf.jsqlparser.statement.select.Join j : ps.getJoins())
+				j.getRightItem().accept(fv);
+		
 	}
+	
+	protected Select postProcGenSQLStopJoin(Select dstStatement, Boolean stopAtJoin) throws Exception {
+    	
+    	if (dstStatement == null || !stopAtJoin) return dstStatement;
+    	
+    	for (Operator o : children) {
+    		Operator child = o;
+    		while ((!child.getChildren().isEmpty()) && (!child.getClass().equals(Join.class))) child = child.getChildren().get(0);
+    		if (!child.children.isEmpty()) {
+    			Map<String, String> ane = child.getDataObjectAliasesOrNames();
+    			Set<String> childAliases = ane.keySet();
+    			Set<String> childAliasesAndNames = new HashSet<>(ane.keySet());
+    			for (String s : ane.values()) childAliasesAndNames.add(s);
+    			updateJoinTokens(((PlainSelect)dstStatement.getSelectBody()), childAliases, childAliasesAndNames, ((Join)child).getJoinToken());
+//    			if (dstStatement.getWithItemsList() != null)
+//    				for (WithItem wi : dstStatement.getWithItemsList())
+//    					updateJoinTokens(((PlainSelect)wi.getSelectBody()), childNames, ((Join)child).getJoinToken());
+    		}
+    	}
+    	
+    	return dstStatement;
+    }
 	
 	// will likely get overridden
 	public String getTreeRepresentation(boolean isRoot) throws Exception{
@@ -902,9 +979,8 @@ public class Operator {
 	 * @param out
 	 * @throws Exception 
 	 */
-	protected void addToOut(Expression e, Map<String, Set<String>> out) throws Exception {
+	protected void addToOut(Expression e, Map<String, Set<String>> out, Map<String, String> aliasMapping) throws Exception {
 		
-		Map<String, String> aliasMapping = this.getDataObjectAliasesOrNames();
 		while (e instanceof Parenthesis) e = ((Parenthesis)e).getExpression();
 		SQLExpressionUtils.restoreTableNamesFromAliasForSignature(e, aliasMapping);
 		

@@ -110,7 +110,7 @@ public class CommonSQLTableExpressionScan extends Scan {
 	};
 
 	@Override
-	public Select generateSQLStringDestOnly(Select dstStatement, boolean stopAtJoin, Set<String> allowedScans) throws Exception {
+	public Select generateSQLStringDestOnly(Select dstStatement, Boolean stopAtJoin, Set<String> allowedScans) throws Exception {
 		dstStatement = super.generateSQLStringDestOnly(dstStatement, stopAtJoin, allowedScans);
 		 
 		List<WithItem> withs = dstStatement.getWithItemsList();

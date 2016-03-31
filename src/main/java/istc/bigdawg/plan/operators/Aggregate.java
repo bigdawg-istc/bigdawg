@@ -340,9 +340,16 @@ public class Aggregate extends Operator {
 	}
 	
 	@Override
-	public Select generateSQLStringDestOnly(Select dstStatement, boolean stopAtJoin, Set<String> allowedScans) throws Exception {
+	public Select generateSQLStringDestOnly(Select dstStatement, Boolean stopAtJoin, Set<String> allowedScans) throws Exception {
 
 		Select originalDST = dstStatement;
+		
+//		String joinToken = null;
+//		Operator o = this.getChildren().get(0);
+//		while (!o.getChildren().isEmpty() && !(o instanceof Join)) o = o.getChildren().get(0);
+//		if (o instanceof Join && stopAtJoin != null && stopAtJoin == true) joinToken = ((Join)o).getJoinToken();
+//
+//		
 		
 		if (aggregateID == null) dstStatement = children.get(0).generateSQLStringDestOnly(dstStatement, stopAtJoin, allowedScans);
 		else dstStatement = children.get(0).generateSQLStringDestOnly(null, stopAtJoin, allowedScans);
@@ -354,19 +361,25 @@ public class Aggregate extends Operator {
 		
 		for (String alias: outSchema.keySet()) {
 			
-			Expression e = outSchema.get(alias).getSQLExpression();
+			Expression e = CCJSqlParserUtil.parseExpression(outSchema.get(alias).getSQLExpression().toString());
 			SelectItem s = new SelectExpressionItem(e);
 			
-			if (!(e instanceof Column))
+			if (!(e instanceof Column)) {
+//				if (joinToken != null) SQLExpressionUtils.renameAttributes(e, this.getDataObjectAliasesOrNames().keySet(), joinToken);
 				((SelectExpressionItem)s).setAlias(new Alias(alias));
+			}
 			
 			ps.addSelectItems(s);
 		}
 		
-		updateGroupByElements();
+		updateGroupByElements(stopAtJoin);
 		ps.setGroupByColumnReferences(parsedGroupBys);
-		if (aggregateFilter != null)
-			ps.setHaving(CCJSqlParserUtil.parseCondExpression(aggregateFilter));
+		if (aggregateFilter != null) {
+			Expression e = CCJSqlParserUtil.parseCondExpression(aggregateFilter);
+//			if (joinToken != null) SQLExpressionUtils.renameAttributes(e, this.getDataObjectAliasesOrNames().keySet(), joinToken);
+			ps.setHaving(e);
+		}
+		
 		
 		if (aggregateID == null) return dstStatement;
 		if (originalDST == null) {
@@ -374,6 +387,8 @@ public class Aggregate extends Operator {
 			SubSelect ss = makeNewSubSelectUpdateDST(dstStatement);
 			originalDST = SelectUtils.buildSelectFromTable(new Table()); // immediately replaced
 			((PlainSelect)originalDST.getSelectBody()).setFromItem(ss);
+			
+//			System.out.printf("\n\n\nAggregate:\n\nonce: %s\n\n\n", originalDST.toString());
 			
 			return originalDST;
 		}
@@ -384,6 +399,8 @@ public class Aggregate extends Operator {
 		insert.setSimple(true);
 		
 		PlainSelect pselect = (PlainSelect)originalDST.getSelectBody();
+		
+		System.out.printf("\n\n\nAggregate:\n\nbefore: %s\n\n", originalDST.toString());
 		
 		if (pselect.getJoins() != null) {
 			boolean isFound = false;
@@ -416,6 +433,8 @@ public class Aggregate extends Operator {
 			}
 		}
 		
+		System.out.printf("after: %s\n\n\n", originalDST.toString());
+		
 		return originalDST;
 	}
 	
@@ -427,7 +446,7 @@ public class Aggregate extends Operator {
 		return ss;
 	}
 	
-	public void updateGroupByElements() throws Exception {
+	public void updateGroupByElements(Boolean stopAtJoin) throws Exception {
 		
 		List<Operator> treeWalker;
 		if (parsedGroupBys == null)
@@ -450,6 +469,17 @@ public class Aggregate extends Operator {
 							found = true;
 							break;
 						}
+					} else if (o instanceof Join && (stopAtJoin != null && stopAtJoin == true )) {
+						
+						Column c = (Column)gb;
+						
+						if (o.getOutSchema().containsKey(c.getFullyQualifiedName())) {
+							c.setTable(new Table(((Join)o).getJoinToken()));
+							found = true;
+							break;
+						}
+						
+						
 					} else {
 						nextGeneration.addAll(o.children);
 					}
@@ -486,7 +516,7 @@ public class Aggregate extends Operator {
 				sb.append(" AS ").append(aggregateAliases.get(i));
 			
 		}
-		updateGroupByElements();
+		updateGroupByElements(false);
 		
 		if(groupBy.size() > 0) {
 			for(int i = 0; i < groupBy.size(); ++i) {
@@ -521,21 +551,29 @@ public class Aggregate extends Operator {
 	@Override
 	public Map<String, Set<String>> getObjectToExpressionMappingForSignature() throws Exception{
 		
+		Operator parent = this;
+		while (!parent.isBlocking && parent.parent != null ) parent = parent.parent;
+		Map<String, String> aliasMapping = parent.getDataObjectAliasesOrNames();
+		
 		Map<String, Set<String>> out = children.get(0).getObjectToExpressionMappingForSignature();
 		
-		// outItem
-		for (String s : outSchema.keySet()) {
-			Expression e = outSchema.get(s).getSQLExpression();
-			if (!(e instanceof Column || e instanceof AllColumns)) {
-				addToOut(e, out);
-			};
-		}
+//		// outItem
+//		for (String s : outSchema.keySet()) {
+//			Expression e = outSchema.get(s).getSQLExpression();
+//			if (!(e instanceof Column || e instanceof AllColumns)) {
+//				addToOut(e, out, aliasMapping);
+//			};
+//		}
 		
 		
 		// having
+		Expression e;
 		if (aggregateFilter != null) {
-			addToOut(CCJSqlParserUtil.parseCondExpression(aggregateFilter), out);
-		}
+			e = CCJSqlParserUtil.parseCondExpression(aggregateFilter);
+			if (!SQLExpressionUtils.containsArtificiallyConstructedTables(e)) {
+				addToOut(e, out, aliasMapping);
+			}
+		} 
 		
 		return out;
 	}

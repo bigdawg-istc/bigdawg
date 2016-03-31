@@ -13,6 +13,7 @@ import istc.bigdawg.catalog.CatalogInstance;
 import istc.bigdawg.plan.extract.SQLPlanParser;
 import istc.bigdawg.plan.operators.Join;
 import istc.bigdawg.plan.operators.Operator;
+import istc.bigdawg.planner.Planner;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.signature.Signature;
 import istc.bigdawg.utils.sqlutil.SQLPrepareQuery;
@@ -23,15 +24,17 @@ public class TrialsAndErrors {
 	private static boolean runBuilder = false;
 	private static boolean runRegex = false;
 	private static boolean runWalker = false;
+	private static boolean runPlanner = false;
 
 	@Before
 	public void setUp() throws Exception {
 		CatalogInstance.INSTANCE.getCatalog();
 		
 //		setupQueryExplainer();
-//		setupQueryBuilder();
+		setupQueryBuilder();
 //		setupRegexTester();
-		setupTreeWalker();
+//		setupTreeWalker();
+//		setupPlannerTester();
 	}
 	
 	public void setupQueryExplainer() {
@@ -49,6 +52,10 @@ public class TrialsAndErrors {
 	public void setupTreeWalker() {
 		runWalker = true;
 	};
+	
+	public void setupPlannerTester() {
+		runPlanner = true;
+	}
 
 	@Test
 	public void testRunExplainer() throws Exception {
@@ -169,6 +176,19 @@ public class TrialsAndErrors {
 			walker = nextgen;
 		}
 		
+	}
+	
+	@Test
+	public void testPlanner() throws Exception {
+		if ( !runPlanner ) return;
+		
+		String userinput = "bdrel(SELECT supplier.s_acctbal, supplier.s_name, nation.n_name, part.p_partkey, part.p_mfgr, supplier.s_address, supplier.s_phone, supplier.s_comment FROM (SELECT partsupp_1.ps_partkey, min(partsupp_1.ps_supplycost) AS minsuppcost FROM nation AS nation_1, region AS region_1, supplier AS supplier_1, partsupp AS partsupp_1 WHERE (supplier_1.s_nationkey = nation_1.n_nationkey) AND (nation_1.n_regionkey = region_1.r_regionkey) AND (region_1.r_name = 'AMERICA') AND (partsupp_1.ps_suppkey = supplier_1.s_suppkey) GROUP BY partsupp_1.ps_partkey) AS BIGDAWGAGGREGATE_1, partsupp, part, supplier, nation, region WHERE ((BIGDAWGAGGREGATE_1.minsuppcost) = partsupp.ps_supplycost) AND (partsupp.ps_partkey = BIGDAWGAGGREGATE_1.ps_partkey) AND ((part.p_type LIKE '%BRASS') AND (part.p_size = 14)) AND (part.p_partkey = partsupp.ps_partkey) AND (part.p_partkey = partsupp.ps_partkey) AND (supplier.s_suppkey = partsupp.ps_suppkey) AND (nation.n_nationkey = supplier.s_nationkey) AND (region.r_name = 'AMERICA') AND (region.r_regionkey = nation.n_regionkey) AND (region.r_regionkey = nation.n_regionkey) ORDER BY supplier.s_acctbal DESC, nation.n_name, supplier.s_name, part.p_partkey);";
+		try {
+		Planner.processQuery(userinput, false);
+		} catch (Exception e) {
+			e.printStackTrace();
+			throw e;
+		}
 	}
 	
 	public void printIndentation(int recLevel) {

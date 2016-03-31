@@ -161,7 +161,7 @@ public class ExecutionNodeFactory {
 		if (sb.toString().length() > 0) {
 			// this and joinOp == null will not happen at the same time
 			lqn = new LocalQueryExecutionNode(sb.toString(), engine, dest);
-			log.debug(String.format("Created new LocalQueryExecutionNode for %s", sb.toString()));
+			log.debug(String.format("Created new LocalQueryExecutionNode for %s\n", sb.toString()));
 			result.addVertex(lqn);
 			result.exitPoint = lqn;
 		}
@@ -175,12 +175,17 @@ public class ExecutionNodeFactory {
 
 			// Break apart Join Predicate Objects into usable Strings
 			List<String> predicateObjects = joinOp.getJoinPredicateObjectsForBinaryExecutionNode();
+			
+			if (predicateObjects.isEmpty()) System.out.printf("Null predicate objects; \n\nleft: %s\n\nright: %s\n\npredicateObjects: %s\n\ntree: %s\n\n\n",
+					left.generateSQLString(null), right.generateSQLString(null), predicateObjects, joinOp.generateSQLString(null));
+			
+			
 			String comparator = predicateObjects.get(0);
 			String leftTable = StringUtils.substringBetween(predicateObjects.get(1), "{", ",");
 			String leftAttribute = StringUtils.substringBetween(predicateObjects.get(1), " ", "}");
 
-			String rightTable = StringUtils.substringBetween(predicateObjects.get(1), "{", ",");
-			String rightAttribute = StringUtils.substringBetween(predicateObjects.get(1), " ", "}");
+			String rightTable = StringUtils.substringBetween(predicateObjects.get(2), "{", ",");
+			String rightAttribute = StringUtils.substringBetween(predicateObjects.get(2), " ", "}");
 
 			// TODO(ankush): allow for multiple types of engines (not just SQL)
 
@@ -189,7 +194,7 @@ public class ExecutionNodeFactory {
 
 			// (jack): verify this is the correct mechanism for generating a query for --- CHECK 
 			// computing this join as a regular broadcast join rather than a shuffle join
-			String broadcastQuery = joinOp.generateSQLSelectIntoStringForExecutionTree(joinDestinationTable);
+			String broadcastQuery = joinOp.generateSQLSelectIntoStringForExecutionTree(joinDestinationTable, null);
 
 			// TODO(jack): verify that this mechanism for coming up with the queries to 
 			// run on each shuffle node makes sense with the Operator model
@@ -200,13 +205,13 @@ public class ExecutionNodeFactory {
 			// other Shuffle Join Query, and not bother with other things, right? 
 			
 			
-			String shuffleLeftJoinQuery = joinOp.generateSQLSelectIntoStringForExecutionTree(joinDestinationTable + "_LEFTRESULTS").replace(rightTable, joinDestinationTable + "_RIGHTPARTIAL");
-			String shuffleRightJoinQuery = joinOp.generateSQLSelectIntoStringForExecutionTree(joinDestinationTable + "_RIGHTRESULTS").replace(leftTable, joinDestinationTable + "_LEFTPARTIAL");
+			String shuffleLeftJoinQuery = joinOp.generateSQLSelectIntoStringForExecutionTree(joinDestinationTable + "_LEFTRESULTS", true).replace(rightTable, joinDestinationTable + "_RIGHTPARTIAL");
+			String shuffleRightJoinQuery = joinOp.generateSQLSelectIntoStringForExecutionTree(joinDestinationTable + "_RIGHTRESULTS", true).replace(leftTable, joinDestinationTable + "_LEFTPARTIAL");
 
 			JoinOperand leftOp = new JoinOperand(engine, leftTable, leftAttribute, shuffleLeftJoinQuery);
 			JoinOperand rightOp = new JoinOperand(engine, rightTable, rightAttribute, shuffleRightJoinQuery);
 
-			log.debug(String.format("Created join node for query %s with left dependency on %s and right dependency on %s", broadcastQuery, leftTable, rightTable));
+			log.debug(String.format("Created join node for query %s with left dependency on %s and right dependency on %s\n", broadcastQuery, leftTable, rightTable));
 			BinaryJoinExecutionNode joinNode = new BinaryJoinExecutionNode(broadcastQuery, engine, joinDestinationTable, leftOp, rightOp, comparator);
 			result.addVertex(joinNode);
 			
@@ -315,7 +320,7 @@ public class ExecutionNodeFactory {
 
 		// if RELATIONAL
 		if (qep.getIsland().equals(Scope.RELATIONAL))
-			remainderSelectIntoString = remainder.generateSQLSelectIntoStringForExecutionTree(null);
+			remainderSelectIntoString = remainder.generateSQLSelectIntoStringForExecutionTree(null, false);
 		else if (qep.getIsland().equals(Scope.ARRAY))
 			remainderSelectIntoString = remainder.generateAFLStoreStringForExecutionTree(null);
 		else 

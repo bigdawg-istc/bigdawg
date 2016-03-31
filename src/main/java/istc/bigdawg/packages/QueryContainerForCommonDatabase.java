@@ -42,7 +42,7 @@ public class QueryContainerForCommonDatabase {
 	}
 	
 	public String generateSQLSelectIntoString() throws Exception {
-		return rootOperator.generateSQLSelectIntoStringForExecutionTree(pruneToken);
+		return rootOperator.generateSQLSelectIntoStringForExecutionTree(pruneToken, false);
 	}
 	
 	public String generateAFLStoreString() throws Exception {

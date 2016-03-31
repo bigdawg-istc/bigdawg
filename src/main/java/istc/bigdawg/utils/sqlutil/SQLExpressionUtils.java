@@ -324,13 +324,18 @@ public class SQLExpressionUtils {
 	}
 	
 	
-	public static void renameAttributes(Expression expr, Set<String> originalTableNameSet, String replacement) throws JSQLParserException {
+	public static void renameAttributes(Expression expr, Set<String> originalAliasSet, Set<String> aliasesAndNames, String replacement) throws JSQLParserException {
+		
+		List<Boolean> functionFlag = new ArrayList<>();
 		
 		SQLExpressionHandler deparser = new SQLExpressionHandler() {
 	        
 			@Override
 			public void visit(Column tableColumn) {
-				if (originalTableNameSet == null || originalTableNameSet.contains(tableColumn.getTable().getName()))
+				
+				if (!functionFlag.isEmpty() && aliasesAndNames != null && aliasesAndNames.contains(tableColumn.getTable().getName()))
+					tableColumn.getTable().setName(replacement);
+				else if (originalAliasSet == null || originalAliasSet.contains(tableColumn.getTable().getName()))
 					tableColumn.getTable().setName(replacement);
 			}
 			
@@ -361,6 +366,7 @@ public class SQLExpressionUtils {
 			
 			@Override
 			public void visit(Function function) {
+				functionFlag.add(true);
 				function.getParameters().accept(this);
 			}
 			
@@ -517,14 +523,14 @@ public class SQLExpressionUtils {
 			@Override
 			public void visit(Column tableColumn) {
 				if (tableColumn.getTable() != null && tableColumn.getTable().getName() != null) {
-					
 					if ( tableColumn.getTable().getName().startsWith("BIGDAWGAGGREGATE_"))
 						tableColumn.getTable().setName("BIGDAWGAGGREGATE");
 					else if ( tableColumn.getTable().getName().startsWith("BIGDAWGPRUNED_")) 
 						tableColumn.getTable().setName("BIGDAWGPRUNED");
-					else 
+					else if (aliasMapping.get(tableColumn.getTable().getName()) != null)
 						tableColumn.getTable().setName(aliasMapping.get(tableColumn.getTable().getName()));
 				} else if (aliasMapping.size() == 1) {
+					
 					String alias = ((String)aliasMapping.keySet().toArray()[0]);
 					if (tableColumn.getTable() == null) tableColumn.setTable(new Table(alias));
 					else tableColumn.getTable().setName(alias);
@@ -592,6 +598,74 @@ public class SQLExpressionUtils {
 	    };
 	    
 	    expr.accept(deparser);
+	}
+	
+	public static boolean containsArtificiallyConstructedTables(Expression expr) {
+		
+		List<Boolean> ret = new ArrayList<>();
+		ret.add(false);
+		
+		SQLExpressionHandler deparser = new SQLExpressionHandler() {
+	        
+			@Override
+			public void visit(Column tableColumn) {
+				if (tableColumn.getTable() != null && tableColumn.getTable().getName() != null) {
+					if ( tableColumn.getTable().getName().startsWith("BIGDAWGAGGREGATE_"))
+						ret.set(0, true);
+					else if ( tableColumn.getTable().getName().startsWith("BIGDAWGPRUNED_")) 
+						ret.set(0, true);
+					else if ( tableColumn.getTable().getName().startsWith("BIGDAWGJOINTOKEN_"))
+						ret.set(0, true);
+				} 
+			}
+			
+			@Override public void visit(Parenthesis parenthesis) {parenthesis.getExpression().accept(this);}
+			@Override public void visit(InExpression in) {if ( in.getLeftExpression() != null ) in.getLeftExpression().accept(this);}
+			
+			@Override
+			public void visitOldOracleJoinBinaryExpression(OldOracleJoinBinaryExpression expression, String operator) {
+				expression.getLeftExpression().accept(this);
+				expression.getRightExpression().accept(this);
+			}
+			
+			@Override
+			protected void visitBinaryExpression(BinaryExpression binaryExpression, String operator) {
+		        binaryExpression.getLeftExpression().accept(this);
+		        binaryExpression.getRightExpression().accept(this);
+			}
+			
+			@Override
+		    public void visit(ExpressionList expressionList) {
+		        for (Iterator<Expression> iter = expressionList.getExpressions().iterator(); iter.hasNext();) {
+		            Expression expression = iter.next();
+		            expression.accept(this);
+		        }
+		    }
+			
+			@Override public void visit(Function function) {if (function.getParameters() != null) function.getParameters().accept(this); }
+			
+			@Override public void visit(SignedExpression se) {se.getExpression().accept(this);}
+			
+			@Override
+		    public void visit(CaseExpression caseExpression) {
+		        if (caseExpression.getSwitchExpression() != null) caseExpression.getSwitchExpression().accept(this);
+		        for (int i = 0; i < caseExpression.getWhenClauses().size(); i++) {
+		        	((WhenClause)caseExpression.getWhenClauses().get(i)).getWhenExpression().accept(this);
+		        	((WhenClause)caseExpression.getWhenClauses().get(i)).getThenExpression().accept(this);;
+		        }
+		        if (caseExpression.getElseExpression() != null) caseExpression.getElseExpression().accept(this);
+		    }
+			
+			@Override public void visit(LongValue lv) {};
+			@Override public void visit(DoubleValue lv) {};
+			@Override public void visit(HexValue lv) {};
+			@Override public void visit(NullValue lv) {};
+			@Override public void visit(TimeValue lv) {};
+			@Override public void visit(StringValue sv) {};
+	    };
+	    
+	    expr.accept(deparser);
+	    return ret.get(0);
 	}
 
 	/** 
