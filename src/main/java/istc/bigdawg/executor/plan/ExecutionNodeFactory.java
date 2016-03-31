@@ -248,27 +248,32 @@ public class ExecutionNodeFactory {
 			remainderDBID = Integer.parseInt(containers.values().iterator().next().getDBID());
 		}
 
+		String remainderSelectIntoString;
 		ConnectionInfo remainderCI;
-		if (qep.getIsland().equals(Scope.RELATIONAL))
+		if (qep.getIsland().equals(Scope.RELATIONAL)) {
 			remainderCI = CatalogViewer.getPSQLConnectionInfo(remainderDBID);
-		else if (qep.getIsland().equals(Scope.ARRAY))
+			remainderSelectIntoString = remainder.generateSQLString(null);
+		} else if (qep.getIsland().equals(Scope.ARRAY)) {
 			remainderCI = CatalogViewer.getSciDBConnectionInfo(remainderDBID);
-		else
+			// TODO(jack): check this out
+			remainderSelectIntoString = remainder.generateAFLStoreStringForExecutionTree(null);
+		} else {
 			throw new Exception("Unsupported island code: " + qep.getIsland().toString());
+		}
 
 		String remainderInto = qep.getSerializedName();
-
-		OperatorTree operatorTree = buildOperatorSubgraph(remainder, remainderCI, remainderInto);
-
-		Graphs.addGraph(qep, operatorTree);
-
 		qep.setTerminalTableName(remainderInto);
-		qep.setTerminalTableNode(operatorTree.exitPoint);
 
-		// if remainderLoc is not null, then there are no containers
 		if (remainderLoc != null) {
+			LocalQueryExecutionNode lqn = new LocalQueryExecutionNode(remainderSelectIntoString, remainderCI, remainderInto);
+			qep.addNode(lqn);
+			qep.setTerminalTableNode(lqn);
 			return;
 		}
+
+		OperatorTree operatorTree = buildOperatorSubgraph(remainder, remainderCI, remainderInto);
+		Graphs.addGraph(qep, operatorTree);
+		qep.setTerminalTableNode(operatorTree.exitPoint);
 
 		for(Map.Entry<String, QueryContainerForCommonDatabase> entry : containers.entrySet()) {
 			String table = entry.getKey();

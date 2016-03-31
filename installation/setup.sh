@@ -31,7 +31,8 @@ postgres2_bin=${downloads_dir}/postgres2/bin
 
 # tpch 
 scale_factor=1
-TABLES_TPCH_POSTGRES1=(region  part partsupp orders)
+TABLES_TPCH_POSTGRES1=(region part partsupp orders)
+# TABLES_TPCH_POSTGRES1=(region part partsupp orders nation supplier customer lineitem) # for tests
 TABLES_TPCH_POSTGRES2=(nation supplier customer lineitem)
 
 # auxiliary function: this compiles the code, intalls and configures the database

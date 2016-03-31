@@ -616,7 +616,7 @@ public class PostgreSQLHandler implements DBHandler {
 				preparedSt.setString(1, schemaTable.getSchemaName());
 				preparedSt.setString(2, schemaTable.getTableName());
 				// postgresql logger cannot accept single quotes
-				log.debug("replace double quotes (\") with signle quotes in the query to run it in PostgreSQL: "
+				log.debug("replace double quotes (\") with signle quotes in the query to log it in PostgreSQL: "
 						+ preparedSt.toString().replace("'", "\""));
 			} catch (SQLException e) {
 				e.printStackTrace();
