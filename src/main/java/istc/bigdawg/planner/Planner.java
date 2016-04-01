@@ -81,6 +81,8 @@ public class Planner {
 		int choice = 0;
 		List<QueryExecutionPlan> qeps = ciqn.getAllQEPs();
 		Signature signature = ciqn.getSignature();
+
+		Log.debug("Number of qeps: " + qeps.size());
 		
 		if (isTrainingMode) {
 			Log.debug("Running in Training Mode...");
