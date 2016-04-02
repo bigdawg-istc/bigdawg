@@ -17,12 +17,16 @@ public enum BigDawgConfigProperties {
 	private String postgreSQLURL;
 	private String postgreSQLUser;
 	private String postgreSQLPassword;
-
+	
 	private String postgreSQLTestHost;
 	private String postgreSQLTestPort;
 	private String postgreSQLTestDatabase;
 	private String postgreSQLTestUser;
 	private String postgreSQLTestPassword;
+	
+	private String sStoreSQLURL;
+	private String sStoreSQLUser;
+	private String sStoreSQLPassword;
 
 	private String accumuloIstanceType;
 	private String accumuloIstanceName;
@@ -86,7 +90,11 @@ public enum BigDawgConfigProperties {
 		this.postgreSQLTestDatabase = prop.getProperty("main.postgresql.test.database");
 		this.postgreSQLTestUser = prop.getProperty("main.postgresql.test.user");
 		this.postgreSQLTestPassword = prop.getProperty("main.postgresql.test.password");
-
+		
+		this.sStoreSQLURL = prop.getProperty("main.sstoresql.url");
+		this.sStoreSQLUser = prop.getProperty("main.sstoresql.user");
+		this.sStoreSQLPassword = prop.getProperty("main.sstoresql.password");
+		
 		this.accumuloIstanceType = prop.getProperty("main.accumulo.instanceType");
 		this.accumuloIstanceName = prop.getProperty("main.accumulo.instanceName");
 		this.accumuloZooKeepers = prop.getProperty("main.accumulo.zooKeepers");
@@ -192,7 +200,19 @@ public enum BigDawgConfigProperties {
 	public String getPostgreSQLURL() {
 		return postgreSQLURL;
 	}
-
+	
+	public String getSStoreSQLUser() {
+	    return sStoreSQLUser;
+	}
+	
+	public String getSStoreSQLPassword() {
+	    return sStoreSQLPassword;
+	}
+	
+	public String getSStoreSQLurl() {
+	    return sStoreSQLURL;
+	}
+	
 	public int getPostgresSchemaServerDBID() {
 		return postgresSchemaServerDBID;
 	}

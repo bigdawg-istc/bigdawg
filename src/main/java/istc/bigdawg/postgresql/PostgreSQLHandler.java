@@ -39,7 +39,7 @@ public class PostgreSQLHandler implements DBHandler {
 	private static Logger log = Logger.getLogger(PostgreSQLHandler.class.getName());
 	private static int defaultSchemaServerDBID = BigDawgConfigProperties.INSTANCE.getPostgresSchemaServerDBID();
 	private Connection con = null;
-	private PostgreSQLConnectionInfo conInfo = null;
+	private ConnectionInfo conInfo = null;
 	private Statement st = null;
 	private PreparedStatement preparedSt = null;
 	private ResultSet rs = null;
@@ -89,7 +89,7 @@ public class PostgreSQLHandler implements DBHandler {
 		return con;
 	}
 
-	public static Connection getConnection(PostgreSQLConnectionInfo conInfo) throws SQLException {
+	public static Connection getConnection(ConnectionInfo conInfo) throws SQLException {
 		Connection con;
 		String url = conInfo.getUrl();
 		String user = conInfo.getUser();

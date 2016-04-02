@@ -11,6 +11,7 @@ import java.util.List;
 import org.apache.log4j.Logger;
 
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
+import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
 
 public class CatalogViewer {
@@ -851,7 +852,7 @@ public class CatalogViewer {
 	 *             problem with the connection to the catalog or no data for the
 	 *             arguments in the catalog
 	 */
-	public static PostgreSQLConnectionInfo getConnection(int dbId) throws Exception {
+	public static ConnectionInfo getConnection(int dbId) throws Exception {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// TODO add cache for the connections (done by Adam)
 		CatalogUtilities.checkConnection(cc);
@@ -876,7 +877,7 @@ public class CatalogViewer {
 			logger.error(msg);
 			throw new Exception(msg);
 		}
-		PostgreSQLConnectionInfo conInfo = new PostgreSQLConnectionInfo(rs.getString("host"), rs.getString("port"), rs.getString("name"),
+		ConnectionInfo conInfo = new PostgreSQLConnectionInfo(rs.getString("host"), rs.getString("port"), rs.getString("name"),
 				rs.getString("userid"), rs.getString("password"));
 		return conInfo;
 	}

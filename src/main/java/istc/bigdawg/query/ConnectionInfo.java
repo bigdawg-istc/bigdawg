@@ -16,6 +16,13 @@ import org.apache.commons.lang3.tuple.Pair;
  * @author Adam Dziedzic
  */
 public interface ConnectionInfo extends Serializable {
+    
+    /**
+     * 
+     * @return name of the URL where the instance is running from which the
+     *         connection will be obtained
+     */
+    public String getUrl();
 
 	/**
 	 * 

@@ -186,9 +186,9 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 		System.out.println("Migrating data from PostgreSQL to PostgreSQL");
 		FromPostgresToPostgres migrator = new FromPostgresToPostgres();
 		PostgreSQLConnectionInfo conInfoFrom = new PostgreSQLConnectionInfo(
-				"localhost", "5431", "mimic2", "pguser", "test");
+				"localhost", "5432", "mimic2", "pguser", "test");
 		PostgreSQLConnectionInfo conInfoTo = new PostgreSQLConnectionInfo(
-				"localhost", "5431", "mimic2_copy", "pguser", "test");
+				"localhost", "5432", "mimic2_copy", "pguser", "test");
 		MigrationResult result;
 		try {
 			result = migrator.migrate(conInfoFrom, "mimic2v26.d_patients",
