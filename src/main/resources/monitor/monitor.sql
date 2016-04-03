@@ -1,8 +1,9 @@
 CREATE TABLE IF NOT EXISTS monitoring (
-	lastRan bigint,
-	duration integer,
-	island varchar(30),
-	query varchar(3000)
+  island varchar(50),
+  signature varchar(3000),
+  query varchar(3000),
+  lastRan bigint,
+  duration bigint
 );
 
 CREATE TABLE IF NOT EXISTS migrationstats (
