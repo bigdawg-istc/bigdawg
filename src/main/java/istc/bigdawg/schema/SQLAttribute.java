@@ -4,6 +4,7 @@ package istc.bigdawg.schema;
 
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.create.table.ColDataType;
 import net.sf.jsqlparser.statement.create.table.ColumnDefinition;
 
@@ -32,7 +33,7 @@ public class SQLAttribute extends DataObjectAttribute {
 			String typeName = type.getDataType();
 			type.setDataType(new String(typeName));
 			typeString = type.getDataType();
-			
+			expression = CCJSqlParserUtil.parseExpression(a.getColumnName());
 		}
 		
 		public SQLAttribute(SQLAttribute sa) throws JSQLParserException {

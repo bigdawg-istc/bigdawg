@@ -245,6 +245,9 @@ public class CrossIslandQueryNode {
 			// then it must have only one child, because join does not block
 			// root spear-heads the rest of the subtree
 			
+			System.out.println("--> blocking root; class: "+root.getClass().getSimpleName()+"; ");
+			System.out.println("--> tree rep: "+root.getTreeRepresentation(true)+"; ");
+			
 			List<Operator> ninos = getPermutatedOperatorsWithBlock(root.getChildren().get(0), joinPredConnections);
 			
 			for (Operator o: ninos) {

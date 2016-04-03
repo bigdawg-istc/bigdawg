@@ -482,6 +482,7 @@ public class Join extends Operator {
 		if (child.isPruned()) {
 			// does child have any of those names? 
 			Set<String> names = new HashSet<>(child.getDataObjectNames());
+			if (child.objectAliases == null) child.updateObjectAliases(true);
 			names.addAll(child.objectAliases);
 			names.retainAll(itemsSet);
 			if (names.size() > 0) {

@@ -68,6 +68,7 @@ public class SeqScan extends Scan {
 		for(int i = 0; i < output.size(); ++i) {
 			
 			String expr = output.get(i); // fully qualified name
+			
 			SQLOutItem out = new SQLOutItem(expr, baseTable.getAttributes(), supplement);
 			
 			SQLAttribute sa =  out.getAttribute();

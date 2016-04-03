@@ -144,7 +144,7 @@ public class SQLOutItem extends CommonOutItem{
 		}
 		
 
-		// there's  no alias
+		// there's no alias
 		if(alias == null) {
 			
 			String after = expr.replaceAll("[(][*_.'\\w]+[)]", "");
@@ -152,6 +152,7 @@ public class SQLOutItem extends CommonOutItem{
 				alias = expr;
 			} else if (expr.contains("(")) {
 				for (String key : srcSchema.keySet()) {
+					
 					if (srcSchema.get(key).getExpressionString().contains(expr)) {
 						alias = key;
 						break;
@@ -193,18 +194,21 @@ public class SQLOutItem extends CommonOutItem{
 					
 					for (DataObjectAttribute doa : srcSchema.values()) {
 						try {
-							if (doa.getSQLExpression() != null && 
-									SQLExpressionUtils.getAttributes(doa.getSQLExpression()).contains(name)){
+							if (doa.getSQLExpression() != null) {
+								
+								List<Column> lc = SQLExpressionUtils.getAttributes(doa.getSQLExpression());
+								List<String> ls = new ArrayList<>();
+								for (Column c : lc) ls.add(c.toString());
+								if (!ls.contains(name)) continue;
+								
 								for (DataObjectAttribute doa2: doa.getSourceAttributes()) {
-									
 									if (name.contains(doa2.getName())){
 										lookup = (SQLAttribute) doa2;
-										
 										break;
 									}
 								}
 							}
-						} catch (JSQLParserException e) {
+						} catch (Exception e) {
 							e.printStackTrace();
 						}
 						if (lookup != null)
