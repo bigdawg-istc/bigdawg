@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS monitoring (
   island varchar(50),
-  signature varchar(3000),
-  query varchar(3000),
+  signature text,
+  query text,
   lastRan bigint,
   duration bigint
 );
