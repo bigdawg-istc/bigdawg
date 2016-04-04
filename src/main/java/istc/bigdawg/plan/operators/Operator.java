@@ -845,13 +845,13 @@ public class Operator {
 		} else {
 			// this.getClass().equals(Join.class) && (!child.getChildren().isEmpty())
 			
-			System.out.printf("\n\nJoin case: \nchild0: %s; %s;\n%s\n\nchild1: %s; %s;\n%s\n\n\n", 
-					children.get(0).getClass().getSimpleName(), 
-					children.get(0).generateSQLStringDestOnly(null, true, children.get(0).getDataObjectAliasesOrNames().keySet()), 
-					children.get(0).getTreeRepresentation(true), 
-					children.get(1).getClass().getSimpleName(), 
-					children.get(1).generateSQLStringDestOnly(null, true, children.get(1).getDataObjectAliasesOrNames().keySet()),
-					children.get(1).getTreeRepresentation(true));
+//			System.out.printf("\n\nJoin case: \nchild0: %s; %s;\n%s\n\nchild1: %s; %s;\n%s\n\n\n", 
+//					children.get(0).getClass().getSimpleName(), 
+//					children.get(0).generateSQLStringDestOnly(null, true, children.get(0).getDataObjectAliasesOrNames().keySet()), 
+//					children.get(0).getTreeRepresentation(true), 
+//					children.get(1).getClass().getSimpleName(), 
+//					children.get(1).generateSQLStringDestOnly(null, true, children.get(1).getDataObjectAliasesOrNames().keySet()),
+//					children.get(1).getTreeRepresentation(true));
 			
 			
 			Select outputSelect = this.generateSQLStringDestOnly(null, null, this.getDataObjectAliasesOrNames().keySet());

@@ -247,12 +247,13 @@ public class CrossIslandQueryNode {
 			
 			System.out.println("--> blocking root; class: "+root.getClass().getSimpleName()+"; ");
 			System.out.println("--> tree rep: "+root.getTreeRepresentation(true)+"; ");
+			System.out.println("--> SQL: "+root.generateSQLString(null)+"; \n");
 			
 			List<Operator> ninos = getPermutatedOperatorsWithBlock(root.getChildren().get(0), joinPredConnections);
 			
 			for (Operator o: ninos) {
 				
-				Operator t = root.duplicate(false);
+				Operator t = root.duplicate(true); // TODO USED TO BE FALSE
 				t.addChild(o);
 				extraction.add(t);
 				
@@ -275,7 +276,7 @@ public class CrossIslandQueryNode {
 						
 					} else if (c.blockingStatus()) {
 						
-						Operator t = c.duplicate(false);
+						Operator t = c.duplicate(true); // TODO USED TO BE FALSE
 						leaves.add(t);
 						blockers.add(t);
 						

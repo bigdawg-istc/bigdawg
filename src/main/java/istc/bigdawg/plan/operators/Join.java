@@ -298,11 +298,14 @@ public class Join extends Operator {
         		s2 = ses.get(0);
         	}
         	
+        	// TODO MODIFIED
         	if (! s.equals(child0ObjectMap.get(s))) t0.setAlias(new Alias(s));
-        	t0.setName(child0ObjectMap.get(s));
+        	if (!child0.isPruned()) t0.setName(child0ObjectMap.get(s));
+        	else t0.setName(child0.getPruneToken());
         	
         	if (! s2.equals(child1ObjectMap.get(s2))) t1.setAlias(new Alias(s2));
-        	t1.setName(child1ObjectMap.get(s2));
+        	if (!child1.isPruned()) t1.setName(child1ObjectMap.get(s2));
+        	else t1.setName(child1.getPruneToken());
         	
         	
 //    		// for debugging
@@ -369,6 +372,10 @@ public class Join extends Operator {
 			
 		}
     	
+    	if (child0.isPruned()) {
+    		((PlainSelect) dstStatement.getSelectBody()).setFromItem(t0);
+    	}
+    	
 		
 		// finish with child 1
     	
@@ -381,7 +388,7 @@ public class Join extends Operator {
 		
 		dstStatement = child1.generateSQLStringDestOnly(dstStatement, stopAtJoin, allowedScans); 
 		
-		if(joinFilter != null || joinPredicate != null) {
+		if (joinFilter != null || joinPredicate != null) {
 
 			String jf = joinFilter;
 			if (jf == null || jf.length() == 0) jf = joinPredicate;
@@ -390,7 +397,11 @@ public class Join extends Operator {
 			Expression e = CCJSqlParserUtil.parseCondExpression(jf);
 			List<Column> filterRelatedTablesExpr = SQLExpressionUtils.getAttributes(e); 
 			List<String> filterRelatedTables = new ArrayList<>();
-			for (Column c : filterRelatedTablesExpr) filterRelatedTables.add(c.getFullyQualifiedName());
+			for (Column c : filterRelatedTablesExpr) {
+				filterRelatedTables.add(c.getTable().getFullyQualifiedName());
+				if (c.getTable().getAlias() != null) filterRelatedTables.add(c.getTable().getAlias().getName());
+			}
+			
 			
 			List<Operator> treeWalker = new ArrayList<>(this.children);
 			List<Operator> nextGen;
@@ -404,7 +415,7 @@ public class Join extends Operator {
 						Set<String> aliasesAndNames = new HashSet<>(o.objectAliases);
 						aliasesAndNames.addAll(o.dataObjects);
 						Set<String> duplicate = new HashSet<>(aliasesAndNames);
-						if (aliasesAndNames.removeAll(filterRelatedTables))
+						if (aliasesAndNames.removeAll(filterRelatedTables)) 
 							SQLExpressionUtils.renameAttributes(e, duplicate, null, o.getPruneToken());
 					} else 
 						nextGen.addAll(o.children);

@@ -1,8 +1,9 @@
 CREATE TABLE IF NOT EXISTS monitoring (
-      lastRan bigint,
-      duration integer,
-      island varchar(30),
-      query varchar(3000)
+  island varchar(50),
+  signature text,
+  query text,
+  lastRan bigint,
+  duration bigint
 );
 
 CREATE TABLE IF NOT EXISTS migrationstats (
@@ -15,7 +16,7 @@ CREATE TABLE IF NOT EXISTS migrationstats (
       endTime bigint,
       countExtracted bigint,
       countLoaded bigint,
-      message varchar(1000)
+      message text
 );
 
 CREATE SCHEMA IF NOT EXISTS catalog;

@@ -154,9 +154,10 @@ public class Aggregate extends Operator {
 							break;
 						}
 							
-				
+//				if (e instanceof Column) System.out.printf("---->> e class: %s, %s, %s \n",e.getClass().getSimpleName(), ((Column) e).getColumnName(), ((Column) e).getTable());
 				parsedGroupBys.add(e);
 			}
+//			System.out.println("parsedGroupBys: "+parsedGroupBys+"\n");
 		}
 
 	}
@@ -165,6 +166,7 @@ public class Aggregate extends Operator {
 		super(o, addChild);
 		Aggregate a = (Aggregate) o;
 		
+		this.aggregateID = a.aggregateID;
 		this.groupBy = new ArrayList<SQLAttribute>();
 		this.aggregateExpressions = new ArrayList<String>(); // e.g., COUNT(SOMETHING)
 		this.aggregates = new ArrayList<AggregateType>(); 
@@ -350,6 +352,14 @@ public class Aggregate extends Operator {
 //		if (o instanceof Join && stopAtJoin != null && stopAtJoin == true) joinToken = ((Join)o).getJoinToken();
 //
 //		
+		if (isPruned) {
+			Table t = new Table();
+			t.setName(this.getPruneToken());
+			dstStatement = SelectUtils.buildSelectFromTable(t);
+			
+			return dstStatement;
+		}
+		
 		
 		if (aggregateID == null) dstStatement = children.get(0).generateSQLStringDestOnly(dstStatement, stopAtJoin, allowedScans);
 		else dstStatement = children.get(0).generateSQLStringDestOnly(null, stopAtJoin, allowedScans);
@@ -574,6 +584,11 @@ public class Aggregate extends Operator {
 				addToOut(e, out, aliasMapping);
 			}
 		} 
+		
+		System.out.printf("-----> aggregate getObjectToExpressionMappingForSignature: \n- %s; \n- %s; \n- %s",
+				children.get(0).getObjectToExpressionMappingForSignature(),
+				aliasMapping,
+				out);
 		
 		return out;
 	}

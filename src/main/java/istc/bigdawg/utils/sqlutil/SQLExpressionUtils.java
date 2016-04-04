@@ -32,6 +32,7 @@ import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 import net.sf.jsqlparser.expression.operators.relational.GreaterThan;
 import net.sf.jsqlparser.expression.operators.relational.GreaterThanEquals;
 import net.sf.jsqlparser.expression.operators.relational.InExpression;
+import net.sf.jsqlparser.expression.operators.relational.IsNullExpression;
 import net.sf.jsqlparser.expression.operators.relational.LikeExpression;
 import net.sf.jsqlparser.expression.operators.relational.MinorThan;
 import net.sf.jsqlparser.expression.operators.relational.MinorThanEquals;
@@ -215,6 +216,11 @@ public class SQLExpressionUtils {
 		        }
 		    }
 			
+			@Override 
+			public void visit(IsNullExpression inv) {
+				inv.getLeftExpression().accept(this);
+			};
+			
 			@Override public void visit(Column tableColumn) {}
 			@Override public void visit(LongValue lv) {};
 			@Override public void visit(DoubleValue lv) {};
@@ -335,8 +341,12 @@ public class SQLExpressionUtils {
 				
 				if (!functionFlag.isEmpty() && aliasesAndNames != null && aliasesAndNames.contains(tableColumn.getTable().getName()))
 					tableColumn.getTable().setName(replacement);
-				else if (originalAliasSet == null || originalAliasSet.contains(tableColumn.getTable().getName()))
+				else if (originalAliasSet == null || (tableColumn.getTable() != null && originalAliasSet.contains(tableColumn.getTable().getName())))
 					tableColumn.getTable().setName(replacement);
+//				else if (originalAliasSet == null || tableColumn.getTable() == null)
+//					tableColumn.setTable(new Table(replacement));
+				
+//				System.out.printf("---->>>>>> tableColumn in renameAttributes: %s, %s, %s, %s\n\n", expr, originalAliasSet, aliasesAndNames, replacement);
 			}
 			
 			@Override
@@ -367,12 +377,17 @@ public class SQLExpressionUtils {
 			@Override
 			public void visit(Function function) {
 				functionFlag.add(true);
-				function.getParameters().accept(this);
+				if (!function.isAllColumns()) function.getParameters().accept(this);
 			}
 			
 			@Override
 			public void visit(SignedExpression se) {
 				se.getExpression().accept(this);
+			}
+			
+			@Override
+			public void visit(IsNullExpression ine) {
+				ine.getLeftExpression().accept(this);
 			}
 			
 			@Override
@@ -460,6 +475,11 @@ public class SQLExpressionUtils {
 		    }
 			
 			@Override
+		    public void visit(IsNullExpression ine) {
+		        ine.getLeftExpression().accept(this);
+		    }
+			
+			@Override
 		    public void visit(InExpression in) {
 		        in.getLeftExpression().accept(this);
 		    }
@@ -543,6 +563,11 @@ public class SQLExpressionUtils {
 		    }
 			
 			@Override
+		    public void visit(IsNullExpression ine) {
+		        ine.getLeftExpression().accept(this);
+		    }
+			
+			@Override
 			public void visit(InExpression in) {
 				if ( in.getLeftExpression() != null )
 					in.getLeftExpression().accept(this);
@@ -620,6 +645,7 @@ public class SQLExpressionUtils {
 			}
 			
 			@Override public void visit(Parenthesis parenthesis) {parenthesis.getExpression().accept(this);}
+			@Override public void visit(IsNullExpression ine) {ine.getLeftExpression().accept(this);}
 			@Override public void visit(InExpression in) {if ( in.getLeftExpression() != null ) in.getLeftExpression().accept(this);}
 			
 			@Override
@@ -927,6 +953,16 @@ public class SQLExpressionUtils {
 		        sb.append('}');
 		    }
 			
+			@Override 
+			public void visit(IsNullExpression ine) {
+				if (ine.isNot()) 
+					sb.append("{isNotNull");
+				else
+					sb.append("{isNull");
+				ine.getLeftExpression().accept(this);
+				sb.append('}');
+			}
+			
 			@Override public void visit(Column tableColumn) {sb.append('{').append(tableColumn.getFullyQualifiedName()).append('}');}
 			@Override public void visit(LongValue lv) {sb.append('{').append(lv.getStringValue()).append('}');};
 			@Override public void visit(DoubleValue lv) {sb.append('{').append(lv.getValue()).append('}');};
@@ -949,6 +985,7 @@ public class SQLExpressionUtils {
 	        
 			@Override public void visit(Function function) {ret.set(0, true);}
 			@Override public void visit(Parenthesis parenthesis) {parenthesis.getExpression().accept(this);}
+			@Override public void visit(IsNullExpression ine) {ine.getLeftExpression().accept(this);}
 			@Override public void visit(SignedExpression se) {se.getExpression().accept(this);}
 			
 			@Override
@@ -1077,6 +1114,15 @@ public class SQLExpressionUtils {
 					else el.accept(this);
 		        }
 		    }
+			
+			@Override
+			public void visit(IsNullExpression ine) {
+				if (ine.getLeftExpression() instanceof Function) {
+					result.add(ine.getLeftExpression());
+					result.add(ine);
+				}
+				else ine.getLeftExpression().accept(this);
+			}
 			
 			@Override public void visit(Column tableColumn) {}
 			@Override public void visit(LongValue lv) {};
