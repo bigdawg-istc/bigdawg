@@ -179,7 +179,7 @@ public class ExecutionNodeFactory {
 		return new BinaryJoinExecutionNode(broadcastQuery, engine, joinDestinationTable, leftOp, rightOp, comparator);
 	}
 
-	private static ExecutionNodeSubgraph buildOperatorSubgraph(Operator op, ConnectionInfo engine, String dest) throws Exception {
+	private static ExecutionNodeSubgraph buildOperatorSubgraph(Operator op, ConnectionInfo engine, String dest, Map<String, LocalQueryExecutionNode> containerNodes) throws Exception {
 		StringBuilder sb = new StringBuilder();
 		Join joinOp = op.generateSQLStatementForPresentNonJoinSegment(sb);
 		final String sqlStatementForPresentNonJoinSegment = sb.toString();
@@ -217,18 +217,21 @@ public class ExecutionNodeFactory {
 			}
 			//--- END OF PART 2/2 OF SOLUTION
 
-			Set<ExecutionNode> entryPoints = new HashSet<>();
+//			Set<ExecutionNode> entryPoints = new HashSet<>();
 			for(Operator child : joinOp.getChildren()) {
-				String token = child.isSubTree() ? child.getSubTreeToken() : null;
-				ExecutionNodeSubgraph subgraph = buildOperatorSubgraph(child, engine, token);
-				Graphs.addGraph(result, subgraph);
-				result.addEdge(subgraph.exitPoint, joinNode);
-				entryPoints = Sets.union(entryPoints, subgraph.entryPoints);
+				if(child.isPruned()) {
+					result.addEdge(containerNodes.get(child.getPruneToken()), joinNode);
+				} else {
+					String token = child.isSubTree() ? child.getSubTreeToken() : null;
+					ExecutionNodeSubgraph subgraph = buildOperatorSubgraph(child, engine, token, containerNodes);
+					Graphs.addGraph(result, subgraph);
+					result.addEdge(subgraph.exitPoint, joinNode);
+//					entryPoints = Sets.union(entryPoints, subgraph.entryPoints);
+				}
 			}
-
-			result.entryPoints = entryPoints;
-		} else {
-			result.entryPoints = Collections.singleton(lqn);
+//			result.entryPoints = entryPoints;
+//		} else {
+//			result.entryPoints = Collections.singleton(lqn);
 		}
 
 		return result;
@@ -256,20 +259,7 @@ public class ExecutionNodeFactory {
 			throw new Exception("Unsupported island code: " + qep.getIsland().toString());
 		}
 
-		String remainderInto = qep.getSerializedName();
-		qep.setTerminalTableName(remainderInto);
-
-		if (remainderLoc != null) {
-			LocalQueryExecutionNode lqn = new LocalQueryExecutionNode(remainderSelectIntoString, remainderCI, remainderInto);
-			qep.addNode(lqn);
-			qep.setTerminalTableNode(lqn);
-			return;
-		}
-
-		ExecutionNodeSubgraph subgraph = buildOperatorSubgraph(remainder, remainderCI, remainderInto);
-		Graphs.addGraph(qep, subgraph);
-		qep.setTerminalTableNode(subgraph.exitPoint);
-
+		Map<String, LocalQueryExecutionNode> containerNodes = new HashMap<>();
 		for(Map.Entry<String, QueryContainerForCommonDatabase> entry : containers.entrySet()) {
 			String table = entry.getKey();
 			QueryContainerForCommonDatabase container = entry.getValue();
@@ -287,9 +277,23 @@ public class ExecutionNodeFactory {
 			log.debug(String.format("Created LQN %s for container.", selectIntoString));
 
 			qep.addVertex(localQueryNode);
-
-			subgraph.entryPoints.forEach((v) -> qep.addEdge(localQueryNode, v));
+			containerNodes.put(table, localQueryNode);
 		}
+
+		String remainderInto = qep.getSerializedName();
+		qep.setTerminalTableName(remainderInto);
+
+		if (remainderLoc != null) {
+			LocalQueryExecutionNode lqn = new LocalQueryExecutionNode(remainderSelectIntoString, remainderCI, remainderInto);
+			qep.addNode(lqn);
+			qep.setTerminalTableNode(lqn);
+			return;
+		}
+
+		ExecutionNodeSubgraph subgraph = buildOperatorSubgraph(remainder, remainderCI, remainderInto, containerNodes);
+
+		Graphs.addGraph(qep, subgraph);
+		qep.setTerminalTableNode(subgraph.exitPoint);
 	}
 
 	@Deprecated
