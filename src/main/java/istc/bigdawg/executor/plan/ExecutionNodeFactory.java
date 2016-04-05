@@ -220,7 +220,9 @@ public class ExecutionNodeFactory {
 //			Set<ExecutionNode> entryPoints = new HashSet<>();
 			for(Operator child : joinOp.getChildren()) {
 				if(child.isPruned()) {
-					result.addEdge(containerNodes.get(child.getPruneToken()), joinNode);
+					ExecutionNode containerNode = containerNodes.get(child.getPruneToken());
+					result.addVertex(containerNode);
+					result.addEdge(containerNode, joinNode);
 				} else {
 					String token = child.isSubTree() ? child.getSubTreeToken() : null;
 					ExecutionNodeSubgraph subgraph = buildOperatorSubgraph(child, engine, token, containerNodes);
@@ -276,7 +278,6 @@ public class ExecutionNodeFactory {
 
 			log.debug(String.format("Created LQN %s for container.", selectIntoString));
 
-			qep.addVertex(localQueryNode);
 			containerNodes.put(table, localQueryNode);
 		}
 
