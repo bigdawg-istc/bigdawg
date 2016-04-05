@@ -49,9 +49,17 @@ public class Operator {
 	// does this op need access to all inputs before it can emit output?
 	// e.g., max, min, sort
 	// these block force sync points in our setup
-	protected boolean isBlocking; 
+	protected boolean isBlocking = false; 
 	protected static int blockerCount = 0;
 	protected Integer blockerID = null;
+	
+	protected boolean isPruned = false;
+	protected static int pruneCount = 0;
+	protected Integer pruneID = null;
+	
+	protected boolean isSubTree = false;
+	protected static int subTreeCount = 0;
+	protected Integer subTreeID = null;
 	
 	
 	protected Map<String, DataObjectAttribute> outSchema;
@@ -60,11 +68,6 @@ public class Operator {
 	// direct descendants
 	protected List<Operator> children;
 	protected Operator parent = null;
-	
-	
-	protected boolean isPruned = false;
-	protected static int pruneCount = 0;
-	protected Integer pruneID = null;
 	
 	protected boolean isQueryRoot = false;
 	
@@ -248,27 +251,30 @@ public class Operator {
 	
 	
 	public String generateSQLSelectIntoStringForExecutionTree(String into, Boolean stopAtJoin) throws Exception {
-		
 		Select dstStatement  = prepareForSQLGeneration(null, stopAtJoin);
-		
+		return addSelectIntoToken(dstStatement, into);
+	}
+	
+	public String addSelectIntoToken(Select dstStatement, String into) {
 		// dealing with WITH statment
 		if (into != null) {
 			
 			if (dstStatement.getWithItemsList() == null) {
-				return addInto(dstStatement.getSelectBody(), into);
+				addInto(dstStatement.getSelectBody(), into);
+				return dstStatement.toString();
 			}
 			
+			// single out the with statement 
 			for (WithItem wi : dstStatement.getWithItemsList()) {
 				if (wi.getName().equals(into)) {
-					return addInto(wi.getSelectBody(), into);
+					addInto(wi.getSelectBody(), into);
+					dstStatement.getWithItemsList().remove(wi); // remove this item so it no longer gets bundled
+					return wi.getSelectBody().toString();
 				}
 			}
-
-			return addInto(dstStatement.getSelectBody(), into);
 		}
-		return ((PlainSelect) dstStatement.getSelectBody()).toString();
+		return dstStatement.toString();
 	}
-	
 	
 	
 	public String generateAFLStoreStringForExecutionTree(String into) throws Exception {
@@ -364,14 +370,14 @@ public class Operator {
 	 * @param into
 	 * @return the resulting text
 	 */
-	private String addInto(SelectBody body, String into) {
+	private void addInto(SelectBody body, String into) {
 		Table t = new Table();
 		t.setName(into);
 		ArrayList<Table> tl = new ArrayList<>();
 		tl.add(t);
 		
 		((PlainSelect) body).setIntoTables(tl);
-		return ((PlainSelect) body).toString();
+//		return ((PlainSelect) body).toString();
 	}
 	
 	/**
@@ -595,10 +601,32 @@ public class Operator {
 	public String getPruneToken() throws Exception {
 		
 		if (!isPruned) {
-			throw new Exception("\n\n\n----> unpruned token: "+this.outSchema.toString()+"\n\n");
+			throw new Exception("\n\n\n----> unpruned token: "+this.outSchema+"\n\n");
 		}
 		
 		return "BIGDAWGPRUNED_"+this.pruneID;
+	}
+	
+	public boolean isSubTree() {
+		return this.isSubTree;
+	}
+	
+	public void setSubTree(boolean t) {
+		if (t && this.subTreeID == null) {
+			subTreeCount += 1;
+			this.subTreeID = subTreeCount;
+		}
+		isSubTree = t;
+	}
+	
+	public String getSubTreeToken() throws Exception {
+		
+		if (!isSubTree && !(this instanceof Join)) {
+			throw new Exception("\n\n\n----> not the root of a SubTree: "+this.outSchema+"\n\n");
+		}
+		
+		if (this instanceof Join) return ((Join)this).getJoinToken(); 
+		else return "BIGDAWGSUBTREE_"+this.subTreeID;
 	}
 	
 	public void setQueryRoot() {
@@ -823,15 +851,16 @@ public class Operator {
 			// then there could be one child only
 			child = child.getChildren().get(0);
 		
+		Select outputSelect;
 		
 		if ( !this.getClass().equals(Join.class) && (!child.getChildren().isEmpty())) {
 			// TODO targeted strike? CURRENTLY WASH EVERYTHING // Set<String> names = child.getDataObjectNames();
-			Select outputSelect 		= this.generateSQLStringDestOnly(null, true, this.getDataObjectAliasesOrNames().keySet());
-			String joinToken 			= ((Join)child).getJoinToken();
+			outputSelect 		= this.generateSQLStringDestOnly(null, true, this.getDataObjectAliasesOrNames().keySet());
+			String joinToken 	= ((Join)child).getJoinToken();
 			
-			Map<String, String> ane = this.getChildren().get(0).getDataObjectAliasesOrNames();
-			Set<String> childAliases = ane.keySet();
-			Set<String> childAliasesAndNames = new HashSet<>(ane.keySet());
+			Map<String, String> ane				= this.getChildren().get(0).getDataObjectAliasesOrNames();
+			Set<String> childAliases			= ane.keySet();
+			Set<String> childAliasesAndNames	= new HashSet<>(ane.keySet());
 			for (String s : ane.values()) childAliasesAndNames.add(s);
 			
 			
@@ -839,9 +868,18 @@ public class Operator {
 			if (outputSelect.getWithItemsList() != null) 
 				for (WithItem wi : outputSelect.getWithItemsList())
 					updateJoinTokens(((PlainSelect)wi.getSelectBody()), childAliases, childAliasesAndNames, joinToken);
+			
+			this.setSubTree(true);
+			addSelectIntoToken(outputSelect, this.getSubTreeToken());
+			
 			sb.append(outputSelect);
 		} else if (child.getChildren().isEmpty()) {
-			sb.append(this.generateSQLStringDestOnly(null, true, this.getDataObjectAliasesOrNames().keySet()));
+			outputSelect = this.generateSQLStringDestOnly(null, true, this.getDataObjectAliasesOrNames().keySet());
+			
+			this.setSubTree(true);
+			addSelectIntoToken(outputSelect, this.getSubTreeToken());
+			
+			sb.append(outputSelect);
 		} else {
 			// this.getClass().equals(Join.class) && (!child.getChildren().isEmpty())
 			
@@ -854,17 +892,18 @@ public class Operator {
 //					children.get(1).getTreeRepresentation(true));
 			
 			
-			Select outputSelect = this.generateSQLStringDestOnly(null, null, this.getDataObjectAliasesOrNames().keySet());
-//			Expression where = ((PlainSelect)outputSelect.getSelectBody()).getWhere();
+			outputSelect = this.generateSQLStringDestOnly(null, null, this.getDataObjectAliasesOrNames().keySet());
+			
+			addSelectIntoToken(outputSelect, this.getSubTreeToken());
 			
 			for (Operator childchild : children) {
 				while ((!childchild.getChildren().isEmpty()) && !childchild.getClass().equals(Join.class)) 
 					childchild = childchild.getChildren().get(0);
 				
 				if (!childchild.getChildren().isEmpty()) {
-					Map<String, String> anecc = childchild.getDataObjectAliasesOrNames();
-					Set<String> childAliases = anecc.keySet();
-					Set<String> childAliasesAndNames = new HashSet<>(anecc.keySet());
+					Map<String, String> anecc			= childchild.getDataObjectAliasesOrNames();
+					Set<String> childAliases			= anecc.keySet();
+					Set<String> childAliasesAndNames 	= new HashSet<>(anecc.keySet());
 					for (String s : anecc.values()) childAliasesAndNames.add(s);
 					updateJoinTokens(((PlainSelect)outputSelect.getSelectBody()), childAliases, childAliasesAndNames, ((Join)childchild).getJoinToken());
 					if (outputSelect.getWithItemsList() != null) 
