@@ -34,7 +34,11 @@ import istc.bigdawg.signature.builder.ArraySignatureBuilder;
 import istc.bigdawg.signature.builder.RelationalSignatureBuilder;
 import istc.bigdawg.utils.IslandsAndCast;
 import istc.bigdawg.utils.IslandsAndCast.Scope;
+import istc.bigdawg.utils.sqlutil.SQLExpressionUtils;
+import net.sf.jsqlparser.JSQLParserException;
+import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
+import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.Select;
 
@@ -492,12 +496,11 @@ public class CrossIslandQueryNode {
 				Set<String> objlist = new HashSet<>(k0o.getDataObjectNames());
 				String jp = ((Join)k1o).getCurrentJoinPredicate();
 				if (objlist.removeAll(new HashSet<>(Arrays.asList(jp.split("[. =<>]+"))))) { 
-					newEntry.add(makeJoin(k0o, k1o, null, joinPredConnections, k0o.getDataObjectNames()));
+					newEntry.add(makeJoin(k0o, k1o, null, joinPredConnections, k0o.getDataObjectAliasesOrNames().keySet()));
 				}
 			}
 		} else {
-			
-			Operator ret = makeJoin(k0o, k1o, null, joinPredConnections, k0o.getDataObjectNames());
+			Operator ret = makeJoin(k0o, k1o, null, joinPredConnections, k0o.getDataObjectAliasesOrNames().keySet());
 			if (ret == null) return; // the final prune done
 			newEntry.add(ret);
 		}
@@ -527,7 +530,6 @@ public class CrossIslandQueryNode {
 		if (o1.isCopy()) o1Temp = new Join(o1, true);
 		if (o2.isCopy()) o2Temp = new Join(o2, true);
 		
-		
 		for (String s : o1ns) {
 			
 			if (jc.get(s) == null) continue; // because jc is modified along the way
@@ -537,7 +539,6 @@ public class CrossIslandQueryNode {
 			o2ns.retainAll(ks);
 			
 			if (!o2ns.isEmpty()) {
-				
 				
 				String key = o2ns.iterator().next();
 				
@@ -556,13 +557,11 @@ public class CrossIslandQueryNode {
 					return null;
 				}
 					
-				
 				return new Join(o1Temp, o2Temp, jt, pred);
 			}
 			
 			o2ns = new HashSet<>(o2nsOriginal);
 		}
-		
 		return new Join(o1Temp, o2Temp, jt, null);
 	}
 	
@@ -577,16 +576,17 @@ public class CrossIslandQueryNode {
 	
 	
 	
-	private Map<String, Map<String, String>> processJoinPredicates(Set<String> jp) {
+	private Map<String, Map<String, String>> processJoinPredicates(Set<String> jp) throws Exception {
 		
 		Map<String, Map<String, String>> result = new HashMap<>();
 		
 		for (String s : jp ) {
 			
-			List<String> spl = Arrays.asList(s.split(" *([<>!=]+) *"));
+			Expression e = CCJSqlParserUtil.parseCondExpression(s);
+			List<Column> lc = SQLExpressionUtils.getAttributes(e);
 			
-			String temp0 = Arrays.asList((spl.get(0)).split("\\.")).get(0); // we don't look for other dots because everything is pruned
-			String temp1 = Arrays.asList((spl.get(1)).split("\\.")).get(0);
+			String temp0 = lc.get(0).getTable().getFullyQualifiedName(); // we don't look for other dots because everything is pruned
+			String temp1 = lc.get(1).getTable().getFullyQualifiedName();
 			
 			if (!result.containsKey(temp0))
 				result.put(temp0, new HashMap<>());

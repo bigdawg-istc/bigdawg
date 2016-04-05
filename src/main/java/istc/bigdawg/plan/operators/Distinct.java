@@ -71,4 +71,8 @@ public class Distinct extends Operator {
 		return planStr;
 	}
 	
+	@Override
+	public String getTreeRepresentation(boolean isRoot) throws Exception{
+		return "{distinct" + this.getChildren().get(0).getTreeRepresentation(isRoot)+"}";
+	}
 };

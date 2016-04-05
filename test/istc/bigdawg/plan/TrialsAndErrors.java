@@ -84,10 +84,10 @@ public class TrialsAndErrors {
 		PostgreSQLHandler psqlh = new PostgreSQLHandler(3);
 		System.out.println("Builder -- Type query or \"quit\" to exit: ");
 		Scanner scanner = new Scanner(System.in);
-//		String query = scanner.nextLine();
+		String query = scanner.nextLine();
 //		String query = "select l_returnflag, l_linestatus, sum(l_quantity) as sum_qty, sum(l_extendedprice) as sum_base_price, sum(l_extendedprice * (1 - l_discount)) as sum_disc_price, sum(l_extendedprice * (1 - l_discount) * (1 + l_tax)) as sum_charge, avg(l_quantity) as avg_qty, avg(l_extendedprice) as avg_price, avg(l_discount) as avg_disc, count(*) as count_order from lineitem where l_shipdate <= date '1998-12-01' - interval '1' day group by l_returnflag, l_linestatus order by l_returnflag, l_linestatus;";
 		
-		String query = "select s_acctbal, s_name, n_name, p_partkey, p_mfgr, s_address, s_phone, s_comment from part, supplier, partsupp, nation, region, ( select ps_partkey, min(ps_supplycost) as minsuppcost from partsupp, supplier, nation, region where s_suppkey = ps_suppkey and s_nationkey = n_nationkey and n_regionkey = r_regionkey and r_name = 'AMERICA' group by  ps_partkey ) as temp where p_partkey = partsupp.ps_partkey and s_suppkey = ps_suppkey and p_size = 14 and p_type like '%BRASS' and s_nationkey = n_nationkey and n_regionkey = r_regionkey and r_name = 'AMERICA' and p_partkey = temp.ps_partkey and ps_supplycost = minsuppcost order by s_acctbal desc, n_name, s_name, p_partkey;";
+//		String query = "select bucket, count(*) from ( select width_bucket(value1num, 0, 300, 300) as bucket from mimic2v26.chartevents ce,  mimic2v26.d_patients dp  where itemid in (6, 51, 455, 6701)  and ce.subject_id = dp.subject_id  and ((DATE_PART('year',ce.charttime) - DATE_PART('year',dp.dob))*12 + DATE_PART('month',ce.charttime) - DATE_PART('month',dp.dob)) > 15 ) as sbp group by bucket order by bucket;";
 		while (!query.toLowerCase().equals("quit")) {
 			
 			SQLQueryPlan queryPlan = SQLPlanParser.extractDirect(psqlh, query);
@@ -105,8 +105,8 @@ public class TrialsAndErrors {
 			
 //			System.out.println(RTED.computeDistance(root.getTreeRepresentation(true), "{}"));
 			
-			break;
-//			query = scanner.nextLine();
+//			break;
+			query = scanner.nextLine();
 			
 		}
 		scanner.close();
@@ -182,7 +182,7 @@ public class TrialsAndErrors {
 	public void testPlanner() throws Exception {
 		if ( !runPlanner ) return;
 		
-		String userinput = "bdrel(select bucket, count(*) from ( select width_bucket(valuenum, 0.5, 1000, 1000) as bucket from mimic2v26.labevents le,  mimic2v26.d_patients dp  where itemid in (50006,50112) and valuenum is not null and le.subject_id = dp.subject_id and ((DATE_PART('year',le.charttime) - DATE_PART('year',dp.dob))*12 + DATE_PART('month',le.charttime) - DATE_PART('month',dp.dob)) > 15  ) as glucose group by bucket order by bucket);";
+		String userinput = "bdrel(select a.hadm_id, b.census_id from mimic2v26.admissions as a join mimic2v26.censusevents as b on a.subject_id = b.subject_id);";
 		try {
 		Planner.processQuery(userinput, false);
 		} catch (Exception e) {

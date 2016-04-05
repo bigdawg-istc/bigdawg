@@ -61,7 +61,8 @@ public class Join extends Operator {
 		
 		if (j.joinPredicate == null) this.joinPredicate = j.joinPredicate;
 		else this.joinPredicate = new String(j.joinPredicate);
-		
+
+		System.out.println("Copy join after: "+this.joinPredicate);
 		
 		this.srcSchema = new HashMap<>();
 		for (String s : j.srcSchema.keySet()) {
@@ -94,7 +95,7 @@ public class Join extends Operator {
 			this.joinPredicate = joinPred;
 			
 		}
-
+		
 		this.isQueryRoot = true;
 		
 		this.dataObjects = new HashSet<>();
@@ -161,6 +162,7 @@ public class Join extends Operator {
 			joinFilterOriginal 		= new String (joinFilter);
 	}
 	
+	// for SQL
 	public Join (Map<String, String> parameters, List<String> output, Operator lhs, Operator rhs, SQLTableExpression supplement) throws Exception  {
 		super(parameters, output, lhs, rhs, supplement);
 
@@ -276,6 +278,7 @@ public class Join extends Operator {
     	if (joinPredicate != null) {
     		
     		joinPredicate = updateOnExpression(joinPredicate, child0, child1, t0, t1, true);
+    		
     		joinPredicateUpdated = true;
     		// ^ ON predicate constructed
     		
@@ -286,16 +289,25 @@ public class Join extends Operator {
         	Map<String, String> child1ObjectMap = child1.getDataObjectAliasesOrNames();
 
         	String s, s2;
-        	List<String> ses = processLeftAndRightWithIndexCond(true);
-        	if (ses != null) {
+        	List<String> ses;
+        	if ((ses = processLeftAndRightWithIndexCond(true)) != null) {
         		s = ses.get(0);
         		s2 = ses.get(1);
         		
-        	} else {
-        		ses = processLeftAndRightWithIndexCond(false);
-        		if (ses == null) throw new Exception("Ses from Join gen dest only doesn't find match: "+child0.getChildrenIndexConds()+"; "+child1.getChildrenIndexConds());
+        	} else if ((ses = processLeftAndRightWithIndexCond(false)) != null) {
         		s = ses.get(1);
         		s2 = ses.get(0);
+        	} else {
+        		if (joinFilter == null || joinFilter.isEmpty()) 
+        			throw new Exception("Ses from Join gen dest only doesn't find match; joinFilter empty: "+joinFilter+"; "+joinPredicate);
+        		try {
+	        		List<Column> lc = SQLExpressionUtils.getAttributes(CCJSqlParserUtil.parseCondExpression(joinFilter));
+	        		s = lc.get(0).getTable().getName();
+	        		s2 = lc.get(1).getTable().getName();
+        		} catch (Exception e) {
+        			e.printStackTrace();
+        			throw new Exception(String.format("Ses from Join gen dest only doesn't find match: %s; %s; %s;\n",child0.getChildrenIndexConds(), child1.getChildrenIndexConds(),joinFilter));
+        		}
         	}
         	
         	// TODO MODIFIED
@@ -307,12 +319,6 @@ public class Join extends Operator {
         	if (!child1.isPruned()) t1.setName(child1ObjectMap.get(s2));
         	else t1.setName(child1.getPruneToken());
         	
-        	
-//    		// for debugging
-//        	System.out.printf("\nJF: %s; JP: %s\nTree left: %s\nTree right: %s\ntable left: %s; table right: %s\n\n", 
-//        			joinFilter, joinPredicate, 
-//        			children.get(0).getTreeRepresentation(true), children.get(1).getTreeRepresentation(true), t0, t1);
-        	
     	}
 
 //		// for debugging
@@ -320,70 +326,24 @@ public class Join extends Operator {
 //    	Map<String, String> child1ObjectMap = child1.getDataObjectAliasesOrNames();
 //    	System.out.printf("\nJF: %s; JP: %s\nchild0obj: %s\nchild1obj: %s\n\n", joinFilter, joinPredicate, 
 //    			child0ObjectMap, child1ObjectMap);
-
     	
-    	// used to find the deepest object
-//    	// TODO ORIGINAL
-//    	Table t;
-    	
-    	if (dstStatement == null) {
-    		
-    		// check if child0 is pruned or one of the scans
-    		// if not call child0; 
-    		if (child0.isPruned() || child0 instanceof Scan) {
+    	if (dstStatement == null && (child0.isPruned() || child0 instanceof Scan)) {
 
-    			// ensuring this is a left deep tree
-    			if (!(child1.isPruned() || child1 instanceof Scan)) {
-    				throw new Exception("child0 class: "+child0.getClass().toString()+"; child1 class: "+child1.getClass().toString());
-    			}
-    			
-    			// this is the bottom
-    			dstStatement = children.get(0).generateSQLStringDestOnly(null, stopAtJoin, allowedScans);
-    			
-    			if (t0.getAlias() != null) updateThisAndParentJoinReservedObjects(t0.getAlias().getName());
-    			else updateThisAndParentJoinReservedObjects(t0.getName());
-    			
-//    	    	// TODO ORIGINAL
-//    			t = t1;
-    			
-    		} else {
-    			dstStatement = child0.generateSQLStringDestOnly(dstStatement, stopAtJoin, allowedScans); 
-    			
-//    			// TODO ORIGINAL
-//    			t = t1;
-//	    		if (t1.getAlias() != null && this.joinReservedObjects.contains(t1.getAlias().getName())) t = t0;
-//	    		else if (t1.getAlias() == null && this.joinReservedObjects.contains(t1.getName())) t = t0;
-	    		
-    		}
-    		
-			// leave the rest for child1;
+			// ensuring this is a left deep tree
+			if (!(child1.isPruned() || child1 instanceof Scan)) 
+				throw new Exception("child0 class: "+child0.getClass().toString()+"; child1 class: "+child1.getClass().toString());
 			
+			dstStatement = children.get(0).generateSQLStringDestOnly(null, stopAtJoin, allowedScans);
+			if (t0.getAlias() != null) updateThisAndParentJoinReservedObjects(t0.getAlias().getName());
+			else updateThisAndParentJoinReservedObjects(t0.getName());
+
 		} else {
-			
-			
 			dstStatement = child0.generateSQLStringDestOnly(dstStatement, stopAtJoin, allowedScans); 
-			
-//			// TODO ORIGINAL
-//			getJoinReservedObjectsFromParents();
-//						
-//			t = t1;
-//    		if (t1.getAlias() != null && this.joinReservedObjects.contains(t1.getAlias().getName())) t = t0;
-//    		else if (t1.getAlias() == null && this.joinReservedObjects.contains(t1.getName())) t = t0;
-			
 		}
     	
-    	if (child0.isPruned()) {
-    		((PlainSelect) dstStatement.getSelectBody()).setFromItem(t0);
-    	}
-    	
 		
-		// finish with child 1
-    	
-//    	// TODO ORIGINAL
-//    	addJSQLParserJoin(dstStatement, t);
-//    	
-//    	if (t.getAlias() == null) updateThisAndParentJoinReservedObjects(t.getFullyQualifiedName());
-//    	else updateThisAndParentJoinReservedObjects(t.getAlias().getName());
+		// Resolve pruning and add join
+    	if (child0.isPruned()) ((PlainSelect) dstStatement.getSelectBody()).setFromItem(t0);
     	addJSQLParserJoin(dstStatement, t1);
 		
 		dstStatement = child1.generateSQLStringDestOnly(dstStatement, stopAtJoin, allowedScans); 
@@ -401,7 +361,6 @@ public class Join extends Operator {
 				filterRelatedTables.add(c.getTable().getFullyQualifiedName());
 				if (c.getTable().getAlias() != null) filterRelatedTables.add(c.getTable().getAlias().getName());
 			}
-			
 			
 			List<Operator> treeWalker = new ArrayList<>(this.children);
 			List<Operator> nextGen;

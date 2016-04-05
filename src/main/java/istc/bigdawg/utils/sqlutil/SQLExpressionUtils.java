@@ -11,12 +11,14 @@ import java.util.regex.Pattern;
 
 import istc.bigdawg.extract.logical.SQLExpressionHandler;
 import net.sf.jsqlparser.JSQLParserException;
+import net.sf.jsqlparser.expression.AnalyticExpression;
 import net.sf.jsqlparser.expression.BinaryExpression;
 import net.sf.jsqlparser.expression.CaseExpression;
 import net.sf.jsqlparser.expression.DoubleValue;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Function;
 import net.sf.jsqlparser.expression.HexValue;
+import net.sf.jsqlparser.expression.IntervalExpression;
 import net.sf.jsqlparser.expression.LongValue;
 import net.sf.jsqlparser.expression.NullValue;
 import net.sf.jsqlparser.expression.Parenthesis;
@@ -218,9 +220,19 @@ public class SQLExpressionUtils {
 			
 			@Override 
 			public void visit(IsNullExpression inv) {
+				while (inv.getLeftExpression() instanceof Parenthesis)
+					inv.setLeftExpression(((Parenthesis)inv.getLeftExpression()).getExpression());
 				inv.getLeftExpression().accept(this);
 			};
 			
+			@Override 
+			public void visit(AnalyticExpression ae) {
+				while (ae.getExpression() instanceof Parenthesis)
+					ae.setExpression(((Parenthesis)ae.getExpression()).getExpression());
+				if (ae.getPartitionExpressionList() != null) ae.getPartitionExpressionList().accept(this);
+			}
+			
+			@Override public void visit(IntervalExpression ie)  {}
 			@Override public void visit(Column tableColumn) {}
 			@Override public void visit(LongValue lv) {};
 			@Override public void visit(DoubleValue lv) {};
@@ -524,6 +536,7 @@ public class SQLExpressionUtils {
 		        if (caseExpression.getElseExpression() != null) caseExpression.getElseExpression().accept(this);
 		    }
 			
+			@Override public void visit(IntervalExpression ie) {};
 			@Override public void visit(LongValue lv) {};
 			@Override public void visit(DoubleValue lv) {};
 			@Override public void visit(HexValue lv) {};
@@ -614,6 +627,7 @@ public class SQLExpressionUtils {
 		        if (caseExpression.getElseExpression() != null) caseExpression.getElseExpression().accept(this);
 		    }
 			
+			@Override public void visit(IntervalExpression ie) {};
 			@Override public void visit(LongValue lv) {};
 			@Override public void visit(DoubleValue lv) {};
 			@Override public void visit(HexValue lv) {};
@@ -682,6 +696,7 @@ public class SQLExpressionUtils {
 		        if (caseExpression.getElseExpression() != null) caseExpression.getElseExpression().accept(this);
 		    }
 			
+			@Override public void visit(IntervalExpression ie) {};
 			@Override public void visit(LongValue lv) {};
 			@Override public void visit(DoubleValue lv) {};
 			@Override public void visit(HexValue lv) {};
@@ -963,6 +978,7 @@ public class SQLExpressionUtils {
 				sb.append('}');
 			}
 			
+			@Override public void visit(IntervalExpression ie) {sb.append("{interval{").append(ie.getParameter()).append('}').append('}');};
 			@Override public void visit(Column tableColumn) {sb.append('{').append(tableColumn.getFullyQualifiedName()).append('}');}
 			@Override public void visit(LongValue lv) {sb.append('{').append(lv.getStringValue()).append('}');};
 			@Override public void visit(DoubleValue lv) {sb.append('{').append(lv.getValue()).append('}');};
@@ -1017,6 +1033,7 @@ public class SQLExpressionUtils {
 		        if (caseExpression.getElseExpression() != null) caseExpression.getElseExpression().accept(this);
 		    }
 			
+			@Override public void visit(IntervalExpression ie) {};
 			@Override public void visit(Column tableColumn) {}
 			@Override public void visit(LongValue lv) {};
 			@Override public void visit(DoubleValue lv) {};
@@ -1124,7 +1141,8 @@ public class SQLExpressionUtils {
 				else ine.getLeftExpression().accept(this);
 			}
 			
-			@Override public void visit(Column tableColumn) {}
+			@Override public void visit(IntervalExpression ie) {};
+			@Override public void visit(Column tableColumn) {};
 			@Override public void visit(LongValue lv) {};
 			@Override public void visit(DoubleValue lv) {};
 			@Override public void visit(HexValue lv) {};
@@ -1309,6 +1327,13 @@ public class SQLExpressionUtils {
 			}
 			
 			@Override
+			public void visit(IsNullExpression ine) {
+				while (ine.getLeftExpression() instanceof Function)
+					ine.setLeftExpression(getFirstExpression(ine.getLeftExpression()));
+				ine.getLeftExpression().accept(this);
+			}
+			
+			@Override
 		    public void visit(CaseExpression caseExpression) {
 		        if (caseExpression.getSwitchExpression() != null) {
 		        	while (caseExpression.getSwitchExpression() instanceof Function)
@@ -1334,7 +1359,8 @@ public class SQLExpressionUtils {
 		        }
 		    }
 			
-			@Override public void visit(Column tableColumn) {}
+			@Override public void visit(IntervalExpression ie){};
+			@Override public void visit(Column tableColumn) {};
 			@Override public void visit(LongValue lv) {};
 			@Override public void visit(DoubleValue lv) {};
 			@Override public void visit(HexValue lv) {};

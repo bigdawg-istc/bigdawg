@@ -215,7 +215,6 @@ public class SQLOutItem extends CommonOutItem{
 							break;
 					}
 				}
-//				else 
 					
 				if (lookup == null)  {
 					System.out.println("(SQLAttribute) srcSchema.get(name), name = "+tableColumn.getFullyQualifiedName() + "; alias: "+alias);
