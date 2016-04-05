@@ -6,6 +6,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
@@ -23,6 +25,8 @@ import istc.bigdawg.monitoring.Monitor;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.postgresql.PostgreSQLHandler.QueryResult;
 import istc.bigdawg.query.ConnectionInfo;
+
+import java.util.Spliterators;
 
 /**
  * TODO:
@@ -55,10 +59,17 @@ class PlanExecutor {
      */
     public PlanExecutor(QueryExecutionPlan plan) {
         this.plan = plan;
+        log.debug(String.format("Received plan: \n %s",
+                StreamSupport.stream(Spliterators.spliterator(plan.iterator(), plan.vertexSet().size(), Spliterator.ORDERED), false)
+                    .map(ExecutionNode::getQueryString)
+                    .filter(Optional::isPresent).map(opt -> opt.get())
+                    .collect(Collectors.joining(" \n ---- then ---- \n "))));
 
         // initialize countdown latches to the proper counts
         for(ExecutionNode node : plan) {
-            locks.put(node, new CountDownLatch(plan.getDependencies(node).size()));
+            int latchSize = plan.inDegreeOf(node);
+            log.debug(String.format("Node %s lock initialized to %s", node.getTableName(), latchSize));
+            locks.put(node, new CountDownLatch(latchSize));
         }
     }
 
@@ -145,6 +156,8 @@ class PlanExecutor {
     }
 
     private void markNodeAsCompleted(ExecutionNode node) {
+        log.debug(String.format("Marking node %s as completed.", node.getTableName()));
+
         if (!plan.getTerminalTableNode().equals(node)) {
             // clean up the intermediate table later
             node.getTableName().ifPresent((table) -> temporaryTables.put(node.getEngine(), table));
@@ -153,6 +166,7 @@ class PlanExecutor {
             resultLocations.put(node, node.getEngine());
 
             for (ExecutionNode dependent : plan.getDependents(node)) {
+                log.debug(String.format("Decrementing lock of dependency %s", dependent.getTableName()));
                 locks.get(dependent).countDown();
             }
         }
@@ -169,7 +183,7 @@ class PlanExecutor {
     private void colocateDependencies(ExecutionNode node, Collection<String> ignoreTables) {
         // Block until dependencies are all resolved
         try {
-            log.debug(String.format("Waiting for dependencies of query node %s to be resolved", node));
+            log.debug(String.format("Waiting for dependencies of query node %s to be resolved...", node));
             this.locks.get(node).await();
         } catch (InterruptedException e) {
             log.error(String.format("Execution of query node %s was interrupted while waiting for dependencies.", node), e);
@@ -182,7 +196,9 @@ class PlanExecutor {
                 .filter(d -> !resultLocations.containsEntry(d, node.getEngine()) && d.getTableName().isPresent() && !ignoreTables.contains(d.getTableName().get()))
                 .map((d) -> {
                     // computeIfAbsent gets a previous migration's Future, or creates one if it doesn't already exist
-                    return migrations.computeIfAbsent(new ImmutablePair<>(d.getTableName().get(), node.getEngine()), (k) -> {
+                    ImmutablePair<String, ConnectionInfo> migrationKey = new ImmutablePair<>(d.getTableName().get(), node.getEngine());
+
+                    return migrations.computeIfAbsent(migrationKey, (k) -> {
                         return CompletableFuture.supplyAsync(() -> colocateSingleDependency(d, node));
                     });
                 }).toArray(CompletableFuture[]::new);
@@ -203,12 +219,13 @@ class PlanExecutor {
                 // mark that this engine now has a copy of the dependency's data
                 temporaryTables.put(dependant.getEngine(), table);
 
+                log.debug(String.format("Finished migrating dependency %s of node %s!", dependency, dependant));
                 return result;
             } catch (MigrationException e) {
                 log.error(String.format("Error migrating dependency %s of node %s!", dependency, dependant), e);
                 return MigrationResult.getFailedInstance(e.getLocalizedMessage());
             }
-        }).orElse(MigrationResult.getEmptyInstance("No table to migrate"));
+        }).orElse(MigrationResult.getEmptyInstance(String.format("No table to migrate for node %s", dependency)));
     }
 
     private void dropTemporaryTables() throws SQLException {
