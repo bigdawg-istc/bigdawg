@@ -5,11 +5,11 @@ import org.jgrapht.graph.DefaultEdge;
 
 import java.util.Set;
 
-class OperatorTree extends DirectedAcyclicGraph<ExecutionNode, DefaultEdge> {
+class ExecutionNodeSubgraph extends DirectedAcyclicGraph<ExecutionNode, DefaultEdge> {
     public Set<ExecutionNode> entryPoints;
     public ExecutionNode exitPoint;
 
-    public OperatorTree() {
+    public ExecutionNodeSubgraph() {
         super(DefaultEdge.class);
     }
 }
