@@ -201,6 +201,10 @@ public enum BigDawgConfigProperties {
 		return postgreSQLURL;
 	}
 	
+	public int getPostgresSchemaServerDBID() {
+		return postgresSchemaServerDBID;
+	}
+	
 	public String getSStoreSQLUser() {
 	    return sStoreSQLUser;
 	}
@@ -209,12 +213,12 @@ public enum BigDawgConfigProperties {
 	    return sStoreSQLPassword;
 	}
 	
-	public String getSStoreSQLurl() {
-	    return sStoreSQLURL;
+	public int getSStoreSchemaServerDBID() {
+	    return 0;
 	}
 	
-	public int getPostgresSchemaServerDBID() {
-		return postgresSchemaServerDBID;
+	public String getSStoreSQLurl() {
+	    return sStoreSQLURL;
 	}
 
 	public int getSciDBSchemaServerDBID() {

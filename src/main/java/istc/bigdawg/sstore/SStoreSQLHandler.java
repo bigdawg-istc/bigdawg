@@ -8,7 +8,9 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.ws.rs.core.Response;
 
@@ -21,12 +23,13 @@ import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.query.DBHandler;
 import istc.bigdawg.query.QueryClient;
 import istc.bigdawg.utils.LogUtils;
+import istc.bigdawg.utils.StackTrace;
 
 public class SStoreSQLHandler implements DBHandler {
 
     private static Logger log = Logger.getLogger(SStoreSQLHandler.class.getName());
     // private static int defaultSchemaServerDBID =
-    // BigDawgConfigProperties.INSTANCE.getPostgresSchemaServerDBID();
+    // BigDawgConfigProperties.INSTANCE.getSStoreSchemaServerDBID();
     private Connection con = null;
     private ConnectionInfo conInfo = null;
     private Statement st = null;
@@ -46,6 +49,15 @@ public class SStoreSQLHandler implements DBHandler {
     }
 
     public SStoreSQLHandler(SStoreSQLConnectionInfo conInfo) {
+	try {
+		Class.forName("org.voltdb.jdbc.Driver");
+	} catch (ClassNotFoundException ex) {
+		ex.printStackTrace();
+		log.error("SStore jdbc driver is not in the CLASSPATH -> "
+				+ ex.getMessage() + " " + StackTrace.getFullStackTrace(ex),
+				ex);
+		throw new RuntimeException(ex.getMessage());
+	}
 	this.conInfo = conInfo;
     }
 
@@ -55,7 +67,7 @@ public class SStoreSQLHandler implements DBHandler {
     }
 
     /**
-     * Establish connection to PostgreSQL for this instance.
+     * Establish connection to SStoreSQL for this instance.
      * 
      * @throws SQLException
      *             if could not establish a connection
@@ -67,7 +79,7 @@ public class SStoreSQLHandler implements DBHandler {
 		    con = getConnection(conInfo);
 		} catch (SQLException e) {
 		    e.printStackTrace();
-		    log.error(e.getMessage() + " Could not connect to PostgreSQL database using: " + conInfo.toString(),
+		    log.error(e.getMessage() + " Could not connect to SStoreSQL database using: " + conInfo.toString(),
 			    e);
 		    throw e;
 		}
@@ -94,7 +106,7 @@ public class SStoreSQLHandler implements DBHandler {
 	}
 	return con;
     }
-    
+
     public class QueryResult {
 	private List<List<String>> rows;
 	private List<String> types;
@@ -104,21 +116,21 @@ public class SStoreSQLHandler implements DBHandler {
 	 * @return the rows
 	 */
 	public List<List<String>> getRows() {
-		return rows;
+	    return rows;
 	}
 
 	/**
 	 * @return the types
 	 */
 	public List<String> getTypes() {
-		return types;
+	    return types;
 	}
 
 	/**
 	 * @return the colNames
 	 */
 	public List<String> getColNames() {
-		return colNames;
+	    return colNames;
 	}
 
 	/**
@@ -127,13 +139,13 @@ public class SStoreSQLHandler implements DBHandler {
 	 * @param colNames
 	 */
 	public QueryResult(List<List<String>> rows, List<String> types, List<String> colNames) {
-		super();
-		this.rows = rows;
-		this.types = types;
-		this.colNames = colNames;
+	    super();
+	    this.rows = rows;
+	    this.types = types;
+	    this.colNames = colNames;
 	}
 
-}
+    }
 
     @Override
     public Response executeQuery(String queryString) {
@@ -145,7 +157,7 @@ public class SStoreSQLHandler implements DBHandler {
 	    return Response.status(500)
 		    .entity("Problem with query execution in SSToreSQL: " + e.getMessage() + "; query: " + queryString)
 		    .build();
-	    // return "Problem with query execution in PostgreSQL: " +
+	    // return "Problem with query execution in SStoreSQL: " +
 	    // queryString;
 	}
 	String messageQuery = "SSToreSQL query execution time milliseconds: "
@@ -181,7 +193,7 @@ public class SStoreSQLHandler implements DBHandler {
      * 
      * @throws SQLException
      */
-    private void cleanPostgreSQLResources() throws SQLException {
+    private void cleanSStoreSQLResources() throws SQLException {
 	if (rs != null) {
 	    rs.close();
 	    rs = null;
@@ -231,7 +243,7 @@ public class SStoreSQLHandler implements DBHandler {
 	    throw ex;
 	} finally {
 	    try {
-		this.cleanPostgreSQLResources();
+		this.cleanSStoreSQLResources();
 	    } catch (SQLException ex) {
 		Logger lgr = Logger.getLogger(QueryClient.class.getName());
 		// ex.printStackTrace();
@@ -286,6 +298,53 @@ public class SStoreSQLHandler implements DBHandler {
     @Override
     public Shim getShim() {
 	return Shim.SSTORESQLRELATION;
+    }
+
+    /**
+     * Get metadata about columns (right now, just has column name, data type) for a
+     * table in SStoreQL.
+     * 
+     * @param conInfo
+     * @param tableName
+     * @return map column name to column meta data
+     * @throws SQLException
+     *             if the data extraction from SStoreSQL failed
+     */
+    public SStoreSQLTableMetaData getColumnsMetaData(String tableName) throws SQLException {
+	try {
+	    this.getConnection();
+	    try {
+		st = con.createStatement();
+		log.debug("replace double quotes (\") with signle quotes in the query to log it in SStoreSQL: "
+			+ st.toString().replace("'", "\""));
+	    } catch (SQLException e) {
+		e.printStackTrace();
+		log.error("SStoreSQLHandler, the query preparation failed. " + e.getMessage() + " "
+			+ StackTrace.getFullStackTrace(e));
+		throw e;
+	    }
+	    ResultSet resultSet = st.executeQuery("select * from " + tableName + " limit 1");
+	    Map<String, SStoreSQLColumnMetaData> columnsMap = new HashMap<>();
+	    List<SStoreSQLColumnMetaData> columnsOrdered = new ArrayList<>();
+	    ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
+	    for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
+		SStoreSQLColumnMetaData columnMetaData = new SStoreSQLColumnMetaData(resultSetMetaData.getColumnName(i),
+			resultSetMetaData.getColumnTypeName(i), false);
+		columnsMap.put(resultSetMetaData.getColumnName(i), columnMetaData);
+		columnsOrdered.add(columnMetaData);
+	    }
+	    
+	    return new SStoreSQLTableMetaData(columnsMap, columnsOrdered);
+	} finally {
+	    try {
+		this.cleanSStoreSQLResources();
+	    } catch (SQLException ex) {
+		ex.printStackTrace();
+		log.error(ex.getMessage() + "; conInfo: " + conInfo.toString() + "; table: " + tableName + " "
+			+ StackTrace.getFullStackTrace(ex), ex);
+		throw ex;
+	    }
+	}
     }
 
 }

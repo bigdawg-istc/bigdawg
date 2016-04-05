@@ -49,7 +49,7 @@ public class PostgreSQLHandler implements DBHandler {
 			this.conInfo = CatalogViewer.getConnection(dbId);
 		} catch (Exception e) {
 			String msg = "Catalog chosen connection: " + conInfo.getHost() + " " + conInfo.getPort() + " "
-					+ conInfo.getDatabase() + " " + conInfo.getUser() + " " + conInfo.getPassword() + ".";
+					+ conInfo.getUser() + " " + conInfo.getPassword() + ".";
 			log.error(msg);
 			e.printStackTrace();
 			throw e;
@@ -248,6 +248,13 @@ public class PostgreSQLHandler implements DBHandler {
 		try {
 			statement = connection.createStatement();
 			statement.execute(stringStatement);
+			System.out.println("table has been created! " + stringStatement);
+//			if (stringStatement.contains("table")) {
+//			    ResultSet rs = statement.executeQuery("select * from contestants");
+//			    ResultSetMetaData rsmd = rs.getMetaData();
+//			    System.out.println(rsmd.getColumnTypeName(2));
+//			    
+//			}
 			statement.close();
 		} catch (SQLException ex) {
 			ex.printStackTrace();

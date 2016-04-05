@@ -113,7 +113,7 @@ public class FromPostgresToSciDB
 			throws MigrationException, IOException {
 		LoggerSetup.setLogging();
 		PostgreSQLConnectionInfo conFrom = new PostgreSQLConnectionInfo(
-				"localhost", "5431", "test", "postgres", "test");
+				"localhost", "5432", "test", "postgres", "test");
 //		PostgreSQLConnectionInfo conFrom = new PostgreSQLConnectionInfo(
 //				"localhost", "5431", "test", "postgres", "test");
 		String fromTable = "test_waveform2";
