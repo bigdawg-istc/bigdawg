@@ -612,6 +612,9 @@ public class Operator {
 	}
 	
 	public void setSubTree(boolean t) {
+		
+		if (this instanceof Join) return;
+		
 		if (t && this.subTreeID == null) {
 			subTreeCount += 1;
 			this.subTreeID = subTreeCount;
@@ -664,6 +667,12 @@ public class Operator {
 	}
 	
 	public Map<String, String> getDataObjectAliasesOrNames() throws Exception {
+		
+		if (isSubTree) {
+			Map<String, String> temps = new LinkedHashMap<>();
+			temps.put(getSubTreeToken(), getSubTreeToken());
+			return temps;
+		}
 		
 		if (isPruned) {
 			Map<String, String> temps = new LinkedHashMap<>();
@@ -864,10 +873,10 @@ public class Operator {
 			for (String s : ane.values()) childAliasesAndNames.add(s);
 			
 			
-			updateJoinTokens((PlainSelect) outputSelect.getSelectBody(), childAliases, childAliasesAndNames, joinToken);
+			updateSubTreeTokens((PlainSelect) outputSelect.getSelectBody(), childAliases, childAliasesAndNames, joinToken);
 			if (outputSelect.getWithItemsList() != null) 
 				for (WithItem wi : outputSelect.getWithItemsList())
-					updateJoinTokens(((PlainSelect)wi.getSelectBody()), childAliases, childAliasesAndNames, joinToken);
+					updateSubTreeTokens(((PlainSelect)wi.getSelectBody()), childAliases, childAliasesAndNames, joinToken);
 			
 			this.setSubTree(true);
 			addSelectIntoToken(outputSelect, this.getSubTreeToken());
@@ -897,19 +906,33 @@ public class Operator {
 			addSelectIntoToken(outputSelect, this.getSubTreeToken());
 			
 			for (Operator childchild : children) {
-				while ((!childchild.getChildren().isEmpty()) && !childchild.getClass().equals(Join.class)) 
-					childchild = childchild.getChildren().get(0);
 				
-				if (!childchild.getChildren().isEmpty()) {
-					Map<String, String> anecc			= childchild.getDataObjectAliasesOrNames();
-					Set<String> childAliases			= anecc.keySet();
-					Set<String> childAliasesAndNames 	= new HashSet<>(anecc.keySet());
-					for (String s : anecc.values()) childAliasesAndNames.add(s);
-					updateJoinTokens(((PlainSelect)outputSelect.getSelectBody()), childAliases, childAliasesAndNames, ((Join)childchild).getJoinToken());
-					if (outputSelect.getWithItemsList() != null) 
-						for (WithItem wi : outputSelect.getWithItemsList())
-							updateJoinTokens(((PlainSelect)wi.getSelectBody()), childAliases, childAliasesAndNames, ((Join)childchild).getJoinToken());
-				}
+				childchild.setSubTree(true);
+				
+				Map<String, String> anecc			= childchild.getDataObjectAliasesOrNames();
+				Set<String> childAliases			= anecc.keySet();
+				Set<String> childAliasesAndNames 	= new HashSet<>(anecc.keySet());
+				for (String s : anecc.values()) childAliasesAndNames.add(s);
+				updateSubTreeTokens(((PlainSelect)outputSelect.getSelectBody()), childAliases, childAliasesAndNames, childchild.getSubTreeToken());
+				if (outputSelect.getWithItemsList() != null) 
+					for (WithItem wi : outputSelect.getWithItemsList())
+						updateSubTreeTokens(((PlainSelect)wi.getSelectBody()), childAliases, childAliasesAndNames, childchild.getSubTreeToken());
+				
+				
+//				// then update join tokens
+//				while ((!childchild.getChildren().isEmpty()) && !childchild.getClass().equals(Join.class)) 
+//					childchild = childchild.getChildren().get(0);
+//				
+//				if (!childchild.getChildren().isEmpty()) {
+//					Map<String, String> anecc			= childchild.getDataObjectAliasesOrNames();
+//					Set<String> childAliases			= anecc.keySet();
+//					Set<String> childAliasesAndNames 	= new HashSet<>(anecc.keySet());
+//					for (String s : anecc.values()) childAliasesAndNames.add(s);
+//					updateSubTreeTokens(((PlainSelect)outputSelect.getSelectBody()), childAliases, childAliasesAndNames, ((Join)childchild).getJoinToken());
+//					if (outputSelect.getWithItemsList() != null) 
+//						for (WithItem wi : outputSelect.getWithItemsList())
+//							updateSubTreeTokens(((PlainSelect)wi.getSelectBody()), childAliases, childAliasesAndNames, ((Join)childchild).getJoinToken());
+//				}
 			}
 			
 			sb.append(outputSelect);
@@ -921,7 +944,7 @@ public class Operator {
 			return null;
 	}
 	
-	protected void updateJoinTokens(PlainSelect ps, Set<String> originalAliases, Set<String> aliasesAndNames, String joinToken) throws Exception {
+	protected void updateSubTreeTokens(PlainSelect ps, Set<String> originalAliases, Set<String> aliasesAndNames, String subTreeToken) throws Exception {
 		List<OrderByElement> obes 	= ps.getOrderByElements();
 		List<Expression> gbes 		= ps.getGroupByColumnReferences();
 		List<SelectItem> sis 		= ps.getSelectItems();
@@ -929,18 +952,18 @@ public class Operator {
 		Expression having = ps.getHaving();
 		
 		// CHANGE WHERE AND HAVING
-		if (where != null) SQLExpressionUtils.renameAttributes(where, originalAliases, aliasesAndNames, joinToken);
-		if (having != null) SQLExpressionUtils.renameAttributes(having, originalAliases, aliasesAndNames, joinToken);
+		if (where != null) SQLExpressionUtils.renameAttributes(where, originalAliases, aliasesAndNames, subTreeToken);
+		if (having != null) SQLExpressionUtils.renameAttributes(having, originalAliases, aliasesAndNames, subTreeToken);
 		
 		// CHANGE ORDER BY
 		if (obes != null && !obes.isEmpty()) 
 			for (OrderByElement obe : obes) 
-				SQLExpressionUtils.renameAttributes(obe.getExpression(), originalAliases, aliasesAndNames, joinToken);
+				SQLExpressionUtils.renameAttributes(obe.getExpression(), originalAliases, aliasesAndNames, subTreeToken);
 		
 		// CHANGE GROUP BY and SELECT ITEM
 		if (gbes != null && !gbes.isEmpty()) {
 			for (Expression gbe : gbes) 
-				SQLExpressionUtils.renameAttributes(gbe, originalAliases, aliasesAndNames, joinToken);
+				SQLExpressionUtils.renameAttributes(gbe, originalAliases, aliasesAndNames, subTreeToken);
 		}
 		for (SelectItem si : sis) {
 			SelectItemVisitor siv = new SelectItemVisitor() {
@@ -948,7 +971,7 @@ public class Operator {
 				@Override public void visit(AllTableColumns allTableColumns) {}
 				@Override public void visit(SelectExpressionItem selectExpressionItem) {
 					try {
-						SQLExpressionUtils.renameAttributes(selectExpressionItem.getExpression(), originalAliases, aliasesAndNames, joinToken);
+						SQLExpressionUtils.renameAttributes(selectExpressionItem.getExpression(), originalAliases, aliasesAndNames, subTreeToken);
 					} catch (JSQLParserException e) {e.printStackTrace();}}};
 			si.accept(siv);
 		}
@@ -963,7 +986,7 @@ public class Operator {
 
 			@Override
 			public void visit(SubSelect subSelect) {
-				try { updateJoinTokens((PlainSelect)subSelect.getSelectBody(), originalAliases, aliasesAndNames, joinToken);
+				try { updateSubTreeTokens((PlainSelect)subSelect.getSelectBody(), originalAliases, aliasesAndNames, subTreeToken);
 				} catch (Exception e) { e.printStackTrace(); }
 			}
 		};
@@ -987,7 +1010,7 @@ public class Operator {
     			Set<String> childAliases = ane.keySet();
     			Set<String> childAliasesAndNames = new HashSet<>(ane.keySet());
     			for (String s : ane.values()) childAliasesAndNames.add(s);
-    			updateJoinTokens(((PlainSelect)dstStatement.getSelectBody()), childAliases, childAliasesAndNames, ((Join)child).getJoinToken());
+    			updateSubTreeTokens(((PlainSelect)dstStatement.getSelectBody()), childAliases, childAliasesAndNames, ((Join)child).getJoinToken());
 //    			if (dstStatement.getWithItemsList() != null)
 //    				for (WithItem wi : dstStatement.getWithItemsList())
 //    					updateJoinTokens(((PlainSelect)wi.getSelectBody()), childNames, ((Join)child).getJoinToken());
