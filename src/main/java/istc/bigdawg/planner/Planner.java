@@ -67,6 +67,7 @@ public class Planner {
 		
 		// EXECUTE THE RESULT
 		logger.debug("Executing query execution tree...");
+		qep.setSelect(true);
 		return compileResults(ciqp.getSerial(), Executor.executePlan(qep));
 	}
 

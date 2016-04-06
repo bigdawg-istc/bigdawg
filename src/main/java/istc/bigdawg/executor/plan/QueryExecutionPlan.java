@@ -30,6 +30,7 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
     private int serial;
     private String terminalTableName;
     private ExecutionNode terminalNode;
+    private boolean isSelect = false;
     
     private final Scope island;
 
@@ -67,6 +68,14 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
     
     public ExecutionNode getTerminalTableNode() {
     	return this.terminalNode;
+    }
+    
+    public boolean isSelect() {
+    	return isSelect;
+    }
+    
+    public void setSelect(boolean isSelect) {
+    	this.isSelect = isSelect;
     }
 
     /**
