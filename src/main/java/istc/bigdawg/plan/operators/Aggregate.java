@@ -352,13 +352,13 @@ public class Aggregate extends Operator {
 //		if (o instanceof Join && stopAtJoin != null && stopAtJoin == true) joinToken = ((Join)o).getJoinToken();
 //
 //		
-		if (isPruned) {
-			Table t = new Table();
-			t.setName(this.getPruneToken());
-			dstStatement = SelectUtils.buildSelectFromTable(t);
-			
-			return dstStatement;
-		}
+//		if (isPruned) {
+//			Table t = new Table();
+//			t.setName(this.getPruneToken());
+//			dstStatement = SelectUtils.buildSelectFromTable(t);
+//			
+//			return dstStatement;
+//		}
 		
 		
 		if (aggregateID == null) dstStatement = children.get(0).generateSQLStringDestOnly(dstStatement, stopAtJoin, allowedScans);

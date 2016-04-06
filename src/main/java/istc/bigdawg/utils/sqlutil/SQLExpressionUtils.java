@@ -245,6 +245,97 @@ public class SQLExpressionUtils {
 	    expr.accept(deparser);
 		
 	}
+	
+	public static void replaceColumnName(Expression expr, boolean restore) {
+		
+		SQLExpressionHandler deparser = new SQLExpressionHandler() {
+	        
+			@Override 
+			public void visit(Column tableColumn) {
+				if (tableColumn.getTable() != null) {
+					if (restore) {
+						tableColumn.setColumnName(tableColumn.getColumnName().replaceAll("^.*___", ""));
+					} else {
+						tableColumn.setColumnName(tableColumn.getFullyQualifiedName().replaceAll("[\\.]", "___"));
+					}
+				}
+			}
+			
+			@Override
+		    public void visit(Parenthesis parenthesis) {parenthesis.getExpression().accept(this);}
+			
+			@Override
+		    public void visit(InExpression ine) {
+				ine.getLeftExpression().accept(this);
+				if (ine.getLeftItemsList() != null) ine.getLeftItemsList().accept(this);
+				if (ine.getRightItemsList() != null) ine.getRightItemsList().accept(this);
+		    }
+			
+			@Override
+			public void visitOldOracleJoinBinaryExpression(OldOracleJoinBinaryExpression expression, String operator) {
+		        expression.getLeftExpression().accept(this);
+		        expression.getRightExpression().accept(this);
+			}
+			
+			@Override
+			protected void visitBinaryExpression(BinaryExpression binaryExpression, String operator) {
+		        binaryExpression.getLeftExpression().accept(this);
+		        binaryExpression.getRightExpression().accept(this);
+			}
+			
+			@Override
+		    public void visit(ExpressionList expressionList) {
+				List<Expression> exprs = expressionList.getExpressions();
+		        for (int i = 0; i < exprs.size(); i++) exprs.get(i).accept(this);
+		    }
+			
+			@Override
+			public void visit(MultiExpressionList multiExprList) {
+				List<ExpressionList> explist = multiExprList.getExprList();
+				for (ExpressionList el : explist) el.accept(this);
+			}
+			
+			@Override
+			public void visit(Function function) {
+				if (!function.isAllColumns()) function.getParameters().accept(this);
+			}
+			
+			@Override
+			public void visit(SignedExpression se) {
+				se.getExpression().accept(this);
+			}
+			
+			@Override
+		    public void visit(CaseExpression caseExpression) {
+				if (caseExpression.getSwitchExpression() != null) caseExpression.getSwitchExpression().accept(this);
+				
+		        for (int i = 0; i < caseExpression.getWhenClauses().size(); i++) {
+		        	((WhenClause)caseExpression.getWhenClauses().get(i)).getWhenExpression().accept(this);
+		        	((WhenClause)caseExpression.getWhenClauses().get(i)).getThenExpression().accept(this);
+		        }
+		        if (caseExpression.getElseExpression() != null) caseExpression.getElseExpression().accept(this);
+		    }
+			
+			@Override 
+			public void visit(IsNullExpression inv) {inv.getLeftExpression().accept(this);}
+			
+			@Override 
+			public void visit(AnalyticExpression ae) {
+				if (ae.getPartitionExpressionList() != null) ae.getPartitionExpressionList().accept(this);
+			}
+			
+			@Override public void visit(IntervalExpression ie)  {}
+			@Override public void visit(LongValue lv) {};
+			@Override public void visit(DoubleValue lv) {};
+			@Override public void visit(HexValue lv) {};
+			@Override public void visit(NullValue lv) {};
+			@Override public void visit(TimeValue lv) {};
+			@Override public void visit(StringValue sv) {};
+	    };
+	    
+	    expr.accept(deparser);
+		
+	}
 
 	
 	public static List<Column> getAttributes(Expression expr) throws JSQLParserException {
@@ -270,7 +361,7 @@ public class SQLExpressionUtils {
 		return attributes;
 	}
 	
-	public static List<String> getColumnNamesInAllForms(Expression expr) throws JSQLParserException {
+	public static List<String> getColumnTableNamesInAllForms(Expression expr) throws JSQLParserException {
 		
 		final Set<String> attributes = new HashSet<String>();
 	
@@ -288,6 +379,82 @@ public class SQLExpressionUtils {
 		    public void visit(Parenthesis parenthesis) {
 		        parenthesis.getExpression().accept(this);
 		    }
+			
+			@Override
+			public void visitOldOracleJoinBinaryExpression(OldOracleJoinBinaryExpression expression, String operator) {
+				expression.getLeftExpression().accept(this);
+				expression.getRightExpression().accept(this);
+			}
+			
+			@Override
+			protected void visitBinaryExpression(BinaryExpression binaryExpression, String operator) {
+		        binaryExpression.getLeftExpression().accept(this);
+		        binaryExpression.getRightExpression().accept(this);
+			}
+			
+			@Override
+		    public void visit(ExpressionList expressionList) {
+		        for (Iterator<Expression> iter = expressionList.getExpressions().iterator(); iter.hasNext();) {
+		            Expression expression = iter.next();
+		            expression.accept(this);
+		        }
+		    }
+			
+			@Override
+			public void visit(Function function) {
+				function.getParameters().accept(this);
+			}
+			
+			@Override
+			public void visit(SignedExpression se) {
+				se.getExpression().accept(this);
+			}
+			
+			@Override
+		    public void visit(CaseExpression caseExpression) {
+				if (caseExpression.getSwitchExpression() != null) caseExpression.getSwitchExpression().accept(this);
+		        for (int i = 0; i < caseExpression.getWhenClauses().size(); i++) {
+		        	((WhenClause)caseExpression.getWhenClauses().get(i)).getWhenExpression().accept(this);
+		        	((WhenClause)caseExpression.getWhenClauses().get(i)).getThenExpression().accept(this);;
+		        }
+		        if (caseExpression.getElseExpression() != null) caseExpression.getElseExpression().accept(this);
+		    }
+			
+			@Override public void visit(LongValue lv) {};
+			@Override public void visit(DoubleValue lv) {};
+			@Override public void visit(HexValue lv) {};
+			@Override public void visit(NullValue lv) {};
+			@Override public void visit(TimeValue lv) {};
+			@Override public void visit(StringValue sv) {};
+	    };
+	    
+	    expr.accept(deparser);
+	    return new ArrayList<>(attributes);
+	}
+	
+public static List<String> getColumnNamesInAllForms(Expression expr) throws JSQLParserException {
+		
+		final Set<String> attributes = new HashSet<String>();
+	
+		SQLExpressionHandler deparser = new SQLExpressionHandler() {
+	        
+			@Override
+			public void visit(Column tableColumn) {
+				attributes.add(tableColumn.getColumnName());
+				attributes.add(tableColumn.getFullyQualifiedName());
+			}
+			
+			@Override
+		    public void visit(Parenthesis parenthesis) {
+		        parenthesis.getExpression().accept(this);
+		    }
+			
+			@Override
+			public void visit(InExpression inExpression) {
+				inExpression.getLeftExpression().accept(this);
+				if (inExpression.getLeftItemsList() != null) inExpression.getLeftItemsList().accept(this);
+				if (inExpression.getRightItemsList() != null) inExpression.getRightItemsList().accept(this);
+			}
 			
 			@Override
 			public void visitOldOracleJoinBinaryExpression(OldOracleJoinBinaryExpression expression, String operator) {

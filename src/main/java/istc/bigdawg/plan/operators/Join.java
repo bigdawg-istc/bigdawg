@@ -50,7 +50,136 @@ public class Join extends Operator {
 	
 	
 	
-	public Join (Operator o, boolean addChild) throws Exception {
+	// for SQL
+	public Join (Map<String, String> parameters, List<String> output, Operator lhs, Operator rhs, SQLTableExpression supplement) throws Exception  {
+		super(parameters, output, lhs, rhs, supplement);
+
+		// mending non-canoncial ordering
+		if (children.get(0) instanceof Scan && !(children.get(1) instanceof Scan)) {
+			Operator child0 = children.get(1);
+			Operator child1 = children.get(0);
+			children.clear();
+			children.add(child0);
+			children.add(child1);
+		}
+		
+		this.isBlocking = false;
+		this.aliases = new ArrayList<>();
+		
+		maxJoinSerial++;
+		this.joinID = maxJoinSerial;
+	
+		srcSchema = new LinkedHashMap<String, DataObjectAttribute>(lhs.outSchema);
+		srcSchema.putAll(rhs.outSchema);
+		
+		for(int i = 0; i < output.size(); ++i) {
+			String expr = output.get(i);
+
+			SQLOutItem out = new SQLOutItem(expr, srcSchema, supplement);
+
+			DataObjectAttribute attr = out.getAttribute();
+			String attrName = attr.getFullyQualifiedName();		
+			outSchema.put(attrName, attr);
+				
+		}
+		
+		// process join predicates and join filters
+		// if hash join "Hash-Cond", merge join "Merge-Cond"
+		for(String p : parameters.keySet()) 
+			if(p.endsWith("Cond")) 
+				joinPredicate = parameters.get(p);
+		joinFilter = parameters.get("Join-Filter");
+		if (joinFilter != null)  joinFilter = SQLExpressionUtils.removeExpressionDataTypeArtifactAndConvertLike(joinFilter);
+		if (joinPredicate != null) joinPredicate = SQLExpressionUtils.removeExpressionDataTypeArtifactAndConvertLike(joinPredicate);
+	
+		if(joinFilter != null && joinPredicate != null && joinFilter.contains(joinPredicate)) { // remove duplicate
+			String joinClause = "(" + joinPredicate + ") AND"; // canonical form
+			if(joinFilter.contains(joinClause)) 			
+				joinFilter = joinFilter.replace(joinClause, "");
+			else {
+				joinClause = " AND (" + joinPredicate + ")";
+				joinFilter = joinFilter.replace(joinClause, "");			
+			}
+		} 
+		
+		inferJoinParameters();
+		
+		if (joinPredicate != null)
+			joinPredicateOriginal 	= new String (joinPredicate);
+		if (joinFilter != null)
+			joinFilterOriginal 		= new String (joinFilter);
+		
+		for (Operator o : children) {
+			if (o instanceof Aggregate) {
+				((Aggregate)o).setSingledOutAggregate();
+			}
+		}
+	}
+    
+	
+	// for AFL
+	public Join(Map<String, String> parameters, SciDBArray output, Operator lhs, Operator rhs) throws Exception  {
+		super(parameters, output, lhs, rhs);
+
+		maxJoinSerial++;
+		this.joinID = maxJoinSerial;
+		
+		isBlocking = false;
+		
+		joinPredicate = parameters.get("Join-Predicate");
+		aliases = Arrays.asList(parameters.get("Children-Aliases").split(" "));
+
+		srcSchema = new LinkedHashMap<String, DataObjectAttribute>(lhs.outSchema);
+		srcSchema.putAll(rhs.outSchema);
+		
+		// attributes
+		for (String expr : output.getAttributes().keySet()) {
+			
+			CommonOutItem out = new CommonOutItem(expr, output.getAttributes().get(expr), false, srcSchema);
+			DataObjectAttribute attr = out.getAttribute();
+			String attrName = attr.getFullyQualifiedName();		
+			outSchema.put(attrName, attr);
+				
+		}
+		
+		// dimensions
+		for (String expr : output.getDimensions().keySet()) {
+			
+			CommonOutItem out = new CommonOutItem(expr, "Dimension", true, srcSchema);
+			DataObjectAttribute attr = out.getAttribute();
+			String attrName = attr.getFullyQualifiedName();		
+			outSchema.put(attrName, attr);
+				
+		}
+		
+		inferJoinParameters();
+		
+		if (joinPredicate != null)
+			joinPredicateOriginal 	= new String (joinPredicate);
+		if (joinFilter != null)
+			joinFilterOriginal 		= new String (joinFilter);
+	}
+	
+	// combine join ON clause with WHEREs that combine two tables
+ 	// if a predicate references data that is not public, move it to the filter
+ 	// collect equality predicates over public attributes in joinPredicate
+ 	// only supports AND in predicates, not OR or NOT
+ 	private void inferJoinParameters() throws Exception {
+ 		
+ 		if(joinFilter == null && joinPredicate == null) return;
+ 		if (joinPredicate != null && joinPredicate.length() > 0) { 
+ 			Expression jp = CCJSqlParserUtil.parseCondExpression(joinPredicate);
+ 			SQLExpressionUtils.removeExcessiveParentheses(jp);
+ 			joinPredicate = jp.toString(); 
+ 		}
+ 		if (joinFilter != null && joinFilter.length() > 0) {
+ 			Expression jf = CCJSqlParserUtil.parseCondExpression(joinFilter);
+ 			SQLExpressionUtils.removeExcessiveParentheses(jf);
+ 			joinFilter = jf.toString(); 
+ 		}
+ 	}
+    
+ 	public Join (Operator o, boolean addChild) throws Exception {
 		super(o, addChild);
 		Join j = (Join) o;
 		
@@ -118,157 +247,21 @@ public class Join extends Operator {
 		child0.isQueryRoot = false;
 		child1.isQueryRoot = false;
 	}
-	
-	// for AFL
-	public Join(Map<String, String> parameters, SciDBArray output, Operator lhs, Operator rhs) throws Exception  {
-		super(parameters, output, lhs, rhs);
-
-		maxJoinSerial++;
-		this.joinID = maxJoinSerial;
-		
-		isBlocking = false;
-		
-		joinPredicate = parameters.get("Join-Predicate");
-		aliases = Arrays.asList(parameters.get("Children-Aliases").split(" "));
-
-		srcSchema = new LinkedHashMap<String, DataObjectAttribute>(lhs.outSchema);
-		srcSchema.putAll(rhs.outSchema);
-		
-		// attributes
-		for (String expr : output.getAttributes().keySet()) {
-			
-			CommonOutItem out = new CommonOutItem(expr, output.getAttributes().get(expr), false, srcSchema);
-			DataObjectAttribute attr = out.getAttribute();
-			String attrName = attr.getFullyQualifiedName();		
-			outSchema.put(attrName, attr);
-				
-		}
-		
-		// dimensions
-		for (String expr : output.getDimensions().keySet()) {
-			
-			CommonOutItem out = new CommonOutItem(expr, "Dimension", true, srcSchema);
-			DataObjectAttribute attr = out.getAttribute();
-			String attrName = attr.getFullyQualifiedName();		
-			outSchema.put(attrName, attr);
-				
-		}
-		
-		inferJoinParameters();
-		
-		if (joinPredicate != null)
-			joinPredicateOriginal 	= new String (joinPredicate);
-		if (joinFilter != null)
-			joinFilterOriginal 		= new String (joinFilter);
-	}
-	
-	// for SQL
-	public Join (Map<String, String> parameters, List<String> output, Operator lhs, Operator rhs, SQLTableExpression supplement) throws Exception  {
-		super(parameters, output, lhs, rhs, supplement);
-
-		// mending non-canoncial ordering
-		if (children.get(0) instanceof Scan && !(children.get(1) instanceof Scan)) {
-			Operator child0 = children.get(1);
-			Operator child1 = children.get(0);
-			children.clear();
-			children.add(child0);
-			children.add(child1);
-		}
-		
-		this.isBlocking = false;
-		this.aliases = new ArrayList<>();
-		
-		maxJoinSerial++;
-		this.joinID = maxJoinSerial;
-	
-		srcSchema = new LinkedHashMap<String, DataObjectAttribute>(lhs.outSchema);
-		srcSchema.putAll(rhs.outSchema);
-		
-		for(int i = 0; i < output.size(); ++i) {
-			String expr = output.get(i);
-			
-			SQLOutItem out = new SQLOutItem(expr, srcSchema, supplement);
-
-			DataObjectAttribute attr = out.getAttribute();
-			String attrName = attr.getFullyQualifiedName();		
-			outSchema.put(attrName, attr);
-				
-		}
-		
-		// process join predicates and join filters
-		// if hash join "Hash-Cond", merge join "Merge-Cond"
-		for(String p : parameters.keySet()) 
-			if(p.endsWith("Cond")) 
-				joinPredicate = parameters.get(p);
-		joinFilter = parameters.get("Join-Filter");
-		if (joinFilter != null)  joinFilter = SQLExpressionUtils.removeExpressionDataTypeArtifactAndConvertLike(joinFilter);
-		if (joinPredicate != null) joinPredicate = SQLExpressionUtils.removeExpressionDataTypeArtifactAndConvertLike(joinPredicate);
-	
-		if(joinFilter != null && joinPredicate != null && joinFilter.contains(joinPredicate)) { // remove duplicate
-			String joinClause = "(" + joinPredicate + ") AND"; // canonical form
-			if(joinFilter.contains(joinClause)) 			
-				joinFilter = joinFilter.replace(joinClause, "");
-			else {
-				joinClause = " AND (" + joinPredicate + ")";
-				joinFilter = joinFilter.replace(joinClause, "");			
-			}
-		} 
-		
-		inferJoinParameters();
-		
-		if (joinPredicate != null)
-			joinPredicateOriginal 	= new String (joinPredicate);
-		if (joinFilter != null)
-			joinFilterOriginal 		= new String (joinFilter);
-		
-		for (Operator o : children) {
-			if (o instanceof Aggregate) {
-				((Aggregate)o).setSingledOutAggregate();
-			}
-		}
-	}
-    
-	// combine join ON clause with WHEREs that combine two tables
- 	// if a predicate references data that is not public, move it to the filter
- 	// collect equality predicates over public attributes in joinPredicate
- 	// only supports AND in predicates, not OR or NOT
- 	private void inferJoinParameters() throws Exception {
- 		
- 		if(joinFilter == null && joinPredicate == null) return;
- 		if (joinPredicate != null && joinPredicate.length() > 0) { 
- 			Expression jp = CCJSqlParserUtil.parseCondExpression(joinPredicate);
- 			SQLExpressionUtils.removeExcessiveParentheses(jp);
- 			joinPredicate = jp.toString(); 
- 		}
- 		if (joinFilter != null && joinFilter.length() > 0) {
- 			Expression jf = CCJSqlParserUtil.parseCondExpression(joinFilter);
- 			SQLExpressionUtils.removeExcessiveParentheses(jf);
- 			joinFilter = jf.toString(); 
- 		}
- 	}
-    
-    
 
     @Override
 	public Select generateSQLStringDestOnly(Select dstStatement, Boolean stopAtJoin, Set<String> allowedScans) throws Exception {
 		
-    	if (stopAtJoin != null && stopAtJoin) return SelectUtils.buildSelectFromTable(new Table(getJoinToken()));
+    	if (stopAtJoin != null && stopAtJoin) return generateSelectWithToken(getJoinToken());
     	if (stopAtJoin == null) stopAtJoin = true;
     	
 		if (isPruned) {
-			Table t = new Table();
-			t.setName(this.getPruneToken());
-			dstStatement = SelectUtils.buildSelectFromTable(t);
-			
-			return dstStatement;
+			return generateSelectWithToken(getPruneToken());
 		}
     	
 		allowedScans = this.getDataObjectAliasesOrNames().keySet();
 		
     	Operator child0 = children.get(0);
     	Operator child1 = children.get(1);
-    	
-    	
     	
     	// constructing the ON expression
     	
@@ -510,7 +503,7 @@ public class Join extends Operator {
     		return joinPredicate;
     	
     	Expression expr = CCJSqlParserUtil.parseCondExpression(joinPred);
-		List<String> itemsSet = SQLExpressionUtils.getColumnNamesInAllForms(expr);
+		List<String> itemsSet = SQLExpressionUtils.getColumnTableNamesInAllForms(expr);
 		
 		if (!replaceTableNameWithPruneName(child0, expr, t0, itemsSet))
 			findAndGetTableName(child0, t0, itemsSet);

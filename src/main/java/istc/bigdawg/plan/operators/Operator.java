@@ -38,6 +38,7 @@ import net.sf.jsqlparser.statement.select.SubJoin;
 import net.sf.jsqlparser.statement.select.SubSelect;
 import net.sf.jsqlparser.statement.select.ValuesList;
 import net.sf.jsqlparser.statement.select.WithItem;
+import net.sf.jsqlparser.util.SelectUtils;
 
 public class Operator {
 
@@ -376,8 +377,29 @@ public class Operator {
 		ArrayList<Table> tl = new ArrayList<>();
 		tl.add(t);
 		
-		((PlainSelect) body).setIntoTables(tl);
-//		return ((PlainSelect) body).toString();
+		PlainSelect ps = (PlainSelect) body; 
+		ps.setIntoTables(tl);
+		
+		
+		List<String> columnNames = new ArrayList<>();
+		List<SelectItem> seli = new ArrayList<>();
+		SelectItemVisitor siv = new SelectItemVisitor() {
+			@Override public void visit(AllColumns allColumns) {}
+			@Override public void visit(AllTableColumns allTableColumns) {} // this is bad, but we can't do too much about it TODO
+			@Override
+			public void visit(SelectExpressionItem selectExpressionItem) {
+				try {
+					List<String> columns = SQLExpressionUtils.getColumnNamesInAllForms(selectExpressionItem.getExpression());
+					if (!columns.removeAll(columnNames)) {
+						columnNames.addAll(columns); // TODO EXTREMELY BAD PRACTICE. BETTER SOLUTION NEEDED
+						seli.add(selectExpressionItem);
+					}
+					
+				} catch (JSQLParserException e) {e.printStackTrace();}
+			}
+		};
+		for (SelectItem si : ps.getSelectItems()) si.accept(siv);
+		ps.setSelectItems(seli);
 	}
 	
 	/**
@@ -856,13 +878,13 @@ public class Operator {
 		
 		// find the join		
 		Operator child = this;
-		while ((!child.getChildren().isEmpty()) && (!child.getClass().equals(Join.class))) 
+		while ((!child.getChildren().isEmpty()) && !(child instanceof Join)) 
 			// then there could be one child only
 			child = child.getChildren().get(0);
 		
 		Select outputSelect;
 		
-		if ( !this.getClass().equals(Join.class) && (!child.getChildren().isEmpty())) {
+		if ( !(this instanceof Join) && (!child.getChildren().isEmpty())) {
 			// TODO targeted strike? CURRENTLY WASH EVERYTHING // Set<String> names = child.getDataObjectNames();
 			outputSelect 		= this.generateSQLStringDestOnly(null, true, this.getDataObjectAliasesOrNames().keySet());
 			String joinToken 	= ((Join)child).getJoinToken();
@@ -882,7 +904,7 @@ public class Operator {
 			addSelectIntoToken(outputSelect, this.getSubTreeToken());
 			
 			sb.append(outputSelect);
-		} else if (child.getChildren().isEmpty()) {
+		} else if (!(this instanceof Join) && child.getChildren().isEmpty()) {
 			outputSelect = this.generateSQLStringDestOnly(null, true, this.getDataObjectAliasesOrNames().keySet());
 			
 			this.setSubTree(true);
@@ -901,24 +923,24 @@ public class Operator {
 //					children.get(1).getTreeRepresentation(true));
 			
 			
-			outputSelect = this.generateSQLStringDestOnly(null, null, this.getDataObjectAliasesOrNames().keySet());
-			
-			addSelectIntoToken(outputSelect, this.getSubTreeToken());
-			
-			for (Operator childchild : children) {
-				
-				childchild.setSubTree(true);
-				
-				Map<String, String> anecc			= childchild.getDataObjectAliasesOrNames();
-				Set<String> childAliases			= anecc.keySet();
-				Set<String> childAliasesAndNames 	= new HashSet<>(anecc.keySet());
-				for (String s : anecc.values()) childAliasesAndNames.add(s);
-				updateSubTreeTokens(((PlainSelect)outputSelect.getSelectBody()), childAliases, childAliasesAndNames, childchild.getSubTreeToken());
-				if (outputSelect.getWithItemsList() != null) 
-					for (WithItem wi : outputSelect.getWithItemsList())
-						updateSubTreeTokens(((PlainSelect)wi.getSelectBody()), childAliases, childAliasesAndNames, childchild.getSubTreeToken());
-				
-				
+//			outputSelect = this.generateSQLStringDestOnly(null, null, this.getDataObjectAliasesOrNames().keySet());
+//			
+//			addSelectIntoToken(outputSelect, this.getSubTreeToken());
+//			
+//			for (Operator childchild : children) {
+//				
+//				childchild.setSubTree(true);
+//				
+//				Map<String, String> anecc			= childchild.getDataObjectAliasesOrNames();
+//				Set<String> childAliases			= anecc.keySet();
+//				Set<String> childAliasesAndNames 	= new HashSet<>(anecc.keySet());
+//				for (String s : anecc.values()) childAliasesAndNames.add(s);
+//				updateSubTreeTokens(((PlainSelect)outputSelect.getSelectBody()), childAliases, childAliasesAndNames, childchild.getSubTreeToken());
+//				if (outputSelect.getWithItemsList() != null) 
+//					for (WithItem wi : outputSelect.getWithItemsList())
+//						updateSubTreeTokens(((PlainSelect)wi.getSelectBody()), childAliases, childAliasesAndNames, childchild.getSubTreeToken());
+//				
+//				
 //				// then update join tokens
 //				while ((!childchild.getChildren().isEmpty()) && !childchild.getClass().equals(Join.class)) 
 //					childchild = childchild.getChildren().get(0);
@@ -933,9 +955,9 @@ public class Operator {
 //						for (WithItem wi : outputSelect.getWithItemsList())
 //							updateSubTreeTokens(((PlainSelect)wi.getSelectBody()), childAliases, childAliasesAndNames, ((Join)childchild).getJoinToken());
 //				}
-			}
+//			}
 			
-			sb.append(outputSelect);
+//			sb.append(outputSelect);
 		}
 		
 		if (child instanceof Join)
@@ -1083,4 +1105,22 @@ public class Operator {
 	protected Map<String, Expression> getChildrenIndexConds() throws Exception {
 		return this.getChildren().get(0).getChildrenIndexConds();
 	}
+	
+	protected Select generateSelectWithToken(String token) throws Exception {
+    	Select dstStatement = SelectUtils.buildSelectFromTable(new Table(token));
+		PlainSelect ps = (PlainSelect)dstStatement.getSelectBody();
+		List<SelectItem> lsi = new ArrayList<>();
+		for (String s : outSchema.keySet()) {
+			SelectExpressionItem sei = new SelectExpressionItem();
+			Expression e = CCJSqlParserUtil.parseExpression(outSchema.get(s).getExpressionString());
+			SQLExpressionUtils.renameAttributes(e, null, null, token);
+			sei.setExpression(e);
+			lsi.add(sei);
+		}
+		ps.setSelectItems(lsi);
+		
+		System.out.printf("\n\n\nselect item: %s\n\n\n", lsi);
+		
+		return dstStatement;
+    }
 }

@@ -194,17 +194,20 @@ public class ExecutionNodeFactory {
 		if (sqlStatementForPresentNonJoinSegment.length() > 0) {
 			// this and joinOp == null will not happen at the same time
 			lqn = new LocalQueryExecutionNode(sqlStatementForPresentNonJoinSegment, engine, dest);
-			log.debug(String.format("Created new LocalQueryExecutionNode for %s\n", sqlStatementForPresentNonJoinSegment));
+			log.debug(String.format("Created new LocalQueryExecutionNode for %s, from sqlStatementForPresentNonJoinSegment\n", sqlStatementForPresentNonJoinSegment));
 			result.addVertex(lqn);
 			result.exitPoint = lqn;
 		}
 		//--- END OF PART 1/2 OF SOLUTION
 
 		if (joinOp != null) {
+			
 			// normal components that are also used in LQNs
 			String joinDestinationTable = joinOp.getJoinToken();
 			String broadcastQuery = joinOp.generateSQLSelectIntoStringForExecutionTree(joinDestinationTable, null);
 
+			log.debug(String.format("---> joinOp broadcast query %s\n", broadcastQuery));
+			
 			// TODO(ankush): re-enable binary join handling
 //			BinaryJoinExecutionNode joinNode = ExecutionNodeFactory.createJoinNode(broadcastQuery, engine, joinDestinationTable, joinOp);
 			LocalQueryExecutionNode joinNode = new LocalQueryExecutionNode(broadcastQuery, engine, joinDestinationTable);
@@ -281,7 +284,7 @@ public class ExecutionNodeFactory {
 			containerNodes.put(table, localQueryNode);
 		}
 
-		String remainderInto = qep.getSerializedName();
+		String remainderInto = remainder.getSubTreeToken();
 		qep.setTerminalTableName(remainderInto);
 
 		if (remainderLoc != null) {
