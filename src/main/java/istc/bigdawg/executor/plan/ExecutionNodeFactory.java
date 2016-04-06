@@ -179,9 +179,9 @@ public class ExecutionNodeFactory {
 		return new BinaryJoinExecutionNode(broadcastQuery, engine, joinDestinationTable, leftOp, rightOp, comparator);
 	}
 
-	private static ExecutionNodeSubgraph buildOperatorSubgraph(Operator op, ConnectionInfo engine, String dest, Map<String, LocalQueryExecutionNode> containerNodes) throws Exception {
+	private static ExecutionNodeSubgraph buildOperatorSubgraph(Operator op, ConnectionInfo engine, String dest, Map<String, LocalQueryExecutionNode> containerNodes, boolean isSelect) throws Exception {
 		StringBuilder sb = new StringBuilder();
-		Join joinOp = op.generateSQLStatementForPresentNonJoinSegment(sb);
+		Join joinOp = op.generateSQLStatementForPresentNonJoinSegment(sb, isSelect);
 		final String sqlStatementForPresentNonJoinSegment = sb.toString();
 		
 		// TODO CHANGE NAME OF JOIN'S CHILDREN
@@ -204,8 +204,10 @@ public class ExecutionNodeFactory {
 			
 			// normal components that are also used in LQNs
 			String joinDestinationTable = joinOp.getJoinToken();
-			String broadcastQuery = joinOp.generateSQLSelectIntoStringForExecutionTree(joinDestinationTable, null);
-
+			String broadcastQuery;
+			if (sqlStatementForPresentNonJoinSegment.length() == 0 && isSelect) broadcastQuery = joinOp.generateSQLString(null);
+			else broadcastQuery = joinOp.generateSQLSelectIntoStringForExecutionTree(joinDestinationTable, null);
+			
 			log.debug(String.format("---> joinOp broadcast query %s\n", broadcastQuery));
 			
 			// TODO(ankush): re-enable binary join handling
@@ -217,6 +219,8 @@ public class ExecutionNodeFactory {
 			//--- TODO WHAT IF op IS A JOIN? SOLUTION PART 2/2
 			if (sqlStatementForPresentNonJoinSegment.length() == 0) {
 				result.exitPoint = joinNode;
+			} else {
+				result.addEdge(joinNode, result.exitPoint);
 			}
 			//--- END OF PART 2/2 OF SOLUTION
 
@@ -228,7 +232,7 @@ public class ExecutionNodeFactory {
 					result.addEdge(containerNode, joinNode);
 				} else {
 					String token = child.isSubTree() ? child.getSubTreeToken() : null;
-					ExecutionNodeSubgraph subgraph = buildOperatorSubgraph(child, engine, token, containerNodes);
+					ExecutionNodeSubgraph subgraph = buildOperatorSubgraph(child, engine, token, containerNodes, false);
 					Graphs.addGraph(result, subgraph);
 					result.addEdge(subgraph.exitPoint, joinNode);
 //					entryPoints = Sets.union(entryPoints, subgraph.entryPoints);
@@ -243,7 +247,7 @@ public class ExecutionNodeFactory {
 	}
 
 	public static void addNodesAndEdgesWithJoinHandling(QueryExecutionPlan qep, Operator remainder, List<String> remainderLoc, Map<String,
-			QueryContainerForCommonDatabase> containers) throws Exception {
+			QueryContainerForCommonDatabase> containers, boolean isSelect) throws Exception {
 
 		int remainderDBID;
 		if (remainderLoc != null) {
@@ -294,7 +298,7 @@ public class ExecutionNodeFactory {
 			return;
 		}
 
-		ExecutionNodeSubgraph subgraph = buildOperatorSubgraph(remainder, remainderCI, remainderInto, containerNodes);
+		ExecutionNodeSubgraph subgraph = buildOperatorSubgraph(remainder, remainderCI, remainderInto, containerNodes, isSelect);
 
 		Graphs.addGraph(qep, subgraph);
 		qep.setTerminalTableNode(subgraph.exitPoint);

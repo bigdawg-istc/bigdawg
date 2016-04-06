@@ -47,7 +47,7 @@ public class Planner {
 			
 			
 			// currently there should be just one island, therefore one child, root.
-			QueryExecutionPlan qep = ciqp.getMember(k).getQEP(choice);
+			QueryExecutionPlan qep = ciqp.getMember(k).getQEP(choice, true);
 			
 			
 			// EXECUTE THE RESULT SUB RESULT
@@ -62,12 +62,11 @@ public class Planner {
 		
 		
 		// currently there should be just one island, therefore one child, root.
-		QueryExecutionPlan qep = ciqp.getRoot().getQEP(choice);
+		QueryExecutionPlan qep = ciqp.getRoot().getQEP(choice, true);
 		
 		
 		// EXECUTE THE RESULT
 		logger.debug("Executing query execution tree...");
-		qep.setSelect(true);
 		return compileResults(ciqp.getSerial(), Executor.executePlan(qep));
 	}
 
@@ -80,7 +79,7 @@ public class Planner {
 	 */
 	public static int getGetPerformanceAndPickTheBest(CrossIslandQueryNode ciqn, boolean isTrainingMode) throws Exception {
 		int choice = 0;
-		List<QueryExecutionPlan> qeps = ciqn.getAllQEPs();
+		List<QueryExecutionPlan> qeps = ciqn.getAllQEPs(true);
 		Signature signature = ciqn.getSignature();
 
 		Log.debug("Number of qeps: " + qeps.size());

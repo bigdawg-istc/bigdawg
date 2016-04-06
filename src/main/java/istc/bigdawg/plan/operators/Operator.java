@@ -874,7 +874,7 @@ public class Operator {
 	} 
 	
 	
-	public Join generateSQLStatementForPresentNonJoinSegment(StringBuilder sb) throws Exception {
+	public Join generateSQLStatementForPresentNonJoinSegment(StringBuilder sb, boolean isSelect) throws Exception {
 		
 		// find the join		
 		Operator child = this;
@@ -901,14 +901,14 @@ public class Operator {
 					updateSubTreeTokens(((PlainSelect)wi.getSelectBody()), childAliases, childAliasesAndNames, joinToken);
 			
 			this.setSubTree(true);
-			addSelectIntoToken(outputSelect, this.getSubTreeToken());
+			if (!isSelect) addSelectIntoToken(outputSelect, this.getSubTreeToken());
 			
 			sb.append(outputSelect);
 		} else if (!(this instanceof Join) && child.getChildren().isEmpty()) {
 			outputSelect = this.generateSQLStringDestOnly(null, true, this.getDataObjectAliasesOrNames().keySet());
 			
 			this.setSubTree(true);
-			addSelectIntoToken(outputSelect, this.getSubTreeToken());
+			if (!isSelect) addSelectIntoToken(outputSelect, this.getSubTreeToken());
 			
 			sb.append(outputSelect);
 		} else {

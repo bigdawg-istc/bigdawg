@@ -141,7 +141,7 @@ public class CrossIslandQueryNode {
 		return offsprings;
 	}
 	
-	public QueryExecutionPlan getQEP(int perm) throws Exception {
+	public QueryExecutionPlan getQEP(int perm, boolean isSelect) throws Exception {
 		
 		
 		
@@ -149,19 +149,19 @@ public class CrossIslandQueryNode {
 		if (perm >= remainderPermutations.size()) throw new Exception ("Permutation reference index out of bound");
 		
 		QueryExecutionPlan qep = new QueryExecutionPlan(scope); 
-		ExecutionNodeFactory.addNodesAndEdgesWithJoinHandling(qep, remainderPermutations.get(perm), remainderLoc, queryContainer); 
+		ExecutionNodeFactory.addNodesAndEdgesWithJoinHandling(qep, remainderPermutations.get(perm), remainderLoc, queryContainer, isSelect); 
 //		ExecutionNodeFactory.addNodesAndEdgesNaive( qep, remainderPermutations.get(perm), remainderLoc, queryContainer);
 		
 		return qep;
 	}
 	
-	public List<QueryExecutionPlan> getAllQEPs() throws Exception {
+	public List<QueryExecutionPlan> getAllQEPs(boolean isSelect) throws Exception {
 		
 		List<QueryExecutionPlan> qepl = new ArrayList<>();
 		
 		for (int i = 0; i < remainderPermutations.size(); i++ ){
 			QueryExecutionPlan qep = new QueryExecutionPlan(scope); 
-			ExecutionNodeFactory.addNodesAndEdgesWithJoinHandling(qep, remainderPermutations.get(i), remainderLoc, queryContainer); 
+			ExecutionNodeFactory.addNodesAndEdgesWithJoinHandling(qep, remainderPermutations.get(i), remainderLoc, queryContainer, isSelect); 
 //			ExecutionNodeFactory.addNodesAndEdgesNaive( qep, remainderPermutations.get(i), remainderLoc, queryContainer);
 			qepl.add(qep);
 		}

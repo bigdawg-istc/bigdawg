@@ -249,7 +249,7 @@ public class QEPConstruction {
 			
 			 
 			// qeps and benchmarks
-			Monitor.addBenchmarks(n.getAllQEPs(), n.getSignature(), true);
+			Monitor.addBenchmarks(n.getAllQEPs(true), n.getSignature(), true);
 			
 		}
 		
