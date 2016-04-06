@@ -189,7 +189,6 @@ public class ExecutionNodeFactory {
 
 		ExecutionNodeSubgraph result = new ExecutionNodeSubgraph();
 		
-		//--- TODO WHAT IF op IS A JOIN? SOLUTION PART 1
 		LocalQueryExecutionNode lqn = null;
 		if (sqlStatementForPresentNonJoinSegment.length() > 0) {
 			// this and joinOp == null will not happen at the same time
@@ -198,15 +197,16 @@ public class ExecutionNodeFactory {
 			result.addVertex(lqn);
 			result.exitPoint = lqn;
 		}
-		//--- END OF PART 1/2 OF SOLUTION
 
 		if (joinOp != null) {
-			
-			// normal components that are also used in LQNs
 			String joinDestinationTable = joinOp.getJoinToken();
+
 			String broadcastQuery;
-			if (sqlStatementForPresentNonJoinSegment.length() == 0 && isSelect) broadcastQuery = joinOp.generateSQLString(null);
-			else broadcastQuery = joinOp.generateSQLSelectIntoStringForExecutionTree(joinDestinationTable, null);
+			if (sqlStatementForPresentNonJoinSegment.length() == 0 && isSelect) {
+				broadcastQuery = joinOp.generateSQLString(null);
+			} else {
+				broadcastQuery = joinOp.generateSQLSelectIntoStringForExecutionTree(joinDestinationTable, null);
+			}
 			
 			log.debug(String.format("---> joinOp broadcast query %s\n", broadcastQuery));
 			
@@ -216,15 +216,12 @@ public class ExecutionNodeFactory {
 
 			result.addVertex(joinNode);
 			
-			//--- TODO WHAT IF op IS A JOIN? SOLUTION PART 2/2
 			if (sqlStatementForPresentNonJoinSegment.length() == 0) {
 				result.exitPoint = joinNode;
 			} else {
 				result.addEdge(joinNode, result.exitPoint);
 			}
-			//--- END OF PART 2/2 OF SOLUTION
 
-//			Set<ExecutionNode> entryPoints = new HashSet<>();
 			for(Operator child : joinOp.getChildren()) {
 				if(child.isPruned()) {
 					ExecutionNode containerNode = containerNodes.get(child.getPruneToken());
@@ -235,12 +232,8 @@ public class ExecutionNodeFactory {
 					ExecutionNodeSubgraph subgraph = buildOperatorSubgraph(child, engine, token, containerNodes, false);
 					Graphs.addGraph(result, subgraph);
 					result.addEdge(subgraph.exitPoint, joinNode);
-//					entryPoints = Sets.union(entryPoints, subgraph.entryPoints);
 				}
 			}
-//			result.entryPoints = entryPoints;
-//		} else {
-//			result.entryPoints = Collections.singleton(lqn);
 		}
 
 		return result;
