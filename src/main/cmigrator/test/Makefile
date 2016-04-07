@@ -36,7 +36,8 @@ ATTRIBUTE_TEST = $(TESTS_DIR)/attribute
 # the compiler doesn't generate warnings in Google Test headers.
 IDIR=../include # you have to add this because otherwise makefile searches only
 # in the same directory where *.cc or *.cpp files are stored (our placement of header files is clean)
-CPPFLAGS += -isystem $(GTEST_DIR)/include -I$(IDIR) -mlong-double-64 -mpc64 -std=c++11 -L/usr/local/include/boost
+# problem with boost/cregex.hpp: http://www.gossamer-threads.com/lists/atrpms/devel/9467
+CPPFLAGS += -isystem $(GTEST_DIR)/include -I$(IDIR) -mlong-double-64 -mpc64 -std=c++11 # -L/usr/include/boost
 
 # Flags passed to the C++ compiler.
 CXXFLAGS += -g -Wall -Wextra -pthread # -O2
