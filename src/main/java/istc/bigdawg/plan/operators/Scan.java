@@ -77,7 +77,6 @@ public class Scan extends Operator {
 		if(tableAlias != null && !tableAlias.equalsIgnoreCase(srcTable)) {
 			table.setAlias(new Alias(tableAlias));
 		}
-
 	}
 	
 	// for AFL

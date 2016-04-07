@@ -190,9 +190,10 @@ public class Join extends Operator {
 		
 		if (j.joinPredicate == null) this.joinPredicate = j.joinPredicate;
 		else this.joinPredicate = new String(j.joinPredicate);
-
-		System.out.println("Copy join after: "+this.joinPredicate);
 		
+		if (j.joinFilter == null) this.joinFilter = j.joinFilter;
+		else this.joinFilter = new String(j.joinFilter);
+
 		this.srcSchema = new HashMap<>();
 		for (String s : j.srcSchema.keySet()) {
 			if (j.srcSchema.get(s) != null) 
@@ -304,14 +305,17 @@ public class Join extends Operator {
         	}
         	
         	// TODO MODIFIED
-        	if (! s.equals(child0ObjectMap.get(s))) t0.setAlias(new Alias(s));
-        	if (!child0.isPruned()) t0.setName(child0ObjectMap.get(s));
-        	else t0.setName(child0.getPruneToken());
+        	if (!child0.isPruned()) {
+        		t0.setName(child0ObjectMap.get(s));
+        		if (! s.equals(child0ObjectMap.get(s))) t0.setAlias(new Alias(s));
+        	} else t0.setName(child0.getPruneToken());
         	
-        	if (! s2.equals(child1ObjectMap.get(s2))) t1.setAlias(new Alias(s2));
-        	if (!child1.isPruned()) t1.setName(child1ObjectMap.get(s2));
-        	else t1.setName(child1.getPruneToken());
+        	if (!child1.isPruned()) {
+        		t1.setName(child1ObjectMap.get(s2));
+        		if (! s2.equals(child1ObjectMap.get(s2))) t1.setAlias(new Alias(s2));
+        	} else t1.setName(child1.getPruneToken());
         	
+        	System.out.printf("\n\n\nt0: %s; t1: %s;\n\n\n", t0, t1);
     	}
 
 //		// for debugging

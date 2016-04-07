@@ -714,9 +714,9 @@ public class Operator {
 			}
 		} else {
 			if (((Scan)this).tableAlias != null && !((Scan)this).tableAlias.isEmpty())
-				aliasOrString.put(((Scan)this).tableAlias, ((Scan)this).srcTable);
+				aliasOrString.put(((Scan)this).tableAlias, ((Scan)this).table.getFullyQualifiedName());
 			else 
-				aliasOrString.put(((Scan)this).srcTable, ((Scan)this).srcTable);
+				aliasOrString.put(((Scan)this).srcTable, ((Scan)this).table.getFullyQualifiedName());
 		}
 		
 		return aliasOrString;
@@ -787,6 +787,8 @@ public class Operator {
 			return new Sort(this, addChild);
 		} else if (this instanceof Aggregate) {
 			return new Aggregate(this, addChild);
+		} else if (this instanceof Limit) {
+			return new Limit(this, addChild);
 		} else {
 			throw new Exception("Unsupported Operator Copy: "+this.getClass().toString());
 		}
@@ -1118,9 +1120,6 @@ public class Operator {
 			lsi.add(sei);
 		}
 		ps.setSelectItems(lsi);
-		
-		System.out.printf("\n\n\nselect item: %s\n\n\n", lsi);
-		
 		return dstStatement;
     }
 }

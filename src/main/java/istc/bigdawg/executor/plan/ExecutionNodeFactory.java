@@ -287,7 +287,8 @@ public class ExecutionNodeFactory {
 
 			containerNodes.put(table, localQueryNode);
 		}
-
+		
+		remainder.setSubTree(true);
 		String remainderInto = remainder.getSubTreeToken();
 		qep.setTerminalTableName(remainderInto);
 

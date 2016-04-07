@@ -58,7 +58,6 @@ public class Limit extends Operator {
 		super(o, addChild);
 		Limit lim = (Limit) o;
 		
-		
 		this.isLimitAll = lim.isLimitAll;
 		this.isLimitNull = lim.isLimitNull;
 		this.hasOffSet = lim.hasOffSet;
