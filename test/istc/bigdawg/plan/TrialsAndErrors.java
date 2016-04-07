@@ -118,12 +118,12 @@ public class TrialsAndErrors {
 		
 		if ( !runRegex ) return;
 		
-		String s = "where l_shipdate <= dAte '1998-12-01' - interval '1' day group by";
+		String s = "width_bucket(valuenum, 0, 100, 1001)";
 		
 		StringBuilder sb = new StringBuilder();
 		sb.append(s);
 
-		Pattern pDayInterval = Pattern.compile("(?i)(interval '[0-9]+\\s?((hour)|(hours)|(day)|(days)|(month)|(months))?'(\\s((hour)|(hours)|(day)|(days)|(month)|(months)))?)");
+		Pattern pDayInterval = Pattern.compile("[(]");
 		Matcher m3 = pDayInterval.matcher(sb);
 		
 		if (m3.find()) {
@@ -131,13 +131,13 @@ public class TrialsAndErrors {
 		}
 		
 		
-		s = s.replaceAll("::\\w+( \\w+)*", ""); 
-		Pattern p = Pattern.compile("'[0-9]+'");
-		Matcher m = p.matcher(s);
-		while (m.find()) {
-			s = m.replaceFirst(s.substring(m.start()+1, m.end()-1));
-			m.reset(s);
-		}
+		s = s.replaceAll("[(]", "\\[\\(\\]"); 
+//		Pattern p = Pattern.compile("'[0-9]+'");
+//		Matcher m = p.matcher(s);
+//		while (m.find()) {
+//			s = m.replaceFirst(s.substring(m.start()+1, m.end()-1));
+//			m.reset(s);
+//		}
 		
 		System.out.println(s);
 	}
@@ -182,7 +182,7 @@ public class TrialsAndErrors {
 	public void testPlanner() throws Exception {
 		if ( !runPlanner ) return;
 		
-		String userinput = "bdrel(select a.hadm_id, b.census_id from mimic2v26.admissions as a join mimic2v26.censusevents as b on a.subject_id = b.subject_id);";
+		String userinput = "bdrel(select bucket/10, count(*) from ( select width_bucket(valuenum, 0, 100, 1001) as bucket from mimic2v26.labevents le, mimic2v26.d_patients dp where itemid in (50316, 50468) and valuenum is not null and le.subject_id = dp.subject_id ) as wbc group by bucket order by bucket);";
 		try {
 		Planner.processQuery(userinput, false);
 		} catch (Exception e) {

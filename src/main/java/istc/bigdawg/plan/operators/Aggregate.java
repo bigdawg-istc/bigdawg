@@ -89,14 +89,12 @@ public class Aggregate extends Operator {
 		for(int i = 0; i < output.size(); ++i) {
 			String expr = output.get(i);
 
-			
 			SQLOutItem out = new SQLOutItem(expr, child.outSchema, supplement); // TODO CHECK THIS TODO
 			SQLAttribute attr = out.getAttribute();
+			attr.setExpression(rewriteComplextOutItem(attr.getExpressionString()));
 			String attrName = attr.getName();
 			
-			
 			outSchema.put(attrName, attr);
-			
 			
 			// e.g., sum(y) / count(x)
 			if(out.hasAggregate()) {
@@ -138,24 +136,27 @@ public class Aggregate extends Operator {
 				while (e instanceof Parenthesis) e = ((Parenthesis) e).getExpression();
 				
 				String estr = e.toString();
-				if (!(e instanceof Column))// && outExps.containsValue(estr))
-					for (String str : outExps.keySet())
-						if (outExps.get(str).contains(estr)) {
-							// get it's children to stand-out as a subselect
-							Set<String> names = new HashSet<>();
-							StringBuilder sb = new StringBuilder();
-							e = children.get(0).resolveAggregatesInFilter(estr, false, this, names, sb);
-							
-							if (e == null) {
-								// then we look for the weird expression from outItem
-								e = new Column(str);
-							}
-								
-							break;
-						}
+				
+				estr = rewriteComplextOutItem(estr);
+				
+//				if (!(e instanceof Column))// && outExps.containsValue(estr))
+//					for (String str : outExps.keySet())
+//						if (outExps.get(str).contains(estr)) {
+//							// get it's children to stand-out as a subselect
+//							Set<String> names = new HashSet<>();
+//							StringBuilder sb = new StringBuilder();
+//							e = children.get(0).resolveAggregatesInFilter(estr, false, this, names, sb);
+//							
+//							if (e == null) {
+//								// then we look for the weird expression from outItem
+//								e = new Column(str);
+//							}
+//								
+//							break;
+//						}
 							
 //				if (e instanceof Column) System.out.printf("---->> e class: %s, %s, %s \n",e.getClass().getSimpleName(), ((Column) e).getColumnName(), ((Column) e).getTable());
-				parsedGroupBys.add(e);
+				parsedGroupBys.add(CCJSqlParserUtil.parseExpression(estr));
 			}
 //			System.out.println("parsedGroupBys: "+parsedGroupBys+"\n");
 		}
@@ -366,8 +367,9 @@ public class Aggregate extends Operator {
 				
 		PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
 
-		if (ps.getSelectItems().get(0) instanceof AllColumns)
-			ps.getSelectItems().remove(0);
+//		if (ps.getSelectItems().get(0) instanceof AllColumns)
+//			ps.getSelectItems().remove(0);
+		ps.getSelectItems().clear();
 		
 		for (String alias: outSchema.keySet()) {
 			
@@ -410,7 +412,7 @@ public class Aggregate extends Operator {
 		
 		PlainSelect pselect = (PlainSelect)originalDST.getSelectBody();
 		
-		System.out.printf("\n\n\nAggregate:\n\nbefore: %s\n\n", originalDST.toString());
+//		System.out.printf("\n\n\nAggregate:\n\nbefore: %s\n\n", originalDST.toString());
 		
 		if (pselect.getJoins() != null) {
 			boolean isFound = false;
@@ -471,7 +473,6 @@ public class Aggregate extends Operator {
 				
 				for (Operator o : treeWalker) {
 					if (o.isPruned()) {
-						
 						Column c = (Column)gb;
 						
 						if (o.getOutSchema().containsKey(c.getFullyQualifiedName())) {

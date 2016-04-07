@@ -9,9 +9,12 @@ import java.util.Set;
 
 import istc.bigdawg.extract.logical.SQLTableExpression;
 import istc.bigdawg.packages.SciDBArray;
+import istc.bigdawg.plan.extract.SQLOutItem;
 import istc.bigdawg.schema.DataObjectAttribute;
+import istc.bigdawg.schema.SQLAttribute;
 import istc.bigdawg.utils.sqlutil.SQLExpressionUtils;
 import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.expression.Function;
 import net.sf.jsqlparser.expression.Parenthesis;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
@@ -49,8 +52,13 @@ public class Sort extends Operator {
 		
 		sortOrder = supplement.getSortOrder(keys, parameters.get("sectionName"));
 		sortKeys = keys;
-		outSchema = new LinkedHashMap<String, DataObjectAttribute>(child.outSchema);
+		outSchema = new LinkedHashMap<>(child.outSchema);
 		
+//		for (String s : outSchema.keySet()) {
+//			DataObjectAttribute da = outSchema.get(s);
+//			da.setExpression(rewriteComplextOutItem(da.getExpressionString()));
+//		}
+
 		// match with previous schema to get any aliases to propagate
 		for(int i = 0; i < sortKeys.size(); ++i) {
 			String a = supplement.getAlias(sortKeys.get(i));
@@ -74,15 +82,17 @@ public class Sort extends Operator {
 			
 			String estr = e.toString();
 			
-			if (e instanceof Column && outExps.containsKey(estr))
-				e = CCJSqlParserUtil.parseExpression(outExps.get(estr));
-			else if (!(e instanceof Column) && outExps.containsValue(estr))
-				for (String str : outExps.keySet()) 
-					if (outExps.get(str).contains(estr))
-						e = new Column(str);
+			estr = rewriteComplextOutItem(estr);
+			
+//			if (e instanceof Column && outExps.containsKey(estr))
+//				e = CCJSqlParserUtil.parseExpression(outExps.get(estr));
+//			else if (!(e instanceof Column) && outExps.containsValue(estr))
+//				for (String str : outExps.keySet()) 
+//					if (outExps.get(str).contains(estr))
+//						e = new Column(str);
 			
 			OrderByElement obe = new OrderByElement();
-			obe.setExpression(e);
+			obe.setExpression(CCJSqlParserUtil.parseExpression(estr));
 			if (s.endsWith("DESC")) {
 				obe.setAscDescPresent(true);
 				obe.setAsc(false);

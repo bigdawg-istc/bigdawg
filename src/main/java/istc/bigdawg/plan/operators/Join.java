@@ -74,10 +74,13 @@ public class Join extends Operator {
 		
 		for(int i = 0; i < output.size(); ++i) {
 			String expr = output.get(i);
-
+			
 			SQLOutItem out = new SQLOutItem(expr, srcSchema, supplement);
 
 			DataObjectAttribute attr = out.getAttribute();
+			
+			attr.setExpression(rewriteComplextOutItem(attr.getExpressionString()));
+			
 			String attrName = attr.getFullyQualifiedName();		
 			outSchema.put(attrName, attr);
 				

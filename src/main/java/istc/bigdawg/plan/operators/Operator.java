@@ -65,6 +65,8 @@ public class Operator {
 	
 	protected Map<String, DataObjectAttribute> outSchema;
 	
+	protected Map<String, String> complexOutItemFromProgeny;
+	
 	
 	// direct descendants
 	protected List<Operator> children;
@@ -79,6 +81,7 @@ public class Operator {
 	protected boolean isCopy = false;  // used in building permutations; only remainder join operators could attain true, so far
 	
 	
+	// SQL, single non sort
 	public Operator(Map<String, String> parameters, List<String> output,  
 			Operator child, // this is changed to 
 			SQLTableExpression supplement) {
@@ -87,17 +90,19 @@ public class Operator {
 		
 		// order preserving
 		outSchema = new LinkedHashMap<String, DataObjectAttribute>();
+		complexOutItemFromProgeny = new LinkedHashMap<>();
 		children  = new ArrayList<Operator>();
 		dataObjects = new HashSet<>();
 		joinReservedObjects = new HashSet<>();
 
 		
-		
 		if(child != null) { // check for leaf nodes
 			children.add(child);
 			child.setParent(this);
 			
+			populateComplexOutItem();
 		}
+		
 		
 		
 		// if it is a subplan, add it to the ctes list -- moved out to planparser
@@ -117,6 +122,7 @@ public class Operator {
 		
 		// order preserving
 		outSchema = new LinkedHashMap<String, DataObjectAttribute>();
+		complexOutItemFromProgeny = new HashMap<>();
 		children  = new ArrayList<Operator>();
 		dataObjects = new HashSet<>();
 		joinReservedObjects = new HashSet<>();
@@ -130,11 +136,14 @@ public class Operator {
 		
 	}
 	
+	
+	// SQL, join
 	public Operator(Map<String, String> parameters, List<String> output, 
 			Operator lhs, Operator rhs,
 			SQLTableExpression supplement) {
 		
 		outSchema = new LinkedHashMap<String, DataObjectAttribute>();
+		complexOutItemFromProgeny = new LinkedHashMap<>();
 		children  = new ArrayList<Operator>();
 		dataObjects = new HashSet<>();
 		joinReservedObjects = new HashSet<>();
@@ -144,6 +153,9 @@ public class Operator {
 
 		lhs.setParent(this);
 		rhs.setParent(this);
+		
+		populateComplexOutItem();
+		
 
 		// if it is a subplan, add it to the ctes list -- moved out to plan parser
 		/* if(parameters.containsKey("Subplan-Name")) {
@@ -219,6 +231,29 @@ public class Operator {
 		}
 	}
 
+	private void populateComplexOutItem() {
+		// populate complexOutItemFromProgeny
+		for (Operator child : children){
+			for (String s: child.getOutSchema().keySet()) {
+				Expression e = child.getOutSchema().get(s).getSQLExpression();
+				if (e == null) continue;
+				while (e instanceof Parenthesis) e = ((Parenthesis)e).getExpression();
+				if (e instanceof Column) continue;
+				complexOutItemFromProgeny.put(s, e.toString().replaceAll("[.]", "\\[\\.\\]").replaceAll("[(]", "\\[\\(\\]").replaceAll("[)]", "\\[\\)\\]"));
+			}
+			complexOutItemFromProgeny.putAll(child.complexOutItemFromProgeny);
+		}
+	}
+	
+	protected String rewriteComplextOutItem(String expr) throws Exception {
+		// simplify
+		expr = CCJSqlParserUtil.parseExpression(expr).toString();
+		for (String alias : complexOutItemFromProgeny.keySet()) {
+			expr = expr.replaceAll("("+complexOutItemFromProgeny.get(alias)+")", alias);
+		}
+		return expr;
+	}
+	
 	public boolean CTERoot() {
 		return isCTERoot;
 	}

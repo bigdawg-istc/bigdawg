@@ -1,5 +1,6 @@
 package istc.bigdawg.plan.operators;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -40,17 +41,7 @@ public class Limit extends Operator {
 		
 		// iterate over outschema and 
 		// classify each term as aggregate func or group by
-		for(int i = 0; i < output.size(); ++i) {
-			String expr = output.get(i);
-
-			
-			SQLOutItem out = new SQLOutItem(expr, child.outSchema, supplement); // TODO CHECK THIS TODO
-			SQLAttribute attr = out.getAttribute();
-			String attrName = attr.getName();
-			
-			outSchema.put(attrName, attr);
-			
-		}
+		outSchema = new LinkedHashMap<>(child.outSchema);
 
 	}
 	
