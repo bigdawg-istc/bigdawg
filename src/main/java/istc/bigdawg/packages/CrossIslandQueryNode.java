@@ -28,6 +28,7 @@ import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.query.DBHandler;
+import istc.bigdawg.schema.DataObjectAttribute;
 import istc.bigdawg.scidb.SciDBHandler;
 import istc.bigdawg.signature.Signature;
 import istc.bigdawg.signature.builder.ArraySignatureBuilder;
@@ -199,6 +200,7 @@ public class CrossIslandQueryNode {
 		originalMap = CatalogViewer.getDBMappingByObj(objs);
 		
 		// traverse add remainder
+		Map<String, DataObjectAttribute> rootOutSchema = root.getOutSchema();
 		remainderLoc = traverse(root); // this populated everything
 		
 		Map<String, Map<String, String>> jp = processJoinPredicates(joinPredicates);
@@ -208,6 +210,12 @@ public class CrossIslandQueryNode {
 			
 			List<Operator> permResult = getPermutatedOperatorsWithBlock(root, jp);
 			
+			// if root is join then the constructed out schema might get messed up
+			for (Operator o : permResult) {
+				if (o.getOutSchema().size() != rootOutSchema.size()) {
+					o.updateOutSchema(rootOutSchema);
+				}
+			}
 //			// debug
 //			System.out.println("\n\n\nResult of Permutation: ");
 //			int i = 1;

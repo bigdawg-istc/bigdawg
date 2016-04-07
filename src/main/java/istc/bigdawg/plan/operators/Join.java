@@ -315,7 +315,6 @@ public class Join extends Operator {
         		if (! s2.equals(child1ObjectMap.get(s2))) t1.setAlias(new Alias(s2));
         	} else t1.setName(child1.getPruneToken());
         	
-        	System.out.printf("\n\n\nt0: %s; t1: %s;\n\n\n", t0, t1);
     	}
 
 //		// for debugging

@@ -1122,4 +1122,13 @@ public class Operator {
 		ps.setSelectItems(lsi);
 		return dstStatement;
     }
+	
+	public void updateOutSchema(Map<String, DataObjectAttribute> schema) throws JSQLParserException {
+		Map<String, DataObjectAttribute> update = new HashMap<>();
+		for (String s: schema.keySet()) {
+			if (schema.get(s) instanceof SQLAttribute) update.put(new String(s), new SQLAttribute((SQLAttribute)schema.get(s)));
+			else update.put(new String(s), new DataObjectAttribute(schema.get(s)));
+		}
+		this.outSchema = update;
+	}
 }

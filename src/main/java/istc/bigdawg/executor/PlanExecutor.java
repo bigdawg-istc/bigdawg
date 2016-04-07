@@ -79,12 +79,12 @@ class PlanExecutor {
     public Optional<QueryResult> executePlan() throws SQLException, MigrationException {
         long start = System.currentTimeMillis();
 
-        log.debug(String.format("Executing query plan %s...", plan.getSerializedName()));
+//        log.debug(String.format("Executing query plan %s...", plan.getSerializedName()));
 
         CompletableFuture<Optional<QueryResult>> finalResult = CompletableFuture.completedFuture(Optional.empty());
 
         for (ExecutionNode node : plan) {
-            log.debug(String.format("Examining query node %s...", node.getTableName()));
+//            log.debug(String.format("Examining query node %s...", node.getTableName()));
 
             CompletableFuture<Optional<QueryResult>> result = CompletableFuture.supplyAsync(() -> this.executeNode(node));
 
@@ -141,7 +141,7 @@ class PlanExecutor {
         // otherwise execute as local query execution (same as broadcast join)
         // colocate dependencies, blocking until completed
         colocateDependencies(node, Collections.emptySet());
-        log.debug(String.format("Executing query node %s...", node.getTableName()));
+//        log.debug(String.format("Executing query node %s...", node.getTableName()));
 
         return node.getQueryString().flatMap((query) -> {
             try {

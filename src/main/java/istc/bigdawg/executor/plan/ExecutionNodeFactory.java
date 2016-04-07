@@ -174,7 +174,7 @@ public class ExecutionNodeFactory {
 		JoinOperand leftOp = new JoinOperand(engine, leftTable, leftAttribute, shuffleLeftJoinQuery);
 		JoinOperand rightOp = new JoinOperand(engine, rightTable, rightAttribute, shuffleRightJoinQuery);
 
-		log.debug(String.format("Created join node for query %s with left dependency on %s and right dependency on %s\n", broadcastQuery, leftTable, rightTable));
+//		log.debug(String.format("Created join node for query %s with left dependency on %s and right dependency on %s\n", broadcastQuery, leftTable, rightTable));
 
 		return new BinaryJoinExecutionNode(broadcastQuery, engine, joinDestinationTable, leftOp, rightOp, comparator);
 	}
@@ -193,7 +193,7 @@ public class ExecutionNodeFactory {
 		if (sqlStatementForPresentNonJoinSegment.length() > 0) {
 			// this and joinOp == null will not happen at the same time
 			lqn = new LocalQueryExecutionNode(sqlStatementForPresentNonJoinSegment, engine, dest);
-			log.debug(String.format("Created new LocalQueryExecutionNode for %s, from sqlStatementForPresentNonJoinSegment\n", sqlStatementForPresentNonJoinSegment));
+//			log.debug(String.format("Created new LocalQueryExecutionNode for %s, from sqlStatementForPresentNonJoinSegment\n", sqlStatementForPresentNonJoinSegment));
 			result.addVertex(lqn);
 			result.exitPoint = lqn;
 		}
@@ -207,8 +207,6 @@ public class ExecutionNodeFactory {
 			} else {
 				broadcastQuery = joinOp.generateSQLSelectIntoStringForExecutionTree(joinDestinationTable, null);
 			}
-			
-			log.debug(String.format("---> joinOp broadcast query %s\n", broadcastQuery));
 			
 			// TODO(ankush): re-enable binary join handling
 //			BinaryJoinExecutionNode joinNode = ExecutionNodeFactory.createJoinNode(broadcastQuery, engine, joinDestinationTable, joinOp);
@@ -276,7 +274,7 @@ public class ExecutionNodeFactory {
 
 			LocalQueryExecutionNode localQueryNode = new LocalQueryExecutionNode(selectIntoString, container.getConnectionInfo(), table);
 
-			log.debug(String.format("Created LQN %s for container.", selectIntoString));
+//			log.debug(String.format("Created LQN %s for container.", selectIntoString));
 
 			containerNodes.put(table, localQueryNode);
 		}
