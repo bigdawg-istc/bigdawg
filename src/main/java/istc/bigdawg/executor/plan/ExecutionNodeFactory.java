@@ -275,7 +275,7 @@ public class ExecutionNodeFactory {
 
 			LocalQueryExecutionNode localQueryNode = new LocalQueryExecutionNode(selectIntoString, container.getConnectionInfo(), table);
 
-			log.debug(String.format("Created LQN %s for container.", table));
+//			log.debug(String.format("Created LQN %s for container.", table));
 
 			containerNodes.put(table, localQueryNode);
 		}
