@@ -57,7 +57,8 @@ public class ExportFromSciDBExecutor implements Callable<String> {
 			String array = arrays.getMultiDimensional();
 			/* this is only a flat array so export only the attributes */
 			if (arrays.getFlat() != null) {
-				csvFormat = "csv";
+				/* for flat array we export only the attributes */
+				csvFormat = "csv"; 
 				array = arrays.getFlat();
 			}
 			saveCommandFinal = "save(" + array + ",'" + scidbFilePath + "',-2,'" + csvFormat + "')";

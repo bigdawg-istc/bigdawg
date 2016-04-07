@@ -1,11 +1,10 @@
 # clean everything
-mkdir -p obj/attribute
-
 rm check_stdin_stdout
 rm postgres2scidb
 rm scidb2postgres
 make clean
 
+mkdir -p obj/attribute
 # tests
 cwd=`pwd`
 cd ${cwd}/test
