@@ -174,7 +174,7 @@ public class ExecutionNodeFactory {
 		JoinOperand leftOp = new JoinOperand(engine, leftTable, leftAttribute, shuffleLeftJoinQuery);
 		JoinOperand rightOp = new JoinOperand(engine, rightTable, rightAttribute, shuffleRightJoinQuery);
 
-//		log.debug(String.format("Created join node for query %s with left dependency on %s and right dependency on %s\n", broadcastQuery, leftTable, rightTable));
+		log.debug(String.format("Created join node for query %s with left dependency on %s and right dependency on %s\n", broadcastQuery, leftTable, rightTable));
 
 		return new BinaryJoinExecutionNode(broadcastQuery, engine, joinDestinationTable, leftOp, rightOp, comparator);
 	}
@@ -239,6 +239,7 @@ public class ExecutionNodeFactory {
 
 	public static void addNodesAndEdgesWithJoinHandling(QueryExecutionPlan qep, Operator remainder, List<String> remainderLoc, Map<String,
 			QueryContainerForCommonDatabase> containers, boolean isSelect) throws Exception {
+		log.debug(String.format("Creating QEP %s...", qep.getSerializedName()));
 
 		int remainderDBID;
 		if (remainderLoc != null) {
@@ -274,7 +275,7 @@ public class ExecutionNodeFactory {
 
 			LocalQueryExecutionNode localQueryNode = new LocalQueryExecutionNode(selectIntoString, container.getConnectionInfo(), table);
 
-//			log.debug(String.format("Created LQN %s for container.", selectIntoString));
+			log.debug(String.format("Created LQN %s for container.", table));
 
 			containerNodes.put(table, localQueryNode);
 		}
@@ -287,13 +288,13 @@ public class ExecutionNodeFactory {
 			LocalQueryExecutionNode lqn = new LocalQueryExecutionNode(remainderSelectIntoString, remainderCI, remainderInto);
 			qep.addNode(lqn);
 			qep.setTerminalTableNode(lqn);
-			return;
+		} else {
+			ExecutionNodeSubgraph subgraph = buildOperatorSubgraph(remainder, remainderCI, remainderInto, containerNodes, isSelect);
+			Graphs.addGraph(qep, subgraph);
+			qep.setTerminalTableNode(subgraph.exitPoint);
 		}
 
-		ExecutionNodeSubgraph subgraph = buildOperatorSubgraph(remainder, remainderCI, remainderInto, containerNodes, isSelect);
-
-		Graphs.addGraph(qep, subgraph);
-		qep.setTerminalTableNode(subgraph.exitPoint);
+		log.debug(String.format("Finished creating QEP %s.", qep.getSerializedName()));
 	}
 
 	@Deprecated
