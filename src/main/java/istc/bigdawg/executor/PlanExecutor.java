@@ -149,7 +149,7 @@ class PlanExecutor {
                 markNodeAsCompleted(node);
                 return result;
             } catch (SQLException e) {
-                log.error(String.format("Error executing node %s", node), e);
+                log.error(String.format("Error executing node %s", node.getTableName()), e);
                 return Optional.empty();
             }
         });
@@ -183,10 +183,10 @@ class PlanExecutor {
     private void colocateDependencies(ExecutionNode node, Collection<String> ignoreTables) {
         // Block until dependencies are all resolved
         try {
-            log.debug(String.format("Waiting for dependencies of query node %s to be resolved...", node));
+            log.debug(String.format("Waiting for dependencies of query node %s to be resolved...", node.getTableName()));
             this.locks.get(node).await();
         } catch (InterruptedException e) {
-            log.error(String.format("Execution of query node %s was interrupted while waiting for dependencies.", node), e);
+            log.error(String.format("Execution of query node %s was interrupted while waiting for dependencies.", node.getTableName()), e);
             Thread.currentThread().interrupt();
         }
 
@@ -214,18 +214,18 @@ class PlanExecutor {
                 MigrationResult result = Migrator.migrate(dependency.getEngine(), table, dependant.getEngine(), table);
 
                 // mark the dependency's data as being present on node.getEngine()
-                resultLocations.put(dependency, dependant.getEngine());
+                resultLocations.put(dependency  , dependant.getEngine());
 
                 // mark that this engine now has a copy of the dependency's data
                 temporaryTables.put(dependant.getEngine(), table);
 
-                log.debug(String.format("Finished migrating dependency %s of node %s!", dependency, dependant));
+                log.debug(String.format("Finished migrating dependency %s of node %s!", dependency.getTableName(), dependant.getTableName()));
                 return result;
             } catch (MigrationException e) {
-                log.error(String.format("Error migrating dependency %s of node %s!", dependency, dependant), e);
+                log.error(String.format("Error migrating dependency %s of node %s!", dependency.getTableName(), dependant.getTableName()), e);
                 return MigrationResult.getFailedInstance(e.getLocalizedMessage());
             }
-        }).orElse(MigrationResult.getEmptyInstance(String.format("No table to migrate for node %s", dependency)));
+        }).orElse(MigrationResult.getEmptyInstance(String.format("No table to migrate for node %s", dependency.getTableName())));
     }
 
     private void dropTemporaryTables() throws SQLException {
@@ -261,14 +261,14 @@ class PlanExecutor {
     private void colocateDependenciesSerially(ExecutionNode node) {
         // Block until dependencies are all resolved
         try {
-            log.debug(String.format("Waiting for dependencies of query node %s to be resolved", node));
+            log.debug(String.format("Waiting for dependencies of query node %s to be resolved", node.getTableName()));
             this.locks.get(node).await();
         } catch (InterruptedException e) {
-            log.error(String.format("Execution of query node %s was interrupted while waiting for dependencies.", node), e);
+            log.error(String.format("Execution of query node %s was interrupted while waiting for dependencies.", node.getTableName()), e);
             Thread.currentThread().interrupt();
         }
 
-        log.debug(String.format("Colocating dependencies of query node %s", node));
+        log.debug(String.format("Colocating dependencies of query node %s", node.getTableName()));
 
         plan.getDependencies(node).stream()
                 // only look at dependencies not already on desired engine
@@ -286,7 +286,7 @@ class PlanExecutor {
                             // mark that this engine now has a copy of the dependency's data
                             temporaryTables.put(node.getEngine(), table);
                         } catch (MigrationException e) {
-                            log.error(String.format("Error migrating dependency %s of node %s!", d, node), e);
+                            log.error(String.format("Error migrating dependency %s of node %s!", d.getTableName(), node.getTableName()), e);
                         }
                     });
                 });
