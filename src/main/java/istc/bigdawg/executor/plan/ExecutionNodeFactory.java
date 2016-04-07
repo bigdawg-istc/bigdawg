@@ -7,6 +7,7 @@ import java.util.regex.Pattern;
 import com.google.common.collect.Sets;
 import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.packages.QueryContainerForCommonDatabase;
+import istc.bigdawg.plan.operators.Aggregate;
 import istc.bigdawg.plan.operators.CommonSQLTableExpressionScan;
 import istc.bigdawg.plan.operators.Join;
 import istc.bigdawg.plan.operators.Operator;
@@ -205,7 +206,7 @@ public class ExecutionNodeFactory {
 			if (sqlStatementForPresentNonJoinSegment.length() == 0 && isSelect) {
 				broadcastQuery = joinOp.generateSQLString(null);
 			} else {
-				broadcastQuery = joinOp.generateSQLSelectIntoStringForExecutionTree(joinDestinationTable, null);
+				broadcastQuery = joinOp.generateSQLSelectIntoStringForExecutionTree(joinDestinationTable, true);
 			}
 			
 			// TODO(ankush): re-enable binary join handling

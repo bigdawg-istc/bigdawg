@@ -26,6 +26,8 @@ import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.Select;
+import net.sf.jsqlparser.statement.select.SelectExpressionItem;
+import net.sf.jsqlparser.statement.select.SelectItem;
 import net.sf.jsqlparser.statement.select.WithItem;
 import net.sf.jsqlparser.util.SelectUtils;
 
@@ -253,10 +255,10 @@ public class Join extends Operator {
 	}
 
     @Override
-	public Select generateSQLStringDestOnly(Select dstStatement, Boolean stopAtJoin, Set<String> allowedScans) throws Exception {
+	public Select generateSQLStringDestOnly(Select dstStatement, boolean isSubTreeRoot, boolean stopAtJoin, Set<String> allowedScans) throws Exception {
 		
-    	if (stopAtJoin != null && stopAtJoin) return generateSelectWithToken(getJoinToken());
-    	if (stopAtJoin == null) stopAtJoin = true;
+    	if (!isSubTreeRoot && stopAtJoin) return generateSelectWithToken(getJoinToken());
+//    	if (stopAtJoin == null) stopAtJoin = true;
     	
 		if (isPruned) {
 			return generateSelectWithToken(getPruneToken());
@@ -308,15 +310,23 @@ public class Join extends Operator {
         	}
         	
         	// TODO MODIFIED
-        	if (!child0.isPruned()) {
+        	if (child0.isPruned()) {
+        		t0.setName(child0.getPruneToken());
+        	} else if (child0 instanceof Aggregate && stopAtJoin) {
+        		t0.setName(((Aggregate)child0).getAggregateToken());
+        	} else {
         		t0.setName(child0ObjectMap.get(s));
         		if (! s.equals(child0ObjectMap.get(s))) t0.setAlias(new Alias(s));
-        	} else t0.setName(child0.getPruneToken());
+        	} 
         	
-        	if (!child1.isPruned()) {
+        	if (child1.isPruned()) {
+        		t1.setName(child1.getPruneToken());
+        	} else if (child1 instanceof Aggregate && stopAtJoin) {
+        		t1.setName(((Aggregate)child1).getAggregateToken());
+        	} else {
         		t1.setName(child1ObjectMap.get(s2));
         		if (! s2.equals(child1ObjectMap.get(s2))) t1.setAlias(new Alias(s2));
-        	} else t1.setName(child1.getPruneToken());
+        	} 
         	
     	}
 
@@ -332,12 +342,19 @@ public class Join extends Operator {
 			if (!(child1.isPruned() || child1 instanceof Scan)) 
 				throw new Exception("child0 class: "+child0.getClass().toString()+"; child1 class: "+child1.getClass().toString());
 			
-			dstStatement = children.get(0).generateSQLStringDestOnly(null, stopAtJoin, allowedScans);
+			dstStatement = children.get(0).generateSQLStringDestOnly(null, false, stopAtJoin, allowedScans);
 			if (t0.getAlias() != null) updateThisAndParentJoinReservedObjects(t0.getAlias().getName());
 			else updateThisAndParentJoinReservedObjects(t0.getName());
 
+    	} else if (child0 instanceof Aggregate && stopAtJoin) {
+    		dstStatement = SelectUtils.buildSelectFromTable(new Table(((Aggregate)child0).getAggregateToken()));
+    		List<SelectItem> sil = new ArrayList<>();
+    		for (String s : child0.getOutSchema().keySet()){
+    			sil.add(new SelectExpressionItem(new Column(new Table(((Aggregate)child0).getAggregateToken()), s)));
+    		};
+    		((PlainSelect)dstStatement.getSelectBody()).setSelectItems(sil);
 		} else {
-			dstStatement = child0.generateSQLStringDestOnly(dstStatement, stopAtJoin, allowedScans); 
+			dstStatement = child0.generateSQLStringDestOnly(dstStatement, false, stopAtJoin, allowedScans); 
 		}
     	
 		
@@ -345,7 +362,20 @@ public class Join extends Operator {
     	if (child0.isPruned()) ((PlainSelect) dstStatement.getSelectBody()).setFromItem(t0);
     	addJSQLParserJoin(dstStatement, t1);
 		
-		dstStatement = child1.generateSQLStringDestOnly(dstStatement, stopAtJoin, allowedScans); 
+    	
+    	if (child1 instanceof Aggregate && stopAtJoin) {
+    		dstStatement = SelectUtils.buildSelectFromTable(t1);
+    		List<SelectItem> sil = new ArrayList<>();
+    		for (String s : child0.getOutSchema().keySet()){
+    			sil.add(new SelectExpressionItem(new Column(t1, s)));
+    		};
+    		((PlainSelect)dstStatement.getSelectBody()).getSelectItems().addAll(sil);
+		} else {
+			dstStatement = child1.generateSQLStringDestOnly(dstStatement, false, stopAtJoin, allowedScans); 
+		}
+    	
+    	
+//		dstStatement = child1.generateSQLStringDestOnly(dstStatement, false, stopAtJoin, allowedScans); 
 		
 		if (joinFilter != null || joinPredicate != null) {
 

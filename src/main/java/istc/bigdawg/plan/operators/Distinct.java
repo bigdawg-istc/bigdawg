@@ -47,9 +47,9 @@ public class Distinct extends Operator {
 
 	
 	@Override
-	public Select generateSQLStringDestOnly(Select dstStatement, Boolean stopAtJoin, Set<String> allowedScans) throws Exception {
+	public Select generateSQLStringDestOnly(Select dstStatement, boolean isSubTreeRoot, boolean stopAtJoin, Set<String> allowedScans) throws Exception {
 		
-		dstStatement = children.get(0).generateSQLStringDestOnly(dstStatement, stopAtJoin, allowedScans);
+		dstStatement = children.get(0).generateSQLStringDestOnly(dstStatement, false, stopAtJoin, allowedScans);
 		
 		PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
 		ps.setDistinct(new net.sf.jsqlparser.statement.select.Distinct());
