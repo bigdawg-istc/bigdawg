@@ -59,7 +59,7 @@ class PlanExecutor {
      */
     public PlanExecutor(QueryExecutionPlan plan) {
         this.plan = plan;
-        log.debug(String.format("Received plan: \n %s",
+        log.debug(String.format("Received plan %s: \n %s", plan.getSerializedName(),
                 StreamSupport.stream(Spliterators.spliterator(plan.iterator(), plan.vertexSet().size(), Spliterator.ORDERED), false)
                     .map(ExecutionNode::getQueryString)
                     .filter(Optional::isPresent).map(opt -> opt.get())
