@@ -253,10 +253,10 @@ public class Join extends Operator {
 	}
 
     @Override
-	public Select generateSQLStringDestOnly(Select dstStatement, Boolean stopAtJoin, Set<String> allowedScans) throws Exception {
+	public Select generateSQLStringDestOnly(Select dstStatement, boolean isSubTreeRoot, boolean stopAtJoin, Set<String> allowedScans) throws Exception {
 		
-    	if (stopAtJoin != null && stopAtJoin) return generateSelectWithToken(getJoinToken());
-    	if (stopAtJoin == null) stopAtJoin = true;
+    	if (!isSubTreeRoot && stopAtJoin) return generateSelectWithToken(getJoinToken());
+//    	if (stopAtJoin == null) stopAtJoin = true;
     	
 		if (isPruned) {
 			return generateSelectWithToken(getPruneToken());
@@ -332,12 +332,12 @@ public class Join extends Operator {
 			if (!(child1.isPruned() || child1 instanceof Scan)) 
 				throw new Exception("child0 class: "+child0.getClass().toString()+"; child1 class: "+child1.getClass().toString());
 			
-			dstStatement = children.get(0).generateSQLStringDestOnly(null, stopAtJoin, allowedScans);
+			dstStatement = children.get(0).generateSQLStringDestOnly(null, false, stopAtJoin, allowedScans);
 			if (t0.getAlias() != null) updateThisAndParentJoinReservedObjects(t0.getAlias().getName());
 			else updateThisAndParentJoinReservedObjects(t0.getName());
 
 		} else {
-			dstStatement = child0.generateSQLStringDestOnly(dstStatement, stopAtJoin, allowedScans); 
+			dstStatement = child0.generateSQLStringDestOnly(dstStatement, false, stopAtJoin, allowedScans); 
 		}
     	
 		
@@ -345,7 +345,7 @@ public class Join extends Operator {
     	if (child0.isPruned()) ((PlainSelect) dstStatement.getSelectBody()).setFromItem(t0);
     	addJSQLParserJoin(dstStatement, t1);
 		
-		dstStatement = child1.generateSQLStringDestOnly(dstStatement, stopAtJoin, allowedScans); 
+		dstStatement = child1.generateSQLStringDestOnly(dstStatement, false, stopAtJoin, allowedScans); 
 		
 		if (joinFilter != null || joinPredicate != null) {
 

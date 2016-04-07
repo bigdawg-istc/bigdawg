@@ -205,7 +205,7 @@ public class ExecutionNodeFactory {
 			if (sqlStatementForPresentNonJoinSegment.length() == 0 && isSelect) {
 				broadcastQuery = joinOp.generateSQLString(null);
 			} else {
-				broadcastQuery = joinOp.generateSQLSelectIntoStringForExecutionTree(joinDestinationTable, null);
+				broadcastQuery = joinOp.generateSQLSelectIntoStringForExecutionTree(joinDestinationTable, true);
 			}
 			
 			// TODO(ankush): re-enable binary join handling

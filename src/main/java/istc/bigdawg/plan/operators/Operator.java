@@ -286,7 +286,7 @@ public class Operator {
 	}
 	
 	
-	public String generateSQLSelectIntoStringForExecutionTree(String into, Boolean stopAtJoin) throws Exception {
+	public String generateSQLSelectIntoStringForExecutionTree(String into, boolean stopAtJoin) throws Exception {
 		Select dstStatement  = prepareForSQLGeneration(null, stopAtJoin);
 		return addSelectIntoToken(dstStatement, into);
 	}
@@ -505,11 +505,11 @@ public class Operator {
 	}
 	
 	
-	protected Select generateSQLStringDestOnly(Select dstStatement, Boolean stopAtJoin, Set<String> allowedScans) throws Exception {
+	protected Select generateSQLStringDestOnly(Select dstStatement, boolean isSubTreeRoot, boolean stopAtJoin, Set<String> allowedScans) throws Exception {
 		
 		// generic case
 		for (Operator o : children)
-			dstStatement = o.generateSQLStringDestOnly(dstStatement, stopAtJoin, allowedScans);
+			dstStatement = o.generateSQLStringDestOnly(dstStatement, false, stopAtJoin, allowedScans);
 		return dstStatement;
 	}
 	
@@ -521,19 +521,25 @@ public class Operator {
 	 * @return dstStatement
 	 * @throws Exception
 	 */
-	private Select prepareForSQLGeneration(Select srcStatement, Boolean stopAtJoin) throws Exception {
+	private Select prepareForSQLGeneration(Select srcStatement, boolean stopAtJoin) throws Exception {
 
 		clearJoinReservedObjects();
 		boolean originalPruneStatus = this.isPruned();
 		this.prune(false);
-		Select dstStatement  = this.generateSQLStringDestOnly(null, stopAtJoin, this.getDataObjectAliasesOrNames().keySet());
+		Select dstStatement  = this.generateSQLStringDestOnly(null, true, stopAtJoin, this.getDataObjectAliasesOrNames().keySet());
 		this.prune(originalPruneStatus);
 		
 		// iterate over out schema and add it to select clause
 		HashMap<String, SelectItem> selects = new HashMap<String, SelectItem>();
 
 		updateObjectAliases(false);
+		changeAttributesForSelectItems(srcStatement, (PlainSelect) dstStatement.getSelectBody(), selects);
 		
+//		if (isSubTreeRoot == true && ) stopAtJoin = true;
+		return postProcGenSQLStopJoin(dstStatement, stopAtJoin);
+	}
+	
+	private void changeAttributesForSelectItems(Select srcStatement, PlainSelect ps, HashMap<String, SelectItem> selects) throws Exception {
 		List<SelectItem> selectItemList = new ArrayList<>(); 
 		
 		for(String s : outSchema.keySet()) {
@@ -554,14 +560,20 @@ public class Operator {
 				selects.put(s, si);
 		}
 		
-		PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
 		if (srcStatement != null)
 			ps.setSelectItems(changeSelectItemsOrder(srcStatement, selects));
 		else 
 			ps.setSelectItems(selectItemList);
 		
-		if (stopAtJoin == null) stopAtJoin = true;
-		return postProcGenSQLStopJoin(dstStatement, stopAtJoin);
+		if (ps.getFromItem() instanceof SubSelect) {
+			changeAttributesForSelectItems(null, (PlainSelect)((SubSelect)ps.getFromItem()).getSelectBody(), selects);
+		}
+		if (ps.getJoins() != null) {
+			for (net.sf.jsqlparser.statement.select.Join j : ps.getJoins()) {
+				if (j.getRightItem() instanceof SubSelect)
+					changeAttributesForSelectItems(null, (PlainSelect)((SubSelect)j.getRightItem()).getSelectBody(), selects);
+			}
+		} 
 	}
 	
 	
@@ -686,6 +698,7 @@ public class Operator {
 		}
 		
 		if (this instanceof Join) return ((Join)this).getJoinToken(); 
+		else if (this instanceof Aggregate && ((Aggregate)this).aggregateID != null) return ((Aggregate)this).getAggregateToken();
 		else return "BIGDAWGSUBTREE_"+this.subTreeID;
 	}
 	
@@ -725,19 +738,17 @@ public class Operator {
 	
 	public Map<String, String> getDataObjectAliasesOrNames() throws Exception {
 		
+		Map<String, String> aliasOrString = new LinkedHashMap<>();
+		
 		if (isSubTree) {
-			Map<String, String> temps = new LinkedHashMap<>();
-			temps.put(getSubTreeToken(), getSubTreeToken());
-			return temps;
+			aliasOrString.put(getSubTreeToken(), getSubTreeToken());
+			return aliasOrString;
 		}
 		
 		if (isPruned) {
-			Map<String, String> temps = new LinkedHashMap<>();
-			temps.put(getPruneToken(), getPruneToken());
-			return temps;
+			aliasOrString.put(getPruneToken(), getPruneToken());
+			return aliasOrString;
 		}
-		
-		Map<String, String> aliasOrString = new LinkedHashMap<>();
 		
 		if (this instanceof Aggregate && ((Aggregate)this).aggregateID != null)
 			aliasOrString.put(((Aggregate)this).getAggregateToken(), ((Aggregate)this).getAggregateToken());
@@ -923,7 +934,7 @@ public class Operator {
 		
 		if ( !(this instanceof Join) && (!child.getChildren().isEmpty())) {
 			// TODO targeted strike? CURRENTLY WASH EVERYTHING // Set<String> names = child.getDataObjectNames();
-			outputSelect 		= this.generateSQLStringDestOnly(null, true, this.getDataObjectAliasesOrNames().keySet());
+			outputSelect 		= this.generateSQLStringDestOnly(null, true, true, this.getDataObjectAliasesOrNames().keySet());
 			String joinToken 	= ((Join)child).getJoinToken();
 			
 			Map<String, String> ane				= this.getChildren().get(0).getDataObjectAliasesOrNames();
@@ -942,7 +953,7 @@ public class Operator {
 			
 			sb.append(outputSelect);
 		} else if (!(this instanceof Join) && child.getChildren().isEmpty()) {
-			outputSelect = this.generateSQLStringDestOnly(null, true, this.getDataObjectAliasesOrNames().keySet());
+			outputSelect = this.generateSQLStringDestOnly(null, true, true, this.getDataObjectAliasesOrNames().keySet());
 			
 			this.setSubTree(true);
 			if (!isSelect) addSelectIntoToken(outputSelect, this.getSubTreeToken());
@@ -1045,7 +1056,8 @@ public class Operator {
 
 			@Override
 			public void visit(SubSelect subSelect) {
-				try { updateSubTreeTokens((PlainSelect)subSelect.getSelectBody(), originalAliases, aliasesAndNames, subTreeToken);
+				try { 
+					updateSubTreeTokens((PlainSelect)subSelect.getSelectBody(), originalAliases, aliasesAndNames, subTreeToken);
 				} catch (Exception e) { e.printStackTrace(); }
 			}
 		};
@@ -1057,7 +1069,7 @@ public class Operator {
 		
 	}
 	
-	protected Select postProcGenSQLStopJoin(Select dstStatement, Boolean stopAtJoin) throws Exception {
+	protected Select postProcGenSQLStopJoin(Select dstStatement, boolean stopAtJoin) throws Exception {
     	
     	if (dstStatement == null || !stopAtJoin) return dstStatement;
     	

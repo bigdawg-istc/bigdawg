@@ -343,7 +343,7 @@ public class Aggregate extends Operator {
 	}
 	
 	@Override
-	public Select generateSQLStringDestOnly(Select dstStatement, Boolean stopAtJoin, Set<String> allowedScans) throws Exception {
+	public Select generateSQLStringDestOnly(Select dstStatement, boolean isSubTreeRoot, boolean stopAtJoin, Set<String> allowedScans) throws Exception {
 
 		Select originalDST = dstStatement;
 		
@@ -362,8 +362,8 @@ public class Aggregate extends Operator {
 //		}
 		
 		
-		if (aggregateID == null) dstStatement = children.get(0).generateSQLStringDestOnly(dstStatement, stopAtJoin, allowedScans);
-		else dstStatement = children.get(0).generateSQLStringDestOnly(null, stopAtJoin, allowedScans);
+		if (isSubTreeRoot || aggregateID == null) dstStatement = children.get(0).generateSQLStringDestOnly(dstStatement, false, stopAtJoin, allowedScans);
+		else dstStatement = children.get(0).generateSQLStringDestOnly(null, false, stopAtJoin, allowedScans);
 				
 		PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
 
@@ -393,7 +393,7 @@ public class Aggregate extends Operator {
 		}
 		
 		
-		if (aggregateID == null) return dstStatement;
+		if (isSubTreeRoot || aggregateID == null) return dstStatement;
 		if (originalDST == null) {
 			
 			SubSelect ss = makeNewSubSelectUpdateDST(dstStatement);

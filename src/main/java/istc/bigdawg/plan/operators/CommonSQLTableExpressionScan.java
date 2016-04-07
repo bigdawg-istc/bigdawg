@@ -110,8 +110,8 @@ public class CommonSQLTableExpressionScan extends Scan {
 	};
 
 	@Override
-	public Select generateSQLStringDestOnly(Select dstStatement, Boolean stopAtJoin, Set<String> allowedScans) throws Exception {
-		dstStatement = super.generateSQLStringDestOnly(dstStatement, stopAtJoin, allowedScans);
+	public Select generateSQLStringDestOnly(Select dstStatement, boolean isSubTreeRoot, boolean stopAtJoin, Set<String> allowedScans) throws Exception {
+		dstStatement = super.generateSQLStringDestOnly(dstStatement, isSubTreeRoot, stopAtJoin, allowedScans);
 		 
 		List<WithItem> withs = dstStatement.getWithItemsList();
 		
@@ -139,7 +139,7 @@ public class CommonSQLTableExpressionScan extends Scan {
 			// recurse if child references any additional CTEs
 			// create new dst statement for child and grab its select body
 			
-			Select dstPrime = sourceStatement.generateSQLStringDestOnly(null, stopAtJoin, new HashSet<>());
+			Select dstPrime = sourceStatement.generateSQLStringDestOnly(null, true, stopAtJoin, new HashSet<>());
 
 			List<WithItem> dstWithsPrime = dstPrime.getWithItemsList();
 			if(dstWithsPrime != null) {
