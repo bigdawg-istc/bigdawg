@@ -53,8 +53,9 @@ run test server
 -- follow the Phase specific guides to set up the databases, make sure you could access each of which BigDAWG uses
 -> mvn exec:java -P XXX
 
-
-
+cmigrator
+-----------------
+Our main migration tool was built in C++. Please, refer to: src/main/cmigrator/README.md for more details.
 
 # For demo of Phase 0.3
 Migration from PostgreSQL to PostgreSQL is in binary format.

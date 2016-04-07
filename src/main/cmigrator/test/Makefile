@@ -15,6 +15,7 @@
 # Points to the root of Google Test, relative to where this file is.
 # Remember to tweak this if you move this file.
 #GTEST_DIR = ${GTEST_DIR}
+GTEST_DIR = ./gtest/googletest
 
 # Where to find user code.
 ODIR=../obj
@@ -35,7 +36,7 @@ ATTRIBUTE_TEST = $(TESTS_DIR)/attribute
 # the compiler doesn't generate warnings in Google Test headers.
 IDIR=../include # you have to add this because otherwise makefile searches only
 # in the same directory where *.cc or *.cpp files are stored (our placement of header files is clean)
-CPPFLAGS += -isystem $(GTEST_DIR)/include -I$(IDIR) -mlong-double-64 -mpc64 -std=c++11 -L/usr/include/boost
+CPPFLAGS += -isystem $(GTEST_DIR)/include -I$(IDIR) -mlong-double-64 -mpc64 -std=c++11 -L/usr/local/include/boost
 
 # Flags passed to the C++ compiler.
 CXXFLAGS += -g -Wall -Wextra -pthread # -O2
@@ -105,7 +106,7 @@ attribute_unittest.o : $(ATTRIBUTE_TEST)/attribute_unittest.cc \
 		       $(ATTRIBUTE_HEADER)/attribute.h $(GTEST_HEADERS)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c -o $@ $<
 
-attribute_unittest : $(ODIR_ATTRIBUTE)/attribute.o attribute_unittest.o gtest_main.a
+attribute_unittest : $(ODIR_ATTRIBUTE)/attribute.o attribute_unittest.o $(ODIR)/buffer.o gtest_main.a 
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -lpthread $^ -o $@
 
 # tests for typeAttributeMap
@@ -127,7 +128,7 @@ typeAttributeMap_unittest.o : $(TESTS_DIR)/typeAttributeMap_unittest.cc $(HEADER
 		       $(ATTRIBUTE_HEADER)/attribute.h $(HEADERS)/dataMigratorExceptions.h $(GTEST_HEADERS)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
-typeAttributeMap_unittest : $(ODIR_ATTRIBUTE)/attribute.o $(ODIR)/typeAttributeMap.o typeAttributeMap_unittest.o gtest_main.a
+typeAttributeMap_unittest : $(ODIR_ATTRIBUTE)/attribute.o $(ODIR)/typeAttributeMap.o typeAttributeMap_unittest.o $(ODIR)/buffer.o gtest_main.a
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -lpthread $^ -o $@
 
 # tests for typeAttributeMap

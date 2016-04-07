@@ -6,7 +6,7 @@
 TEST(TypeAttributeMapTest,getAttributesFromTypes)
 {
   std::cout << "Testing typeAttributeMap" << std::endl;
-  char* types = (char*)"int32_t,int32_t:null,double";
+  char* types = (char*)"int32_t,int32_t null,double";
   std::cout << "types: " << types << std::endl;
   TypeAttributeMap map = TypeAttributeMap();
   std::vector<std::shared_ptr<Attribute> > attributes = std::vector<std::shared_ptr<Attribute> >();
