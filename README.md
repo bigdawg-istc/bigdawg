@@ -53,7 +53,8 @@ run test server
 -- follow the Phase specific guides to set up the databases, make sure you could access each of which BigDAWG uses
 -> mvn exec:java -P XXX
 
-CMIGRATOR
+cmigrator
+-----------------
 Our main migration tool was build in C++. Please, refer to: src/main/cmigrator/README.md for more details.
 
 
