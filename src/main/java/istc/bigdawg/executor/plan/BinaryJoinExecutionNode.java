@@ -65,7 +65,7 @@ public class BinaryJoinExecutionNode implements ExecutionNode {
         }
 
         public String serialize(){
-            return "QUERY:" + this.getQueryString() + "TABLE:" + this.table + "ATTRIBUTE:" + this.attribute + "ENGINE:(" + ConnectionInfoParser.connectionInfoToString(this.engine) + ")";
+            return "(QUERY:" + this.getQueryString() + "TABLE:" + this.table + "ATTRIBUTE:" + this.attribute + "ENGINE:(" + ConnectionInfoParser.connectionInfoToString(this.engine) + ")" + "NODETYPE:BinaryJoinExecutionNode)";
         }
 
         public static JoinOperand deserialize(String rep){
