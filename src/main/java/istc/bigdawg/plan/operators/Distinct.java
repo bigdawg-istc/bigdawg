@@ -72,7 +72,6 @@ public class Distinct extends Operator {
 		ps.setDistinct(new net.sf.jsqlparser.statement.select.Distinct());
 		
 		return dstStatement;
-		
 	}
 
 	
