@@ -298,32 +298,43 @@ public class Join extends Operator {
         		s = ses.get(1);
         		s2 = ses.get(0);
         	} else {
-        		if (joinFilter == null || joinFilter.isEmpty()) 
-        			throw new Exception("Ses from Join gen dest only doesn't find match; joinFilter empty: "+joinFilter+"; "+joinPredicate);
-        		try {
-	        		List<Column> lc = SQLExpressionUtils.getAttributes(CCJSqlParserUtil.parseCondExpression(joinFilter));
-	        		s = lc.get(0).getTable().getName();
-	        		s2 = lc.get(1).getTable().getName();
-        		} catch (Exception e) {
-        			e.printStackTrace();
-        			throw new Exception(String.format("Ses from Join gen dest only doesn't find match: %s; %s; %s;\n",child0.getChildrenIndexConds(), child1.getChildrenIndexConds(),joinFilter));
+        		if (joinFilter != null && !joinFilter.isEmpty()) {
+	        		try {
+		        		List<Column> lc = SQLExpressionUtils.getAttributes(CCJSqlParserUtil.parseCondExpression(joinFilter));
+		        		s = lc.get(0).getTable().getName();
+		        		s2 = lc.get(1).getTable().getName();
+	        		} catch (Exception e) {
+	        			e.printStackTrace();
+	        			throw new Exception(String.format("Ses from Join gen dest only doesn't find match: %s; %s; %s;\n",child0.getChildrenIndexConds(), child1.getChildrenIndexConds(),joinFilter));
+	        		}
+        		} else {
+        			s = child0ObjectMap.keySet().iterator().next();
+        			s2 = child1ObjectMap.keySet().iterator().next();
+//        			throw new Exception("Ses from Join gen dest only doesn't find match; joinFilter empty: "+joinFilter+"; "+joinPredicate);
         		}
         	}
         	
+        	boolean anyPruned = isAnyProgenyPruned();
+        	
         	// TODO MODIFIED
-        	if (child0.isPruned()) {
-        		t0.setName(child0.getPruneToken());
-        	} else if (child0 instanceof Aggregate && stopAtJoin) {
+        	if (child0 instanceof Aggregate && stopAtJoin) {
         		t0.setName(((Aggregate)child0).getAggregateToken());
+        	} else if (child0 instanceof Join && anyPruned) {
+        		t0.setName(((Join)child0).getJoinToken());
+        	} else if (child0.isPruned()) {
+        		t0.setName(child0.getPruneToken());
         	} else {
         		t0.setName(child0ObjectMap.get(s));
         		if (! s.equals(child0ObjectMap.get(s))) t0.setAlias(new Alias(s));
         	} 
         	
-        	if (child1.isPruned()) {
-        		t1.setName(child1.getPruneToken());
-        	} else if (child1 instanceof Aggregate && stopAtJoin) {
+        	
+        	if (child1 instanceof Aggregate && stopAtJoin) {
         		t1.setName(((Aggregate)child1).getAggregateToken());
+        	} else if (child1 instanceof Join && anyPruned) {
+        		t1.setName(((Join)child1).getJoinToken());
+        	} else if (child1.isPruned()) {
+            	t1.setName(child1.getPruneToken());
         	} else {
         		t1.setName(child1ObjectMap.get(s2));
         		if (! s2.equals(child1ObjectMap.get(s2))) t1.setAlias(new Alias(s2));

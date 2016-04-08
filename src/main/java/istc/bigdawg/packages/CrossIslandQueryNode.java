@@ -269,7 +269,16 @@ public class CrossIslandQueryNode {
 			for (Operator o: ninos) {
 				
 				Operator t = root.duplicate(true); // TODO USED TO BE FALSE
+
+				t.getChildren().get(0).setParent(t);
+				while (!(t instanceof Join)) {
+					t = t.getChildren().get(0);
+					t.getChildren().get(0).setParent(t);
+				}
+				t = t.getParent();
+				t.getChildren().clear();
 				t.addChild(o);
+				
 				extraction.add(t);
 				
 			}

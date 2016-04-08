@@ -794,6 +794,9 @@ public class Operator {
 			return aliasOrString;
 		}
 		
+//		if (this instanceof Join && ((Join)this).joinID != null)
+//			aliasOrString.put(((Join)this).getJoinToken(), ((Join)this).getJoinToken());
+		
 		if (this instanceof Aggregate && ((Aggregate)this).aggregateID != null)
 			aliasOrString.put(((Aggregate)this).getAggregateToken(), ((Aggregate)this).getAggregateToken());
 		

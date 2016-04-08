@@ -1,7 +1,9 @@
 package istc.bigdawg.plan;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.junit.Before;
@@ -15,6 +17,9 @@ import istc.bigdawg.parsers.UserQueryParser;
 import istc.bigdawg.plan.operators.Join;
 import istc.bigdawg.plan.operators.Operator;
 import istc.bigdawg.utils.IslandsAndCast.Scope;
+import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.expression.Parenthesis;
+import net.sf.jsqlparser.schema.Column;
 
 public class QEPConstruction {
 
@@ -133,7 +138,7 @@ public class QEPConstruction {
 	}
 	
 	private void setupCrossIslandPlanConstructionTPCH2() {
-		inputs.put("tpch2", "bdrel(select s_acctbal, s_name, n_name, p_partkey, p_mfgr, s_address, s_phone, s_comment from part, supplier, partsupp, nation, region where p_partkey = ps_partkey and s_suppkey = ps_suppkey and p_size = 14 and p_type like '%BRASS' and s_nationkey = n_nationkey and n_regionkey = r_regionkey and r_name = 'AMERICA' and ps_supplycost = ( select min(ps_supplycost) from partsupp, supplier, nation, region where p_partkey = ps_partkey and s_suppkey = ps_suppkey and s_nationkey = n_nationkey and n_regionkey = r_regionkey and r_name = 'AMERICA') order by s_acctbal desc, n_name, s_name, p_partkey)");
+		inputs.put("tpch2", "bdrel(select supplier.s_name, nation.n_name, part.p_partkey, part.p_mfgr, supplier.s_address, supplier.s_phone from partsupp, part, region, supplier, nation where ((part.p_type LIKE '%BRASS') AND (part.p_size = 14)) AND (part.p_partkey = partsupp.ps_partkey) AND (supplier.s_suppkey = partsupp.ps_suppkey) AND (nation.n_nationkey = supplier.s_nationkey) AND (region.r_name = 'AMERICA') AND (region.r_regionkey = nation.n_regionkey) ORDER BY supplier.s_acctbal DESC, nation.n_name, supplier.s_name, part.p_partkey)");
 	};
 	
 	
@@ -220,28 +225,25 @@ public class QEPConstruction {
 			// schemas
 			if (k.toLowerCase().startsWith("bigdawgtag_")){
 				System.out.println("Root schema in SQL: \n- "+n.getRemainder(0).generateSQLCreateTableStatementLocally(k));
-				System.out.println("Root schema in AFL: \n- "+n.getRemainder(0).generateAFLCreateArrayStatementLocally(k));
+//				System.out.println("Root schema in AFL: \n- "+n.getRemainder(0).generateAFLCreateArrayStatementLocally(k));
 			}
 			
 			n.printSignature();
 			
 			for (String s : n.getQueryContainer().keySet()){
-				System.out.println("Container select into: "+n.getQueryContainer().get(s).generateSQLSelectIntoString());
+				System.out.println("\nContainer select into: "+n.getQueryContainer().get(s).generateSQLSelectIntoString());
 			};
 			
 			
-			System.out.println("All possible remainder permutations: ");
+			System.out.println("\nAll possible remainder permutations: ");
 			int i = 1;
 			for (Operator o : n.getAllRemainders()) {
-				if (n.getScope().equals(Scope.RELATIONAL))
-					System.out.printf("%d. %s\n", i, o.generateSQLString(null));
-				else if (n.getScope().equals(Scope.ARRAY))
-					System.out.printf("%d. %s\n", i, o.generateAFLString(0));
 				
-				if (o instanceof Join) {
-					Join j = (Join)o;
-					j.getJoinPredicateObjectsForBinaryExecutionNode();
-				}
+				printAllInterestingNodes(o);
+				
+//				else if (n.getScope().equals(Scope.ARRAY))
+//					System.out.printf("-- %d. %s\n", i, o.generateAFLString(0));
+				
 				i++;
 			}
 			
@@ -249,11 +251,37 @@ public class QEPConstruction {
 			
 			 
 			// qeps and benchmarks
-			Monitor.addBenchmarks(n.getAllQEPs(true), n.getSignature(), true);
+//			Monitor.addBenchmarks(n.getAllQEPs(true), n.getSignature(), true);
 			
 		}
 		
 		
 	}
 	
+	private void printAllInterestingNodes(Operator o) throws Exception {
+		
+		int gen = 1;
+		
+		List<Operator> walker = new ArrayList<>();
+		walker.add(o);
+		while (!walker.isEmpty()) {
+			List<Operator> nextgen = new ArrayList<>();
+			for (Operator child : walker){
+				
+				if (child.isPruned()) continue;
+				
+				StringBuilder sb = new StringBuilder();
+				Join j = child.generateSQLStatementForPresentNonJoinSegment(sb, false);
+				System.out.printf("-- %s. current: %s;\n\njoin: %s\n\n\n", gen, sb, j.generateSQLSelectIntoStringForExecutionTree(j.getJoinToken(), true));
+				
+				if (j != null ) {
+					nextgen.addAll(j.getChildren());
+				}
+				
+			}
+			walker = nextgen;
+			gen++;
+		}
+		
+	}
 }
