@@ -59,7 +59,15 @@ class PlanExecutor {
      */
     public PlanExecutor(QueryExecutionPlan plan) {
         this.plan = plan;
-        log.debug(String.format("Received plan %s: \n %s", plan.getSerializedName(),
+
+        StringBuilder sb = new StringBuilder();
+        for(ExecutionNode n : plan) {
+            sb.append(String.format("%s -> (%s)\n", n, plan.getDependents(n)));
+        }
+
+        log.debug(String.format("Received plan %s: \n %s", plan.getSerializedName(), sb.toString()));
+
+        log.debug(String.format("Ordered queries: \n %s",
                 StreamSupport.stream(Spliterators.spliterator(plan.iterator(), plan.vertexSet().size(), Spliterator.ORDERED), false)
                     .map(ExecutionNode::getQueryString)
                     .filter(Optional::isPresent).map(opt -> opt.get())
@@ -192,7 +200,7 @@ class PlanExecutor {
             Thread.currentThread().interrupt();
         }
 
-        log.debug(String.format("Colocating dependencies of query node %s", node));
+        log.debug(String.format("Colocating dependencies of query node %s", node.getEngine()));
 
         CompletableFuture[] futures = plan.getDependencies(node).stream()
                 .filter(d -> !resultLocations.containsEntry(d, node.getEngine()) && d.getTableName().isPresent() && !ignoreTables.contains(d.getTableName().get()))

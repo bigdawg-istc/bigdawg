@@ -5,7 +5,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.google.common.base.Objects;
-import istc.bigdawg.plan.operators.Join;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.query.ConnectionInfoParser;
 
@@ -65,11 +64,11 @@ public class BinaryJoinExecutionNode implements ExecutionNode {
             return Objects.hashCode(engine, table, attribute);
         }
 
-        public String toString(){
+        public String serialize(){
             return "QUERY:" + this.getQueryString() + "TABLE:" + this.table + "ATTRIBUTE:" + this.attribute + "ENGINE:(" + ConnectionInfoParser.connectionInfoToString(this.engine) + ")";
         }
 
-        public static JoinOperand stringTo(String rep){
+        public static JoinOperand deserialize(String rep){
             Pattern queryPat = Pattern.compile("(?<=QUERY:)(?s).*(?=TABLE:)");
             Pattern tablePat = Pattern.compile("(?<=TABLE:)(?s).*(?=ATTRIBUTE:)");
             Pattern attributePat = Pattern.compile("(?<=ATTRIBUTE:)(?s).*(?=ENGINE:)");
@@ -150,15 +149,15 @@ public class BinaryJoinExecutionNode implements ExecutionNode {
         return this.comparator.equals("=");
     }
 
-    public String toString(){
+    public String serialize() {
         StringBuilder currentRep = new StringBuilder();
         currentRep.append("(");
         currentRep.append(String.format("TABLE:%s", this.destinationTable));
         currentRep.append(String.format("QUERY:%s", this.broadcastQuery));
         currentRep.append(String.format("COMPARATOR:%s", this.comparator));
         currentRep.append(String.format("CONNECTION:(%s)", ConnectionInfoParser.connectionInfoToString(this.destinationEngine)));
-        currentRep.append(String.format("LEFT:(%s)", this.left.toString()));
-        currentRep.append(String.format("RIGHT:(%s)", this.right.toString()));
+        currentRep.append(String.format("LEFT:(%s)", this.left.serialize()));
+        currentRep.append(String.format("RIGHT:(%s)", this.right.serialize()));
         currentRep.append(String.format("NODETYPE:%s", this.getClass().getName()));
 
         currentRep.append("HINT:");
@@ -169,7 +168,12 @@ public class BinaryJoinExecutionNode implements ExecutionNode {
         return currentRep.toString();
     }
 
-    public static BinaryJoinExecutionNode stringTo(String rep){
+    @Override
+    public String toString() {
+        return this.destinationTable;
+    }
+
+    public static BinaryJoinExecutionNode deserialize(String rep){
         Pattern tablePat = Pattern.compile("(?<=TABLE:)(?s).*(?=QUERY:)");
         Pattern queryPat = Pattern.compile("(?<=QUERY:)(?s).*(?=COMPARATOR:)");
         Pattern compPat = Pattern.compile("(?<=COMPARATOR:)(?s).*(?=CONNECTION:)");
@@ -208,12 +212,12 @@ public class BinaryJoinExecutionNode implements ExecutionNode {
 
         m = leftPat.matcher(rep);
         if (m.find()) {
-            left = JoinOperand.stringTo(m.group());
+            left = JoinOperand.deserialize(m.group());
         }
 
         m = rightPat.matcher(rep);
         if (m.find()) {
-            right = JoinOperand.stringTo(m.group());
+            right = JoinOperand.deserialize(m.group());
         }
 
         m = hintPat.matcher(rep);

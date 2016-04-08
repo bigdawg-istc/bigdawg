@@ -88,8 +88,11 @@ public class TableExecutionNode implements ExecutionNode {
         return true;
     }
 
-    @Override
-    public String toString() {
+    public String serialize() {
         return "TableExecutionNode [engine=" + engine + ", tableName=" + tableName + "]";
+    }
+
+    public String toString() {
+        return this.tableName;
     }
 }
