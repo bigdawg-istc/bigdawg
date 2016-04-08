@@ -29,6 +29,10 @@ public class ExecutionNodeFactory {
 	 * @return The representation
 	 */
 	public static String executionNodeToString(ExecutionNode node) {
+		if (node.getClass().getName().contains("BinaryJoinExecutionNode")){
+			return node.serialize();
+		}
+
 		StringBuilder currentRep = new StringBuilder();
 		currentRep.append("(");
 

@@ -30,4 +30,6 @@ public interface ExecutionNode {
      *         the given node.
      */
     public Optional<String> getQueryString();
+
+    public String serialize();
 }
