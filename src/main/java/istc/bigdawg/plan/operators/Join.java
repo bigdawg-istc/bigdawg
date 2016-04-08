@@ -275,6 +275,8 @@ public class Join extends Operator {
     	Table t0 = new Table();
 		Table t1 = new Table();
     	
+		System.out.printf("\n\n\n-----> join Pred: %s; %s\n\n\n", joinPredicate, joinFilter);
+		
     	if (joinPredicate != null) {
     		
     		joinPredicate = updateOnExpression(joinPredicate, child0, child1, t0, t1, true);
@@ -310,20 +312,28 @@ public class Join extends Operator {
         		}
         	}
         	
+        	boolean anyPruned = isAnyProgenyPruned();
+        	
         	// TODO MODIFIED
-        	if (child0.isPruned()) {
-        		t0.setName(child0.getPruneToken());
-        	} else if (child0 instanceof Aggregate && stopAtJoin) {
+    	
+        	if (child0 instanceof Aggregate && stopAtJoin) {
         		t0.setName(((Aggregate)child0).getAggregateToken());
+        	} else if (child0 instanceof Join && anyPruned) {
+        		t0.setName(((Join)child0).getJoinToken());
+        	} else if (child0.isPruned()) {
+        		t0.setName(child0.getPruneToken());
         	} else {
         		t0.setName(child0ObjectMap.get(s));
         		if (! s.equals(child0ObjectMap.get(s))) t0.setAlias(new Alias(s));
         	} 
         	
-        	if (child1.isPruned()) {
-        		t1.setName(child1.getPruneToken());
-        	} else if (child1 instanceof Aggregate && stopAtJoin) {
+    	
+        	if (child1 instanceof Aggregate && stopAtJoin) {
         		t1.setName(((Aggregate)child1).getAggregateToken());
+        	} else if (child1 instanceof Join && anyPruned) {
+        		t1.setName(((Join)child1).getJoinToken());
+        	} else if (child1.isPruned()) {
+        		t1.setName(child1.getPruneToken());
         	} else {
         		t1.setName(child1ObjectMap.get(s2));
         		if (! s2.equals(child1ObjectMap.get(s2))) t1.setAlias(new Alias(s2));
@@ -378,12 +388,23 @@ public class Join extends Operator {
     	
 //		dstStatement = child1.generateSQLStringDestOnly(dstStatement, false, stopAtJoin, allowedScans); 
 		
+    	String jf = null;
+    	
 		if (joinFilter != null || joinPredicate != null) {
-
-			String jf = joinFilter;
+			jf = joinFilter;
 			if (jf == null || jf.length() == 0) jf = joinPredicate;
 			else if (joinPredicate != null && joinPredicate.length() > 0) jf = jf + " AND " + joinPredicate; 
-			
+		}	
+		
+		Expression w = ((PlainSelect) dstStatement.getSelectBody()).getWhere();
+		if (w != null) {
+			if (jf == null)
+				jf = w.toString();
+			else 
+				jf = jf + " AND " + w;
+		}
+		
+		if (jf != null) {
 			Expression e = CCJSqlParserUtil.parseCondExpression(jf);
 			List<Column> filterRelatedTablesExpr = SQLExpressionUtils.getAttributes(e); 
 			List<String> filterRelatedTables = new ArrayList<>();
@@ -412,16 +433,15 @@ public class Join extends Operator {
 				treeWalker = nextGen;
 			}
 			
-			jf = e.toString();
+			((PlainSelect) dstStatement.getSelectBody()).setWhere(CCJSqlParserUtil.parseCondExpression(e.toString()));
 			
-			String currentWhere = jf;// StringUtils.join(filterSet, " AND ");
-			
-			if (!currentWhere.isEmpty()) {
-				Expression where = 	CCJSqlParserUtil.parseCondExpression(currentWhere);
-				PlainSelect ps = ((PlainSelect) dstStatement.getSelectBody());
-				if (ps.getWhere() == null) ps.setWhere(where);
-				else ps.setWhere(new AndExpression(where, ps.getWhere()));
-			}
+//			String currentWhere = jf;// StringUtils.join(filterSet, " AND ");
+//			if (!currentWhere.isEmpty()) {
+//				Expression where = 	CCJSqlParserUtil.parseCondExpression(currentWhere);
+//				PlainSelect ps = ((PlainSelect) dstStatement.getSelectBody());
+//				if (ps.getWhere() == null) ps.setWhere(where);
+//				else ps.setWhere(new AndExpression(where, ps.getWhere()));
+//			}
 		}
 		
 //		System.out.println("\n-- Join: "+dstStatement.toString()+"\n");
@@ -443,11 +463,14 @@ public class Join extends Operator {
     		child1Cond = children.get(0).getChildrenIndexConds();
     	}
     	
+    	System.out.printf("\n\n\n-----> %s; %s; %s\n\n\n", child0Cond, child1Cond, zeroFirst);
+    	
 		for (String s : child0Cond.keySet()) {
 			if (child0Cond.get(s) == null ) continue;
 			List<Column> ls = SQLExpressionUtils.getAttributes(child0Cond.get(s));
 			for (Column c : ls) {
 				String s2 = c.getTable().getName();
+				
 				if (child1Cond.containsKey(s2)) {
 					
 //					// t0 gets s; t1 gets s2
@@ -536,8 +559,8 @@ public class Join extends Operator {
     
     public String updateOnExpression(String joinPred, Operator child0, Operator child1, Table t0, Table t1, boolean update) throws Exception {
     	
-    	if ((!update) && joinPredicateUpdated)
-    		return joinPredicate;
+//    	if ((!update) && joinPredicateUpdated)
+//    		return joinPredicate;
     	
     	Expression expr = CCJSqlParserUtil.parseCondExpression(joinPred);
 		List<String> itemsSet = SQLExpressionUtils.getColumnTableNamesInAllForms(expr);

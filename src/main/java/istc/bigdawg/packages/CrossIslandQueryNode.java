@@ -269,8 +269,17 @@ public class CrossIslandQueryNode {
 			for (Operator o: ninos) {
 				
 				Operator t = root.duplicate(true); // TODO USED TO BE FALSE
-				t.addChild(o);
+
 				extraction.add(t);
+				
+				t.getChildren().get(0).setParent(t);
+				while (!(t instanceof Join)) {
+					t = t.getChildren().get(0);
+					t.getChildren().get(0).setParent(t);
+				}
+				t = t.getParent();
+				t.getChildren().clear();
+				t.addChild(o);
 				
 			}
 			
@@ -529,8 +538,10 @@ public class CrossIslandQueryNode {
 			}
 		}
 		
-		Set<String> o1ns = new HashSet<>(o1.getDataObjectNames());
-		Set<String> o2nsOriginal = new HashSet<>(o2.getDataObjectNames());
+//		Set<String> o1ns = new HashSet<>(o1.getDataObjectNames());
+//		Set<String> o2nsOriginal = new HashSet<>(o2.getDataObjectNames());
+		Set<String> o1ns = new HashSet<>(o1.getDataObjectAliasesOrNames().keySet());
+		Set<String> o2nsOriginal = new HashSet<>(o2.getDataObjectAliasesOrNames().keySet());
 		Set<String> o2ns = new HashSet<>(o2nsOriginal);
 		
 		o1ns.retainAll(jc.keySet());
@@ -686,8 +697,10 @@ public class CrossIslandQueryNode {
 			
 			// do nothing if both are pruned before enter here, thus saving it for the remainder 
 			
-			if (((Join)node).getJoinPredicateOriginal() != null && (!((Join)node).getJoinPredicateOriginal().isEmpty()))
-				joinPredicates.add(((Join)node).updateOnExpression(((Join)node).getJoinPredicateOriginal(), child0, child1, new Table(), new Table(), true));
+			if (joinNode.getJoinPredicateOriginal() != null)
+				joinPredicates.add(joinNode.updateOnExpression(joinNode.getJoinPredicateOriginal(), child0, child1, new Table(), new Table(), true));
+			if (joinNode.getJoinFilterOriginal() != null)
+				joinPredicates.add(joinNode.updateOnExpression(joinNode.getJoinFilterOriginal(), child0, child1, new Table(), new Table(), true));
 			
 		} else if (node instanceof Sort || node instanceof Aggregate || node instanceof Limit || node instanceof Distinct) {
 			

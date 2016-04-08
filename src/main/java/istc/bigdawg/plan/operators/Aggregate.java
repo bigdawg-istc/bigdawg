@@ -373,7 +373,7 @@ public class Aggregate extends Operator {
 		
 		for (String alias: outSchema.keySet()) {
 			
-			Expression e = CCJSqlParserUtil.parseExpression(outSchema.get(alias).getSQLExpression().toString());
+			Expression e = CCJSqlParserUtil.parseExpression(rewriteComplextOutItem(outSchema.get(alias).getSQLExpression()));
 			SelectItem s = new SelectExpressionItem(e);
 			
 			if (!(e instanceof Column)) {

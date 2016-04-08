@@ -13,6 +13,7 @@ import istc.bigdawg.plan.extract.SQLOutItem;
 import istc.bigdawg.schema.DataObjectAttribute;
 import istc.bigdawg.schema.SQLAttribute;
 import istc.bigdawg.utils.sqlutil.SQLExpressionUtils;
+import net.sf.jsqlparser.expression.Alias;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Function;
 import net.sf.jsqlparser.expression.Parenthesis;
@@ -22,6 +23,8 @@ import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.OrderByElement;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.Select;
+import net.sf.jsqlparser.statement.select.SelectExpressionItem;
+import net.sf.jsqlparser.statement.select.SelectItem;
 
 public class Sort extends Operator {
 
@@ -52,13 +55,20 @@ public class Sort extends Operator {
 		
 		sortOrder = supplement.getSortOrder(keys, parameters.get("sectionName"));
 		sortKeys = keys;
-		outSchema = new LinkedHashMap<>(child.outSchema);
-		
-//		for (String s : outSchema.keySet()) {
-//			DataObjectAttribute da = outSchema.get(s);
-//			da.setExpression(rewriteComplextOutItem(da.getExpressionString()));
-//		}
 
+		if (children.get(0) instanceof Join) {
+			outSchema = new LinkedHashMap<>();
+			for(int i = 0; i < output.size(); ++i) {
+				String expr = output.get(i);
+				SQLOutItem out = new SQLOutItem(expr, child.outSchema, supplement); // TODO CHECK THIS TODO
+				SQLAttribute attr = out.getAttribute();
+				String attrName = attr.getName();
+				outSchema.put(attrName, attr);
+			}
+		} else {
+			outSchema = new LinkedHashMap<>(child.outSchema);
+		}
+		
 		// match with previous schema to get any aliases to propagate
 		for(int i = 0; i < sortKeys.size(); ++i) {
 			String a = supplement.getAlias(sortKeys.get(i));
@@ -84,13 +94,6 @@ public class Sort extends Operator {
 			
 			estr = rewriteComplextOutItem(estr);
 			
-//			if (e instanceof Column && outExps.containsKey(estr))
-//				e = CCJSqlParserUtil.parseExpression(outExps.get(estr));
-//			else if (!(e instanceof Column) && outExps.containsValue(estr))
-//				for (String str : outExps.keySet()) 
-//					if (outExps.get(str).contains(estr))
-//						e = new Column(str);
-			
 			OrderByElement obe = new OrderByElement();
 			obe.setExpression(CCJSqlParserUtil.parseExpression(estr));
 			if (s.endsWith("DESC")) {
@@ -103,37 +106,6 @@ public class Sort extends Operator {
 			orderByElements.add(obe);
 		}
 		
-//		orderByElements = supplement.getOrderByClause();
-//		System.out.println("---> parameters.get(\"Sort-Key\")"+ parameters.get("Sort-Key"));
-		
-		// append all table names
-//		for (int i = 0; i < orderByElements.size(); ++i) {
-//			Column c = (Column)orderByElements.get(i).getExpression();
-//			String[] s = sortKeys.get(i).split("\\.");
-//			if (c.getColumnName().equals(s[s.length-1])) {
-//				
-//				switch (s.length) {
-//				case 1:
-//					// no need to change anything
-//					break;
-//				case 2:
-//					c.setTable(new Table(s[0]));
-//					break;
-//				case 3:
-//					c.setTable(new Table(s[0], s[1]));
-//					break;
-//				case 4:
-//					c.setTable(new Table(new Database(s[0]), s[1], s[2]));
-//					break;
-//				default:
-//					throw new Exception("Too many components in order by's sortkey; key: "+sortKeys.get(i));
-//				}
-//			} else {
-//				System.out.println("--> Sort failure: srcSchema: "+outSchema);
-//				throw new Exception("Elements mismatch between sortKeys and orderByElements: "+sortKeys+" "+orderByElements);
-//			}
-//		}
-	
 	}
 	
 	// for AFL
@@ -178,6 +150,19 @@ public class Sort extends Operator {
 	public Select generateSQLStringDestOnly(Select dstStatement, boolean isSubTreeRoot, boolean stopAtJoin, Set<String> allowedScans) throws Exception {
 		dstStatement = children.get(0).generateSQLStringDestOnly(dstStatement, false, stopAtJoin, allowedScans);
 
+		if (children.get(0) instanceof Join) {
+			PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
+			ps.getSelectItems().clear();
+			for (String alias: outSchema.keySet()) {
+				Expression e = CCJSqlParserUtil.parseExpression(outSchema.get(alias).getExpressionString());
+				SelectItem s = new SelectExpressionItem(e);
+				if (!(e instanceof Column)) {
+					((SelectExpressionItem)s).setAlias(new Alias(alias));
+				}
+				ps.addSelectItems(s);
+			}
+		}
+		
 		updateOrderByElements();
 		
 		if(!isWinAgg) {
