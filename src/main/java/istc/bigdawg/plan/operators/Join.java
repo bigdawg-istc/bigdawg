@@ -81,7 +81,7 @@ public class Join extends Operator {
 
 			DataObjectAttribute attr = out.getAttribute();
 			
-			attr.setExpression(rewriteComplextOutItem(attr.getExpressionString()));
+//			attr.setExpression(rewriteComplextOutItem(attr.getExpressionString()));
 			
 			String attrName = attr.getFullyQualifiedName();		
 			outSchema.put(attrName, attr);
@@ -219,6 +219,7 @@ public class Join extends Operator {
 		this.isPruned = false;
 		this.isCopy = true;
 		this.aliases = new ArrayList<>();
+		this.complexOutItemFromProgeny = new LinkedHashMap<>();
 		
 		maxJoinSerial++;
 		this.joinID = maxJoinSerial;
@@ -545,7 +546,6 @@ public class Join extends Operator {
 			findAndGetTableName(child0, t0, itemsSet);
 		if (!replaceTableNameWithPruneName(child1, expr, t1, itemsSet))
 			findAndGetTableName(child1, t1, itemsSet);
-		
 		
 		return expr.toString();
 	}

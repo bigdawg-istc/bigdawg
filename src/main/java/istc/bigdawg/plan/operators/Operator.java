@@ -100,7 +100,7 @@ public class Operator {
 			children.add(child);
 			child.setParent(this);
 			
-			populateComplexOutItem();
+			populateComplexOutItem(true);
 		}
 		
 		
@@ -154,7 +154,7 @@ public class Operator {
 		lhs.setParent(this);
 		rhs.setParent(this);
 		
-		populateComplexOutItem();
+		populateComplexOutItem(true);
 		
 
 		// if it is a subplan, add it to the ctes list -- moved out to plan parser
@@ -198,8 +198,8 @@ public class Operator {
 		this.isQueryRoot = o.isQueryRoot;
 		
 		this.dataObjects = new HashSet<>();
-		joinReservedObjects = new HashSet<>();
-		
+		this.joinReservedObjects = new HashSet<>();
+		this.complexOutItemFromProgeny = new LinkedHashMap<>();
 		
 		this.outSchema = new LinkedHashMap<>();
 		for (String s : o.outSchema.keySet()) {
@@ -231,23 +231,61 @@ public class Operator {
 		}
 	}
 
-	private void populateComplexOutItem() {
+	private void populateComplexOutItem(boolean first) {
 		// populate complexOutItemFromProgeny
-		for (Operator child : children){
-			for (String s: child.getOutSchema().keySet()) {
-				Expression e = child.getOutSchema().get(s).getSQLExpression();
-				if (e == null) continue;
-				while (e instanceof Parenthesis) e = ((Parenthesis)e).getExpression();
-				if (e instanceof Column) continue;
-				complexOutItemFromProgeny.put(s, e.toString().replaceAll("[.]", "\\[\\.\\]").replaceAll("[(]", "\\[\\(\\]").replaceAll("[)]", "\\[\\)\\]"));
+		
+		if (!first) {
+			
+			complexOutItemFromProgeny = new LinkedHashMap<>();
+			
+			List<Operator> walker = new ArrayList<>();
+			walker.addAll(children);
+			while (!walker.isEmpty()) {
+				List<Operator> nextgen = new ArrayList<>();
+				for (Operator child : walker){
+					if (child.isPruned() || child instanceof Join) {
+						for (String s: child.getOutSchema().keySet()) {
+							Expression e = child.getOutSchema().get(s).getSQLExpression();
+							if (e == null) continue;
+							while (e instanceof Parenthesis) e = ((Parenthesis)e).getExpression();
+							if (e instanceof Column) continue;
+							complexOutItemFromProgeny.put(s, e.toString().replaceAll("[.]", "\\[\\.\\]").replaceAll("[(]", "\\[\\(\\]").replaceAll("[)]", "\\[\\)\\]"));
+						}
+					} else {
+						nextgen.addAll(child.children);
+						continue;
+					}
+					
+					complexOutItemFromProgeny.putAll(child.complexOutItemFromProgeny);
+				}
+				walker = nextgen;
 			}
-			complexOutItemFromProgeny.putAll(child.complexOutItemFromProgeny);
+		} else {
+			for (Operator child : children){
+				for (String s: child.getOutSchema().keySet()) {
+					Expression e = child.getOutSchema().get(s).getSQLExpression();
+					if (e == null) continue;
+					while (e instanceof Parenthesis) e = ((Parenthesis)e).getExpression();
+					if (e instanceof Column) continue;
+					complexOutItemFromProgeny.put(s, e.toString().replaceAll("[.]", "\\[\\.\\]").replaceAll("[(]", "\\[\\(\\]").replaceAll("[)]", "\\[\\)\\]"));
+				}
+				complexOutItemFromProgeny.putAll(child.complexOutItemFromProgeny);
+			}
 		}
 	}
 	
 	protected String rewriteComplextOutItem(String expr) throws Exception {
 		// simplify
 		expr = CCJSqlParserUtil.parseExpression(expr).toString();
+		for (String alias : complexOutItemFromProgeny.keySet()) {
+			expr = expr.replaceAll("("+complexOutItemFromProgeny.get(alias)+")", alias);
+		}
+		return expr;
+	}
+	
+	protected String rewriteComplextOutItem(Expression e) throws Exception {
+		// simplify
+		String expr = e.toString();
 		for (String alias : complexOutItemFromProgeny.keySet()) {
 			expr = expr.replaceAll("("+complexOutItemFromProgeny.get(alias)+")", alias);
 		}
@@ -539,6 +577,12 @@ public class Operator {
 		return postProcGenSQLStopJoin(dstStatement, stopAtJoin);
 	}
 	
+	protected boolean isAnyProgenyPruned() {
+		if (this.isPruned) return true;
+		else if (children.isEmpty()) return false;
+		else return children.get(0).isAnyProgenyPruned();
+	}
+	
 	private void changeAttributesForSelectItems(Select srcStatement, PlainSelect ps, HashMap<String, SelectItem> selects) throws Exception {
 		List<SelectItem> selectItemList = new ArrayList<>(); 
 		
@@ -560,10 +604,10 @@ public class Operator {
 				selects.put(s, si);
 		}
 		
-		if (srcStatement != null)
-			ps.setSelectItems(changeSelectItemsOrder(srcStatement, selects));
-		else 
+		if (srcStatement == null)
 			ps.setSelectItems(selectItemList);
+		else 
+			ps.setSelectItems(changeSelectItemsOrder(srcStatement, selects));
 		
 		if (ps.getFromItem() instanceof SubSelect) {
 			changeAttributesForSelectItems(null, (PlainSelect)((SubSelect)ps.getFromItem()).getSelectBody(), selects);
@@ -942,8 +986,17 @@ public class Operator {
 			Set<String> childAliasesAndNames	= new HashSet<>(ane.keySet());
 			for (String s : ane.values()) childAliasesAndNames.add(s);
 			
+			populateComplexOutItem(false);
+			PlainSelect ps = ((PlainSelect)outputSelect.getSelectBody());
+			List<SelectItem> sil = ps.getSelectItems();
+			for (int i = 0 ; i < sil.size(); i ++) {
+				if (sil.get(i) instanceof SelectExpressionItem) {
+					SelectExpressionItem sei = (SelectExpressionItem)sil.get(i);
+					sei.setExpression(CCJSqlParserUtil.parseExpression(rewriteComplextOutItem(sei.getExpression())));
+				}
+			}
 			
-			updateSubTreeTokens((PlainSelect) outputSelect.getSelectBody(), childAliases, childAliasesAndNames, joinToken);
+			updateSubTreeTokens(ps, childAliases, childAliasesAndNames, joinToken);
 			if (outputSelect.getWithItemsList() != null) 
 				for (WithItem wi : outputSelect.getWithItemsList())
 					updateSubTreeTokens(((PlainSelect)wi.getSelectBody()), childAliases, childAliasesAndNames, joinToken);
@@ -1087,6 +1140,7 @@ public class Operator {
 //    					updateJoinTokens(((PlainSelect)wi.getSelectBody()), childNames, ((Join)child).getJoinToken());
     		}
     	}
+    	
     	
     	return dstStatement;
     }

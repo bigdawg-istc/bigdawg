@@ -261,7 +261,10 @@ public class CrossIslandQueryNode {
 			System.out.println("--> tree rep: "+root.getTreeRepresentation(true)+"; ");
 			System.out.println("--> SQL: "+root.generateSQLString(null)+"; \n");
 			
-			List<Operator> ninos = getPermutatedOperatorsWithBlock(root.getChildren().get(0), joinPredConnections);
+			Operator next = root.getChildren().get(0);
+			while (!(next instanceof Join)) next = next.getChildren().get(0);
+			
+			List<Operator> ninos = getPermutatedOperatorsWithBlock(next, joinPredConnections);
 			
 			for (Operator o: ninos) {
 				

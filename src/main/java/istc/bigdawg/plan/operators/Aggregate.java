@@ -91,7 +91,7 @@ public class Aggregate extends Operator {
 
 			SQLOutItem out = new SQLOutItem(expr, child.outSchema, supplement); // TODO CHECK THIS TODO
 			SQLAttribute attr = out.getAttribute();
-			attr.setExpression(rewriteComplextOutItem(attr.getExpressionString()));
+//			attr.setExpression(rewriteComplextOutItem(attr.getExpressionString()));
 			String attrName = attr.getName();
 			
 			outSchema.put(attrName, attr);
@@ -586,10 +586,10 @@ public class Aggregate extends Operator {
 			}
 		} 
 		
-		System.out.printf("-----> aggregate getObjectToExpressionMappingForSignature: \n- %s; \n- %s; \n- %s",
-				children.get(0).getObjectToExpressionMappingForSignature(),
-				aliasMapping,
-				out);
+//		System.out.printf("-----> aggregate getObjectToExpressionMappingForSignature: \n- %s; \n- %s; \n- %s",
+//				children.get(0).getObjectToExpressionMappingForSignature(),
+//				aliasMapping,
+//				out);
 		
 		return out;
 	}

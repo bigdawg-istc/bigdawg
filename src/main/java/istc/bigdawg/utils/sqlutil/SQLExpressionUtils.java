@@ -370,6 +370,8 @@ public class SQLExpressionUtils {
 			@Override
 			public void visit(Column tableColumn) {
 				attributes.add(tableColumn.getTable().getName());
+//				if (tableColumn.getTable().getAlias() != null)
+//					attributes.add(tableColumn.getTable().getAlias().getName());
 				if (tableColumn.getTable().getSchemaName() != null)
 					attributes.add(tableColumn.getTable().getSchemaName()+"."+tableColumn.getTable().getName());
 				attributes.add(tableColumn.getTable().getFullyQualifiedName());

@@ -31,7 +31,7 @@ public class Distinct extends Operator {
 			
 			SQLOutItem out = new SQLOutItem(expr, srcSchema, supplement);
 			SQLAttribute sa =  out.getAttribute();
-			sa.setExpression(rewriteComplextOutItem(sa.getExpressionString()));
+//			sa.setExpression(rewriteComplextOutItem(sa.getExpressionString()));
 //			updateSecurityPolicy(sa);
 			
 			

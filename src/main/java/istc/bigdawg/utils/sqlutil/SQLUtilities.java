@@ -17,7 +17,7 @@ import istc.bigdawg.schema.SQLDatabaseSingleton;
 public class SQLUtilities {
 
 	// extract expression from XML string
-	private static Pattern inPattern = Pattern.compile("\\'\\{.*\\}\\'");
+	private static Pattern inPattern = Pattern.compile("\\'\\{[,\\w]*\\}\\'");
 	
 	public static String parseString(String src) {
 		
@@ -46,19 +46,17 @@ public class SQLUtilities {
 			for (int i = 0; i < l.size(); i++) {
 				l.set(i, '\''+l.get(i).trim()+'\'');
 			}
+			
 			StringBuilder sb = new StringBuilder().append(dst);
 			sb.replace(m.start(), m.end(), String.join(", ", l));
-			dst = sb.toString().replaceAll("\\'\\'", "'");
+			dst = sb.toString().replaceAll("['][']", "'");
+			
 		}
-		
-		dst = dst.replaceAll("\\'\\{", "");  // remove psql optimizer notation
-		dst = dst.replaceAll("\\}\\'", "");
-		
-		
-		
+		dst = dst.replaceAll("['][{]", "");  // remove psql optimizer notation
+		dst = dst.replaceAll("[}][']", "");
 		
 		dst = dst.replaceAll(" = ANY", " IN"); // convert to form that JSQLParser accepts
-		
+
 		
 		
 		// flip order of time INTERVAL 
