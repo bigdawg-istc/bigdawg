@@ -879,6 +879,8 @@ public class Operator {
 			return new Aggregate(this, addChild);
 		} else if (this instanceof Limit) {
 			return new Limit(this, addChild);
+		} else if (this instanceof Distinct) {
+			return new Distinct(this, addChild);
 		} else {
 			throw new Exception("Unsupported Operator Copy: "+this.getClass().toString());
 		}
@@ -1012,54 +1014,7 @@ public class Operator {
 			if (!isSelect) addSelectIntoToken(outputSelect, this.getSubTreeToken());
 			
 			sb.append(outputSelect);
-		} else {
-			// this.getClass().equals(Join.class) && (!child.getChildren().isEmpty())
-			
-//			System.out.printf("\n\nJoin case: \nchild0: %s; %s;\n%s\n\nchild1: %s; %s;\n%s\n\n\n", 
-//					children.get(0).getClass().getSimpleName(), 
-//					children.get(0).generateSQLStringDestOnly(null, true, children.get(0).getDataObjectAliasesOrNames().keySet()), 
-//					children.get(0).getTreeRepresentation(true), 
-//					children.get(1).getClass().getSimpleName(), 
-//					children.get(1).generateSQLStringDestOnly(null, true, children.get(1).getDataObjectAliasesOrNames().keySet()),
-//					children.get(1).getTreeRepresentation(true));
-			
-			
-//			outputSelect = this.generateSQLStringDestOnly(null, null, this.getDataObjectAliasesOrNames().keySet());
-//			
-//			addSelectIntoToken(outputSelect, this.getSubTreeToken());
-//			
-//			for (Operator childchild : children) {
-//				
-//				childchild.setSubTree(true);
-//				
-//				Map<String, String> anecc			= childchild.getDataObjectAliasesOrNames();
-//				Set<String> childAliases			= anecc.keySet();
-//				Set<String> childAliasesAndNames 	= new HashSet<>(anecc.keySet());
-//				for (String s : anecc.values()) childAliasesAndNames.add(s);
-//				updateSubTreeTokens(((PlainSelect)outputSelect.getSelectBody()), childAliases, childAliasesAndNames, childchild.getSubTreeToken());
-//				if (outputSelect.getWithItemsList() != null) 
-//					for (WithItem wi : outputSelect.getWithItemsList())
-//						updateSubTreeTokens(((PlainSelect)wi.getSelectBody()), childAliases, childAliasesAndNames, childchild.getSubTreeToken());
-//				
-//				
-//				// then update join tokens
-//				while ((!childchild.getChildren().isEmpty()) && !childchild.getClass().equals(Join.class)) 
-//					childchild = childchild.getChildren().get(0);
-//				
-//				if (!childchild.getChildren().isEmpty()) {
-//					Map<String, String> anecc			= childchild.getDataObjectAliasesOrNames();
-//					Set<String> childAliases			= anecc.keySet();
-//					Set<String> childAliasesAndNames 	= new HashSet<>(anecc.keySet());
-//					for (String s : anecc.values()) childAliasesAndNames.add(s);
-//					updateSubTreeTokens(((PlainSelect)outputSelect.getSelectBody()), childAliases, childAliasesAndNames, ((Join)childchild).getJoinToken());
-//					if (outputSelect.getWithItemsList() != null) 
-//						for (WithItem wi : outputSelect.getWithItemsList())
-//							updateSubTreeTokens(((PlainSelect)wi.getSelectBody()), childAliases, childAliasesAndNames, ((Join)childchild).getJoinToken());
-//				}
-//			}
-			
-//			sb.append(outputSelect);
-		}
+		} 
 		
 		if (child instanceof Join)
 			return (Join) child;

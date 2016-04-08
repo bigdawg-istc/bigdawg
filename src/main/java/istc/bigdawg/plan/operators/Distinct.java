@@ -46,6 +46,11 @@ public class Distinct extends Operator {
 	}
 
 	
+	public Distinct(Operator o, boolean addChild) throws Exception {
+		super(o, addChild);
+	}
+
+
 	@Override
 	public Select generateSQLStringDestOnly(Select dstStatement, boolean isSubTreeRoot, boolean stopAtJoin, Set<String> allowedScans) throws Exception {
 		

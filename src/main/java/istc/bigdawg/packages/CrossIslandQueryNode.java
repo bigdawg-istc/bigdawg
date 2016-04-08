@@ -18,6 +18,7 @@ import istc.bigdawg.plan.SQLQueryPlan;
 import istc.bigdawg.plan.extract.AFLPlanParser;
 import istc.bigdawg.plan.extract.SQLPlanParser;
 import istc.bigdawg.plan.operators.Aggregate;
+import istc.bigdawg.plan.operators.Distinct;
 import istc.bigdawg.plan.operators.Join;
 import istc.bigdawg.plan.operators.Join.JoinType;
 import istc.bigdawg.plan.operators.Limit;
@@ -36,7 +37,6 @@ import istc.bigdawg.signature.builder.RelationalSignatureBuilder;
 import istc.bigdawg.utils.IslandsAndCast;
 import istc.bigdawg.utils.IslandsAndCast.Scope;
 import istc.bigdawg.utils.sqlutil.SQLExpressionUtils;
-import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
@@ -689,7 +689,7 @@ public class CrossIslandQueryNode {
 			if (((Join)node).getJoinPredicateOriginal() != null && (!((Join)node).getJoinPredicateOriginal().isEmpty()))
 				joinPredicates.add(((Join)node).updateOnExpression(((Join)node).getJoinPredicateOriginal(), child0, child1, new Table(), new Table(), true));
 			
-		} else if (node instanceof Sort || node instanceof Aggregate || node instanceof Limit) {
+		} else if (node instanceof Sort || node instanceof Aggregate || node instanceof Limit || node instanceof Distinct) {
 			
 			// blocking come into effect
 			List<String> result = traverse(node.getChildren().get(0));
