@@ -4,10 +4,8 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.google.common.collect.Sets;
 import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.packages.QueryContainerForCommonDatabase;
-import istc.bigdawg.plan.operators.Aggregate;
 import istc.bigdawg.plan.operators.CommonSQLTableExpressionScan;
 import istc.bigdawg.plan.operators.Join;
 import istc.bigdawg.plan.operators.Operator;
@@ -31,6 +29,10 @@ public class ExecutionNodeFactory {
 	 * @return The representation
 	 */
 	public static String executionNodeToString(ExecutionNode node) {
+		if (node.getClass().getName().contains("BinaryJoinExecutionNode")){
+			return node.serialize();
+		}
+
 		StringBuilder currentRep = new StringBuilder();
 		currentRep.append("(");
 
@@ -75,7 +77,7 @@ public class ExecutionNodeFactory {
 		}
 
 		if (nodeClass.contains("BinaryJoinExecutionNode")) {
-			return BinaryJoinExecutionNode.stringTo(representation);
+			return BinaryJoinExecutionNode.deserialize(representation);
 		}
 
 		// Extract the query

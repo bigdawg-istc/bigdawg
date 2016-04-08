@@ -108,6 +108,28 @@ class GenericAttribute<char*> : public Attribute
   int postgresWriteBinary(FILE *fp);
 };
 
+
+// template specialization for bool values
+template<>
+class GenericAttribute<bool> : public Attribute
+{
+ private:
+  bool value;
+ public:
+  GenericAttribute(bool isNullable=false);
+  ~GenericAttribute() {}
+  GenericAttribute<bool>* clone() const { return new GenericAttribute<bool>(*this);}
+  char type() { return 3;}
+  void setValue(bool value) { this->value=value;}
+  bool getValue() {return this->value;}
+  int postgresReadBinary(FILE *fp);
+  int postgresWriteBinary(FILE *fp);
+  int writeCsv(std::ofstream & ofile);
+  int scidbWriteBinary(FILE *fp);
+  int scidbReadBinary(FILE *fp);
+};
+
+
 template <class T>
 GenericAttribute<T>::GenericAttribute(bool isNullable)
 {

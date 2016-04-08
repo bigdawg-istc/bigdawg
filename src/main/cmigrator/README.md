@@ -50,3 +50,5 @@ export BOOST_ROOT=/home/adam/Downloads/boost_1_60_0
 
 And then in your makefiles you can add: CPPFLAGS += -L/usr/local/include/boost
 
+## MAKEFILE
+to run the old makefile: 

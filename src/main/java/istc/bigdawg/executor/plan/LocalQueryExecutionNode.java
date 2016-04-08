@@ -101,9 +101,12 @@ public class LocalQueryExecutionNode implements ExecutionNode {
         return true;
     }
 
+    public String serialize() {
+        return "LocalQueryExecutionNode [query=" + query + ", engine=" + engine + ", resultsTable=" + resultsTable + "]";
+    }
+
     @Override
     public String toString() {
-        return "LocalQueryExecutionNode [query=" + query + ", engine=" + engine + ", resultsTable=" + resultsTable
-                + "]";
+        return resultsTable;
     }
 }

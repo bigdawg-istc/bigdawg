@@ -1,3 +1,10 @@
+/*
+
+This file contains specialization for strings and boolean values.
+
+The generic handle for numbers can be found in: attribute.h
+*/
+
 #include "attribute/attribute.h"
 
 // this is the definition of null(s) for values that are empty (for example in SciDB binary format)
@@ -9,6 +16,9 @@ Attribute* new_clone(Attribute const& other)
 }
 
 Attribute::~Attribute() {}
+
+//######################################################################################################
+// Specialization for strings
 
 GenericAttribute<char*>::GenericAttribute(bool isNullable)
 {
@@ -197,5 +207,63 @@ int GenericAttribute<char*>::postgresWriteBinary(FILE *fp)
   fwrite(this->value,this->bytesNumber,1,fp);
   // free the string buffer
   freeValue();
+  return 0;
+}
+
+
+//######################################################################################################
+// specialization for: BOOL
+
+GenericAttribute<bool>::GenericAttribute(bool isNullable)
+{
+  this->isNullable=isNullable;
+  this->bytesNumber=sizeof(bool);
+}
+
+GenericAttribute<bool>::~GenericAttribute()
+{
+
+}
+
+int GenericAttribute<bool>::postgresReadBinary(FILE *fp)
+{
+  int32_t valueBytesNumber;
+  fread(&valueBytesNumber,4,1,fp);
+  valueBytesNumber = endianness::from_postgres<int32_t>(valueBytesNumber);
+  if (valueBytesNumber == -1)
+    {
+      assert(isNullable==true);
+      // this is null and there are no bytes for the value
+      this->isNull=true;
+      return 0;
+    }
+  this->isNull=false;
+  assert(valueBytesNumber==this->bytesNumber);
+  fread(&value,this->bytesNumber,1,fp);
+  return 0; // success
+}
+
+int GenericAttribute<bool>::writeCsv(std::ofstream & ofile)
+{
+  return 0;
+}
+
+int GenericAttribute<bool>::scidbWriteBinary(FILE *fp) 
+{
+  return 0;
+}
+
+int GenericAttribute<bool>::postgresReadBinaryBuffer(Buffer * buffer)
+{
+  return 0; // success
+}
+
+int GenericAttribute<bool>::scidbReadBinary(FILE *fp) 
+{
+  return 0;
+}
+
+int GenericAttribute<bool>::postgresWriteBinary(FILE *fp) 
+{
   return 0;
 }

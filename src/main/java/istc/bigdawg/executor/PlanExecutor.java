@@ -59,7 +59,15 @@ class PlanExecutor {
      */
     public PlanExecutor(QueryExecutionPlan plan) {
         this.plan = plan;
-        log.debug(String.format("Received plan: \n %s",
+
+        StringBuilder sb = new StringBuilder();
+        for(ExecutionNode n : plan) {
+            sb.append(String.format("%s -> (%s)\n", n, plan.getDependents(n)));
+        }
+
+        log.debug(String.format("Received plan %s: \n %s", plan.getSerializedName(), sb.toString()));
+
+        log.debug(String.format("Ordered queries: \n %s",
                 StreamSupport.stream(Spliterators.spliterator(plan.iterator(), plan.vertexSet().size(), Spliterator.ORDERED), false)
                     .map(ExecutionNode::getQueryString)
                     .filter(Optional::isPresent).map(opt -> opt.get())
@@ -146,11 +154,13 @@ class PlanExecutor {
         return node.getQueryString().flatMap((query) -> {
             try {
                 Optional<QueryResult> result = ((PostgreSQLHandler) node.getEngine().getHandler()).executePostgreSQL(query);
-                markNodeAsCompleted(node);
                 return result;
             } catch (SQLException e) {
                 log.error(String.format("Error executing node %s", node.getTableName()), e);
+                // TODO: if error is actually bad, don't markNodeAsCompleted, and instead fail the QEP gracefully.
                 return Optional.empty();
+            } finally {
+                markNodeAsCompleted(node);
             }
         });
     }
@@ -190,7 +200,7 @@ class PlanExecutor {
             Thread.currentThread().interrupt();
         }
 
-        log.debug(String.format("Colocating dependencies of query node %s", node));
+        log.debug(String.format("Colocating dependencies of query node %s", node.getEngine()));
 
         CompletableFuture[] futures = plan.getDependencies(node).stream()
                 .filter(d -> !resultLocations.containsEntry(d, node.getEngine()) && d.getTableName().isPresent() && !ignoreTables.contains(d.getTableName().get()))
