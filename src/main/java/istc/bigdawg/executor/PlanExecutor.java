@@ -146,11 +146,13 @@ class PlanExecutor {
         return node.getQueryString().flatMap((query) -> {
             try {
                 Optional<QueryResult> result = ((PostgreSQLHandler) node.getEngine().getHandler()).executePostgreSQL(query);
-                markNodeAsCompleted(node);
                 return result;
             } catch (SQLException e) {
                 log.error(String.format("Error executing node %s", node.getTableName()), e);
+                // TODO: if error is actually bad, don't markNodeAsCompleted, and instead fail the QEP gracefully.
                 return Optional.empty();
+            } finally {
+                markNodeAsCompleted(node);
             }
         });
     }
