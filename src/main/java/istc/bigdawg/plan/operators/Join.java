@@ -213,7 +213,7 @@ public class Join extends Operator {
 		}
 	}
 	
-	public Join(Operator child0, Operator child1, JoinType jt, String joinPred) throws JSQLParserException {
+	public Join(Operator child0, Operator child1, JoinType jt, String joinPred, boolean isFilter) throws JSQLParserException {
 		this.isCTERoot = false; // TODO VERIFY
 		this.isBlocking = false; 
 		this.isPruned = false;
@@ -228,8 +228,8 @@ public class Join extends Operator {
 		if (jt != null) this.joinType = jt;
 		
 		if (joinPred != null) {
-			this.joinPredicate = joinPred;
-			
+			if (isFilter) this.joinFilter = joinPred;
+			else this.joinPredicate = joinPred;
 		}
 		
 		this.isQueryRoot = true;
@@ -258,13 +258,12 @@ public class Join extends Operator {
     @Override
 	public Select generateSQLStringDestOnly(Select dstStatement, boolean isSubTreeRoot, boolean stopAtJoin, Set<String> allowedScans) throws Exception {
 		
-    	if (!isSubTreeRoot && stopAtJoin) return generateSelectWithToken(getJoinToken());
 //    	if (stopAtJoin == null) stopAtJoin = true;
     	
-		if (isPruned) {
-			return generateSelectWithToken(getPruneToken());
-		}
+		if (isPruned) return generateSelectWithToken(getPruneToken());
     	
+		if (!isSubTreeRoot && stopAtJoin) return generateSelectWithToken(getJoinToken());
+		
 		allowedScans = this.getDataObjectAliasesOrNames().keySet();
 		
     	Operator child0 = children.get(0);
@@ -275,6 +274,8 @@ public class Join extends Operator {
     	Table t0 = new Table();
 		Table t1 = new Table();
     	
+//		System.out.printf("\n\n\n-----> join Pred: %s; %s\n\n\n", joinPredicate, joinFilter);
+		
     	if (joinPredicate != null) {
     		
     		joinPredicate = updateOnExpression(joinPredicate, child0, child1, t0, t1, true);
@@ -298,43 +299,44 @@ public class Join extends Operator {
         		s = ses.get(1);
         		s2 = ses.get(0);
         	} else {
-        		if (joinFilter != null && !joinFilter.isEmpty()) {
-	        		try {
-		        		List<Column> lc = SQLExpressionUtils.getAttributes(CCJSqlParserUtil.parseCondExpression(joinFilter));
-		        		s = lc.get(0).getTable().getName();
-		        		s2 = lc.get(1).getTable().getName();
-	        		} catch (Exception e) {
-	        			e.printStackTrace();
-	        			throw new Exception(String.format("Ses from Join gen dest only doesn't find match: %s; %s; %s;\n",child0.getChildrenIndexConds(), child1.getChildrenIndexConds(),joinFilter));
-	        		}
-        		} else {
+        		if (joinFilter == null || joinFilter.isEmpty())  {
+//        			throw new Exception("Ses from Join gen dest only doesn't find match; joinFilter empty: "+joinFilter+"; "+joinPredicate);
         			s = child0ObjectMap.keySet().iterator().next();
         			s2 = child1ObjectMap.keySet().iterator().next();
-//        			throw new Exception("Ses from Join gen dest only doesn't find match; joinFilter empty: "+joinFilter+"; "+joinPredicate);
+        		} else {
+        			try {
+    	        		List<Column> lc = SQLExpressionUtils.getAttributes(CCJSqlParserUtil.parseCondExpression(joinFilter));
+    	        		s = lc.get(0).getTable().getName();
+    	        		s2 = lc.get(1).getTable().getName();
+            		} catch (Exception e) {
+            			e.printStackTrace();
+            			throw new Exception(String.format("Ses from Join gen dest only doesn't find match: %s; %s; %s;\n",child0.getChildrenIndexConds(), child1.getChildrenIndexConds(),joinFilter));
+            		}
         		}
         	}
         	
         	boolean anyPruned = isAnyProgenyPruned();
         	
         	// TODO MODIFIED
-        	if (child0 instanceof Aggregate && stopAtJoin) {
+    	
+        	if (child0.isPruned()) {
+        		t0.setName(child0.getPruneToken());
+        	} else if (child0 instanceof Aggregate && stopAtJoin) {
         		t0.setName(((Aggregate)child0).getAggregateToken());
         	} else if (child0 instanceof Join && anyPruned) {
         		t0.setName(((Join)child0).getJoinToken());
-        	} else if (child0.isPruned()) {
-        		t0.setName(child0.getPruneToken());
         	} else {
         		t0.setName(child0ObjectMap.get(s));
         		if (! s.equals(child0ObjectMap.get(s))) t0.setAlias(new Alias(s));
         	} 
         	
-        	
-        	if (child1 instanceof Aggregate && stopAtJoin) {
+
+        	if (child1.isPruned()) {
+        		t1.setName(child1.getPruneToken());
+        	} else if (child1 instanceof Aggregate && stopAtJoin) {
         		t1.setName(((Aggregate)child1).getAggregateToken());
         	} else if (child1 instanceof Join && anyPruned) {
         		t1.setName(((Join)child1).getJoinToken());
-        	} else if (child1.isPruned()) {
-            	t1.setName(child1.getPruneToken());
         	} else {
         		t1.setName(child1ObjectMap.get(s2));
         		if (! s2.equals(child1ObjectMap.get(s2))) t1.setAlias(new Alias(s2));
@@ -389,12 +391,23 @@ public class Join extends Operator {
     	
 //		dstStatement = child1.generateSQLStringDestOnly(dstStatement, false, stopAtJoin, allowedScans); 
 		
+    	String jf = null;
+    	
 		if (joinFilter != null || joinPredicate != null) {
-
-			String jf = joinFilter;
+			jf = joinFilter;
 			if (jf == null || jf.length() == 0) jf = joinPredicate;
 			else if (joinPredicate != null && joinPredicate.length() > 0) jf = jf + " AND " + joinPredicate; 
-			
+		}	
+		
+		Expression w = ((PlainSelect) dstStatement.getSelectBody()).getWhere();
+		if (w != null) {
+			if (jf == null)
+				jf = w.toString();
+			else 
+				jf = jf + " AND " + w;
+		}
+		
+		if (jf != null) {
 			Expression e = CCJSqlParserUtil.parseCondExpression(jf);
 			List<Column> filterRelatedTablesExpr = SQLExpressionUtils.getAttributes(e); 
 			List<String> filterRelatedTables = new ArrayList<>();
@@ -423,16 +436,15 @@ public class Join extends Operator {
 				treeWalker = nextGen;
 			}
 			
-			jf = e.toString();
+			((PlainSelect) dstStatement.getSelectBody()).setWhere(CCJSqlParserUtil.parseCondExpression(e.toString()));
 			
-			String currentWhere = jf;// StringUtils.join(filterSet, " AND ");
-			
-			if (!currentWhere.isEmpty()) {
-				Expression where = 	CCJSqlParserUtil.parseCondExpression(currentWhere);
-				PlainSelect ps = ((PlainSelect) dstStatement.getSelectBody());
-				if (ps.getWhere() == null) ps.setWhere(where);
-				else ps.setWhere(new AndExpression(where, ps.getWhere()));
-			}
+//			String currentWhere = jf;// StringUtils.join(filterSet, " AND ");
+//			if (!currentWhere.isEmpty()) {
+//				Expression where = 	CCJSqlParserUtil.parseCondExpression(currentWhere);
+//				PlainSelect ps = ((PlainSelect) dstStatement.getSelectBody());
+//				if (ps.getWhere() == null) ps.setWhere(where);
+//				else ps.setWhere(new AndExpression(where, ps.getWhere()));
+//			}
 		}
 		
 //		System.out.println("\n-- Join: "+dstStatement.toString()+"\n");
@@ -454,11 +466,14 @@ public class Join extends Operator {
     		child1Cond = children.get(0).getChildrenIndexConds();
     	}
     	
+//    	System.out.printf("\n\n-----> %s; %s; %s\n\n", child0Cond, child1Cond, zeroFirst);
+    	
 		for (String s : child0Cond.keySet()) {
 			if (child0Cond.get(s) == null ) continue;
 			List<Column> ls = SQLExpressionUtils.getAttributes(child0Cond.get(s));
 			for (Column c : ls) {
 				String s2 = c.getTable().getName();
+				
 				if (child1Cond.containsKey(s2)) {
 					
 //					// t0 gets s; t1 gets s2
@@ -547,8 +562,8 @@ public class Join extends Operator {
     
     public String updateOnExpression(String joinPred, Operator child0, Operator child1, Table t0, Table t1, boolean update) throws Exception {
     	
-    	if ((!update) && joinPredicateUpdated)
-    		return joinPredicate;
+//    	if ((!update) && joinPredicateUpdated)
+//    		return joinPredicate;
     	
     	Expression expr = CCJSqlParserUtil.parseCondExpression(joinPred);
 		List<String> itemsSet = SQLExpressionUtils.getColumnTableNamesInAllForms(expr);
@@ -867,5 +882,10 @@ public class Join extends Operator {
 		}
 		
 		return e.toString();
+	}
+
+
+	public String getCurrentJoinFilter() {
+		return joinFilter;
 	}
 };

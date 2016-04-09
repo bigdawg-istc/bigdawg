@@ -187,6 +187,9 @@ public class ExecutionNodeFactory {
 		Join joinOp = op.generateSQLStatementForPresentNonJoinSegment(sb, isSelect);
 		final String sqlStatementForPresentNonJoinSegment = sb.toString();
 		
+		
+//		if (joinOp != null) System.out.printf("\n\n\n----> join sql String: %s;\n\nsqlStatementForPresentNonJoinSegment: %s\n\n\n", joinOp.generateSQLString(null), sqlStatementForPresentNonJoinSegment);
+		
 		// TODO CHANGE NAME OF JOIN'S CHILDREN
 		// TODO(ankush): allow for multiple types of engines (not just SQL)
 

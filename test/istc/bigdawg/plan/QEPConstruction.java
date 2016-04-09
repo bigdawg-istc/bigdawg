@@ -235,7 +235,7 @@ public class QEPConstruction {
 			};
 			
 			
-			System.out.println("\nAll possible remainder permutations: ");
+			System.out.printf("All possible remainder permutations: count: %s\n", n.getAllRemainders().size());
 			int i = 1;
 			for (Operator o : n.getAllRemainders()) {
 				

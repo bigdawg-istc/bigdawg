@@ -10,6 +10,8 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.google.common.collect.Sets;
+
 import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.executor.plan.ExecutionNodeFactory;
 import istc.bigdawg.executor.plan.QueryExecutionPlan;
@@ -62,6 +64,7 @@ public class CrossIslandQueryNode {
 	private Map<String, List<String>> originalMap;
 	
 	private Set<String> joinPredicates;
+	private Set<String> joinFilters;
 	
 	private static final int  psqlSchemaHandlerDBID = BigDawgConfigProperties.INSTANCE.getPostgresSchemaServerDBID();
 	private static final int  scidbSchemaHandlerDBID = BigDawgConfigProperties.INSTANCE.getSciDBSchemaServerDBID();
@@ -107,6 +110,7 @@ public class CrossIslandQueryNode {
 		remainderPermutations = new ArrayList<>();
 		remainderLoc = new ArrayList<>();
 		joinPredicates = new HashSet<>();
+		joinFilters = new HashSet<>();
 		populateQueryContainer();
 		
 		
@@ -204,11 +208,12 @@ public class CrossIslandQueryNode {
 		remainderLoc = traverse(root); // this populated everything
 		
 		Map<String, Map<String, String>> jp = processJoinPredicates(joinPredicates);
+		Map<String, Map<String, String>> jf = processJoinPredicates(joinFilters);
 		
 		
 		if (remainderLoc == null && root.getDataObjectNames().size() > 1) {
 			
-			List<Operator> permResult = getPermutatedOperatorsWithBlock(root, jp);
+			List<Operator> permResult = getPermutatedOperatorsWithBlock(root, jp, jf);
 			
 			// if root is join then the constructed out schema might get messed up
 			for (Operator o : permResult) {
@@ -240,7 +245,7 @@ public class CrossIslandQueryNode {
 	}
 	
 	
-	private List<Operator> getPermutatedOperatorsWithBlock(Operator root, Map<String, Map<String, String>> joinPredConnections) throws Exception {
+	private List<Operator> getPermutatedOperatorsWithBlock(Operator root, Map<String, Map<String, String>> joinPredConnections,  Map<String, Map<String, String>> joinFilterConnections) throws Exception {
 		
 		/**
 		 * This function dictates which part of the tree could be permuted.
@@ -264,12 +269,14 @@ public class CrossIslandQueryNode {
 			Operator next = root.getChildren().get(0);
 			while (!(next instanceof Join)) next = next.getChildren().get(0);
 			
-			List<Operator> ninos = getPermutatedOperatorsWithBlock(next, joinPredConnections);
+			List<Operator> ninos = getPermutatedOperatorsWithBlock(next, joinPredConnections, joinFilterConnections);
 			
 			for (Operator o: ninos) {
 				
 				Operator t = root.duplicate(true); // TODO USED TO BE FALSE
 
+				extraction.add(t);
+				
 				t.getChildren().get(0).setParent(t);
 				while (!(t instanceof Join)) {
 					t = t.getChildren().get(0);
@@ -278,8 +285,6 @@ public class CrossIslandQueryNode {
 				t = t.getParent();
 				t.getChildren().clear();
 				t.addChild(o);
-				
-				extraction.add(t);
 				
 			}
 			
@@ -321,12 +326,12 @@ public class CrossIslandQueryNode {
 			 */
 			
 			// 1.
-			List<Operator> permutationsOfLeaves = getPermutatedOperators(leaves, joinPredConnections);
+			List<Operator> permutationsOfLeaves = getPermutatedOperators(leaves, joinPredConnections, joinFilterConnections);
 			Map<Integer, List<Operator>> blockerTrees = new HashMap<>();
 			
 			// 2.
 			for (Operator b : blockers) {
-				blockerTrees.put(b.getBlockerID(), getPermutatedOperatorsWithBlock(b, joinPredConnections));
+				blockerTrees.put(b.getBlockerID(), getPermutatedOperatorsWithBlock(b, joinPredConnections, joinFilterConnections));
 			}
 			
 			// 3.
@@ -397,7 +402,7 @@ public class CrossIslandQueryNode {
 	}
 	
 	
-	private List<Operator> getPermutatedOperators(List<Operator> ops, Map<String, Map<String, String>> joinPredConnections) throws Exception {
+	private List<Operator> getPermutatedOperators(List<Operator> ops, Map<String, Map<String, String>> joinPredConnections, Map<String, Map<String, String>> joinFilterConnections) throws Exception {
 		
 		/**
 		 * Eventually 'ops' should be able to contain blocking operators,
@@ -419,21 +424,21 @@ public class CrossIslandQueryNode {
 			
 		} else if (len == 2) {
 			// the case of two
-			extraction.add(makeJoin(ops.get(0), ops.get(1), null, joinPredConnections, new HashSet<>())); 
+			extraction.add(makeJoin(ops.get(0), ops.get(1), null, joinPredConnections, joinFilterConnections, new HashSet<>())); 
 			return extraction;
 		} 
 		
 		ArrayList<List<Operator>> permutations = new ArrayList<>();
 		permutations.add(ops);
 		
-		ArrayList<Operator> newEntry;
+		ArrayList<Operator> newEntries;
 		
 		int j0;
 		int j1;
 		int k0;
 		int k1;
 		for (int i = 1; i < len ; i ++ ) {
-			newEntry = new ArrayList<Operator>();
+			newEntries = new ArrayList<Operator>();
 
 			for (j0 = i - 1; j0 >= 0 ; j0 --) {
 				// j0 and j1 are the two to be joined
@@ -452,7 +457,7 @@ public class CrossIslandQueryNode {
 						for (k1 = k0 + 1; k1 < j0listSize; k1 ++) {
 							k1o = permutations.get(j0).get(k1);
 							
-							if (isDisj(k0o, k1o)) {
+							if (isDisjoint(k0o, k1o)) { // disjoint is on the progeny is required
 								
 								
 //								// debug
@@ -461,7 +466,7 @@ public class CrossIslandQueryNode {
 //									System.out.printf("--->>>>>>> equal %d. ", l);
 //								}
 								
-								addNewEntry(k0o, k1o, joinPredConnections, newEntry);
+								addNewEntry(k0o, k1o, joinPredConnections, joinFilterConnections, newEntries);
 								 
 							}
 							// else do nothing
@@ -481,20 +486,20 @@ public class CrossIslandQueryNode {
 
 							k1o = permutations.get(j1).get(k1);
 							
-							if (isDisj(k0o, k1o)) {
+							if (isDisjoint(k0o, k1o)) {
 								
 //								// debug
 //								if (i == len-1) {
 //									l ++;
 //									System.out.printf("--->>>>>>> not %d. ", l);
 //								}
-								addNewEntry(k0o, k1o, joinPredConnections, newEntry);
+								addNewEntry(k0o, k1o, joinPredConnections, joinFilterConnections, newEntries);
 							}
 						}
 					}
 				}
 			}
-			permutations.add(newEntry);
+			permutations.add(newEntries);
 		}
 		
 		extraction.addAll(permutations.get(permutations.size()-1));
@@ -503,46 +508,73 @@ public class CrossIslandQueryNode {
 		return extraction;
 	}
 
-	private void addNewEntry (Operator k0o, Operator k1o, Map<String, Map<String, String>> joinPredConnections, List<Operator> newEntry) throws Exception {
+	/**
+	 * Add new entry for permutation
+	 * Note: use children characteristics to avoid making unnecessary entries.
+	 * @param k0o
+	 * @param k1o
+	 * @param joinPredConnections
+	 * @param joinFilterConnections
+	 * @param newEntry
+	 * @throws Exception
+	 */
+	private void addNewEntry (Operator k0o, Operator k1o, Map<String, Map<String, String>> joinPredConnections, Map<String, Map<String, String>> joinFilterConnections, List<Operator> newEntry) throws Exception {
 		
 		if (k1o instanceof Join) {
+			// all on-expression must precede cross-joins
 			if (k0o instanceof Join && (((Join)k0o).getCurrentJoinPredicate() == null && ((Join)k1o).getCurrentJoinPredicate() != null)) {
-				
 				return;
 			}
 				
 		
-			if ( ((Join)k1o).getCurrentJoinPredicate() != null) {
-				Set<String> objlist = new HashSet<>(k0o.getDataObjectNames());
+			if ( ((Join)k1o).getCurrentJoinPredicate() != null || ((Join)k1o).getCurrentJoinFilter() != null) {
+				Set<String> objlist1 = new HashSet<>(k0o.getDataObjectAliasesOrNames().keySet());
+				Set<String> objlist2 = new HashSet<>(objlist1);
 				String jp = ((Join)k1o).getCurrentJoinPredicate();
-				if (objlist.removeAll(new HashSet<>(Arrays.asList(jp.split("[. =<>]+"))))) { 
-					newEntry.add(makeJoin(k0o, k1o, null, joinPredConnections, k0o.getDataObjectAliasesOrNames().keySet()));
+				String jf = ((Join)k1o).getCurrentJoinFilter();
+				
+				boolean jpb = false;
+				boolean jfb = false;
+				
+				if (jp != null) jpb = objlist1.removeAll( SQLExpressionUtils.getColumnTableNamesInAllForms(CCJSqlParserUtil.parseCondExpression(jp)) );
+				if (jf != null) jfb = objlist2.removeAll( SQLExpressionUtils.getColumnTableNamesInAllForms(CCJSqlParserUtil.parseCondExpression(jf)) );
+				
+				if (jpb || jfb) { 
+					newEntry.add(makeJoin(k0o, k1o, null, joinPredConnections, joinFilterConnections, k0o.getDataObjectAliasesOrNames().keySet()));
 				}
 			}
 		} else {
-			Operator ret = makeJoin(k0o, k1o, null, joinPredConnections, k0o.getDataObjectAliasesOrNames().keySet());
+			Operator ret = makeJoin(k0o, k1o, null, joinPredConnections,  joinFilterConnections, k0o.getDataObjectAliasesOrNames().keySet());
 			if (ret == null) return; // the final prune done
 			newEntry.add(ret);
 		}
 	}
 	
-	private Operator makeJoin(Operator o1, Operator o2, JoinType jt, Map<String, Map<String, String>> joinPredConnection, Set<String> used) throws Exception {
+	private Operator makeJoin(Operator o1, Operator o2, JoinType jt, Map<String, Map<String, String>> joinPredConnection, Map<String, Map<String, String>> joinFilterConnection, Set<String> used) throws Exception {
 		
 		
-		Map<String, Map<String, String>> jc = new HashMap<>();
+		Map<String, Map<String, String>> jp = new HashMap<>();
+		Map<String, Map<String, String>> jf = new HashMap<>();
 		
 		for (String k : joinPredConnection.keySet()) {
-			jc.put(k, new HashMap<>());
+			jp.put(k, new HashMap<>());
 			for (String kin : joinPredConnection.get(k).keySet()) {
-				jc.get(k).put(kin, joinPredConnection.get(k).get(kin));
+				jp.get(k).put(kin, joinPredConnection.get(k).get(kin));
 			}
 		}
 		
-		Set<String> o1ns = new HashSet<>(o1.getDataObjectNames());
-		Set<String> o2nsOriginal = new HashSet<>(o2.getDataObjectNames());
+		for (String k : joinFilterConnection.keySet()) {
+			jf.put(k, new HashMap<>());
+			for (String kin : joinFilterConnection.get(k).keySet()) {
+				jf.get(k).put(kin, joinFilterConnection.get(k).get(kin));
+			}
+		}
+		
+		Set<String> o1ns = new HashSet<>(o1.getDataObjectAliasesOrNames().keySet());
+		Set<String> o2nsOriginal = new HashSet<>(o2.getDataObjectAliasesOrNames().keySet());
 		Set<String> o2ns = new HashSet<>(o2nsOriginal);
 		
-		o1ns.retainAll(jc.keySet());
+		o1ns.retainAll(Sets.union(jp.keySet(), jf.keySet()));
 		
 		Operator o1Temp = o1;
 		Operator o2Temp = o2;
@@ -552,11 +584,9 @@ public class CrossIslandQueryNode {
 		
 		for (String s : o1ns) {
 			
-			if (jc.get(s) == null) continue; // because jc is modified along the way
+			if (jp.get(s) == null) continue; // because jc is modified along the way
 			
-			Set<String> ks = jc.get(s).keySet();
-			
-			o2ns.retainAll(ks);
+			o2ns.retainAll(Sets.union(jp.keySet(), jf.keySet()));
 			
 			if (!o2ns.isEmpty()) {
 				
@@ -566,26 +596,35 @@ public class CrossIslandQueryNode {
 					key = o2ns.iterator().next();
 				}
 				
-				String pred = jc.get(s).get(key);
-				jc.get(s).remove(key);
-				jc.get(key).remove(s);
+				boolean isFilter = false;
+				String pred;
+				if (jp.get(s) != null) {
+					pred = jp.get(s).get(key);
+					jp.get(s).remove(key);
+					jp.get(key).remove(s);
+				} else {
+					pred = jf.get(s).get(key);
+					jf.get(s).remove(key);
+					jf.get(key).remove(s);
+					isFilter = true;
+				} 
 				
 				// this is the final checking of whether we need to prune it
 				if (o1Temp instanceof Join && (!(o2Temp instanceof Join)) 
-						&& (((Join) o1Temp).getCurrentJoinPredicate() == null)) {
+						&& (((Join) o1Temp).getCurrentJoinPredicate() == null) && (((Join) o1Temp).getCurrentJoinFilter() == null)) {
 					
 					return null;
 				}
 					
-				return new Join(o1Temp, o2Temp, jt, pred);
+				return new Join(o1Temp, o2Temp, jt, pred, isFilter);
 			}
 			
 			o2ns = new HashSet<>(o2nsOriginal);
 		}
-		return new Join(o1Temp, o2Temp, jt, null);
+		return new Join(o1Temp, o2Temp, jt, null, false);
 	}
 	
-	private boolean isDisj(Operator s1, Operator s2) throws Exception {
+	private boolean isDisjoint(Operator s1, Operator s2) throws Exception {
 		Set<String> set1 = new HashSet<String>(s1.getDataObjectNames());
 		Set<String> set2 = new HashSet<String>(s2.getDataObjectNames());
 		return (!(set1.removeAll(set2)));
@@ -695,8 +734,10 @@ public class CrossIslandQueryNode {
 			
 			// do nothing if both are pruned before enter here, thus saving it for the remainder 
 			
-			if (((Join)node).getJoinPredicateOriginal() != null && (!((Join)node).getJoinPredicateOriginal().isEmpty()))
-				joinPredicates.add(((Join)node).updateOnExpression(((Join)node).getJoinPredicateOriginal(), child0, child1, new Table(), new Table(), true));
+			if (joinNode.getJoinPredicateOriginal() != null)
+				joinPredicates.add(joinNode.updateOnExpression(joinNode.getJoinPredicateOriginal(), child0, child1, new Table(), new Table(), true));
+			if (joinNode.getJoinFilterOriginal() != null)
+				joinPredicates.add(joinNode.updateOnExpression(joinNode.getJoinFilterOriginal(), child0, child1, new Table(), new Table(), true));
 			
 		} else if (node instanceof Sort || node instanceof Aggregate || node instanceof Limit || node instanceof Distinct) {
 			

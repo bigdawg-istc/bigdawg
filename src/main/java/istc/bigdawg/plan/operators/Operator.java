@@ -231,10 +231,12 @@ public class Operator {
 		}
 	}
 
-	private void populateComplexOutItem(boolean first) {
+	protected void populateComplexOutItem(boolean first) {
 		// populate complexOutItemFromProgeny
 		
 		if (!first) {
+			
+//			System.out.printf("\n\npopulate false: %s\n\n", this.getClass().getSimpleName());
 			
 			complexOutItemFromProgeny = new LinkedHashMap<>();
 			
@@ -249,9 +251,13 @@ public class Operator {
 							if (e == null) continue;
 							while (e instanceof Parenthesis) e = ((Parenthesis)e).getExpression();
 							if (e instanceof Column) continue;
+							
+							System.out.printf("\n\n\n====> found string: %s: \n\n\n", e);
+							
 							complexOutItemFromProgeny.put(s, e.toString().replaceAll("[.]", "\\[\\.\\]").replaceAll("[(]", "\\[\\(\\]").replaceAll("[)]", "\\[\\)\\]"));
 						}
 					} else {
+//						if (child.complexOutItemFromProgeny.isEmpty()) child.populateComplexOutItem(false);
 						nextgen.addAll(child.children);
 						continue;
 					}
@@ -786,12 +792,12 @@ public class Operator {
 		
 		if (isSubTree) {
 			aliasOrString.put(getSubTreeToken(), getSubTreeToken());
-			return aliasOrString;
+//			return aliasOrString;
 		}
 		
 		if (isPruned) {
 			aliasOrString.put(getPruneToken(), getPruneToken());
-			return aliasOrString;
+//			return aliasOrString;
 		}
 		
 //		if (this instanceof Join && ((Join)this).joinID != null)
@@ -975,23 +981,23 @@ public class Operator {
 		
 		// find the join		
 		Operator child = this;
-		while ((!child.getChildren().isEmpty()) && !(child instanceof Join)) 
+		while (!(child instanceof Join) && !child.getChildren().get(0).isPruned()) 
 			// then there could be one child only
 			child = child.getChildren().get(0);
 		
 		Select outputSelect;
 		
-		if ( !(this instanceof Join) && (!child.getChildren().isEmpty())) {
+		if ( !(this instanceof Join) && (child instanceof Join)) {
 			// TODO targeted strike? CURRENTLY WASH EVERYTHING // Set<String> names = child.getDataObjectNames();
 			outputSelect 		= this.generateSQLStringDestOnly(null, true, true, this.getDataObjectAliasesOrNames().keySet());
-			String joinToken 	= ((Join)child).getJoinToken();
 			
 			Map<String, String> ane				= this.getChildren().get(0).getDataObjectAliasesOrNames();
 			Set<String> childAliases			= ane.keySet();
-			Set<String> childAliasesAndNames	= new HashSet<>(ane.keySet());
+			Set<String> childAliasesAndNames	= new HashSet<>(ane.values());
 			for (String s : ane.values()) childAliasesAndNames.add(s);
 			
 			populateComplexOutItem(false);
+			
 			PlainSelect ps = ((PlainSelect)outputSelect.getSelectBody());
 			List<SelectItem> sil = ps.getSelectItems();
 			for (int i = 0 ; i < sil.size(); i ++) {
@@ -1001,22 +1007,29 @@ public class Operator {
 				}
 			}
 			
-			updateSubTreeTokens(ps, childAliases, childAliasesAndNames, joinToken);
+//			System.out.printf("\n\n\n---> childAlias&Names: %s\n\n\n", childAliasesAndNames);
+			String token;
+			if (child.isPruned()) token = child.getPruneToken();
+    		else token = ((Join)child).getJoinToken();
+				
+			updateSubTreeTokens(ps, childAliases, childAliasesAndNames, token);
 			if (outputSelect.getWithItemsList() != null) 
 				for (WithItem wi : outputSelect.getWithItemsList())
-					updateSubTreeTokens(((PlainSelect)wi.getSelectBody()), childAliases, childAliasesAndNames, joinToken);
+					updateSubTreeTokens(((PlainSelect)wi.getSelectBody()), childAliases, childAliasesAndNames, token);
 			
 			this.setSubTree(true);
 			if (!isSelect) addSelectIntoToken(outputSelect, this.getSubTreeToken());
 			
 			sb.append(outputSelect);
-		} else if (!(this instanceof Join) && child.getChildren().isEmpty()) {
+		} else if (!(this instanceof Join) && !(child instanceof Join)) {
 			outputSelect = this.generateSQLStringDestOnly(null, true, true, this.getDataObjectAliasesOrNames().keySet());
 			
 			this.setSubTree(true);
 			if (!isSelect) addSelectIntoToken(outputSelect, this.getSubTreeToken());
 			
-			sb.append(outputSelect);
+			throw new Exception ("---->> shouldn't be here: "+outputSelect);
+			
+//			sb.append(outputSelect);
 		} 
 		
 		if (child instanceof Join)
@@ -1087,12 +1100,18 @@ public class Operator {
     	for (Operator o : children) {
     		Operator child = o;
     		while ((!child.getChildren().isEmpty()) && (!child.getClass().equals(Join.class))) child = child.getChildren().get(0);
+    		
+    		String token;
+    		
+    		if (child.isPruned()) token = child.getPruneToken();
+    		else token = ((Join)child).getJoinToken();
+    		
     		if (!child.children.isEmpty()) {
     			Map<String, String> ane = child.getDataObjectAliasesOrNames();
     			Set<String> childAliases = ane.keySet();
     			Set<String> childAliasesAndNames = new HashSet<>(ane.keySet());
     			for (String s : ane.values()) childAliasesAndNames.add(s);
-    			updateSubTreeTokens(((PlainSelect)dstStatement.getSelectBody()), childAliases, childAliasesAndNames, ((Join)child).getJoinToken());
+    			updateSubTreeTokens(((PlainSelect)dstStatement.getSelectBody()), childAliases, childAliasesAndNames, token);
 //    			if (dstStatement.getWithItemsList() != null)
 //    				for (WithItem wi : dstStatement.getWithItemsList())
 //    					updateJoinTokens(((PlainSelect)wi.getSelectBody()), childNames, ((Join)child).getJoinToken());
