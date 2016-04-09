@@ -231,6 +231,10 @@ class PlanExecutor {
             try {
                 MigrationResult result = Migrator.migrate(dependency.getEngine(), table, dependant.getEngine(), table);
 
+                if(result.isError()) {
+                    throw new MigrationException(result.toString());
+                }
+
                 // mark the dependency's data as being present on node.getEngine()
                 resultLocations.put(dependency, dependant.getEngine());
 
@@ -296,7 +300,12 @@ class PlanExecutor {
                         Logger.debug(this, String.format("Migrating dependency table %s from engine %s to engine %s...", table, d.getEngine(),
                                 node.getEngine()));
                         try {
-                            Migrator.migrate(d.getEngine(), table, node.getEngine(), table);
+                            MigrationResult result = Migrator.migrate(d.getEngine(), table, node.getEngine(), table);
+
+                            if(result.isError()) {
+                                throw new MigrationException(result.toString());
+                            }
+
                             // mark the dependency's data as being present on node.getEngine()
                             resultLocations.put(d, node.getEngine());
 
