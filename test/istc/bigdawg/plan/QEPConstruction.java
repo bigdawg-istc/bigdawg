@@ -133,7 +133,7 @@ public class QEPConstruction {
 	}
 	
 	private void setupCrossIslandPlanConstructionTPCH2() {
-		inputs.put("tpch2", "bdrel(select s_acctbal, s_name, n_name, p_partkey, p_mfgr, s_address, s_phone, s_comment from part, supplier, partsupp, nation, region where p_partkey = ps_partkey and s_suppkey = ps_suppkey and p_size = 14 and p_type like '%BRASS' and s_nationkey = n_nationkey and n_regionkey = r_regionkey and r_name = 'AMERICA' and ps_supplycost = ( select min(ps_supplycost) from partsupp, supplier, nation, region where p_partkey = ps_partkey and s_suppkey = ps_suppkey and s_nationkey = n_nationkey and n_regionkey = r_regionkey and r_name = 'AMERICA') order by s_acctbal desc, n_name, s_name, p_partkey)");
+		inputs.put("tpch2", "bdrel(select supplier.s_name, nation.n_name, part.p_partkey, part.p_mfgr, supplier.s_address, supplier.s_phone from partsupp, part, region, supplier, nation where ((part.p_type LIKE '%BRASS') AND (part.p_size = 14)) AND (part.p_partkey = partsupp.ps_partkey) AND (supplier.s_suppkey = partsupp.ps_suppkey) AND (nation.n_nationkey = supplier.s_nationkey) AND (region.r_name = 'AMERICA') AND (region.r_regionkey = nation.n_regionkey) ORDER BY supplier.s_acctbal DESC, nation.n_name, supplier.s_name, part.p_partkey)");
 	};
 	
 	
@@ -230,7 +230,7 @@ public class QEPConstruction {
 			};
 			
 			
-			System.out.println("All possible remainder permutations: ");
+			System.out.printf("All possible remainder permutations: count: %s\n", n.getAllRemainders().size());
 			int i = 1;
 			for (Operator o : n.getAllRemainders()) {
 				if (n.getScope().equals(Scope.RELATIONAL))
