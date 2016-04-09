@@ -202,7 +202,7 @@ class PlanExecutor {
 
         ignoreTables.addAll(plan.getDependencies(node).stream().filter(d -> resultLocations.containsEntry(d, node.getEngine())).map(n -> n.getTableName().orElse("NO_TABLE")).collect(Collectors.toSet()));
 
-        Logger.debug(this, "Ignoring dependencies %[list]s of %s", ignoreTables, node.getEngine());
+        Logger.debug(this, "Ignoring dependencies %[list]s of %s", ignoreTables, node);
 
         CompletableFuture[] futures = plan.getDependencies(node).stream()
                 .filter(d -> d.getTableName().isPresent() && !ignoreTables.contains(d.getTableName().get()))
@@ -212,6 +212,7 @@ class PlanExecutor {
 
                     return migrations.computeIfAbsent(migrationKey, (k) -> {
                         return CompletableFuture.supplyAsync(() -> {
+                            Logger.debug(this, "Started migrating dependency %s of node %s: %s", d, node);
                             MigrationResult result = colocateSingleDependency(d, node);
                             Logger.debug(this, "Finished migrating dependency %s of node %s: %s", d, node, result);
                             return result;
@@ -224,9 +225,6 @@ class PlanExecutor {
     }
 
     private MigrationResult colocateSingleDependency(ExecutionNode dependency, ExecutionNode dependant) {
-        Logger.debug(this, "Migrating dependency %s from engine %s to engine %s...", dependency,
-                dependency.getEngine().getDatabase(), dependant.getEngine().getDatabase());
-
         return dependency.getTableName().map((table) -> {
             try {
                 MigrationResult result = Migrator.migrate(dependency.getEngine(), table, dependant.getEngine(), table);
@@ -234,6 +232,8 @@ class PlanExecutor {
                 if(result.isError()) {
                     throw new MigrationException(result.toString());
                 }
+
+                Logger.debug(this, "Marking dependency %s as migrated on engine %s...", dependency, dependant.getEngine());
 
                 // mark the dependency's data as being present on node.getEngine()
                 resultLocations.put(dependency, dependant.getEngine());
