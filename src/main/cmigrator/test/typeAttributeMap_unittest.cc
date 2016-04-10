@@ -2,7 +2,6 @@
 
 #include "typeAttributeMap.h"
 
-
 TEST(TypeAttributeMapTest,getAttributesFromTypes)
 {
   std::cout << "Testing typeAttributeMap" << std::endl;

@@ -17,6 +17,8 @@
 #GTEST_DIR = ${GTEST_DIR}
 GTEST_DIR = ./gtest/googletest
 
+CC=g++
+
 # Where to find user code.
 ODIR=../obj
 ODIR_ATTRIBUTE=$(ODIR)/attribute
@@ -37,7 +39,7 @@ ATTRIBUTE_TEST = $(TESTS_DIR)/attribute
 IDIR=../include # you have to add this because otherwise makefile searches only
 # in the same directory where *.cc or *.cpp files are stored (our placement of header files is clean)
 # problem with boost/cregex.hpp: http://www.gossamer-threads.com/lists/atrpms/devel/9467
-CPPFLAGS += -isystem $(GTEST_DIR)/include -I$(IDIR) -mlong-double-64 -mpc64 -std=c++11 -L/usr/include/boost -DBOOST_LOG_DYN_LINK
+CPPFLAGS += -isystem $(GTEST_DIR)/include -I$(IDIR) -mlong-double-64 -mpc64 -std=c++11 -L/usr/local/include/boost -DBOOST_LOG_DYN_LINK
 LIBS=-lm -lboost_log -lboost_thread -lboost_system -lboost_log_setup
 
 # Flags passed to the C++ compiler.
@@ -102,7 +104,7 @@ sample1_unittest : sample1.o sample1_unittest.o gtest_main.a
 
 # tests for attributes
 $(ODIR_ATTRIBUTE)/attribute.o: $(ATTRIBUTE_SRC)/attribute.cpp $(warning $(ODIR_ATTRIBUTE)) $(warning $(ATTRIBUTE_HEADER)) $(ATTRIBUTE_HEADER)/attribute.h $(GTEST_HEADERS)
-	$(CXX) -c $< -o $@ $(CPPFLAGS) $(CXXFLAGS) $(LIBS)
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(LIBS) -c $< -o $@
 
 attribute_unittest.o : $(ATTRIBUTE_TEST)/attribute_unittest.cc \
 		       $(ATTRIBUTE_HEADER)/attribute.h $(GTEST_HEADERS)

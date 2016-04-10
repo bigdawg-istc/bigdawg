@@ -175,6 +175,37 @@ TEST(Postgres,ReadBinaryTestString)
   fclose(fp);
 }
 
+TEST(Postgres,WriteBinaryTestStringNullableWithValue)
+{
+  GenericAttribute<char*> attr = GenericAttribute<char*>(true);
+  int32_t setBytesNumber=13;
+  /* +1 for the null character at the end of the string */
+  char* value = new char[setBytesNumber+1];
+  strcpy(value,"Adam Dziedzic");
+  attr.setValue(value);
+  attr.setBytesNumber(setBytesNumber+1);
+  attr.setIsNull(false);
+  std::cout << "attribute value before writing for Postgres: " << attr.getValue() << std::endl;
+  FILE * fp;
+  fp = tmpfile();
+  attr.postgresWriteBinary(fp);
+  rewind(fp);
+
+  // now check what the written for the binary file for Postgres
+  int32_t bytesNumberRaw=-1;
+  fread(&bytesNumberRaw,sizeof(int32_t),1,fp);
+  int32_t bytesNumber = endianness::from_postgres<int32_t>(bytesNumberRaw);
+  std::cout << "Bytes number found in the binary file for Postgres: " << bytesNumber << std::endl;
+  ASSERT_EQ(setBytesNumber,bytesNumber);
+  char* receivedValue = new char[bytesNumber];
+  fread(receivedValue,bytesNumber,1,fp); // received value shoule already have the \0 (null) at the end
+  std::cout << "Final value found in the binary file for Postgres: " << receivedValue << std::endl;
+  EXPECT_STREQ(value,receivedValue);
+  //delete value; // this is removed by destructor of the GenericAttribute<char*> class
+  delete [] receivedValue;
+  fclose(fp);
+}
+
 TEST(SciDB,WriteBinaryBoolTrueNotNullable)
 {
   GenericAttribute<bool> attr = GenericAttribute<bool>(false);
