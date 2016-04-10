@@ -19,9 +19,13 @@ import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.query.ConnectionInfoParser;
 import istc.bigdawg.signature.Signature;
 
+import org.apache.log4j.Logger;
 import org.mortbay.log.Log;
 
 public class Monitor {
+
+    private static Logger logger = Logger.getLogger(Monitor.class.getName());
+
     public static final String stringSeparator = "****";
 
     private static final String INSERT = "INSERT INTO monitoring (signature, index, lastRan, duration) SELECT '%s', '%d', -1, -1 WHERE NOT EXISTS (SELECT 1 FROM monitoring WHERE signature='%s' AND index='%d)";
@@ -40,6 +44,7 @@ public class Monitor {
 
     public static boolean addBenchmarks(Signature signature, boolean lean, BDConstants.Shim[] shims) throws Exception {
         LinkedHashMap<String, String> crossIslandQuery = UserQueryParser.getUnwrappedQueriesByIslands(signature.getQuery());
+        logger.debug("Query for signature: " + signature.getQuery());
         CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(crossIslandQuery);
         CrossIslandQueryNode ciqn = ciqp.getRoot();
         List<QueryExecutionPlan> qeps = ciqn.getAllQEPs(true);
