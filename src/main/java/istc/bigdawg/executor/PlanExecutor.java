@@ -4,6 +4,7 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 import com.jcabi.log.Logger;
+import com.jcabi.log.VerboseThreads;
 import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.executor.plan.ExecutionNode;
 import istc.bigdawg.executor.plan.QueryExecutionPlan;
@@ -29,13 +30,12 @@ import java.util.stream.StreamSupport;
  *   fully abstracted DbHandlers instead of casting to PostgreSQL
  *   shuffle joins
  *   better exception/error handling in the event of failure
- *   look into implications of too many events in the ForkJoinPool
- * 
+ *
  * @author ankush
  */
 class PlanExecutor {
     private static final Monitor monitor = new Monitor();
-    private static final ExecutorService threadPool = java.util.concurrent.Executors.newCachedThreadPool();
+    private static final ExecutorService threadPool = java.util.concurrent.Executors.newCachedThreadPool(new VerboseThreads());
 
     private final Multimap<ExecutionNode, ConnectionInfo> resultLocations = Multimaps.synchronizedSetMultimap(HashMultimap.create());
     private final Multimap<ConnectionInfo, String> temporaryTables = Multimaps.synchronizedSetMultimap(HashMultimap.create());
