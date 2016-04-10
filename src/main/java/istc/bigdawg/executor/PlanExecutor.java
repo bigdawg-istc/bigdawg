@@ -2,10 +2,7 @@ package istc.bigdawg.executor;
 
 import java.sql.SQLException;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -37,6 +34,7 @@ import istc.bigdawg.query.ConnectionInfo;
  */
 class PlanExecutor {
     static final Monitor monitor = new Monitor();
+    static final ExecutorService threadPool = java.util.concurrent.Executors.newCachedThreadPool();
 
     private final Multimap<ExecutionNode, ConnectionInfo> resultLocations = Multimaps.synchronizedSetMultimap(HashMultimap.create());
     private final Multimap<ConnectionInfo, String> temporaryTables = Multimaps.synchronizedSetMultimap(HashMultimap.create());
@@ -75,7 +73,7 @@ class PlanExecutor {
         for(ExecutionNode node : plan) {
             int latchSize = plan.inDegreeOf(node);
             Logger.debug(this, "Node %s lock initialized with %s dependencies", node, latchSize);
-            locks.put(node, new CountDownLatch(latchSize));
+            this.locks.put(node, new CountDownLatch(latchSize));
         }
     }
 
@@ -88,11 +86,10 @@ class PlanExecutor {
         Logger.info(this, "Executing query plan %s...", plan.getSerializedName());
 
         CompletableFuture<Optional<QueryResult>> finalResult = CompletableFuture.completedFuture(Optional.empty());
-
         for (ExecutionNode node : plan) {
             Logger.debug(this, "Creating Future for query node %s...", node);
 
-            CompletableFuture<Optional<QueryResult>> result = CompletableFuture.supplyAsync(() -> this.executeNode(node));
+            CompletableFuture<Optional<QueryResult>> result = CompletableFuture.supplyAsync(() -> this.executeNode(node), threadPool);
 
             if (plan.getTerminalTableNode().equals(node)) {
                 finalResult = result;
@@ -173,10 +170,16 @@ class PlanExecutor {
             // update nodeLocations to reflect that the results are located on this node's engine
             resultLocations.put(node, node.getEngine());
 
-            for (ExecutionNode dependent : plan.getDependents(node)) {
+            final Collection<ExecutionNode> dependants = plan.getDependents(node);
+            Logger.debug(this, "Examining dependants %[list]s of %s", dependants, node);
+
+            for (ExecutionNode dependent : dependants) {
                 Logger.debug(this, "Decrementing lock of %s because $s completed.", dependent, node);
-                locks.get(dependent).countDown();
+                this.locks.get(dependent).countDown();
+                Logger.debug(this, "%s is now waiting on %d dependencies.", dependent, this.locks.get(dependent).getCount());
             }
+
+            Logger.debug(this, "Completed examination of dependants %[list]s of %s", dependants, node);
         }
     }
 
@@ -191,8 +194,10 @@ class PlanExecutor {
     private void colocateDependencies(ExecutionNode node, Collection<String> ignoreTables) {
         // Block until dependencies are all resolved
         try {
-            Logger.debug(this, "Waiting for dependencies of query node %s to be resolved...", node);
-            this.locks.get(node).await();
+            Logger.debug(this, "Waiting for %d dependencies of query node %s to be resolved...", this.locks.get(node).getCount(), node);
+            while(!this.locks.get(node).await(10, TimeUnit.SECONDS)) {
+                Logger.debug(this, "Still waiting for %d dependencies of query node %s to be resolved...", this.locks.get(node).getCount(), node);
+            }
         } catch (InterruptedException e) {
             Logger.error(this, "Execution of query node %s was interrupted while waiting for dependencies: %[exception]s", node, e);
             Thread.currentThread().interrupt();
@@ -201,27 +206,63 @@ class PlanExecutor {
         Logger.debug(this, "Colocating dependencies of %s to %s", node, node.getEngine());
 
         ignoreTables.addAll(plan.getDependencies(node).stream().filter(d -> resultLocations.containsEntry(d, node.getEngine())).map(n -> n.getTableName().orElse("NO_TABLE")).collect(Collectors.toSet()));
-
         Logger.debug(this, "Ignoring dependencies %[list]s of %s", ignoreTables, node);
 
-        CompletableFuture[] futures = plan.getDependencies(node).stream()
+//        java.util.stream.Stream<ExecutionNode> deps = plan.getDependencies(node).stream()
+//                .filter(d -> d.getTableName().isPresent() && !ignoreTables.contains(d.getTableName().get()));
+//
+//        Logger.debug(this, "Examining dependencies %[list]s of %s", deps.collect(Collectors.toSet()), node);
+//        CompletableFuture[] futures = deps
+//                .map((d) -> {
+//                    // computeIfAbsent gets a previous migration's Future, or creates one if it doesn't already exist
+//                    ImmutablePair<String, ConnectionInfo> migrationKey = new ImmutablePair<>(d.getTableName().get(), node.getEngine());
+//                    Logger.debug(PlanExecutor.this, "Examining %s to see if migration is necessary...", d);
+//
+//                    return migrations.computeIfAbsent(migrationKey, (k) -> {
+//                        return CompletableFuture.supplyAsync(() -> {
+//                            Logger.debug(PlanExecutor.this, "Started migrating dependency %s of node %s: %s", d, node);
+//                            MigrationResult result = colocateSingleDependency(d, node);
+//                            Logger.debug(PlanExecutor.this, "Finished migrating dependency %s of node %s: %s", d, node, result);
+//                            return result;
+//                        }, threadPool);
+//                    });
+//                }).toArray(CompletableFuture[]::new);
+
+        Collection<ExecutionNode> deps = plan.getDependencies(node).stream()
                 .filter(d -> d.getTableName().isPresent() && !ignoreTables.contains(d.getTableName().get()))
-                .map((d) -> {
-                    // computeIfAbsent gets a previous migration's Future, or creates one if it doesn't already exist
-                    ImmutablePair<String, ConnectionInfo> migrationKey = new ImmutablePair<>(d.getTableName().get(), node.getEngine());
+                .collect(Collectors.toSet());
 
-                    return migrations.computeIfAbsent(migrationKey, (k) -> {
-                        return CompletableFuture.supplyAsync(() -> {
-                            Logger.debug(this, "Started migrating dependency %s of node %s: %s", d, node);
-                            MigrationResult result = colocateSingleDependency(d, node);
-                            Logger.debug(this, "Finished migrating dependency %s of node %s: %s", d, node, result);
-                            return result;
-                        });
-                    });
-                }).toArray(CompletableFuture[]::new);
+        Logger.debug(this, "Examining dependencies %[list]s of %s", deps, node);
 
+        Collection<CompletableFuture<MigrationResult>> futureCollection = new HashSet<>();
+        for(ExecutionNode d : deps) {
+            ImmutablePair<String, ConnectionInfo> migrationKey = new ImmutablePair<>(d.getTableName().get(), node.getEngine());
+            Logger.debug(PlanExecutor.this, "Examining %s to see if migration is necessary...", d);
 
+            synchronized (migrations) {
+                if (!migrations.containsKey(migrationKey)) {
+                    CompletableFuture<MigrationResult> migration = CompletableFuture.supplyAsync(() -> {
+                        Logger.debug(PlanExecutor.this, "Started migrating dependency %s of node %s: %s", d, node);
+                        MigrationResult result = colocateSingleDependency(d, node);
+                        Logger.debug(PlanExecutor.this, "Finished migrating dependency %s of node %s: %s", d, node, result);
+                        return result;
+                    }, threadPool);
+
+                    migrations.put(migrationKey, migration);
+
+                    futureCollection.add(migration);
+                } else {
+                    Logger.debug(PlanExecutor.this, "Already migrating %s, not queueing again.", d);
+                }
+            }
+        }
+
+        CompletableFuture[] futures = futureCollection.toArray(new CompletableFuture[futureCollection.size()]);
+
+        Logger.debug(this, "Waiting on %d dependencies of %s to be migrated...", futures.length, node);
         CompletableFuture.allOf(futures).join();
+        Logger.debug(this, "All dependencies of %s to be migrated.", node);
+
     }
 
     private MigrationResult colocateSingleDependency(ExecutionNode dependency, ExecutionNode dependant) {
@@ -233,7 +274,7 @@ class PlanExecutor {
                     throw new MigrationException(result.toString());
                 }
 
-                Logger.debug(this, "Marking dependency %s as migrated on engine %s...", dependency, dependant.getEngine());
+                Logger.debug(PlanExecutor.this, "Marking dependency %s as migrated on engine %s...", dependency, dependant.getEngine());
 
                 // mark the dependency's data as being present on node.getEngine()
                 resultLocations.put(dependency, dependant.getEngine());
@@ -243,7 +284,7 @@ class PlanExecutor {
 
                 return result;
             } catch (MigrationException e) {
-                Logger.error(this, "Error migrating dependency %s of node %s: %[exception]s", dependency.getTableName(), dependant.getTableName(), e);
+                Logger.error(PlanExecutor.this, "Error migrating dependency %s of node %s: %[exception]s", dependency.getTableName(), dependant.getTableName(), e);
                 return MigrationResult.getFailedInstance(e.getLocalizedMessage());
             }
         }).orElse(MigrationResult.getEmptyInstance(String.format("No table to migrate for node %s", dependency.getTableName())));
