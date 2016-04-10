@@ -107,7 +107,7 @@ class PlanExecutor {
         dropTemporaryTables();
 
         final long end = System.currentTimeMillis();
-        Logger.info(this, "Finished executing query plan %s, in %d ms.", plan.getSerializedName(), (start - end));
+        Logger.info(this, "Finished executing query plan %s, in %d ms.", plan.getSerializedName(), (end - start));
 
         Logger.info(this, "Sending timing to monitor...");
         monitor.finishedBenchmark(plan, start, end);
@@ -172,9 +172,9 @@ class PlanExecutor {
             Logger.debug(this, "Examining dependants %s of %s", dependants, node);
 
             for (ExecutionNode dependent : dependants) {
-                Logger.debug(this, "Decrementing lock of %s because $s completed.", dependent, node);
+                Logger.debug(this, "Decrementing lock of %s because %s completed.", dependent, node);
                 this.locks.get(dependent).countDown();
-                Logger.debug(this, "%s is now waiting on     %d dependencies.", dependent, this.locks.get(dependent).getCount());
+                Logger.debug(this, "%s is now waiting on %d dependencies.", dependent, this.locks.get(dependent).getCount());
             }
 
             Logger.debug(this, "Completed examination of dependants %s of %s", dependants, node);
