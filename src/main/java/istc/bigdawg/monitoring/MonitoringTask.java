@@ -1,9 +1,14 @@
 package istc.bigdawg.monitoring;
 
 import istc.bigdawg.exceptions.MigrationException;
+import istc.bigdawg.executor.plan.ExecutionNode;
 import istc.bigdawg.executor.plan.QueryExecutionPlan;
+import istc.bigdawg.packages.CrossIslandQueryNode;
+import istc.bigdawg.packages.CrossIslandQueryPlan;
+import istc.bigdawg.parsers.UserQueryParser;
 import istc.bigdawg.postgresql.PostgreSQLInstance;
 import istc.bigdawg.query.QueryClient;
+import istc.bigdawg.signature.Signature;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
@@ -13,6 +18,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -28,7 +34,6 @@ import static istc.bigdawg.postgresql.PostgreSQLHandler.getRows;
  */
 public class MonitoringTask implements Runnable {
     private static final int CHECK_RATE_MS = 100;
-    private final String island;
     private final int cores;
     private final ScheduledExecutorService executor;
 
@@ -37,11 +42,9 @@ public class MonitoringTask implements Runnable {
      *
      * This is currently made with the assumption that each island resides on one machine. To adapt this, would need to add a
      * machine field to the db and choose queries based on that field..
-     * @param island - String of the Scope of the island
      */
-    public MonitoringTask (String island) {
+    public MonitoringTask () {
         this.executor = Executors.newScheduledThreadPool(1);
-        this.island = island;
         int cores = 1;
         try {
             Process p = Runtime.getRuntime().exec("nproc");
@@ -66,18 +69,16 @@ public class MonitoringTask implements Runnable {
      */
     @Override
     public void run() {
-        this.executor.scheduleAtFixedRate(new Task(this.island, this.cores), 0, CHECK_RATE_MS, TimeUnit.MILLISECONDS);
+        this.executor.scheduleAtFixedRate(new Task(this.cores), 0, CHECK_RATE_MS, TimeUnit.MILLISECONDS);
     }
 }
 
 class Task implements Runnable {
-    private static final String RETRIEVE = "SELECT query FROM monitoring WHERE lastRan=(SELECT min(lastRan) FROM monitoring) AND island='%s' ORDER BY RANDOM() LIMIT 1";
+    private static final String RETRIEVE = "SELECT signature FROM monitoring WHERE lastRan=(SELECT min(lastRan) FROM monitoring) ORDER BY RANDOM() LIMIT 1";
     private static final double MAX_LOAD = 0.7;
-    private final String island;
     private final int cores;
 
-    Task(String island, int cores){
-        this.island = island;
+    Task(int cores){
         this.cores = cores;
     }
 
@@ -85,14 +86,15 @@ class Task implements Runnable {
     public void run(){
         if (this.can_add()) {
             try {
-                final String query = this.getQuery();
-                if (query != null) {
-                    QueryExecutionPlan qep = QueryExecutionPlan.stringToQEP(query);
-                    ArrayList<QueryExecutionPlan> qeps = new ArrayList<>();
-                    qeps.add(qep);
-                    Monitor.runBenchmarks(qeps);
-                }
-            } catch (SQLException | DirectedAcyclicGraph.CycleFoundException | MigrationException e) {
+                final Signature signature= this.getSignature();
+                assert signature != null;
+                LinkedHashMap<String, String> crossIslandQuery = UserQueryParser.getUnwrappedQueriesByIslands(signature.getQuery());
+                CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(crossIslandQuery);
+                CrossIslandQueryNode ciqn = ciqp.getRoot();
+                List<QueryExecutionPlan> qeps = ciqn.getAllQEPs(true);
+
+                Monitor.runBenchmarks(qeps, signature);
+            } catch (Exception e) {
                 e.printStackTrace();
                 throw new RuntimeException(e);
             }
@@ -131,31 +133,31 @@ class Task implements Runnable {
     }
 
     /**
-     * Finds the Least Recently Updated query for the island
-     * @return query
+     * Finds the Least Recently Updated Signature for the island
+     * @return Signature
      * @throws SQLException
      */
-    private String getQuery() throws SQLException {
+    private Signature getSignature() throws Exception {
         Connection con = null;
         Statement st = null;
         ResultSet rs = null;
         try {
             con = PostgreSQLInstance.getConnection();
             st = con.createStatement();
-            rs = st.executeQuery(String.format(RETRIEVE, this.island));
+            rs = st.executeQuery(RETRIEVE);
             ResultSetMetaData rsmd = rs.getMetaData();
             List<String> colNames = getColumnNames(rsmd);
             List<List<String>> rows = getRows(rs);
 
-            int queryCol = colNames.indexOf("query");
+            int signatureCol = colNames.indexOf("signature");
             if (rows.size() > 0){
                 List<String> query = rows.get(0);
-                if (query.size() > queryCol){
-                    return query.get(queryCol).replace(Monitor.stringSeparator, "'");
+                if (query.size() > signatureCol){
+                    return new Signature(query.get(signatureCol).replace(Monitor.stringSeparator, "'"));
                 }
             }
             return null;
-        } catch (SQLException ex) {
+        } catch (Exception ex) {
             Logger lgr = Logger.getLogger(QueryClient.class.getName());
             ex.printStackTrace();
             lgr.log(Level.ERROR, ex.getMessage() + "; query: " + RETRIEVE, ex);

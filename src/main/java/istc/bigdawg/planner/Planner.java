@@ -52,7 +52,7 @@ public class Planner {
 			
 			// EXECUTE THE RESULT SUB RESULT
 			logger.debug("Executing query cross-island subquery "+k+"...");
-			Executor.executePlan(qep);
+			Executor.executePlan(qep, ciqn.getSignature(), choice);
 		}
 		
 		
@@ -79,21 +79,21 @@ public class Planner {
 	 */
 	public static int getGetPerformanceAndPickTheBest(CrossIslandQueryNode ciqn, boolean isTrainingMode) throws Exception {
 		int choice = 0;
-		List<QueryExecutionPlan> qeps = ciqn.getAllQEPs(true);
 		Signature signature = ciqn.getSignature();
 
+		List<QueryExecutionPlan> qeps = ciqn.getAllQEPs(true);
 		Log.debug("Number of qeps: " + qeps.size());
 		
 		if (isTrainingMode) {
 			Log.debug("Running in Training Mode...");
 			// now call the corresponding monitor function to deliver permuted.
-			Monitor.addBenchmarks(qeps, signature, false);
-			QueriesAndPerformanceInformation qnp = Monitor.getBenchmarkPerformance(qeps);
+			Monitor.addBenchmarks(signature, false);
+			List<Long> perfInfo = Monitor.getBenchmarkPerformance(signature);
 	
 			// does some magic to pick out the best query, store it to the query plan queue
 			long minDuration = Long.MAX_VALUE;
-			for (int i = 0; i < qnp.qList.size(); i++){
-				long currentDuration = qnp.pInfo.get(i);
+			for (int i = 0; i < perfInfo.size(); i++){
+				long currentDuration = perfInfo.get(i);
 				if (currentDuration < minDuration){
 					minDuration = currentDuration;
 					choice = i;
@@ -106,7 +106,7 @@ public class Planner {
 				Log.debug("Closest query found");
 				double distance = signature.compare(closest);
 				Log.debug("Minimum distance between queries: " + distance);
-				QueriesAndPerformanceInformation qnp = Monitor.getBenchmarkPerformance(closest);
+				List<Long> perfInfo = Monitor.getBenchmarkPerformance(closest);
 
 				// TODO does some magic to match the best query from the closest
 				// signature to a query plan for the current query
@@ -114,8 +114,8 @@ public class Planner {
 				// permutations for a similar query will be the
 				// same as that of the current query
 				long minDuration = Long.MAX_VALUE;
-				for (int i = 0; i < qnp.qList.size(); i++){
-					long currentDuration = qnp.pInfo.get(i);
+				for (int i = 0; i < perfInfo.size(); i++){
+					long currentDuration = perfInfo.get(i);
 					if (currentDuration < minDuration){
 						minDuration = currentDuration;
 						choice = i;
@@ -123,7 +123,7 @@ public class Planner {
 				}
 			} else {
 				Log.debug("No queries that are even slightly similar");
-				Monitor.addBenchmarks(qeps, signature, true);
+				Monitor.addBenchmarks(signature, true);
 			}
 		}
 		

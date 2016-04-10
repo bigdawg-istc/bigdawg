@@ -65,7 +65,7 @@ public class Main {
 		logger.info("Starting application ...");
 		CatalogInstance.INSTANCE.getCatalog();
 		final HttpServer server = startServer();
-		MonitoringTask relationalTask = new MonitoringTask(IslandsAndCast.Scope.RELATIONAL.toString());
+		MonitoringTask relationalTask = new MonitoringTask();
 		relationalTask.run();
 		MigratorTask migratorTask = new MigratorTask();
 		logger.info("Server started");
