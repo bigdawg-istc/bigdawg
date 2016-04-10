@@ -54,7 +54,7 @@ class PlanExecutor {
     public PlanExecutor(QueryExecutionPlan plan) {
         this.plan = plan;
 
-        StringBuilder sb = new StringBuilder();
+        final StringBuilder sb = new StringBuilder();
         for(ExecutionNode n : plan) {
             sb.append(String.format("%s -> (%s)\n", n, plan.getDependents(n)));
         }
@@ -80,7 +80,7 @@ class PlanExecutor {
      * Execute the plan, and return the result
      */
     Optional<QueryResult> executePlan() throws SQLException, MigrationException {
-        long start = System.currentTimeMillis();
+        final long start = System.currentTimeMillis();
 
         Logger.info(this, "Executing query plan %s...", plan.getSerializedName());
 
@@ -106,9 +106,9 @@ class PlanExecutor {
 
         dropTemporaryTables();
 
-        long end = System.currentTimeMillis();
-
+        final long end = System.currentTimeMillis();
         Logger.info(this, "Finished executing query plan %s, in %d ms.", plan.getSerializedName(), (start - end));
+
         Logger.info(this, "Sending timing to monitor...");
         monitor.finishedBenchmark(plan, start, end);
         Logger.info(this, "Returning result to planner...");
@@ -145,7 +145,7 @@ class PlanExecutor {
 
         return node.getQueryString().flatMap((query) -> {
             try {
-                Optional<QueryResult> result = ((PostgreSQLHandler) node.getEngine().getHandler()).executePostgreSQL(query);
+                final Optional<QueryResult> result = ((PostgreSQLHandler) node.getEngine().getHandler()).executePostgreSQL(query);
                 Logger.info(this, "Successfully executed node %s", node);
                 return result;
             } catch (SQLException e) {
@@ -190,8 +190,8 @@ class PlanExecutor {
      * @param node the ExecutionNOde whose dependencies we want to colocate
      * @param ignoreTables table names that we wish to ignore
      */
-    private void colocateDependencies(ExecutionNode node, Collection<String> ignoreTables) {
-        Collection<String> ignoreCopy = new HashSet<>(ignoreTables);
+    private void colocateDependencies(ExecutionNode node, final Collection<String> ignoreTables) {
+        final Collection<String> ignoreCopy = new HashSet<>(ignoreTables);
 
         // Block until dependencies are all resolved
         try {
@@ -206,7 +206,10 @@ class PlanExecutor {
 
         Logger.debug(this, "Colocating dependencies of %s to %s", node, node.getEngine());
 
-        ignoreCopy.addAll(plan.getDependencies(node).stream().filter(d -> resultLocations.containsEntry(d, node.getEngine())).map(n -> n.getTableName().orElse("NO_TABLE")).collect(Collectors.toSet()));
+        ignoreCopy.addAll(plan.getDependencies(node).stream()
+                .filter(d -> resultLocations.containsEntry(d, node.getEngine()))
+                .map(n -> n.getTableName().orElse("NO_TABLE"))
+                .collect(Collectors.toSet()));
         Logger.debug(this, "Ignoring dependencies %s of %s", ignoreCopy, node);
 
 //        java.util.stream.Stream<ExecutionNode> deps = plan.getDependencies(node).stream()
@@ -229,7 +232,7 @@ class PlanExecutor {
 //                    });
 //                }).toArray(CompletableFuture[]::new);
 
-        Collection<ExecutionNode> deps = plan.getDependencies(node).stream()
+        final Collection<ExecutionNode> deps = plan.getDependencies(node).stream()
                 .filter(d -> d.getTableName().isPresent() && !ignoreCopy.contains(d.getTableName().get()))
                 .collect(Collectors.toSet());
 
@@ -237,14 +240,15 @@ class PlanExecutor {
 
         Collection<CompletableFuture<MigrationResult>> futureCollection = new HashSet<>();
         for(ExecutionNode d : deps) {
-            ImmutablePair<String, ConnectionInfo> migrationKey = new ImmutablePair<>(d.getTableName().get(), node.getEngine());
+            final ImmutablePair<String, ConnectionInfo> migrationKey = new ImmutablePair<>(d.getTableName().get(), node.getEngine());
+
             Logger.debug(PlanExecutor.this, "Examining %s to see if migration is necessary...", d);
 
             synchronized (migrations) {
                 if (!migrations.containsKey(migrationKey)) {
-                    CompletableFuture<MigrationResult> migration = CompletableFuture.supplyAsync(() -> {
+                   final CompletableFuture<MigrationResult> migration = CompletableFuture.supplyAsync(() -> {
                         Logger.debug(PlanExecutor.this, "Started migrating dependency %s of node %s", d, node);
-                        MigrationResult result = colocateSingleDependency(d, node);
+                        final MigrationResult result = colocateSingleDependency(d, node);
                         Logger.debug(PlanExecutor.this, "Finished migrating dependency %s of node %s: %s", d, node, result);
                         return result;
                     }, threadPool);
@@ -258,7 +262,7 @@ class PlanExecutor {
             }
         }
 
-        CompletableFuture[] futures = futureCollection.toArray(new CompletableFuture[futureCollection.size()]);
+        final CompletableFuture[] futures = futureCollection.toArray(new CompletableFuture[futureCollection.size()]);
 
         Logger.debug(this, "Waiting on %d dependencies of %s to be migrated...", futures.length, node);
         CompletableFuture.allOf(futures).join();
@@ -269,7 +273,7 @@ class PlanExecutor {
     private MigrationResult colocateSingleDependency(ExecutionNode dependency, ExecutionNode dependant) {
         return dependency.getTableName().map((table) -> {
             try {
-                MigrationResult result = Migrator.migrate(dependency.getEngine(), table, dependant.getEngine(), table);
+                final MigrationResult result = Migrator.migrate(dependency.getEngine(), table, dependant.getEngine(), table);
 
                 if(result.isError()) {
                     throw new MigrationException(result.toString());
@@ -293,10 +297,10 @@ class PlanExecutor {
 
     private void dropTemporaryTables() throws SQLException {
         synchronized(temporaryTables) {
-            Multimap<ConnectionInfo, String> removed = HashMultimap.create();
+            final Multimap<ConnectionInfo, String> removed = HashMultimap.create();
 
             for (ConnectionInfo c : temporaryTables.keySet()) {
-                Collection<String> tables = temporaryTables.get(c);
+                final Collection<String> tables = temporaryTables.get(c);
 
                 Logger.debug(this, "Cleaning up %s by removing %s...", c, tables);
                 ((PostgreSQLHandler) c.getHandler()).executeStatementPostgreSQL(c.getCleanupQuery(tables));
