@@ -83,13 +83,14 @@ class Task implements Runnable {
         if (this.can_add()) {
             try {
                 final Signature signature= this.getSignature();
-                assert signature != null;
-                LinkedHashMap<String, String> crossIslandQuery = UserQueryParser.getUnwrappedQueriesByIslands(signature.getQuery());
-                CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(crossIslandQuery);
-                CrossIslandQueryNode ciqn = ciqp.getRoot();
-                List<QueryExecutionPlan> qeps = ciqn.getAllQEPs(true);
+                if (signature != null) {
+                    LinkedHashMap<String, String> crossIslandQuery = UserQueryParser.getUnwrappedQueriesByIslands(signature.getQuery());
+                    CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(crossIslandQuery);
+                    CrossIslandQueryNode ciqn = ciqp.getRoot();
+                    List<QueryExecutionPlan> qeps = ciqn.getAllQEPs(true);
 
-                Monitor.runBenchmarks(qeps, signature);
+                    Monitor.runBenchmarks(qeps, signature);
+                }
             } catch (Exception e) {
                 e.printStackTrace();
                 throw new RuntimeException(e);
