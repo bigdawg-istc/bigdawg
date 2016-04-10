@@ -9,6 +9,8 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
+import com.jcabi.log.Logger;
+
 public class Executor {
     public static QueryResult executePlan(QueryExecutionPlan plan) throws SQLException, MigrationException {
         return new PlanExecutor(plan).executePlan().orElse(null);
@@ -19,6 +21,7 @@ public class Executor {
             try {
                 return new PlanExecutor(plan).executePlan();
             } catch (Exception e) {
+                Logger.error(Executor.class, "Error executing query plan: %[exception]s", e);
                 throw new CompletionException(e);
             }
         });
