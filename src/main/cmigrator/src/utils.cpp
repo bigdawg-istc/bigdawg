@@ -8,10 +8,8 @@
 #define GetCurrentDir getcwd
 #endif
 
-void getCurrentPath(char * cCurrentPath,size_t sizeCurrentPath)
-{
-  if (!GetCurrentDir(cCurrentPath,sizeCurrentPath))
-    {
-      fprintf(stderr,"%s","Could not get current path\n");
+void getCurrentPath(char * cCurrentPath,size_t sizeCurrentPath) {
+    if (!GetCurrentDir(cCurrentPath,sizeCurrentPath)) {
+        fprintf(stderr,"%s","Could not get current path\n");
     }
 }

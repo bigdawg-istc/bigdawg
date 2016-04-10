@@ -2,12 +2,12 @@
 
 class Csv2Postgres {
 
-private:
-  size_t *elemSize;
-  FILE *fp;
+  private:
+    size_t *elemSize;
+    FILE *fp;
 
- public:
-  int csv2postgres(int argc, char *argv[]);
-  void writeHeader(FILE* fp);
-  void writeTrailer(FILE* fp);
+  public:
+    int csv2postgres(int argc, char *argv[]);
+    void writeHeader(FILE* fp);
+    void writeTrailer(FILE* fp);
 };

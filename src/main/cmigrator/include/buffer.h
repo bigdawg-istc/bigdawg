@@ -6,13 +6,12 @@
 
 // #define RAW_BUF_SIZE 65536 // this is equal to the default size of the pipe
 
-typedef struct Buffer 
-{
-  char * raw_buf; /* this is the buffer */
-  size_t size; /* size of the buffer */
-  size_t raw_buf_index; /* next byte to process */
-  size_t raw_buf_len; /* total # of bytes stored */
-  FILE * file; /* file to be read from */
+typedef struct Buffer {
+    char * raw_buf; /* this is the buffer */
+    size_t size; /* size of the buffer */
+    size_t raw_buf_index; /* next byte to process */
+    size_t raw_buf_len; /* total # of bytes stored */
+    FILE * file; /* file to be read from */
 
 } Buffer;
 

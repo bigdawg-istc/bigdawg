@@ -54,6 +54,72 @@ TEST(Postgres,PostgresReadBinaryInteger32Bit)
   fclose(fp);
 }
 
+TEST(Postgres,PostgresReadBinaryBoolTrue)
+{
+  GenericAttribute<bool> attr = GenericAttribute<bool>(false);
+  FILE * fp;
+  fp = tmpfile();
+  int32_t bytesNumber = sizeof(bool);
+  // postgres writes the bytes in Big Endian format so change the value to Big Endian
+  std::cout << "bytes number: " << bytesNumber << std::endl;
+  bytesNumber = endianness::to_postgres<int32_t>(bytesNumber);
+  fwrite(&bytesNumber,sizeof(int32_t),1,fp);
+  char boolValue = 1;
+  fwrite(&boolValue,bytesNumber,1,fp);
+  // you wrote to a file and now would like to start reading from the beginnin of the file
+  rewind(fp); 
+  attr.postgresReadBinary(fp);
+  std::cout << "attribute value: " << attr.getValue() << std::endl;
+  EXPECT_EQ(true,attr.getValue());
+  fclose(fp);
+}
+
+TEST(Postgres,PostgresReadBinaryBoolFalse)
+{
+  GenericAttribute<bool> attr = GenericAttribute<bool>(false);
+  FILE * fp;
+  fp = tmpfile();
+  int32_t bytesNumber = sizeof(bool);
+  // postgres writes the bytes in Big Endian format so change the value to Big Endian
+  std::cout << "bytes number: " << bytesNumber << std::endl;
+  bytesNumber = endianness::to_postgres<int32_t>(bytesNumber);
+  fwrite(&bytesNumber,sizeof(int32_t),1,fp);
+  // the false value is represented as a NULL character '\0'
+  char boolValue = '\0';
+  fwrite(&boolValue,bytesNumber,1,fp);
+  // you wrote to a file and now would like to start reading from the beginnin of the file
+  rewind(fp);
+  attr.postgresReadBinary(fp);
+  std::cout << "attribute value: " << attr.getValue() << std::endl;
+  // check the value: is should be false
+  EXPECT_EQ(false,attr.getValue());
+  // the attribute should not allow null values
+  EXPECT_EQ(false,attr.getIsNullable());
+  fclose(fp);
+}
+
+TEST(Postgres,PostgresReadBinaryBoolNull)
+{
+  GenericAttribute<bool> attr = GenericAttribute<bool>(true);
+  FILE * fp;
+  fp = tmpfile();
+  int32_t bytesNumber = -1; // -1 denotes NULL value
+  // postgres writes the bytes in Big Endian format so change the value to Big Endian
+  std::cout << "bytes number: " << bytesNumber << std::endl;
+  bytesNumber = endianness::to_postgres<int32_t>(bytesNumber);
+  fwrite(&bytesNumber,sizeof(int32_t),1,fp);
+  // the null (-1) is followed by no value
+  // fwrite(&boolValue,bytesNumber,1,fp);
+  // you wrote to a file and now would like to start reading from the beginnin of the file
+  rewind(fp);
+  attr.postgresReadBinary(fp);
+  // check that the value is indeed NULL
+  ASSERT_TRUE(attr.getIsNull());
+  // the attribute should allow null values
+  ASSERT_TRUE(attr.getIsNullable());
+  fclose(fp);
+}
+
 TEST(Postgres,ReadBinaryTestFloat64_t) 
 {
   GenericAttribute<boost::float64_t> attr = GenericAttribute<boost::float64_t>(true);
@@ -106,6 +172,86 @@ TEST(Postgres,ReadBinaryTestString)
   ASSERT_EQ(0,strncmp(value,attr.getValue(),bytesNumberRaw));
   // also check if the null value was added at the end of the string
   ASSERT_EQ(0,strncmp(value,attr.getValue(),bytesNumberRaw+1));
+  fclose(fp);
+}
+
+TEST(SciDB,WriteBinaryBoolTrueNotNullable)
+{
+  GenericAttribute<bool> attr = GenericAttribute<bool>(false);
+  int32_t setBytesNumber=sizeof(bool);
+  attr.setBytesNumber(setBytesNumber);
+  attr.setValue(true);
+  std::cout << "attribute value before writing for SciDB: " << attr.getValue() << std::endl;
+  FILE * fp;
+  fp = tmpfile();
+  attr.scidbWriteBinary(fp);
+  rewind(fp);
+  
+  // now check what is in the file after writing values for SciDB
+  char receivedValue;
+  fread(&receivedValue,setBytesNumber,1,fp);
+  std::cout << "Final value found in the binary file for SciDB: " << receivedValue << std::endl;
+  ASSERT_EQ(1,receivedValue); // it checks if NULL values are at the end of the strings
+  // check if this is the end of the file
+  char stop;
+  fread(&stop,1,1,fp);
+  EXPECT_TRUE(feof(fp));
+  //delete value; // this is removed by destructor of the GenericAttribute<char*> class
+  fclose(fp);
+}
+
+TEST(SciDB,WriteBinaryBoolFalseNotNullable)
+{
+  GenericAttribute<bool> attr = GenericAttribute<bool>(false);
+  int32_t setBytesNumber=sizeof(bool);
+  attr.setBytesNumber(setBytesNumber);
+  attr.setValue(false);
+  std::cout << "attribute value before writing for SciDB: " << attr.getValue() << std::endl;
+  FILE * fp;
+  fp = tmpfile();
+  attr.scidbWriteBinary(fp);
+  rewind(fp);
+  
+  // now check what is in the file after writing values for SciDB
+  char receivedValue;
+  fread(&receivedValue,setBytesNumber,1,fp);
+  std::cout << "Final value found in the binary file for SciDB: " << receivedValue << std::endl;
+  ASSERT_EQ('\0',receivedValue); // it checks if NULL values are at the end of the strings
+  // check if this is the end of the file
+  char stop;
+  fread(&stop,1,1,fp);
+  EXPECT_TRUE(feof(fp));
+  //delete value; // this is removed by destructor of the GenericAttribute<char*> class
+  fclose(fp);
+}
+
+/**
+Write the value which is null.
+ */
+TEST(SciDB,WriteBinaryBoolNullable)
+{
+  GenericAttribute<bool> attr = GenericAttribute<bool>(true);
+  int32_t setBytesNumber=sizeof(bool);
+  attr.setBytesNumber(setBytesNumber);
+  attr.setIsNull(true);
+  FILE * fp;
+  fp = tmpfile();
+  attr.scidbWriteBinary(fp);
+  rewind(fp);
+  // now check what is in the file after writing values for SciDB
+  char nullReason;
+  fread(&nullReason,setBytesNumber,1,fp);
+  ASSERT_EQ('\0',nullReason); // it checks if NULL values are at the end of the strings
+  // check the received value
+  char receivedValue;
+  fread(&receivedValue,setBytesNumber,1,fp);
+  std::cout << "Final value found in the binary file for SciDB: " << receivedValue << std::endl;
+  ASSERT_EQ('\0',receivedValue); // it checks if NULL values are at the end of the strings
+  // check if this is the end of the file
+  char stop;
+  fread(&stop,1,1,fp);
+  EXPECT_TRUE(feof(fp));
+  //delete value; // this is removed by destructor of the GenericAttribute<char*> class
   fclose(fp);
 }
 

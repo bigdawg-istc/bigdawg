@@ -2,6 +2,6 @@
 #include <hellofunc.h>
 
 void myPrintHelloMake(void) {
-  printf("Hello makefiles & Adam!\n");
-  return;
+    printf("Hello makefiles & Adam!\n");
+    return;
 }

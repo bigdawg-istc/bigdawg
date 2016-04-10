@@ -9,16 +9,15 @@
 
 #include "buffer.h"
 
-class Postgres 
-{
- public:
-  static char* readHeader(FILE *fp);
-  static void writeHeader(FILE *fp);
-  static void skipHeader(FILE *fp);
-  static short int readColNumber(FILE *fp);
-  static void writeColNumber(FILE *fp, int16_t colNumber);
-  static void writeFileTrailer(FILE *fp);
-  static short int readColNumberBuffer(Buffer * buffer);
+class Postgres {
+  public:
+    static char* readHeader(FILE *fp);
+    static void writeHeader(FILE *fp);
+    static void skipHeader(FILE *fp);
+    static short int readColNumber(FILE *fp);
+    static void writeColNumber(FILE *fp, int16_t colNumber);
+    static void writeFileTrailer(FILE *fp);
+    static short int readColNumberBuffer(Buffer * buffer);
 };
 
 #endif // POSTGRES_H

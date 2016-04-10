@@ -48,7 +48,16 @@ export BOOST_LIBRARYDIR=/usr/local/lib/
 
 export BOOST_ROOT=/home/adam/Downloads/boost_1_60_0
 
-And then in your makefiles you can add: CPPFLAGS += -L/usr/local/include/boost
+export INCLUDE="/usr/local/include/boost/:$INCLUDE"
+
+export LIBRARY_PATH="/usr/local/lib/:$LIBRARY_PATH"
+
+Or in your makefiles you can add: CPPFLAGS += -L/usr/local/include/boost
 
 ## MAKEFILE
-to run the old makefile: 
+to run the old makefile: make -f 
+
+## EXAMPLES
+adam@gaia:~/cmigrator$ ./data-migrator -t postgres2scidb -i /home/adam/data/scidb/bool_table_test.bin -o /home/adam/data/scidb/bool_table_test_to_scidb2.bin -f'bool null'
+AFL% load(bool_array4,'/home/adam/data/scidb/bool_table_test_to_scidb2.bin',-2,'(bool null)');
+
