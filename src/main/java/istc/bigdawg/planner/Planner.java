@@ -26,7 +26,7 @@ public class Planner {
 	public static Response processQuery(String userinput, boolean isTrainingMode) throws Exception {
 		
 		// UNROLLING
-		logger.debug("User query received. Parsing...");
+		logger.debug("User query received. Parsing... " + userinput);
 		LinkedHashMap<String, String> crossIslandQuery = UserQueryParser.getUnwrappedQueriesByIslands(userinput);
 		
 		CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(crossIslandQuery);
