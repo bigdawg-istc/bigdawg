@@ -13,16 +13,13 @@ import istc.bigdawg.executor.plan.QueryExecutionPlan;
 import istc.bigdawg.migration.MigrationStatistics;
 import istc.bigdawg.packages.CrossIslandQueryNode;
 import istc.bigdawg.packages.CrossIslandQueryPlan;
-import istc.bigdawg.packages.QueriesAndPerformanceInformation;
 import istc.bigdawg.parsers.UserQueryParser;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.query.ConnectionInfoParser;
 import istc.bigdawg.signature.Signature;
-import istc.bigdawg.utils.IslandsAndCast.Scope;
 
 import org.mortbay.log.Log;
-import org.neo4j.cypher.internal.compiler.v2_2.functions.Sign;
 
 public class Monitor {
     public static final String stringSeparator = "****";

@@ -6,7 +6,6 @@ import java.util.List;
 import javax.ws.rs.core.Response;
 
 import istc.bigdawg.monitoring.Monitor;
-import istc.bigdawg.packages.QueriesAndPerformanceInformation;
 import istc.bigdawg.signature.Signature;
 import org.apache.log4j.Logger;
 import org.mortbay.log.Log;
@@ -67,7 +66,7 @@ public class Planner {
 		
 		// EXECUTE THE RESULT
 		logger.debug("Executing query execution tree...");
-		return compileResults(ciqp.getSerial(), Executor.executePlan(qep));
+		return compileResults(ciqp.getSerial(), Executor.executePlan(qep, ciqn.getSignature(), choice));
 	}
 
 	

@@ -1,7 +1,5 @@
 package istc.bigdawg.monitoring;
 
-import istc.bigdawg.exceptions.MigrationException;
-import istc.bigdawg.executor.plan.ExecutionNode;
 import istc.bigdawg.executor.plan.QueryExecutionPlan;
 import istc.bigdawg.packages.CrossIslandQueryNode;
 import istc.bigdawg.packages.CrossIslandQueryPlan;
@@ -11,13 +9,11 @@ import istc.bigdawg.query.QueryClient;
 import istc.bigdawg.signature.Signature;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.sql.*;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.concurrent.Executors;
