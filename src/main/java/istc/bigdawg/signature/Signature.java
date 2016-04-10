@@ -148,7 +148,14 @@ public class Signature {
 	}
 
 	public String getQuery() {
-		return query;
+		if (this.getIsland() == Scope.RELATIONAL){
+			return String.format("bdrel(%s);", query);
+		} else if (this.getIsland() == Scope.ARRAY){
+			return String.format("bdarray(%s);", query);
+		} else {
+			// TODO make a clause for each type of query
+			return query;
+		}
 	}
 
 	public void setQuery(String query) {
