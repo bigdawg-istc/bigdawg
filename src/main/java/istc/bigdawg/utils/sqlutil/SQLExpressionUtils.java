@@ -8,6 +8,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
+import com.beust.jcommander.internal.Lists;
 
 import istc.bigdawg.extract.logical.SQLExpressionHandler;
 import net.sf.jsqlparser.JSQLParserException;
@@ -434,7 +437,7 @@ public class SQLExpressionUtils {
 	    return new ArrayList<>(attributes);
 	}
 	
-public static List<String> getColumnNamesInAllForms(Expression expr) throws JSQLParserException {
+	public static List<String> getColumnNamesInAllForms(Expression expr) throws JSQLParserException {
 		
 		final Set<String> attributes = new HashSet<String>();
 	
@@ -508,6 +511,106 @@ public static List<String> getColumnNamesInAllForms(Expression expr) throws JSQL
 	    
 	    expr.accept(deparser);
 	    return new ArrayList<>(attributes);
+	}
+	
+	public static String getRelevantFilterSections(Expression expr, Set<String> leftNames, Set<String> rightNames) throws JSQLParserException {
+		
+		final Set<String> filters = new HashSet<String>();
+	
+		SQLExpressionHandler deparser = new SQLExpressionHandler() {
+	        
+			@Override
+			public void visitOldOracleJoinBinaryExpression(OldOracleJoinBinaryExpression expression, String operator) {
+				
+				boolean leftFound = false;
+				boolean rightFound = false;
+				
+				try {
+					List <String> llc = getAttributes(expression.getLeftExpression()).stream().filter(d -> d.getTable() != null).map(d -> d.getTable().toString()).collect(Collectors.toList());
+					List <String> rlc = getAttributes(expression.getRightExpression()).stream().filter(d -> d.getTable() != null).map(d -> d.getTable().toString()).collect(Collectors.toList());
+					
+					if (llc.removeAll(leftNames) && llc.removeAll(rightNames)) leftFound = true;
+					if (rlc.removeAll(leftNames) && rlc.removeAll(rightNames)) rightFound = true;
+				} catch (JSQLParserException e) {
+					e.printStackTrace();
+				}
+				
+				if (leftFound && rightFound) filters.add(expression.toString());
+				else if (leftFound) {
+					filters.add(expression.getLeftExpression().toString());
+					expression.getRightExpression().accept(this);
+				} else if (rightFound) {
+					filters.add(expression.getRightExpression().toString());
+					expression.getLeftExpression().accept(this);
+				} else {
+					expression.getLeftExpression().accept(this);
+					expression.getRightExpression().accept(this);
+				}
+			}
+			
+			@Override
+			protected void visitBinaryExpression(BinaryExpression expression, String operator) {
+				boolean leftFound = false;
+				boolean rightFound = false;
+				
+				try {
+					List <String> llc = getAttributes(expression.getLeftExpression()).stream().filter(d -> d.getTable() != null).map(d -> d.getTable().toString()).collect(Collectors.toList());
+					List <String> rlc = getAttributes(expression.getRightExpression()).stream().filter(d -> d.getTable() != null).map(d -> d.getTable().toString()).collect(Collectors.toList());
+					
+					if (llc.removeAll(leftNames) && llc.removeAll(rightNames)) leftFound = true;
+					if (rlc.removeAll(leftNames) && rlc.removeAll(rightNames)) rightFound = true;
+				} catch (JSQLParserException e) {
+					e.printStackTrace();
+				}
+				
+				if (leftFound && rightFound) filters.add(expression.toString());
+				else if (leftFound) {
+					filters.add(expression.getLeftExpression().toString());
+					expression.getRightExpression().accept(this);
+				} else if (rightFound) {
+					filters.add(expression.getRightExpression().toString());
+					expression.getLeftExpression().accept(this);
+				} else {
+					expression.getLeftExpression().accept(this);
+					expression.getRightExpression().accept(this);
+				}
+			}
+			
+			@Override
+		    public void visit(CaseExpression caseExpression) {
+				if (caseExpression.getSwitchExpression() != null) caseExpression.getSwitchExpression().accept(this);
+		        for (int i = 0; i < caseExpression.getWhenClauses().size(); i++) {
+		        	((WhenClause)caseExpression.getWhenClauses().get(i)).getWhenExpression().accept(this);
+		        	((WhenClause)caseExpression.getWhenClauses().get(i)).getThenExpression().accept(this);;
+		        }
+		        if (caseExpression.getElseExpression() != null) caseExpression.getElseExpression().accept(this);
+		    }
+			
+			@Override
+			public void visit(InExpression inExpression) {
+				inExpression.getLeftExpression().accept(this);
+				if (inExpression.getLeftItemsList() != null) inExpression.getLeftItemsList().accept(this);
+				if (inExpression.getRightItemsList() != null) inExpression.getRightItemsList().accept(this);
+			}
+			
+			@Override public void visit(ExpressionList expressionList) {for (Iterator<Expression> iter = expressionList.getExpressions().iterator(); iter.hasNext();) iter.next().accept(this);}
+			@Override public void visit(Parenthesis parenthesis) {parenthesis.getExpression().accept(this);}
+			@Override public void visit(Function function) {function.getParameters().accept(this);}
+			@Override public void visit(SignedExpression se) {se.getExpression().accept(this);}
+			@Override public void visit(Column tableColumn) {}
+			@Override public void visit(LongValue lv) {};
+			@Override public void visit(DoubleValue lv) {};
+			@Override public void visit(HexValue lv) {};
+			@Override public void visit(NullValue lv) {};
+			@Override public void visit(TimeValue lv) {};
+			@Override public void visit(StringValue sv) {};
+	    };
+	    
+	    expr.accept(deparser);
+	    
+//	    System.out.printf("\n----> SQLExpressionUtils expression: \n	---%s;\n	---filters: %s;\n	---left: %s;\n	---right: %s;\n", expr, filters, leftNames, rightNames);
+	    
+	    return String.join(" AND ", filters);
 	}
 	
 	

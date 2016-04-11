@@ -436,11 +436,19 @@ public class Join extends Operator {
 		if (!discoveredJoinPredicate.isEmpty()) for (String s : discoveredJoinPredicate) jf = addToJoinFilter(s, jf); // there should be only one entry
 		
 		
-//		if (jf == null || jf.length() == 0) throw new Exception(String.format("---> join jf check: \n-- %s; \n-- %s; \n-- %s\n", dstStatement, jf, discoveredJoinPredicate));
 		
+		
+		String estring = null;
 		// WHERE UPDATE
-		if (jf != null) {
-			Expression e = CCJSqlParserUtil.parseCondExpression(jf);
+		if (jf != null && !((estring = SQLExpressionUtils.getRelevantFilterSections(
+				CCJSqlParserUtil.parseCondExpression(jf), 
+				child0.getDataObjectAliasesOrNames().keySet(), 
+				child1.getDataObjectAliasesOrNames().keySet())).isEmpty())) {
+			
+//			System.out.printf("----> estring: %s\n", estring);
+			
+			Expression e = CCJSqlParserUtil.parseCondExpression(estring);
+			
 			List<Column> filterRelatedTablesExpr = SQLExpressionUtils.getAttributes(e); 
 			List<String> filterRelatedTables = new ArrayList<>();
 			for (Column c : filterRelatedTablesExpr) {
@@ -481,6 +489,8 @@ public class Join extends Operator {
 		
 //		System.out.println("\n-- Join: "+dstStatement.toString()+"\n");
 		
+//		if (estring == null) throw new Exception(String.format("---> join jf check: \n-- %s; \n-- %s; \n-- %s\n", dstStatement, jf, discoveredJoinPredicate));
+		
 		return dstStatement;
 
 	}
@@ -507,13 +517,6 @@ public class Join extends Operator {
 				String s2 = c.getTable().getName();
 				
 				if (child1Cond.containsKey(s2)) {
-					
-//					// t0 gets s; t1 gets s2
-//					if (! s.equals(child0ObjectMap.get(s))) t0.setAlias(new Alias(s));
-//		        	t0.setName(child0ObjectMap.get(s));
-//		        	
-//		        	if (! s2.equals(child1ObjectMap.get(s2))) t1.setAlias(new Alias(s2));
-//		        	t1.setName(child1ObjectMap.get(s2));
 					
 					List<String> ret = new ArrayList<>();
 					ret.add(s);
