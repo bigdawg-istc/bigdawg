@@ -28,7 +28,7 @@ public class Monitor {
 
     public static final String stringSeparator = "****";
 
-    private static final String INSERT = "INSERT INTO monitoring (signature, index, lastRan, duration) SELECT '%s', %d, -1, -1 WHERE NOT EXISTS (SELECT 1 FROM monitoring WHERE signature='%s' AND index=%d)";
+    private static final String INSERT = "INSERT INTO monitoring (signature, index, lastRan, duration) SELECT '%s', %d, %d, -1 WHERE NOT EXISTS (SELECT 1 FROM monitoring WHERE signature='%s' AND index=%d)";
     private static final String DELETE = "DELETE FROM monitoring WHERE signature='%s'";
     private static final String UPDATE = "UPDATE monitoring SET lastRan=%d, duration=%d WHERE signature='%s' AND index=%d";
     private static final String RETRIEVE = "SELECT duration FROM monitoring WHERE signature='%s' ORDER BY index";
@@ -153,7 +153,7 @@ public class Monitor {
         PostgreSQLHandler handler = new PostgreSQLHandler();
         try {
             String escapedSignature = signature.toRecoverableString().replace("'", stringSeparator);
-			handler.executeStatementPostgreSQL(String.format(INSERT, escapedSignature, index, escapedSignature, index));
+			handler.executeStatementPostgreSQL(String.format(INSERT, escapedSignature, index, System.currentTimeMillis(), escapedSignature, index));
 			return true;
 		} catch (SQLException e) {
 			return false;

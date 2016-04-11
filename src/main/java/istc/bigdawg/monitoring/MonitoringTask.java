@@ -29,7 +29,7 @@ import static istc.bigdawg.postgresql.PostgreSQLHandler.getRows;
  * Created by chenp on 11/17/2015.
  */
 public class MonitoringTask implements Runnable {
-    private static final int CHECK_RATE_MS = 100;
+    public static final int CHECK_RATE_MS = 100;
     private final int cores;
     private final ScheduledExecutorService executor;
 
@@ -70,7 +70,7 @@ public class MonitoringTask implements Runnable {
 }
 
 class Task implements Runnable {
-    private static final String RETRIEVE = "SELECT signature FROM monitoring WHERE lastRan=(SELECT min(lastRan) FROM monitoring) ORDER BY RANDOM() LIMIT 1";
+    private static final String RETRIEVE = "SELECT signature FROM monitoring WHERE lastRan < %d AND lastRan=(SELECT min(lastRan) FROM monitoring) ORDER BY RANDOM() LIMIT 1";
     private static final double MAX_LOAD = 0.7;
     private final int cores;
 
@@ -140,7 +140,7 @@ class Task implements Runnable {
         try {
             con = PostgreSQLInstance.getConnection();
             st = con.createStatement();
-            rs = st.executeQuery(RETRIEVE);
+            rs = st.executeQuery(String.format(RETRIEVE, System.currentTimeMillis() - MonitoringTask.CHECK_RATE_MS * 100));
             ResultSetMetaData rsmd = rs.getMetaData();
             List<String> colNames = getColumnNames(rsmd);
             List<List<String>> rows = getRows(rs);
