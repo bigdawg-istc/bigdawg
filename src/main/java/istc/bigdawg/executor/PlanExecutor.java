@@ -142,7 +142,7 @@ class PlanExecutor {
         colocateDependencies(node, new HashSet<>());
 
         Logger.debug(this, "Executing query node %s...", node);
-
+        try {
         return node.getQueryString().flatMap((query) -> {
             try {
                 final Optional<QueryResult> result = ((PostgreSQLHandler) node.getEngine().getHandler()).executePostgreSQL(query);
@@ -156,6 +156,10 @@ class PlanExecutor {
                 markNodeAsCompleted(node);
             }
         });
+        } catch (Exception e) {
+        	e.printStackTrace();
+        	throw e;
+        }
     }
 
     private void markNodeAsCompleted(ExecutionNode node) {

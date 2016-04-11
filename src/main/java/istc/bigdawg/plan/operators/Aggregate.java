@@ -384,8 +384,12 @@ public class Aggregate extends Operator {
 			ps.addSelectItems(s);
 		}
 		
-		updateGroupByElements(stopAtJoin);
-		ps.setGroupByColumnReferences(parsedGroupBys);
+		// check if pruneToken or join token needs to be implemented
+		
+		
+		List<Expression> updatedGroupBy = updateGroupByElements(stopAtJoin);
+		ps.setGroupByColumnReferences(updatedGroupBy);
+		
 		if (aggregateFilter != null) {
 			Expression e = CCJSqlParserUtil.parseCondExpression(aggregateFilter);
 //			if (joinToken != null) SQLExpressionUtils.renameAttributes(e, this.getDataObjectAliasesOrNames().keySet(), joinToken);
@@ -445,7 +449,7 @@ public class Aggregate extends Operator {
 			}
 		}
 		
-		System.out.printf("after: %s\n\n\n", originalDST.toString());
+//		System.out.printf("after: %s\n\n\n", originalDST.toString());
 		
 		return originalDST;
 	}
@@ -458,11 +462,13 @@ public class Aggregate extends Operator {
 		return ss;
 	}
 	
-	public void updateGroupByElements(Boolean stopAtJoin) throws Exception {
+	public List<Expression> updateGroupByElements(Boolean stopAtJoin) throws Exception {
+		
+		List<Expression> ret = new ArrayList<>();
 		
 		List<Operator> treeWalker;
 		if (parsedGroupBys == null)
-			return;
+			return null;
 		for (Expression gb : parsedGroupBys) {
 			
 			treeWalker = children;
@@ -476,16 +482,16 @@ public class Aggregate extends Operator {
 						Column c = (Column)gb;
 						
 						if (o.getOutSchema().containsKey(c.getFullyQualifiedName())) {
-							c.setTable(new Table(o.getPruneToken()));
+							ret.add(new Column(new Table(o.getPruneToken()), c.getColumnName()));
 							found = true;
 							break;
 						}
-					} else if (o instanceof Join && (stopAtJoin != null && stopAtJoin == true )) {
+					} else if (o instanceof Join && stopAtJoin == true ) {
 						
 						Column c = (Column)gb;
 						
 						if (o.getOutSchema().containsKey(c.getFullyQualifiedName())) {
-							c.setTable(new Table(((Join)o).getJoinToken()));
+							ret.add(new Column(new Table(((Join)o).getJoinToken()), c.getColumnName()));
 							found = true;
 							break;
 						}
@@ -495,12 +501,13 @@ public class Aggregate extends Operator {
 						nextGeneration.addAll(o.children);
 					}
 				}
-				
+				if (found) continue; 
 				treeWalker = nextGeneration;
 			}
 			
 			
 		}
+		return ret;
 	}
 	
 	@Override

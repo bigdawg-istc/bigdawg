@@ -1,7 +1,6 @@
 package istc.bigdawg.packages;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -25,6 +24,7 @@ import istc.bigdawg.plan.operators.Join;
 import istc.bigdawg.plan.operators.Join.JoinType;
 import istc.bigdawg.plan.operators.Limit;
 import istc.bigdawg.plan.operators.Operator;
+import istc.bigdawg.plan.operators.Scan;
 import istc.bigdawg.plan.operators.SeqScan;
 import istc.bigdawg.plan.operators.Sort;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
@@ -544,6 +544,12 @@ public class CrossIslandQueryNode {
 				}
 			}
 		} else {
+			
+			if ((k0o.isPruned() || k0o instanceof Scan) && (!k1o.isPruned() && !(k1o instanceof Scan))) {
+				// pruned non-left-deep branch
+				return;
+			}
+			
 			Operator ret = makeJoin(k0o, k1o, null, joinPredConnections,  joinFilterConnections, k0o.getDataObjectAliasesOrNames().keySet());
 			if (ret == null) return; // the final prune done
 			newEntry.add(ret);

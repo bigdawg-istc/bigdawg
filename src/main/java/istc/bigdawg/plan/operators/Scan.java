@@ -155,7 +155,9 @@ public class Scan extends Operator {
 		
 		if (filterExpression != null && !isPruned()) { // used to have a !isPruned;
 			
-			List<Column> cs = SQLExpressionUtils.getAttributes(filterExpression);
+			Expression fe = CCJSqlParserUtil.parseCondExpression(filterExpression.toString());
+			
+			List<Column> cs = SQLExpressionUtils.getAttributes(fe);
 			List<String> ss = new ArrayList<>();
 			for (Column c : cs)  ss.add(c.getTable().getName());
 			ss.remove(this.srcTable);
@@ -176,23 +178,25 @@ public class Scan extends Operator {
 //							e = new AndExpression(e, s); 
 //						}
 //					}
-					e = new AndExpression(ps.getWhere(), filterExpression);
+					e = new AndExpression(ps.getWhere(), fe);
 				} else 
-					e = filterExpression;
+					e = fe;
 				
 				if ( e != null) e = CCJSqlParserUtil.parseCondExpression(e.toString());
 				
 				try {
 					ps.setWhere(e);
 				} catch (Exception ex) {
-					System.out.println("filterSet exception: "+filterExpression.toString());
+					System.out.println("filterSet exception: "+fe.toString());
 				}
 			}
 		}
 		
 		if (indexCond != null ) { // used to have a !isPruned;
 			
-			List<Column> cs = SQLExpressionUtils.getAttributes(indexCond);
+			Expression ic = CCJSqlParserUtil.parseCondExpression(indexCond.toString());
+			
+			List<Column> cs = SQLExpressionUtils.getAttributes(ic);
 			List<String> ss = new ArrayList<>();
 			for (Column c : cs)  ss.add(c.getTable().getName());
 			ss.remove(this.srcTable);
@@ -201,16 +205,13 @@ public class Scan extends Operator {
 			
 			
 			if (ss.isEmpty()) {
-				Expression ic = null;
 				
 				if (isPruned) {
-					ic = CCJSqlParserUtil.parseCondExpression(indexCond.toString());
 					Set<String> names = new HashSet<>();
 					names.add(this.srcTable);
 					names.add(this.tableAlias);
 					SQLExpressionUtils.renameAttributes(ic, names, null, this.getPruneToken());
-				} else 
-					ic = indexCond;
+				} 
 				
 				PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
 				
@@ -226,7 +227,7 @@ public class Scan extends Operator {
 				try {
 					ps.setWhere(e);
 				} catch (Exception ex) {
-					System.out.println("indexCond exception: "+indexCond.toString());
+					System.out.println("indexCond exception: "+ic.toString());
 				}
 			}
 		}

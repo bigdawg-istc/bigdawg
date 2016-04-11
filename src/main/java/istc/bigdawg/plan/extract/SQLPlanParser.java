@@ -97,9 +97,9 @@ public class SQLPlanParser {
 	    }
 		
 	    // resolve any aggregate in where
-	    queryPlan.getRootNode().seekScanAndProcessAggregateInFilter();
-	    for (String s : queryPlan.getPlanRoots().keySet())
-	    	queryPlan.getPlanRoot(s).seekScanAndProcessAggregateInFilter();
+//	    queryPlan.getRootNode().seekScanAndProcessAggregateInFilter();
+//	    for (String s : queryPlan.getPlanRoots().keySet())
+//	    	queryPlan.getPlanRoot(s).seekScanAndProcessAggregateInFilter();
 		    
 	}
 	

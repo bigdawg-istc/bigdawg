@@ -163,10 +163,8 @@ public class Sort extends Operator {
 			}
 		}
 		
-		updateOrderByElements();
-		
 		if(!isWinAgg) {
-			((PlainSelect) dstStatement.getSelectBody()).setOrderByElements(orderByElements);
+			((PlainSelect) dstStatement.getSelectBody()).setOrderByElements(updateOrderByElements());
 		}
 
 		return dstStatement;
@@ -179,7 +177,9 @@ public class Sort extends Operator {
 	}
 	
 
-	public void updateOrderByElements() throws Exception {
+	public List<OrderByElement> updateOrderByElements() throws Exception {
+		
+		List<OrderByElement> ret = new ArrayList<>();
 		
 		List<Operator> treeWalker;
 		for (OrderByElement obe : orderByElements) {
@@ -196,7 +196,9 @@ public class Sort extends Operator {
 						Column c = (Column)obe.getExpression();
 						
 						if (o.getOutSchema().containsKey(c.getFullyQualifiedName())) {
-							c.setTable(new Table(o.getPruneToken()));
+							OrderByElement newobe = new OrderByElement();
+							newobe.setExpression(new Column(new Table(o.getPruneToken()), c.getColumnName()));
+							ret.add(newobe);
 							found = true;
 							break;
 						}
@@ -210,6 +212,7 @@ public class Sort extends Operator {
 			
 			
 		}
+		return ret;
 	}
 	
 	

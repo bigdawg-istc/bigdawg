@@ -42,6 +42,7 @@ public class Join extends Operator {
 	private List<String> aliases;
 	private String joinPredicateOriginal = null; // TODO determine if this is useful for constructing new remainders 
 	private String joinFilterOriginal = null; 
+	private String discoveredAggregateFilter = null; 
 	
 	protected Map<String, DataObjectAttribute> srcSchema;
 	protected boolean joinPredicateUpdated = false;
@@ -49,7 +50,6 @@ public class Join extends Operator {
 	
 	protected static int maxJoinSerial = 0;
 	protected Integer joinID = null;
-	
 	
 	
 	// for SQL
@@ -341,7 +341,6 @@ public class Join extends Operator {
         		t1.setName(child1ObjectMap.get(s2));
         		if (! s2.equals(child1ObjectMap.get(s2))) t1.setAlias(new Alias(s2));
         	} 
-        	
     	}
 
 //		// for debugging
@@ -354,7 +353,7 @@ public class Join extends Operator {
 
 			// ensuring this is a left deep tree
 			if (!(child1.isPruned() || child1 instanceof Scan)) 
-				throw new Exception("child0 class: "+child0.getClass().toString()+"; child1 class: "+child1.getClass().toString());
+				throw new Exception("child0 class: "+child0.getClass().getSimpleName().toString()+"; child1 class: "+child1.getClass().getSimpleName().toString());
 			
 			dstStatement = children.get(0).generateSQLStringDestOnly(null, false, stopAtJoin, allowedScans);
 			if (t0.getAlias() != null) updateThisAndParentJoinReservedObjects(t0.getAlias().getName());
@@ -378,35 +377,57 @@ public class Join extends Operator {
 		
     	
     	if (child1 instanceof Aggregate && stopAtJoin) {
-    		dstStatement = SelectUtils.buildSelectFromTable(t1);
+//    		//dstStatement = SelectUtils.buildSelectFromTable(t1);
     		List<SelectItem> sil = new ArrayList<>();
     		for (String s : child0.getOutSchema().keySet()){
     			sil.add(new SelectExpressionItem(new Column(t1, s)));
     		};
-    		((PlainSelect)dstStatement.getSelectBody()).getSelectItems().addAll(sil);
+    		PlainSelect  ps = ((PlainSelect)dstStatement.getSelectBody());
+    		ps.getSelectItems().addAll(sil);
+    		
+    		// need to go fetch a potential having filter
+    		List<Operator> treeWalker = new ArrayList<>(this.children);
+			List<Operator> nextGen;
+			boolean found = false;
+
+			while (!treeWalker.isEmpty()) {
+				nextGen = new ArrayList<>();
+				for (Operator o : treeWalker) {
+					if (o instanceof Scan) {
+						Expression f = ((Scan) o).filterExpression;
+						if (f != null && SQLExpressionUtils.isFunctionPresentInCondExpression(f)) {
+							populateComplexOutItem(false);
+							Expression e = CCJSqlParserUtil.parseCondExpression(rewriteComplextOutItem(f));
+							Set<String> aliases = child1.getDataObjectAliasesOrNames().keySet();
+							SQLExpressionUtils.renameAttributes(e, aliases, aliases, ((Aggregate)child1).getAggregateToken());
+							discoveredAggregateFilter = e.toString();
+							found = true;
+							break;
+						}
+					} else 
+						nextGen.addAll(o.children);
+				}
+				if (found) break;
+				treeWalker = nextGen;
+			}
+    		
 		} else {
 			dstStatement = child1.generateSQLStringDestOnly(dstStatement, false, stopAtJoin, allowedScans); 
 		}
     	
-    	
-//		dstStatement = child1.generateSQLStringDestOnly(dstStatement, false, stopAtJoin, allowedScans); 
-		
+		// WHERE setup
     	String jf = null;
-    	
+		Expression w = ((PlainSelect) dstStatement.getSelectBody()).getWhere();
+		
 		if (joinFilter != null || joinPredicate != null) {
 			jf = joinFilter;
 			if (jf == null || jf.length() == 0) jf = joinPredicate;
 			else if (joinPredicate != null && joinPredicate.length() > 0) jf = jf + " AND " + joinPredicate; 
-		}	
-		
-		Expression w = ((PlainSelect) dstStatement.getSelectBody()).getWhere();
-		if (w != null) {
-			if (jf == null)
-				jf = w.toString();
-			else 
-				jf = jf + " AND " + w;
 		}
+		if (w != null) { if (jf == null) jf = w.toString(); else jf = jf + " AND " + w;}
+		if (discoveredAggregateFilter != null) { if (jf == null) jf = discoveredAggregateFilter.toString(); else jf = jf + " AND " + discoveredAggregateFilter;}
 		
+		// WHERE UPDATE
 		if (jf != null) {
 			Expression e = CCJSqlParserUtil.parseCondExpression(jf);
 			List<Column> filterRelatedTablesExpr = SQLExpressionUtils.getAttributes(e); 
@@ -419,7 +440,7 @@ public class Join extends Operator {
 			List<Operator> treeWalker = new ArrayList<>(this.children);
 			List<Operator> nextGen;
 
-			this.updateObjectAliases(true);
+			this.updateObjectAliases();
 			
 			while (!treeWalker.isEmpty()) {
 				nextGen = new ArrayList<>();
@@ -508,7 +529,7 @@ public class Join extends Operator {
 		if (child.isPruned()) {
 			// does child have any of those names? 
 			Set<String> names = new HashSet<>(child.getDataObjectNames());
-			if (child.objectAliases == null) child.updateObjectAliases(true);
+			if (child.objectAliases == null) child.updateObjectAliases();
 			names.addAll(child.objectAliases);
 			names.retainAll(itemsSet);
 			if (names.size() > 0) {
@@ -541,7 +562,7 @@ public class Join extends Operator {
     private boolean findAndGetTableName(Operator child, Table t, List<String> itemsSet) throws Exception {
     	
 		Set<String> names = new HashSet<>(child.getDataObjectNames());
-		child.updateObjectAliases(true);
+		child.updateObjectAliases();
 		names.addAll(child.objectAliases);
 		names.retainAll(itemsSet);
 		if (names.size() > 0) {

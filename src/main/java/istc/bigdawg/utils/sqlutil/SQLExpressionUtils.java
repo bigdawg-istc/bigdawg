@@ -524,6 +524,8 @@ public static List<String> getColumnNamesInAllForms(Expression expr) throws JSQL
 					tableColumn.getTable().setName(replacement);
 				else if (originalAliasSet == null || (tableColumn.getTable() != null && originalAliasSet.contains(tableColumn.getTable().getName())))
 					tableColumn.getTable().setName(replacement);
+				else if (tableColumn.getTable() == null || tableColumn.getTable().getName() == null)
+					tableColumn.setTable(new Table(replacement));
 //				else if (originalAliasSet == null || tableColumn.getTable() == null)
 //					tableColumn.setTable(new Table(replacement));
 				

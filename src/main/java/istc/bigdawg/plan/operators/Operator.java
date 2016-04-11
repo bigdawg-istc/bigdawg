@@ -233,50 +233,18 @@ public class Operator {
 
 	protected void populateComplexOutItem(boolean first) {
 		// populate complexOutItemFromProgeny
-		
-		if (!first) {
-			
-//			System.out.printf("\n\npopulate false: %s\n\n", this.getClass().getSimpleName());
-			
-			complexOutItemFromProgeny = new LinkedHashMap<>();
-			
-			List<Operator> walker = new ArrayList<>();
-			walker.addAll(children);
-			while (!walker.isEmpty()) {
-				List<Operator> nextgen = new ArrayList<>();
-				for (Operator child : walker){
-					if (child.isPruned() || child instanceof Join) {
-						for (String s: child.getOutSchema().keySet()) {
-							Expression e = child.getOutSchema().get(s).getSQLExpression();
-							if (e == null) continue;
-							while (e instanceof Parenthesis) e = ((Parenthesis)e).getExpression();
-							if (e instanceof Column) continue;
-							
-							System.out.printf("\n\n\n====> found string: %s: \n\n\n", e);
-							
-							complexOutItemFromProgeny.put(s, e.toString().replaceAll("[.]", "\\[\\.\\]").replaceAll("[(]", "\\[\\(\\]").replaceAll("[)]", "\\[\\)\\]"));
-						}
-					} else {
-//						if (child.complexOutItemFromProgeny.isEmpty()) child.populateComplexOutItem(false);
-						nextgen.addAll(child.children);
-						continue;
-					}
-					
-					complexOutItemFromProgeny.putAll(child.complexOutItemFromProgeny);
-				}
-				walker = nextgen;
+		for (Operator child : children){
+			if ((!first) && child.complexOutItemFromProgeny.isEmpty()) child.populateComplexOutItem(first);
+			for (String s: child.getOutSchema().keySet()) {
+				Expression e = child.getOutSchema().get(s).getSQLExpression();
+				if (e == null) continue;
+				while (e instanceof Parenthesis) e = ((Parenthesis)e).getExpression();
+				if (e instanceof Column) continue;
+				complexOutItemFromProgeny.put(s, e.toString().replaceAll("[.]", "\\[\\.\\]").replaceAll("[(]", "\\[\\(\\]").replaceAll("[)]", "\\[\\)\\]"));
 			}
-		} else {
-			for (Operator child : children){
-				for (String s: child.getOutSchema().keySet()) {
-					Expression e = child.getOutSchema().get(s).getSQLExpression();
-					if (e == null) continue;
-					while (e instanceof Parenthesis) e = ((Parenthesis)e).getExpression();
-					if (e instanceof Column) continue;
-					complexOutItemFromProgeny.put(s, e.toString().replaceAll("[.]", "\\[\\.\\]").replaceAll("[(]", "\\[\\(\\]").replaceAll("[)]", "\\[\\)\\]"));
-				}
-				complexOutItemFromProgeny.putAll(child.complexOutItemFromProgeny);
-			}
+			if (first || (!child.isPruned()
+					|| (child instanceof Join && ((Join)child).joinID == null)
+					|| (child instanceof Aggregate && ((Aggregate)child).aggregateID == null))) complexOutItemFromProgeny.putAll(child.complexOutItemFromProgeny);
 		}
 	}
 	
@@ -293,7 +261,7 @@ public class Operator {
 		// simplify
 		String expr = e.toString();
 		for (String alias : complexOutItemFromProgeny.keySet()) {
-			expr = expr.replaceAll("("+complexOutItemFromProgeny.get(alias)+")", alias);
+			expr = expr.replaceAll(complexOutItemFromProgeny.get(alias), alias);
 		}
 		return expr;
 	}
@@ -487,7 +455,7 @@ public class Operator {
 	 * @return
 	 * @throws Exception
 	 */
-	public boolean changeAttributeName(SQLAttribute attr) throws Exception {
+	public boolean changeAttributeName(SQLAttribute attr, boolean stopAtJoin) throws Exception {
 		// if no children, then do nothing 
 		// for each children, 
 		// check if the child is pruned, 
@@ -524,6 +492,16 @@ public class Operator {
 						attr.setExpression(e.toString());
 						ret = true;
 					}
+				} else if (stopAtJoin && o instanceof Join) {
+						if (o.getOutSchema().containsKey(attr.getName()) || attribs.removeAll(o.getOutSchema().keySet())) {
+						
+						if (e instanceof Column) ((Column)e).setTable(new Table(((Join)o).getJoinToken()));
+						else e = new Column(new Table(((Join)o).getJoinToken()), attr.getName());
+						
+						attr.setExpression(e.toString());
+						ret = true;
+						break;
+					}
 				} else if (o instanceof Aggregate && ((Aggregate)o).aggregateID != null) {
 					
 					
@@ -540,7 +518,7 @@ public class Operator {
 						break;
 					}
 				} else {
-					if ( o.changeAttributeName(attr) ) return true;
+					if ( o.changeAttributeName(attr, stopAtJoin) ) return true;
 				}
 			}
 		}
@@ -576,11 +554,53 @@ public class Operator {
 		// iterate over out schema and add it to select clause
 		HashMap<String, SelectItem> selects = new HashMap<String, SelectItem>();
 
-		updateObjectAliases(false);
-		changeAttributesForSelectItems(srcStatement, (PlainSelect) dstStatement.getSelectBody(), selects);
+		updateObjectAliases();
+		
+		changeAttributesForSelectItems(srcStatement, (PlainSelect) dstStatement.getSelectBody(), selects, stopAtJoin);
+		
+		if (isAnyProgenyPruned()) {
+			PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
+			for (Operator child : children) {
+			
+				Map<String, String> ane				= child.getDataObjectAliasesOrNames();
+				Set<String> childAliases			= ane.keySet();
+				Set<String> childAliasesAndNames	= new HashSet<>(ane.values());
+				for (String s : ane.values()) childAliasesAndNames.add(s);
+				
+				populateComplexOutItem(false);
+				
+				List<SelectItem> sil = ps.getSelectItems();
+				for (int i = 0 ; i < sil.size(); i ++) {
+					if (sil.get(i) instanceof SelectExpressionItem) {
+						SelectExpressionItem sei = (SelectExpressionItem)sil.get(i);
+						sei.setExpression(CCJSqlParserUtil.parseExpression(rewriteComplextOutItem(sei.getExpression())));
+					}
+				}
+				
+				String token;
+					
+				while (!child.isPruned() && !(child instanceof Join) && !(child instanceof Aggregate && ((Aggregate)child).aggregateID != null))
+					child = child.getChildren().get(0);
+				
+				if (child.isPruned())
+					token = child.getPruneToken();
+				else if (child instanceof Join)
+					token = ((Join)child).getJoinToken();
+				else if (child instanceof Aggregate && ((Aggregate)child).aggregateID != null)
+					token = ((Aggregate)child).getAggregateToken();
+				else 
+					throw new Exception("Uncovered case: "+child.getClass().getSimpleName());
+					
+				updateSubTreeTokens(ps, childAliases, childAliasesAndNames, token);
+				if (dstStatement.getWithItemsList() != null) 
+					for (WithItem wi : dstStatement.getWithItemsList())
+						updateSubTreeTokens(((PlainSelect)wi.getSelectBody()), childAliases, childAliasesAndNames, token);
+			
+			}
+		}
 		
 //		if (isSubTreeRoot == true && ) stopAtJoin = true;
-		return postProcGenSQLStopJoin(dstStatement, stopAtJoin);
+		return dstStatement;
 	}
 	
 	protected boolean isAnyProgenyPruned() {
@@ -589,14 +609,14 @@ public class Operator {
 		else return children.get(0).isAnyProgenyPruned();
 	}
 	
-	private void changeAttributesForSelectItems(Select srcStatement, PlainSelect ps, HashMap<String, SelectItem> selects) throws Exception {
+	private void changeAttributesForSelectItems(Select srcStatement, PlainSelect ps, HashMap<String, SelectItem> selects, boolean stopAtJoin) throws Exception {
 		List<SelectItem> selectItemList = new ArrayList<>(); 
 		
 		for(String s : outSchema.keySet()) {
 			SQLAttribute attr = new SQLAttribute((SQLAttribute)outSchema.get(s));
 
 			// find the table where it is pruned
-			changeAttributeName(attr);
+			changeAttributeName(attr, stopAtJoin);
 			
 			SelectExpressionItem si = new SelectExpressionItem(attr.getSQLExpression());
 			
@@ -615,16 +635,38 @@ public class Operator {
 		else 
 			ps.setSelectItems(changeSelectItemsOrder(srcStatement, selects));
 		
-		if (ps.getFromItem() instanceof SubSelect) {
-			changeAttributesForSelectItems(null, (PlainSelect)((SubSelect)ps.getFromItem()).getSelectBody(), selects);
-		}
-		if (ps.getJoins() != null) {
-			for (net.sf.jsqlparser.statement.select.Join j : ps.getJoins()) {
-				if (j.getRightItem() instanceof SubSelect)
-					changeAttributesForSelectItems(null, (PlainSelect)((SubSelect)j.getRightItem()).getSelectBody(), selects);
-			}
-		} 
 	}
+	
+	private Select postProcGenSQLStopJoin(Select dstStatement, boolean stopAtJoin) throws Exception {
+    	
+    	if (dstStatement == null || !stopAtJoin) return dstStatement;
+    	
+//    	System.out.printf("\n operator post processing dst during: %s\n", dstStatement);
+    	
+    	for (Operator o : children) {
+    		Operator child = o;
+    		while ((!child.getChildren().isEmpty()) && (!child.getClass().equals(Join.class))) child = child.getChildren().get(0);
+    		
+    		String token;
+    		
+    		if (child.isPruned()) token = child.getPruneToken();
+    		else token = ((Join)child).getJoinToken();
+    		
+    		if (!child.children.isEmpty()) {
+    			Map<String, String> ane = child.getDataObjectAliasesOrNames();
+    			Set<String> childAliases = ane.keySet();
+    			Set<String> childAliasesAndNames = new HashSet<>(ane.keySet());
+    			for (String s : ane.values()) childAliasesAndNames.add(s);
+    			updateSubTreeTokens(((PlainSelect)dstStatement.getSelectBody()), childAliases, childAliasesAndNames, token);
+//    			if (dstStatement.getWithItemsList() != null)
+//    				for (WithItem wi : dstStatement.getWithItemsList())
+//    					updateJoinTokens(((PlainSelect)wi.getSelectBody()), childNames, ((Join)child).getJoinToken());
+    		}
+    	}
+    	
+//    	System.out.printf("\n operator post processing dst after: %s\n", dstStatement);
+    	return dstStatement;
+    }
 	
 	
 	// this is the implicit root of the SQL generated
@@ -897,22 +939,19 @@ public class Operator {
 	
 	
 	
-	public void updateObjectAliases(boolean lazy) {
-		
-		if (lazy && this.objectAliases != null)
-			return;
+	public void updateObjectAliases() {
 		
 		objectAliases = new HashSet<String>();
 		if (this instanceof Scan && ((Scan)this).tableAlias != null) {
 			objectAliases.add(((Scan)this).tableAlias);
 		} else if (this instanceof Join) {
 			
-			children.get(1).updateObjectAliases(lazy);
+			children.get(1).updateObjectAliases();
 			objectAliases.addAll(children.get(1).objectAliases);
 		} 
 
 		if (children.size() != 0) {
-			children.get(0).updateObjectAliases(lazy);
+			children.get(0).updateObjectAliases();
 			objectAliases.addAll(children.get(0).objectAliases);
 		}
 	}
@@ -1093,34 +1132,7 @@ public class Operator {
 		
 	}
 	
-	protected Select postProcGenSQLStopJoin(Select dstStatement, boolean stopAtJoin) throws Exception {
-    	
-    	if (dstStatement == null || !stopAtJoin) return dstStatement;
-    	
-    	for (Operator o : children) {
-    		Operator child = o;
-    		while ((!child.getChildren().isEmpty()) && (!child.getClass().equals(Join.class))) child = child.getChildren().get(0);
-    		
-    		String token;
-    		
-    		if (child.isPruned()) token = child.getPruneToken();
-    		else token = ((Join)child).getJoinToken();
-    		
-    		if (!child.children.isEmpty()) {
-    			Map<String, String> ane = child.getDataObjectAliasesOrNames();
-    			Set<String> childAliases = ane.keySet();
-    			Set<String> childAliasesAndNames = new HashSet<>(ane.keySet());
-    			for (String s : ane.values()) childAliasesAndNames.add(s);
-    			updateSubTreeTokens(((PlainSelect)dstStatement.getSelectBody()), childAliases, childAliasesAndNames, token);
-//    			if (dstStatement.getWithItemsList() != null)
-//    				for (WithItem wi : dstStatement.getWithItemsList())
-//    					updateJoinTokens(((PlainSelect)wi.getSelectBody()), childNames, ((Join)child).getJoinToken());
-    		}
-    	}
-    	
-    	
-    	return dstStatement;
-    }
+	
 	
 	// will likely get overridden
 	public String getTreeRepresentation(boolean isRoot) throws Exception{
