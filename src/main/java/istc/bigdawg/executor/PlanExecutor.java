@@ -14,7 +14,9 @@ import istc.bigdawg.monitoring.Monitor;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.postgresql.PostgreSQLHandler.QueryResult;
 import istc.bigdawg.query.ConnectionInfo;
+import istc.bigdawg.signature.Signature;
 import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
 
 import java.sql.SQLException;
 import java.util.Collection;
@@ -39,7 +41,7 @@ class PlanExecutor {
 
     private final Multimap<ExecutionNode, ConnectionInfo> resultLocations = Multimaps.synchronizedSetMultimap(HashMultimap.create());
     private final Multimap<ConnectionInfo, String> temporaryTables = Multimaps.synchronizedSetMultimap(HashMultimap.create());
-    private final Map<ImmutablePair<String, ConnectionInfo>, CompletableFuture<MigrationResult>> migrations = new ConcurrentHashMap<>();
+    private final Map<Pair<String, ConnectionInfo>, CompletableFuture<MigrationResult>> migrations = new ConcurrentHashMap<>();
     private final Map<ExecutionNode, CountDownLatch> locks = new ConcurrentHashMap<>();
 
     private final QueryExecutionPlan plan;
@@ -50,6 +52,8 @@ class PlanExecutor {
      * @param plan
      *            a data structure of the queries to be run and their ordering,
      *            with edges pointing to dependencies
+     * @param signature value to pass to Monitor
+     * @param index value to pass to Monitor
      */
     public PlanExecutor(QueryExecutionPlan plan) {
         this.plan = plan;
@@ -79,7 +83,7 @@ class PlanExecutor {
     /**
      * Execute the plan, and return the result
      */
-    Optional<QueryResult> executePlan() throws SQLException, MigrationException {
+    Optional<QueryResult> executePlan(Optional<Pair<Signature, Integer>> reportValues) throws SQLException, MigrationException {
         final long start = System.currentTimeMillis();
 
         Logger.info(this, "Executing query plan %s...", plan.getSerializedName());
@@ -109,9 +113,14 @@ class PlanExecutor {
         final long end = System.currentTimeMillis();
         Logger.info(this, "Finished executing query plan %s, in %d ms.", plan.getSerializedName(), (end - start));
 
-        Logger.info(this, "Sending timing to monitor...");
-        monitor.finishedBenchmark(plan, start, end);
-        Logger.info(this, "Returning result to planner...");
+        if (reportValues.isPresent()) {
+            Logger.info(this, "Sending timing to monitor...");
+            monitor.finishedBenchmark(reportValues.get().getLeft(), reportValues.get().getRight(), start, end);
+        } else {
+            Logger.info(this, "Not reporting timing to monitor.");
+        }
+
+        Logger.info(this, "Returning result...");
         return result;
     }
     
@@ -223,7 +232,7 @@ class PlanExecutor {
 //        CompletableFuture[] futures = deps
 //                .map((d) -> {
 //                    // computeIfAbsent gets a previous migration's Future, or creates one if it doesn't already exist
-//                    ImmutablePair<String, ConnectionInfo> migrationKey = new ImmutablePair<>(d.getTableName().get(), node.getEngine());
+//                    Pair<String, ConnectionInfo> migrationKey = new ImmutablePair<>(d.getTableName().get(), node.getEngine());
 //                    Logger.debug(PlanExecutor.this, "Examining %s to see if migration is necessary...", d);
 //
 //                    return migrations.computeIfAbsent(migrationKey, (k) -> {
@@ -244,7 +253,7 @@ class PlanExecutor {
 
         Collection<CompletableFuture<MigrationResult>> futureCollection = new HashSet<>();
         for(ExecutionNode d : deps) {
-            final ImmutablePair<String, ConnectionInfo> migrationKey = new ImmutablePair<>(d.getTableName().get(), node.getEngine());
+            final Pair<String, ConnectionInfo> migrationKey = new ImmutablePair<>(d.getTableName().get(), node.getEngine());
 
             Logger.debug(PlanExecutor.this, "Examining %s to see if migration is necessary...", d);
 
