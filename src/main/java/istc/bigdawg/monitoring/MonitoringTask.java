@@ -93,7 +93,6 @@ class Task implements Runnable {
                 }
             } catch (Exception e) {
                 e.printStackTrace();
-                throw new RuntimeException(e);
             }
         }
     }
@@ -134,7 +133,7 @@ class Task implements Runnable {
      * @return Signature
      * @throws SQLException
      */
-    private Signature getSignature() throws Exception {
+    private Signature getSignature() {
         Connection con = null;
         Statement st = null;
         ResultSet rs = null;
@@ -158,7 +157,6 @@ class Task implements Runnable {
             Logger lgr = Logger.getLogger(QueryClient.class.getName());
             ex.printStackTrace();
             lgr.log(Level.ERROR, ex.getMessage() + "; query: " + RETRIEVE, ex);
-            throw ex;
         } finally {
             try {
                 if (rs != null) {
@@ -174,8 +172,8 @@ class Task implements Runnable {
                 Logger lgr = Logger.getLogger(QueryClient.class.getName());
                 ex.printStackTrace();
                 lgr.log(Level.INFO, ex.getMessage() + "; query: " + RETRIEVE, ex);
-                throw ex;
             }
         }
+        return null;
     }
 }
