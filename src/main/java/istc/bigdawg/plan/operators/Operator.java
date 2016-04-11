@@ -560,43 +560,93 @@ public class Operator {
 		
 		if (isAnyProgenyPruned()) {
 			PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
-			for (Operator child : children) {
 			
-				Map<String, String> ane				= child.getDataObjectAliasesOrNames();
-				Set<String> childAliases			= ane.keySet();
-				Set<String> childAliasesAndNames	= new HashSet<>(ane.values());
-				for (String s : ane.values()) childAliasesAndNames.add(s);
-				
-				populateComplexOutItem(false);
-				
-				List<SelectItem> sil = ps.getSelectItems();
-				for (int i = 0 ; i < sil.size(); i ++) {
-					if (sil.get(i) instanceof SelectExpressionItem) {
-						SelectExpressionItem sei = (SelectExpressionItem)sil.get(i);
-						sei.setExpression(CCJSqlParserUtil.parseExpression(rewriteComplextOutItem(sei.getExpression())));
+			List<Operator> walker = children;
+			List<Operator> nextgen;
+			
+			while (!walker.isEmpty()) {
+				nextgen = new ArrayList<>();
+				for (Operator o : walker) {
+					
+					if (!o.isPruned() && !(stopAtJoin && o instanceof Join) && !(stopAtJoin && o instanceof Aggregate && ((Aggregate)o).aggregateID != null)) {
+						nextgen.addAll(o.getChildren());
+						continue;
 					}
+						
+					
+					Map<String, String> ane				= o.getDataObjectAliasesOrNames();
+					Set<String> childAliases			= ane.keySet();
+					Set<String> childAliasesAndNames	= new HashSet<>(ane.values());
+					for (String s : ane.values()) childAliasesAndNames.add(s);
+					
+					populateComplexOutItem(false);
+					
+					List<SelectItem> sil = ps.getSelectItems();
+					for (int i = 0 ; i < sil.size(); i ++) {
+						if (sil.get(i) instanceof SelectExpressionItem) {
+							SelectExpressionItem sei = (SelectExpressionItem)sil.get(i);
+							sei.setExpression(CCJSqlParserUtil.parseExpression(rewriteComplextOutItem(sei.getExpression())));
+						}
+					}
+					
+					String token;
+					
+					if (o.isPruned())
+						token = o.getPruneToken();
+					else if (o instanceof Join)
+						token = ((Join)o).getJoinToken();
+					else if (o instanceof Aggregate && ((Aggregate)o).aggregateID != null)
+						token = ((Aggregate)o).getAggregateToken();
+					else 
+						throw new Exception("Uncovered case: "+o.getClass().getSimpleName());
+						
+					updateSubTreeTokens(ps, childAliases, childAliasesAndNames, token);
+					if (dstStatement.getWithItemsList() != null) 
+						for (WithItem wi : dstStatement.getWithItemsList())
+							updateSubTreeTokens(((PlainSelect)wi.getSelectBody()), childAliases, childAliasesAndNames, token);
+					
 				}
-				
-				String token;
-					
-				while (!child.isPruned() && !(child instanceof Join) && !(child instanceof Aggregate && ((Aggregate)child).aggregateID != null))
-					child = child.getChildren().get(0);
-				
-				if (child.isPruned())
-					token = child.getPruneToken();
-				else if (child instanceof Join)
-					token = ((Join)child).getJoinToken();
-				else if (child instanceof Aggregate && ((Aggregate)child).aggregateID != null)
-					token = ((Aggregate)child).getAggregateToken();
-				else 
-					throw new Exception("Uncovered case: "+child.getClass().getSimpleName());
-					
-				updateSubTreeTokens(ps, childAliases, childAliasesAndNames, token);
-				if (dstStatement.getWithItemsList() != null) 
-					for (WithItem wi : dstStatement.getWithItemsList())
-						updateSubTreeTokens(((PlainSelect)wi.getSelectBody()), childAliases, childAliasesAndNames, token);
-			
+				walker = nextgen;
 			}
+			
+			
+//			for (Operator child : children) {
+//			
+//				while (!child.isPruned() && !(child instanceof Join) && !(child instanceof Aggregate && ((Aggregate)child).aggregateID != null))
+//					child = child.getChildren().get(0);
+//				
+//				Map<String, String> ane				= child.getDataObjectAliasesOrNames();
+//				Set<String> childAliases			= ane.keySet();
+//				Set<String> childAliasesAndNames	= new HashSet<>(ane.values());
+//				for (String s : ane.values()) childAliasesAndNames.add(s);
+//				
+//				populateComplexOutItem(false);
+//				
+//				List<SelectItem> sil = ps.getSelectItems();
+//				for (int i = 0 ; i < sil.size(); i ++) {
+//					if (sil.get(i) instanceof SelectExpressionItem) {
+//						SelectExpressionItem sei = (SelectExpressionItem)sil.get(i);
+//						sei.setExpression(CCJSqlParserUtil.parseExpression(rewriteComplextOutItem(sei.getExpression())));
+//					}
+//				}
+//				
+//				String token;
+//				
+//				if (child.isPruned())
+//					token = child.getPruneToken();
+//				else if (child instanceof Join)
+//					token = ((Join)child).getJoinToken();
+//				else if (child instanceof Aggregate && ((Aggregate)child).aggregateID != null)
+//					token = ((Aggregate)child).getAggregateToken();
+//				else 
+//					throw new Exception("Uncovered case: "+child.getClass().getSimpleName());
+//					
+//				updateSubTreeTokens(ps, childAliases, childAliasesAndNames, token);
+//				if (dstStatement.getWithItemsList() != null) 
+//					for (WithItem wi : dstStatement.getWithItemsList())
+//						updateSubTreeTokens(((PlainSelect)wi.getSelectBody()), childAliases, childAliasesAndNames, token);
+//			
+//			}
 		}
 		
 //		if (isSubTreeRoot == true && ) stopAtJoin = true;

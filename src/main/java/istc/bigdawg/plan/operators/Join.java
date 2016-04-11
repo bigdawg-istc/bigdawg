@@ -42,7 +42,6 @@ public class Join extends Operator {
 	private List<String> aliases;
 	private String joinPredicateOriginal = null; // TODO determine if this is useful for constructing new remainders 
 	private String joinFilterOriginal = null; 
-	private String discoveredAggregateFilter = null; 
 	
 	protected Map<String, DataObjectAttribute> srcSchema;
 	protected boolean joinPredicateUpdated = false;
@@ -273,7 +272,9 @@ public class Join extends Operator {
     	
     	Table t0 = new Table();
 		Table t1 = new Table();
-    	
+		String discoveredAggregateFilter = null;
+		List<String> discoveredJoinPredicate = new ArrayList<>();
+		
 //		System.out.printf("\n\n\n-----> join Pred: %s; %s\n\n\n", joinPredicate, joinFilter);
 		
     	if (joinPredicate != null) {
@@ -291,11 +292,11 @@ public class Join extends Operator {
 
         	String s, s2;
         	List<String> ses;
-        	if ((ses = processLeftAndRightWithIndexCond(true)) != null) {
+        	if ((ses = processLeftAndRightWithIndexCond(true, discoveredJoinPredicate)) != null) {
         		s = ses.get(0);
         		s2 = ses.get(1);
         		
-        	} else if ((ses = processLeftAndRightWithIndexCond(false)) != null) {
+        	} else if ((ses = processLeftAndRightWithIndexCond(false, discoveredJoinPredicate)) != null) {
         		s = ses.get(1);
         		s2 = ses.get(0);
         	} else {
@@ -395,12 +396,16 @@ public class Join extends Operator {
 				for (Operator o : treeWalker) {
 					if (o instanceof Scan) {
 						Expression f = ((Scan) o).filterExpression;
-						if (f != null && SQLExpressionUtils.isFunctionPresentInCondExpression(f)) {
+//						System.out.printf("-----> join: f in scan: %s: %s\n", ((Scan)o).table, f);
+						if (f != null && ((Scan)o).hasFunctionInFilterExpression) {
 							populateComplexOutItem(false);
 							Expression e = CCJSqlParserUtil.parseCondExpression(rewriteComplextOutItem(f));
 							Set<String> aliases = child1.getDataObjectAliasesOrNames().keySet();
 							SQLExpressionUtils.renameAttributes(e, aliases, aliases, ((Aggregate)child1).getAggregateToken());
 							discoveredAggregateFilter = e.toString();
+							
+//							System.out.printf("-----> discoveredAggregateFilter: %s\n", discoveredAggregateFilter);
+							
 							found = true;
 							break;
 						}
@@ -415,6 +420,7 @@ public class Join extends Operator {
 			dstStatement = child1.generateSQLStringDestOnly(dstStatement, false, stopAtJoin, allowedScans); 
 		}
     	
+    	
 		// WHERE setup
     	String jf = null;
 		Expression w = ((PlainSelect) dstStatement.getSelectBody()).getWhere();
@@ -424,8 +430,13 @@ public class Join extends Operator {
 			if (jf == null || jf.length() == 0) jf = joinPredicate;
 			else if (joinPredicate != null && joinPredicate.length() > 0) jf = jf + " AND " + joinPredicate; 
 		}
-		if (w != null) { if (jf == null) jf = w.toString(); else jf = jf + " AND " + w;}
-		if (discoveredAggregateFilter != null) { if (jf == null) jf = discoveredAggregateFilter.toString(); else jf = jf + " AND " + discoveredAggregateFilter;}
+
+		if (w != null) jf = addToJoinFilter(w.toString(), jf);
+		jf = addToJoinFilter(discoveredAggregateFilter, jf);
+		if (!discoveredJoinPredicate.isEmpty()) for (String s : discoveredJoinPredicate) jf = addToJoinFilter(s, jf); // there should be only one entry
+		
+		
+//		if (jf == null || jf.length() == 0) throw new Exception(String.format("---> join jf check: \n-- %s; \n-- %s; \n-- %s\n", dstStatement, jf, discoveredJoinPredicate));
 		
 		// WHERE UPDATE
 		if (jf != null) {
@@ -474,7 +485,7 @@ public class Join extends Operator {
 
 	}
     
-    private List<String> processLeftAndRightWithIndexCond(boolean zeroFirst) throws Exception {
+    private List<String> processLeftAndRightWithIndexCond(boolean zeroFirst, List<String> foundExpression) throws Exception {
     	
     	Map<String, Expression> child0Cond;
     	Map<String, Expression> child1Cond;
@@ -508,6 +519,8 @@ public class Join extends Operator {
 					ret.add(s);
 					ret.add(s2);
 					
+					foundExpression.add(child0Cond.get(s).toString());
+					
 					return ret;
 				}
 			}
@@ -515,6 +528,14 @@ public class Join extends Operator {
 		return null;
     }
     
+    private String addToJoinFilter(String s, String jf) {
+    	if (s != null) { 
+    		if (jf == null) 
+    			jf = s; 
+    		else jf = jf + " AND " + s;
+		}
+    	return jf;
+    }
     
     private void updateThisAndParentJoinReservedObjects(String name) {
     	Operator o = this;
@@ -702,6 +723,7 @@ public class Join extends Operator {
 	 * @return
 	 * @throws Exception
 	 */
+	@Deprecated
 	public List<String> getJoinPredicateObjectsForBinaryExecutionNode() throws Exception {
 		
 		List<String> ret = new ArrayList<String>();
@@ -713,14 +735,14 @@ public class Join extends Operator {
 			Column rightColumn = null;
 			
 			
-			List<String> ses = processLeftAndRightWithIndexCond(true);
+			List<String> ses = processLeftAndRightWithIndexCond(true, null);
 			String s, s2; 
 			if (ses != null) {
 				s = ses.get(0);
 				s2 = ses.get(1);
 				extraction = this.getChildren().get(0).getChildrenIndexConds().get(s);
 			} else {
-				ses = processLeftAndRightWithIndexCond(false);
+				ses = processLeftAndRightWithIndexCond(false, null);
 				if (ses == null) return ret;
 				s = ses.get(1);
 				s2 = ses.get(0);

@@ -30,6 +30,7 @@ public class Scan extends Operator {
 	
 	protected String tableAlias;  //may be query-specific, need to derive it here
 	protected Table table;
+	protected boolean hasFunctionInFilterExpression = false;
 
 	
 	public Scan(Map<String, String> parameters, List<String> output, Operator child, SQLTableExpression supplement) throws Exception {
@@ -95,11 +96,7 @@ public class Scan extends Operator {
 		if(parameters.get("Filter") != null) {
 			
 			filterExpression = CCJSqlParserUtil.parseCondExpression(parameters.get("Filter"));
-//			filterSet = new HashSet<Expression>();
-//			filterSet.add(filterExpression);
-//			filterExpressionString = SQLUtilities.parseString(parameters.get("Filter"));
-//			filterSet = new HashSet<String>();
-//			filterSet.add(filterExpressionString);
+			hasFunctionInFilterExpression = SQLExpressionUtils.isFunctionPresentInCondExpression(filterExpression);
 		}
 		
 		table = new Table(srcTable); // new one to accommodate aliasing
@@ -121,13 +118,8 @@ public class Scan extends Operator {
 			this.filterExpression = CCJSqlParserUtil.parseCondExpression(sc.filterExpression.toString());
 		this.srcTable = new String(sc.srcTable);
 		this.tableAlias = new String(sc.tableAlias);
+		this.hasFunctionInFilterExpression = sc.hasFunctionInFilterExpression;
 
-//		if (sc.filterSet != null) {
-//			this.filterSet = new HashSet<>();
-//			for (Expression s : sc.filterSet) {
-//				this.filterSet.add(CCJSqlParserUtil.parseCondExpression(s.toString()));
-//			}
-//		}
 		this.table = new Table();
 		try {
 			this.table.setName(new String(sc.table.getName()));
@@ -153,7 +145,7 @@ public class Scan extends Operator {
 			dstStatement = SelectUtils.buildSelectFromTable(table);
 		}
 		
-		if (filterExpression != null && !isPruned()) { // used to have a !isPruned;
+		if (filterExpression != null && !isPruned() && !hasFunctionInFilterExpression) { // FilterExpression with function is pulled
 			
 			Expression fe = CCJSqlParserUtil.parseCondExpression(filterExpression.toString());
 			
@@ -171,13 +163,6 @@ public class Scan extends Operator {
 				
 				Expression e = null; 
 				if(ps.getWhere() != null) {
-//					for (Expression s : filterSet) {
-//						if (e == null) {
-//							e = s;
-//						} else {
-//							e = new AndExpression(e, s); 
-//						}
-//					}
 					e = new AndExpression(ps.getWhere(), fe);
 				} else 
 					e = fe;
@@ -192,45 +177,45 @@ public class Scan extends Operator {
 			}
 		}
 		
-		if (indexCond != null ) { // used to have a !isPruned;
-			
-			Expression ic = CCJSqlParserUtil.parseCondExpression(indexCond.toString());
-			
-			List<Column> cs = SQLExpressionUtils.getAttributes(ic);
-			List<String> ss = new ArrayList<>();
-			for (Column c : cs)  ss.add(c.getTable().getName());
-			ss.remove(this.srcTable);
-			if (tableAlias != null) ss.remove(tableAlias);
-			ss.removeAll(allowedScans);
-			
-			
-			if (ss.isEmpty()) {
-				
-				if (isPruned) {
-					Set<String> names = new HashSet<>();
-					names.add(this.srcTable);
-					names.add(this.tableAlias);
-					SQLExpressionUtils.renameAttributes(ic, names, null, this.getPruneToken());
-				} 
-				
-				PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
-				
-				Expression e = null; 
-				if(ps.getWhere() != null) {
-					e = new AndExpression(ps.getWhere(), ic);
-				} else {
-					e = ic;
-				}
-				
-				e = CCJSqlParserUtil.parseCondExpression(e.toString());
-
-				try {
-					ps.setWhere(e);
-				} catch (Exception ex) {
-					System.out.println("indexCond exception: "+ic.toString());
-				}
-			}
-		}
+//		if (indexCond != null ) { // used to have a !isPruned;
+//			
+//			Expression ic = CCJSqlParserUtil.parseCondExpression(indexCond.toString());
+//			
+//			List<Column> cs = SQLExpressionUtils.getAttributes(ic);
+//			List<String> ss = new ArrayList<>();
+//			for (Column c : cs)  ss.add(c.getTable().getName());
+//			ss.remove(this.srcTable);
+//			if (tableAlias != null) ss.remove(tableAlias);
+//			ss.removeAll(allowedScans);
+//			
+//			
+//			if (ss.isEmpty()) {
+//				
+//				if (isPruned) {
+//					Set<String> names = new HashSet<>();
+//					names.add(this.srcTable);
+//					names.add(this.tableAlias);
+//					SQLExpressionUtils.renameAttributes(ic, names, null, this.getPruneToken());
+//				} 
+//				
+//				PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
+//				
+//				Expression e = null; 
+//				if(ps.getWhere() != null) {
+//					e = new AndExpression(ps.getWhere(), ic);
+//				} else {
+//					e = ic;
+//				}
+//				
+//				e = CCJSqlParserUtil.parseCondExpression(e.toString());
+//
+//				try {
+//					ps.setWhere(e);
+//				} catch (Exception ex) {
+//					System.out.println("indexCond exception: "+ic.toString());
+//				}
+//			}
+//		}
 		
 		return dstStatement;
 

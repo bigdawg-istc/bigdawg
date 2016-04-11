@@ -105,7 +105,6 @@ public class Sort extends Operator {
 			}
 			orderByElements.add(obe);
 		}
-		
 	}
 	
 	// for AFL
@@ -212,6 +211,7 @@ public class Sort extends Operator {
 			
 			
 		}
+		
 		return ret;
 	}
 	
