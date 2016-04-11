@@ -19,6 +19,8 @@ import istc.bigdawg.postgresql.PostgreSQLHandler.QueryResult;
 
 public class Planner {
 
+	private static final double SIGNATURE_DISTANCE = .01;
+
 	private static Logger logger = Logger.getLogger(Planner.class.getName());
 //	private static Integer maxSerial = 0;
 
@@ -105,6 +107,12 @@ public class Planner {
 				Log.debug("Closest query found");
 				double distance = signature.compare(closest);
 				Log.debug("Minimum distance between queries: " + distance);
+				if (distance > SIGNATURE_DISTANCE){
+					Log.debug("No queries that are similar enough");
+					Monitor.addBenchmarks(signature, true);
+					return choice;
+				}
+
 				List<Long> perfInfo = Monitor.getBenchmarkPerformance(closest);
 
 				// TODO does some magic to match the best query from the closest
