@@ -289,7 +289,7 @@ public class Signature {
 		List<String> l2;
 		List<String> l4k2 = new ArrayList<>(sig.sig4k);
 		int size;
-		
+
 		// sig1
 		dist = getTreeEditDistance(sig1, sig.sig1);
 		logger.debug("SIGNATURE sig1 dist: " + dist);
@@ -304,8 +304,8 @@ public class Signature {
 			l2.retainAll(sig2);
 			size = sig.sig2.size();
 		}
-		double sig2Dist = ((double)l2.size()) / size;
-		dist *= sig2Dist;
+		double sig2Dist = 1 - ((double)l2.size()) / size;
+		dist += sig2Dist;
 		logger.debug("SIGNATURE sig2 dist: " + sig2Dist);
 		
 		// sig3
