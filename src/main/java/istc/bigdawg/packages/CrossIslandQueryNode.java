@@ -131,6 +131,10 @@ public class CrossIslandQueryNode {
 		
 		
 	}
+
+	public Set<String> getJoinPredicates(){
+		return this.joinPredicates;
+	}
 	
 	public Set<String> getCrossIslandChildrenReferences() {
 		
