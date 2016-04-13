@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.log4j.Logger;
+
 import convenience.RTED;
 import istc.bigdawg.packages.QueryContainerForCommonDatabase;
 import istc.bigdawg.plan.operators.Operator;
@@ -22,6 +24,7 @@ import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
 
 public class Signature {
+	private static Logger logger = Logger.getLogger(Signature.class.getName());
 	
 	private static String fieldSeparator = "|||||";
 	private static String fieldSeparatorRest = "[|][|][|][|][|]";
@@ -278,14 +281,18 @@ public class Signature {
 	
 	
 	public double compare(Signature sig) {
+		logger.debug("SIGNATURE 1: " + this.toRecoverableString());
+		logger.debug("SIGNATURE 2: " + sig.toRecoverableString());
+
 		double dist = 0;
 		
 		List<String> l2;
 		List<String> l4k2 = new ArrayList<>(sig.sig4k);
 		int size;
-		
+
 		// sig1
 		dist = getTreeEditDistance(sig1, sig.sig1);
+		logger.debug("SIGNATURE sig1 dist: " + dist);
 		
 		// sig2
 		if (sig2.size() > sig.sig2.size()) {
@@ -297,13 +304,17 @@ public class Signature {
 			l2.retainAll(sig2);
 			size = sig.sig2.size();
 		}
-		dist *= ((double)l2.size()) / size;
+		double sig2Dist = 1 - ((double)l2.size()) / size;
+		dist += sig2Dist;
+		logger.debug("SIGNATURE sig2 dist: " + sig2Dist);
 		
 		// sig3
-		dist += (sig3.size() > sig.sig3.size()) ? sig3.size() - sig.sig3.size() : sig.sig3.size() - sig3.size();
+		double sig3Dist = (sig3.size() > sig.sig3.size()) ? sig3.size() - sig.sig3.size() : sig.sig3.size() - sig3.size();
+		logger.debug("SIGNATURE sig3 dist: " + sig3Dist);
+		dist += sig3Dist;
 		
 		// sig4k
-		dist += sig4k.size() < sig.sig4k.size() ? sig.sig4k.size() - sig4k.size() : sig4k.size() - sig.sig4k.size();
+		double sig4kDist = sig4k.size() < sig.sig4k.size() ? sig.sig4k.size() - sig4k.size() : sig4k.size() - sig.sig4k.size();
 		for (int i = 0 ; i < sig4k.size() ; i++ ) {
 			double result = Double.MAX_VALUE;
 			int j = 0;
@@ -318,11 +329,15 @@ public class Signature {
 			}
 			if (holder > 0) { 
 				l4k2.remove(holder);
-				dist += result;
+				sig4kDist += result;
 			} else 
 				break;
 		}
-		
+
+		logger.debug("SIGNATURE sig4k dist: " + sig4kDist);
+		dist += sig4kDist;
+
+		logger.debug("SIGNATURE final dist: " + dist);
 		return dist;
 	}
 	
