@@ -207,9 +207,7 @@ public class CrossIslandQueryNode {
 		} else 
 			throw new Exception("Unsupported island code: "+scope.toString());
 
-		if (root != null){
-			originalJoinPredicates.addAll(getOriginalJoinPredicates(root));
-		}
+		originalJoinPredicates.addAll(getOriginalJoinPredicates(root));
 
 		originalMap = CatalogViewer.getDBMappingByObj(objs);
 		
@@ -256,6 +254,11 @@ public class CrossIslandQueryNode {
 
 	private Set<String> getOriginalJoinPredicates(Operator root){
 		Set<String> predicates = new HashSet<>();
+
+		if (root == null){
+			return predicates;
+		}
+
 		if (root instanceof Join){
 			String predicate = ((Join) root).getOriginalJoinPredicate();
 			if (predicate != null){
