@@ -740,10 +740,10 @@ public class CrossIslandQueryNode {
 			
 			// do nothing if both are pruned before enter here, thus saving it for the remainder 
 			
-			if (joinNode.getJoinPredicateOriginal() != null)
-				joinPredicates.add(joinNode.updateOnExpression(joinNode.getJoinPredicateOriginal(), child0, child1, new Table(), new Table(), true));
-			if (joinNode.getJoinFilterOriginal() != null)
-				joinPredicates.add(joinNode.updateOnExpression(joinNode.getJoinFilterOriginal(), child0, child1, new Table(), new Table(), true));
+			if (joinNode.getOriginalJoinPredicate() != null)
+				joinPredicates.add(joinNode.updateOnExpression(joinNode.getOriginalJoinPredicate(), child0, child1, new Table(), new Table(), true));
+			if (joinNode.getOriginalJoinFilter() != null)
+				joinPredicates.add(joinNode.updateOnExpression(joinNode.getOriginalJoinFilter(), child0, child1, new Table(), new Table(), true));
 			
 		} else if (node instanceof Sort || node instanceof Aggregate || node instanceof Limit || node instanceof Distinct) {
 			

@@ -40,11 +40,11 @@ public class Join extends Operator {
 	private String joinPredicate = null;
 	private String joinFilter = null; 
 	private List<String> aliases;
-	private String joinPredicateOriginal = null; // TODO determine if this is useful for constructing new remainders 
-	private String joinFilterOriginal = null; 
+//	private String joinPredicateOriginal = null; // TODO determine if this is useful for constructing new remainders 
+//	private String joinFilterOriginal = null; 
 	
 	protected Map<String, DataObjectAttribute> srcSchema;
-	protected boolean joinPredicateUpdated = false;
+//	protected boolean joinPredicateUpdated = false;
 	
 	
 	protected static int maxJoinSerial = 0;
@@ -108,10 +108,10 @@ public class Join extends Operator {
 		
 		inferJoinParameters();
 		
-		if (joinPredicate != null)
-			joinPredicateOriginal 	= new String (joinPredicate);
-		if (joinFilter != null)
-			joinFilterOriginal 		= new String (joinFilter);
+//		if (joinPredicate != null)
+//			joinPredicateOriginal 	= new String (joinPredicate);
+//		if (joinFilter != null)
+//			joinFilterOriginal 		= new String (joinFilter);
 		
 		for (Operator o : children) {
 			if (o instanceof Aggregate) {
@@ -158,10 +158,10 @@ public class Join extends Operator {
 		
 		inferJoinParameters();
 		
-		if (joinPredicate != null)
-			joinPredicateOriginal 	= new String (joinPredicate);
-		if (joinFilter != null)
-			joinFilterOriginal 		= new String (joinFilter);
+//		if (joinPredicate != null)
+//			joinPredicateOriginal 	= new String (joinPredicate);
+//		if (joinFilter != null)
+//			joinFilterOriginal 		= new String (joinFilter);
 	}
 	
 	// combine join ON clause with WHEREs that combine two tables
@@ -274,14 +274,15 @@ public class Join extends Operator {
 		Table t1 = new Table();
 		String discoveredAggregateFilter = null;
 		List<String> discoveredJoinPredicate = new ArrayList<>();
+		String jf = null;
 		
 //		System.out.printf("\n\n\n-----> join Pred: %s; %s\n\n\n", joinPredicate, joinFilter);
 		
     	if (joinPredicate != null) {
     		
-    		joinPredicate = updateOnExpression(joinPredicate, child0, child1, t0, t1, true);
+    		jf = updateOnExpression(joinPredicate, child0, child1, t0, t1, true);
     		
-    		joinPredicateUpdated = true;
+//    		joinPredicateUpdated = true;
     		// ^ ON predicate constructed
     		
 //    		System.out.printf("\nupdated on: JF: %s; JP: %s\n\n\n", joinFilter, joinPredicate);
@@ -422,7 +423,6 @@ public class Join extends Operator {
     	
     	
 		// WHERE setup
-    	String jf = null;
 		Expression w = ((PlainSelect) dstStatement.getSelectBody()).getWhere();
 		
 		if (joinFilter != null || joinPredicate != null) {
@@ -657,11 +657,11 @@ public class Join extends Operator {
 		return sb.toString();
 	}
 	
-	public String getJoinPredicateOriginal() {
-		return joinPredicateOriginal;
+	public String getOriginalJoinPredicate() {
+		return new String(joinPredicate);
 	}
-	public String getJoinFilterOriginal() {
-		return joinFilterOriginal;
+	public String getOriginalJoinFilter() {
+		return new String(joinFilter);
 	}
 	
 	private void addJSQLParserJoin(Select dstStatement, Table t) {
