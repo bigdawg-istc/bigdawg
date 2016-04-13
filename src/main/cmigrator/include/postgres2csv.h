@@ -3,6 +3,8 @@
 
 #include <cstdio>
 #include <string>
+#include <memory>
+#include <vector>
 
 #include "attribute.h"
 

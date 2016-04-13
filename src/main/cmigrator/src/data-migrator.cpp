@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <vector>
+#include <memory> // for shared_ptr
 #include <iostream>
 
 #include "attribute.h"

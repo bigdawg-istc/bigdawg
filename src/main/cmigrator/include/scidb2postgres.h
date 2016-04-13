@@ -2,6 +2,8 @@
 #define SCIDB_2_POSTGRES
 
 #include <cstdio>
+#include <vector>
+#include <memory>
 #include "attribute.h"
 
 class Scidb2Postgres {

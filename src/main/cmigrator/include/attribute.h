@@ -1,10 +1,15 @@
 #ifndef ATTRIBUTE_H
 #define ATTRIBUTE_H
 
-#define BOOST_LOG_DYN_LINK 1
-
-#include <boost/lexical_cast.hpp>
+//boost
+//#define BOOST_LOG_DYN_LINK 1
+//#include <boost/lexical_cast.hpp>
 //#include <boost/type_index.hpp>
+//#include <boost/log/core.hpp>
+//#include <boost/log/trivial.hpp>
+//#include <boost/log/expressions.hpp>
+//namespace logging = boost::log;
+
 #include <cstdio>
 #include <stdint.h>
 #include <assert.h>
@@ -15,13 +20,7 @@
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 
-#include <boost/log/core.hpp>
-#include <boost/log/trivial.hpp>
-#include <boost/log/expressions.hpp>
-
 #include "buffer.h"
-
-namespace logging = boost::log;
 
 class Attribute {
 

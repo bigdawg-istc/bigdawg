@@ -28,7 +28,7 @@ add_executable(data-migrator-exe ${SOURCES})
 
 # creat the shared library for the data migrator
 #Generate the shared library from the sources
-add_library(data-migrator SHARED ${SOURCES} ${HEADERS})
+add_library(data-migrator SHARED ${SOURCES})
 #add_library(attribute SHARED src/attribute.cpp include/attribute.h)
  
 #Set the location for library installation -- i.e., /usr/lib in this case
@@ -46,6 +46,15 @@ install(TARGETS data-migrator
 
 INSTALL(FILES ${HEADERS}
         DESTINATION include)
+
+# install(TARGETS data-migrator
+#         RUNTIME DESTINATION /usr/bin
+#         LIBRARY DESTINATION /usr/lib
+#         ARCHIVE DESTINATION /usr/lib/static
+# 	PUBLIC_HEADER DESTINATION /usr/include)
+
+# INSTALL(FILES ${HEADERS}
+#         DESTINATION /usr/include)
  
 # add boost library
 set(Boost_USE_STATIC_LIBS OFF) 
