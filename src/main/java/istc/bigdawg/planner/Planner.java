@@ -84,6 +84,10 @@ public class Planner {
 
 		List<QueryExecutionPlan> qeps = ciqn.getAllQEPs(true);
 		Log.debug("Number of qeps: " + qeps.size());
+
+		if (qeps.size() <= 1){
+			return choice;
+		}
 		
 		if (isTrainingMode) {
 			Log.debug("Running in Training Mode...");

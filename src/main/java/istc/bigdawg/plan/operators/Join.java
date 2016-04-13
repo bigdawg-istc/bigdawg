@@ -658,10 +658,10 @@ public class Join extends Operator {
 	}
 	
 	public String getOriginalJoinPredicate() {
-		return joinPredicate;
+		return joinPredicate != null ? new String(joinPredicate) : null;
 	}
 	public String getOriginalJoinFilter() {
-		return joinFilter;
+		return joinFilter != null ? new String(joinFilter): null;
 	}
 	
 	private void addJSQLParserJoin(Select dstStatement, Table t) {

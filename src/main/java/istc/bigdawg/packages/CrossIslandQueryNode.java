@@ -187,7 +187,6 @@ public class CrossIslandQueryNode {
 	 */
 	private void populateQueryContainer() throws Exception {
 		
-		
 		// NOW WE ONLY SUPPORT RELATIONAL ISLAND
 		// SUPPORT OTHER ISLANDS && ISLAND CHECK 
 		
@@ -207,9 +206,7 @@ public class CrossIslandQueryNode {
 		} else 
 			throw new Exception("Unsupported island code: "+scope.toString());
 
-		if (root != null){
-			originalJoinPredicates.addAll(getOriginalJoinPredicates(root));
-		}
+		originalJoinPredicates.addAll(getOriginalJoinPredicates(root));
 
 		originalMap = CatalogViewer.getDBMappingByObj(objs);
 		
@@ -256,15 +253,26 @@ public class CrossIslandQueryNode {
 
 	private Set<String> getOriginalJoinPredicates(Operator root){
 		Set<String> predicates = new HashSet<>();
+
+		if (root == null){
+			return predicates;
+		}
+
 		if (root instanceof Join){
 			String predicate = ((Join) root).getOriginalJoinPredicate();
 			if (predicate != null){
-				predicates.add(predicate);
+				predicates.addAll(splitPredicates(predicate));
 			}
+
+			predicate = ((Join) root).getOriginalJoinFilter();
+			if (predicate != null){
+				predicates.addAll(splitPredicates(predicate));
+			}
+
 		} else if (root instanceof  Scan){
 			String predicate = ((Scan) root).getJoinPredicate();
 			if (predicate != null){
-				predicates.add(predicate);
+				predicates.addAll(splitPredicates(predicate));
 			}
 		}
 
@@ -273,6 +281,16 @@ public class CrossIslandQueryNode {
 		}
 
 		return predicates;
+	}
+
+	private static Set<String> splitPredicates(String predicates){
+		Set<String> results = new HashSet<>();
+		Pattern predicatePattern = Pattern.compile("(?<=\\()([^\\(^\\)]+)(?=\\))");
+		Matcher m = predicatePattern.matcher(predicates);
+		while (m.find()){
+			results.add(m.group().replace(" ", ""));
+		}
+		return results;
 	}
 	
 	
