@@ -55,9 +55,15 @@ export LIBRARY_PATH="/usr/local/lib/:$LIBRARY_PATH"
 Or in your makefiles you can add: CPPFLAGS += -L/usr/local/include/boost
 
 ## MAKEFILE
-to run the old makefile: make -f 
+to run the old makefile: make -f Makefile
+
+## CMAKE
+Cmake is a preferred way to compile cmigrator. Create a folder build, run cmake .. and then make. It generates the shared library: data-migrator.so and the executable: data-migrator-exe.
 
 ## EXAMPLES
 adam@gaia:~/cmigrator$ ./data-migrator -t postgres2scidb -i /home/adam/data/scidb/bool_table_test.bin -o /home/adam/data/scidb/bool_table_test_to_scidb2.bin -f'bool null'
+
 AFL% load(bool_array4,'/home/adam/data/scidb/bool_table_test_to_scidb2.bin',-2,'(bool null)');
+
+
 

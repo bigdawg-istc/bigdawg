@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include <string>
 #include <boost/ptr_container/ptr_vector.hpp>
-#include "attribute/attribute.h"
+#include "attribute.h"
 
 /** Map a given type (of an attribute) to the handler that will transform it to an internal representnation and finally to any other desired format. */
 class TypeAttributeMap {

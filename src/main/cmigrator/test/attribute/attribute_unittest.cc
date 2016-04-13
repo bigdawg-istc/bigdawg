@@ -6,7 +6,7 @@
 #include "boost/cstdfloat.hpp"
 #include "gtest/gtest.h"
 
-#include "attribute/attribute.h"
+#include "attribute.h"
 #include "endianness.h"
 
 // TEST(test_case_name, test_name) {

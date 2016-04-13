@@ -2,7 +2,7 @@
 #define POSTGRES_2_SCIDB
 
 #include <cstdio>
-#include "attribute/attribute.h"
+#include "attribute.h"
 
 class Postgres2Scidb {
   public:

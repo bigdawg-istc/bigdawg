@@ -6,7 +6,7 @@
 #include <vector>
 #include <iostream>
 
-#include "attribute/attribute.h"
+#include "attribute.h"
 #include "postgres2scidb.h"
 #include "postgres2csv.h"
 #include "scidb2postgres.h"
@@ -27,7 +27,7 @@ void closeFiles(FILE * logFile, bool isInFile, FILE * inFile, bool isOutFile, FI
     if(isOutFile && outFile != NULL) fclose(outFile);
 }
 
-int main(int argc, char *argv[], char* env[]) {
+int main(int argc, char *argv[]) {
     printf("%s\n","go with buffer");
     FILE * logFile = NULL;
     FILE * inFile = stdin;

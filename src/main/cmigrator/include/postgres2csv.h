@@ -4,7 +4,7 @@
 #include <cstdio>
 #include <string>
 
-#include "attribute/attribute.h"
+#include "attribute.h"
 
 class Postgres2Csv {
   public:

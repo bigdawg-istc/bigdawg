@@ -5,7 +5,7 @@
   The generic handle for numbers can be found in: attribute.h
 */
 
-#include "attribute/attribute.h"
+#include "attribute.h"
 
 #include <boost/log/trivial.hpp>
 
@@ -103,23 +103,24 @@ int GenericAttribute<char*>::scidbWriteBinary(FILE *fp) {
 }
 
 int GenericAttribute<char*>::postgresReadBinaryBuffer(Buffer * buffer) {
-// string is handled differently than other types
-    BufferRead(&this->bytesNumber,4,1,buffer);
-//std::cout << "value bytes number before endianness: " << valueBytesNumber << std::endl;
-    this->bytesNumber = endianness::from_postgres<int32_t>(this->bytesNumber);
-//std::cout << "value bytes number after endianness: " << this->bytesNumber << std::endl;
-    if (this->bytesNumber == -1) {
-// this is null and there are no bytes for the value
-        this->isNull=true;
-        return 0;
-    }
-    this->isNull=false;
-    this->value = new char[this->bytesNumber+1]; // +1 is for NULL \0 value at the end of the string: SciDB adds \0 at the end of each string
-    this->value[this->bytesNumber]='\0';
-//std::cout << "value bytes number: " << valueBytesNumber << std::endl;
-    BufferRead(this->value,this->bytesNumber,1,buffer);
-//std::cout << "value read: " << value << std::endl;
-    return 0; // success
+// // string is handled differently than other types
+//     BufferRead(&this->bytesNumber,4,1,buffer);
+// //std::cout << "value bytes number before endianness: " << valueBytesNumber << std::endl;
+//     this->bytesNumber = endianness::from_postgres<int32_t>(this->bytesNumber);
+// //std::cout << "value bytes number after endianness: " << this->bytesNumber << std::endl;
+//     if (this->bytesNumber == -1) {
+// // this is null and there are no bytes for the value
+//         this->isNull=true;
+//         return 0;
+//     }
+//     this->isNull=false;
+//     this->value = new char[this->bytesNumber+1]; // +1 is for NULL \0 value at the end of the string: SciDB adds \0 at the end of each string
+//     this->value[this->bytesNumber]='\0';
+// //std::cout << "value bytes number: " << valueBytesNumber << std::endl;
+//     BufferRead(this->value,this->bytesNumber,1,buffer);
+// //std::cout << "value read: " << value << std::endl;
+//     return 0; // success
+    exit(1);
 }
 
 int GenericAttribute<char*>::scidbReadBinary(FILE *fp) {
@@ -325,7 +326,7 @@ int GenericAttribute<bool>::scidbReadBinary(FILE *fp) {
     } else {
         std::string msg ("Unrecognized value for bool attribute in the binary format: "+boolValue);
         std::cerr << msg << std::endl;
-        //BOOST_LOG_TRIVIAL(debug) << msg;
+        //BOOST_LOG_TRIVIAL(error) << msg;
         exit(1);
     }
     if(elements_read != 1) return 1; // no more data in the input file
