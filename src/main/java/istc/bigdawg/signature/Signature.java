@@ -38,7 +38,6 @@ public class Signature {
 	private String query;
 	private List<String> sig4k;
 	private List<Map<String, Set<String>>> objectExpressionMapping = null;
-	private Set<String> joinPredicates;
 //	private String identifier; 
 	
 //	private static Pattern possibleObjectsPattern	= Pattern.compile("[_@a-zA-Z0-9]+");
@@ -54,10 +53,10 @@ public class Signature {
 	public Signature(String query, Scope island, Operator root, Map<String, QueryContainerForCommonDatabase> container, Set<String> joinPredicates) throws Exception {
 
 		if (island.equals(Scope.RELATIONAL)){
-			setSig2(RelationalSignatureBuilder.sig2(query));
+			//setSig2(RelationalSignatureBuilder.sig2(query));
 			setSig3(RelationalSignatureBuilder.sig3(query));
 		} else if (island.equals(Scope.ARRAY)) {
-			setSig2(ArraySignatureBuilder.sig2(query));
+			//setSig2(ArraySignatureBuilder.sig2(query));
 			setSig3(ArraySignatureBuilder.sig3(query));
 		} else {
 			throw new Exception("Invalid Signature island input: "+island);
@@ -80,12 +79,14 @@ public class Signature {
 		
 		this.setQuery(query);
 		this.setIsland(island);
-		this.joinPredicates = joinPredicates;
+
+		List<String> predicates = new ArrayList<>();
+		predicates.addAll(joinPredicates);
+		setSig2(predicates);
 	}
 	
 	
 	public Signature(String s) throws Exception{
-		this.joinPredicates = new HashSet<>();
 
 		List<String> parsed = Arrays.asList(s.split(fieldSeparatorRest));
 		if (parsed.size() != 5 && parsed.size() != 6) {
