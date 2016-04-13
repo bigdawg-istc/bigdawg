@@ -187,7 +187,6 @@ public class CrossIslandQueryNode {
 	 */
 	private void populateQueryContainer() throws Exception {
 		
-		
 		// NOW WE ONLY SUPPORT RELATIONAL ISLAND
 		// SUPPORT OTHER ISLANDS && ISLAND CHECK 
 		
@@ -262,18 +261,18 @@ public class CrossIslandQueryNode {
 		if (root instanceof Join){
 			String predicate = ((Join) root).getOriginalJoinPredicate();
 			if (predicate != null){
-				predicates.add(new String(predicate));
+				predicates.addAll(splitPredicates(predicate));
 			}
 
 			predicate = ((Join) root).getOriginalJoinFilter();
 			if (predicate != null){
-				predicates.add(new String(predicate));
+				predicates.addAll(splitPredicates(predicate));
 			}
 
 		} else if (root instanceof  Scan){
 			String predicate = ((Scan) root).getJoinPredicate();
 			if (predicate != null){
-				predicates.add(new String(predicate));
+				predicates.addAll(splitPredicates(predicate));
 			}
 		}
 
@@ -282,6 +281,16 @@ public class CrossIslandQueryNode {
 		}
 
 		return predicates;
+	}
+
+	private static Set<String> splitPredicates(String predicates){
+		Set<String> results = new HashSet<>();
+		Pattern predicatePattern = Pattern.compile("(?<=\\()([^\\(^\\)]+)(?=\\))");
+		Matcher m = predicatePattern.matcher(predicates);
+		while (m.find()){
+			results.add(m.group().replace(" ", ""));
+		}
+		return results;
 	}
 	
 	
