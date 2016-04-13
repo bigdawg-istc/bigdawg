@@ -1,6 +1,7 @@
 package istc.bigdawg.sstore;
 
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -32,6 +33,7 @@ public class SStoreSQLHandler implements DBHandler {
     // BigDawgConfigProperties.INSTANCE.getSStoreSchemaServerDBID();
     private Connection con = null;
     private ConnectionInfo conInfo = null;
+    private DatabaseMetaData metaData = null;
     private Statement st = null;
     private PreparedStatement preparedSt = null;
     private ResultSet rs = null;
@@ -314,25 +316,24 @@ public class SStoreSQLHandler implements DBHandler {
 	try {
 	    this.getConnection();
 	    try {
-		st = con.createStatement();
-		log.debug("replace double quotes (\") with signle quotes in the query to log it in SStoreSQL: "
-			+ st.toString().replace("'", "\""));
-	    } catch (SQLException e) {
+    	    	metaData = con.getMetaData();
+	    } catch(SQLException e) {
 		e.printStackTrace();
-		log.error("SStoreSQLHandler, the query preparation failed. " + e.getMessage() + " "
-			+ StackTrace.getFullStackTrace(e));
+		log.error("PostgreSQLHandler, the query preparation failed. " + e.getMessage() + " "
+				+ StackTrace.getFullStackTrace(e));
 		throw e;
 	    }
-	    ResultSet resultSet = st.executeQuery("select * from " + tableName + " limit 1");
-	    Map<String, SStoreSQLColumnMetaData> columnsMap = new HashMap<>();
-	    List<SStoreSQLColumnMetaData> columnsOrdered = new ArrayList<>();
-	    ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
-	    for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
-		SStoreSQLColumnMetaData columnMetaData = new SStoreSQLColumnMetaData(resultSetMetaData.getColumnName(i),
-			resultSetMetaData.getColumnTypeName(i), false);
-		columnsMap.put(resultSetMetaData.getColumnName(i), columnMetaData);
-		columnsOrdered.add(columnMetaData);
-	    }
+    	    ResultSet rs = metaData.getColumns(null, null, tableName, null);
+    	    
+    	    Map<String, SStoreSQLColumnMetaData> columnsMap = new HashMap<>();
+    	    List<SStoreSQLColumnMetaData> columnsOrdered = new ArrayList<>();
+    	    while (rs.next()) {
+    		SStoreSQLColumnMetaData columnMetaData = new SStoreSQLColumnMetaData(rs.getString("COLUMN_NAME"), 
+    			rs.getString("TYPE_NAME"), rs.getBoolean("IS_NULLABLE"), rs.getInt("RELATIVE_INDEX"),
+    			rs.getInt("COLUMN_SIZE"));
+    		columnsMap.put(rs.getString("COLUMN_NAME"), columnMetaData);
+    		columnsOrdered.add(columnMetaData);
+    	    }
 	    
 	    return new SStoreSQLTableMetaData(columnsMap, columnsOrdered);
 	} finally {

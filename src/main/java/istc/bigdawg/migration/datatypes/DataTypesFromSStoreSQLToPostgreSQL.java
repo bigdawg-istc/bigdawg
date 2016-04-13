@@ -12,7 +12,7 @@ public class DataTypesFromSStoreSQLToPostgreSQL {
 	static {
 		map = new HashMap<>();
 		// boolean
-//		map.put("boolean","boolean");
+		map.put("boolean","boolean");
 		// integers
 		map.put("tinyint", "smallint");
 		map.put("smallint", "smallint");
@@ -22,8 +22,8 @@ public class DataTypesFromSStoreSQLToPostgreSQL {
 		map.put("float", "real");
 		map.put("decimal", "double precision");
 		// string
-		map.put("varchar", "text");
-		map.put("char", "character(1)");
+		map.put("string", "varchar");
+//		map.put("char", "character(1)");
 		// time
 		map.put("timestamp", "timestamp (0)");
 	}

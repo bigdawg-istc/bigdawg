@@ -61,11 +61,9 @@ public class FromSStoreToPostgresImplementation implements MigrationImplementati
 	    SStoreSQLHandler handler = new SStoreSQLHandler(connectionFrom);
 	    this.sStoreSQLTableMetaData = handler.getColumnsMetaData(fromTable);
 	} catch (SQLException sStoreException) {
-	    // MigrationException migrateException =
-	    // handleException(sStoreException,
-	    // "Extraction of meta data on the array: " + fromTable + " in SciDB
-	    // failed. ");
-	    // throw migrateException;
+//	     MigrationException migrateException = handleException(sStoreException, "Extraction of meta data on the array: " 
+//		     + fromTable + " in SciDB failed. ");
+//	     throw migrateException;
 	}
     }
 
@@ -93,8 +91,6 @@ public class FromSStoreToPostgresImplementation implements MigrationImplementati
 
 	    connectionPostgres = PostgreSQLHandler.getConnection(connectionTo);
 	    connectionPostgres.setAutoCommit(false);
-//	    System.out.println(connectionPostgres);
-//	    System.out.println(SStoreSQLHandler.getConnection(connectionFrom));
 	    createTargetTableSchema(connectionPostgres, createTableStatement);
 	    
 
@@ -146,7 +142,11 @@ public class FromSStoreToPostgresImplementation implements MigrationImplementati
 	    String colName = column.getName();
 	    String sStoreType = column.getdataType();
 	    String postgresType = DataTypesFromSStoreSQLToPostgreSQL.getPostgreSQLTypeFromSStoreType(sStoreType);
-	    createTableStringBuf.append(colName + " " + postgresType + ",");
+	    if ("varchar".equals(postgresType)) {
+		postgresType += "(" + column.getCharacterMaximumLength() + ")";
+	    }
+	    String nullable = column.isNullable() ? "" : "NOT NULL";
+	    createTableStringBuf.append(colName + " " + postgresType +  " " + nullable + ",");
 	}
 	createTableStringBuf.deleteCharAt(createTableStringBuf.length() - 1);
 	createTableStringBuf.append(")");

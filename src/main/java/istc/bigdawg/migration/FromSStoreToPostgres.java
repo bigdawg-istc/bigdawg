@@ -26,6 +26,7 @@ public class FromSStoreToPostgres
     private PostgreSQLConnectionInfo connectionTo;
     private String toTable;
 
+
     @Override
     public MigrationResult execute() throws MigrationException {
 	if (this.connectionFrom == null || this.fromTable == null
@@ -77,12 +78,12 @@ public class FromSStoreToPostgres
 		FromSStoreToPostgres migrator = new FromSStoreToPostgres();
 		SStoreSQLConnectionInfo conFrom = new SStoreSQLConnectionInfo("localhost",
 				"21212", "", "user", "password");
-		String arrayFrom = "contestants";
+		String tableFrom = "contestants";
 		PostgreSQLConnectionInfo conTo = new PostgreSQLConnectionInfo(
 				"localhost", "5432", "test_db", "postgres", "test");
-		String tableTo = "voter.contestants";
-		MigrationResult result = migrator.migrate(conFrom, arrayFrom, conTo, tableTo);
-		System.out.println(result);
+		String tableTo = "contestants";
+		migrator.migrate(conFrom, tableFrom, conTo, tableTo);
+//		System.out.println(result);
 	}
 
 }

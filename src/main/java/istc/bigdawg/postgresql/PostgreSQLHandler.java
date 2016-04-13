@@ -248,13 +248,6 @@ public class PostgreSQLHandler implements DBHandler {
 		try {
 			statement = connection.createStatement();
 			statement.execute(stringStatement);
-			System.out.println("table has been created! " + stringStatement);
-//			if (stringStatement.contains("table")) {
-//			    ResultSet rs = statement.executeQuery("select * from contestants");
-//			    ResultSetMetaData rsmd = rs.getMetaData();
-//			    System.out.println(rsmd.getColumnTypeName(2));
-//			    
-//			}
 			statement.close();
 		} catch (SQLException ex) {
 			ex.printStackTrace();
