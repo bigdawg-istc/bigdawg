@@ -262,12 +262,18 @@ public class CrossIslandQueryNode {
 		if (root instanceof Join){
 			String predicate = ((Join) root).getOriginalJoinPredicate();
 			if (predicate != null){
-				predicates.add(predicate);
+				predicates.add(new String(predicate));
 			}
+
+			predicate = ((Join) root).getOriginalJoinFilter();
+			if (predicate != null){
+				predicates.add(new String(predicate));
+			}
+
 		} else if (root instanceof  Scan){
 			String predicate = ((Scan) root).getJoinPredicate();
 			if (predicate != null){
-				predicates.add(predicate);
+				predicates.add(new String(predicate));
 			}
 		}
 
