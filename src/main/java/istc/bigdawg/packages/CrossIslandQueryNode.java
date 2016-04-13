@@ -62,7 +62,9 @@ public class CrossIslandQueryNode {
 	private DBHandler dbSchemaHandler = null;
 	 
 	private Map<String, List<String>> originalMap;
-	
+
+	private Set<String> originalJoinPredicates;
+
 	private Set<String> joinPredicates;
 	private Set<String> joinFilters;
 	
@@ -111,10 +113,11 @@ public class CrossIslandQueryNode {
 		remainderLoc = new ArrayList<>();
 		joinPredicates = new HashSet<>();
 		joinFilters = new HashSet<>();
+		originalJoinPredicates = new HashSet<>();
 		populateQueryContainer();
 		
 		
-		this.signature = new Signature(islandQuery, scope, getRemainder(0), getQueryContainer());
+		this.signature = new Signature(islandQuery, scope, getRemainder(0), getQueryContainer(), originalJoinPredicates);
 		
 		
 		// removing temporary schema plates
@@ -203,8 +206,11 @@ public class CrossIslandQueryNode {
 			objs = new ArrayList<>(ArraySignatureBuilder.sig2(query));
 		} else 
 			throw new Exception("Unsupported island code: "+scope.toString());
-		
-		
+
+		if (root != null){
+			originalJoinPredicates.addAll(getOriginalJoinPredicates(root));
+		}
+
 		originalMap = CatalogViewer.getDBMappingByObj(objs);
 		
 		// traverse add remainder
@@ -246,6 +252,27 @@ public class CrossIslandQueryNode {
 			
 		} // if remainderLoc is not null, then THERE IS NO NEED FOR PERMUTATIONS 
 		
+	}
+
+	private Set<String> getOriginalJoinPredicates(Operator root){
+		Set<String> predicates = new HashSet<>();
+		if (root instanceof Join){
+			String predicate = ((Join) root).getOriginalJoinPredicate();
+			if (predicate != null){
+				predicates.add(predicate);
+			}
+		} else if (root instanceof  Scan){
+			String predicate = ((Scan) root).getJoinPredicate();
+			if (predicate != null){
+				predicates.add(predicate);
+			}
+		}
+
+		for (Operator child: root.getChildren()){
+			predicates.addAll(getOriginalJoinPredicates(child));
+		}
+
+		return predicates;
 	}
 	
 	

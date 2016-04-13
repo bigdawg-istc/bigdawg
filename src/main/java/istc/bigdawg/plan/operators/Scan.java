@@ -32,6 +32,10 @@ public class Scan extends Operator {
 	protected Table table;
 	protected boolean hasFunctionInFilterExpression = false;
 
+	public String getJoinPredicate(){
+		return indexCond.toString();
+	}
+
 	
 	public Scan(Map<String, String> parameters, List<String> output, Operator child, SQLTableExpression supplement) throws Exception {
 		super(parameters, output, child, supplement);
