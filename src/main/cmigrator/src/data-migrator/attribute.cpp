@@ -6,6 +6,7 @@
 */
 
 #include "attribute.h"
+#include "ValuePeeker.hpp"
 
 //#include <boost/log/trivial.hpp>
 
@@ -44,7 +45,7 @@ int GenericAttribute<char*>::postgresReadBinary(FILE *fp) {
 // string is handled differently than other types
     fread(&this->bytesNumber,4,1,fp);
 //std::cout << "value bytes number before endianness: " << valueBytesNumber << std::endl;
-    this->bytesNumber = endianness::from_postgres<int32_t>(this->bytesNumber);
+    this->bytesNumber = be32toh(this->bytesNumber);
 //std::cout << "value bytes number after endianness: " << valueBytesNumber << std::endl;
     if (this->bytesNumber == -1) {
 // this is null and there are no bytes for the value
@@ -81,7 +82,7 @@ int GenericAttribute<char*>::scidbWriteBinary(FILE *fp) {
             fwrite(&nullReason,1,1,fp);
 // this is indeed null, so only write -1 as the number of bytes
 // and don't write the NULL value
-            int32_t scidbBytesNumber = 0;
+            uint32_t scidbBytesNumber = 0;
             fwrite(&scidbBytesNumber,4,1,fp);
             return 0;
         } else {
@@ -92,7 +93,7 @@ int GenericAttribute<char*>::scidbWriteBinary(FILE *fp) {
     }
 //std::cout << "Bytes number written for SciDB: " << this->bytesNumber << std::endl;
 //fflush(stdout);
-    int32_t scidbBytesNumber=this->bytesNumber+1;
+    uint32_t scidbBytesNumber=this->bytesNumber+1;
     fwrite(&(scidbBytesNumber),4,1,fp);
 //printf("Value written for SciDB: %.13s\n",this->value);
 //fflush(stdout);
@@ -123,6 +124,17 @@ int GenericAttribute<char*>::postgresReadBinaryBuffer(Buffer * buffer) {
     exit(1);
 }
 
+int GenericAttribute<char*>::readSstore(const voltdb::NValue& nvalue) {
+	this->isNull = nvalue.isNull();
+	if(this->isNull) return 0;
+	std::string value = ValuePeeker.getString();
+	this->bytesNumber = static_cast<uint32_t>(value.length())+1;
+	this->value = new char[this->bytesNumber];
+	strncpy(this->value,value.c_str(),value.length());
+	this->value[value.length()]='\0'; // add null at the end of the string
+    return 0;
+}
+
 int GenericAttribute<char*>::scidbReadBinary(FILE *fp) {
     /* A string data type that allows nulls is always preceded by five bytes:
        a null byte indicating whether a value is present
@@ -139,7 +151,7 @@ int GenericAttribute<char*>::scidbReadBinary(FILE *fp) {
         size_t bytes_read;
         bytes_read = fread(&nullValue,1,1,fp);
         if(bytes_read < 1) return 1; // no more data in the input file
-        if(nullValue>=0 && nullValue <= 127) {
+        if(nullValue>=0) {
             this->isNull = true;
 // we don't need the reason why it is null so we'll write byte 0
             /* A fixed-length data type that allows null values
@@ -179,14 +191,14 @@ int GenericAttribute<char*>::postgresWriteBinary(FILE *fp) {
     if(this->isNullable) {
         if(this->isNull) {
             /* -1 indicates a NULL field value */
-            int32_t nullValue = -1;
-            int32_t nullValuePostgres = endianness::to_postgres<int32_t>(nullValue);
+            uint32_t nullValue = -1;
+            uint32_t nullValuePostgres = htobe32(nullValue);
             fwrite(&nullValuePostgres,4,1,fp);
             /* No value bytes follow in the NULL case. */
             return 0;
         }
     }
-    int32_t attrLengthPostgres = endianness::to_postgres<int32_t>(this->bytesNumber);
+    uint32_t attrLengthPostgres = htobe32(this->bytesNumber);
     fwrite(&attrLengthPostgres,4,1,fp);
     fwrite(this->value,this->bytesNumber,1,fp);
     // free the string buffer
@@ -210,7 +222,7 @@ GenericAttribute<bool>::~GenericAttribute() {
 int GenericAttribute<bool>::postgresReadBinary(FILE *fp) {
     int32_t valueBytesNumber;
     fread(&valueBytesNumber,4,1,fp);
-    valueBytesNumber = endianness::from_postgres<int32_t>(valueBytesNumber);
+    valueBytesNumber = be32toh(valueBytesNumber);
     if (valueBytesNumber == -1) {
         assert(isNullable==true);
         // if (isNullable==false) {
@@ -299,7 +311,7 @@ int GenericAttribute<bool>::scidbReadBinary(FILE *fp) {
         bytes_read = fread(&nullValue,1,1,fp);
         //BOOST_LOG_TRIVIAL(debug) << "bytes read: " << bytes_read;
         if(bytes_read < 1) return 1; // no more data in the input file
-        if(nullValue>=0 && nullValue <= 127) {
+        if(nullValue>=0) {
             this->isNull = true;
             // we don't need the reason why it is null so we'll write byte 0
             /* A fixed-length data type that allows null values
@@ -338,14 +350,14 @@ int GenericAttribute<bool>::postgresWriteBinary(FILE *fp) {
     if(this->isNullable) {
         if(this->isNull) {
             /* -1 indicates a NULL field value */
-            int32_t nullValue = -1;
-            int32_t nullValuePostgres = endianness::to_postgres<int32_t>(nullValue);
+            uint32_t nullValue = -1;
+            uint32_t nullValuePostgres = htobe32(nullValue);
             fwrite(&nullValuePostgres,4,1,fp);
             /* No value bytes follow in the NULL case. */
             return 0;
         }
     }
-    int32_t attrLengthPostgres = endianness::to_postgres<int32_t>(this->bytesNumber);
+    uint32_t attrLengthPostgres = htobe32(this->bytesNumber);
     fwrite(&attrLengthPostgres,4,1,fp);
     char boolBin;
     if (this->value == false) {
@@ -355,5 +367,17 @@ int GenericAttribute<bool>::postgresWriteBinary(FILE *fp) {
     }
     //BOOST_LOG_TRIVIAL(debug) << "postgresWriteBinary bytes number: " << this->bytesNumber;
     fwrite(&boolBin,this->bytesNumber,1,fp);
+    return 0;
+}
+
+int GenericAttribute<bool>::readSstore(const voltdb::NValue& nvalue) {
+	this->isNull = nvalue.isNull();
+	if(this->isNull) return 0;
+	if (nvalue.isTrue()) {
+		this->value = true;
+	}
+	else {
+		this->value = false;
+	}
     return 0;
 }

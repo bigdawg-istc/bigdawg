@@ -15,7 +15,7 @@ typedef struct Buffer {
 
 } Buffer;
 
-void BufferNew(Buffer* buffer, FILE * file, int size);
+void BufferNew(Buffer* buffer, FILE * file, size_t size);
 void BufferDispose(Buffer* buffer);
 
 /* imitate the fread: buffer read

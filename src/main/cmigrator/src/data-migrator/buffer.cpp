@@ -4,9 +4,9 @@
 #include <stdlib.h>
 
 static bool CopyLoadRawBuf(Buffer* buffer);
-static int CopyGetData(Buffer* buffer, void* databuf, int minread, int maxread);
+static size_t CopyGetData(Buffer* buffer, void* databuf, size_t minread, size_t maxread);
 
-void BufferNew(Buffer * buffer, FILE * file, int size)
+void BufferNew(Buffer * buffer, FILE * file, size_t size)
 {
   buffer->raw_buf= (char*) malloc(size+1);
   buffer->size=size;
@@ -20,13 +20,13 @@ void BufferDispose(Buffer * buffer)
   free(buffer->raw_buf);
 }
 
-size_t BufferRead(void* address, size_t size, size_t count, Buffer * buffer) 
+size_t BufferRead(void* address, size_t size, size_t count, Buffer * buffer)
 {
   assert(count==1);
   size_t bytesNumber = size*count;
   assert(bytesNumber < buffer->size);
   // check if there is enough bytes to be read (if not then fetch new bytes)
-  if (buffer->raw_buf_len-buffer->raw_buf_index < bytesNumber) 
+  if (buffer->raw_buf_len-buffer->raw_buf_index < bytesNumber)
     {
       // copy new bytes to the buffer
       CopyLoadRawBuf(buffer); // this change raw_buf_index and raw_buf_len
@@ -62,8 +62,8 @@ size_t BufferRead(void* address, size_t size, size_t count, Buffer * buffer)
  */
 static bool CopyLoadRawBuf(Buffer* buffer)
 {
-  int nbytes; /* number of bytes to be still processed in the buffer */
-  int inbytes; /* number of bytes read from the file to the buffer */
+  size_t nbytes; /* number of bytes to be still processed in the buffer */
+  size_t inbytes; /* number of bytes read from the file to the buffer */
 
   if (buffer->raw_buf_index < buffer->raw_buf_len)
     {
@@ -104,12 +104,12 @@ static bool CopyLoadRawBuf(Buffer* buffer)
  *
  * NB: no data conversion is applied here.
  */
-static int CopyGetData(Buffer* buffer, void* databuf, int minread, int maxread)
+static size_t CopyGetData(Buffer* buffer, void* databuf, size_t minread, size_t maxread)
 {
   assert(minread==1);
-  int bytesRead = 0;
+  size_t bytesRead = 0;
   bytesRead = fread(databuf,1,maxread,buffer->file);
-  if (ferror(buffer->file)) 
+  if (ferror(buffer->file))
     {
       fprintf(stderr,"%s\n","Not able to read data from the file in buffer");
       exit(1);

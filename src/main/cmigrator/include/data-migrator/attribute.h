@@ -16,26 +16,27 @@
 #include <iostream>
 #include <fstream>
 #include "endianness.h"
+#include "buffer.h"
+#include "common/NValue.hpp"
 
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
-
-#include "buffer.h"
 
 class Attribute {
 
   protected:
     // can the argument be a NULL value
-    bool isNullable=false;
+    bool isNullable;
 
     // how many bytes the attribute requires
-    int32_t bytesNumber; // this is only the number of real values (without any NULL values, for example, for char*)
+    uint32_t bytesNumber; // this is only the number of real values (without any NULL values, for example, for char*)
 
     // is this instance of the argument a NULL value or not
     bool isNull;
 
     // null values have to have null char '\0' on each position
     static const int32_t nullValuesSize=20;
+
     // this is the declaration of null(s) for values that are empty (for example in SciDB binary format) - this is a string with only '\0' (null) values
     static const char nullValues[nullValuesSize];
 
@@ -56,7 +57,7 @@ class Attribute {
         this->bytesNumber = bytesNumber;
     }
 
-    int32_t getBytesNumber() {
+    uint32_t getBytesNumber() {
         return this->bytesNumber;
     }
 
@@ -67,7 +68,7 @@ class Attribute {
     bool getIsNull() {
         return this->isNull;
     }
-
+    /* if return value==0 then sucess, otherwise something went wrong */
     int virtual postgresReadBinary(FILE *fp) = 0;
     int virtual postgresReadBinaryBuffer(Buffer * buffer) = 0;
     //int virtual writeCsv(FILE *fp) = 0;
@@ -75,6 +76,7 @@ class Attribute {
     int virtual scidbWriteBinary(FILE *fp) = 0;
     int virtual scidbReadBinary(FILE *fp) = 0;
     int virtual postgresWriteBinary(FILE *fp) = 0;
+    int virtual readSstore(const voltdb::NValue & nvalue) = 0;
 };
 
 Attribute* new_clone(Attribute const& other);
@@ -104,6 +106,7 @@ class GenericAttribute : public Attribute {
     int scidbWriteBinary(FILE *fp);
     int scidbReadBinary(FILE *fp);
     int postgresWriteBinary(FILE *fp);
+    int readSstore(const voltdb::NValue & nvalue);
 };
 
 // template specialization for strings (implemented as char*)
@@ -134,6 +137,7 @@ class GenericAttribute<char*> : public Attribute {
     int scidbWriteBinary(FILE *fp);
     int scidbReadBinary(FILE *fp);
     int postgresWriteBinary(FILE *fp);
+    int readSstore(const voltdb::NValue & nvalue);
 };
 
 
@@ -163,6 +167,7 @@ class GenericAttribute<bool> : public Attribute {
     int writeCsv(std::ofstream & ofile);
     int scidbWriteBinary(FILE *fp);
     int scidbReadBinary(FILE *fp);
+    int readSstore(const voltdb::NValue& nvalue);
 };
 
 template <class T>
@@ -173,49 +178,19 @@ GenericAttribute<T>::GenericAttribute(bool isNullable) {
 
 template <class T>
 int GenericAttribute<T>::postgresReadBinary(FILE *fp) {
-    //std::cout << "this is type: " << boost::typeindex::type_id().pretty_name() << std::endl;
-    int32_t valueBytesNumber;
+    uint32_t valueBytesNumber;
     fread(&valueBytesNumber,4,1,fp);
-    //std::cout << "in postgres: value bytes number before endianness: " << std::oct << valueBytesNumber << std::endl;
-    /* char buf[4]; */
-    /* memcpy(buf,&valueBytesNumber,4); */
-    /* printf("bytes postgres read for valueBytesNumber: "); */
-    /* for (int i=0; i<4; ++i) { */
-    /*   printf("%o\n",buf[i]); */
-    /* } */
-    //printf("%d\n",valueBytesNumber);
-    //std::cout << "value bytes number before endianness: " << valueBytesNumber << std::endl;
-    valueBytesNumber = endianness::from_postgres<int32_t>(valueBytesNumber);
-    //std::cout << "value bytes number after endianness: " << valueBytesNumber << std::endl;
-    /* char bufAfter[4]; */
-    /* memcpy(bufAfter,&valueBytesNumber,4); */
-    /* printf("bytes postgres read for valueBytesNumber: "); */
-    /* for (int i=0; i<4; ++i) { */
-    /*   printf("%o\n",bufAfter[i]); */
-    /* } */
-    /* printf("value bytes number int32_t:"); */
-    /* printf("%" PRId32,valueBytesNumber); */
-    /* printf("\n"); */
+    valueBytesNumber = be32toh(valueBytesNumber);
     if (valueBytesNumber == -1) {
         // this is null and there are no bytes for the value
         this->isNull=true;
         return 0;
     }
     this->isNull=false;
-    /* std::cout << "value bytes number: " << valueBytesNumber << std::endl; */
-    /* std::cout << "value size in bytes: " << sizeof(value) << std::endl; */
-    /* std::cout << "this->bytesNumber: " << this->bytesNumber << std::endl; */
     assert(valueBytesNumber==this->bytesNumber);
     fread(&value,this->bytesNumber,1,fp);
     // change the endianness
     value = endianness::from_postgres<T>(value);
-    /* char bufValue[100]; */
-    /* memcpy(bufValue,&(this->value),this->bytesNumber); */
-    /* printf("bytes postgres read for value: "); */
-    /* for (int i=0; i<this->bytesNumber; ++i) { */
-    /*   printf("%o\n",bufValue[i]); */
-    /* } */
-    //std::cout << "value read: " << value << std::endl;
     return 0; // success
 }
 
@@ -268,6 +243,14 @@ int GenericAttribute<T>::writeCsv(std::ofstream & ofile) {
 }
 
 template <class T>
+int GenericAttribute<T>::readSstore(const voltdb::NValue& nvalue) {
+	this->isNull = nvalue.isNull();
+	if (this->isNull) return 0;
+	this->value = nvalue.getInteger();
+    return 0;
+}
+
+template <class T>
 int GenericAttribute<T>::scidbWriteBinary(FILE *fp) {
     if(this->isNullable) {
         if(this->isNull) {
@@ -299,7 +282,7 @@ int GenericAttribute<T>::postgresWriteBinary(FILE *fp) {
             return 0;
         }
     }
-    int32_t attrLengthPostgres = endianness::to_postgres<int32_t>(this->bytesNumber);
+    uint32_t attrLengthPostgres = htobe32(this->bytesNumber);
     fwrite(&attrLengthPostgres,4,1,fp);
     T valuePostgres = endianness::to_postgres<T>(this->value);
     //BOOST_LOG_TRIVIAL(debug) << "postgresWriteBinary bytes number: " << this->bytesNumber;
@@ -310,9 +293,9 @@ int GenericAttribute<T>::postgresWriteBinary(FILE *fp) {
 template <class T>
 int GenericAttribute<T>::postgresReadBinaryBuffer(Buffer * buffer) {
     //fprintf(stderr,"%s\n","Read binary buffer");
-    int32_t valueBytesNumber;
+    uint32_t valueBytesNumber;
     BufferRead(&valueBytesNumber,4,1,buffer);
-    valueBytesNumber = endianness::from_postgres<int32_t>(valueBytesNumber);
+    valueBytesNumber = be32toh(valueBytesNumber);
     //printf("type size read: %d\n",valueBytesNumber);
     //printf("expected type size: %d\n",this->bytesNumber);
     if (valueBytesNumber == -1) {
