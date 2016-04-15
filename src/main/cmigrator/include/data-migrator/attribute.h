@@ -25,19 +25,21 @@
 class Attribute {
 
   protected:
-    // can the argument be a NULL value
+    /* can the argument be a NULL value */
     bool isNullable;
 
-    // how many bytes the attribute requires
-    uint32_t bytesNumber; // this is only the number of real values (without any NULL values, for example, for char*)
+    /* how many bytes the attribute requires
+       this is only the number of real values (without any NULL values, for example, for char*) 
+       but postgres can set it to -1 so this is why it is int and not unsigned int */
+    int32_t bytesNumber; 
 
-    // is this instance of the argument a NULL value or not
+    /* is this instance of the argument a NULL value or not */
     bool isNull;
 
-    // null values have to have null char '\0' on each position
+    /* null values have to have null char '\0' on each position */
     static const int32_t nullValuesSize=20;
 
-    // this is the declaration of null(s) for values that are empty (for example in SciDB binary format) - this is a string with only '\0' (null) values
+    /* this is the declaration of null(s) for values that are empty (for example in SciDB binary format) - this is a string with only '\0' (null) values */
     static const char nullValues[nullValuesSize];
 
   public:
@@ -190,7 +192,7 @@ int GenericAttribute<T>::postgresReadBinary(FILE *fp) {
     assert(valueBytesNumber==this->bytesNumber);
     fread(&value,this->bytesNumber,1,fp);
     // change the endianness
-    value = endianness::from_postgres<T>(value);
+    endianness::fromBigEndianToHost<T>(value);
     return 0; // success
 }
 
@@ -276,17 +278,18 @@ int GenericAttribute<T>::postgresWriteBinary(FILE *fp) {
         if(this->isNull) {
             /* -1 indicates a NULL field value */
             int32_t nullValue = -1;
-            int32_t nullValuePostgres = endianness::to_postgres<int32_t>(nullValue);
-            fwrite(&nullValuePostgres,4,1,fp);
+	    /* this works in place */
+            endianness::fromHostToBigEndian<int32_t>(nullValue);
+            fwrite(&nullValue,4,1,fp);
             /* No value bytes follow in the NULL case. */
             return 0;
         }
     }
     uint32_t attrLengthPostgres = htobe32(this->bytesNumber);
     fwrite(&attrLengthPostgres,4,1,fp);
-    T valuePostgres = endianness::to_postgres<T>(this->value);
+    endianness::fromHostToBigEndian<T>(this->value);
     //BOOST_LOG_TRIVIAL(debug) << "postgresWriteBinary bytes number: " << this->bytesNumber;
-    fwrite(&valuePostgres,this->bytesNumber,1,fp);
+    fwrite(&(this->value),this->bytesNumber,1,fp);
     return 0;
 }
 
@@ -306,7 +309,7 @@ int GenericAttribute<T>::postgresReadBinaryBuffer(Buffer * buffer) {
     this->isNull=false;
     assert(valueBytesNumber==this->bytesNumber);
     BufferRead(&value,this->bytesNumber,1,buffer);
-    value = endianness::from_postgres<T>(value);
+    endianness::fromBigEndianToHost<T>(value);
     //std::cout << "value read: " << value << std::endl;
     return 0; // success
 }

@@ -6,6 +6,6 @@
 #include <string>
 
 void getCurrentPath(char * currentPath, size_t currentPathSize);
-std::vector<std::string> split(const std::string &text, char sep);
+std::vector<std::string> splitString(const std::string &text, char sep);
 
 #endif // UTILS_H

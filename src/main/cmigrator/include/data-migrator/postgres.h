@@ -15,7 +15,7 @@ class Postgres {
     static void writeHeader(FILE *fp);
     static void skipHeader(FILE *fp);
     static uint16_t readColNumber(FILE *fp);
-    static void writeColNumber(FILE *fp, int16_t colNumber);
+    static void writeColNumber(FILE *fp, uint16_t colNumber);
     static void writeFileTrailer(FILE *fp);
     static uint16_t readColNumberBuffer(Buffer * buffer);
 };

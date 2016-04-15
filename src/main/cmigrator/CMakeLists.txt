@@ -4,7 +4,8 @@ project(data-migrator)
 set(CMAKE_BUILD_TYPE Release)
 
 #SET(CMAKE_CXX_COMPILER "g++")
-set(CMAKE_CXX_FLAGS " -g -Wall -std=c++11")
+# another possible parameter: -std=c++11
+set(CMAKE_CXX_FLAGS " -Wall -Wextra -Woverloaded-virtual -Wconversion -Wpointer-arith -Wcast-qual -Wcast-align -Wwrite-strings -Winit-self -Wno-sign-compare -Wno-unused-parameter -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -DNOCLOCK -fno-omit-frame-pointer -fvisibility=hidden -DBOOST_SP_DISABLE_THREADS -Wno-ignored-qualifiers -fno-strict-aliasing -Wno-return-type")
 
 #Bring the headers, such as Student.h into the project
 #include_directories(include/attribute)
@@ -79,3 +80,7 @@ endif()
 if(CMAKE_THREAD_LIBS_INIT)
   target_link_libraries(data-migrator "${CMAKE_THREAD_LIBS_INIT}")
 endif()
+
+# tests
+option(build_tests "Build all of gtest's own tests." OFF)
+

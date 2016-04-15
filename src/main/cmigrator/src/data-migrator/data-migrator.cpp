@@ -54,7 +54,10 @@ int main(int argc, char *argv[]) {
     const std::string postgres2csv("postgres2csv");
     const std::string postgres2scidb("postgres2scidb");
     const std::string scidb2postgres("scidb2postgres");
-    std::vector<std::string> migrationTypes = {postgres2csv,postgres2scidb,scidb2postgres};
+    std::vector<std::string> migrationTypes;
+    migrationTypes.push_back(postgres2csv);
+    migrationTypes.push_back(postgres2scidb);
+    migrationTypes.push_back(scidb2postgres);
 
     char* migrationType = (char*)defaultMigrationType;
     char* out = (char*)defaultOut;
@@ -125,7 +128,7 @@ int main(int argc, char *argv[]) {
     //   }
 
     fprintf(stderr,"migrator=%s, in=%s, out=%s, types=%s\n",migrationType,in,out,types);
-    std::vector<std::shared_ptr<Attribute> > attributes = std::vector<std::shared_ptr<Attribute> >();
+    std::vector<boost::shared_ptr<Attribute> > attributes = std::vector<boost::shared_ptr<Attribute> >();
     TypeAttributeMap mapTypes = TypeAttributeMap();
     try {
         mapTypes.getAttributesFromTypes(attributes,types);

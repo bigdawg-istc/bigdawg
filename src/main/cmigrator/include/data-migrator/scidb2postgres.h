@@ -5,6 +5,7 @@
 #include <vector>
 #include <memory>
 #include "attribute.h"
+#include "boost/smart_ptr/shared_ptr.hpp"
 
 class Scidb2Postgres {
   private:
@@ -12,7 +13,7 @@ class Scidb2Postgres {
     FILE* binOut;
 
   public:
-    static int scidb2postgres(FILE* in, std::vector<std::shared_ptr<Attribute> > & attributes, FILE* out);
+    static int scidb2postgres(FILE* in, std::vector<boost::shared_ptr<Attribute> > & attributes, FILE* out);
 };
 
 #endif // SCIDB_TO_POSTGRES

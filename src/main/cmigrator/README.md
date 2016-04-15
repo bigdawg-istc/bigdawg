@@ -1,7 +1,5 @@
 # CMIGRATOR docs #
 
-We use google tests: https://github.com/google/googletest/blob/master/googletest/docs/Primer.md
-
 ## BOOST
 
 version >= 1.60.0
@@ -64,6 +62,18 @@ Cmake is a preferred way to compile cmigrator. Create a folder build, run cmake 
 adam@gaia:~/cmigrator$ ./data-migrator -t postgres2scidb -i /home/adam/data/scidb/bool_table_test.bin -o /home/adam/data/scidb/bool_table_test_to_scidb2.bin -f'bool null'
 
 AFL% load(bool_array4,'/home/adam/data/scidb/bool_table_test_to_scidb2.bin',-2,'(bool null)');
+
+## TESTS
+We use google tests: https://github.com/google/googletest/blob/master/googletest/docs/Primer.md
+
+the test are in cmigrator/test
+
+run make to build the tests
+
+all the tests can be run with: ./runTests
+
+each test can be run individually, e.g.: ./attribute_unittest
+
 
 
 

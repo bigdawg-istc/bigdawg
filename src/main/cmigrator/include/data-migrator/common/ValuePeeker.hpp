@@ -11,8 +11,8 @@
 namespace voltdb {
     class ValuePeeker {
     public:
-	inline int getInteger(const NValue) const { throw DataMigratorNotImplementedException(); }
-	inline std::string getString(const NValue&) const { throw DataMigratorNotImplementedException(); }
+	static inline int getInteger(const NValue) { throw DataMigratorNotImplementedException(); }
+	static inline std::string getString(const NValue&) { throw DataMigratorNotImplementedException(); }
     };
 }
 

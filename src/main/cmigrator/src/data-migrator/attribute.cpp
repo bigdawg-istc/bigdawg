@@ -4,7 +4,7 @@
 
   The generic handle for numbers can be found in: attribute.h
 */
-
+#include <cstring>
 #include "attribute.h"
 #include "ValuePeeker.hpp"
 
@@ -127,7 +127,7 @@ int GenericAttribute<char*>::postgresReadBinaryBuffer(Buffer * buffer) {
 int GenericAttribute<char*>::readSstore(const voltdb::NValue& nvalue) {
 	this->isNull = nvalue.isNull();
 	if(this->isNull) return 0;
-	std::string value = ValuePeeker.getString();
+	std::string value = voltdb::ValuePeeker::getString(nvalue);
 	this->bytesNumber = static_cast<uint32_t>(value.length())+1;
 	this->value = new char[this->bytesNumber];
 	strncpy(this->value,value.c_str(),value.length());

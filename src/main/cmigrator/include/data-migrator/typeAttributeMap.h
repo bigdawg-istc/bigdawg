@@ -6,6 +6,7 @@
 #include <memory>
 #include <string>
 
+#include "utils.h"
 #include "attribute.h"
 #include "boost/smart_ptr/shared_ptr.hpp"
 #include "boost/smart_ptr/make_shared.hpp"

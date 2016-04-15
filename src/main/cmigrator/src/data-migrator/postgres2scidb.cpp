@@ -5,7 +5,7 @@
 #define BUFFER_SIZE 65536
 //#define BUFFER_SIZE 104857600
 
-int Postgres2Scidb::postgres2scidb(FILE* inFile, std::vector<std::shared_ptr<Attribute> > &attributes, FILE* outFile) {
+int Postgres2Scidb::postgres2scidb(FILE* inFile, std::vector<boost::shared_ptr<Attribute> > &attributes, FILE* outFile) {
     //Postgres::skipHeader(inFile);
     Postgres::readHeader(inFile);
     Buffer buffer;
@@ -14,7 +14,7 @@ int Postgres2Scidb::postgres2scidb(FILE* inFile, std::vector<std::shared_ptr<Att
     //while (Postgres::readColNumberBuffer(&buffer) != -1) {
     while (Postgres::readColNumber(inFile) != -1) {
         // process each column in a line
-        for (std::vector<std::shared_ptr<Attribute> >::iterator it=attributes.begin(); it != attributes.end(); ++it) {
+        for (std::vector<boost::shared_ptr<Attribute> >::iterator it=attributes.begin(); it != attributes.end(); ++it) {
             //(*it)->postgresReadBinaryBuffer(&buffer);
 	    (*it)->postgresReadBinary(inFile);
             (*it)->scidbWriteBinary(outFile);

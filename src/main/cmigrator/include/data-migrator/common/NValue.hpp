@@ -12,6 +12,7 @@ namespace voltdb {
     public:
 	inline int getInteger() const { throw DataMigratorNotImplementedException(); }
 	inline bool isNull() const { throw DataMigratorNotImplementedException(); }
+	inline bool isTrue() const { throw DataMigratorNotImplementedException(); }
     };
 }
 

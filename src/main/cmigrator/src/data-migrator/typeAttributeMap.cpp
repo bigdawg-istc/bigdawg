@@ -1,50 +1,49 @@
 #include "typeAttributeMap.h"
 #include "dataMigratorExceptions.h"
 #include <utility>
-#include "utils.h"
 #include "common/debuglog.h"
 
 TypeAttributeMap::TypeAttributeMap() {
     std::string nullString = " null";
 
-//    typeAttributeMap.insert(std::make_pair("bool",boost::make_shared<GenericAttribute<bool> >(false)));
-//    typeAttributeMap.insert(std::make_pair("bool"+nullString,boost::make_shared<GenericAttribute<bool> >(true)));
-//
-//    typeAttributeMap.insert(std::make_pair("int16",boost::make_shared<GenericAttribute<int16_t> >(false)));
-//    typeAttributeMap.insert(std::make_pair("int16"+nullString,boost::make_shared<GenericAttribute<int16_t> >(true)));
-//
-//    typeAttributeMap.insert(std::make_pair("int16_t",boost::make_shared<GenericAttribute<int16_t> >(false)));
-//    typeAttributeMap.insert(std::make_pair("int16_t"+nullString,boost::make_shared<GenericAttribute<int16_t> >(true)));
-//
-//    typeAttributeMap.insert(std::make_pair("int32_t",boost::make_shared<GenericAttribute<int32_t> >(false)));
-//    typeAttributeMap.insert(std::make_pair("int32_t"+nullString,boost::make_shared<GenericAttribute<int32_t> >(true)));
-//
-//    typeAttributeMap.insert(std::make_pair("int32",boost::make_shared<GenericAttribute<int32_t> >(false)));
-//    typeAttributeMap.insert(std::make_pair("int32"+nullString,boost::make_shared<GenericAttribute<int32_t> >(true)));
+   typeAttributeMap.insert(std::make_pair("bool",boost::make_shared<GenericAttribute<bool> >(false)));
+   typeAttributeMap.insert(std::make_pair("bool"+nullString,boost::make_shared<GenericAttribute<bool> >(true)));
 
-    typeAttributeMap.insert(std::make_pair("int",boost::make_shared<GenericAttribute<int32_t> >(false)));
-    typeAttributeMap.insert(std::make_pair("int"+nullString,boost::make_shared<GenericAttribute<int32_t> >(true)));
+   typeAttributeMap.insert(std::make_pair("int16",boost::make_shared<GenericAttribute<int16_t> >(false)));
+   typeAttributeMap.insert(std::make_pair("int16"+nullString,boost::make_shared<GenericAttribute<int16_t> >(true)));
 
-    typeAttributeMap.insert(std::make_pair("integer",boost::make_shared<GenericAttribute<int32_t> >(false)));
-    typeAttributeMap.insert(std::make_pair("integer"+nullString,boost::make_shared<GenericAttribute<int32_t> >(true)));
+   typeAttributeMap.insert(std::make_pair("int16_t",boost::make_shared<GenericAttribute<int16_t> >(false)));
+   typeAttributeMap.insert(std::make_pair("int16_t"+nullString,boost::make_shared<GenericAttribute<int16_t> >(true)));
 
-//    typeAttributeMap.insert(std::make_pair("int64_t",boost::make_shared<GenericAttribute<int64_t> >(false)));
-//    typeAttributeMap.insert(std::make_pair("int64_t"+nullString,boost::make_shared<GenericAttribute<int64_t> >(true)));
-//
-//    typeAttributeMap.insert(std::make_pair("int64",boost::make_shared<GenericAttribute<int64_t> >(false)));
-//    typeAttributeMap.insert(std::make_pair("int64"+nullString,boost::make_shared<GenericAttribute<int64_t> >(true)));
-//
-//    typeAttributeMap.insert(std::make_pair("double",boost::make_shared<GenericAttribute<double> >(false)));
-//    typeAttributeMap.insert(std::make_pair("double"+nullString,boost::make_shared<GenericAttribute<double> >(true)));
-//
-//    typeAttributeMap.insert(std::make_pair("float",boost::make_shared<GenericAttribute<float> >(false)));
-//    typeAttributeMap.insert(std::make_pair("float"+nullString,boost::make_shared<GenericAttribute<float> >(true)));
-//
-//    typeAttributeMap.insert(std::make_pair("string",boost::make_shared<GenericAttribute<char*> >(false)));
-//    typeAttributeMap.insert(std::make_pair("string"+nullString,boost::make_shared<GenericAttribute<char*> >(true)));
+   typeAttributeMap.insert(std::make_pair("int32_t",boost::make_shared<GenericAttribute<int32_t> >(false)));
+   typeAttributeMap.insert(std::make_pair("int32_t"+nullString,boost::make_shared<GenericAttribute<int32_t> >(true)));
 
-    typeAttributeMap.insert(std::make_pair("varchar",boost::make_shared<GenericAttribute<char*> >(false)));
-    typeAttributeMap.insert(std::make_pair("varchar"+nullString,boost::make_shared<GenericAttribute<char*> >(true)));
+   typeAttributeMap.insert(std::make_pair("int32",boost::make_shared<GenericAttribute<int32_t> >(false)));
+   typeAttributeMap.insert(std::make_pair("int32"+nullString,boost::make_shared<GenericAttribute<int32_t> >(true)));
+
+   typeAttributeMap.insert(std::make_pair("int",boost::make_shared<GenericAttribute<int32_t> >(false)));
+   typeAttributeMap.insert(std::make_pair("int"+nullString,boost::make_shared<GenericAttribute<int32_t> >(true)));
+   
+   typeAttributeMap.insert(std::make_pair("integer",boost::make_shared<GenericAttribute<int32_t> >(false)));
+   typeAttributeMap.insert(std::make_pair("integer"+nullString,boost::make_shared<GenericAttribute<int32_t> >(true)));
+
+   typeAttributeMap.insert(std::make_pair("int64_t",boost::make_shared<GenericAttribute<int64_t> >(false)));
+   typeAttributeMap.insert(std::make_pair("int64_t"+nullString,boost::make_shared<GenericAttribute<int64_t> >(true)));
+
+   typeAttributeMap.insert(std::make_pair("int64",boost::make_shared<GenericAttribute<int64_t> >(false)));
+   typeAttributeMap.insert(std::make_pair("int64"+nullString,boost::make_shared<GenericAttribute<int64_t> >(true)));
+
+   typeAttributeMap.insert(std::make_pair("double",boost::make_shared<GenericAttribute<double> >(false)));
+   typeAttributeMap.insert(std::make_pair("double"+nullString,boost::make_shared<GenericAttribute<double> >(true)));
+
+   typeAttributeMap.insert(std::make_pair("float",boost::make_shared<GenericAttribute<float> >(false)));
+   typeAttributeMap.insert(std::make_pair("float"+nullString,boost::make_shared<GenericAttribute<float> >(true)));
+
+   typeAttributeMap.insert(std::make_pair("string",boost::make_shared<GenericAttribute<char*> >(false)));
+   typeAttributeMap.insert(std::make_pair("string"+nullString,boost::make_shared<GenericAttribute<char*> >(true)));
+
+   typeAttributeMap.insert(std::make_pair("varchar",boost::make_shared<GenericAttribute<char*> >(false)));
+   typeAttributeMap.insert(std::make_pair("varchar"+nullString,boost::make_shared<GenericAttribute<char*> >(true)));
 }
 
 TypeAttributeMap::~TypeAttributeMap() {
@@ -71,9 +70,9 @@ void TypeAttributeMap::getAttributesFromTypesVector(std::vector<boost::shared_pt
 void TypeAttributeMap::getAttributesFromTypes(std::vector<boost::shared_ptr<Attribute> > & attributes, const char *types) {
     //std::cout << "getAttributesFromTypes in typeAttributeMap.ccp" << std::endl;
     const std::string typesString(types);
-	VOLT_INFO("type string in TypeAttributeMap::getAttributesFromTypes: %s!END!\n",typesString.c_str());
+    VOLT_INFO("type string in TypeAttributeMap::getAttributesFromTypes: %s!END!\n",typesString.c_str());
     //std::cout << "typesString in typeAttributeMap.cpp: " << typesString << std::endl;
-    const std::vector<std::string> typesDivided = split(typesString,',');
+    const std::vector<std::string> typesDivided = splitString(typesString,',');
     //boost::split(typesDivided,typesString,boost::is_any_of(","));
     //std::cout << "typesDivided vector: ";
     for (std::vector<std::string>::const_iterator it = typesDivided.begin(); it != typesDivided.end(); ++it) {
