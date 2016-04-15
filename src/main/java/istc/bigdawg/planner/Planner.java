@@ -19,7 +19,7 @@ import istc.bigdawg.postgresql.PostgreSQLHandler.QueryResult;
 
 public class Planner {
 
-	private static final double SIGNATURE_DISTANCE = 0;
+	private static final double SIGNATURE_DISTANCE = .1;
 
 	private static Logger logger = Logger.getLogger(Planner.class.getName());
 //	private static Integer maxSerial = 0;
