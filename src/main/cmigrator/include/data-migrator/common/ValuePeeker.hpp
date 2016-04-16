@@ -11,7 +11,11 @@
 namespace voltdb {
     class ValuePeeker {
     public:
-	static inline int getInteger(const NValue) { throw DataMigratorNotImplementedException(); }
+	static inline int peekTinyInt(const NValue) { throw DataMigratorNotImplementedException(); }
+	static inline int peekSmallInt(const NValue) { throw DataMigratorNotImplementedException(); }
+	static inline int peekInteger(const NValue) { throw DataMigratorNotImplementedException(); }
+	static inline int peekBigInt(const NValue) { throw DataMigratorNotImplementedException(); }
+	static inline int peekDouble(const NValue) { throw DataMigratorNotImplementedException(); }
 	static inline std::string getString(const NValue&) { throw DataMigratorNotImplementedException(); }
     };
 }

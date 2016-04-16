@@ -17,7 +17,9 @@
 #include <fstream>
 #include "endianness.h"
 #include "buffer.h"
+#include "dataMigratorExceptions.h"
 #include "common/NValue.hpp"
+#include "common/ValuePeeker.hpp"
 
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
@@ -44,7 +46,6 @@ class Attribute {
 
   public:
     virtual Attribute* clone() const = 0;
-    virtual char type() = 0;
     virtual ~Attribute() = 0;
 
     void setIsNullable(bool isNullable) {
@@ -93,9 +94,6 @@ class GenericAttribute : public Attribute {
     GenericAttribute<T>* clone() const {
         return new GenericAttribute<T>(*this);
     }
-    char type() {
-        return 1;
-    }
     void setValue(T value) {
         this->value=value;
     }
@@ -124,9 +122,6 @@ class GenericAttribute<char*> : public Attribute {
     GenericAttribute<char*>* clone() const {
         return new GenericAttribute<char*>(*this);
     }
-    char type() {
-        return 2;
-    }
     void setValue(char* value) {
         this->value=value;
     }
@@ -153,9 +148,6 @@ class GenericAttribute<bool> : public Attribute {
     ~GenericAttribute();
     GenericAttribute<bool>* clone() const {
         return new GenericAttribute<bool>(*this);
-    }
-    char type() {
-        return 3;
     }
     void setValue(bool value) {
         this->value=value;
@@ -245,14 +237,6 @@ int GenericAttribute<T>::writeCsv(std::ofstream & ofile) {
 }
 
 template <class T>
-int GenericAttribute<T>::readSstore(const voltdb::NValue& nvalue) {
-	this->isNull = nvalue.isNull();
-	if (this->isNull) return 0;
-	this->value = nvalue.getInteger();
-    return 0;
-}
-
-template <class T>
 int GenericAttribute<T>::scidbWriteBinary(FILE *fp) {
     if(this->isNullable) {
         if(this->isNull) {
@@ -313,6 +297,13 @@ int GenericAttribute<T>::postgresReadBinaryBuffer(Buffer * buffer) {
     //std::cout << "value read: " << value << std::endl;
     return 0; // success
 }
+
+template<> int GenericAttribute<int8_t>::readSstore(const voltdb::NValue& nvalue);
+template<> int GenericAttribute<int16_t>::readSstore(const voltdb::NValue& nvalue);
+template<> int GenericAttribute<int32_t>::readSstore(const voltdb::NValue& nvalue);
+template<> int GenericAttribute<int64_t>::readSstore(const voltdb::NValue& nvalue);
+template<> int GenericAttribute<float>::readSstore(const voltdb::NValue& nvalue);
+template<> int GenericAttribute<double>::readSstore(const voltdb::NValue& nvalue);
 
 #endif // ATTRIBUTE_H
 

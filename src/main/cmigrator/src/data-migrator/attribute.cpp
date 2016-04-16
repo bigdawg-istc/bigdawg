@@ -6,7 +6,6 @@
 */
 #include <cstring>
 #include "attribute.h"
-#include "ValuePeeker.hpp"
 
 //#include <boost/log/trivial.hpp>
 
@@ -122,17 +121,6 @@ int GenericAttribute<char*>::postgresReadBinaryBuffer(Buffer * buffer) {
 // //std::cout << "value read: " << value << std::endl;
 //     return 0; // success
     exit(1);
-}
-
-int GenericAttribute<char*>::readSstore(const voltdb::NValue& nvalue) {
-	this->isNull = nvalue.isNull();
-	if(this->isNull) return 0;
-	std::string value = voltdb::ValuePeeker::getString(nvalue);
-	this->bytesNumber = static_cast<uint32_t>(value.length())+1;
-	this->value = new char[this->bytesNumber];
-	strncpy(this->value,value.c_str(),value.length());
-	this->value[value.length()]='\0'; // add null at the end of the string
-    return 0;
 }
 
 int GenericAttribute<char*>::scidbReadBinary(FILE *fp) {
@@ -370,6 +358,7 @@ int GenericAttribute<bool>::postgresWriteBinary(FILE *fp) {
     return 0;
 }
 
+/* S-store readings */
 int GenericAttribute<bool>::readSstore(const voltdb::NValue& nvalue) {
 	this->isNull = nvalue.isNull();
 	if(this->isNull) return 0;
@@ -380,4 +369,61 @@ int GenericAttribute<bool>::readSstore(const voltdb::NValue& nvalue) {
 		this->value = false;
 	}
     return 0;
+}
+
+int GenericAttribute<char*>::readSstore(const voltdb::NValue& nvalue) {
+	this->isNull = nvalue.isNull();
+	if(this->isNull) return 0;
+	std::string value = voltdb::ValuePeeker::getString(nvalue);
+	this->bytesNumber = static_cast<uint32_t>(value.length())+1;
+	this->value = new char[this->bytesNumber];
+	strncpy(this->value,value.c_str(),value.length());
+	this->value[value.length()]='\0'; // add null at the end of the string
+    return 0;
+}
+
+/* specialization of int8_t for reading data from sstore internals */
+template<>
+int GenericAttribute<int8_t>::readSstore(const voltdb::NValue& nvalue) {
+	this->isNull = nvalue.isNull();
+	if (this->isNull) return 0;
+	this->value = voltdb::ValuePeeker::peekTinyInt(nvalue);
+	return 0;
+}
+
+template<>
+int GenericAttribute<int16_t>::readSstore(const voltdb::NValue& nvalue) {
+	this->isNull = nvalue.isNull();
+	if (this->isNull) return 0;
+	this->value = voltdb::ValuePeeker::peekSmallInt(nvalue);
+   return 0;
+}
+
+template<>
+int GenericAttribute<int32_t>::readSstore(const voltdb::NValue& nvalue) {
+	this->isNull = nvalue.isNull();
+	if (this->isNull) return 0;
+	this->value = voltdb::ValuePeeker::peekInteger(nvalue);
+   return 0;
+}
+
+template<>
+int GenericAttribute<int64_t>::readSstore(const voltdb::NValue& nvalue) {
+	this->isNull = nvalue.isNull();
+	if (this->isNull) return 0;
+	this->value = voltdb::ValuePeeker::peekBigInt(nvalue);
+   return 0;
+}
+
+template<>
+int GenericAttribute<float>::readSstore(const voltdb::NValue& nvalue) {
+    throw DataMigratorTypeNotSupported("S-Store does not support the float data type!");
+}
+
+template<>
+int GenericAttribute<double>::readSstore(const voltdb::NValue& nvalue) {
+	this->isNull = nvalue.isNull();
+	if (this->isNull) return 0;
+	this->value = voltdb::ValuePeeker::peekDouble(nvalue);
+   return 0;
 }

@@ -25,12 +25,26 @@ class DataMigratorException : public std::exception {
 /**
  * The data migrator in binary format is highly dependent on what data types are supported.
  * If a given data type is not supported by the data migrator, then throw the exception.
+ * This type is not supported at all (for all databases).
  */
 class TypeAttributeMapException : public DataMigratorException {
   public:
     TypeAttributeMapException(const char* m) : DataMigratorException(m) {}
     TypeAttributeMapException(std::string & m) : DataMigratorException(m) {}
     ~TypeAttributeMapException() throw() {}
+    const char* what() const throw() {
+        return msg.c_str();
+    }
+};
+
+/**
+ * This type is not supported for a database.  
+ */
+class DataMigratorTypeNotSupported : public DataMigratorException {
+  public:
+    DataMigratorTypeNotSupported(const char* m) : DataMigratorException(m) {}
+    DataMigratorTypeNotSupported(std::string & m) : DataMigratorException(m) {}
+    ~DataMigratorTypeNotSupported() throw() {}
     const char* what() const throw() {
         return msg.c_str();
     }
