@@ -4,21 +4,23 @@ project(data-migrator)
 set(CMAKE_BUILD_TYPE Release)
 
 #SET(CMAKE_CXX_COMPILER "g++")
-set(CMAKE_CXX_FLAGS " -g -Wall -std=c++11")
+# another possible parameter: -std=c++11
+set(CMAKE_CXX_FLAGS " -Wall -Wextra -Woverloaded-virtual -Wconversion -Wpointer-arith -Wcast-qual -Wcast-align -Wwrite-strings -Winit-self -Wno-sign-compare -Wno-unused-parameter -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -DNOCLOCK -fno-omit-frame-pointer -fvisibility=hidden -DBOOST_SP_DISABLE_THREADS -Wno-ignored-qualifiers -fno-strict-aliasing -Wno-return-type")
 
 #Bring the headers, such as Student.h into the project
 #include_directories(include/attribute)
-file(GLOB HEADERS "include/*.h")
+file(GLOB HEADERS "include/data-migrator/*.h")
 MESSAGE( STATUS "HEADERS:         " ${HEADERS} )
 #include_directories(include)
-include_directories(include)
+include_directories(include/data-migrator)
+include_directories(include/data-migrator/common)
  
 #Can manually add the sources using the set command as follows:
 #set(SOURCES src/mainapp.cpp src/Student.cpp)
  
 #However, the file(GLOB...) allows for wildcard additions:
 #file(GLOB SOURCES "src/attribute/*.cpp")
-file(GLOB SOURCES "src/*.cpp")
+file(GLOB SOURCES "src/data-migrator/*.cpp")
 
 # create the main executable 
 add_executable(data-migrator-exe ${SOURCES})
@@ -42,10 +44,10 @@ install(TARGETS data-migrator
         RUNTIME DESTINATION bin
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib/static
-	PUBLIC_HEADER DESTINATION include)
+	PUBLIC_HEADER DESTINATION include/data-migrator)
 
 INSTALL(FILES ${HEADERS}
-        DESTINATION include)
+        DESTINATION include/data-migrator)
 
 # install(TARGETS data-migrator
 #         RUNTIME DESTINATION /usr/bin
@@ -78,3 +80,7 @@ endif()
 if(CMAKE_THREAD_LIBS_INIT)
   target_link_libraries(data-migrator "${CMAKE_THREAD_LIBS_INIT}")
 endif()
+
+# tests
+option(build_tests "Build all of gtest's own tests." OFF)
+
