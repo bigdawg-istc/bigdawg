@@ -1,5 +1,6 @@
 package istc.bigdawg.packages;
 
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -283,12 +284,25 @@ public class CrossIslandQueryNode {
 		return predicates;
 	}
 
-	private static Set<String> splitPredicates(String predicates){
+	private Set<String> splitPredicates(String predicates){
 		Set<String> results = new HashSet<>();
 		Pattern predicatePattern = Pattern.compile("(?<=\\()([^\\(^\\)]+)(?=\\))");
+
+		String joinDelim = "";
+		if (scope.equals(Scope.RELATIONAL)){
+			joinDelim = "=";
+		} else if (scope.equals(Scope.ARRAY)){
+			// TODO ensure this is correct for SciDB
+			joinDelim = ",";
+		}
+
 		Matcher m = predicatePattern.matcher(predicates);
 		while (m.find()){
-			results.add(m.group().replace(" ", ""));
+			String current = m.group().replace(" ", "");
+			String[] filters = current.split(joinDelim);
+			Arrays.sort(filters);
+			String result = String.join(joinDelim, filters);
+			results.add(result);
 		}
 		return results;
 	}
