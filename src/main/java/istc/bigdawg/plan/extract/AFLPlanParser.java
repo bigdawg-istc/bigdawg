@@ -3,6 +3,7 @@ package istc.bigdawg.plan.extract;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Stack;
@@ -39,7 +40,8 @@ public class AFLPlanParser {
 
 	static Pattern lInstance = Pattern.compile("^>+\\[lInstance\\] ");
 	static Pattern lOperator = Pattern.compile("^>+\\[lOperator\\] ");
-	static Pattern lFields = Pattern.compile(" *\\[\\w+\\] ");
+	static Pattern lFields = Pattern.compile(" *([\\w]+:)? *\\[\\w+\\] ");
+	static Pattern lAliasStandAlone = Pattern.compile("(?<=(^\\s*alias ))\\w+");
 	static Pattern lSchema = Pattern.compile("^>+schema: ");
 	static Pattern lSchemaName = Pattern.compile("^[\\w@]+");
 	
@@ -67,6 +69,9 @@ public class AFLPlanParser {
 	 * @throws Exception
 	 */
 	public AFLPlanNode parseString(String query) throws Exception {
+		
+		System.out.printf("afl parser query: %s\n\n\n", query);
+		
 		
 		Stack<AFLPlanNode> nodes = new Stack<>();
 		Stack<AFLPlanAttribute> priorAttributes = new Stack<>();
@@ -121,7 +126,7 @@ public class AFLPlanParser {
 			mField = lFields.matcher(line);
 			if (mField.find()) {
 				
-				temp = line.substring(mField.start(),mField.end());
+				temp = line.substring(mField.start(),mField.end()).replaceAll("\\w+:", "");
 				
 				int indent = temp.indexOf(temp.trim());
 				temp = temp.trim();
@@ -138,6 +143,27 @@ public class AFLPlanParser {
 				continue;
 			}
 			
+			mField = lAliasStandAlone.matcher(line);
+			if (mField.find()) {
+				
+				temp = line.substring(mField.start(),mField.end());
+				currentNode.attributes.get(currentNode.attributes.size()-1).properties.add(temp);
+//				System.out.printf("^^^^^^^^^^^^^^^^^^^^^^^^^ found; [%s]\nprior attributes: %s\n\n\n", temp,  currentNode.attributes);
+				
+//				int indent = temp.indexOf(temp.trim());
+//				temp = temp.trim();
+//				temp = temp.substring(1,temp.length()-1);
+//				
+//				
+//				AFLPlanAttribute pa = new AFLPlanAttribute();
+//				pa.name = temp;
+//				pa.indent = indent;
+//				pa.properties.addAll(Arrays.asList(line.substring(mField.end()).split(" ")));
+//				
+//				addAttribute(priorAttributes, currentNode, pa);
+				
+				continue;
+			}
 			
 			// finished off by "^>+schema: ", which has "(?>\\<)[\\w@]+" or just "(?>\\<)[\\w]+" as the name
 			// its dimensions are dimension name concatenated with array name, like "ipoe_med"
@@ -229,8 +255,15 @@ public class AFLPlanParser {
 		
 		case "project":
 		case "scan":
+		case "redimension":
 			nodeType = "Seq Scan";
-			parameters.put("Relation-Name", node.schemaAlias.iterator().next().split("@")[0]);
+			Iterator<String> it = node.schemaAlias.iterator();
+			String name = it.next();
+			if (it.hasNext()) name = it.next();
+			
+			parameters.put("Relation-Name", name.split("@")[0]);
+			parameters.put("Alias", node.schemaAlias.iterator().next().split("@")[0]);
+			
 			break;
 		case "filter":
 			nodeType = "Seq Scan";
@@ -241,19 +274,18 @@ public class AFLPlanParser {
 				AFLPlanAttribute outExpr = filterAttributes.get(k);
 				
 				if (outExpr.name.equals("paramLogicalExpression")) 
-					parameters.put("Filter", getFilterExpression(outExpr.subAttributes.get(0)));
+					parameters.put("Filter", getLogicalExpression(outExpr.subAttributes.get(0)));
 			}
 			
 			break;
 		case "cross_join":
 			nodeType = "Cross Join";
 
-			
 			List<AFLPlanAttribute> joinAttributes = node.attributes;
 			StringBuilder joinFilterSB = new StringBuilder();
 			boolean started = false;
 			boolean left = true;
-			
+			int pos = 1;
 			
 			for(int k = 0; k < joinAttributes.size(); ++k) {
 				
@@ -262,7 +294,10 @@ public class AFLPlanParser {
 				
 				if (outExpr.name.equals("paramDimensionReference")) { //Join-Filter
 					
-					if (started) joinFilterSB.append(' ');
+					if (started) {
+						if (pos % 2 == 1) joinFilterSB.append(" = ");
+						else joinFilterSB.append(" AND ");
+					}
 					else started = true;
 					
 					if (left) joinFilterSB.append(node.children.get(0).schema.getAlias()).append('.');
@@ -273,8 +308,6 @@ public class AFLPlanParser {
 					
 				}
 			}
-			
-			
 			parameters.put("Join-Predicate", joinFilterSB.toString());
 			parameters.put("Children-Aliases", node.children.get(0).schema.getAlias()+" "+node.children.get(1).schema.getAlias());
 			
@@ -294,11 +327,74 @@ public class AFLPlanParser {
 			break;
 		case "aggregate":
 			nodeType = "Aggregate";
+			
+			List<AFLPlanAttribute> aggAttributes = node.attributes;
+			
+//			System.out.printf("afl parser, agg, outExpr prop: %s\n", node);
+			
+			Stack<StringBuilder> stk = new Stack<>();
+			List<String> aggFuns = new ArrayList<>();
+//			List<String> aggregateDimensions = new ArrayList<>();
+			
+			for (int k = 0; k < aggAttributes.size(); ++k) {
+				AFLPlanAttribute outExpr = aggAttributes.get(k);
+				if (outExpr.name.equals("opParamPlaceholder")) continue;
+				
+				if (outExpr.name.equals("paramAggregateCall")) {
+					if (!stk.isEmpty()) {
+						aggFuns.add(stk.pop().toString());
+					}
+					stk.push(new StringBuilder(outExpr.properties.get(0) + "("));
+					
+					for (AFLPlanAttribute a : outExpr.subAttributes) {
+						if (stk.peek().charAt(stk.peek().length()-1) != '(') stk.peek().append(", ");
+						stk.peek().append(a.properties.get(1));
+					}
+					
+					if (outExpr.properties.size() > 1) stk.peek().append(')').append(" AS ").append(outExpr.properties.get(1));
+					else stk.peek().append(')');
+//				} else  {
+//					aggregateDimensions.add(outExpr.properties.get(1));
+				} else if (!outExpr.name.equals("paramDimensionReference")) {
+					System.out.printf("unhandled expression from aggregate parsing: %s", outExpr);
+				}
+			}
+			if (!stk.isEmpty()) {
+				aggFuns.add( stk.pop().toString());
+			}
+			
+			parameters.put("Aggregate-Functions", String.join(", ", aggFuns));
+//			if (!aggregateDimensions.isEmpty()) parameters.put("Aggregate-Dimensions", String.join("|||", aggregateDimensions));
 			break;
 		case "window":
 			nodeType = "WindowAgg";
 			break;
-		case "redimension":
+		case "apply":
+			nodeType = "Seq Scan";
+			parameters.put("Relation-Name", node.schemaAlias.iterator().next().split("@")[0]);
+			
+			List<AFLPlanAttribute> applyAttributes = node.attributes;
+			String mostRecentEntry = null;
+			List<String> resolvedEntries = new ArrayList<>();
+			for (int k = 0; k < applyAttributes.size(); ++k) {
+				AFLPlanAttribute outExpr = applyAttributes.get(k);
+				if (outExpr.name.equals("paramAttributeReference")) {
+					if (mostRecentEntry == null) mostRecentEntry = outExpr.properties.get(1);
+					else {
+						resolvedEntries.add(outExpr.properties.get(1)+" AS "+mostRecentEntry);
+						mostRecentEntry = null;
+					}
+				} else if (outExpr.name.equals("paramLogicalExpression")) {
+					resolvedEntries.add(getLogicalExpression(outExpr.subAttributes.get(0))+" @AS@ "+mostRecentEntry);
+					mostRecentEntry = null;
+				} else if (!outExpr.name.equals("opParamPlaceholder")) {
+					System.out.printf("----> Unhandled case in AFLPlanParser apply: %s\n", outExpr);
+				}
+					
+			}
+			
+			parameters.put("Apply-Attributes", String.join("@@@@", resolvedEntries));
+			break;
 		default:
 			throw new Exception("unsupported AFL function: "+node.name);
 		}
@@ -322,7 +418,7 @@ public class AFLPlanParser {
 	}
 	
 	
-	public String getFilterExpression(AFLPlanAttribute outExpr) throws Exception {
+	public String getLogicalExpression(AFLPlanAttribute outExpr) throws Exception {
 
 		if (outExpr.subAttributes.size() != 2)
 			throw new Exception("Unexpected subAttribute: "+outExpr.subAttributes);
@@ -331,21 +427,26 @@ public class AFLPlanParser {
 		AFLPlanAttribute a0 = outExpr.subAttributes.get(0);
 		AFLPlanAttribute a1 = outExpr.subAttributes.get(1);
 
-		String left;
-		String right;
+		String left = "";
+		String right = "";
 		String sign;
 
-		if (a0.name.equals("attributeReference") || a0.name.equals("constant")) 
-			left = a0.properties.get(a0.properties.size()-1);
-		else 
-			left = "("+ getFilterExpression(a0) + ")";
+		if (a0.name.equals("attributeReference") || a0.name.equals("constant")) {
+			if (a0.name.equals("attributeReference") && !a0.properties.get(1).isEmpty()) 
+				left = a0.properties.get(1)+".";
+			left = left + a0.properties.get(a0.properties.size()-1);
+		} else 
+			left = "("+ getLogicalExpression(a0) + ")";
 
 		sign = outExpr.properties.get(0);
 
-		if (a1.name.equals("attributeReference") || a1.name.equals("constant")) 
-			right = a1.properties.get(a1.properties.size()-1);
-		else 
-			right = "("+ getFilterExpression(a1) + ")";
+		if (a1.name.equals("attributeReference") || a1.name.equals("constant")) {
+			
+			if (a1.name.equals("attributeReference") && !a1.properties.get(1).isEmpty()) 
+				right = a1.properties.get(1)+".";
+			right = right + a1.properties.get(a1.properties.size()-1);
+		} else 
+			right = "("+ getLogicalExpression(a1) + ")";
 
 		return left + " " + sign + " " + right;
 	}

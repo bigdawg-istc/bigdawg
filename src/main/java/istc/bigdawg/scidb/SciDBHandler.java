@@ -264,7 +264,7 @@ public class SciDBHandler implements DBHandler {
 			IStatementWrapper stWrapper = st.unwrap(IStatementWrapper.class);
 			stWrapper.setAfl(true);
 			
-			ResultSet res = st.executeQuery("explain_logical('"+query+"', 'afl')");
+			ResultSet res = st.executeQuery("explain_logical('"+query.replace("'", "\\'")+"', 'afl')");
 			return res.getString("logical_plan");
 			
 			

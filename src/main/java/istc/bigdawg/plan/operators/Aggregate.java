@@ -7,6 +7,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.jcp.xml.dsig.internal.dom.Utils;
 
@@ -43,11 +45,11 @@ public class Aggregate extends Operator {
 	// create a list of aggregations to perform
 	
 	public enum AggregateType { MIN, MAX, COUNT, COUNT_DISTINCT, AVG, SUM, WIDTH_BUCKET, DATE_PART};
-	private List<SQLAttribute> groupBy;
-	private List<String> aggregateExpressions; // e.g., COUNT(SOMETHING)
-	private List<AggregateType>  aggregates; 
+//	private List<DataObjectAttribute> groupBy;
+//	private List<String> aggregateExpressions; // e.g., COUNT(SOMETHING)
+//	private List<AggregateType>  aggregates; 
 	private List<String> aggregateAliases; 
-	private List<Function> parsedAggregates;
+//	private List<Function> parsedAggregates;
 	private List<Expression> parsedGroupBys;
 	private String aggregateFilter = null; // HAVING clause
 	
@@ -68,12 +70,12 @@ public class Aggregate extends Operator {
 		blockerCount++;
 		this.blockerID = blockerCount;
 		
-		aggregates = new ArrayList<AggregateType>();
-		aggregateExpressions = new ArrayList<String>(); 
+//		aggregates = new ArrayList<AggregateType>();
+//		aggregateExpressions = new ArrayList<String>(); 
 		aggregateAliases = new ArrayList<String>(); 
-		groupBy = new ArrayList<SQLAttribute>();
+//		groupBy = new ArrayList<DataObjectAttribute>();
 	
-		parsedAggregates = new ArrayList<Function>();
+//		parsedAggregates = new ArrayList<Function>();
 		parsedGroupBys = new ArrayList<>();
 		aggregateFilter = parameters.get("Filter");
 		if(aggregateFilter != null) {
@@ -96,19 +98,19 @@ public class Aggregate extends Operator {
 			
 			outSchema.put(attrName, attr);
 			
-			// e.g., sum(y) / count(x)
-			if(out.hasAggregate()) {
-				List<Function> parsedAggregates = out.getAggregates();
-				
-				for(int j = 0; j < parsedAggregates.size(); ++j) {
-					processFunction(parsedAggregates.get(j), attrName);
-				}
-				
-			}
-			else {
-				groupBy.add(attr);
-				
-			}
+//			// e.g., sum(y) / count(x)
+//			if(out.hasAggregate()) {
+//				List<Function> parsedAggregates = out.getAggregates();
+//				
+//				for(int j = 0; j < parsedAggregates.size(); ++j) {
+//					processFunction(parsedAggregates.get(j), attrName);
+//				}
+//				
+//			}
+//			else {
+//				groupBy.add(attr);
+//				
+//			}
 			
 		}
 		
@@ -168,34 +170,34 @@ public class Aggregate extends Operator {
 		Aggregate a = (Aggregate) o;
 		
 		this.aggregateID = a.aggregateID;
-		this.groupBy = new ArrayList<SQLAttribute>();
-		this.aggregateExpressions = new ArrayList<String>(); // e.g., COUNT(SOMETHING)
-		this.aggregates = new ArrayList<AggregateType>(); 
+//		this.groupBy = new ArrayList<DataObjectAttribute>();
+//		this.aggregateExpressions = new ArrayList<String>(); // e.g., COUNT(SOMETHING)
+//		this.aggregates = new ArrayList<AggregateType>(); 
 		this.aggregateAliases = new ArrayList<String> (); 
-		this.parsedAggregates = new ArrayList<Function>();
+//		this.parsedAggregates = new ArrayList<Function>();
 		this.parsedGroupBys = new ArrayList<Expression>();
 		if (a.aggregateFilter != null)
 			this.aggregateFilter = new String (a.aggregateFilter); // HAVING clause
 		
-		for (SQLAttribute att : a.groupBy)
-			this.groupBy.add(new SQLAttribute(att));
-		for (String ae : a.aggregateExpressions)
-			this.aggregateExpressions.add(new String(ae));
-		for (AggregateType at : a.aggregates)
-			this.aggregates.add(at);
+//		for (DataObjectAttribute att : a.groupBy)
+//			this.groupBy.add(new DataObjectAttribute(att));
+//		for (String ae : a.aggregateExpressions)
+//			this.aggregateExpressions.add(new String(ae));
+//		for (AggregateType at : a.aggregates)
+//			this.aggregates.add(at);
 		for (String aa : a.aggregateAliases)
 			this.aggregateAliases.add(new String (aa));
-		for (Function pa : a.parsedAggregates) {
-			Function f = new Function();
-			f.setAllColumns(pa.isAllColumns());
-			f.setAttribute(new String(pa.getAttribute()));
-			f.setDistinct(pa.isDistinct());
-			f.setEscaped(pa.isEscaped());
-			f.setKeep(pa.getKeep());
-			f.setName(new String(pa.getName()));
-			f.setParameters(pa.getParameters());
-			this.parsedAggregates.add(f);
-		}
+//		for (Function pa : a.parsedAggregates) {
+//			Function f = new Function();
+//			f.setAllColumns(pa.isAllColumns());
+//			f.setAttribute(new String(pa.getAttribute()));
+//			f.setDistinct(pa.isDistinct());
+//			f.setEscaped(pa.isEscaped());
+//			f.setKeep(pa.getKeep());
+//			f.setName(new String(pa.getName()));
+//			f.setParameters(pa.getParameters());
+//			this.parsedAggregates.add(f);
+//		}
 		for (Expression e : a.parsedGroupBys)
 			this.parsedGroupBys.add(e);
 		
@@ -211,42 +213,47 @@ public class Aggregate extends Operator {
 		blockerCount++;
 		this.blockerID = blockerCount;
 		
-		aggregates = new ArrayList<AggregateType>();
-		aggregateExpressions = new ArrayList<String>(); 
-		aggregateAliases = new ArrayList<String>(); 
-		groupBy = new ArrayList<SQLAttribute>();
-	
-		parsedAggregates = new ArrayList<Function>();
-//		parsedGroupBys = supplement.getGroupBy();
+		List<String> aggregateExpressions = Arrays.asList(parameters.get("Aggregate-Functions").split(", ")); 
+		aggregateAliases = new ArrayList<String>();
+		parsedGroupBys = new ArrayList<>();
 		aggregateFilter = parameters.get("Filter");
-//		if(aggregateFilter != null) {
-//			aggregateFilter = Utils.parseIdFromSameDocumentURI(aggregateFilter); // HAVING clause
-//		}
+		
+		
+		Map<String, Expression> aggFuns = new HashMap<>();
+		for (String s : aggregateExpressions) {
+			String alias = null;
+			
+			Expression f = CCJSqlParserUtil.parseExpression(s);
+			
+			if (f instanceof Function) {
+				List<String> exprAndAlias = Arrays.asList(s.split(" AS "));
+				if (exprAndAlias.size() > 1) alias = exprAndAlias.get(1);
+				else alias = ((Function)f).getParameters().getExpressions().get(0).toString()+"_"+((Function)f).getName();
+				
+			} else if (f instanceof Column) {
+				alias = ((Column)f).getColumnName();
+				System.out.printf("----> f alias: %s\n", alias);
+			}
+			
+			aggFuns.put(alias, f);
+		}
 		
 		
 		// iterate over outschema and 
 		// classify each term as aggregate func or group by
 		for (String expr : output.getAttributes().keySet()) {
 			
-			CommonOutItem out = new CommonOutItem(expr, output.getAttributes().get(expr), true, null); // TODO CHECK THIS TODO
+//			System.out.printf("aggreagte output expression: %s, type: %s\n", expr, output.getAttributes().get(expr));
+			
+			CommonOutItem out = new CommonOutItem(expr, output.getAttributes().get(expr), false, null); // TODO CHECK THIS TODO
 			DataObjectAttribute attr = out.getAttribute();
+			
+			if (aggFuns.get(expr) != null) attr.setExpression(aggFuns.get(expr));
+			else attr.setExpression(expr);
+			
 			String attrName = attr.getName();
 			
 			outSchema.put(attrName, attr);
-			
-			
-			// e.g., sum(y) / count(x)
-//			if(out.hasAggregate()) {
-//				List<Function> parsedAggregates = out.getAggregates();
-//				for(int j = 0; j < parsedAggregates.size(); ++j) {
-//					processFunction(parsedAggregates.get(j), attrName);
-//				}
-//				
-//				
-//			}
-//			else {
-////				groupBy.add(attr);
-//			}
 			
 		}
 		
@@ -254,78 +261,89 @@ public class Aggregate extends Operator {
 		for (String expr : output.getDimensions().keySet()) {
 			
 			CommonOutItem out = new CommonOutItem(expr, "Dimension", true, null);
-			DataObjectAttribute attr = out.getAttribute();
-			String attrName = attr.getFullyQualifiedName();		
-			outSchema.put(attrName, attr);
+			DataObjectAttribute dim = out.getAttribute();
+			
+			Column e = (Column) CCJSqlParserUtil.parseExpression(expr);
+			String arrayName = output.getDimensionMembership().get(expr);
+			if (arrayName != null) {
+				e.setTable(new Table(Arrays.asList(arrayName.split(", ")).get(0)));
+			}
+			
+			parsedGroupBys.add(e);
+			dim.setExpression(e);
+			
+			String dimName = dim.getFullyQualifiedName();		
+			outSchema.put(dimName, dim);
 				
 		}
 		
+		System.out.printf("parsedGroupBys in Aggregate: %s\n", parsedGroupBys);
 
 	}
 	
 	
-	void processFunction(Function f, String alias) throws Exception  {
-		switch(f.getName()) {
-			case "min":
-				aggregates.add(AggregateType.MIN);
-				break;
-			case "max":
-				aggregates.add(AggregateType.MAX);
-				break;
-			case "avg":
-				aggregates.add(AggregateType.AVG);
-				break;
-			case "sum":
-				aggregates.add(AggregateType.SUM);
-				break;
-			case "count":
-				if(f.isDistinct())  {
-						aggregates.add(AggregateType.COUNT_DISTINCT); }
-				else {
-					aggregates.add(AggregateType.COUNT); }
-				break;
-			case "width_bucket":
-				aggregates.add(AggregateType.WIDTH_BUCKET);
-				break;
-			case "date_part":
-				aggregates.add(AggregateType.DATE_PART);
-				break;
-			default:
-				throw new Exception("Unknown aggregate type " + f.getName());
-		}
-
-		if(f.getParameters() != null) {
-			String parameter = f.getParameters().toString();
-			aggregateExpressions.add(parameter);
-			parameter = SQLUtilities.removeOuterParens(parameter);
-			// check for secure coordination
-//			SQLAttribute attr = children.get(0).outSchema.get(parameter);
-			
-//			if(attr != null) {
-//				updateSecurityPolicy(attr);
-//			}
-		}
-		else {
-			aggregateExpressions.add("");
-		}
-		
-		aggregateAliases.add(alias);
-			
-	}
+//	void processFunction(Function f, String alias) throws Exception  {
+//		switch(f.getName()) {
+//			case "min":
+//				aggregates.add(AggregateType.MIN);
+//				break;
+//			case "max":
+//				aggregates.add(AggregateType.MAX);
+//				break;
+//			case "avg":
+//				aggregates.add(AggregateType.AVG);
+//				break;
+//			case "sum":
+//				aggregates.add(AggregateType.SUM);
+//				break;
+//			case "count":
+//				if(f.isDistinct())  {
+//						aggregates.add(AggregateType.COUNT_DISTINCT); }
+//				else {
+//					aggregates.add(AggregateType.COUNT); }
+//				break;
+//			case "width_bucket":
+//				aggregates.add(AggregateType.WIDTH_BUCKET);
+//				break;
+//			case "date_part":
+//				aggregates.add(AggregateType.DATE_PART);
+//				break;
+//			default:
+//				throw new Exception("Unknown aggregate type " + f.getName());
+//		}
+//
+//		if(f.getParameters() != null) {
+//			String parameter = f.getParameters().toString();
+//			aggregateExpressions.add(parameter);
+//			parameter = SQLUtilities.removeOuterParens(parameter);
+//			// check for secure coordination
+////			SQLAttribute attr = children.get(0).outSchema.get(parameter);
+//			
+////			if(attr != null) {
+////				updateSecurityPolicy(attr);
+////			}
+//		}
+//		else {
+//			aggregateExpressions.add("");
+//		}
+//		
+//		aggregateAliases.add(alias);
+//			
+//	}
 	
 	public Aggregate() {
 		isBlocking = true;
 		
-		aggregates = new ArrayList<AggregateType>();
-		aggregateExpressions = new ArrayList<String>(); 
+//		aggregates = new ArrayList<AggregateType>();
+//		aggregateExpressions = new ArrayList<String>(); 
 		
 		
 	}
 
 	
 	public void addAggregate(AggregateType a, String aFilter) {
-		aggregates.add(a);
-		aggregateExpressions.add(aFilter);
+//		aggregates.add(a);
+//		aggregateExpressions.add(aFilter);
 	}
 	
 	public String getAggregateToken() {
@@ -347,28 +365,12 @@ public class Aggregate extends Operator {
 
 		Select originalDST = dstStatement;
 		
-//		String joinToken = null;
-//		Operator o = this.getChildren().get(0);
-//		while (!o.getChildren().isEmpty() && !(o instanceof Join)) o = o.getChildren().get(0);
-//		if (o instanceof Join && stopAtJoin != null && stopAtJoin == true) joinToken = ((Join)o).getJoinToken();
-//
-//		
-//		if (isPruned) {
-//			Table t = new Table();
-//			t.setName(this.getPruneToken());
-//			dstStatement = SelectUtils.buildSelectFromTable(t);
-//			
-//			return dstStatement;
-//		}
-		
 		
 		if (isSubTreeRoot || aggregateID == null) dstStatement = children.get(0).generateSQLStringDestOnly(dstStatement, false, stopAtJoin, allowedScans);
 		else dstStatement = children.get(0).generateSQLStringDestOnly(null, false, stopAtJoin, allowedScans);
 				
 		PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
 
-//		if (ps.getSelectItems().get(0) instanceof AllColumns)
-//			ps.getSelectItems().remove(0);
 		ps.getSelectItems().clear();
 		
 		for (String alias: outSchema.keySet()) {
@@ -386,13 +388,11 @@ public class Aggregate extends Operator {
 		
 		// check if pruneToken or join token needs to be implemented
 		
-		
 		List<Expression> updatedGroupBy = updateGroupByElements(stopAtJoin);
 		ps.setGroupByColumnReferences(updatedGroupBy);
 		
 		if (aggregateFilter != null) {
 			Expression e = CCJSqlParserUtil.parseCondExpression(aggregateFilter);
-//			if (joinToken != null) SQLExpressionUtils.renameAttributes(e, this.getDataObjectAliasesOrNames().keySet(), joinToken);
 			ps.setHaving(e);
 		}
 		
@@ -404,8 +404,6 @@ public class Aggregate extends Operator {
 			originalDST = SelectUtils.buildSelectFromTable(new Table()); // immediately replaced
 			((PlainSelect)originalDST.getSelectBody()).setFromItem(ss);
 			
-//			System.out.printf("\n\n\nAggregate:\n\nonce: %s\n\n\n", originalDST.toString());
-			
 			return originalDST;
 		}
 		
@@ -415,8 +413,6 @@ public class Aggregate extends Operator {
 		insert.setSimple(true);
 		
 		PlainSelect pselect = (PlainSelect)originalDST.getSelectBody();
-		
-//		System.out.printf("\n\n\nAggregate:\n\nbefore: %s\n\n", originalDST.toString());
 		
 		if (pselect.getJoins() != null) {
 			boolean isFound = false;
@@ -449,8 +445,6 @@ public class Aggregate extends Operator {
 			}
 		}
 		
-//		System.out.printf("after: %s\n\n\n", originalDST.toString());
-		
 		return originalDST;
 	}
 	
@@ -458,7 +452,6 @@ public class Aggregate extends Operator {
 		SubSelect ss = new SubSelect();
 		ss.setAlias(new Alias(this.getAggregateToken()));
 		ss.setSelectBody(dstStatement.getSelectBody());
-//		if (dstStatement.getWithItemsList() != null) ss.setWithItemsList(dstStatement.getWithItemsList());
 		return ss;
 	}
 	
@@ -495,8 +488,6 @@ public class Aggregate extends Operator {
 							found = true;
 							break;
 						}
-						
-						
 					} else {
 						nextGeneration.addAll(o.children);
 					}
@@ -507,13 +498,18 @@ public class Aggregate extends Operator {
 			
 			
 		}
+		if (ret.isEmpty()) {
+			for (Expression gb : parsedGroupBys) {
+				ret.add(CCJSqlParserUtil.parseExpression(gb.toString()));
+			}
+		}
 		return ret;
 	}
 	
-	@Override
-	public String toString() {
-		return "Aggregating on " + aggregateExpressions.toString() + " group by " + groupBy + " types " + aggregates.toString();
-	}
+//	@Override
+//	public String toString() {
+//		return "Aggregating on " + aggregateExpressions.toString() + " group by " + groupBy + " types " ;//+ aggregates.toString();
+//	}
 	
 	@Override
 	public String generateAFLString(int recursionLevel) throws Exception {
@@ -525,20 +521,18 @@ public class Aggregate extends Operator {
 		
 		// TODO make sure the GroupBy are marked as hidden, otherwise do a redimension
 		
-//		System.out.println("outSchema:: "+outSchema);
-//		System.out.println("AFL schema:: "+this.generateAFLCreateArrayStatementLocally("AAA"));
 		
-		for(int i = 0; i < aggregates.size(); ++i) {
-			sb.append(", ").append(aggregates.get(i)).append(aggregateExpressions.get(i));
-			if (aggregateAliases.get(i) != null)
-				sb.append(" AS ").append(aggregateAliases.get(i));
-			
+		for (String s : outSchema.keySet()) {
+			if (outSchema.get(s).isHidden()) continue;
+			sb.append(", ").append(outSchema.get(s).getExpressionString());
+			if (!outSchema.get(s).getName().contains("(")) sb.append(" AS ").append(outSchema.get(s).getName());
 		}
-		updateGroupByElements(false);
 		
-		if(groupBy.size() > 0) {
-			for(int i = 0; i < groupBy.size(); ++i) {
-				sb.append(", ").append(groupBy.get(i).getName());
+		List<Expression> updatedGroupBy = updateGroupByElements(false);
+		
+		if(updatedGroupBy.size() > 0) {
+			for(Expression e : updatedGroupBy) {
+				sb.append(", ").append(e);
 			}
 		}
 

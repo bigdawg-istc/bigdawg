@@ -1,6 +1,8 @@
 package istc.bigdawg.plan.operators;
 
 import java.sql.Connection;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -18,14 +20,13 @@ import istc.bigdawg.schema.SQLAttribute;
 import istc.bigdawg.utils.sqlutil.SQLExpressionUtils;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
+import net.sf.jsqlparser.schema.Column;
+import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.create.table.CreateTable;
 
 public class SeqScan extends Scan {
 
 	private static int defaultSchemaServerDBID = BigDawgConfigProperties.INSTANCE.getPostgresSchemaServerDBID();
-	
-	private String operatorName = null;
-	
 	
 	// this is another difference from regular sql processing where the inclination is to keep the rows whole until otherwise needed
 	public SeqScan (Map<String, String> parameters, List<String> output, Operator child, SQLTableExpression supplement) throws Exception  {
@@ -42,8 +43,6 @@ public class SeqScan extends Scan {
 		
 		int dbid;
 
-//		System.out.println(schemaAndName);
-		
 		if (super.srcTable.toLowerCase().startsWith("bigdawgtag_")) {
 			dbid = defaultSchemaServerDBID;
 		} else 
@@ -93,32 +92,26 @@ public class SeqScan extends Scan {
 		
 		operatorName = parameters.get("OperatorName");
 		
-		// match output to base relation
-
-//		String schemaAndName = parameters.get("Schema");
-//		if (schemaAndName == null || schemaAndName.equals("public")) schemaAndName = super.srcTable;
-//		else schemaAndName = schemaAndName + "." + super.srcTable;
-//		
-//		this.dataObjects.add(schemaAndName);
-//		
-//		int dbid = CatalogViewer.getDbsOfObject(schemaAndName).get(0); // TODO FIX THIS; MAKE SURE THE RIGHT DATABASE (SQL) IS REFERENCED
-//		
-//		
-//		
-//		Connection con = SciDBHandler.getConnection(((SciDBConnectionInfo)SciDBHandler.generateConnectionInfo(dbid)));
-//		
-//		CreateTable create = (CreateTable) CCJSqlParserUtil.parse(PostgreSQLHandler.getCreateTable(con, schemaAndName));
-//		DataObject baseTable = new DataObject(output); 
+		Map<String, String> applyAttributes = new HashMap<>();
+		if (parameters.get("Apply-Attributes") != null) {
+			List<String> applyAttributesList = Arrays.asList(parameters.get("Apply-Attributes").split("@@@@"));
+			for (String s : applyAttributesList) {
+				String[] sSplit = s.split(" @AS@ ");
+				applyAttributes.put(sSplit[1], sSplit[0]);
+			}
+		}
 		
 		// attributes
 		for (String expr : output.getAttributes().keySet()) {
 			
 			CommonOutItem out = new CommonOutItem(expr, output.getAttributes().get(expr), false, null);
 			
-			DataObjectAttribute sa =  out.getAttribute();
-			String alias = sa.getName();
+			DataObjectAttribute attr = out.getAttribute();
+			String alias = attr.getName();
+			if (!applyAttributes.isEmpty() && applyAttributes.get(expr) != null) attr.setExpression(applyAttributes.get(expr));
+			else attr.setExpression(expr);
 			
-			outSchema.put(alias, sa);
+			outSchema.put(alias, attr);
 			
 		}
 		
@@ -127,10 +120,17 @@ public class SeqScan extends Scan {
 			
 			CommonOutItem out = new CommonOutItem(expr, output.getDimensions().get(expr), true, null);
 			
-			DataObjectAttribute attr = out.getAttribute();
-			String attrName = attr.getFullyQualifiedName();		
+			DataObjectAttribute dim = out.getAttribute();
+			String attrName = dim.getFullyQualifiedName();		
 			
-			outSchema.put(attrName, attr);
+
+			Column e = (Column) CCJSqlParserUtil.parseExpression(expr);
+			String arrayName = output.getDimensionMembership().get(expr);
+			if (arrayName != null) {
+				e.setTable(new Table(Arrays.asList(arrayName.split(", ")).get(0)));
+			}
+			
+			outSchema.put(attrName, dim);
 		}
 		
 	}
@@ -146,43 +146,6 @@ public class SeqScan extends Scan {
 		return "Sequential scan over " + srcTable + " Filter: " + filterExpression;
 	}
 	
-	
-	@Override
-	public String generateAFLString(int recursionLevel) throws Exception {
-		StringBuilder sb = new StringBuilder();
-		if (!(operatorName.equals("scan") && recursionLevel > 0))
-			sb.append(operatorName).append('(');
-		
-		boolean ped = (!this.getChildren().isEmpty()) && this.getChildren().get(0).isPruned();
-		
-		if (ped)
-			sb.append(this.getChildren().get(0).getPruneToken());
-		else 
-			sb.append(srcTable);
-		switch (operatorName) {
-		case "project":
-			for (String s : outSchema.keySet()){
-				sb.append(", ");
-				
-				if (ped) {
-					String[] o = outSchema.get(s).getName().split("\\.");
-					sb.append(getChildren().get(0).getPruneToken()).append('.').append(o[o.length-1]);
-				} else 
-					sb.append(outSchema.get(s).getName());
-			}
-			break;
-		case "scan":
-			break;
-		case "filter":
-			sb.append(", ").append(filterExpression);
-			break;
-		default:
-			break;
-		}
-		if (!(operatorName.equals("scan") && recursionLevel > 0))
-			sb.append(')');
-		return sb.toString();
-	}
 	
 	@Override
 	public String getTreeRepresentation(boolean isRoot) throws Exception{

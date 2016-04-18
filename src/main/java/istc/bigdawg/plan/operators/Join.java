@@ -155,13 +155,7 @@ public class Join extends Operator {
 			outSchema.put(attrName, attr);
 				
 		}
-		
 		inferJoinParameters();
-		
-//		if (joinPredicate != null)
-//			joinPredicateOriginal 	= new String (joinPredicate);
-//		if (joinFilter != null)
-//			joinFilterOriginal 		= new String (joinFilter);
 	}
 	
 	// combine join ON clause with WHEREs that combine two tables
@@ -234,7 +228,7 @@ public class Join extends Operator {
 		this.isQueryRoot = true;
 		
 		this.dataObjects = new HashSet<>();
-		this.joinReservedObjects = new HashSet<>();
+//		this.joinReservedObjects = new HashSet<>();
 		
 		this.srcSchema = new LinkedHashMap<String, DataObjectAttribute>(child0.outSchema);
 		srcSchema.putAll(child1.outSchema);
@@ -358,8 +352,8 @@ public class Join extends Operator {
 				throw new Exception("child0 class: "+child0.getClass().getSimpleName().toString()+"; child1 class: "+child1.getClass().getSimpleName().toString());
 			
 			dstStatement = children.get(0).generateSQLStringDestOnly(null, false, stopAtJoin, allowedScans);
-			if (t0.getAlias() != null) updateThisAndParentJoinReservedObjects(t0.getAlias().getName());
-			else updateThisAndParentJoinReservedObjects(t0.getName());
+//			if (t0.getAlias() != null) updateThisAndParentJoinReservedObjects(t0.getAlias().getName());
+//			else updateThisAndParentJoinReservedObjects(t0.getName());
 
     	} else if (child0 instanceof Aggregate && stopAtJoin) {
     		dstStatement = SelectUtils.buildSelectFromTable(new Table(((Aggregate)child0).getAggregateToken()));
@@ -540,14 +534,14 @@ public class Join extends Operator {
     	return jf;
     }
     
-    private void updateThisAndParentJoinReservedObjects(String name) {
-    	Operator o = this;
-    	o.joinReservedObjects.add(name);
-    	while (o.parent != null) {
-    		o.parent.joinReservedObjects.add(name);
-    		o = o.parent;
-    	}
-    }
+//    private void updateThisAndParentJoinReservedObjects(String name) {
+//    	Operator o = this;
+//    	o.joinReservedObjects.add(name);
+//    	while (o.parent != null) {
+//    		o.parent.joinReservedObjects.add(name);
+//    		o = o.parent;
+//    	}
+//    }
     
     private boolean replaceTableNameWithPruneName(Operator child, Expression e, Table t, List<String> itemsSet) throws Exception {
 		if (child.isPruned()) {
@@ -650,7 +644,7 @@ public class Join extends Operator {
 		
 		if (joinPredicate != null) {
 			sb.append(", ");
-			sb.append(joinFilter.replaceAll("[<>= ()]+", " ").replace("\\s+", ", "));
+			sb.append(joinPredicate.replaceAll("( AND )|( = )", ", ").replaceAll("[<>= ()]+", " ").replace("\\s+", ", "));
 		}
 		
 		sb.append(')');

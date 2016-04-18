@@ -76,7 +76,7 @@ public class Operator {
 	
 	
 	protected Set<String> dataObjects;
-	protected Set<String> joinReservedObjects;
+//	protected Set<String> joinReservedObjects;
 	protected Set<String> objectAliases = null;
 	protected boolean isCopy = false;  // used in building permutations; only remainder join operators could attain true, so far
 	
@@ -93,7 +93,7 @@ public class Operator {
 		complexOutItemFromProgeny = new LinkedHashMap<>();
 		children  = new ArrayList<Operator>();
 		dataObjects = new HashSet<>();
-		joinReservedObjects = new HashSet<>();
+//		joinReservedObjects = new HashSet<>();
 
 		
 		if(child != null) { // check for leaf nodes
@@ -125,7 +125,7 @@ public class Operator {
 		complexOutItemFromProgeny = new HashMap<>();
 		children  = new ArrayList<Operator>();
 		dataObjects = new HashSet<>();
-		joinReservedObjects = new HashSet<>();
+//		joinReservedObjects = new HashSet<>();
 		
 		
 		if(child != null) { // check for leaf nodes
@@ -146,7 +146,7 @@ public class Operator {
 		complexOutItemFromProgeny = new LinkedHashMap<>();
 		children  = new ArrayList<Operator>();
 		dataObjects = new HashSet<>();
-		joinReservedObjects = new HashSet<>();
+//		joinReservedObjects = new HashSet<>();
 		
 		children.add(lhs);
 		children.add(rhs);
@@ -174,7 +174,7 @@ public class Operator {
 		outSchema = new LinkedHashMap<String, DataObjectAttribute>();
 		children  = new ArrayList<Operator>();
 		dataObjects = new HashSet<>();
-		joinReservedObjects = new HashSet<>();
+//		joinReservedObjects = new HashSet<>();
 		
 		children.add(lhs);
 		children.add(rhs);
@@ -198,7 +198,7 @@ public class Operator {
 		this.isQueryRoot = o.isQueryRoot;
 		
 		this.dataObjects = new HashSet<>();
-		this.joinReservedObjects = new HashSet<>();
+//		this.joinReservedObjects = new HashSet<>();
 		this.complexOutItemFromProgeny = new LinkedHashMap<>();
 		
 		this.outSchema = new LinkedHashMap<>();
@@ -545,7 +545,7 @@ public class Operator {
 	 */
 	private Select prepareForSQLGeneration(Select srcStatement, boolean stopAtJoin) throws Exception {
 
-		clearJoinReservedObjects();
+//		clearJoinReservedObjects();
 		boolean originalPruneStatus = this.isPruned();
 		this.prune(false);
 		Select dstStatement  = this.generateSQLStringDestOnly(null, true, stopAtJoin, this.getDataObjectAliasesOrNames().keySet());
@@ -853,11 +853,11 @@ public class Operator {
 	}
 	
 	
-	public void getJoinReservedObjectsFromParents() {
-		if (parent != null) {
-			this.joinReservedObjects.addAll(this.parent.joinReservedObjects);
-		}
-	}
+//	public void getJoinReservedObjectsFromParents() {
+//		if (parent != null) {
+//			this.joinReservedObjects.addAll(this.parent.joinReservedObjects);
+//		}
+//	}
 	
 	
 	public Set<String> getDataObjectNames() throws Exception {
@@ -961,11 +961,11 @@ public class Operator {
 		return blockerID;
 	}
 	
-	private void clearJoinReservedObjects() {
-		this.joinReservedObjects.clear();
-		for (Operator c : children)
-			c.clearJoinReservedObjects();
-	}
+//	private void clearJoinReservedObjects() {
+//		this.joinReservedObjects.clear();
+//		for (Operator c : children)
+//			c.clearJoinReservedObjects();
+//	}
 	
 	public Operator duplicate(boolean addChild) throws Exception {
 		if (this instanceof Join) {

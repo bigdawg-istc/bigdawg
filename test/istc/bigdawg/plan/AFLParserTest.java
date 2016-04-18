@@ -34,10 +34,11 @@ public class AFLParserTest extends TestCase {
 	private void setupParse() {
 //		expectedOutputs.put("parse1", "cross_join(project(filter(poe_med, i <= 5), poe_id, drug_type, dose_val_disp) AS a, project(filter(redimension(poe_med, <drug_type:string,drug_name:string,drug_name_generic:string,prod_strength:string,form_rx:string,dose_val_rx:string,dose_unit_rx:string,form_val_disp:string,form_unit_disp:string,dose_val_disp:double,dose_unit_disp:string,dose_range_override:string>[poe_id=0:10000000,1,1]), poe_id = 3750047), dose_val_rx) AS b)");
 //		expectedOutputs.put("parse1", "sort(filter(poe_med, i <= 5), poe_id, drug_type, dose_val_disp)");
-		expectedOutputs.put("parse1", "cross_join(project(filter(poe_med, i <= 5), poe_id, drug_type, dose_val_disp) AS a, project(filter(poe_med, poe_id = 3750047), dose_val_rx) AS b, a.i, b.i)");
+		expectedOutputs.put("parse1", "apply(cross_join(project(filter(nation, n_name = 'brazil'), n_name) AS a, project(region, r_name) AS b, a.n_regionkey, b.r_regionkey), shifted_key, a.n_regionkey + 3)");
 		
 //		expectedOutputs.put("parse1", "filter(patients, id < 10)");
-		expectedOutputs.put("parse2", "cross_join(cross_join(cross_join(geo, filter(go_matrix, goid < 3), geo.geneid, go_matrix.geneid), filter(genes, id < 10), geo.geneid, genes.id), filter(patients, id <= 10 or id >= 30), geo.patientid, patients.id)");
+//		expectedOutputs.put("parse2", "cross_join(cross_join(cross_join(geo, filter(go_matrix, goid < 3), geo.geneid, go_matrix.geneid), filter(genes, id < 10), geo.geneid, genes.id), filter(patients, id <= 10 or id >= 30), geo.patientid, patients.id)");
+		expectedOutputs.put("parse2", "aggregate(cross_join(project(filter(nation, n_name = 'brazil'), n_name) AS a, project(region, r_name) AS b, a.n_regionkey, b.r_regionkey), count(n_name), count(r_name) as rcnt, n_nationkey, nation.n_regionkey)");
 
 	}
 	
@@ -51,11 +52,11 @@ public class AFLParserTest extends TestCase {
 	public void testParse1() throws Exception {
 		testParse("parse1");
 	}
-	
-	@Test
-	public void testParse2() throws Exception {
-		testParse("parse2");
-	}
+//	
+//	@Test
+//	public void testParse2() throws Exception {
+//		testParse("parse2");
+//	}
 	
 //	@Test
 //	public void testTreeEdit() throws Exception {
