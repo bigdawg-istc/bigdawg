@@ -1,5 +1,6 @@
 package istc.bigdawg.packages;
 
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -187,7 +188,6 @@ public class CrossIslandQueryNode {
 	 */
 	private void populateQueryContainer() throws Exception {
 		
-		
 		// NOW WE ONLY SUPPORT RELATIONAL ISLAND
 		// SUPPORT OTHER ISLANDS && ISLAND CHECK 
 		
@@ -207,9 +207,7 @@ public class CrossIslandQueryNode {
 		} else 
 			throw new Exception("Unsupported island code: "+scope.toString());
 
-		if (root != null){
-			originalJoinPredicates.addAll(getOriginalJoinPredicates(root));
-		}
+		originalJoinPredicates.addAll(getOriginalJoinPredicates(root));
 
 		originalMap = CatalogViewer.getDBMappingByObj(objs);
 		
@@ -256,21 +254,41 @@ public class CrossIslandQueryNode {
 
 	private Set<String> getOriginalJoinPredicates(Operator root){
 		Set<String> predicates = new HashSet<>();
+
+		if (root == null){
+			return predicates;
+		}
+
 		if (root instanceof Join){
 			String predicate = ((Join) root).getOriginalJoinPredicate();
 			if (predicate != null){
-				predicates.add(new String(predicate));
+//<<<<<<< HEAD
+//				predicates.add(new String(predicate));
+//			}
+//			
+//			predicate = ((Join) root).getOriginalJoinFilter();
+//			if (predicate != null){
+//				predicates.add(new String(predicate));
+//			}
+//			
+//		} else if (root instanceof  Scan){
+//			String predicate = ((Scan) root).getJoinPredicate();
+//			if (predicate != null){
+//				predicates.add(new String(predicate));
+//=======
+				predicates.addAll(splitPredicates(predicate));
 			}
-			
+
 			predicate = ((Join) root).getOriginalJoinFilter();
 			if (predicate != null){
-				predicates.add(new String(predicate));
+				predicates.addAll(splitPredicates(predicate));
 			}
-			
+
 		} else if (root instanceof  Scan){
 			String predicate = ((Scan) root).getJoinPredicate();
 			if (predicate != null){
-				predicates.add(new String(predicate));
+				predicates.addAll(splitPredicates(predicate));
+//>>>>>>> 3a3cdab4d84687cbe0e4e309ff5ddd778ff3e04a
 			}
 		}
 
@@ -280,6 +298,29 @@ public class CrossIslandQueryNode {
 
 		System.out.printf("\n\n\n---------> all predicates of %s: %s\n\n\n\n", root.getClass().getSimpleName(), predicates);
 		return predicates;
+	}
+
+	private Set<String> splitPredicates(String predicates){
+		Set<String> results = new HashSet<>();
+		Pattern predicatePattern = Pattern.compile("(?<=\\()([^\\(^\\)]+)(?=\\))");
+
+		String joinDelim = "";
+		if (scope.equals(Scope.RELATIONAL)){
+			joinDelim = "=";
+		} else if (scope.equals(Scope.ARRAY)){
+			// TODO ensure this is correct for SciDB
+			joinDelim = ",";
+		}
+
+		Matcher m = predicatePattern.matcher(predicates);
+		while (m.find()){
+			String current = m.group().replace(" ", "");
+			String[] filters = current.split(joinDelim);
+			Arrays.sort(filters);
+			String result = String.join(joinDelim, filters);
+			results.add(result);
+		}
+		return results;
 	}
 	
 	

@@ -19,7 +19,7 @@ import istc.bigdawg.postgresql.PostgreSQLHandler.QueryResult;
 
 public class Planner {
 
-	private static final double SIGNATURE_DISTANCE = 0;
+	private static final double SIGNATURE_DISTANCE = .05;
 
 	private static Logger logger = Logger.getLogger(Planner.class.getName());
 //	private static Integer maxSerial = 0;
@@ -84,6 +84,10 @@ public class Planner {
 
 		List<QueryExecutionPlan> qeps = ciqn.getAllQEPs(true);
 		Log.debug("Number of qeps: " + qeps.size());
+
+		if (qeps.size() <= 1){
+			return choice;
+		}
 		
 		if (isTrainingMode) {
 			Log.debug("Running in Training Mode...");

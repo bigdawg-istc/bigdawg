@@ -6,8 +6,7 @@
 #include "boost/cstdfloat.hpp"
 #include "gtest/gtest.h"
 
-#include "attribute/attribute.h"
-#include "endianness.h"
+#include "attribute.h"
 
 // TEST(test_case_name, test_name) {
 //  ... test body ...
@@ -40,11 +39,11 @@ TEST(Postgres,PostgresReadBinaryInteger32Bit)
   int32_t bytesNumber = sizeof(int32_t);
   // postgres writes the bytes in Big Endian format so change the value to Big Endian
   std::cout << "bytes number: " << bytesNumber << std::endl;
-  bytesNumber = endianness::to_postgres<int32_t>(bytesNumber);
+  endianness::fromHostToBigEndian<int32_t>(bytesNumber);
   fwrite(&bytesNumber,sizeof(int32_t),1,fp);
   int32_t testIntHostEndian = 31; // just arbitrary number 
-  int32_t testIntBigEndian = 0;
-  testIntBigEndian = endianness::to_postgres<int32_t>(testIntHostEndian);
+  int32_t testIntBigEndian = testIntHostEndian;
+  endianness::fromHostToBigEndian<int32_t>(testIntBigEndian);
   fwrite(&testIntBigEndian,bytesNumber,1,fp);
   // you wrote to a file and now would like to start reading from the beginnin of the file
   rewind(fp); 
@@ -62,7 +61,7 @@ TEST(Postgres,PostgresReadBinaryBoolTrue)
   int32_t bytesNumber = sizeof(bool);
   // postgres writes the bytes in Big Endian format so change the value to Big Endian
   std::cout << "bytes number: " << bytesNumber << std::endl;
-  bytesNumber = endianness::to_postgres<int32_t>(bytesNumber);
+  endianness::fromHostToBigEndian<int32_t>(bytesNumber);
   fwrite(&bytesNumber,sizeof(int32_t),1,fp);
   char boolValue = 1;
   fwrite(&boolValue,bytesNumber,1,fp);
@@ -82,7 +81,7 @@ TEST(Postgres,PostgresReadBinaryBoolFalse)
   int32_t bytesNumber = sizeof(bool);
   // postgres writes the bytes in Big Endian format so change the value to Big Endian
   std::cout << "bytes number: " << bytesNumber << std::endl;
-  bytesNumber = endianness::to_postgres<int32_t>(bytesNumber);
+  endianness::fromHostToBigEndian<int32_t>(bytesNumber);
   fwrite(&bytesNumber,sizeof(int32_t),1,fp);
   // the false value is represented as a NULL character '\0'
   char boolValue = '\0';
@@ -106,7 +105,7 @@ TEST(Postgres,PostgresReadBinaryBoolNull)
   int32_t bytesNumber = -1; // -1 denotes NULL value
   // postgres writes the bytes in Big Endian format so change the value to Big Endian
   std::cout << "bytes number: " << bytesNumber << std::endl;
-  bytesNumber = endianness::to_postgres<int32_t>(bytesNumber);
+  endianness::fromHostToBigEndian<int32_t>(bytesNumber);
   fwrite(&bytesNumber,sizeof(int32_t),1,fp);
   // the null (-1) is followed by no value
   // fwrite(&boolValue,bytesNumber,1,fp);
@@ -125,26 +124,28 @@ TEST(Postgres,ReadBinaryTestFloat64_t)
   GenericAttribute<boost::float64_t> attr = GenericAttribute<boost::float64_t>(true);
   FILE * fp;
   fp = tmpfile();
-  int32_t bytesNumberRaw = sizeof(boost::float64_t);
+  int32_t bytesNumber = sizeof(boost::float64_t);
+  int32_t bytesNumberRaw = bytesNumber;
   // postgres writes the bytes in Big Endian format so change the value to Big Endian
   std::cout << "test bytes number raw: " << bytesNumberRaw << std::endl;
-  int32_t bytesNumber = endianness::to_postgres<int32_t>(bytesNumberRaw);
+  endianness::fromHostToBigEndian<int32_t>(bytesNumber);
   std::cout << "test bytes number after endianness: " << bytesNumber << std::endl;
   fwrite(&bytesNumber,sizeof(int32_t),1,fp);
 
-  bytesNumber = endianness::from_postgres<int32_t>(bytesNumber);
+  endianness::fromBigEndianToHost<int32_t>(bytesNumber);
   std::cout << "test bytes number after endianness 2: " << bytesNumber << std::endl;
   
-  boost::float64_t testIntHostEndian = 31.23;
-  boost::float64_t testIntBigEndian = endianness::to_postgres<boost::float64_t>(testIntHostEndian);
-  fwrite(&testIntBigEndian,bytesNumber,1,fp);
+  boost::float64_t testFloat = 31.23;
+  boost::float64_t testFloatToConversion = testFloat;
+  endianness::fromHostToBigEndian<boost::float64_t>(testFloatToConversion);
+  fwrite(&testFloatToConversion,bytesNumber,1,fp);
   // you wrote to a file and now would like to start reading from the beginnin of the file
   rewind(fp); 
   attr.postgresReadBinary(fp);
   std::cout << "attribute size: " << attr.getBytesNumber() << std::endl;
   EXPECT_EQ(bytesNumberRaw,attr.getBytesNumber());
   std::cout << "attribute value: " << attr.getValue() << std::endl;
-  EXPECT_EQ(testIntHostEndian,attr.getValue());
+  EXPECT_EQ(testFloat,attr.getValue());
   fclose(fp);
 }
 
@@ -154,10 +155,11 @@ TEST(Postgres,ReadBinaryTestString)
   FILE * fp;
   fp = tmpfile();
   const char* value = "Adam Dziedzic";
-  int32_t bytesNumberRaw = 13;
+  int32_t bytesNumber = 13;
+  int32_t bytesNumberRaw = bytesNumber;
   // postgres writes the bytes in Big Endian format so change the value to Big Endian
-  std::cout << "bytes number: " << bytesNumberRaw << std::endl;
-  int32_t bytesNumber = endianness::to_postgres<int32_t>(bytesNumberRaw);
+  std::cout << "bytes number: " << bytesNumber << std::endl;
+  endianness::fromHostToBigEndian<int32_t>(bytesNumber);
   fwrite(&bytesNumber,sizeof(int32_t),1,fp);
   fwrite(value,bytesNumber,1,fp);
   // you wrote to a file and now would like to start reading from the beginnin of the file
@@ -192,9 +194,9 @@ TEST(Postgres,WriteBinaryTestStringNullableWithValue)
   rewind(fp);
 
   // now check what the written for the binary file for Postgres
-  int32_t bytesNumberRaw=-1;
-  fread(&bytesNumberRaw,sizeof(int32_t),1,fp);
-  int32_t bytesNumber = endianness::from_postgres<int32_t>(bytesNumberRaw);
+  int32_t bytesNumber=-1;
+  fread(&bytesNumber,sizeof(int32_t),1,fp);
+  endianness::fromBigEndianToHost<int32_t>(bytesNumber);
   std::cout << "Bytes number found in the binary file for Postgres: " << bytesNumber << std::endl;
   ASSERT_EQ(setBytesNumber,bytesNumber);
   char* receivedValue = new char[bytesNumber];

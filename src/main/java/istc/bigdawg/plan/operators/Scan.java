@@ -32,9 +32,7 @@ public class Scan extends Operator {
 	protected boolean hasFunctionInFilterExpression = false;
 
 	public String getJoinPredicate(){
-		if (indexCond != null) return indexCond.toString();
-		else return null;
-		
+		return indexCond != null ? indexCond.toString(): null;
 	}
 
 	

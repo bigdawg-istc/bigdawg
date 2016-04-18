@@ -38,7 +38,6 @@ public class Signature {
 	private String query;
 	private List<String> sig4k;
 	private List<Map<String, Set<String>>> objectExpressionMapping = null;
-	private Set<String> joinPredicates;
 //	private String identifier; 
 	
 //	private static Pattern possibleObjectsPattern	= Pattern.compile("[_@a-zA-Z0-9]+");
@@ -54,10 +53,10 @@ public class Signature {
 	public Signature(String query, Scope island, Operator root, Map<String, QueryContainerForCommonDatabase> container, Set<String> joinPredicates) throws Exception {
 
 		if (island.equals(Scope.RELATIONAL)){
-			setSig2(RelationalSignatureBuilder.sig2(query));
+			//setSig2(RelationalSignatureBuilder.sig2(query));
 			setSig3(RelationalSignatureBuilder.sig3(query));
 		} else if (island.equals(Scope.ARRAY)) {
-			setSig2(ArraySignatureBuilder.sig2(query));
+			//setSig2(ArraySignatureBuilder.sig2(query));
 			setSig3(ArraySignatureBuilder.sig3(query));
 		} else {
 			throw new Exception("Invalid Signature island input: "+island);
@@ -80,12 +79,14 @@ public class Signature {
 		
 		this.setQuery(query);
 		this.setIsland(island);
-		this.joinPredicates = joinPredicates;
+
+		List<String> predicates = new ArrayList<>();
+		predicates.addAll(joinPredicates);
+		setSig2(predicates);
 	}
 	
 	
 	public Signature(String s) throws Exception{
-		this.joinPredicates = new HashSet<>();
 
 		List<String> parsed = Arrays.asList(s.split(fieldSeparatorRest));
 		if (parsed.size() != 5 && parsed.size() != 6) {
@@ -288,58 +289,76 @@ public class Signature {
 		logger.debug("SIGNATURE 2: " + sig.toRecoverableString());
 
 		double dist = 0;
-		
-		List<String> l2;
-		List<String> l4k2 = new ArrayList<>(sig.sig4k);
-		int size;
+
+		double sig1Weight = 2;
+		double sig2Weight = 1;
+		double sig3Weight = 1;
+		double sig4kWeight = 2;
 
 		// sig1
-		dist = getTreeEditDistance(sig1, sig.sig1);
-		logger.debug("SIGNATURE sig1 dist: " + dist);
-		
+		double treeEdit1 = getTreeEditDistance(sig1, "{}");
+		double treeEdit2 = getTreeEditDistance(sig.sig1, "{}");
+		double sig1Max = treeEdit1 > treeEdit2 ? treeEdit1 : treeEdit2;
+		double sig1Dist = getTreeEditDistance(sig1, sig.sig1);
+		sig1Dist /= sig1Max;
+		logger.debug("SIGNATURE sig1 dist: " + sig1Dist);
+
 		// sig2
+		List<String> l2;
+		double sig2Max = sig2.size() > sig.sig2.size() ? sig2.size() : sig.sig2.size();
 		if (sig2.size() > sig.sig2.size()) {
 			l2 = new ArrayList<>(sig2);
 			l2.retainAll(sig.sig2);
-			size = sig2.size();
 		} else { 
 			l2 = new ArrayList<>(sig.sig2);
 			l2.retainAll(sig2);
-			size = sig.sig2.size();
 		}
-		double sig2Dist = 1 - ((double)l2.size()) / size;
-		dist += sig2Dist;
+		double sig2Dist = sig2Max - (double)l2.size();
+		sig2Dist /= sig2Max;
 		logger.debug("SIGNATURE sig2 dist: " + sig2Dist);
 		
 		// sig3
+		double sig3Max = (sig3.size() > sig.sig3.size()) ? sig3.size() : sig.sig3.size();
 		double sig3Dist = (sig3.size() > sig.sig3.size()) ? sig3.size() - sig.sig3.size() : sig.sig3.size() - sig3.size();
+		sig3Dist /= sig3Max;
 		logger.debug("SIGNATURE sig3 dist: " + sig3Dist);
-		dist += sig3Dist;
 		
 		// sig4k
+		List<String> l4k2 = new ArrayList<>(sig.sig4k);
+		double sig4kMax = sig4k.size() > sig.sig4k.size() ? sig4k.size() : sig.sig4k.size();
 		double sig4kDist = sig4k.size() < sig.sig4k.size() ? sig.sig4k.size() - sig4k.size() : sig4k.size() - sig.sig4k.size();
-		for (int i = 0 ; i < sig4k.size() ; i++ ) {
+		double tree4k1 = 0.0;
+		double tree4k2 = 0.0;
+
+		for (String aSig4k: l4k2){
+			tree4k2 += getTreeEditDistance(aSig4k, "{}");
+		}
+
+		for (String aSig4k : sig4k) {
+			tree4k1 += getTreeEditDistance(aSig4k, "{}");
 			double result = Double.MAX_VALUE;
 			int j = 0;
 			int holder = -1;
 			while (!l4k2.isEmpty() && j < l4k2.size()) {
-				double temp = getTreeEditDistance(sig4k.get(i), l4k2.get(j));
+				double temp = getTreeEditDistance(aSig4k, l4k2.get(j));
 				if (temp < result) {
 					result = temp;
 					holder = j;
 				}
 				j++;
 			}
-			if (holder > 0) { 
+			if (holder > 0) {
 				l4k2.remove(holder);
 				sig4kDist += result;
-			} else 
+			} else
 				break;
 		}
-
+		sig4kMax += tree4k1 > tree4k2 ? tree4k1 : tree4k2;
+		sig4kDist /= sig4kMax;
 		logger.debug("SIGNATURE sig4k dist: " + sig4kDist);
-		dist += sig4kDist;
 
+		dist += sig1Dist*sig1Weight + sig2Dist*sig2Weight + sig3Dist*sig3Weight + sig4kDist*sig4kWeight;
+		dist /= sig1Weight + sig2Weight + sig3Weight + sig4kWeight;
 		logger.debug("SIGNATURE final dist: " + dist);
 		return dist;
 	}

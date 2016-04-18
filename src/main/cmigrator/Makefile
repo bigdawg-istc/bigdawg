@@ -18,7 +18,7 @@ LDIR=lib
 
 # to add/remove program files edit onlny this block
 
-_DEPS=csv2scidb.h hellofunc.h attribute/attribute.h csv2postgres.h endianness.h postgres2csv.h $(POSTGRES_TO_SCIDB).h postgres.h utils.h typeAttributeMap.h dataMigratorExceptions.h buffer.h $(SCIDB_TO_POSTGRES).h
+_DEPS=csv2scidb.h hellofunc.h attribute.h csv2postgres.h endianness.h postgres2csv.h $(POSTGRES_TO_SCIDB).h postgres.h utils.h typeAttributeMap.h dataMigratorExceptions.h buffer.h $(SCIDB_TO_POSTGRES).h
 DEPS=$(patsubst %,$(IDIR)/%,$(_DEPS))
 
 _OBJ=data-migrator.o csv2scidb.o hellofunc.o attribute/attribute.o csv2postgres.o postgres2csv.o $(POSTGRES_TO_SCIDB).o postgres.o utils.o typeAttributeMap.o buffer.o $(SCIDB_TO_POSTGRES).o
