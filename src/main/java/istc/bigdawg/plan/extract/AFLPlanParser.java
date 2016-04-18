@@ -253,9 +253,9 @@ public class AFLPlanParser {
 		
 		switch(node.name)  {
 		
+		case "redimension":
 		case "project":
 		case "scan":
-		case "redimension":
 			nodeType = "Seq Scan";
 			Iterator<String> it = node.schemaAlias.iterator();
 			String name = it.next();

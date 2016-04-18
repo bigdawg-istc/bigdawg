@@ -238,53 +238,67 @@ public class Scan extends Operator {
 		
 		if (ped)
 			sb.append(this.getChildren().get(0).getPruneToken());
+		else if (children.size() > 0)
+			sb.append(children.get(0).generateAFLString(recursionLevel + 1));
 		else {
-			if (!operatorName.equals("apply") || children.size() == 0) {
-				sb.append(srcTable);
+			sb.append(srcTable);
+		} 
+		
+		switch (operatorName) {
+		case "apply":
+			for (String s : outSchema.keySet()){
+				if (outSchema.get(s).isHidden()) continue;
+				if (outSchema.get(s).getName().equals(outSchema.get(s).getExpressionString())) continue;
+				sb.append(", ").append(s).append(", ");
+//					if (ped) {
+//						// the apply
+//						Expression expression = CCJSqlParserUtil.parseExpression(outSchema.get(s).getExpressionString());
+//						Set<String> nameSet = new HashSet<>( SQLExpressionUtils.getColumnTableNamesInAllForms(expression));
+//						SQLExpressionUtils.renameAttributes(expression, nameSet, nameSet, getChildren().get(0).getPruneToken());
+//						sb.append(expression.toString());
+//					} else {
+					sb.append(outSchema.get(s).getExpressionString());
+//					}
 			}
-			switch (operatorName) {
-			case "apply":
-				if (children.size() != 0) {
-					sb.append(children.get(0).generateAFLString(recursionLevel + 1));
-				} 
+			
+			break;
+		case "project":
+			for (String s : outSchema.keySet()){
+				if (outSchema.get(s).isHidden()) continue;
 				
-				for (String s : outSchema.keySet()){
-					if (outSchema.get(s).isHidden()) continue;
-					if (outSchema.get(s).getName().equals(outSchema.get(s).getExpressionString())) continue;
-					sb.append(", ").append(s).append(", ");
-					if (ped) {
-						// the apply
-						Expression expression = CCJSqlParserUtil.parseExpression(outSchema.get(s).getExpressionString());
-						Set<String> nameSet = new HashSet<>( SQLExpressionUtils.getColumnTableNamesInAllForms(expression));
-						SQLExpressionUtils.renameAttributes(expression, nameSet, nameSet, getChildren().get(0).getPruneToken());
-						sb.append(expression.toString());
-					} else {
-						sb.append(outSchema.get(s).getExpressionString());
-					}
-				}
-				
-				break;
-			case "project":
-				for (String s : outSchema.keySet()){
-					if (outSchema.get(s).isHidden()) continue;
-					
-					sb.append(", ");
-					if (ped) {
-						String[] o = outSchema.get(s).getName().split("\\.");
-						sb.append(getChildren().get(0).getPruneToken()).append('.').append(o[o.length-1]);
-					} else 
-						sb.append(outSchema.get(s).getName());
-				}
-				break;
-			case "scan":
-				break;
-			case "filter":
-				sb.append(", ").append(filterExpression);
-				break;
-			default:
-				break;
+				sb.append(", ");
+				if (ped) {
+					String[] o = outSchema.get(s).getName().split("\\.");
+					sb.append(getChildren().get(0).getPruneToken()).append('.').append(o[o.length-1]);
+				} else 
+					sb.append(outSchema.get(s).getName());
 			}
+			break;
+		case "redimension":
+			sb.append(", <");
+			
+			for (String s : outSchema.keySet()) {
+				if (outSchema.get(s).isHidden()) continue;
+				if (sb.charAt(sb.length()-1) != '<') sb.append(',');
+				sb.append(outSchema.get(s).generateAFLTypeString());
+			}
+			sb.append(">[");
+			for (String s : outSchema.keySet()) {
+				if (!outSchema.get(s).isHidden()) continue;
+				if (sb.charAt(sb.length()-1) != '[') sb.append(',');
+				sb.append(outSchema.get(s).generateAFLTypeString());
+			}
+			sb.append(']');
+			break;
+		case "scan":
+			break;
+		case "filter":
+			sb.append(", ").append(filterExpression);
+			break;
+		default:
+			break;
 		}
+			
 		if (!(operatorName.equals("scan") && recursionLevel > 0))
 			sb.append(')');
 		return sb.toString();

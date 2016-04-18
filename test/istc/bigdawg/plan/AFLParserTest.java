@@ -38,8 +38,8 @@ public class AFLParserTest extends TestCase {
 		
 //		expectedOutputs.put("parse1", "filter(patients, id < 10)");
 //		expectedOutputs.put("parse2", "cross_join(cross_join(cross_join(geo, filter(go_matrix, goid < 3), geo.geneid, go_matrix.geneid), filter(genes, id < 10), geo.geneid, genes.id), filter(patients, id <= 10 or id >= 30), geo.patientid, patients.id)");
-		expectedOutputs.put("parse2", "aggregate(cross_join(project(filter(nation, n_name = 'brazil'), n_name) AS a, project(region, r_name) AS b, a.n_regionkey, b.r_regionkey), count(n_name), count(r_name) as rcnt, n_nationkey, nation.n_regionkey)");
-
+//		expectedOutputs.put("parse2", "aggregate(cross_join(project(filter(nation, n_name = 'brazil'), n_name) AS a, project(region, r_name) AS b, a.n_regionkey, b.r_regionkey), count(n_name), count(r_name) as rcnt, n_nationkey, nation.n_regionkey)");
+		expectedOutputs.put("parse2", "redimension(cross_join(project(filter(nation, n_name = 'brazil'), n_name) AS a, project(region, r_name) AS b, a.n_regionkey, b.r_regionkey), <n_name:string> [n_nationkey=0:*,10,0,n_regionkey=0:*,3,0])");
 	}
 	
 	private void setupTreeEditDistance() {
@@ -48,15 +48,15 @@ public class AFLParserTest extends TestCase {
 	}
 	
 	
-	@Test
-	public void testParse1() throws Exception {
-		testParse("parse1");
-	}
-//	
 //	@Test
-//	public void testParse2() throws Exception {
-//		testParse("parse2");
+//	public void testParse1() throws Exception {
+//		testParse("parse1");
 //	}
+	
+	@Test
+	public void testParse2() throws Exception {
+		testParse("parse2");
+	}
 	
 //	@Test
 //	public void testTreeEdit() throws Exception {
