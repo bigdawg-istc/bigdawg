@@ -1,7 +1,7 @@
 package istc.bigdawg.packages;
 
-import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -12,6 +12,7 @@ import java.util.regex.Pattern;
 
 import com.google.common.collect.Sets;
 
+import istc.bigdawg.Island;
 import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.executor.plan.ExecutionNodeFactory;
 import istc.bigdawg.executor.plan.QueryExecutionPlan;
@@ -19,6 +20,7 @@ import istc.bigdawg.plan.AFLQueryPlan;
 import istc.bigdawg.plan.SQLQueryPlan;
 import istc.bigdawg.plan.extract.AFLPlanParser;
 import istc.bigdawg.plan.extract.SQLPlanParser;
+import istc.bigdawg.plan.generators.OperatorVisitor;
 import istc.bigdawg.plan.generators.SQLQueryGenerator;
 import istc.bigdawg.plan.operators.Aggregate;
 import istc.bigdawg.plan.operators.Distinct;
@@ -343,8 +345,12 @@ public class CrossIslandQueryNode {
 			// root spear-heads the rest of the subtree
 			
 			// DEBUG ONLY
-			SQLQueryGenerator gen = new SQLQueryGenerator();
-			gen.configure(select, true, false, null);
+			OperatorVisitor gen = null;
+			if (scope.equals(Scope.RELATIONAL)) {
+				gen = new SQLQueryGenerator();
+				((SQLQueryGenerator)gen).setSrcStatement(select);
+			}
+			gen.configure(true, false, null);
 			root.accept(gen);
 			
 			System.out.println("--> blocking root; class: "+root.getClass().getSimpleName()+"; ");

@@ -44,9 +44,9 @@ public class QueryContainerForCommonDatabase {
 	
 	public String generateSQLSelectIntoString() throws Exception {
 		SQLQueryGenerator gen = new SQLQueryGenerator();
-		gen.configure(null, true, false, null);
+		gen.configure(true, false, null);
 		rootOperator.accept(gen);
-		return gen.generateSelectIntoStringForExecutionTree(pruneToken);
+		return gen.generateSelectIntoStatementForExecutionTree(pruneToken);
 	}
 	
 	public String generateAFLStoreString() throws Exception {

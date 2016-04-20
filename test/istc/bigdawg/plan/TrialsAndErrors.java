@@ -98,7 +98,7 @@ public class TrialsAndErrors {
 			Operator root = queryPlan.getRootNode();
 			
 			SQLQueryGenerator gen = new SQLQueryGenerator();
-			gen.configure(null, true, false, new HashSet<>());
+			gen.configure(true, false, new HashSet<>());
 			root.accept(gen);
 			System.out.println(gen.generateStatementString() + "\n");
 //			System.out.println(root.generateSQLString(null) + "\n");

@@ -57,11 +57,16 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	Operator root = null;
 	Set<String> allowedScans = new HashSet<>();
 	
-	public void configure(Select srcStatement, boolean isRoot, boolean stopAtJoin, Set<String> allowedScans) {
-		this.srcStatement = srcStatement;
+	@Override
+	public void configure(boolean isRoot, boolean stopAtJoin, Set<String> allowedScans) {
+//		this.srcStatement = srcStatement;
 		this.stopAtJoin = stopAtJoin;
 		this.isRoot = isRoot;
 		if (allowedScans != null && !allowedScans.isEmpty()) this.allowedScans = new HashSet<>(allowedScans);
+	}
+	
+	public void setSrcStatement(Select srcStatement) {
+		this.srcStatement = srcStatement;
 	}
 
 	public void saveRoot(Operator o) {
@@ -569,7 +574,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 		if ( !(operator instanceof Join) && (child instanceof Join)) {
 			// TODO targeted strike? CURRENTLY WASH EVERYTHING // Set<String> names = child.getDataObjectNames();
 			allowedScans = operator.getDataObjectAliasesOrNames().keySet();
-			configure(null, true, true, allowedScans);
+			configure(true, true, allowedScans);
 			operator.accept(this);
 			outputSelect = dstStatement;
 			
@@ -630,7 +635,8 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	 * @return
 	 * @throws Exception
 	 */
-	public String generateSelectIntoStringForExecutionTree(String into) throws Exception {
+	@Override
+	public String generateSelectIntoStatementForExecutionTree(String into) throws Exception {
 		if (root == null) throw new Exception("SQLQueryGenerator, selectinto: root is null");
 		postprocessSQLStatement(root);
 		String output = addSelectIntoToken(dstStatement, into);

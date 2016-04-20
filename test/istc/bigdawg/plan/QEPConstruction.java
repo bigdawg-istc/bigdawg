@@ -275,7 +275,7 @@ public class QEPConstruction {
 				
 				SQLQueryGenerator generator = new SQLQueryGenerator();
 				Join j = generator.generateStatementForPresentNonJoinSegment(child, sb, false);
-				System.out.printf("-- %s. current: %s;\n\njoin: %s\n\n\n", generation, sb, generator.generateSelectIntoStringForExecutionTree(j.getJoinToken()));
+				System.out.printf("-- %s. current: %s;\n\njoin: %s\n\n\n", generation, sb, generator.generateSelectIntoStatementForExecutionTree(j.getJoinToken()));
 				
 				if (j != null ) {
 					nextgen.addAll(j.getChildren());
