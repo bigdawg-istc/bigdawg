@@ -30,7 +30,7 @@ public class CatalogViewer {
 		// input check
 		CatalogUtilities.checkConnection(cc);
 
-		PostgreSQLConnectionInfo extraction;
+		PostgreSQLConnectionInfo extraction = null;
 
 		ResultSet rs = cc.execRet(
 				"select dbid, eid, host, port, db.name as dbname, userid, password "
@@ -64,7 +64,7 @@ public class CatalogViewer {
 		// input check
 		CatalogUtilities.checkConnection(cc);
 
-		SciDBConnectionInfo extraction;
+		SciDBConnectionInfo extraction = null;
 
 		ResultSet rs = cc.execRet(
 				"select dbid, eid, host, port, connection_properties, userid, password "

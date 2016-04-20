@@ -11,14 +11,13 @@ import istc.bigdawg.extract.logical.SQLTableExpression;
 import istc.bigdawg.packages.SciDBArray;
 import istc.bigdawg.plan.extract.CommonOutItem;
 import istc.bigdawg.plan.extract.SQLOutItem;
+import istc.bigdawg.plan.generators.OperatorVisitor;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.schema.DataObject;
 import istc.bigdawg.schema.DataObjectAttribute;
 import istc.bigdawg.schema.SQLAttribute;
-import istc.bigdawg.utils.sqlutil.SQLExpressionUtils;
-import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
@@ -36,14 +35,14 @@ public class SeqScan extends Scan {
 		// match output to base relation
 
 		String schemaAndName = parameters.get("Schema");
-		if (schemaAndName == null || schemaAndName.equals("public")) schemaAndName = super.srcTable;
-		else schemaAndName = schemaAndName + "." + super.srcTable;
+		if (schemaAndName == null || schemaAndName.equals("public")) schemaAndName = super.getSrcTable();
+		else schemaAndName = schemaAndName + "." + super.getSrcTable();
 		
 		this.dataObjects.add(schemaAndName);
 		
 		int dbid;
 
-		if (super.srcTable.toLowerCase().startsWith("bigdawgtag_")) {
+		if (super.getSrcTable().toLowerCase().startsWith("bigdawgtag_")) {
 			dbid = defaultSchemaServerDBID;
 		} else 
 			dbid = CatalogViewer.getDbsOfObject(schemaAndName, "postgres").get(0);
@@ -77,7 +76,7 @@ public class SeqScan extends Scan {
 			
 		}
 		
-		if (filterExpression != null && (!filterExpression.equals("")))
+		if (getFilterExpression() != null && (!getFilterExpression().equals("")))
 			operatorName = "filter";
 		else if (children.size() != 0)
 			operatorName = "project";
@@ -140,10 +139,14 @@ public class SeqScan extends Scan {
 		this.operatorName = ((SeqScan)o).operatorName;
 	}
 
+	@Override
+	public void accept(OperatorVisitor operatorVisitor) throws Exception {
+		operatorVisitor.visit(this);
+	}
 	
 	
 	public String toString() {
-		return "Sequential scan over " + srcTable + " Filter: " + filterExpression;
+		return "Sequential scan over " + getSrcTable() + " Filter: " + getFilterExpression();
 	}
 	
 	
@@ -158,9 +161,9 @@ public class SeqScan extends Scan {
 		sb.append('{');
 		if (children.isEmpty() && operatorName.equals("scan")){
 			// it is a scan
-			sb.append(this.srcTable);
+			sb.append(this.getSrcTable());
 		} else if (children.isEmpty()) {
-			sb.append(operatorName).append('{').append(this.srcTable).append('}');
+			sb.append(operatorName).append('{').append(this.getSrcTable()).append('}');
 		} else {
 			// filter, project
 			sb.append(operatorName).append(children.get(0).getTreeRepresentation(false));

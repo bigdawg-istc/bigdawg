@@ -6,6 +6,7 @@ import java.util.regex.Pattern;
 
 import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.packages.QueryContainerForCommonDatabase;
+import istc.bigdawg.plan.generators.SQLQueryGenerator;
 import istc.bigdawg.plan.operators.CommonSQLTableExpressionScan;
 import istc.bigdawg.plan.operators.Join;
 import istc.bigdawg.plan.operators.Operator;
@@ -148,43 +149,45 @@ public class ExecutionNodeFactory {
 		return result;
 	}
 
-	private static BinaryJoinExecutionNode createJoinNode(String broadcastQuery, ConnectionInfo engine, String joinDestinationTable, Join joinOp) throws Exception {
-		Operator left = joinOp.getChildren().get(0);
-		Operator right = joinOp.getChildren().get(1);
-
-		// Break apart Join Predicate Objects into usable Strings
-		List<String> predicateObjects = joinOp.getJoinPredicateObjectsForBinaryExecutionNode();
-
-		if (predicateObjects.isEmpty()) {
-			System.out.printf("Null predicate objects; \n\nleft: %s\n\nright: %s\n\npredicateObjects: %s\n\ntree: %s\n\n\n",
-					left.generateSQLString(null), right.generateSQLString(null), predicateObjects, joinOp.generateSQLString(null));
-		}
-
-		String comparator = predicateObjects.get(0);
-		String leftTable = StringUtils.substringBetween(predicateObjects.get(1), "{", ",");
-		String leftAttribute = StringUtils.substringBetween(predicateObjects.get(1), " ", "}");
-		String rightTable = StringUtils.substringBetween(predicateObjects.get(2), "{", ",");
-		String rightAttribute = StringUtils.substringBetween(predicateObjects.get(2), " ", "}");
-
-		// TODO(jack): verify that this mechanism for coming up with the queries to run on each shuffle node makes sense with the Operator model
-
-		// TODO@Ankush: you mentioned that you want to separate the data depends on bins or betweens, this might help you: [from Operator.java] generateSQLWithWidthBucket(String widthBucketString, String into, Select srcStatement)
-		// also, what you're doing here is that you want to only replace the `leftTable' and `rightTable' with the result of the other Shuffle Join Query, and not bother with other things, right?
-
-		String shuffleLeftJoinQuery = joinOp.generateSQLSelectIntoStringForExecutionTree(joinDestinationTable + "_LEFTRESULTS", true).replace(rightTable, joinDestinationTable + "_RIGHTPARTIAL");
-		String shuffleRightJoinQuery = joinOp.generateSQLSelectIntoStringForExecutionTree(joinDestinationTable + "_RIGHTRESULTS", true).replace(leftTable, joinDestinationTable + "_LEFTPARTIAL");
-
-		JoinOperand leftOp = new JoinOperand(engine, leftTable, leftAttribute, shuffleLeftJoinQuery);
-		JoinOperand rightOp = new JoinOperand(engine, rightTable, rightAttribute, shuffleRightJoinQuery);
-
-		log.debug(String.format("Created join node for query %s with left dependency on %s and right dependency on %s\n", broadcastQuery, leftTable, rightTable));
-
-		return new BinaryJoinExecutionNode(broadcastQuery, engine, joinDestinationTable, leftOp, rightOp, comparator);
-	}
+//	private static BinaryJoinExecutionNode createJoinNode(String broadcastQuery, ConnectionInfo engine, String joinDestinationTable, Join joinOp) throws Exception {
+//		Operator left = joinOp.getChildren().get(0);
+//		Operator right = joinOp.getChildren().get(1);
+//
+//		// Break apart Join Predicate Objects into usable Strings
+//		List<String> predicateObjects = joinOp.getJoinPredicateObjectsForBinaryExecutionNode();
+//
+//		if (predicateObjects.isEmpty()) {
+//			System.out.printf("Null predicate objects; \n\nleft: %s\n\nright: %s\n\npredicateObjects: %s\n\ntree: %s\n\n\n",
+//					left.generateSQLString(null), right.generateSQLString(null), predicateObjects, joinOp.generateSQLString(null));
+//		}
+//
+//		String comparator = predicateObjects.get(0);
+//		String leftTable = StringUtils.substringBetween(predicateObjects.get(1), "{", ",");
+//		String leftAttribute = StringUtils.substringBetween(predicateObjects.get(1), " ", "}");
+//		String rightTable = StringUtils.substringBetween(predicateObjects.get(2), "{", ",");
+//		String rightAttribute = StringUtils.substringBetween(predicateObjects.get(2), " ", "}");
+//
+//		// TODO(jack): verify that this mechanism for coming up with the queries to run on each shuffle node makes sense with the Operator model
+//
+//		// TODO@Ankush: you mentioned that you want to separate the data depends on bins or betweens, this might help you: [from Operator.java] generateSQLWithWidthBucket(String widthBucketString, String into, Select srcStatement)
+//		// also, what you're doing here is that you want to only replace the `leftTable' and `rightTable' with the result of the other Shuffle Join Query, and not bother with other things, right?
+//
+//		String shuffleLeftJoinQuery = joinOp.generateSQLSelectIntoStringForExecutionTree(joinDestinationTable + "_LEFTRESULTS", true).replace(rightTable, joinDestinationTable + "_RIGHTPARTIAL");
+//		String shuffleRightJoinQuery = joinOp.generateSQLSelectIntoStringForExecutionTree(joinDestinationTable + "_RIGHTRESULTS", true).replace(leftTable, joinDestinationTable + "_LEFTPARTIAL");
+//
+//		JoinOperand leftOp = new JoinOperand(engine, leftTable, leftAttribute, shuffleLeftJoinQuery);
+//		JoinOperand rightOp = new JoinOperand(engine, rightTable, rightAttribute, shuffleRightJoinQuery);
+//
+//		log.debug(String.format("Created join node for query %s with left dependency on %s and right dependency on %s\n", broadcastQuery, leftTable, rightTable));
+//
+//		return new BinaryJoinExecutionNode(broadcastQuery, engine, joinDestinationTable, leftOp, rightOp, comparator);
+//	}
 
 	private static ExecutionNodeSubgraph buildOperatorSubgraph(Operator op, ConnectionInfo engine, String dest, Map<String, LocalQueryExecutionNode> containerNodes, boolean isSelect) throws Exception {
 		StringBuilder sb = new StringBuilder();
-		Join joinOp = op.generateSQLStatementForPresentNonJoinSegment(sb, isSelect);
+		
+		SQLQueryGenerator gen = new SQLQueryGenerator();
+		Join joinOp = gen.generateStatementForPresentNonJoinSegment(op, sb, isSelect);
 		final String sqlStatementForPresentNonJoinSegment = sb.toString();
 		
 		
@@ -209,9 +212,15 @@ public class ExecutionNodeFactory {
 
 			String broadcastQuery;
 			if (sqlStatementForPresentNonJoinSegment.length() == 0 && isSelect) {
-				broadcastQuery = joinOp.generateSQLString(null);
+//				broadcastQuery = joinOp.generateSQLString(null);
+				gen.configure(null, true, false, null);
+				joinOp.accept(gen);
+				broadcastQuery = gen.generateStatementString();
 			} else {
-				broadcastQuery = joinOp.generateSQLSelectIntoStringForExecutionTree(joinDestinationTable, true);
+//				broadcastQuery = joinOp.generateSQLSelectIntoStringForExecutionTree(joinDestinationTable, true);
+				gen.configure(null, true, true, null);
+				joinOp.accept(gen);
+				broadcastQuery = gen.generateSelectIntoStringForExecutionTree(joinDestinationTable);
 			}
 			
 			// TODO(ankush): re-enable binary join handling
@@ -258,7 +267,9 @@ public class ExecutionNodeFactory {
 		ConnectionInfo remainderCI;
 		if (qep.getIsland().equals(Scope.RELATIONAL)) {
 			remainderCI = CatalogViewer.getPSQLConnectionInfo(remainderDBID);
-			remainderSelectIntoString = remainder.generateSQLString(null);
+			SQLQueryGenerator gen = new SQLQueryGenerator();
+			remainder.accept(gen);
+			remainderSelectIntoString = gen.generateStatementString();
 		} else if (qep.getIsland().equals(Scope.ARRAY)) {
 			remainderCI = CatalogViewer.getSciDBConnectionInfo(remainderDBID);
 			remainderSelectIntoString = remainder.generateAFLStoreStringForExecutionTree(null);
@@ -334,9 +345,11 @@ public class ExecutionNodeFactory {
 		String remainderSelectIntoString;
 
 		// if RELATIONAL
-		if (qep.getIsland().equals(Scope.RELATIONAL))
-			remainderSelectIntoString = remainder.generateSQLSelectIntoStringForExecutionTree(null, false);
-		else if (qep.getIsland().equals(Scope.ARRAY))
+		if (qep.getIsland().equals(Scope.RELATIONAL)) {
+			SQLQueryGenerator gen = new SQLQueryGenerator();
+			remainder.accept(gen);
+			remainderSelectIntoString = gen.generateSelectIntoStringForExecutionTree(null);
+		} else if (qep.getIsland().equals(Scope.ARRAY))
 			remainderSelectIntoString = remainder.generateAFLStoreStringForExecutionTree(null);
 		else 
 			throw new Exception("Unsupported island code: "+qep.getIsland().toString());

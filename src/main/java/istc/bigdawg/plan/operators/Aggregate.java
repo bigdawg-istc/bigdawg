@@ -3,12 +3,9 @@ package istc.bigdawg.plan.operators;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.apache.jcp.xml.dsig.internal.dom.Utils;
 
@@ -16,25 +13,16 @@ import istc.bigdawg.extract.logical.SQLTableExpression;
 import istc.bigdawg.packages.SciDBArray;
 import istc.bigdawg.plan.extract.CommonOutItem;
 import istc.bigdawg.plan.extract.SQLOutItem;
+import istc.bigdawg.plan.generators.OperatorVisitor;
 import istc.bigdawg.schema.DataObjectAttribute;
 import istc.bigdawg.schema.SQLAttribute;
 import istc.bigdawg.utils.sqlutil.SQLExpressionUtils;
-import istc.bigdawg.utils.sqlutil.SQLUtilities;
-import net.sf.jsqlparser.expression.Alias;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Function;
 import net.sf.jsqlparser.expression.Parenthesis;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
-import net.sf.jsqlparser.statement.select.AllColumns;
-import net.sf.jsqlparser.statement.select.FromItem;
-import net.sf.jsqlparser.statement.select.PlainSelect;
-import net.sf.jsqlparser.statement.select.Select;
-import net.sf.jsqlparser.statement.select.SelectExpressionItem;
-import net.sf.jsqlparser.statement.select.SelectItem;
-import net.sf.jsqlparser.statement.select.SubSelect;
-import net.sf.jsqlparser.util.SelectUtils;
 
 
 // TODO: expressions on aggregates - e.g., COUNT(*) / COUNT(v > 5)
@@ -55,7 +43,7 @@ public class Aggregate extends Operator {
 	
 	private static int maxAggregateID = 0;
 	private static final String aggergateNamePrefix = "BIGDAWGAGGREGATE_";
-	protected Integer aggregateID = null;
+	private Integer aggregateID = null;
 	
 	
 	// TODO: write ObliVM aggregate as a for loop over values, 
@@ -77,12 +65,12 @@ public class Aggregate extends Operator {
 	
 //		parsedAggregates = new ArrayList<Function>();
 		parsedGroupBys = new ArrayList<>();
-		aggregateFilter = parameters.get("Filter");
-		if(aggregateFilter != null) {
-			aggregateFilter = SQLExpressionUtils.removeExpressionDataTypeArtifactAndConvertLike(aggregateFilter);
-			Expression e = CCJSqlParserUtil.parseCondExpression(Utils.parseIdFromSameDocumentURI(aggregateFilter));
+		setAggregateFilter(parameters.get("Filter"));
+		if(getAggregateFilter() != null) {
+			setAggregateFilter(SQLExpressionUtils.removeExpressionDataTypeArtifactAndConvertLike(getAggregateFilter()));
+			Expression e = CCJSqlParserUtil.parseCondExpression(Utils.parseIdFromSameDocumentURI(getAggregateFilter()));
 			SQLExpressionUtils.removeExcessiveParentheses(e);
-			aggregateFilter = e.toString(); // HAVING clause
+			setAggregateFilter(e.toString()); // HAVING clause
 			
 		}
 		
@@ -169,15 +157,15 @@ public class Aggregate extends Operator {
 		super(o, addChild);
 		Aggregate a = (Aggregate) o;
 		
-		this.aggregateID = a.aggregateID;
+		this.setAggregateID(a.getAggregateID());
 //		this.groupBy = new ArrayList<DataObjectAttribute>();
 //		this.aggregateExpressions = new ArrayList<String>(); // e.g., COUNT(SOMETHING)
 //		this.aggregates = new ArrayList<AggregateType>(); 
 		this.aggregateAliases = new ArrayList<String> (); 
 //		this.parsedAggregates = new ArrayList<Function>();
 		this.parsedGroupBys = new ArrayList<Expression>();
-		if (a.aggregateFilter != null)
-			this.aggregateFilter = new String (a.aggregateFilter); // HAVING clause
+		if (a.getAggregateFilter() != null)
+			this.setAggregateFilter(new String (a.getAggregateFilter())); // HAVING clause
 		
 //		for (DataObjectAttribute att : a.groupBy)
 //			this.groupBy.add(new DataObjectAttribute(att));
@@ -216,7 +204,7 @@ public class Aggregate extends Operator {
 		List<String> aggregateExpressions = Arrays.asList(parameters.get("Aggregate-Functions").split(", ")); 
 		aggregateAliases = new ArrayList<String>();
 		parsedGroupBys = new ArrayList<>();
-		aggregateFilter = parameters.get("Filter");
+		setAggregateFilter(parameters.get("Filter"));
 		
 		
 		Map<String, Expression> aggFuns = new HashMap<>();
@@ -347,113 +335,113 @@ public class Aggregate extends Operator {
 	}
 	
 	public String getAggregateToken() {
-		if (aggregateID == null)
+		if (getAggregateID() == null)
 			return null;
 		else
-			return aggergateNamePrefix + aggregateID;
+			return aggergateNamePrefix + getAggregateID();
 	}
 	
 	public void setSingledOutAggregate() {
-		if (aggregateID == null) {
+		if (getAggregateID() == null) {
 			maxAggregateID ++;
-			aggregateID = maxAggregateID;
+			setAggregateID(maxAggregateID);
 		}
 	}
 	
-	@Override
-	public Select generateSQLStringDestOnly(Select dstStatement, boolean isSubTreeRoot, boolean stopAtJoin, Set<String> allowedScans) throws Exception {
-
-		Select originalDST = dstStatement;
-		
-		
-		if (isSubTreeRoot || aggregateID == null) dstStatement = children.get(0).generateSQLStringDestOnly(dstStatement, false, stopAtJoin, allowedScans);
-		else dstStatement = children.get(0).generateSQLStringDestOnly(null, false, stopAtJoin, allowedScans);
-				
-		PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
-
-		ps.getSelectItems().clear();
-		
-		for (String alias: outSchema.keySet()) {
-			
-			Expression e = CCJSqlParserUtil.parseExpression(rewriteComplextOutItem(outSchema.get(alias).getSQLExpression()));
-			SelectItem s = new SelectExpressionItem(e);
-			
-			if (!(e instanceof Column)) {
-//				if (joinToken != null) SQLExpressionUtils.renameAttributes(e, this.getDataObjectAliasesOrNames().keySet(), joinToken);
-				((SelectExpressionItem)s).setAlias(new Alias(alias));
-			}
-			
-			ps.addSelectItems(s);
-		}
-		
-		// check if pruneToken or join token needs to be implemented
-		
-		List<Expression> updatedGroupBy = updateGroupByElements(stopAtJoin);
-		ps.setGroupByColumnReferences(updatedGroupBy);
-		
-		if (aggregateFilter != null) {
-			Expression e = CCJSqlParserUtil.parseCondExpression(aggregateFilter);
-			ps.setHaving(e);
-		}
-		
-		
-		if (isSubTreeRoot || aggregateID == null) return dstStatement;
-		if (originalDST == null) {
-			
-			SubSelect ss = makeNewSubSelectUpdateDST(dstStatement);
-			originalDST = SelectUtils.buildSelectFromTable(new Table()); // immediately replaced
-			((PlainSelect)originalDST.getSelectBody()).setFromItem(ss);
-			
-			return originalDST;
-		}
-		
-		SubSelect ss = makeNewSubSelectUpdateDST(dstStatement);
-		net.sf.jsqlparser.statement.select.Join insert = new net.sf.jsqlparser.statement.select.Join();
-		insert.setRightItem(ss);
-		insert.setSimple(true);
-		
-		PlainSelect pselect = (PlainSelect)originalDST.getSelectBody();
-		
-		if (pselect.getJoins() != null) {
-			boolean isFound = false;
-			
-			Map<String, String> aliasMapping = this.getDataObjectAliasesOrNames();
-			
-			for (int pos = 0; pos < pselect.getJoins().size(); pos++) { 
-				FromItem r = pselect.getJoins().get(pos).getRightItem();
-				if (!(r instanceof Table)) continue;
-				
-				Table t = (Table)r;
-				if (t.getName().equals(this.getAggregateToken())) {
-					pselect.getJoins().remove(pos);
-					isFound = true;
-				} else if (t.getAlias() != null && aliasMapping.containsKey(t.getAlias().getName()) && 
-						aliasMapping.get(t.getAlias().getName()).equals(t.getName())) {
-					pselect.getJoins().remove(pos);
-					isFound = true;
-				}
-			}
-			if (!isFound) {
-				for (int pos = 0; pos < pselect.getJoins().size(); pos++) { 
-					if (pselect.getJoins().get(pos).isSimple()) {
-						pselect.getJoins().add(pos, insert);
-						break;
-					}
-				}
-			} else {
-				pselect.getJoins().add(insert);
-			}
-		}
-		
-		return originalDST;
-	}
-	
-	private SubSelect makeNewSubSelectUpdateDST(Select dstStatement) {
-		SubSelect ss = new SubSelect();
-		ss.setAlias(new Alias(this.getAggregateToken()));
-		ss.setSelectBody(dstStatement.getSelectBody());
-		return ss;
-	}
+//	@Override
+//	public Select generateSQLStringDestOnly(Select dstStatement, boolean isSubTreeRoot, boolean stopAtJoin, Set<String> allowedScans) throws Exception {
+//
+//		Select originalDST = dstStatement;
+//		
+//		
+//		if (isSubTreeRoot || getAggregateID() == null) dstStatement = children.get(0).generateSQLStringDestOnly(dstStatement, false, stopAtJoin, allowedScans);
+//		else dstStatement = children.get(0).generateSQLStringDestOnly(null, false, stopAtJoin, allowedScans);
+//				
+//		PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
+//
+//		ps.getSelectItems().clear();
+//		
+//		for (String alias: outSchema.keySet()) {
+//			
+//			Expression e = CCJSqlParserUtil.parseExpression(rewriteComplextOutItem(outSchema.get(alias).getSQLExpression()));
+//			SelectItem s = new SelectExpressionItem(e);
+//			
+//			if (!(e instanceof Column)) {
+////				if (joinToken != null) SQLExpressionUtils.renameAttributes(e, this.getDataObjectAliasesOrNames().keySet(), joinToken);
+//				((SelectExpressionItem)s).setAlias(new Alias(alias));
+//			}
+//			
+//			ps.addSelectItems(s);
+//		}
+//		
+//		// check if pruneToken or join token needs to be implemented
+//		
+//		List<Expression> updatedGroupBy = updateGroupByElements(stopAtJoin);
+//		ps.setGroupByColumnReferences(updatedGroupBy);
+//		
+//		if (getAggregateFilter() != null) {
+//			Expression e = CCJSqlParserUtil.parseCondExpression(getAggregateFilter());
+//			ps.setHaving(e);
+//		}
+//		
+//		
+//		if (isSubTreeRoot || getAggregateID() == null) return dstStatement;
+//		if (originalDST == null) {
+//			
+//			SubSelect ss = makeNewSubSelectUpdateDST(dstStatement);
+//			originalDST = SelectUtils.buildSelectFromTable(new Table()); // immediately replaced
+//			((PlainSelect)originalDST.getSelectBody()).setFromItem(ss);
+//			
+//			return originalDST;
+//		}
+//		
+//		SubSelect ss = makeNewSubSelectUpdateDST(dstStatement);
+//		net.sf.jsqlparser.statement.select.Join insert = new net.sf.jsqlparser.statement.select.Join();
+//		insert.setRightItem(ss);
+//		insert.setSimple(true);
+//		
+//		PlainSelect pselect = (PlainSelect)originalDST.getSelectBody();
+//		
+//		if (pselect.getJoins() != null) {
+//			boolean isFound = false;
+//			
+//			Map<String, String> aliasMapping = this.getDataObjectAliasesOrNames();
+//			
+//			for (int pos = 0; pos < pselect.getJoins().size(); pos++) { 
+//				FromItem r = pselect.getJoins().get(pos).getRightItem();
+//				if (!(r instanceof Table)) continue;
+//				
+//				Table t = (Table)r;
+//				if (t.getName().equals(this.getAggregateToken())) {
+//					pselect.getJoins().remove(pos);
+//					isFound = true;
+//				} else if (t.getAlias() != null && aliasMapping.containsKey(t.getAlias().getName()) && 
+//						aliasMapping.get(t.getAlias().getName()).equals(t.getName())) {
+//					pselect.getJoins().remove(pos);
+//					isFound = true;
+//				}
+//			}
+//			if (!isFound) {
+//				for (int pos = 0; pos < pselect.getJoins().size(); pos++) { 
+//					if (pselect.getJoins().get(pos).isSimple()) {
+//						pselect.getJoins().add(pos, insert);
+//						break;
+//					}
+//				}
+//			} else {
+//				pselect.getJoins().add(insert);
+//			}
+//		}
+//		
+//		return originalDST;
+//	}
+//	
+//	private SubSelect makeNewSubSelectUpdateDST(Select dstStatement) {
+//		SubSelect ss = new SubSelect();
+//		ss.setAlias(new Alias(this.getAggregateToken()));
+//		ss.setSelectBody(dstStatement.getSelectBody());
+//		return ss;
+//	}
 	
 	public List<Expression> updateGroupByElements(Boolean stopAtJoin) throws Exception {
 		
@@ -580,8 +568,8 @@ public class Aggregate extends Operator {
 		
 		// having
 		Expression e;
-		if (aggregateFilter != null) {
-			e = CCJSqlParserUtil.parseCondExpression(aggregateFilter);
+		if (getAggregateFilter() != null) {
+			e = CCJSqlParserUtil.parseCondExpression(getAggregateFilter());
 			if (!SQLExpressionUtils.containsArtificiallyConstructedTables(e)) {
 				addToOut(e, out, aliasMapping);
 			}
@@ -593,6 +581,11 @@ public class Aggregate extends Operator {
 //				out);
 		
 		return out;
+	}
+	
+	@Override
+	public void accept(OperatorVisitor operatorVisitor) throws Exception {
+		operatorVisitor.visit(this);
 	}
 
 	@Override
@@ -617,9 +610,25 @@ public class Aggregate extends Operator {
 	}
 	
 	@Override
-	protected Map<String, Expression> getChildrenIndexConds() throws Exception {
+	public Map<String, Expression> getChildrenIndexConds() throws Exception {
 		Map<String, Expression> ret = this.getChildren().get(0).getChildrenIndexConds();
 		ret.put(getAggregateToken(), null);
 		return ret;
+	}
+
+	public Integer getAggregateID() {
+		return aggregateID;
+	}
+
+	public void setAggregateID(Integer aggregateID) {
+		this.aggregateID = aggregateID;
+	}
+
+	public String getAggregateFilter() {
+		return aggregateFilter;
+	}
+
+	public void setAggregateFilter(String aggregateFilter) {
+		this.aggregateFilter = aggregateFilter;
 	}
 };

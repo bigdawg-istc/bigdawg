@@ -14,6 +14,7 @@ import istc.bigdawg.monitoring.Monitor;
 import istc.bigdawg.packages.CrossIslandQueryNode;
 import istc.bigdawg.packages.CrossIslandQueryPlan;
 import istc.bigdawg.parsers.UserQueryParser;
+import istc.bigdawg.plan.generators.SQLQueryGenerator;
 import istc.bigdawg.plan.operators.Join;
 import istc.bigdawg.plan.operators.Operator;
 import istc.bigdawg.utils.IslandsAndCast.Scope;
@@ -260,7 +261,7 @@ public class QEPConstruction {
 	
 	private void printAllInterestingNodes(Operator o) throws Exception {
 		
-		int gen = 1;
+		int generation = 1;
 		
 		List<Operator> walker = new ArrayList<>();
 		walker.add(o);
@@ -271,8 +272,10 @@ public class QEPConstruction {
 				if (child.isPruned()) continue;
 				
 				StringBuilder sb = new StringBuilder();
-				Join j = child.generateSQLStatementForPresentNonJoinSegment(sb, false);
-				System.out.printf("-- %s. current: %s;\n\njoin: %s\n\n\n", gen, sb, j.generateSQLSelectIntoStringForExecutionTree(j.getJoinToken(), true));
+				
+				SQLQueryGenerator generator = new SQLQueryGenerator();
+				Join j = generator.generateStatementForPresentNonJoinSegment(child, sb, false);
+				System.out.printf("-- %s. current: %s;\n\njoin: %s\n\n\n", generation, sb, generator.generateSelectIntoStringForExecutionTree(j.getJoinToken()));
 				
 				if (j != null ) {
 					nextgen.addAll(j.getChildren());
@@ -280,7 +283,7 @@ public class QEPConstruction {
 				
 			}
 			walker = nextgen;
-			gen++;
+			generation++;
 		}
 		
 	}

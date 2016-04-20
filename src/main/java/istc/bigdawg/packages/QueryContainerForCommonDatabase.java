@@ -3,6 +3,7 @@ package istc.bigdawg.packages;
 import java.util.Map;
 import java.util.Set;
 
+import istc.bigdawg.plan.generators.SQLQueryGenerator;
 import istc.bigdawg.plan.operators.Operator;
 import istc.bigdawg.query.ConnectionInfo;
 
@@ -42,7 +43,10 @@ public class QueryContainerForCommonDatabase {
 	}
 	
 	public String generateSQLSelectIntoString() throws Exception {
-		return rootOperator.generateSQLSelectIntoStringForExecutionTree(pruneToken, false);
+		SQLQueryGenerator gen = new SQLQueryGenerator();
+		gen.configure(null, true, false, null);
+		rootOperator.accept(gen);
+		return gen.generateSelectIntoStringForExecutionTree(pruneToken);
 	}
 	
 	public String generateAFLStoreString() throws Exception {

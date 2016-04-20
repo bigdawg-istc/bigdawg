@@ -10,6 +10,7 @@ import org.junit.Test;
 
 import istc.bigdawg.catalog.CatalogInstance;
 import istc.bigdawg.plan.extract.SQLPlanParser;
+import istc.bigdawg.plan.generators.SQLQueryGenerator;
 import istc.bigdawg.plan.operators.Operator;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
@@ -93,10 +94,14 @@ public class AggregateTest {
 			SQLQueryPlan qp = SQLPlanParser.extractDirect(psqlh, inputs.get(testname));
 			Operator root = qp.getRootNode();
 			
-			System.out.printf("Original query   : %s\n", inputs.get(testname));
-			System.out.printf("Root query output: %s\n", root.generateSQLString((Select)CCJSqlParserUtil.parse(inputs.get(testname))));
+			SQLQueryGenerator gen = new SQLQueryGenerator();
+			gen.configure(((Select)CCJSqlParserUtil.parse(inputs.get(testname))), true, false, null);
+			root.accept(gen);
 			
-			assertEquals(expectedOutputs.get(testname).get("OUTPUT"), root.generateSQLString((Select)CCJSqlParserUtil.parse(inputs.get(testname))));
+			System.out.printf("Original query   : %s\n", inputs.get(testname));
+			System.out.printf("Root query output: %s\n", gen.generateStatementString());
+			
+			assertEquals(expectedOutputs.get(testname).get("OUTPUT"), gen.generateStatementString());
 			
 //			System.out.printf("AFL: "+root.generateAFLString(0));
 			
