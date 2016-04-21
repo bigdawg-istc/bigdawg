@@ -158,15 +158,6 @@ public class WindowAggregate extends Operator {
 		operatorVisitor.visit(this);
 	}
 	
-//	@Override
-//	public Select generateSQLStringDestOnly(Select dstStatement, boolean isSubTreeRoot, boolean stopAtJoin, Set<String> allowedScans) throws Exception {
-//		dstStatement = children.get(0).generateSQLStringDestOnly(dstStatement, false, stopAtJoin, allowedScans);
-//		// do nothing here until SELECT clause		
-//	
-//		return dstStatement;
-//
-//	}
-	
 	
 	public String toString() {
 		return "WindowAgg over " + winaggs + " partition by " + partitionBy + " order by " + orderBy;

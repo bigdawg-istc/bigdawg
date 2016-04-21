@@ -32,7 +32,7 @@ public class Aggregate extends Operator {
 	// can address complex expressions by adding a step after aggregate
 	// create a list of aggregations to perform
 	
-	public enum AggregateType { MIN, MAX, COUNT, COUNT_DISTINCT, AVG, SUM, WIDTH_BUCKET, DATE_PART};
+//	public enum AggregateType { MIN, MAX, COUNT, COUNT_DISTINCT, AVG, SUM, WIDTH_BUCKET, DATE_PART};
 //	private List<DataObjectAttribute> groupBy;
 //	private List<String> aggregateExpressions; // e.g., COUNT(SOMETHING)
 //	private List<AggregateType>  aggregates; 
@@ -329,10 +329,10 @@ public class Aggregate extends Operator {
 	}
 
 	
-	public void addAggregate(AggregateType a, String aFilter) {
-//		aggregates.add(a);
-//		aggregateExpressions.add(aFilter);
-	}
+//	public void addAggregate(AggregateType a, String aFilter) {
+////		aggregates.add(a);
+////		aggregateExpressions.add(aFilter);
+//	}
 	
 	public String getAggregateToken() {
 		if (getAggregateID() == null)
@@ -347,101 +347,6 @@ public class Aggregate extends Operator {
 			setAggregateID(maxAggregateID);
 		}
 	}
-	
-//	@Override
-//	public Select generateSQLStringDestOnly(Select dstStatement, boolean isSubTreeRoot, boolean stopAtJoin, Set<String> allowedScans) throws Exception {
-//
-//		Select originalDST = dstStatement;
-//		
-//		
-//		if (isSubTreeRoot || getAggregateID() == null) dstStatement = children.get(0).generateSQLStringDestOnly(dstStatement, false, stopAtJoin, allowedScans);
-//		else dstStatement = children.get(0).generateSQLStringDestOnly(null, false, stopAtJoin, allowedScans);
-//				
-//		PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
-//
-//		ps.getSelectItems().clear();
-//		
-//		for (String alias: outSchema.keySet()) {
-//			
-//			Expression e = CCJSqlParserUtil.parseExpression(rewriteComplextOutItem(outSchema.get(alias).getSQLExpression()));
-//			SelectItem s = new SelectExpressionItem(e);
-//			
-//			if (!(e instanceof Column)) {
-////				if (joinToken != null) SQLExpressionUtils.renameAttributes(e, this.getDataObjectAliasesOrNames().keySet(), joinToken);
-//				((SelectExpressionItem)s).setAlias(new Alias(alias));
-//			}
-//			
-//			ps.addSelectItems(s);
-//		}
-//		
-//		// check if pruneToken or join token needs to be implemented
-//		
-//		List<Expression> updatedGroupBy = updateGroupByElements(stopAtJoin);
-//		ps.setGroupByColumnReferences(updatedGroupBy);
-//		
-//		if (getAggregateFilter() != null) {
-//			Expression e = CCJSqlParserUtil.parseCondExpression(getAggregateFilter());
-//			ps.setHaving(e);
-//		}
-//		
-//		
-//		if (isSubTreeRoot || getAggregateID() == null) return dstStatement;
-//		if (originalDST == null) {
-//			
-//			SubSelect ss = makeNewSubSelectUpdateDST(dstStatement);
-//			originalDST = SelectUtils.buildSelectFromTable(new Table()); // immediately replaced
-//			((PlainSelect)originalDST.getSelectBody()).setFromItem(ss);
-//			
-//			return originalDST;
-//		}
-//		
-//		SubSelect ss = makeNewSubSelectUpdateDST(dstStatement);
-//		net.sf.jsqlparser.statement.select.Join insert = new net.sf.jsqlparser.statement.select.Join();
-//		insert.setRightItem(ss);
-//		insert.setSimple(true);
-//		
-//		PlainSelect pselect = (PlainSelect)originalDST.getSelectBody();
-//		
-//		if (pselect.getJoins() != null) {
-//			boolean isFound = false;
-//			
-//			Map<String, String> aliasMapping = this.getDataObjectAliasesOrNames();
-//			
-//			for (int pos = 0; pos < pselect.getJoins().size(); pos++) { 
-//				FromItem r = pselect.getJoins().get(pos).getRightItem();
-//				if (!(r instanceof Table)) continue;
-//				
-//				Table t = (Table)r;
-//				if (t.getName().equals(this.getAggregateToken())) {
-//					pselect.getJoins().remove(pos);
-//					isFound = true;
-//				} else if (t.getAlias() != null && aliasMapping.containsKey(t.getAlias().getName()) && 
-//						aliasMapping.get(t.getAlias().getName()).equals(t.getName())) {
-//					pselect.getJoins().remove(pos);
-//					isFound = true;
-//				}
-//			}
-//			if (!isFound) {
-//				for (int pos = 0; pos < pselect.getJoins().size(); pos++) { 
-//					if (pselect.getJoins().get(pos).isSimple()) {
-//						pselect.getJoins().add(pos, insert);
-//						break;
-//					}
-//				}
-//			} else {
-//				pselect.getJoins().add(insert);
-//			}
-//		}
-//		
-//		return originalDST;
-//	}
-//	
-//	private SubSelect makeNewSubSelectUpdateDST(Select dstStatement) {
-//		SubSelect ss = new SubSelect();
-//		ss.setAlias(new Alias(this.getAggregateToken()));
-//		ss.setSelectBody(dstStatement.getSelectBody());
-//		return ss;
-//	}
 	
 	public List<Expression> updateGroupByElements(Boolean stopAtJoin) throws Exception {
 		

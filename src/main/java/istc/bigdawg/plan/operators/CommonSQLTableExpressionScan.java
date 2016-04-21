@@ -109,56 +109,6 @@ public class CommonSQLTableExpressionScan extends Scan {
 //		private Operator sourceStatement;
 	};
 
-//	@Override
-//	public Select generateSQLStringDestOnly(Select dstStatement, boolean isSubTreeRoot, boolean stopAtJoin, Set<String> allowedScans) throws Exception {
-//		dstStatement = super.generateSQLStringDestOnly(dstStatement, isSubTreeRoot, stopAtJoin, allowedScans);
-//		 
-//		List<WithItem> withs = dstStatement.getWithItemsList();
-//		
-//		boolean found = false;
-//		if(withs != null && !withs.isEmpty()) {
-//			for(WithItem w : withs) {
-//				if(w.getName().equals(getCteName())) {
-//					found = true;
-//				}
-//			}
-//		}
-//		
-//		
-//		// insert WithItem at the beginning of list
-//		if(!found) {
-//			List<WithItem> dstWiths = new ArrayList<WithItem>();
-//			
-//			if(dstStatement.getWithItemsList() != null && !(dstStatement.getWithItemsList().isEmpty())) {
-//				dstWiths.addAll(dstStatement.getWithItemsList());
-//			}
-//			dstWiths.add(getWith());
-//
-//			
-//			dstStatement.setWithItemsList(dstWiths);
-//			// recurse if child references any additional CTEs
-//			// create new dst statement for child and grab its select body
-//			
-//			Select dstPrime = sourceStatement.generateSQLStringDestOnly(null, true, stopAtJoin, new HashSet<>());
-//
-//			List<WithItem> dstWithsPrime = dstPrime.getWithItemsList();
-//			if(dstWithsPrime != null) {
-//				for(int i = 0; i < dstWithsPrime.size(); ++i) {
-//					if(dstWiths.contains(dstWithsPrime.get(i))) {
-//						dstWithsPrime.remove(i);
-//						i = 0; // restart
-//					}
-//				}
-//				if(!dstWithsPrime.isEmpty()) {
-//					dstWithsPrime.addAll(dstWiths);
-//					dstStatement.setWithItemsList(dstWithsPrime);
-//				}
-//			} // end "have child cte" check
-//		} // end "adding cte" check
-//
-//		return dstStatement;
-//	
-//	}
 	
 	@Override
 	public void accept(OperatorVisitor operatorVisitor) throws Exception {

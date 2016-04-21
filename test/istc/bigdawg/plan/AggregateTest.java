@@ -95,7 +95,7 @@ public class AggregateTest {
 			Operator root = qp.getRootNode();
 			
 			SQLQueryGenerator gen = new SQLQueryGenerator();
-			gen.configure(true, false, null);
+			gen.configure(true, false);
 			gen.setSrcStatement(((Select)CCJSqlParserUtil.parse(inputs.get(testname))));
 			root.accept(gen);
 			

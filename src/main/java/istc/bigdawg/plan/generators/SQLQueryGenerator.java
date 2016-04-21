@@ -18,6 +18,7 @@ import istc.bigdawg.plan.operators.Scan;
 import istc.bigdawg.plan.operators.SeqScan;
 import istc.bigdawg.plan.operators.Sort;
 import istc.bigdawg.plan.operators.WindowAggregate;
+import istc.bigdawg.schema.DataObjectAttribute;
 import istc.bigdawg.schema.SQLAttribute;
 import istc.bigdawg.utils.sqlutil.SQLExpressionUtils;
 import net.sf.jsqlparser.JSQLParserException;
@@ -58,17 +59,11 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	Set<String> allowedScans = new HashSet<>();
 	
 	@Override
-	public void configure(boolean isRoot, boolean stopAtJoin, Set<String> allowedScans) {
-//		this.srcStatement = srcStatement;
+	public void configure(boolean isRoot, boolean stopAtJoin) {
 		this.stopAtJoin = stopAtJoin;
 		this.isRoot = isRoot;
-		if (allowedScans != null && !allowedScans.isEmpty()) this.allowedScans = new HashSet<>(allowedScans);
 	}
 	
-	public void setSrcStatement(Select srcStatement) {
-		this.srcStatement = srcStatement;
-	}
-
 	public void saveRoot(Operator o) {
 		if (!this.isRoot) return;
 		this.root = o;
@@ -76,6 +71,14 @@ public class SQLQueryGenerator implements OperatorVisitor {
 		dstStatement = null;
 	}
 	
+	public void setSrcStatement(Select srcStatement) {
+		this.srcStatement = srcStatement;
+	}
+	
+	public void setAllowedScan(Set<String> allowedScans) {
+		if (allowedScans != null) this.allowedScans = new HashSet<>(allowedScans);
+	}
+
 	@Override
 	public String generateStatementString() throws Exception {
 		postprocessSQLStatement(root);
@@ -573,8 +576,8 @@ public class SQLQueryGenerator implements OperatorVisitor {
 		
 		if ( !(operator instanceof Join) && (child instanceof Join)) {
 			// TODO targeted strike? CURRENTLY WASH EVERYTHING // Set<String> names = child.getDataObjectNames();
-			allowedScans = operator.getDataObjectAliasesOrNames().keySet();
-			configure(true, true, allowedScans);
+			configure(true, true);
+			setAllowedScan(operator.getDataObjectAliasesOrNames().keySet());
 			operator.accept(this);
 			outputSelect = dstStatement;
 			
@@ -1291,5 +1294,55 @@ System.out.printf("--->> join, processLeftAndRightWithIndexCond, found expressio
 		ss.setSelectBody(dstStatement.getSelectBody());
 		return ss;
 	}
+
 	
+	
+	// consider moving this to a separator visitor
+	
+	@Override
+	public String generateCreateStatementLocally(Operator op, String name) throws Exception {
+		StringBuilder sb = new StringBuilder();
+		
+		sb.append("CREATE TABLE ").append(name).append(' ').append('(');
+		
+		boolean started = false;
+		
+		for (DataObjectAttribute doa : op.getOutSchema().values()) {
+			if (started == true) sb.append(',');
+			else started = true;
+			
+			sb.append(generateSQLTypedString(doa));
+		}
+		
+		sb.append(')');
+		
+		return sb.toString();
+	} 
+	
+	public String generateSQLTypedString(DataObjectAttribute doa) {
+		return doa.getName().replaceAll(".+\\.(?=[\\w]+$)", "") + " " + convertTypeStringToSQLTyped(doa);
+	}
+	
+	public String convertTypeStringToSQLTyped(DataObjectAttribute doa) {
+		
+		if (doa.getTypeString() == null || doa.getTypeString().charAt(0) == '*' || (doa.getTypeString().charAt(0) >= '0' && doa.getTypeString().charAt(0) <= '9'))
+			return "integer";
+		
+		String str = doa.getTypeString().concat("     ").substring(0,5).toLowerCase();
+		
+		switch (str) {
+		case "int32":
+		case "int64":
+			return "integer";
+		case "string":
+			return "varchar";
+		case "float":
+			return "double precision";
+		case "bool ":
+			return "boolean";
+		default:
+			return doa.getTypeString();
+		}
+		
+	}
 }

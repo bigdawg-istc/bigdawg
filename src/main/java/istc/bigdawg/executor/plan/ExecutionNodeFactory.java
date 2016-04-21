@@ -219,12 +219,12 @@ public class ExecutionNodeFactory {
 			String broadcastQuery;
 			if (sqlStatementForPresentNonJoinSegment.length() == 0 && isSelect) {
 //				broadcastQuery = joinOp.generateSQLString(null);
-				gen.configure(true, false, null);
+				gen.configure(true, false);
 				joinOp.accept(gen);
 				broadcastQuery = gen.generateStatementString();
 			} else {
 //				broadcastQuery = joinOp.generateSQLSelectIntoStringForExecutionTree(joinDestinationTable, true);
-				gen.configure(true, true, null);
+				gen.configure(true, true);
 				joinOp.accept(gen);
 				broadcastQuery = gen.generateSelectIntoStatementForExecutionTree(joinDestinationTable);
 			}
@@ -351,15 +351,17 @@ public class ExecutionNodeFactory {
 		String remainderInto = qep.getSerializedName();
 		String remainderSelectIntoString;
 
+		OperatorVisitor gen = null;
 		// if RELATIONAL
 		if (qep.getIsland().equals(Scope.RELATIONAL)) {
-			SQLQueryGenerator gen = new SQLQueryGenerator();
-			remainder.accept(gen);
-			remainderSelectIntoString = gen.generateSelectIntoStatementForExecutionTree(null);
-		} else if (qep.getIsland().equals(Scope.ARRAY))
-			remainderSelectIntoString = remainder.generateAFLStoreStringForExecutionTree(null);
-		else 
+			gen = new SQLQueryGenerator();
+		} else if (qep.getIsland().equals(Scope.ARRAY)) {
+			gen = new AFLQueryGenerator();
+		} else 
 			throw new Exception("Unsupported island code: "+qep.getIsland().toString());
+		remainder.accept(gen);
+		remainderSelectIntoString = gen.generateSelectIntoStatementForExecutionTree(null);
+		
 		
 		LocalQueryExecutionNode remainderNode = new LocalQueryExecutionNode(remainderSelectIntoString, remainderCI, remainderInto);
 		dependentNodes.put(remainderInto, remainderNode);

@@ -12,7 +12,6 @@ import java.util.regex.Pattern;
 
 import com.google.common.collect.Sets;
 
-import istc.bigdawg.Island;
 import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.executor.plan.ExecutionNodeFactory;
 import istc.bigdawg.executor.plan.QueryExecutionPlan;
@@ -20,6 +19,7 @@ import istc.bigdawg.plan.AFLQueryPlan;
 import istc.bigdawg.plan.SQLQueryPlan;
 import istc.bigdawg.plan.extract.AFLPlanParser;
 import istc.bigdawg.plan.extract.SQLPlanParser;
+import istc.bigdawg.plan.generators.AFLQueryGenerator;
 import istc.bigdawg.plan.generators.OperatorVisitor;
 import istc.bigdawg.plan.generators.SQLQueryGenerator;
 import istc.bigdawg.plan.operators.Aggregate;
@@ -89,24 +89,26 @@ public class CrossIslandQueryNode {
 		
 		System.out.println("Island query: " + islandQuery);
 		
+		OperatorVisitor gen = null;
+		
 		// create new tables or arrays for planning use
 		if (scope.equals(Scope.RELATIONAL)) {
 			this.select = (Select) CCJSqlParserUtil.parse(islandQuery);
 			dbSchemaHandler = new PostgreSQLHandler(psqlSchemaHandlerDBID);
+			gen = new SQLQueryGenerator();
 			for (String key : rootsForSchemas.keySet()) {
 				if (children.contains(key)) {
-					System.out.println("key: "+key+"; query: "+rootsForSchemas.get(key).generateSQLCreateTableStatementLocally(key)+"\n\n");
-					((PostgreSQLHandler)dbSchemaHandler).executeStatementPostgreSQL(rootsForSchemas.get(key)
-							.generateSQLCreateTableStatementLocally(key));
+					System.out.println("key: "+key+"; query: "+gen.generateCreateStatementLocally(rootsForSchemas.get(key), key)+"\n\n");
+					((PostgreSQLHandler)dbSchemaHandler).executeStatementPostgreSQL(gen.generateCreateStatementLocally(rootsForSchemas.get(key), key));
 				}
 			}
 		} else if (scope.equals(Scope.ARRAY)) {
 			dbSchemaHandler = new SciDBHandler(scidbSchemaHandlerDBID);
+			gen = new AFLQueryGenerator();
 			for (String key : rootsForSchemas.keySet()) {
 				if (children.contains(key)) {
-					System.out.println("key: "+key+"; query: "+rootsForSchemas.get(key).generateSQLCreateTableStatementLocally(key)+"\n\n");
-					((SciDBHandler)dbSchemaHandler).executeStatement(rootsForSchemas.get(key)
-							.generateAFLCreateArrayStatementLocally(key));
+					System.out.println("key: "+key+"; query: "+gen.generateCreateStatementLocally(rootsForSchemas.get(key), key)+"\n\n");
+					((SciDBHandler)dbSchemaHandler).executeStatement(gen.generateCreateStatementLocally(rootsForSchemas.get(key), key));
 				}
 			}
 		} else
@@ -350,7 +352,7 @@ public class CrossIslandQueryNode {
 				gen = new SQLQueryGenerator();
 				((SQLQueryGenerator)gen).setSrcStatement(select);
 			}
-			gen.configure(true, false, null);
+			gen.configure(true, false);
 			root.accept(gen);
 			
 			System.out.println("--> blocking root; class: "+root.getClass().getSimpleName()+"; ");

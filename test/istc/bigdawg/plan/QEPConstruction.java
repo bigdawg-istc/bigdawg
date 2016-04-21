@@ -10,17 +10,13 @@ import org.junit.Before;
 import org.junit.Test;
 
 import istc.bigdawg.catalog.CatalogInstance;
-import istc.bigdawg.monitoring.Monitor;
 import istc.bigdawg.packages.CrossIslandQueryNode;
 import istc.bigdawg.packages.CrossIslandQueryPlan;
 import istc.bigdawg.parsers.UserQueryParser;
+import istc.bigdawg.plan.generators.OperatorVisitor;
 import istc.bigdawg.plan.generators.SQLQueryGenerator;
 import istc.bigdawg.plan.operators.Join;
 import istc.bigdawg.plan.operators.Operator;
-import istc.bigdawg.utils.IslandsAndCast.Scope;
-import net.sf.jsqlparser.expression.Expression;
-import net.sf.jsqlparser.expression.Parenthesis;
-import net.sf.jsqlparser.schema.Column;
 
 public class QEPConstruction {
 
@@ -216,6 +212,8 @@ public class QEPConstruction {
 		
 		System.out.println("\n\nMember KeySet Size: "+ciqp.getMemberKeySet().size()+"\n");
 		
+		OperatorVisitor gen = new SQLQueryGenerator();
+		
 		for (String k : ciqp.getMemberKeySet()) {
 			
 			CrossIslandQueryNode n = ciqp.getMember(k);
@@ -225,7 +223,7 @@ public class QEPConstruction {
 			
 			// schemas
 			if (k.toLowerCase().startsWith("bigdawgtag_")){
-				System.out.println("Root schema in SQL: \n- "+n.getRemainder(0).generateSQLCreateTableStatementLocally(k));
+				System.out.println("Root schema in SQL: \n- "+gen.generateCreateStatementLocally(n.getRemainder(0), k));
 //				System.out.println("Root schema in AFL: \n- "+n.getRemainder(0).generateAFLCreateArrayStatementLocally(k));
 			}
 			

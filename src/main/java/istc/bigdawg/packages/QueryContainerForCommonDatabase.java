@@ -3,6 +3,8 @@ package istc.bigdawg.packages;
 import java.util.Map;
 import java.util.Set;
 
+import istc.bigdawg.plan.generators.AFLQueryGenerator;
+import istc.bigdawg.plan.generators.OperatorVisitor;
 import istc.bigdawg.plan.generators.SQLQueryGenerator;
 import istc.bigdawg.plan.operators.Operator;
 import istc.bigdawg.query.ConnectionInfo;
@@ -43,14 +45,17 @@ public class QueryContainerForCommonDatabase {
 	}
 	
 	public String generateSQLSelectIntoString() throws Exception {
-		SQLQueryGenerator gen = new SQLQueryGenerator();
-		gen.configure(true, false, null);
+		OperatorVisitor gen = new SQLQueryGenerator();
+		gen.configure(true, false);
 		rootOperator.accept(gen);
 		return gen.generateSelectIntoStatementForExecutionTree(pruneToken);
 	}
 	
 	public String generateAFLStoreString() throws Exception {
-		return rootOperator.generateAFLStoreStringForExecutionTree(pruneToken);
+		OperatorVisitor gen = new AFLQueryGenerator();
+		gen.configure(true, false);
+		rootOperator.accept(gen);
+		return gen.generateSelectIntoStatementForExecutionTree(pruneToken);
 	}
 	
 	public String generateTreeExpression() throws Exception {

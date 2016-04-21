@@ -20,7 +20,7 @@ public class Scan extends Operator {
 	private Expression filterExpression = null;
 	protected Expression indexCond = null;
 	private String srcTable;
-	protected String operatorName = null;
+	private String operatorName = null;
 	
 	private String tableAlias;  //may be query-specific, need to derive it here
 	protected Table table;
@@ -137,167 +137,82 @@ public class Scan extends Operator {
 		
 	}
 	
+	
 //	@Override
-//	public Select generateSQLStringDestOnly(Select dstStatement, boolean isSubTreeRoot, boolean stopAtJoin, Set<String> allowedScans) throws Exception {
-//
-//		if(dstStatement == null) {
-//			dstStatement = SelectUtils.buildSelectFromTable(table);
-//		}
+//	public String generateAFLString(int recursionLevel) throws Exception {
+//		StringBuilder sb = new StringBuilder();
+//		if (!(getOperatorName().equals("scan") && recursionLevel > 0))
+//			sb.append(getOperatorName()).append('(');
 //		
-//		if (getFilterExpression() != null && !isPruned() && !isHasFunctionInFilterExpression()) { // FilterExpression with function is pulled
-//			
-//			Expression fe = CCJSqlParserUtil.parseCondExpression(getFilterExpression().toString());
-//			
-//			List<Column> cs = SQLExpressionUtils.getAttributes(fe);
-//			List<String> ss = new ArrayList<>();
-//			for (Column c : cs)  ss.add(c.getTable().getName());
-//			ss.remove(this.getSrcTable());
-//			if (getTableAlias() != null) ss.remove(getTableAlias());
-//			ss.removeAll(allowedScans);
-//			
-//			
-//			if (ss.isEmpty()) {
-//			
-//				PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
-//				
-//				Expression e = null; 
-//				if(ps.getWhere() != null) {
-//					e = new AndExpression(ps.getWhere(), fe);
-//				} else 
-//					e = fe;
-//				
-//				if ( e != null) e = CCJSqlParserUtil.parseCondExpression(e.toString());
-//				
-//				try {
-//					ps.setWhere(e);
-//				} catch (Exception ex) {
-//					System.out.println("filterSet exception: "+fe.toString());
-//				}
+//		boolean ped = (!this.getChildren().isEmpty()) && this.getChildren().get(0).isPruned();
+//		
+//		if (ped)
+//			sb.append(this.getChildren().get(0).getPruneToken());
+//		else if (children.size() > 0)
+//			sb.append(children.get(0).generateAFLString(recursionLevel + 1));
+//		else {
+//			sb.append(getSrcTable());
+//		} 
+//		
+//		switch (getOperatorName()) {
+//		case "apply":
+//			for (String s : outSchema.keySet()){
+//				if (outSchema.get(s).isHidden()) continue;
+//				if (outSchema.get(s).getName().equals(outSchema.get(s).getExpressionString())) continue;
+//				sb.append(", ").append(s).append(", ");
+////					if (ped) {
+////						// the apply
+////						Expression expression = CCJSqlParserUtil.parseExpression(outSchema.get(s).getExpressionString());
+////						Set<String> nameSet = new HashSet<>( SQLExpressionUtils.getColumnTableNamesInAllForms(expression));
+////						SQLExpressionUtils.renameAttributes(expression, nameSet, nameSet, getChildren().get(0).getPruneToken());
+////						sb.append(expression.toString());
+////					} else {
+//					sb.append(outSchema.get(s).getExpressionString());
+////					}
 //			}
+//			
+//			break;
+//		case "project":
+//			for (String s : outSchema.keySet()){
+//				if (outSchema.get(s).isHidden()) continue;
+//				
+//				sb.append(", ");
+//				if (ped) {
+//					String[] o = outSchema.get(s).getName().split("\\.");
+//					sb.append(getChildren().get(0).getPruneToken()).append('.').append(o[o.length-1]);
+//				} else 
+//					sb.append(outSchema.get(s).getName());
+//			}
+//			break;
+//		case "redimension":
+//			sb.append(", <");
+//			
+//			for (String s : outSchema.keySet()) {
+//				if (outSchema.get(s).isHidden()) continue;
+//				if (sb.charAt(sb.length()-1) != '<') sb.append(',');
+//				sb.append(outSchema.get(s).generateAFLTypeString());
+//			}
+//			sb.append(">[");
+//			for (String s : outSchema.keySet()) {
+//				if (!outSchema.get(s).isHidden()) continue;
+//				if (sb.charAt(sb.length()-1) != '[') sb.append(',');
+//				sb.append(outSchema.get(s).generateAFLTypeString());
+//			}
+//			sb.append(']');
+//			break;
+//		case "scan":
+//			break;
+//		case "filter":
+//			sb.append(", ").append(getFilterExpression());
+//			break;
+//		default:
+//			break;
 //		}
-//		
-////		if (indexCond != null ) { // used to have a !isPruned;
-////			
-////			Expression ic = CCJSqlParserUtil.parseCondExpression(indexCond.toString());
-////			
-////			List<Column> cs = SQLExpressionUtils.getAttributes(ic);
-////			List<String> ss = new ArrayList<>();
-////			for (Column c : cs)  ss.add(c.getTable().getName());
-////			ss.remove(this.srcTable);
-////			if (tableAlias != null) ss.remove(tableAlias);
-////			ss.removeAll(allowedScans);
-////			
-////			
-////			if (ss.isEmpty()) {
-////				
-////				if (isPruned) {
-////					Set<String> names = new HashSet<>();
-////					names.add(this.srcTable);
-////					names.add(this.tableAlias);
-////					SQLExpressionUtils.renameAttributes(ic, names, null, this.getPruneToken());
-////				} 
-////				
-////				PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
-////				
-////				Expression e = null; 
-////				if(ps.getWhere() != null) {
-////					e = new AndExpression(ps.getWhere(), ic);
-////				} else {
-////					e = ic;
-////				}
-////				
-////				e = CCJSqlParserUtil.parseCondExpression(e.toString());
-////
-////				try {
-////					ps.setWhere(e);
-////				} catch (Exception ex) {
-////					System.out.println("indexCond exception: "+ic.toString());
-////				}
-////			}
-////		}
-//		
-//		return dstStatement;
-//
-//		
+//			
+//		if (!(getOperatorName().equals("scan") && recursionLevel > 0))
+//			sb.append(')');
+//		return sb.toString();
 //	}
-	
-	
-	
-	@Override
-	public String generateAFLString(int recursionLevel) throws Exception {
-		StringBuilder sb = new StringBuilder();
-		if (!(operatorName.equals("scan") && recursionLevel > 0))
-			sb.append(operatorName).append('(');
-		
-		boolean ped = (!this.getChildren().isEmpty()) && this.getChildren().get(0).isPruned();
-		
-		if (ped)
-			sb.append(this.getChildren().get(0).getPruneToken());
-		else if (children.size() > 0)
-			sb.append(children.get(0).generateAFLString(recursionLevel + 1));
-		else {
-			sb.append(getSrcTable());
-		} 
-		
-		switch (operatorName) {
-		case "apply":
-			for (String s : outSchema.keySet()){
-				if (outSchema.get(s).isHidden()) continue;
-				if (outSchema.get(s).getName().equals(outSchema.get(s).getExpressionString())) continue;
-				sb.append(", ").append(s).append(", ");
-//					if (ped) {
-//						// the apply
-//						Expression expression = CCJSqlParserUtil.parseExpression(outSchema.get(s).getExpressionString());
-//						Set<String> nameSet = new HashSet<>( SQLExpressionUtils.getColumnTableNamesInAllForms(expression));
-//						SQLExpressionUtils.renameAttributes(expression, nameSet, nameSet, getChildren().get(0).getPruneToken());
-//						sb.append(expression.toString());
-//					} else {
-					sb.append(outSchema.get(s).getExpressionString());
-//					}
-			}
-			
-			break;
-		case "project":
-			for (String s : outSchema.keySet()){
-				if (outSchema.get(s).isHidden()) continue;
-				
-				sb.append(", ");
-				if (ped) {
-					String[] o = outSchema.get(s).getName().split("\\.");
-					sb.append(getChildren().get(0).getPruneToken()).append('.').append(o[o.length-1]);
-				} else 
-					sb.append(outSchema.get(s).getName());
-			}
-			break;
-		case "redimension":
-			sb.append(", <");
-			
-			for (String s : outSchema.keySet()) {
-				if (outSchema.get(s).isHidden()) continue;
-				if (sb.charAt(sb.length()-1) != '<') sb.append(',');
-				sb.append(outSchema.get(s).generateAFLTypeString());
-			}
-			sb.append(">[");
-			for (String s : outSchema.keySet()) {
-				if (!outSchema.get(s).isHidden()) continue;
-				if (sb.charAt(sb.length()-1) != '[') sb.append(',');
-				sb.append(outSchema.get(s).generateAFLTypeString());
-			}
-			sb.append(']');
-			break;
-		case "scan":
-			break;
-		case "filter":
-			sb.append(", ").append(getFilterExpression());
-			break;
-		default:
-			break;
-		}
-			
-		if (!(operatorName.equals("scan") && recursionLevel > 0))
-			sb.append(')');
-		return sb.toString();
-	}
 	
 	
 
@@ -411,6 +326,16 @@ public class Scan extends Operator {
 
 	public void setTableAlias(String tableAlias) {
 		this.tableAlias = tableAlias;
+	}
+
+
+	public String getOperatorName() {
+		return operatorName;
+	}
+
+
+	public void setOperatorName(String operatorName) {
+		this.operatorName = operatorName;
 	}
 
 }

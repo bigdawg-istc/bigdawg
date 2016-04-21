@@ -62,27 +62,6 @@ public class Limit extends Operator {
 	}
 
 	
-//	@Override
-//	public Select generateSQLStringDestOnly(Select dstStatement, boolean isSubTreeRoot, boolean stopAtJoin, Set<String> allowedScans) throws Exception {
-//
-//		dstStatement = children.get(0).generateSQLStringDestOnly(dstStatement, false, stopAtJoin, allowedScans);
-//				
-//		PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
-//
-//		net.sf.jsqlparser.statement.select.Limit sqllim = new net.sf.jsqlparser.statement.select.Limit();
-//		
-//		if (isLimitAll()) sqllim.setLimitAll(isLimitAll());
-//		else if (isLimitNull()) sqllim.setLimitNull(isLimitNull());
-//		else sqllim.setRowCount(getLimitCount());
-//		
-//		if (isHasOffSet()) sqllim.setOffset(getLimitOffset());
-//		
-//		ps.setLimit(sqllim);
-//		
-//		return dstStatement;
-//		
-//	}
-	
 	@Override
 	public void accept(OperatorVisitor operatorVisitor) throws Exception {
 		operatorVisitor.visit(this);

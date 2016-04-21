@@ -48,7 +48,7 @@ public class Sort extends Operator {
 		// iterate from first OVER --> ORDER BY
 		
 		sortOrder = supplement.getSortOrder(keys, parameters.get("sectionName"));
-		sortKeys = keys;
+		setSortKeys(keys);
 
 		if (children.get(0) instanceof Join) {
 			outSchema = new LinkedHashMap<>();
@@ -64,13 +64,13 @@ public class Sort extends Operator {
 		}
 		
 		// match with previous schema to get any aliases to propagate
-		for(int i = 0; i < sortKeys.size(); ++i) {
-			String a = supplement.getAlias(sortKeys.get(i));
+		for(int i = 0; i < getSortKeys().size(); ++i) {
+			String a = supplement.getAlias(getSortKeys().get(i));
 			if(a != null) 
-				sortKeys.set(i, a);
+				getSortKeys().set(i, a);
 		}
 		
-		orderByElements = new ArrayList<>();
+		setOrderByElements(new ArrayList<>());
 		
 		// pick out the outitems that are not columns
 		Map<String, String> outExps = new HashMap<>();
@@ -79,7 +79,7 @@ public class Sort extends Operator {
 				outExps.put(s, outSchema.get(s).getExpressionString());
 		}
 		
-		for (String s : sortKeys) {
+		for (String s : getSortKeys()) {
 			Expression e = CCJSqlParserUtil.parseExpression(SQLExpressionUtils.removeExpressionDataTypeArtifactAndConvertLike(s));
 			SQLExpressionUtils.removeExcessiveParentheses(e);
 			while (e instanceof Parenthesis) e = ((Parenthesis) e).getExpression();
@@ -97,7 +97,7 @@ public class Sort extends Operator {
 				obe.setAscDescPresent(true);
 				obe.setAsc(true);
 			}
-			orderByElements.add(obe);
+			getOrderByElements().add(obe);
 		}
 	}
 	
@@ -115,7 +115,7 @@ public class Sort extends Operator {
 		// instantiate iterator to get the right one
 		// iterate from first OVER --> ORDER BY
 
-		sortKeys = keys;
+		setSortKeys(keys);
 		
 		outSchema = new LinkedHashMap<String, DataObjectAttribute>(child.outSchema);
 		
@@ -127,46 +127,21 @@ public class Sort extends Operator {
 		
 		this.blockerID = s.blockerID;
 
-		this.sortKeys = new ArrayList<>();
+		this.setSortKeys(new ArrayList<>());
 		this.setWinAgg(s.isWinAgg());
-		for (String str : s.sortKeys) {
-			this.sortKeys.add(new String(str));
+		for (String str : s.getSortKeys()) {
+			this.getSortKeys().add(new String(str));
 		}
 		this.sortOrder = s.sortOrder; 
-		this.orderByElements = new ArrayList<>();
-		for (OrderByElement ob : s.orderByElements) {
-			this.orderByElements.add(ob);
+		this.setOrderByElements(new ArrayList<>());
+		for (OrderByElement ob : s.getOrderByElements()) {
+			this.getOrderByElements().add(ob);
 		}
 	}
 	
-//	@Override
-//	public Select generateSQLStringDestOnly(Select dstStatement, boolean isSubTreeRoot, boolean stopAtJoin, Set<String> allowedScans) throws Exception {
-//		dstStatement = children.get(0).generateSQLStringDestOnly(dstStatement, false, stopAtJoin, allowedScans);
-//
-//		if (children.get(0) instanceof Join) {
-//			PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
-//			ps.getSelectItems().clear();
-//			for (String alias: outSchema.keySet()) {
-//				Expression e = CCJSqlParserUtil.parseExpression(outSchema.get(alias).getExpressionString());
-//				SelectItem s = new SelectExpressionItem(e);
-//				if (!(e instanceof Column)) {
-//					((SelectExpressionItem)s).setAlias(new Alias(alias));
-//				}
-//				ps.addSelectItems(s);
-//			}
-//		}
-//		
-//		if(!isWinAgg()) {
-//			((PlainSelect) dstStatement.getSelectBody()).setOrderByElements(updateOrderByElements());
-//		}
-//
-//		return dstStatement;
-//
-//	}
-	
 	
 	public String toString() {
-		return "Sort operator on columns " + sortKeys.toString() + " with ordering " + sortOrder;
+		return "Sort operator on columns " + getSortKeys().toString() + " with ordering " + sortOrder;
 	}
 	
 	/**
@@ -179,7 +154,7 @@ public class Sort extends Operator {
 		List<OrderByElement> ret = new ArrayList<>();
 		
 		List<Operator> treeWalker;
-		for (OrderByElement obe : orderByElements) {
+		for (OrderByElement obe : getOrderByElements()) {
 			
 			treeWalker = children;
 			boolean found = false;
@@ -223,11 +198,11 @@ public class Sort extends Operator {
 		StringBuilder sb = new StringBuilder();
 		sb.append("sort(");
 		sb.append(children.get(0).generateAFLString(recursionLevel+1));
-		if (!sortKeys.isEmpty()) {
+		if (!getSortKeys().isEmpty()) {
 
 			updateOrderByElements();
 			
-			for (OrderByElement obe: orderByElements) {
+			for (OrderByElement obe: getOrderByElements()) {
 				sb.append(", ").append(obe.toString());
 			}
 			
@@ -248,6 +223,22 @@ public class Sort extends Operator {
 
 	public void setWinAgg(boolean isWinAgg) {
 		this.isWinAgg = isWinAgg;
+	}
+
+	public List<String> getSortKeys() {
+		return sortKeys;
+	}
+
+	public void setSortKeys(List<String> sortKeys) {
+		this.sortKeys = sortKeys;
+	}
+
+	public List<OrderByElement> getOrderByElements() {
+		return orderByElements;
+	}
+
+	public void setOrderByElements(List<OrderByElement> orderByElements) {
+		this.orderByElements = orderByElements;
 	}
 	
 };

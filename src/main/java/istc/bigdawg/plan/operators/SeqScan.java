@@ -77,11 +77,11 @@ public class SeqScan extends Scan {
 		}
 		
 		if (getFilterExpression() != null && (!getFilterExpression().equals("")))
-			operatorName = "filter";
+			setOperatorName("filter");
 		else if (children.size() != 0)
-			operatorName = "project";
+			setOperatorName("project");
 		else 
-			operatorName = "scan";
+			setOperatorName("scan");
 		
 	}
 	
@@ -89,7 +89,7 @@ public class SeqScan extends Scan {
 	public SeqScan (Map<String, String> parameters, SciDBArray output, Operator child) throws Exception  {
 		super(parameters, output, child);
 		
-		operatorName = parameters.get("OperatorName");
+		setOperatorName(parameters.get("OperatorName"));
 		
 		Map<String, String> applyAttributes = new HashMap<>();
 		if (parameters.get("Apply-Attributes") != null) {
@@ -136,7 +136,7 @@ public class SeqScan extends Scan {
 		
 	public SeqScan(Operator o, boolean addChild) throws Exception {
 		super(o, addChild);
-		this.operatorName = ((SeqScan)o).operatorName;
+		this.setOperatorName(((SeqScan)o).getOperatorName());
 	}
 
 	@Override
@@ -159,14 +159,14 @@ public class SeqScan extends Scan {
 		
 		StringBuilder sb = new StringBuilder();
 		sb.append('{');
-		if (children.isEmpty() && operatorName.equals("scan")){
+		if (children.isEmpty() && getOperatorName().equals("scan")){
 			// it is a scan
 			sb.append(this.getSrcTable());
 		} else if (children.isEmpty()) {
-			sb.append(operatorName).append('{').append(this.getSrcTable()).append('}');
+			sb.append(getOperatorName()).append('{').append(this.getSrcTable()).append('}');
 		} else {
 			// filter, project
-			sb.append(operatorName).append(children.get(0).getTreeRepresentation(false));
+			sb.append(getOperatorName()).append(children.get(0).getTreeRepresentation(false));
 		}
 //		if (filterExpression != null) sb.append(SQLExpressionUtils.parseCondForTree(filterExpression));
 		sb.append('}');

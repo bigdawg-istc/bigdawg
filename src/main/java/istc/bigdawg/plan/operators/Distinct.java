@@ -42,29 +42,6 @@ public class Distinct extends Operator {
 	}
 
 
-//	@Override
-//	public Select generateSQLStringDestOnly(Select dstStatement, boolean isSubTreeRoot, boolean stopAtJoin, Set<String> allowedScans) throws Exception {
-//		
-//		dstStatement = children.get(0).generateSQLStringDestOnly(dstStatement, false, stopAtJoin, allowedScans);
-//
-//		PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
-//		if (children.get(0) instanceof Join) {
-//			ps.getSelectItems().clear();
-//			for (String alias: outSchema.keySet()) {
-//				Expression e = CCJSqlParserUtil.parseExpression(outSchema.get(alias).getExpressionString());
-//				SelectItem s = new SelectExpressionItem(e);
-//				if (!(e instanceof Column)) {
-//					((SelectExpressionItem)s).setAlias(new Alias(alias));
-//				}
-//				ps.addSelectItems(s);
-//			}
-//		}
-//		
-//		ps.setDistinct(new net.sf.jsqlparser.statement.select.Distinct());
-//		
-//		return dstStatement;
-//	}
-
 	@Override
 	public void accept(OperatorVisitor operatorVisitor) throws Exception {
 		operatorVisitor.visit(this);
