@@ -193,24 +193,24 @@ public class Sort extends Operator {
 		operatorVisitor.visit(this);
 	}
 	
-	@Override
-	public String generateAFLString(int recursionLevel) throws Exception{
-		StringBuilder sb = new StringBuilder();
-		sb.append("sort(");
-		sb.append(children.get(0).generateAFLString(recursionLevel+1));
-		if (!getSortKeys().isEmpty()) {
-
-			updateOrderByElements();
-			
-			for (OrderByElement obe: getOrderByElements()) {
-				sb.append(", ").append(obe.toString());
-			}
-			
-		}
-		sb.append(')');
-		return sb.toString();
-		
-	}
+//	@Override
+//	public String generateAFLString(int recursionLevel) throws Exception{
+//		StringBuilder sb = new StringBuilder();
+//		sb.append("sort(");
+//		sb.append(children.get(0).generateAFLString(recursionLevel+1));
+//		if (!getSortKeys().isEmpty()) {
+//
+//			updateOrderByElements();
+//			
+//			for (OrderByElement obe: getOrderByElements()) {
+//				sb.append(", ").append(obe.toString());
+//			}
+//			
+//		}
+//		sb.append(')');
+//		return sb.toString();
+//		
+//	}
 	
 	@Override
 	public String getTreeRepresentation(boolean isRoot) throws Exception{

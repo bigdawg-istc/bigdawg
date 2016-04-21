@@ -51,13 +51,13 @@ public class Distinct extends Operator {
 		return "Distinct over " + outSchema;
 	}
 	
-	@Override
-	public String generateAFLString(int recursionLevel) throws Exception {
-		String planStr =  "Distinct(";
-		planStr += children.get(0).generateAFLString(recursionLevel + 1);
-		planStr += ")";
-		return planStr;
-	}
+//	@Override
+//	public String generateAFLString(int recursionLevel) throws Exception {
+//		String planStr =  "Distinct(";
+//		planStr += children.get(0).generateAFLString(recursionLevel + 1);
+//		planStr += ")";
+//		return planStr;
+//	}
 	
 	@Override
 	public String getTreeRepresentation(boolean isRoot) throws Exception{

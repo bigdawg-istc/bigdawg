@@ -123,17 +123,17 @@ public class CommonSQLTableExpressionScan extends Scan {
 		return sourceStatement;
 	}
 	
-	@Override
-	public String generateAFLString(int recursionLevel) {
-		String planStr =  "CTE_Scan(" + getCteName();
-		if(getFilterExpression() != null) {
-			planStr += ", " + getFilterExpression();
-		}
-		
-		//planStr += children.get(0).printPlan(recursionLevel + 1);
-		planStr += ")";
-		return planStr;
-	}
+//	@Override
+//	public String generateAFLString(int recursionLevel) {
+//		String planStr =  "CTE_Scan(" + getCteName();
+//		if(getFilterExpression() != null) {
+//			planStr += ", " + getFilterExpression();
+//		}
+//		
+//		//planStr += children.get(0).printPlan(recursionLevel + 1);
+//		planStr += ")";
+//		return planStr;
+//	}
 	
 	@Override
 	public Map<String, List<String>> getTableLocations(Map<String, List<String>> locations) {

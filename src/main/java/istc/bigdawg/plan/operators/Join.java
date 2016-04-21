@@ -326,35 +326,35 @@ public class Join extends Operator {
     				+ " type " + joinType + " predicates " + joinPredicate + " filters " + joinFilter;
     }
     
-	@Override
-	public String generateAFLString(int recursionLevel) throws Exception {
-		StringBuilder sb = new StringBuilder();
-		sb.append("cross_join(");
-		
-		if (children.get(0).isPruned())
-			sb.append(children.get(0).getPruneToken());
-		else 
-			sb.append(children.get(0).generateAFLString(recursionLevel+1));
-		
-		if (!this.getAliases().isEmpty()) 
-			sb.append(" as ").append(getAliases().get(0));
-		sb.append(", ");
-		
-		if (children.get(1).isPruned())
-			sb.append(children.get(1).getPruneToken());
-		else 
-			sb.append(children.get(1).generateAFLString(recursionLevel+1));
-		
-		if (!this.getAliases().isEmpty()) sb.append(" as ").append(getAliases().get(1));
-		
-		if (joinPredicate != null) {
-			sb.append(", ");
-			sb.append(joinPredicate.replaceAll("( AND )|( = )", ", ").replaceAll("[<>= ()]+", " ").replace("\\s+", ", "));
-		}
-		
-		sb.append(')');
-		return sb.toString();
-	}
+//	@Override
+//	public String generateAFLString(int recursionLevel) throws Exception {
+//		StringBuilder sb = new StringBuilder();
+//		sb.append("cross_join(");
+//		
+//		if (children.get(0).isPruned())
+//			sb.append(children.get(0).getPruneToken());
+//		else 
+//			sb.append(children.get(0).generateAFLString(recursionLevel+1));
+//		
+//		if (!this.getAliases().isEmpty()) 
+//			sb.append(" as ").append(getAliases().get(0));
+//		sb.append(", ");
+//		
+//		if (children.get(1).isPruned())
+//			sb.append(children.get(1).getPruneToken());
+//		else 
+//			sb.append(children.get(1).generateAFLString(recursionLevel+1));
+//		
+//		if (!this.getAliases().isEmpty()) sb.append(" as ").append(getAliases().get(1));
+//		
+//		if (joinPredicate != null) {
+//			sb.append(", ");
+//			sb.append(joinPredicate.replaceAll("( AND )|( = )", ", ").replaceAll("[<>= ()]+", " ").replace("\\s+", ", "));
+//		}
+//		
+//		sb.append(')');
+//		return sb.toString();
+//	}
 	
 	public String getOriginalJoinPredicate() {
 		return joinPredicate != null ? new String(joinPredicate) : null;

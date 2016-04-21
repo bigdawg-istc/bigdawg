@@ -163,11 +163,11 @@ public class WindowAggregate extends Operator {
 		return "WindowAgg over " + winaggs + " partition by " + partitionBy + " order by " + orderBy;
 	}
 	
-	@Override
-	public String generateAFLString(int recursionLevel) throws Exception{
-		String planStr =  "WindowAgg(";
-		planStr +=  children.get(0).generateAFLString(recursionLevel+1);
-		planStr += winaggs + "," + partitionBy + "," + orderBy + ")";
-		return planStr;
-	}
+//	@Override
+//	public String generateAFLString(int recursionLevel) throws Exception{
+//		String planStr =  "WindowAgg(";
+//		planStr +=  children.get(0).generateAFLString(recursionLevel+1);
+//		planStr += winaggs + "," + partitionBy + "," + orderBy + ")";
+//		return planStr;
+//	}
 };

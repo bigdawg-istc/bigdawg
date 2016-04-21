@@ -293,9 +293,9 @@ public class Operator implements OperatorInterface {
 	// recurse through plan and print it in nested form
 	// each op adds its part
 	// produces an plan similar to SciDB's AFL syntax
-	public String generateAFLString(int recursionLevel) throws Exception {
-		return new String();
-	}
+//	public String generateAFLString(int recursionLevel) throws Exception {
+//		return new String();
+//	}
 	
 	
 	

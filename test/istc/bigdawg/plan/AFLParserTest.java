@@ -8,6 +8,8 @@ import org.junit.Test;
 import convenience.RTED;
 import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.plan.extract.AFLPlanParser;
+import istc.bigdawg.plan.generators.AFLQueryGenerator;
+import istc.bigdawg.plan.generators.OperatorVisitor;
 import istc.bigdawg.plan.operators.Operator;
 import istc.bigdawg.scidb.SciDBHandler;
 import junit.framework.TestCase;
@@ -105,7 +107,10 @@ public class AFLParserTest extends TestCase {
 		AFLQueryPlan queryPlan = AFLPlanParser.extractDirect(new SciDBHandler(CatalogViewer.getSciDBConnectionInfo(9)), expectedOutputs.get(testname));
 		Operator root = queryPlan.getRootNode();
 		
-		System.out.println(root.generateAFLString(0));
+		OperatorVisitor gen = new AFLQueryGenerator();
+		gen.configure(true, false);
+		root.accept(gen);
+		System.out.println(gen.generateStatementString());
 		
 		System.out.println("Tree representation: "+root.getTreeRepresentation(true)+"\n");
 		

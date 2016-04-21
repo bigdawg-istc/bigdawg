@@ -85,13 +85,13 @@ public class Limit extends Operator {
 		return sb.toString();
 	}
 	
-	@Override
-	public String generateAFLString(int recursionLevel) throws Exception {
-		
-		// operator not applicable in AFL environement
-		
-		return children.get(0).generateAFLString(recursionLevel);
-	}
+//	@Override
+//	public String generateAFLString(int recursionLevel) throws Exception {
+//		
+//		// operator not applicable in AFL environement
+//		
+//		return children.get(0).generateAFLString(recursionLevel);
+//	}
 	
 	@Override
 	public String getTreeRepresentation(boolean isRoot) throws Exception{

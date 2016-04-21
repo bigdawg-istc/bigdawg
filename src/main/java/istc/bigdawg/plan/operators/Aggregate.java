@@ -404,35 +404,35 @@ public class Aggregate extends Operator {
 //		return "Aggregating on " + aggregateExpressions.toString() + " group by " + groupBy + " types " ;//+ aggregates.toString();
 //	}
 	
-	@Override
-	public String generateAFLString(int recursionLevel) throws Exception {
-		
-		StringBuilder sb = new StringBuilder();
-		
-		sb.append("Aggregate(");
-		sb.append(children.get(0).generateAFLString(recursionLevel+1));
-		
-		// TODO make sure the GroupBy are marked as hidden, otherwise do a redimension
-		
-		
-		for (String s : outSchema.keySet()) {
-			if (outSchema.get(s).isHidden()) continue;
-			sb.append(", ").append(outSchema.get(s).getExpressionString());
-			if (!outSchema.get(s).getName().contains("(")) sb.append(" AS ").append(outSchema.get(s).getName());
-		}
-		
-		List<Expression> updatedGroupBy = updateGroupByElements(false);
-		
-		if(updatedGroupBy.size() > 0) {
-			for(Expression e : updatedGroupBy) {
-				sb.append(", ").append(e);
-			}
-		}
-
-		sb.append(')');
-		
-		return sb.toString();
-	}
+//	@Override
+//	public String generateAFLString(int recursionLevel) throws Exception {
+//		
+//		StringBuilder sb = new StringBuilder();
+//		
+//		sb.append("Aggregate(");
+//		sb.append(children.get(0).generateAFLString(recursionLevel+1));
+//		
+//		// TODO make sure the GroupBy are marked as hidden, otherwise do a redimension
+//		
+//		
+//		for (String s : outSchema.keySet()) {
+//			if (outSchema.get(s).isHidden()) continue;
+//			sb.append(", ").append(outSchema.get(s).getExpressionString());
+//			if (!outSchema.get(s).getName().contains("(")) sb.append(" AS ").append(outSchema.get(s).getName());
+//		}
+//		
+//		List<Expression> updatedGroupBy = updateGroupByElements(false);
+//		
+//		if(updatedGroupBy.size() > 0) {
+//			for(Expression e : updatedGroupBy) {
+//				sb.append(", ").append(e);
+//			}
+//		}
+//
+//		sb.append(')');
+//		
+//		return sb.toString();
+//	}
 	
 	@Override
 	public String getTreeRepresentation(boolean isRoot) throws Exception{

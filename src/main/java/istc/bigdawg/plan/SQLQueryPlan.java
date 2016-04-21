@@ -4,11 +4,10 @@ package istc.bigdawg.plan;
 import java.util.HashMap;
 import java.util.Map;
 
-import istc.bigdawg.schema.SQLAttribute;
 import istc.bigdawg.extract.logical.SQLTableExpression;
-import istc.bigdawg.plan.operators.*;
-
-import net.sf.jsqlparser.JSQLParserException;
+import istc.bigdawg.plan.generators.OperatorVisitor;
+import istc.bigdawg.plan.generators.SQLQueryGenerator;
+import istc.bigdawg.plan.operators.Operator;
 import net.sf.jsqlparser.statement.select.Select;
 import net.sf.jsqlparser.statement.select.WithItem;
 
@@ -53,11 +52,16 @@ public class SQLQueryPlan {
 	public String printPlan() throws Exception {
 		String plan = new String();
 		
+		OperatorVisitor gen = new SQLQueryGenerator();
+		
 		// prepend plans for chronological order
 		for(String s : planRoots.keySet()) {
-			plan = "CTE " + s + ": " + planRoots.get(s).generateAFLString(0) + "\n" + plan;
+			gen.configure(true,false);
+			planRoots.get(s).accept(gen);
+			plan = "CTE " + s + ": " + gen.generateStatementString() + "\n" + plan;
 		}
-		plan += rootNode.generateAFLString(0);
+		gen.configure(true, false);
+		plan += gen.generateStatementString();
 		
 		return plan;
 	}
