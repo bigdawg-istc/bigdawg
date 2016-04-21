@@ -1,6 +1,7 @@
 package istc.bigdawg.plan;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Scanner;
 import java.util.regex.Matcher;
@@ -11,6 +12,7 @@ import org.junit.Test;
 
 import istc.bigdawg.catalog.CatalogInstance;
 import istc.bigdawg.plan.extract.SQLPlanParser;
+import istc.bigdawg.plan.generators.SQLQueryGenerator;
 import istc.bigdawg.plan.operators.Join;
 import istc.bigdawg.plan.operators.Operator;
 import istc.bigdawg.planner.Planner;
@@ -84,8 +86,9 @@ public class TrialsAndErrors {
 		PostgreSQLHandler psqlh = new PostgreSQLHandler(3);
 		System.out.println("Builder -- Type query or \"quit\" to exit: ");
 		Scanner scanner = new Scanner(System.in);
-		String query = scanner.nextLine();
+//		String query = scanner.nextLine();
 //		String query = "select l_returnflag, l_linestatus, sum(l_quantity) as sum_qty, sum(l_extendedprice) as sum_base_price, sum(l_extendedprice * (1 - l_discount)) as sum_disc_price, sum(l_extendedprice * (1 - l_discount) * (1 + l_tax)) as sum_charge, avg(l_quantity) as avg_qty, avg(l_extendedprice) as avg_price, avg(l_discount) as avg_disc, count(*) as count_order from lineitem where l_shipdate <= date '1998-12-01' - interval '1' day group by l_returnflag, l_linestatus order by l_returnflag, l_linestatus;";
+		String query = "select l_returnflag, l_linestatus from lineitem where l_shipdate <= date '1998-12-01' - interval '1' day limit 3;";
 		
 //		String query = "select bucket, count(*) from ( select width_bucket(value1num, 0, 300, 300) as bucket from mimic2v26.chartevents ce,  mimic2v26.d_patients dp  where itemid in (6, 51, 455, 6701)  and ce.subject_id = dp.subject_id  and ((DATE_PART('year',ce.charttime) - DATE_PART('year',dp.dob))*12 + DATE_PART('month',ce.charttime) - DATE_PART('month',dp.dob)) > 15 ) as sbp group by bucket order by bucket;";
 		while (!query.toLowerCase().equals("quit")) {
@@ -93,7 +96,12 @@ public class TrialsAndErrors {
 			SQLQueryPlan queryPlan = SQLPlanParser.extractDirect(psqlh, query);
 			
 			Operator root = queryPlan.getRootNode();
-			System.out.println(root.generateSQLString(null) + "\n");
+			
+			SQLQueryGenerator gen = new SQLQueryGenerator();
+			gen.configure(true, false);
+			root.accept(gen);
+			System.out.println(gen.generateStatementString() + "\n");
+//			System.out.println(root.generateSQLString(null) + "\n");
 			
 			System.out.println(root.getTreeRepresentation(true) + "\n");
 			
@@ -105,8 +113,8 @@ public class TrialsAndErrors {
 			
 //			System.out.println(RTED.computeDistance(root.getTreeRepresentation(true), "{}"));
 			
-//			break;
-			query = scanner.nextLine();
+			break;
+//			query = scanner.nextLine();
 			
 		}
 		scanner.close();
@@ -151,9 +159,11 @@ public class TrialsAndErrors {
 
 		PostgreSQLHandler psqlh = new PostgreSQLHandler(3);
 		SQLQueryPlan queryPlan = SQLPlanParser.extractDirect(psqlh, query);
+		SQLQueryGenerator gen = new SQLQueryGenerator();
 		
 		Operator root = queryPlan.getRootNode();
-		System.out.println(root.generateSQLString(null) + "\n");
+		root.accept(gen);
+		System.out.println(gen.generateStatementString() + "\n");
 		
 		List<Operator> walker = new ArrayList<>();
 		walker.add(root);
@@ -164,7 +174,7 @@ public class TrialsAndErrors {
 				
 				if (o instanceof Join) {
 					System.out.println("Join encounter: ");
-					System.out.println("Printing: "+((Join)o).getJoinPredicateObjectsForBinaryExecutionNode());
+//					System.out.println("Printing: "+((Join)o).getJoinPredicateObjectsForBinaryExecutionNode());
 					System.out.println();
 
 				}
@@ -182,7 +192,7 @@ public class TrialsAndErrors {
 	public void testPlanner() throws Exception {
 		if ( !runPlanner ) return;
 		
-		String userinput = "bdrel(SELECT supplier.s_acctbal, supplier.s_name, nation.n_name, part.p_partkey, part.p_mfgr, supplier.s_address, supplier.s_phone, supplier.s_comment FROM ( SELECT partsupp_1.ps_partkey, min(partsupp_1.ps_supplycost) AS minsuppcost FROM nation AS nation_1, region AS region_1, supplier AS supplier_1, partsupp AS partsupp_1 WHERE (supplier_1.s_nationkey = nation_1.n_nationkey) AND (nation_1.n_regionkey = region_1.r_regionkey) AND (region_1.r_name = 'AMERICA') AND (partsupp_1.ps_suppkey = supplier_1.s_suppkey) GROUP BY partsupp_1.ps_partkey ) AS BIGDAWGAGGREGATE_1, partsupp, part, supplier, nation, region WHERE ((BIGDAWGAGGREGATE_1.minsuppcost) = partsupp.ps_supplycost) AND (partsupp.ps_partkey = BIGDAWGAGGREGATE_1.ps_partkey) AND ((part.p_type LIKE '%BRASS') AND (part.p_size = 14)) AND (part.p_partkey = partsupp.ps_partkey) AND (part.p_partkey = partsupp.ps_partkey) AND (supplier.s_suppkey = partsupp.ps_suppkey) AND (nation.n_nationkey = supplier.s_nationkey) AND (region.r_name = 'AMERICA') AND (region.r_regionkey = nation.n_regionkey) AND (region.r_regionkey = nation.n_regionkey) ORDER BY supplier.s_acctbal DESC, nation.n_name, supplier.s_name, part.p_partkey);";
+		String userinput = "bdrel(SELECT lineitem.l_orderkey, sum(lineitem.l_extendedprice * (1 - lineitem.l_discount)) AS revenue, orders.o_orderdate, orders.o_shippriority FROM orders, customer, lineitem WHERE (orders.o_custkey = customer.c_custkey) AND (orders.o_orderdate < '1996-01-02') AND (customer.c_mktsegment = 'AUTOMOBILE') AND (lineitem.l_shipdate > '1996-01-02') AND (lineitem.l_orderkey = orders.o_orderkey) GROUP BY lineitem.l_orderkey, orders.o_orderdate, orders.o_shippriority ORDER BY revenue DESC, orders.o_orderdate);";
 		try {
 		Planner.processQuery(userinput, false);
 		} catch (Exception e) {

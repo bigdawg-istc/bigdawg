@@ -13,12 +13,13 @@ import scala.reflect.macros.Aliases;
 
 public class SciDBArray {
 	
-	private static Pattern lSchemaAttributes = Pattern.compile("^<[-:,.@\\w_ ]+>");
+	private static Pattern lSchemaAttributes = Pattern.compile("<[-:,.@\\w_ ]+>");
 	private static Pattern lDimensions = Pattern.compile("=[*-0-9]+:[*0-9]+,[0-9]+,[0-9]+,?");
 	private static Pattern lSchemaDimensions = Pattern.compile("\\[[-:,@*=\\w_ ]+\\]$");
 	
 	private Map<String, String> attributes;
 	private Map<String, String> dimensions;
+	private Map<String, String> dimensionMembership;
 	private Set<String> schemaAliases;
 	private String schemaAlias = null;
 	
@@ -34,6 +35,7 @@ public class SciDBArray {
 	public SciDBArray() {
 		attributes = new LinkedHashMap<>();
 		dimensions = new LinkedHashMap<>();
+		dimensionMembership = new LinkedHashMap<>();
 		schemaAliases = new LinkedHashSet<>();
 	}
 	
@@ -82,7 +84,7 @@ public class SciDBArray {
 			return outputs;
 					
 		} else {
-			System.out.println ("parseAttribute: Not a valid schema: " + wholeSchema);
+			System.out.println ("parseDimension: Not a valid schema: " + wholeSchema);
 			return null;
 		}
 	}
@@ -142,7 +144,7 @@ public class SciDBArray {
 		sb.append("))*$");
 		
 		Pattern p = Pattern.compile(sb.toString());
-		
+//		System.out.printf("SciDBArray dim: sb: %s\n", sb.toString());
 		
 		Map<String, String> substitute = new LinkedHashMap<>();
 		
@@ -152,8 +154,9 @@ public class SciDBArray {
 			
 			if (d.find()) {
 				substitute.put(s.substring(0,d.start()), dimensions.get(s));
+				dimensionMembership.put(s.substring(0,d.start()), s.substring(d.start(), d.end()));
 				
-//				System.out.println("Substitude String:: "+s.substring(0, d.start()));
+//				System.out.println("Substituded String:: "+s.substring(d.start(), d.end())+"; dimensions.get(s): "+dimensions.get(s));
 //				System.out.println("Whole string:: "+s);
 			} else {
 				System.out.println("Cannot find: "+s);
@@ -176,6 +179,10 @@ public class SciDBArray {
 	
 	public Map<String, String> getAttributes() throws Exception {
 		return attributes;
+	}
+	
+	public Map<String, String> getDimensionMembership() throws Exception {
+		return dimensionMembership;
 	}
 	
 	public Set<String> getAllSchemaAliases() {

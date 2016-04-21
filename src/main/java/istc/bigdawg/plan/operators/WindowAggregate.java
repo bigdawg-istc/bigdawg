@@ -3,17 +3,16 @@ package istc.bigdawg.plan.operators;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import istc.bigdawg.extract.logical.SQLTableExpression;
 import istc.bigdawg.packages.SciDBArray;
 import istc.bigdawg.plan.extract.CommonOutItem;
 import istc.bigdawg.plan.extract.SQLOutItem;
+import istc.bigdawg.plan.generators.OperatorVisitor;
 import istc.bigdawg.schema.DataObjectAttribute;
 import net.sf.jsqlparser.expression.AnalyticExpression;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 import net.sf.jsqlparser.statement.select.OrderByElement;
-import net.sf.jsqlparser.statement.select.Select;
 
 public class WindowAggregate extends Operator {
 
@@ -77,7 +76,7 @@ public class WindowAggregate extends Operator {
 			// want to slice as fine as possible to break up SMC groups
 			if(child instanceof Sort && !orderBy.isEmpty()) {
 				Sort c = (Sort) child;
-				c.isWinAgg = true;
+				c.setWinAgg(true);
 			}
 		}
 		
@@ -147,21 +146,16 @@ public class WindowAggregate extends Operator {
 			// want to slice as fine as possible to break up SMC groups
 			if(child instanceof Sort && !orderBy.isEmpty()) {
 				Sort c = (Sort) child;
-				c.isWinAgg = true;
+				c.setWinAgg(true);
 			}
 		}
 		
 
 	}
 	
-	
 	@Override
-	public Select generateSQLStringDestOnly(Select dstStatement, boolean isSubTreeRoot, boolean stopAtJoin, Set<String> allowedScans) throws Exception {
-		dstStatement = children.get(0).generateSQLStringDestOnly(dstStatement, false, stopAtJoin, allowedScans);
-		// do nothing here until SELECT clause		
-	
-		return dstStatement;
-
+	public void accept(OperatorVisitor operatorVisitor) throws Exception {
+		operatorVisitor.visit(this);
 	}
 	
 	
@@ -169,11 +163,11 @@ public class WindowAggregate extends Operator {
 		return "WindowAgg over " + winaggs + " partition by " + partitionBy + " order by " + orderBy;
 	}
 	
-	@Override
-	public String generateAFLString(int recursionLevel) throws Exception{
-		String planStr =  "WindowAgg(";
-		planStr +=  children.get(0).generateAFLString(recursionLevel+1);
-		planStr += winaggs + "," + partitionBy + "," + orderBy + ")";
-		return planStr;
-	}
+//	@Override
+//	public String generateAFLString(int recursionLevel) throws Exception{
+//		String planStr =  "WindowAgg(";
+//		planStr +=  children.get(0).generateAFLString(recursionLevel+1);
+//		planStr += winaggs + "," + partitionBy + "," + orderBy + ")";
+//		return planStr;
+//	}
 };

@@ -1,6 +1,7 @@
 package istc.bigdawg.packages;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -18,6 +19,9 @@ import istc.bigdawg.plan.AFLQueryPlan;
 import istc.bigdawg.plan.SQLQueryPlan;
 import istc.bigdawg.plan.extract.AFLPlanParser;
 import istc.bigdawg.plan.extract.SQLPlanParser;
+import istc.bigdawg.plan.generators.AFLQueryGenerator;
+import istc.bigdawg.plan.generators.OperatorVisitor;
+import istc.bigdawg.plan.generators.SQLQueryGenerator;
 import istc.bigdawg.plan.operators.Aggregate;
 import istc.bigdawg.plan.operators.Distinct;
 import istc.bigdawg.plan.operators.Join;
@@ -85,24 +89,26 @@ public class CrossIslandQueryNode {
 		
 		System.out.println("Island query: " + islandQuery);
 		
+		OperatorVisitor gen = null;
+		
 		// create new tables or arrays for planning use
 		if (scope.equals(Scope.RELATIONAL)) {
 			this.select = (Select) CCJSqlParserUtil.parse(islandQuery);
 			dbSchemaHandler = new PostgreSQLHandler(psqlSchemaHandlerDBID);
+			gen = new SQLQueryGenerator();
 			for (String key : rootsForSchemas.keySet()) {
 				if (children.contains(key)) {
-					System.out.println("key: "+key+"; query: "+rootsForSchemas.get(key).generateSQLCreateTableStatementLocally(key)+"\n\n");
-					((PostgreSQLHandler)dbSchemaHandler).executeStatementPostgreSQL(rootsForSchemas.get(key)
-							.generateSQLCreateTableStatementLocally(key));
+					System.out.println("key: "+key+"; query: "+gen.generateCreateStatementLocally(rootsForSchemas.get(key), key)+"\n\n");
+					((PostgreSQLHandler)dbSchemaHandler).executeStatementPostgreSQL(gen.generateCreateStatementLocally(rootsForSchemas.get(key), key));
 				}
 			}
 		} else if (scope.equals(Scope.ARRAY)) {
 			dbSchemaHandler = new SciDBHandler(scidbSchemaHandlerDBID);
+			gen = new AFLQueryGenerator();
 			for (String key : rootsForSchemas.keySet()) {
 				if (children.contains(key)) {
-					System.out.println("key: "+key+"; query: "+rootsForSchemas.get(key).generateSQLCreateTableStatementLocally(key)+"\n\n");
-					((SciDBHandler)dbSchemaHandler).executeStatement(rootsForSchemas.get(key)
-							.generateAFLCreateArrayStatementLocally(key));
+					System.out.println("key: "+key+"; query: "+gen.generateCreateStatementLocally(rootsForSchemas.get(key), key)+"\n\n");
+					((SciDBHandler)dbSchemaHandler).executeStatement(gen.generateCreateStatementLocally(rootsForSchemas.get(key), key));
 				}
 			}
 		} else
@@ -261,6 +267,20 @@ public class CrossIslandQueryNode {
 		if (root instanceof Join){
 			String predicate = ((Join) root).getOriginalJoinPredicate();
 			if (predicate != null){
+//<<<<<<< HEAD
+//				predicates.add(new String(predicate));
+//			}
+//			
+//			predicate = ((Join) root).getOriginalJoinFilter();
+//			if (predicate != null){
+//				predicates.add(new String(predicate));
+//			}
+//			
+//		} else if (root instanceof  Scan){
+//			String predicate = ((Scan) root).getJoinPredicate();
+//			if (predicate != null){
+//				predicates.add(new String(predicate));
+//=======
 				predicates.addAll(splitPredicates(predicate));
 			}
 
@@ -273,6 +293,7 @@ public class CrossIslandQueryNode {
 			String predicate = ((Scan) root).getJoinPredicate();
 			if (predicate != null){
 				predicates.addAll(splitPredicates(predicate));
+//>>>>>>> 3a3cdab4d84687cbe0e4e309ff5ddd778ff3e04a
 			}
 		}
 
@@ -280,15 +301,29 @@ public class CrossIslandQueryNode {
 			predicates.addAll(getOriginalJoinPredicates(child));
 		}
 
+//		System.out.printf("\n\n\n---------> all predicates of %s: %s\n\n\n\n", root.getClass().getSimpleName(), predicates);
 		return predicates;
 	}
 
-	private static Set<String> splitPredicates(String predicates){
+	private Set<String> splitPredicates(String predicates){
 		Set<String> results = new HashSet<>();
 		Pattern predicatePattern = Pattern.compile("(?<=\\()([^\\(^\\)]+)(?=\\))");
+
+		String joinDelim = "";
+		if (scope.equals(Scope.RELATIONAL)){
+			joinDelim = "=";
+		} else if (scope.equals(Scope.ARRAY)){
+			// TODO ensure this is correct for SciDB
+			joinDelim = ",";
+		}
+
 		Matcher m = predicatePattern.matcher(predicates);
 		while (m.find()){
-			results.add(m.group().replace(" ", ""));
+			String current = m.group().replace(" ", "");
+			String[] filters = current.split(joinDelim);
+			Arrays.sort(filters);
+			String result = String.join(joinDelim, filters);
+			results.add(result);
 		}
 		return results;
 	}
@@ -311,9 +346,19 @@ public class CrossIslandQueryNode {
 			// then it must have only one child, because join does not block
 			// root spear-heads the rest of the subtree
 			
+			// DEBUG ONLY
+			OperatorVisitor gen = null;
+			if (scope.equals(Scope.RELATIONAL)) {
+				gen = new SQLQueryGenerator();
+				((SQLQueryGenerator)gen).setSrcStatement(select);
+			}
+			gen.configure(true, false);
+			root.accept(gen);
+			
 			System.out.println("--> blocking root; class: "+root.getClass().getSimpleName()+"; ");
 			System.out.println("--> tree rep: "+root.getTreeRepresentation(true)+"; ");
-			System.out.println("--> SQL: "+root.generateSQLString(null)+"; \n");
+			System.out.println("--> SQL: "+gen.generateStatementString()+"; \n");
+			// DEBUG OUTPUT END
 			
 			Operator next = root.getChildren().get(0);
 			while (!(next instanceof Join)) next = next.getChildren().get(0);
@@ -571,16 +616,16 @@ public class CrossIslandQueryNode {
 		
 		if (k1o instanceof Join) {
 			// all on-expression must precede cross-joins
-			if (k0o instanceof Join && (((Join)k0o).getCurrentJoinPredicate() == null && ((Join)k1o).getCurrentJoinPredicate() != null)) {
+			if (k0o instanceof Join && (((Join)k0o).getOriginalJoinPredicate() == null && ((Join)k1o).getOriginalJoinPredicate() != null)) {
 				return;
 			}
 				
 		
-			if ( ((Join)k1o).getCurrentJoinPredicate() != null || ((Join)k1o).getCurrentJoinFilter() != null) {
+			if ( ((Join)k1o).getOriginalJoinPredicate() != null || ((Join)k1o).getOriginalJoinFilter() != null) {
 				Set<String> objlist1 = new HashSet<>(k0o.getDataObjectAliasesOrNames().keySet());
 				Set<String> objlist2 = new HashSet<>(objlist1);
-				String jp = ((Join)k1o).getCurrentJoinPredicate();
-				String jf = ((Join)k1o).getCurrentJoinFilter();
+				String jp = ((Join)k1o).getOriginalJoinPredicate();
+				String jf = ((Join)k1o).getOriginalJoinFilter();
 				
 				boolean jpb = false;
 				boolean jfb = false;
@@ -666,7 +711,7 @@ public class CrossIslandQueryNode {
 				
 				// this is the final checking of whether we need to prune it
 				if (o1Temp instanceof Join && (!(o2Temp instanceof Join)) 
-						&& (((Join) o1Temp).getCurrentJoinPredicate() == null) && (((Join) o1Temp).getCurrentJoinFilter() == null)) {
+						&& (((Join) o1Temp).getOriginalJoinPredicate() == null) && (((Join) o1Temp).getOriginalJoinFilter() == null)) {
 					
 					return null;
 				}
@@ -819,17 +864,22 @@ public class CrossIslandQueryNode {
 		ConnectionInfo ci = null;
 		String dbid = null;
 		
-		if (traverseResult.size() > 1)
-			throw new Exception("traverseResult size greater than 1");
+//		if (traverseResult.size() > 1) {
+//			throw new Exception("traverseResult size greater than 1: "+traverseResult);
+//		}
 		
 		for (String s : traverseResult) {
 			
 			if (scope.equals(Scope.RELATIONAL)) {
 				ci = CatalogViewer.getPSQLConnectionInfo(Integer.parseInt(s));
+				if (ci == null) continue;
 				dbid = s;
+				if (ci != null) break;
 			} else if (scope.equals(Scope.ARRAY)) {
 				ci = CatalogViewer.getSciDBConnectionInfo(Integer.parseInt(s));
+				if (ci == null) continue;
 				dbid = s;
+				if (ci != null) break;
 			} else 
 				throw new Exception("Unsupported island code: "+scope.toString());
 		}

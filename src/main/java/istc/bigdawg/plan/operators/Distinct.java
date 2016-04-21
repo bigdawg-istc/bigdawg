@@ -3,20 +3,11 @@ package istc.bigdawg.plan.operators;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import istc.bigdawg.extract.logical.SQLTableExpression;
 import istc.bigdawg.plan.extract.SQLOutItem;
-import istc.bigdawg.schema.DataObjectAttribute;
+import istc.bigdawg.plan.generators.OperatorVisitor;
 import istc.bigdawg.schema.SQLAttribute;
-import net.sf.jsqlparser.expression.Alias;
-import net.sf.jsqlparser.expression.Expression;
-import net.sf.jsqlparser.parser.CCJSqlParserUtil;
-import net.sf.jsqlparser.schema.Column;
-import net.sf.jsqlparser.statement.select.PlainSelect;
-import net.sf.jsqlparser.statement.select.Select;
-import net.sf.jsqlparser.statement.select.SelectExpressionItem;
-import net.sf.jsqlparser.statement.select.SelectItem;
 
 public class Distinct extends Operator {
 
@@ -52,41 +43,21 @@ public class Distinct extends Operator {
 
 
 	@Override
-	public Select generateSQLStringDestOnly(Select dstStatement, boolean isSubTreeRoot, boolean stopAtJoin, Set<String> allowedScans) throws Exception {
-		
-		dstStatement = children.get(0).generateSQLStringDestOnly(dstStatement, false, stopAtJoin, allowedScans);
-
-		PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
-		if (children.get(0) instanceof Join) {
-			ps.getSelectItems().clear();
-			for (String alias: outSchema.keySet()) {
-				Expression e = CCJSqlParserUtil.parseExpression(outSchema.get(alias).getExpressionString());
-				SelectItem s = new SelectExpressionItem(e);
-				if (!(e instanceof Column)) {
-					((SelectExpressionItem)s).setAlias(new Alias(alias));
-				}
-				ps.addSelectItems(s);
-			}
-		}
-		
-		ps.setDistinct(new net.sf.jsqlparser.statement.select.Distinct());
-		
-		return dstStatement;
+	public void accept(OperatorVisitor operatorVisitor) throws Exception {
+		operatorVisitor.visit(this);
 	}
-
-	
 	
 	public String toString() {
 		return "Distinct over " + outSchema;
 	}
 	
-	@Override
-	public String generateAFLString(int recursionLevel) throws Exception {
-		String planStr =  "Distinct(";
-		planStr += children.get(0).generateAFLString(recursionLevel + 1);
-		planStr += ")";
-		return planStr;
-	}
+//	@Override
+//	public String generateAFLString(int recursionLevel) throws Exception {
+//		String planStr =  "Distinct(";
+//		planStr += children.get(0).generateAFLString(recursionLevel + 1);
+//		planStr += ")";
+//		return planStr;
+//	}
 	
 	@Override
 	public String getTreeRepresentation(boolean isRoot) throws Exception{

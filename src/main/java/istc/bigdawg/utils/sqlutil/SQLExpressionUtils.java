@@ -531,20 +531,23 @@ public class SQLExpressionUtils {
 					
 					if (llc.removeAll(leftNames) && llc.removeAll(rightNames)) leftFound = true;
 					if (rlc.removeAll(leftNames) && rlc.removeAll(rightNames)) rightFound = true;
+
 				} catch (JSQLParserException e) {
 					e.printStackTrace();
 				}
 				
-				if (leftFound && rightFound) filters.add(expression.toString());
-				else if (leftFound) {
+				
+				if (leftFound && rightFound) {
+					expression.getLeftExpression().accept(this);
+					expression.getRightExpression().accept(this);
+				}else if (leftFound) {
 					filters.add(expression.getLeftExpression().toString());
 					expression.getRightExpression().accept(this);
 				} else if (rightFound) {
 					filters.add(expression.getRightExpression().toString());
 					expression.getLeftExpression().accept(this);
 				} else {
-					expression.getLeftExpression().accept(this);
-					expression.getRightExpression().accept(this);
+					filters.add(expression.toString());
 				}
 			}
 			
@@ -559,20 +562,22 @@ public class SQLExpressionUtils {
 					
 					if (llc.removeAll(leftNames) && llc.removeAll(rightNames)) leftFound = true;
 					if (rlc.removeAll(leftNames) && rlc.removeAll(rightNames)) rightFound = true;
+					
 				} catch (JSQLParserException e) {
 					e.printStackTrace();
 				}
 				
-				if (leftFound && rightFound) filters.add(expression.toString());
-				else if (leftFound) {
+				if (leftFound && rightFound) {
+					expression.getLeftExpression().accept(this);
+					expression.getRightExpression().accept(this);
+				} else if (leftFound) {
 					filters.add(expression.getLeftExpression().toString());
 					expression.getRightExpression().accept(this);
 				} else if (rightFound) {
 					filters.add(expression.getRightExpression().toString());
 					expression.getLeftExpression().accept(this);
 				} else {
-					expression.getLeftExpression().accept(this);
-					expression.getRightExpression().accept(this);
+					filters.add(expression.toString());
 				}
 			}
 			

@@ -119,73 +119,73 @@ public class DataObjectAttribute {
 	}
 	
 	
-	public String generateSQLTypedString() {
-//		return name.replaceAll(".+\\.(?=[\\w]+$)", "___") + " " + convertTypeStringToSQLTyped();
-		return name.replaceAll(".+\\.(?=[\\w]+$)", "") + " " + convertTypeStringToSQLTyped();
-	}
+//	public String generateSQLTypedString() {
+////		return name.replaceAll(".+\\.(?=[\\w]+$)", "___") + " " + convertTypeStringToSQLTyped();
+//		return name.replaceAll(".+\\.(?=[\\w]+$)", "") + " " + convertTypeStringToSQLTyped();
+//	}
 	
-	public String generateAFLTypeString() {
-		
-		char token = ':';
-		if (isHidden())
-			token = '=';
-		
-		return name.replaceAll(".+\\.(?=[\\w]+$)", "") + token + convertTypeStringToAFLTyped();
-		
-	}
+//	public String generateAFLTypeString() {
+//		
+//		char token = ':';
+//		if (isHidden())
+//			token = '=';
+//		
+//		return name.replaceAll(".+\\.(?=[\\w]+$)", "") + token + convertTypeStringToAFLTyped();
+//		
+//	}
 	
-	public String convertTypeStringToSQLTyped() {
-		
-		if (typeString == null || typeString.charAt(0) == '*' || (typeString.charAt(0) >= '0' && typeString.charAt(0) <= '9'))
-			return "integer";
-		
-		String str = typeString.concat("     ").substring(0,5).toLowerCase();
-		
-		switch (str) {
-		case "int32":
-		case "int64":
-			return "integer";
-		case "string":
-			return "varchar";
-		case "float":
-			return "double precision";
-		case "bool ":
-			return "boolean";
-		default:
-			return typeString;
-		}
-		
-	}
+//	public String convertTypeStringToSQLTyped() {
+//		
+//		if (typeString == null || typeString.charAt(0) == '*' || (typeString.charAt(0) >= '0' && typeString.charAt(0) <= '9'))
+//			return "integer";
+//		
+//		String str = typeString.concat("     ").substring(0,5).toLowerCase();
+//		
+//		switch (str) {
+//		case "int32":
+//		case "int64":
+//			return "integer";
+//		case "string":
+//			return "varchar";
+//		case "float":
+//			return "double precision";
+//		case "bool ":
+//			return "boolean";
+//		default:
+//			return typeString;
+//		}
+//		
+//	}
 	
-	public String convertTypeStringToAFLTyped() {
-		
-		if (typeString == null) {
-			System.out.println("Missing typeString: "+ this.name);
-			return "int64";
-		}
-		
-		if (typeString.charAt(0) == '*' || (typeString.charAt(0) >= '0' && typeString.charAt(0) <= '9'))
-			return typeString;
-		
-		String str = typeString.concat("     ").substring(0,5).toLowerCase();
-		
-		switch (str) {
-		
-		case "varch":
-			return "string";
-		case "times":
-			return "datetime";
-		case "doubl":
-			return "double";
-		case "integ":
-		case "bigin":
-			return "int64";
-		case "boole":
-			return "bool";
-		default:
-			return typeString;
-		}
-	}
+//	public String convertTypeStringToAFLTyped() {
+//		
+//		if (typeString == null) {
+//			System.out.println("Missing typeString: "+ this.name);
+//			return "int64";
+//		}
+//		
+//		if (typeString.charAt(0) == '*' || (typeString.charAt(0) >= '0' && typeString.charAt(0) <= '9'))
+//			return typeString;
+//		
+//		String str = typeString.concat("     ").substring(0,5).toLowerCase();
+//		
+//		switch (str) {
+//		
+//		case "varch":
+//			return "string";
+//		case "times":
+//			return "datetime";
+//		case "doubl":
+//			return "double";
+//		case "integ":
+//		case "bigin":
+//			return "int64";
+//		case "boole":
+//			return "bool";
+//		default:
+//			return typeString;
+//		}
+//	}
 	
 	public Expression getSQLExpression() {
 		return expression;

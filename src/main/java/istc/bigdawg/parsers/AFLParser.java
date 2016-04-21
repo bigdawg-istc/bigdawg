@@ -178,6 +178,7 @@ public class AFLParser {
 			case "median(":
 			case "count(":
 			case "avg(":
+			case "datetime(":
 			// maybe some others functions of aggregates
 				ignoreToken = true;
 				

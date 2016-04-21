@@ -293,7 +293,7 @@ public class Signature {
 		double sig1Weight = 2;
 		double sig2Weight = 1;
 		double sig3Weight = 1;
-		double sig4kWeight = 4;
+		double sig4kWeight = 2;
 
 		// sig1
 		double treeEdit1 = getTreeEditDistance(sig1, "{}");
