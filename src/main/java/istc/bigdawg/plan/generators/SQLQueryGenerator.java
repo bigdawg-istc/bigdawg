@@ -1246,7 +1246,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 					ret.add(s2);
 					
 					foundExpression.add(child0Cond.get(s).toString());
-System.out.printf("--->> join, processLeftAndRightWithIndexCond, found expression: %s\n\n", foundExpression);
+//System.out.printf("--->> join, processLeftAndRightWithIndexCond, found expression: %s\n\n", foundExpression);
 					return ret;
 				}
 			}

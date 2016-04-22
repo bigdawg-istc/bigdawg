@@ -207,23 +207,29 @@ public class Aggregate extends Operator {
 		setAggregateFilter(parameters.get("Filter"));
 		
 		
-		Map<String, Expression> aggFuns = new HashMap<>();
+		Map<String, String> aggFuns = new HashMap<>();
 		for (String s : aggregateExpressions) {
 			String alias = null;
 			
-			Expression f = CCJSqlParserUtil.parseExpression(s);
-			
-			if (f instanceof Function) {
-				List<String> exprAndAlias = Arrays.asList(s.split(" AS "));
-				if (exprAndAlias.size() > 1) alias = exprAndAlias.get(1);
-				else alias = ((Function)f).getParameters().getExpressions().get(0).toString()+"_"+((Function)f).getName();
+			try {
+				Expression f = CCJSqlParserUtil.parseExpression(s);
 				
-			} else if (f instanceof Column) {
-				alias = ((Column)f).getColumnName();
-				System.out.printf("----> f alias: %s\n", alias);
+				if (f instanceof Function) {
+					List<String> exprAndAlias = Arrays.asList(s.split(" AS "));
+					if (exprAndAlias.size() > 1) alias = exprAndAlias.get(1);
+					else alias = ((Function)f).getParameters().getExpressions().get(0).toString()+"_"+((Function)f).getName();
+					
+				} else if (f instanceof Column) {
+					alias = ((Column)f).getColumnName();
+//					System.out.printf("----> f alias: %s\n", alias);
+				}
+				aggFuns.put(alias, f.toString());
+			} catch (Exception e) {
+				String[] segs = s.split("[-\\(\\)\\.,\\*\\/\\+\\s]+");
+				aggFuns.put(segs[1]+"_"+segs[0], s);
 			}
 			
-			aggFuns.put(alias, f);
+			
 		}
 		
 		
@@ -265,7 +271,7 @@ public class Aggregate extends Operator {
 				
 		}
 		
-		System.out.printf("parsedGroupBys in Aggregate: %s\n", parsedGroupBys);
+//		System.out.printf("parsedGroupBys in Aggregate: %s\n", parsedGroupBys);
 
 	}
 	

@@ -257,11 +257,7 @@ public class SQLOutItem extends CommonOutItem{
 				windowedAggregates.add(fullExpression);
 				assert(aexpr.getName() == "row_number"); // all others not yet implemented
 				setUpAggregateAllColumns(srcSchema, ((SQLAttribute)outAttribute));  // TODO: make this more fine grained, only derived from ORDER BY, PARTITION BY and possibly aggregate
-				try {
-					outAttribute.setExpression(fullExpression);
-				} catch (JSQLParserException e) {
-					e.printStackTrace();
-				} // replace predecessor
+				outAttribute.setExpression(fullExpression);
 				
 			}
 			

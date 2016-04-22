@@ -365,7 +365,8 @@ public class Operator implements OperatorInterface {
 	public String getSubTreeToken() throws Exception {
 		
 		if (!isSubTree && !(this instanceof Join)) {
-			throw new Exception("\n\n\n----> not the root of a SubTree: "+this.outSchema+"\n\n");
+			return null;
+//			throw new Exception("\n\n\n----> not the root of a SubTree: "+this.outSchema+"\n\n");
 		}
 		
 		if (this instanceof Join) return ((Join)this).getJoinToken(); 

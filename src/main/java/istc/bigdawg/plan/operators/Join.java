@@ -112,7 +112,7 @@ public class Join extends Operator {
 		}
 		
 		
-		System.out.printf("---> jp: %s\njf: %s\n\n", joinPredicate, joinFilter);
+//		System.out.printf("---> jp: %s\njf: %s\n\n", joinPredicate, joinFilter);
 	}
     
 	
