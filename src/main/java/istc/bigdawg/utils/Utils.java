@@ -13,7 +13,7 @@ import org.scidb.jdbc.IResultSetWrapper;
 
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
-import istc.bigdawg.postgresql.PostgreSQLHandler.QueryResult;
+import istc.bigdawg.postgresql.PostgreSQLQueryResult;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
 import istc.bigdawg.scidb.SciDBHandler;
 
@@ -77,7 +77,7 @@ public class Utils {
 	public static long getPostgreSQLCountTuples(PostgreSQLConnectionInfo con,
 			String table) throws SQLException {
 		PostgreSQLHandler handler = new PostgreSQLHandler(con);
-		QueryResult qr = handler
+		PostgreSQLQueryResult qr = handler
 				.executeQueryPostgreSQL("select count(*) from " + table);
 		return Long.valueOf(qr.getRows().get(0).get(0));
 	}

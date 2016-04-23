@@ -3,17 +3,16 @@
  */
 package istc.bigdawg.postgresql;
 
-import java.sql.SQLException;
 import java.text.NumberFormat;
 import java.text.ParseException;
 import java.util.Collection;
 import java.util.List;
 
+import istc.bigdawg.executor.ExecutorEngine;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 
 import istc.bigdawg.query.ConnectionInfo;
-import istc.bigdawg.query.DBHandler;
 
 /**
  * Information about connection to an instance of PostgreSQL.
@@ -155,14 +154,14 @@ public class PostgreSQLConnectionInfo implements ConnectionInfo {
 
 	@Override
 	public long[] computeHistogram(String object, String attribute,
-			double start, double end, int numBuckets) throws SQLException {
+			double start, double end, int numBuckets) throws ExecutorEngine.LocalQueryExecutionException {
 		// TODO: handle non-numerical data
 		long[] result = new long[numBuckets];
 
 		String query = "SELECT width_bucket(%s, %s, %s, %s), COUNT(*) FROM %s GROUP BY 1 ORDER BY 1;";
-		List<List<String>> raw = new PostgreSQLHandler(this)
-				.executeQueryPostgreSQL(String.format(query, attribute, start,
-						end, numBuckets, object))
+		List<List<String>> raw = ((PostgreSQLQueryResult) new PostgreSQLHandler(this)
+				.execute(String.format(query, attribute, start,
+						end, numBuckets, object)).get())
 				.getRows();
 
 		for (int i = 0; i < raw.size(); i++) {
@@ -175,18 +174,17 @@ public class PostgreSQLConnectionInfo implements ConnectionInfo {
 
 	@Override
 	public Pair<Number, Number> getMinMax(String object, String attribute)
-			throws SQLException, ParseException {
+			throws ExecutorEngine.LocalQueryExecutionException, ParseException {
 		String query = "SELECT min(%s), max(%s) FROM %s;";
-		List<String> raw = new PostgreSQLHandler(this)
-				.executeQueryPostgreSQL(
+		List<String> raw = ((PostgreSQLQueryResult) new PostgreSQLHandler(this)
+				.execute(
 						String.format(query, attribute, attribute, object))
-				.getRows().get(0);
+				.get()).getRows().get(0);
 		NumberFormat nf = NumberFormat.getInstance();
 		return new ImmutablePair<>(nf.parse(raw.get(0)), nf.parse(raw.get(1)));
 	}
 
-	@Override
-	public DBHandler getHandler() {
+	public ExecutorEngine getLocalQueryExecutor() {
 		return new PostgreSQLHandler(this);
 	}
 

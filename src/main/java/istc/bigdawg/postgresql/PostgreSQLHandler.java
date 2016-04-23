@@ -18,6 +18,8 @@ import java.util.Optional;
 
 import javax.ws.rs.core.Response;
 
+import istc.bigdawg.executor.ExecutorEngine;
+import istc.bigdawg.executor.QueryResult;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
@@ -34,7 +36,7 @@ import istc.bigdawg.utils.StackTrace;
  * @author Adam Dziedzic
  * 
  */
-public class PostgreSQLHandler implements DBHandler {
+public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 
 	private static Logger log = Logger.getLogger(PostgreSQLHandler.class.getName());
 	private static int defaultSchemaServerDBID = BigDawgConfigProperties.INSTANCE.getPostgresSchemaServerDBID();
@@ -106,46 +108,6 @@ public class PostgreSQLHandler implements DBHandler {
 		return con;
 	}
 
-	public class QueryResult {
-		private List<List<String>> rows;
-		private List<String> types;
-		private List<String> colNames;
-
-		/**
-		 * @return the rows
-		 */
-		public List<List<String>> getRows() {
-			return rows;
-		}
-
-		/**
-		 * @return the types
-		 */
-		public List<String> getTypes() {
-			return types;
-		}
-
-		/**
-		 * @return the colNames
-		 */
-		public List<String> getColNames() {
-			return colNames;
-		}
-
-		/**
-		 * @param rows
-		 * @param types
-		 * @param colNames
-		 */
-		public QueryResult(List<List<String>> rows, List<String> types, List<String> colNames) {
-			super();
-			this.rows = rows;
-			this.types = types;
-			this.colNames = colNames;
-		}
-
-	}
-
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -154,7 +116,7 @@ public class PostgreSQLHandler implements DBHandler {
 	@Override
 	public Response executeQuery(String queryString) {
 		long lStartTime = System.nanoTime();
-		QueryResult queryResult = null;
+		PostgreSQLQueryResult queryResult = null;
 		try {
 			queryResult = executeQueryPostgreSQL(queryString);
 		} catch (SQLException e) {
@@ -206,7 +168,7 @@ public class PostgreSQLHandler implements DBHandler {
 	}
 
 	public String computeDateArithmetic(String s) throws Exception {
-		QueryResult qr = executeQueryPostgreSQL("select date("+s+");");
+		PostgreSQLQueryResult qr = executeQueryPostgreSQL("select date("+s+");");
 		return qr.getRows().get(0).get(0);
 	}
 	
@@ -294,7 +256,7 @@ public class PostgreSQLHandler implements DBHandler {
 	 * @return #Optional<QueryResult>
 	 * @throws SQLException
 	 */
-	public Optional<QueryResult> executePostgreSQL(final String query) throws SQLException {
+	public Optional<QueryResult> execute(final String query) throws LocalQueryExecutionException {
 		try {
 			this.getConnection();
 
@@ -309,16 +271,15 @@ public class PostgreSQLHandler implements DBHandler {
 				List<String> colNames = getColumnNames(rsmd);
 				List<String> types = getColumnTypes(rsmd);
 				List<List<String>> rows = getRows(rs);
-				return Optional.of(new QueryResult(rows, types, colNames));
+				return Optional.of(new PostgreSQLQueryResult(rows, types, colNames, this.conInfo));
 			} else {
 				return Optional.empty();
 			}
-
 		} catch (SQLException ex) {
 			Logger lgr = Logger.getLogger(QueryClient.class.getName());
 			// ex.printStackTrace();
 			lgr.log(Level.ERROR, ex.getMessage() + "; query: " + LogUtils.replace(query), ex);
-			throw ex;
+			throw new LocalQueryExecutionException(ex);
 		} finally {
 			try {
 				this.cleanPostgreSQLResources();
@@ -326,7 +287,7 @@ public class PostgreSQLHandler implements DBHandler {
 				Logger lgr = Logger.getLogger(QueryClient.class.getName());
 				// ex.printStackTrace();
 				lgr.log(Level.INFO, ex.getMessage() + "; query: " + LogUtils.replace(query), ex);
-				throw ex;
+				throw new LocalQueryExecutionException(ex);
 			}
 		}
 	}
@@ -335,10 +296,10 @@ public class PostgreSQLHandler implements DBHandler {
 	 * It executes the query and releases the resources at the end.
 	 * 
 	 * @param query
-	 * @return #QueryResult
+	 * @return #PostgreSQLQueryResult
 	 * @throws SQLException
 	 */
-	public QueryResult executeQueryPostgreSQL(final String query) throws SQLException {
+	public PostgreSQLQueryResult executeQueryPostgreSQL(final String query) throws SQLException {
 		try {
 			this.getConnection();
 
@@ -354,7 +315,7 @@ public class PostgreSQLHandler implements DBHandler {
 			List<String> colNames = getColumnNames(rsmd);
 			List<String> types = getColumnTypes(rsmd);
 			List<List<String>> rows = getRows(rs);
-			return new QueryResult(rows, types, colNames);
+			return new PostgreSQLQueryResult(rows, types, colNames, this.conInfo);
 		} catch (SQLException ex) {
 			Logger lgr = Logger.getLogger(QueryClient.class.getName());
 			// ex.printStackTrace();
