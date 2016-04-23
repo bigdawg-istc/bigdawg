@@ -197,7 +197,7 @@ public class CrossIslandQueryNode {
 		// SUPPORT OTHER ISLANDS && ISLAND CHECK 
 		
 		Operator root = null;
-		ArrayList<String> objs = null;
+		List<String> objs = null;
 		
 		System.out.println("Original query to be parsed: \n"+query);
 		
@@ -213,8 +213,7 @@ public class CrossIslandQueryNode {
 			throw new Exception("Unsupported island code: "+scope.toString());
 
 		originalJoinPredicates.addAll(getOriginalJoinPredicates(root));
-
-		originalMap = CatalogViewer.getDBMappingByObj(objs);
+		originalMap = CatalogViewer.getDBMappingByObj(objs, scope);
 		
 		// traverse add remainder
 		Map<String, DataObjectAttribute> rootOutSchema = root.getOutSchema();
@@ -794,8 +793,13 @@ public class CrossIslandQueryNode {
 					ret.add(String.valueOf(scidbSchemaHandlerDBID));
 				else 
 					throw new Exception("Unsupported island: "+scope.name());
-			}else 
+			} else if (node.getChildren().size() > 0) {
+				List<String> result = traverse(node.getChildren().get(0));
+				if (result != null) ret = new ArrayList<String>(result); 
+			} else {
 				ret = new ArrayList<String>(originalMap.get(((SeqScan) node).getTable().getFullyQualifiedName()));
+			}
+				
 			
 			
 		} else if (node instanceof Join) {

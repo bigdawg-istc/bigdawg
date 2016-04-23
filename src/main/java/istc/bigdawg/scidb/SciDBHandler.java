@@ -256,6 +256,9 @@ public class SciDBHandler implements DBHandler {
 			
 			Class.forName("org.scidb.jdbc.Driver");
 			
+			System.out.printf("---> connection info: %s\n", this.conInfo);
+			
+			
 			conn = DriverManager.getConnection("jdbc:scidb://"+this.conInfo.getHost()+":"+this.conInfo.getPort()+"/");
 			Statement st = conn.createStatement();
 			

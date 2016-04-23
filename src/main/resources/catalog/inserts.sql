@@ -15,15 +15,20 @@ insert into catalog.databases values(7,1,'tpch','pguser','test');
 
 -- catalog.islands
 -- iid	scope_name	access_method
-insert into catalog.islands values (0, 'RELATIONAL', 'Everything written in PSQL');
+insert into catalog.islands values (0, 'RELATIONAL', 'PSQL');
+insert into catalog.islands values (1, 'ARRAY', 'AFL');
 
 -- catalog.shims
 -- shim_id	island_id	engine_id	access_method	
 insert into catalog.shims values (0, 0, 0, 'N/A');
+insert into catalog.shims values (1, 1, 5, 'N/A');
+insert into catalog.shims values (2, 1, 6, 'N/A');
 
 -- catalog.scidbbinapath
 -- binary path to scidb utilities: csv2scidb, iquery, etc.
 insert into catalog.scidbbinpaths values (2,'/opt/scidb/14.12/bin/');
+insert into catalog.scidbbinpaths values (5,'/opt/scidb/14.12/bin/');
+insert into catalog.scidbbinpaths values (6,'/opt/scidb/14.12/bin/');
 
 -- catalog.objects
 -- oid	name	fields	logical_db	physical_db
