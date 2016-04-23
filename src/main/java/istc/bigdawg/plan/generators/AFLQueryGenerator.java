@@ -2,10 +2,12 @@ package istc.bigdawg.plan.generators;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
+import java.util.Set;
 import java.util.Stack;
 
 import istc.bigdawg.extract.logical.SQLExpressionHandler;
@@ -42,6 +44,11 @@ import net.sf.jsqlparser.expression.operators.relational.OldOracleJoinBinaryExpr
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.statement.select.OrderByElement;
+import net.sf.jsqlparser.statement.select.PlainSelect;
+import net.sf.jsqlparser.statement.select.Select;
+import net.sf.jsqlparser.statement.select.SelectExpressionItem;
+import net.sf.jsqlparser.statement.select.SelectItem;
+import net.sf.jsqlparser.statement.select.WithItem;
 
 public class AFLQueryGenerator implements OperatorVisitor {
 
@@ -169,7 +176,6 @@ public class AFLQueryGenerator implements OperatorVisitor {
 		case "scan":
 			break;
 		case "filter":
-//			List<String> names = SQLExpressionUtils.getColumnNamesInAllForms(scan.getFilterExpression());
 			// TODO BAD PRACTICE, BUT IT DOESN'T SEEM TO MATTER
 			expressions.add(convertSQLExpressionIntoSciDBApplyExpression(scan.getFilterExpression(), null));
 			break;
@@ -196,9 +202,6 @@ public class AFLQueryGenerator implements OperatorVisitor {
 	@Override
 	public void visit(Aggregate aggregate) throws Exception {
 		
-		//TODO
-		//TODO CHECK SQL CODE FOR AGGREGATION HANDLING
-		//TODO
 		boolean isRootOriginal = isRoot;
 		saveRoot(aggregate);
 		
@@ -251,11 +254,33 @@ public class AFLQueryGenerator implements OperatorVisitor {
 	@Override
 	public Join generateStatementForPresentNonJoinSegment(Operator operator, StringBuilder sb, boolean isSelect)
 			throws Exception {
-		//TODO
-		//TODO CONSIDER
-		//TODO
 		
-		throw new Exception("Unimplemented function for AFL generator: Join <- generateStatementForPresentNonJoinSegment(Operator operator, StringBuilder sb, boolean isSelect)");
+		// find the join		
+		Operator child = operator;
+		while (!(child instanceof Join) && !child.getChildren().get(0).isPruned()) 
+			child = child.getChildren().get(0);
+		
+		if ( !(operator instanceof Join) && (child instanceof Join)) {
+			configure(true, true);
+			operator.accept(this);
+			String token;
+			if (child.isPruned()) token = child.getPruneToken();
+    		else token = ((Join)child).getJoinToken();
+			lastFunction.push((SciDBFunction)lastFunction.pop().whiteWashArrayName(token));
+			
+			operator.setSubTree(true);
+			if (!isSelect) {
+				sb.append(generateSelectIntoStatementForExecutionTree(operator.getSubTreeToken()));
+			} else {
+				sb.append(lastFunction.peek());
+			}
+		} 
+		
+		if (child instanceof Join)
+			return (Join) child;
+		else 
+			return null;
+		
 	}
 
 	@Override
@@ -361,11 +386,20 @@ public class AFLQueryGenerator implements OperatorVisitor {
 			this.name = name;
 			this.alias = alias;
 		}
+		
+		public SciDBExpression whiteWashArrayName(String arrayToken) {
+			return this;
+		}
 	}
 	
 	public class SciDBArrayHolder extends SciDBExpression {
 		protected SciDBArrayHolder(String name, String alias) {
 			super(name, alias);
+		}
+		
+		@Override
+		public SciDBExpression whiteWashArrayName(String arrayToken) {
+			return new SciDBArrayHolder(arrayToken, alias);
 		}
 		
 		@Override
@@ -444,8 +478,19 @@ public class AFLQueryGenerator implements OperatorVisitor {
 		}
 		
 		@Override
+		public SciDBExpression whiteWashArrayName(String arrayToken) {
+			List<SciDBExpression> exprs = new ArrayList<>();
+			for (SciDBExpression e : expressions) {
+				exprs.add(e.whiteWashArrayName(arrayToken));
+			}
+			return new SciDBFunction(name, alias, exprs, pruneToken, subTreeToken, isFunctionRoot, schema);
+		}
+		
+		@Override
 		public String toString() {
 			if (pruneToken != null) return pruneToken; 
+			if (name.equals("cross_join") && !isRoot && stopAtJoin) return subTreeToken;
+			
 			if (!isFunctionRoot && name.equalsIgnoreCase("scan")) return expressions.get(0).name;
 			StringBuilder strb = new StringBuilder();
 			
@@ -502,6 +547,11 @@ public class AFLQueryGenerator implements OperatorVisitor {
 		}
 		
 		@Override
+		public SciDBExpression whiteWashArrayName(String arrayToken) {
+			return new SciDBColumn(name, alias, arrayToken, isDimension, dimensionParameters, typeString);
+		}
+		
+		@Override
 		public String toString() {
 			StringBuilder strb = new StringBuilder();
 			if (arrayName != null) strb.append(arrayName).append('.');
@@ -532,6 +582,15 @@ public class AFLQueryGenerator implements OperatorVisitor {
 		protected SciDBAggregationFunction(String name, String alias, List<SciDBExpression> content) {
 			super(name, alias);
 			if (content != null && !content.isEmpty()) this.content = new ArrayList<>(content);
+		}
+		
+		@Override
+		public SciDBExpression whiteWashArrayName(String arrayToken) {
+			List<SciDBExpression> exprs = new ArrayList<>();
+			for (SciDBExpression e : content) {
+				exprs.add(e.whiteWashArrayName(arrayToken));
+			}
+			return new SciDBAggregationFunction(name, alias, exprs);
 		}
 		
 		@Override 
