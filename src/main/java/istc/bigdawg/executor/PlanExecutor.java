@@ -319,8 +319,10 @@ class PlanExecutor {
                 final Collection<String> tables = temporaryTables.get(c);
 
                 Logger.debug(this, "Cleaning up %s by removing %s...", c, tables);
+                Collection<String> cs = c.getCleanupQuery(tables);
                 try {
-                    c.getLocalQueryExecutor().execute(c.getCleanupQuery(tables));
+                	for (String s : cs)
+                		c.getLocalQueryExecutor().execute(s);
                 } catch (ConnectionInfo.LocalQueryExecutorLookupException e) {
                     Logger.error(this, "Error looking up ExecutorEngine for %s: %[exception]s", c, e);
                 }

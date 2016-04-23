@@ -5,6 +5,7 @@ package istc.bigdawg.scidb;
 
 import java.text.ParseException;
 import java.util.Collection;
+import java.util.stream.Collectors;
 
 import istc.bigdawg.executor.ExecutorEngine;
 import istc.bigdawg.properties.BigDawgConfigProperties;
@@ -105,9 +106,9 @@ public class SciDBConnectionInfo implements ConnectionInfo {
 	 * istc.bigdawg.query.ConnectionInfo#getCleanupQuery(java.util.Collection)
 	 */
 	@Override
-	public String getCleanupQuery(Collection<String> objects) {
+	public Collection<String> getCleanupQuery(Collection<String> objects) {
 		// TODO(ankush) Auto-generated method stub
-		throw new UnsupportedOperationException();
+		return objects.stream().map(o -> "remove("+o+")").collect(Collectors.toSet());
 	}
 
 	@Override

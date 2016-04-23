@@ -6,6 +6,7 @@ package istc.bigdawg.postgresql;
 import java.text.NumberFormat;
 import java.text.ParseException;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 import istc.bigdawg.executor.ExecutorEngine;
@@ -149,8 +150,8 @@ public class PostgreSQLConnectionInfo implements ConnectionInfo {
 	}
 
 	@Override
-	public String getCleanupQuery(Collection<String> objects) {
-		return String.format(CLEANUP_STRING, String.join(", ", objects));
+	public Collection<String> getCleanupQuery(Collection<String> objects) {
+		return Collections.singleton(String.format(CLEANUP_STRING, String.join(", ", objects)));
 	}
 
 	@Override

@@ -55,7 +55,7 @@ public interface ConnectionInfo extends Serializable {
 	 * @return a query that when run on the instance, removes all of the given
 	 *         objects.
 	 */
-	public String getCleanupQuery(Collection<String> objects);
+	public Collection<String> getCleanupQuery(Collection<String> objects);
 
 	/**
 	 *

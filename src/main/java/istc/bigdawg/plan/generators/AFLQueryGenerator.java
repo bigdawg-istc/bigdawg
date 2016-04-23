@@ -75,6 +75,7 @@ public class AFLQueryGenerator implements OperatorVisitor {
 	
 	@Override
 	public void visit(Operator operator) throws Exception {
+		throw new Exception("Unsupported Operator AFL output: Operator");
 	}
 
 	@Override
@@ -493,8 +494,8 @@ public class AFLQueryGenerator implements OperatorVisitor {
 		
 		@Override
 		public String toString() {
-			if (pruneToken != null) return pruneToken; 
-			if (name.equals("cross_join") && !isRoot && stopAtJoin) return subTreeToken;
+			if (pruneToken != null && !isFunctionRoot) return pruneToken; 
+			if (name.equals("cross_join") && !isFunctionRoot && stopAtJoin) return subTreeToken;
 			
 			if (!isFunctionRoot && name.equalsIgnoreCase("scan")) return expressions.get(0).name;
 			StringBuilder strb = new StringBuilder();
