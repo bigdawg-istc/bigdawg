@@ -135,7 +135,7 @@ class PlanExecutor {
 //                try {
 //                    colocateDependencies(node, Arrays.asList(joinNode.getLeft().table, joinNode.getRight().table));
 //
-//                    Optional<PostgreSQLQueryResult> result = new ShuffleJoinExecutor(joinNode).execute();
+//                    Optional<QueryResult> result = new ShuffleJoinExecutor(joinNode).execute();
 //                    markNodeAsCompleted(node);
 //                    return result;
 //                } catch (Exception e) {

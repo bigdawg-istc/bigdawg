@@ -5,18 +5,14 @@ package istc.bigdawg.scidb;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.sql.Timestamp;
+import java.sql.*;
 import java.util.*;
 
 import javax.ws.rs.core.Response;
 
 import istc.bigdawg.executor.ExecutorEngine;
 import istc.bigdawg.executor.QueryResult;
+import istc.bigdawg.executor.JdbcQueryResult;
 import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
 import org.scidb.jdbc.IStatementWrapper;
@@ -285,9 +281,25 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 		return BDConstants.Shim.PSQLARRAY;
 	}
 
-	public Optional<QueryResult> execute(String queryString) throws LocalQueryExecutionException {
-		// TODO
-		throw new UnsupportedOperationException();
+	public Optional<QueryResult> execute(String query) throws LocalQueryExecutionException {
+		try (Statement st = connection.createStatement()) {
+			IStatementWrapper statementWrapper = st.unwrap(IStatementWrapper.class);
+			statementWrapper.setAfl(true);
+
+			log.debug("query: " + LogUtils.replace(query) + "");
+			log.debug("ConnectionInfo: " + this.conInfo.toString() + "\n");
+
+			if (st.execute(query)) {
+				try (ResultSet rs = st.getResultSet()) {
+					return Optional.of(new JdbcQueryResult(rs, this.conInfo));
+				}
+			} else {
+				return Optional.empty();
+			}
+		} catch (SQLException ex) {
+			log.error(ex.getMessage() + "; query: " + LogUtils.replace(query), ex);
+			throw new LocalQueryExecutionException(ex);
+		}
 	}
 
 	/**
