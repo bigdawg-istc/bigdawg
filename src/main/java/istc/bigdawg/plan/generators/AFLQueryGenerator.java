@@ -442,6 +442,11 @@ public class AFLQueryGenerator implements OperatorVisitor {
 		}
 		
 		@Override
+		public SciDBExpression whiteWashArrayName(String arrayToken) {
+			return new SciDBBinaryExpression(name, leftExpression.whiteWashArrayName(arrayToken), rightExpression.whiteWashArrayName(arrayToken));
+		}
+		
+		@Override
 		public String toString() {
 			if (leftExpression == null || rightExpression == null) return null;
 			StringBuilder sb = new StringBuilder();
