@@ -10,13 +10,13 @@ import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.exceptions.NotSupportIslandException;
 import istc.bigdawg.executor.Executor;
 import istc.bigdawg.executor.ExecutorEngine;
+import istc.bigdawg.executor.JdbcQueryResult;
 import istc.bigdawg.executor.plan.QueryExecutionPlan;
 import istc.bigdawg.migration.MigrationStatistics;
 import istc.bigdawg.packages.CrossIslandQueryNode;
 import istc.bigdawg.packages.CrossIslandQueryPlan;
 import istc.bigdawg.parsers.UserQueryParser;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
-import istc.bigdawg.postgresql.PostgreSQLQueryResult;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.query.ConnectionInfoParser;
 import istc.bigdawg.signature.Signature;
@@ -79,7 +79,7 @@ public class Monitor {
     public static boolean allQueriesDone() {
         PostgreSQLHandler handler = new PostgreSQLHandler();
         try {
-            PostgreSQLQueryResult qresult = handler.executeQueryPostgreSQL(MINDURATION);
+            JdbcQueryResult qresult = handler.executeQueryPostgreSQL(MINDURATION);
             List<List<String>> rows = qresult.getRows();
             long minDuration = Long.MAX_VALUE;
             for (List<String> row: rows){
@@ -102,7 +102,7 @@ public class Monitor {
         String escapedSignature = signature.toRecoverableString().replace("'", stringSeparator);
 
         PostgreSQLHandler handler = new PostgreSQLHandler();
-        PostgreSQLQueryResult qresult = handler.executeQueryPostgreSQL(String.format(RETRIEVE, escapedSignature));
+        JdbcQueryResult qresult = handler.executeQueryPostgreSQL(String.format(RETRIEVE, escapedSignature));
         List<List<String>> rows = qresult.getRows();
         for (List<String> row: rows){
             long currentDuration = Long.parseLong(row.get(0));
@@ -121,7 +121,7 @@ public class Monitor {
 
         PostgreSQLHandler handler = new PostgreSQLHandler();
         try {
-            PostgreSQLQueryResult qresult = handler.executeQueryPostgreSQL(SIGS);
+            JdbcQueryResult qresult = handler.executeQueryPostgreSQL(SIGS);
             List<List<String>> rows = qresult.getRows();for (List<String> row: rows){
                 String signature = row.get(0).replace(stringSeparator, "'");
                 signatures.add(new Signature(signature));
@@ -214,7 +214,7 @@ public class Monitor {
         String fromLoc = ConnectionInfoParser.connectionInfoToString(from);
         String toLoc = ConnectionInfoParser.connectionInfoToString(to);
         PostgreSQLHandler handler = new PostgreSQLHandler();
-        PostgreSQLQueryResult qresult = handler.executeQueryPostgreSQL(String.format(RETRIEVEMIGRATE, fromLoc, toLoc));
+        JdbcQueryResult qresult = handler.executeQueryPostgreSQL(String.format(RETRIEVEMIGRATE, fromLoc, toLoc));
         List<MigrationStatistics> results = new ArrayList<>();
         List<List<String>> rows = qresult.getRows();
         for (List<String> row: rows){

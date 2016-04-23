@@ -9,6 +9,7 @@ import java.util.Collection;
 import java.util.List;
 
 import istc.bigdawg.executor.ExecutorEngine;
+import istc.bigdawg.executor.JdbcQueryResult;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -159,7 +160,7 @@ public class PostgreSQLConnectionInfo implements ConnectionInfo {
 		long[] result = new long[numBuckets];
 
 		String query = "SELECT width_bucket(%s, %s, %s, %s), COUNT(*) FROM %s GROUP BY 1 ORDER BY 1;";
-		List<List<String>> raw = ((PostgreSQLQueryResult) new PostgreSQLHandler(this)
+		List<List<String>> raw = ((JdbcQueryResult) new PostgreSQLHandler(this)
 				.execute(String.format(query, attribute, start,
 						end, numBuckets, object)).get())
 				.getRows();
@@ -176,7 +177,7 @@ public class PostgreSQLConnectionInfo implements ConnectionInfo {
 	public Pair<Number, Number> getMinMax(String object, String attribute)
 			throws ExecutorEngine.LocalQueryExecutionException, ParseException {
 		String query = "SELECT min(%s), max(%s) FROM %s;";
-		List<String> raw = ((PostgreSQLQueryResult) new PostgreSQLHandler(this)
+		List<String> raw = ((JdbcQueryResult) new PostgreSQLHandler(this)
 				.execute(
 						String.format(query, attribute, attribute, object))
 				.get()).getRows().get(0);

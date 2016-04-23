@@ -22,8 +22,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static istc.bigdawg.postgresql.PostgreSQLHandler.getColumnNames;
-import static istc.bigdawg.postgresql.PostgreSQLHandler.getRows;
+import static istc.bigdawg.utils.JdbcUtils.getColumnNames;
+import static istc.bigdawg.utils.JdbcUtils.getRows;
 
 /**
  * Created by chenp on 11/17/2015.

@@ -19,7 +19,9 @@ import java.util.Optional;
 import javax.ws.rs.core.Response;
 
 import istc.bigdawg.executor.ExecutorEngine;
+import istc.bigdawg.executor.JdbcQueryResult;
 import istc.bigdawg.executor.QueryResult;
+import istc.bigdawg.utils.JdbcUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
@@ -116,7 +118,7 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 	@Override
 	public Response executeQuery(String queryString) {
 		long lStartTime = System.nanoTime();
-		PostgreSQLQueryResult queryResult = null;
+		JdbcQueryResult queryResult = null;
 		try {
 			queryResult = executeQueryPostgreSQL(queryString);
 		} catch (SQLException e) {
@@ -168,7 +170,7 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 	}
 
 	public String computeDateArithmetic(String s) throws Exception {
-		PostgreSQLQueryResult qr = executeQueryPostgreSQL("select date("+s+");");
+		JdbcQueryResult qr = executeQueryPostgreSQL("select date("+s+");");
 		return qr.getRows().get(0).get(0);
 	}
 	
@@ -260,18 +262,13 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 		try {
 			this.getConnection();
 
-			log.debug("\n\nquery: " + LogUtils.replace(query) + "");
+			log.debug("query: " + LogUtils.replace(query) + "");
 			log.debug("ConnectionInfo: " + this.conInfo.toString() + "\n");
 
 			st = con.createStatement();
 			if (st.execute(query)) {
 				rs = st.getResultSet();
-
-				ResultSetMetaData rsmd = rs.getMetaData();
-				List<String> colNames = getColumnNames(rsmd);
-				List<String> types = getColumnTypes(rsmd);
-				List<List<String>> rows = getRows(rs);
-				return Optional.of(new PostgreSQLQueryResult(rows, types, colNames, this.conInfo));
+				return Optional.of(new JdbcQueryResult(rs, this.conInfo));
 			} else {
 				return Optional.empty();
 			}
@@ -296,10 +293,10 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 	 * It executes the query and releases the resources at the end.
 	 * 
 	 * @param query
-	 * @return #PostgreSQLQueryResult
+	 * @return #JdbcQueryResult
 	 * @throws SQLException
 	 */
-	public PostgreSQLQueryResult executeQueryPostgreSQL(final String query) throws SQLException {
+	public JdbcQueryResult executeQueryPostgreSQL(final String query) throws SQLException {
 		try {
 			this.getConnection();
 
@@ -311,11 +308,7 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 			st = con.createStatement();
 			rs = st.executeQuery(query);
 
-			ResultSetMetaData rsmd = rs.getMetaData();
-			List<String> colNames = getColumnNames(rsmd);
-			List<String> types = getColumnTypes(rsmd);
-			List<List<String>> rows = getRows(rs);
-			return new PostgreSQLQueryResult(rows, types, colNames, this.conInfo);
+			return new JdbcQueryResult(rs, this.conInfo);
 		} catch (SQLException ex) {
 			Logger lgr = Logger.getLogger(QueryClient.class.getName());
 			// ex.printStackTrace();
@@ -405,48 +398,6 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 				throw ex;
 			}
 		}
-	}
-
-	public static List<List<String>> getRows(final ResultSet rs) throws SQLException {
-		if (rs == null) {
-			return null;
-		}
-		List<List<String>> rows = new ArrayList<>();
-		try {
-			ResultSetMetaData rsmd = rs.getMetaData();
-			int NumOfCol = rsmd.getColumnCount();
-			while (rs.next()) {
-				List<String> current_row = new ArrayList<String>();
-				for (int i = 1; i <= NumOfCol; i++) {
-					Object value = rs.getObject(i);
-					if (value == null) {
-						current_row.add("null");
-					} else {
-						current_row.add(value.toString());
-					}
-				}
-				rows.add(current_row);
-			}
-			return rows;
-		} catch (SQLException e) {
-			throw e;
-		}
-	}
-
-	public static List<String> getColumnNames(final ResultSetMetaData rsmd) throws SQLException {
-		List<String> columnNames = new ArrayList<String>();
-		for (int i = 1; i <= rsmd.getColumnCount(); ++i) {
-			columnNames.add(rsmd.getColumnLabel(i));
-		}
-		return columnNames;
-	}
-
-	public static List<String> getColumnTypes(final ResultSetMetaData rsmd) throws SQLException {
-		List<String> columnTypes = new ArrayList<String>();
-		for (int i = 1; i <= rsmd.getColumnCount(); ++i) {
-			columnTypes.add(rsmd.getColumnTypeName(i));
-		}
-		return columnTypes;
 	}
 
 	public List<Integer> getPrimaryColumns(final String table) throws SQLException {
