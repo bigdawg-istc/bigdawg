@@ -4,12 +4,9 @@ import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.executor.plan.BinaryJoinExecutionNode;
 import istc.bigdawg.executor.plan.LocalQueryExecutionNode;
 import istc.bigdawg.executor.plan.QueryExecutionPlan;
-import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.utils.IslandsAndCast;
 import org.apache.commons.lang3.tuple.Pair;
-import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
 
-import java.sql.SQLException;
 import java.text.ParseException;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -21,7 +18,7 @@ public class ShuffleJoinExecutor {
     private double max;
     private static final int NUM_BUCKETS = 100;
 
-    public ShuffleJoinExecutor(BinaryJoinExecutionNode node) throws SQLException, ParseException {
+    public ShuffleJoinExecutor(BinaryJoinExecutionNode node) throws ExecutorEngine.LocalQueryExecutionException, ParseException {
         this.node = node;
 
         BinaryJoinExecutionNode.JoinOperand left = node.getLeft();
@@ -75,7 +72,7 @@ public class ShuffleJoinExecutor {
         }
     }
 
-    private Histogram extractHistogram(BinaryJoinExecutionNode.JoinOperand operand) throws SQLException {
+    private Histogram extractHistogram(BinaryJoinExecutionNode.JoinOperand operand) throws ExecutorEngine.LocalQueryExecutionException {
         return new Histogram(operand.engine.computeHistogram(operand.table, operand.attribute, this.min, this.max, NUM_BUCKETS), operand);
     }
 
@@ -131,7 +128,7 @@ public class ShuffleJoinExecutor {
         return plan;
     }
 
-    public Optional<PostgreSQLHandler.QueryResult> execute() throws SQLException, MigrationException {
+    public Optional<QueryResult> execute() throws ExecutorEngine.LocalQueryExecutionException, MigrationException {
         Histogram leftDistribution = extractHistogram(node.getLeft());
         Histogram rightDistribution = extractHistogram(node.getRight());
 

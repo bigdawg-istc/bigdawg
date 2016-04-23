@@ -11,8 +11,6 @@ import istc.bigdawg.executor.plan.QueryExecutionPlan;
 import istc.bigdawg.migration.MigrationResult;
 import istc.bigdawg.migration.Migrator;
 import istc.bigdawg.monitoring.Monitor;
-import istc.bigdawg.postgresql.PostgreSQLHandler;
-import istc.bigdawg.postgresql.PostgreSQLHandler.QueryResult;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.signature.Signature;
 import org.apache.commons.lang3.tuple.ImmutablePair;
@@ -52,8 +50,6 @@ class PlanExecutor {
      * @param plan
      *            a data structure of the queries to be run and their ordering,
      *            with edges pointing to dependencies
-     * @param signature value to pass to Monitor
-     * @param index value to pass to Monitor
      */
     public PlanExecutor(QueryExecutionPlan plan) {
         this.plan = plan;
@@ -83,7 +79,7 @@ class PlanExecutor {
     /**
      * Execute the plan, and return the result
      */
-    Optional<QueryResult> executePlan(Optional<Pair<Signature, Integer>> reportValues) throws SQLException, MigrationException {
+    Optional<QueryResult> executePlan(Optional<Pair<Signature, Integer>> reportValues) throws ExecutorEngine.LocalQueryExecutionException, MigrationException {
         final long start = System.currentTimeMillis();
 
         Logger.info(this, "Executing query plan %s...", plan.getSerializedName());
@@ -115,7 +111,11 @@ class PlanExecutor {
 
         if (reportValues.isPresent()) {
             Logger.info(this, "Sending timing to monitor...");
-            monitor.finishedBenchmark(reportValues.get().getLeft(), reportValues.get().getRight(), start, end);
+            try {
+                monitor.finishedBenchmark(reportValues.get().getLeft(), reportValues.get().getRight(), start, end);
+            } catch(SQLException e) {
+                throw new ExecutorEngine.LocalQueryExecutionException("Error reporting finished benchmark to Monitor", e);
+            }
         } else {
             Logger.info(this, "Not reporting timing to monitor.");
         }
@@ -135,7 +135,7 @@ class PlanExecutor {
 //                try {
 //                    colocateDependencies(node, Arrays.asList(joinNode.getLeft().table, joinNode.getRight().table));
 //
-//                    Optional<QueryResult> result = new ShuffleJoinExecutor(joinNode).execute();
+//                    Optional<PostgreSQLQueryResult> result = new ShuffleJoinExecutor(joinNode).execute();
 //                    markNodeAsCompleted(node);
 //                    return result;
 //                } catch (Exception e) {
@@ -154,14 +154,17 @@ class PlanExecutor {
         try {
         return node.getQueryString().flatMap((query) -> {
             try {
-                final Optional<QueryResult> result = ((PostgreSQLHandler) node.getEngine().getHandler()).executePostgreSQL(query);
+                final Optional<QueryResult> result = node.getEngine().getLocalQueryExecutor().execute(query);
                 Logger.info(this, "Successfully executed node %s", node);
                 return result;
-            } catch (SQLException e) {
+            } catch (ConnectionInfo.LocalQueryExecutorLookupException e) {
+                Logger.error(this, "Error looking up ExecutorEngine for node %s: %[exception]s", node, e);
+                return Optional.empty();
+            } catch (ExecutorEngine.LocalQueryExecutionException e) {
                 Logger.error(this, "Error executing node %s: %[exception]s", node, e);
-                // TODO: if error is actually bad, don't markNodeAsCompleted, and instead fail the QEP gracefully.
                 return Optional.empty();
             } finally {
+                // TODO: if error is actually bad, don't markNodeAsCompleted, and instead fail the QEP gracefully.
                 markNodeAsCompleted(node);
             }
         });
@@ -308,7 +311,7 @@ class PlanExecutor {
         }).orElse(MigrationResult.getEmptyInstance(String.format("No table to migrate for node %s", dependency.getTableName())));
     }
 
-    private void dropTemporaryTables() throws SQLException {
+    private void dropTemporaryTables() throws ExecutorEngine.LocalQueryExecutionException {
         synchronized(temporaryTables) {
             final Multimap<ConnectionInfo, String> removed = HashMultimap.create();
 
@@ -316,7 +319,11 @@ class PlanExecutor {
                 final Collection<String> tables = temporaryTables.get(c);
 
                 Logger.debug(this, "Cleaning up %s by removing %s...", c, tables);
-                ((PostgreSQLHandler) c.getHandler()).executeStatementPostgreSQL(c.getCleanupQuery(tables));
+                try {
+                    c.getLocalQueryExecutor().execute(c.getCleanupQuery(tables));
+                } catch (ConnectionInfo.LocalQueryExecutorLookupException e) {
+                    Logger.error(this, "Error looking up ExecutorEngine for %s: %[exception]s", c, e);
+                }
 
                 removed.putAll(c, tables);
             }

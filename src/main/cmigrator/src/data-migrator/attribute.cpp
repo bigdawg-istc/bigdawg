@@ -66,7 +66,7 @@ int GenericAttribute<char*>::writeCsv(std::ofstream & ofile) {
 // write the value only if it's not NULL
 // fprintf(fp,"%" PRId64,this->value);
 //printf("%.*s",this->bytesNumber,value);
-    ofile.width(this->bytesNumber);
+    //ofile.width(this->bytesNumber);
     ofile << this->value;
     freeValue();
     return 0;

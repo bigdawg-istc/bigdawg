@@ -5,6 +5,7 @@ import java.util.List;
 
 import javax.ws.rs.core.Response;
 
+import istc.bigdawg.executor.QueryResult;
 import istc.bigdawg.monitoring.Monitor;
 import istc.bigdawg.signature.Signature;
 import org.apache.log4j.Logger;
@@ -15,7 +16,6 @@ import istc.bigdawg.executor.plan.QueryExecutionPlan;
 import istc.bigdawg.packages.CrossIslandQueryNode;
 import istc.bigdawg.packages.CrossIslandQueryPlan;
 import istc.bigdawg.parsers.UserQueryParser;
-import istc.bigdawg.postgresql.PostgreSQLHandler.QueryResult;
 
 public class Planner {
 
@@ -151,27 +151,9 @@ public class Planner {
 	 */
 	public static Response compileResults(int querySerial, QueryResult result) {
 		logger.debug("[BigDAWG] PLANNER: Query "+querySerial+" is completed. Result:\n");
+		System.out.println(result.toPrettyString());
 
-		// print the result;
-		StringBuffer out = new StringBuffer();
-		List<List<String>> rows = result.getRows();
-		List<String> cols = result.getColNames();
-
-		for (String name : cols) {
-			out.append("\t" + name);
-		}
-		out.append("\n");
-		int rowCounter = 1;
-		for (List<String> row : rows) {
-			out.append(rowCounter + ".");
-			for (String s : row) {
-				out.append("\t" + s);
-			}
-			out.append("\n");
-			rowCounter += 1;
-		}
-		System.out.println(out);
-		return Response.status(200).entity(out.toString()).build();
+		return Response.status(200).entity(result.toPrettyString()).build();
 	}
 
 }
