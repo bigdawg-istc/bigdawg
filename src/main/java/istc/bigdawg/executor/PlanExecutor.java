@@ -273,6 +273,7 @@ class PlanExecutor {
 
                     futureCollection.add(migration);
                 } else {
+                    futureCollection.add(migrations.get(migrationKey));
                     Logger.debug(PlanExecutor.this, "Already migrating %s, not queueing again.", d);
                 }
             }
