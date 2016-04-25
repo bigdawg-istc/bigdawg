@@ -215,6 +215,7 @@ public class CrossIslandQueryNode {
 		originalJoinPredicates.addAll(getOriginalJoinPredicates(root));
 		originalMap = CatalogViewer.getDBMappingByObj(objs, scope);
 		
+		
 		// traverse add remainder
 		Map<String, DataObjectAttribute> rootOutSchema = root.getOutSchema();
 		remainderLoc = traverse(root); // this populated everything

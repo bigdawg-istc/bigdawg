@@ -538,16 +538,11 @@ public class SQLExpressionUtils {
 				
 				
 				if (leftFound && rightFound) {
-					expression.getLeftExpression().accept(this);
-					expression.getRightExpression().accept(this);
-				}else if (leftFound) {
+					filters.add(expression.toString());
+				} else if (leftFound) {
 					filters.add(expression.getLeftExpression().toString());
-					expression.getRightExpression().accept(this);
 				} else if (rightFound) {
 					filters.add(expression.getRightExpression().toString());
-					expression.getLeftExpression().accept(this);
-				} else {
-					filters.add(expression.toString());
 				}
 			}
 			
@@ -568,16 +563,11 @@ public class SQLExpressionUtils {
 				}
 				
 				if (leftFound && rightFound) {
-					expression.getLeftExpression().accept(this);
-					expression.getRightExpression().accept(this);
+					filters.add(expression.toString());
 				} else if (leftFound) {
 					filters.add(expression.getLeftExpression().toString());
-					expression.getRightExpression().accept(this);
 				} else if (rightFound) {
 					filters.add(expression.getRightExpression().toString());
-					expression.getLeftExpression().accept(this);
-				} else {
-					filters.add(expression.toString());
 				}
 			}
 			

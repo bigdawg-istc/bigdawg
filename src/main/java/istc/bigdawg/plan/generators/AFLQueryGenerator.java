@@ -59,6 +59,8 @@ public class AFLQueryGenerator implements OperatorVisitor {
 	boolean stopAtJoin = false;
 	boolean isRoot = true;
 	Operator root = null;
+	final static String cross_join_token = "cross_join"; 
+	final static String scan_token = "scan"; 
 	
 	@Override
 	public void configure(boolean isRoot, boolean stopAtJoin) {
@@ -105,7 +107,7 @@ public class AFLQueryGenerator implements OperatorVisitor {
 			}
 		}
 		
-		lastFunction.push(new SciDBFunction("cross_join", null, expressions, join.isPruned() ? join.getPruneToken() : null
+		lastFunction.push(new SciDBFunction(cross_join_token, null, expressions, join.isPruned() ? join.getPruneToken() : null
 				, join.getJoinToken(), isRootOriginal, new SciDBSchema(join.getOutSchema())));
 		
 	}
@@ -177,7 +179,7 @@ public class AFLQueryGenerator implements OperatorVisitor {
 		case "scan":
 			break;
 		case "filter":
-			// TODO BAD PRACTICE, BUT IT DOESN'T SEEM TO MATTER
+			// BAD PRACTICE, BUT IT DOESN'T SEEM TO MATTER
 			expressions.add(convertSQLExpressionIntoSciDBApplyExpression(scan.getFilterExpression(), null));
 			break;
 		default:
@@ -214,7 +216,7 @@ public class AFLQueryGenerator implements OperatorVisitor {
 			DataObjectAttribute doa = aggregate.getOutSchema().get(s);
 			if (!doa.getName().equalsIgnoreCase(doa.getExpressionString()) && doa.getExpressionString().contains("(")) {
 				
-				// TODO now we just assume that it's in the format of 'sum(a)'
+				// now we just assume that it's in the format of 'sum(a)'
 				String[] split = doa.getExpressionString().split("[\\(\\)\\s]+");
 				
 				List<SciDBExpression> templ = new ArrayList<>();
@@ -474,6 +476,10 @@ public class AFLQueryGenerator implements OperatorVisitor {
 		boolean isFunctionRoot = false;
 		SciDBSchema schema = null;
 		
+		//TODO 
+		//TODO Properly update tokens.
+		//TODO 
+		
 		public SciDBFunction(String name, String alias, List<SciDBExpression> expressions, String pruneToken, String subTreeToken, boolean isFunctionRoot, SciDBSchema schema) {
 			super(name, alias);
 			this.expressions = new ArrayList<>(expressions);
@@ -495,9 +501,9 @@ public class AFLQueryGenerator implements OperatorVisitor {
 		@Override
 		public String toString() {
 			if (pruneToken != null && !isFunctionRoot) return pruneToken; 
-			if (name.equals("cross_join") && !isFunctionRoot && stopAtJoin) return subTreeToken;
+			if (name.equals(cross_join_token) && !isFunctionRoot && stopAtJoin) return subTreeToken;
 			
-			if (!isFunctionRoot && name.equalsIgnoreCase("scan")) return expressions.get(0).name;
+			if (!isFunctionRoot && name.equalsIgnoreCase(scan_token)) return expressions.get(0).name;
 			StringBuilder strb = new StringBuilder();
 			
 			// name
