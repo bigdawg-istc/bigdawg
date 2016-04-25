@@ -1,5 +1,6 @@
 package istc.bigdawg.executor;
 
+import com.google.common.collect.Sets;
 import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.executor.plan.BinaryJoinExecutionNode;
 import istc.bigdawg.executor.plan.LocalQueryExecutionNode;
@@ -14,20 +15,10 @@ import java.util.stream.IntStream;
 
 public class ShuffleJoinExecutor {
     private BinaryJoinExecutionNode node;
-    private double min;
-    private double max;
     private static final int NUM_BUCKETS = 100;
 
     public ShuffleJoinExecutor(BinaryJoinExecutionNode node) throws ExecutorEngine.LocalQueryExecutionException, ParseException {
         this.node = node;
-
-        BinaryJoinExecutionNode.JoinOperand left = node.getLeft();
-        BinaryJoinExecutionNode.JoinOperand right = node.getRight();
-        Pair<Number, Number> mmLeft = left.engine.getMinMax(left.table, left.attribute);
-        Pair<Number, Number> mmRight = right.engine.getMinMax(right.table, right.attribute);
-
-        this.min = Math.min(mmLeft.getLeft().doubleValue(), mmRight.getRight().doubleValue()) - 1;
-        this.max = Math.max(mmLeft.getRight().doubleValue(), mmRight.getRight().doubleValue()) + 1;
     }
 
     private class Histogram {
@@ -72,6 +63,7 @@ public class ShuffleJoinExecutor {
         }
     }
 
+
     private Histogram extractHistogram(BinaryJoinExecutionNode.JoinOperand operand) throws ExecutorEngine.LocalQueryExecutionException {
         return new Histogram(operand.engine.computeHistogram(operand.table, operand.attribute, this.min, this.max, NUM_BUCKETS), operand);
     }
@@ -91,7 +83,8 @@ public class ShuffleJoinExecutor {
     }
 
     private QueryExecutionPlan createQueryExecutionPlan(ShuffleJoinPartitionAssignments assignments) {
-        QueryExecutionPlan plan = new QueryExecutionPlan(IslandsAndCast.Scope.RELATIONAL/* TODO: get island?*/);
+        // TODO: get the proper island instead of assuming relational
+        QueryExecutionPlan plan = new QueryExecutionPlan(IslandsAndCast.Scope.RELATIONAL);
 
         String sendToRightDestination = this.node.getTableName().get() + "_LEFTPARTIAL";
         String sendToRightQuery = getPartitionQuery(node.getLeft(), assignments.getBucketsForJoinOperand(node.getRight()), sendToRightDestination);
@@ -129,6 +122,7 @@ public class ShuffleJoinExecutor {
     }
 
     public Optional<QueryResult> execute() throws ExecutorEngine.LocalQueryExecutionException, MigrationException {
+
         Histogram leftDistribution = extractHistogram(node.getLeft());
         Histogram rightDistribution = extractHistogram(node.getRight());
 

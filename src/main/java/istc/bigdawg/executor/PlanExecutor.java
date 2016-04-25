@@ -27,7 +27,6 @@ import java.util.stream.StreamSupport;
 
 /**
  * TODO:
- *   fully abstracted DbHandlers instead of casting to PostgreSQL
  *   shuffle joins
  *   better exception/error handling in the event of failure
  *
@@ -228,10 +227,14 @@ class PlanExecutor {
                 .collect(Collectors.toSet()));
         Logger.debug(this, "Ignoring dependencies %s of %s", ignoreCopy, node);
 
-//        java.util.stream.Stream<ExecutionNode> deps = plan.getDependencies(node).stream()
+//        final java.util.stream.Stream<ExecutionNode> deps = plan.getDependencies(node).stream()
 //                .filter(d -> d.getTableName().isPresent() && !ignoreCopy.contains(d.getTableName().get()));
-//
-//        Logger.debug(this, "Examining dependencies %s of %s", deps.collect(Collectors.toSet()), node);
+        final Collection<ExecutionNode> deps = plan.getDependencies(node).stream()
+                .filter(d -> d.getTableName().isPresent() && !ignoreCopy.contains(d.getTableName().get()))
+                .collect(Collectors.toSet());
+
+        Logger.debug(this, "Examining dependencies %s of %s", deps, node);
+
 //        CompletableFuture[] futures = deps
 //                .map((d) -> {
 //                    // computeIfAbsent gets a previous migration's Future, or creates one if it doesn't already exist
@@ -247,12 +250,6 @@ class PlanExecutor {
 //                        }, threadPool);
 //                    });
 //                }).toArray(CompletableFuture[]::new);
-
-        final Collection<ExecutionNode> deps = plan.getDependencies(node).stream()
-                .filter(d -> d.getTableName().isPresent() && !ignoreCopy.contains(d.getTableName().get()))
-                .collect(Collectors.toSet());
-
-        Logger.debug(this, "Examining dependencies %s of %s", deps, node);
 
         Collection<CompletableFuture<MigrationResult>> futureCollection = new HashSet<>();
         for(ExecutionNode d : deps) {
