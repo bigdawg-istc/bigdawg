@@ -1,12 +1,13 @@
-package istc.bigdawg.executor;
+package istc.bigdawg.executor.shuffle;
 
-import com.google.common.collect.Sets;
 import istc.bigdawg.exceptions.MigrationException;
+import istc.bigdawg.executor.Executor;
+import istc.bigdawg.executor.ExecutorEngine;
+import istc.bigdawg.executor.QueryResult;
 import istc.bigdawg.executor.plan.BinaryJoinExecutionNode;
 import istc.bigdawg.executor.plan.LocalQueryExecutionNode;
 import istc.bigdawg.executor.plan.QueryExecutionPlan;
 import istc.bigdawg.utils.IslandsAndCast;
-import org.apache.commons.lang3.tuple.Pair;
 
 import java.text.ParseException;
 import java.util.*;
@@ -19,48 +20,6 @@ public class ShuffleJoinExecutor {
 
     public ShuffleJoinExecutor(BinaryJoinExecutionNode node) throws ExecutorEngine.LocalQueryExecutionException, ParseException {
         this.node = node;
-    }
-
-    private class Histogram {
-        private final long[] buckets;
-        private final BinaryJoinExecutionNode.JoinOperand operand;
-
-        public Histogram(long[] data, BinaryJoinExecutionNode.JoinOperand operand) {
-            this.buckets = data;
-            this.operand = operand;
-        }
-
-        public long getCount(int bucket) {
-            return buckets[bucket];
-        }
-    }
-
-    private class ShuffleJoinPartitionAssignments {
-        public final double min;
-        public final double max;
-        private final BinaryJoinExecutionNode.JoinOperand[] assignments;
-
-        public ShuffleJoinPartitionAssignments(double min, double max, int bucketCount) {
-            this.min = min;
-            this.max = max;
-
-            assignments = new BinaryJoinExecutionNode.JoinOperand[bucketCount];
-        }
-
-        public Collection<Integer> getBucketsForJoinOperand(BinaryJoinExecutionNode.JoinOperand operand) {
-            return IntStream.range(0, assignments.length)
-                    .filter(i -> assignments[i].equals(operand))
-                    .boxed()
-                    .collect(Collectors.toSet());
-        }
-
-        public BinaryJoinExecutionNode.JoinOperand getAssignment(int bucket) {
-            return assignments[bucket];
-        }
-
-        private void assignBucket(int bucket, BinaryJoinExecutionNode.JoinOperand operand) {
-            assignments[bucket] = operand;
-        }
     }
 
 
