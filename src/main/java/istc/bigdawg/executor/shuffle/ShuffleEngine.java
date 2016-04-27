@@ -9,12 +9,12 @@ import java.util.Collection;
  */
 public interface ShuffleEngine {
 
-    public enum HistogramStrategy {
+    enum HistogramStrategy {
         EXHAUSTIVE,
         SAMPLING
     }
 
-    public default Collection<Histogram> createHistograms(Collection<BinaryJoinExecutionNode.JoinOperand> operands, HistogramStrategy strategy) {
+    default Collection<Histogram> createHistograms(Collection<BinaryJoinExecutionNode.JoinOperand> operands, HistogramStrategy strategy) {
         switch(strategy) {
             case EXHAUSTIVE:
                 return createHistogramsExhaustively(operands);
@@ -25,6 +25,6 @@ public interface ShuffleEngine {
         }
     }
 
-    public Collection<Histogram> createHistogramsExhaustively(Collection<BinaryJoinExecutionNode.JoinOperand> operands);
-    public Collection<Histogram> createHistogramsBySampling(Collection<BinaryJoinExecutionNode.JoinOperand> operands);
+    Collection<Histogram> createHistogramsExhaustively(Collection<BinaryJoinExecutionNode.JoinOperand> operands);
+    Collection<Histogram> createHistogramsBySampling(Collection<BinaryJoinExecutionNode.JoinOperand> operands);
 }
