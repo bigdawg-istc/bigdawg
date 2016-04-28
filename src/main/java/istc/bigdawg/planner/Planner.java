@@ -1,21 +1,21 @@
 package istc.bigdawg.planner;
 
-import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.ws.rs.core.Response;
 
-import istc.bigdawg.executor.QueryResult;
-import istc.bigdawg.monitoring.Monitor;
-import istc.bigdawg.signature.Signature;
 import org.apache.log4j.Logger;
 import org.mortbay.log.Log;
 
 import istc.bigdawg.executor.Executor;
+import istc.bigdawg.executor.QueryResult;
 import istc.bigdawg.executor.plan.QueryExecutionPlan;
+import istc.bigdawg.monitoring.Monitor;
 import istc.bigdawg.packages.CrossIslandQueryNode;
 import istc.bigdawg.packages.CrossIslandQueryPlan;
 import istc.bigdawg.parsers.UserQueryParser;
+import istc.bigdawg.signature.Signature;
 
 public class Planner {
 
@@ -29,41 +29,52 @@ public class Planner {
 		
 		// UNROLLING
 		logger.debug("User query received. Parsing... " + userinput);
-		LinkedHashMap<String, String> crossIslandQuery = UserQueryParser.getUnwrappedQueriesByIslands(userinput);
+		Map<String, String> crossIslandQuery = UserQueryParser.getUnwrappedQueriesByIslands(userinput);
 		
 		CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(crossIslandQuery);
 
+//		ConcurrentLinkedDeque<QueryResult> cfriendlyQR = new ConcurrentLinkedDeque<QueryResult>();
 		
-		
-		for (String k : ciqp.getMemberKeySet()) {
+		for (CrossIslandQueryNode k : ciqp.vertexSet()) {
 			
-			if (k.equals("A_OUTPUT")) {
+			if (k.equals(CrossIslandQueryPlan.getOutputToken())) {
 				// this is the root; save for later. 
 				continue;
 			}
 			
 			
-			CrossIslandQueryNode ciqn = ciqp.getMember(k);
+			CrossIslandQueryNode ciqn = k;
 			int choice = getGetPerformanceAndPickTheBest(ciqn, isTrainingMode);
 			
 			
 			// currently there should be just one island, therefore one child, root.
-			QueryExecutionPlan qep = ciqp.getMember(k).getQEP(choice, true);
+			QueryExecutionPlan qep = k.getQEP(choice, true);
 			
 			
 			// EXECUTE THE RESULT SUB RESULT
 			logger.debug("Executing query cross-island subquery "+k+"...");
 			Executor.executePlan(qep, ciqn.getSignature(), choice);
+			
+			// collocate the intermediate results TODO
+//			Set<DefaultEdge> edges =  ciqp.edgesOf(k);
+//			for (DefaultEdge e : edges) {
+//				CrossIslandQueryNode d = ciqp.getEdgeTarget(e);
+////				Migrator mig = new Migrator(d.getQueryContainer().entrySet().iterator().next().getValue().getDBID()
+////						, k.getQueryContainer().entrySet().iterator().next().getValue().getDBID());
+//				
+//				// add temp entry in catalog
+//				// don't forget to patch ciqn to have a dbid mapping -- or have ciqn directly points to hte resulting query container/remainder??
+//			}
 		}
 		
 		
 		// pass this to monitor, and pick your favorite
-		CrossIslandQueryNode ciqn = ciqp.getRoot();
+		CrossIslandQueryNode ciqn = ciqp.getTerminalNode();
 		int choice = getGetPerformanceAndPickTheBest(ciqn, isTrainingMode);
 		
 		
 		// currently there should be just one island, therefore one child, root.
-		QueryExecutionPlan qep = ciqp.getRoot().getQEP(choice, true);
+		QueryExecutionPlan qep = ciqp.getTerminalNode().getQEP(choice, true);
 		
 		
 		// EXECUTE THE RESULT

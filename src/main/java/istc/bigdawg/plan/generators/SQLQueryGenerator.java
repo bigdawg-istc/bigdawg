@@ -6,6 +6,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import istc.bigdawg.extract.logical.SQLExpressionHandler;
 import istc.bigdawg.plan.operators.Aggregate;
@@ -132,6 +133,43 @@ public class SQLQueryGenerator implements OperatorVisitor {
         		s = ses.get(1);
         		s2 = ses.get(0);
         	} else {
+        		
+        		if (stopAtJoin) {
+	        		Operator leftChild = join.getChildren().get(0);
+	        		String pred;
+	        		while (!(leftChild instanceof Join)) leftChild = leftChild.getChildren().get(0);
+	        			
+	        		
+	        		if ((pred = ((Join)leftChild).getOriginalJoinPredicate()) != null) {
+	        			
+	        			System.out.printf("::::::: Pred left: %s; \n", pred);
+	        			
+	        			Expression e = CCJSqlParserUtil.parseCondExpression(pred);
+	        			List<String> es = SQLExpressionUtils.getAttributes(e).stream().map(a -> a.getTable().getFullyQualifiedName()).collect(Collectors.toList());
+	        			if ((new HashSet<>( child1ObjectMap.keySet())).removeAll(es)) {
+	        				Expression exp = CCJSqlParserUtil.parseCondExpression(pred);
+	        				SQLExpressionUtils.renameAttributes(exp, child1ObjectMap.keySet(), null, ((Join)leftChild).getJoinToken());
+	        				discoveredJoinPredicate.add(exp.toString());
+	        			}
+	        		}
+	        		
+	        		
+	        		Operator rightChild = join.getChildren().get(1);
+	        		while (!(rightChild instanceof Join)) rightChild = rightChild.getChildren().get(0);
+	        		if ((pred = ((Join)rightChild).getOriginalJoinPredicate()) != null) {
+	        			System.out.printf("::::::: Pred right: %s; \n", pred);
+	        			Expression e = CCJSqlParserUtil.parseCondExpression(pred);
+	        			List<String> es = SQLExpressionUtils.getAttributes(e).stream().map(a -> a.getTable().getFullyQualifiedName()).collect(Collectors.toList());
+	        			if ((new HashSet<>( child0ObjectMap.keySet())).removeAll(es)) {
+	        				Expression exp = CCJSqlParserUtil.parseCondExpression(pred);
+	        				SQLExpressionUtils.renameAttributes(exp, child0ObjectMap.keySet(), null, ((Join)rightChild).getJoinToken());
+	        				discoveredJoinPredicate.add(exp.toString());
+	        			}
+	        		}
+        		}
+        		
+        		
+        		
         		if (join.getOriginalJoinFilter() == null || join.getOriginalJoinFilter().isEmpty())  {
         			s = child0ObjectMap.keySet().iterator().next();
         			s2 = child1ObjectMap.keySet().iterator().next();
@@ -142,12 +180,14 @@ public class SQLQueryGenerator implements OperatorVisitor {
     	        		s2 = lc.get(1).getTable().getName();
             		} catch (Exception e) {
             			e.printStackTrace();
-            			throw new Exception(String.format("Ses from Join gen dest only doesn't find match: %s; %s; %s;\n",child0.getChildrenIndexConds(), child1.getChildrenIndexConds(),join.getOriginalJoinFilter()));
+            			throw new Exception(String.format("Ses from Join gen dest only doesn't find match: %s; %s; %s;\n"
+            					,child0.getChildrenPredicates(), child1.getChildrenPredicates(), join.getOriginalJoinFilter()));
             		}
         		}
         	}
         	
-//        	System.out.printf("--->> join, discoveredJoinPredicate: %s; ses: %s; joinPredicate: %s; joinFilter: %s\n\n", discoveredJoinPredicate, ses, join.getOriginalJoinPredicate(), join.getOriginalJoinFilter());
+//        	System.out.printf("--->> join, discoveredJoinPredicate: %s; joinPredicate: %s;\n"
+//        			, discoveredJoinPredicate, join.getOriginalJoinPredicate());
         	
         	boolean anyPruned = join.isAnyProgenyPruned();
         	
@@ -248,8 +288,11 @@ public class SQLQueryGenerator implements OperatorVisitor {
 		jf = addToJoinFilter(discoveredAggregateFilter, jf);
 		if (!discoveredJoinPredicate.isEmpty()) for (String s : discoveredJoinPredicate) jf = addToJoinFilter(s, jf); // there should be only one entry
 		
-//		System.out.printf("---> join jf: %s, getRelevantFilterSections: expr: %s, left: %s, right: %s\n\n", jf, 
-//				CCJSqlParserUtil.parseCondExpression(jf), 
+//		System.out.printf("--->>>> join getRelevantFilterSections: \n\texpr: %s;\n\tjf: %s;\n\tleft: %s,\n\tright: %s\n", 
+//				SQLExpressionUtils.getRelevantFilterSections(CCJSqlParserUtil.parseCondExpression(jf), 
+//						child0.getDataObjectAliasesOrNames(), 
+//						child1.getDataObjectAliasesOrNames()),
+//				jf ,
 //				child0.getDataObjectAliasesOrNames().keySet(), 
 //				child1.getDataObjectAliasesOrNames().keySet());
 		
@@ -257,8 +300,8 @@ public class SQLQueryGenerator implements OperatorVisitor {
 		// WHERE UPDATE
 		if (jf != null && !((estring = SQLExpressionUtils.getRelevantFilterSections(
 				CCJSqlParserUtil.parseCondExpression(jf), 
-				child0.getDataObjectAliasesOrNames().keySet(), 
-				child1.getDataObjectAliasesOrNames().keySet())).isEmpty())) {
+				child0.getDataObjectAliasesOrNames(), 
+				child1.getDataObjectAliasesOrNames())).isEmpty())) {
 			
 //			System.out.printf("--> estring: %s\n", estring);
 			
@@ -1226,11 +1269,11 @@ public class SQLQueryGenerator implements OperatorVisitor {
     	Map<String, Expression> child1Cond;
 
     	if (zeroFirst) {
-    		child0Cond = o.getChildren().get(0).getChildrenIndexConds();
-    		child1Cond = o.getChildren().get(1).getChildrenIndexConds();
+    		child0Cond = o.getChildren().get(0).getChildrenPredicates();
+    		child1Cond = o.getChildren().get(1).getChildrenPredicates();
     	} else {
-    		child0Cond = o.getChildren().get(1).getChildrenIndexConds();
-    		child1Cond = o.getChildren().get(0).getChildrenIndexConds();
+    		child0Cond = o.getChildren().get(1).getChildrenPredicates();
+    		child1Cond = o.getChildren().get(0).getChildrenPredicates();
     	}
     	
 		for (String s : child0Cond.keySet()) {
@@ -1246,7 +1289,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 					ret.add(s2);
 					
 					foundExpression.add(child0Cond.get(s).toString());
-//System.out.printf("--->> join, processLeftAndRightWithIndexCond, found expression: %s\n\n", foundExpression);
+					System.out.printf("--->> join, processLeftAndRightWithIndexCond, found expression: %s\n\n", foundExpression);
 					return ret;
 				}
 			}
@@ -1334,13 +1377,14 @@ public class SQLQueryGenerator implements OperatorVisitor {
 		case "int32":
 		case "int64":
 			return "integer";
-		case "string":
+		case "strin":
 			return "varchar";
 		case "float":
 			return "double precision";
 		case "bool ":
 			return "boolean";
 		default:
+			System.out.printf("--> abnormal type String: |%s|, |%s|;\n", str, doa.getTypeString());
 			return doa.getTypeString();
 		}
 		

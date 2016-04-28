@@ -40,7 +40,7 @@ public class Join extends Operator {
 	
 	
 	protected static int maxJoinSerial = 0;
-	private Integer joinID = null;
+	protected Integer joinID = null;
 	
 	
 	// for SQL
@@ -304,19 +304,27 @@ public class Join extends Operator {
 		}    	
     }
     
-    public String updateOnExpression(String joinPred, Operator child0, Operator child1, Table t0, Table t1, boolean update) throws Exception {
+    public String updatePruneTokensForOnExpression(String joinPred) throws Exception {
     	
-//    	if ((!update) && joinPredicateUpdated)
-//    		return joinPredicate;
+    	if (!isAnyProgenyPruned()) return new String(joinPred);
+    	
+    	List<Operator> lo = new ArrayList<>();
+    	List<Operator> walker = this.children;
+    	while (!walker.isEmpty()) {
+    		List<Operator> nextgen = new ArrayList<>();
+    		for (Operator o : walker) {
+    			if (o.isPruned()) lo.add(o);
+    			else nextgen.addAll(o.getChildren());
+    		}
+    		walker = nextgen;
+    	}
     	
     	Expression expr = CCJSqlParserUtil.parseCondExpression(joinPred);
-		List<String> itemsSet = SQLExpressionUtils.getColumnTableNamesInAllForms(expr);
-		
-		if (!replaceTableNameWithPruneName(child0, expr, t0, itemsSet))
-			findAndGetTableName(child0, t0, itemsSet);
-		if (!replaceTableNameWithPruneName(child1, expr, t1, itemsSet))
-			findAndGetTableName(child1, t1, itemsSet);
-		
+    	for (Operator o : lo) {
+    		Map<String, String> s = o.getDataObjectAliasesOrNames();
+    		SQLExpressionUtils.renameAttributes(expr, s.keySet(), null, o.getPruneToken());
+    	}
+    	
 		return expr.toString();
 	}
     
@@ -535,9 +543,9 @@ public class Join extends Operator {
 	}
 	
 	@Override
-	public Map<String, Expression> getChildrenIndexConds() throws Exception {
-		Map<String, Expression> left = this.getChildren().get(0).getChildrenIndexConds();
-		Map<String, Expression> right = this.getChildren().get(1).getChildrenIndexConds();
+	public Map<String, Expression> getChildrenPredicates() throws Exception {
+		Map<String, Expression> left = this.getChildren().get(0).getChildrenPredicates();
+		Map<String, Expression> right = this.getChildren().get(1).getChildrenPredicates();
 		
 		boolean found = false; 
 		for (String s : left.keySet()) {
@@ -570,6 +578,18 @@ public class Join extends Operator {
 		}
 		
 		left.putAll(right);
+		
+//		if (this.joinID != null && joinPredicate != null) {
+//			Expression e = CCJSqlParserUtil.parseCondExpression(joinPredicate);
+//			System.out.printf("\n--><><><> expression: %s; \n", e);
+//			String out = SQLExpressionUtils.getRelevantFilterSections(e, getChildren().get(0).getDataObjectAliasesOrNames().keySet(), getChildren().get(1).getDataObjectAliasesOrNames().keySet());
+//			System.out.printf("--><><><> out: %s; \n", out);
+//			if (out.length() > 0)
+//				left.put(this.getJoinToken(), CCJSqlParserUtil.parseCondExpression(out));
+//		}
+//		if (this.joinID != null && joinFilter != null) {
+//			left.put(this.getJoinToken(), CCJSqlParserUtil.parseCondExpression(SQLExpressionUtils.getRelevantFilterSections(CCJSqlParserUtil.parseCondExpression(joinFilter), left.keySet(), right.keySet())));
+//		}
 		return left;
 	}
 	

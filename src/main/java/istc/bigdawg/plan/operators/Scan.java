@@ -230,7 +230,7 @@ public class Scan extends Operator {
 	}
 	
 	@Override
-	public Map<String, Expression> getChildrenIndexConds() throws Exception {
+	public Map<String, Expression> getChildrenPredicates() throws Exception {
 		Map<String, Expression> ret = new HashMap<>();
 		ret.put((this.getTableAlias() != null ? this.getTableAlias() : this.getSrcTable()), indexCond);
 		return ret;

@@ -48,7 +48,7 @@ public class Monitor {
         LinkedHashMap<String, String> crossIslandQuery = UserQueryParser.getUnwrappedQueriesByIslands(signature.getQuery());
         logger.debug("Query for signature: " + signature.getQuery());
         CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(crossIslandQuery);
-        CrossIslandQueryNode ciqn = ciqp.getRoot();
+        CrossIslandQueryNode ciqn = ciqp.getTerminalNode();
         List<QueryExecutionPlan> qeps = ciqn.getAllQEPs(true);
 
         for (int i = 0; i < qeps.size(); i++){
