@@ -521,8 +521,8 @@ public class Aggregate extends Operator {
 	}
 	
 	@Override
-	public Map<String, Expression> getChildrenIndexConds() throws Exception {
-		Map<String, Expression> ret = this.getChildren().get(0).getChildrenIndexConds();
+	public Map<String, Expression> getChildrenPredicates() throws Exception {
+		Map<String, Expression> ret = this.getChildren().get(0).getChildrenPredicates();
 		ret.put(getAggregateToken(), null);
 		return ret;
 	}

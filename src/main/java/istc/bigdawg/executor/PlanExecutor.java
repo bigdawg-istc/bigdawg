@@ -65,7 +65,7 @@ class PlanExecutor {
                     .map(ExecutionNode::getQueryString)
                     .filter(Optional::isPresent).map(Optional::get)
                     .collect(Collectors.joining(" \n ---- then ---- \n ")));
-
+        
         // initialize countdown latches to the proper counts
         for(ExecutionNode node : plan) {
             int latchSize = plan.inDegreeOf(node);

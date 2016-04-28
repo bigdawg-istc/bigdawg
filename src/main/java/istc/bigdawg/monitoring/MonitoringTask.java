@@ -86,7 +86,7 @@ class Task implements Runnable {
                 if (signature != null) {
                     LinkedHashMap<String, String> crossIslandQuery = UserQueryParser.getUnwrappedQueriesByIslands(signature.getQuery());
                     CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(crossIslandQuery);
-                    CrossIslandQueryNode ciqn = ciqp.getRoot();
+                    CrossIslandQueryNode ciqn = ciqp.getTerminalNode();
                     List<QueryExecutionPlan> qeps = ciqn.getAllQEPs(true);
 
                     Monitor.runBenchmarks(qeps, signature);

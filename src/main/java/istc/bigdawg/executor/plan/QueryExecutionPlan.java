@@ -50,7 +50,7 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
     }
     
     public String getSerializedName() {
-    	return "QEPTERMINALNODE_"+serial;
+    	return "BIGDAWGQEPTERMINALNODE_"+serial;
     }
     
     public void setTerminalTableName(String terminalTableName) {

@@ -10,6 +10,12 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
+import org.jgrapht.alg.ConnectivityInspector;
+import org.jgrapht.graph.DefaultEdge;
+import org.jgrapht.graph.SimpleGraph;
+
 import com.google.common.collect.Sets;
 
 import istc.bigdawg.catalog.CatalogViewer;
@@ -46,7 +52,6 @@ import istc.bigdawg.utils.sqlutil.SQLExpressionUtils;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
-import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.Select;
 
 public class CrossIslandQueryNode {
@@ -56,21 +61,20 @@ public class CrossIslandQueryNode {
 	private Select select;
 	private String name;
 	private Signature signature;
+	private DBHandler dbSchemaHandler = null;
 	
 	private Map<String, QueryContainerForCommonDatabase> queryContainer;
 	private List<Operator> remainderPermutations;
 	private List<String> remainderLoc; // if null then we need to look into the container
 	
+	private Map<String, List<String>> originalMap;
 	private Set<String> children;
 	private Matcher tagMatcher;
-	private DBHandler dbSchemaHandler = null;
-	 
-	private Map<String, List<String>> originalMap;
-
+	
 	private Set<String> originalJoinPredicates;
-
 	private Set<String> joinPredicates;
 	private Set<String> joinFilters;
+	List<Set<String>> predicateConnections;
 	
 	private static final int  psqlSchemaHandlerDBID = BigDawgConfigProperties.INSTANCE.getPostgresSchemaServerDBID();
 	private static final int  scidbSchemaHandlerDBID = BigDawgConfigProperties.INSTANCE.getSciDBSchemaServerDBID();
@@ -220,8 +224,10 @@ public class CrossIslandQueryNode {
 		Map<String, DataObjectAttribute> rootOutSchema = root.getOutSchema();
 		remainderLoc = traverse(root); // this populated everything
 		
-		Map<String, Map<String, String>> jp = processJoinPredicates(joinPredicates);
-		Map<String, Map<String, String>> jf = processJoinPredicates(joinFilters);
+		Map<Pair<String, String>, String> jp = processJoinPredicates(joinPredicates);
+		Map<Pair<String, String>, String> jf = processJoinPredicates(joinFilters);
+		
+		populatePredicateConnectionSets(jp, jf);
 		
 		
 		if (remainderLoc == null && root.getDataObjectNames().size() > 1) {
@@ -237,13 +243,17 @@ public class CrossIslandQueryNode {
 //			// debug
 //			System.out.println("\n\n\nResult of Permutation: ");
 //			int i = 1;
+//			OperatorVisitor gen;
 //			for (Operator o : permResult) {
-//				if (scope.equals(Scope.RELATIONAL))
-//					System.out.printf("%d. %s\n\n", i, o.generateSQLString(select));
-//				else if (scope.equals(Scope.ARRAY))
-//					System.out.printf("%d. %s\n\n", i, o.generateAFLString(0));
-//				
-////				System.out.printf("%d. %s\n\n", i, o.generateSQLString(select)); // duplicate command to test modification of underlying structure
+//				if (scope.equals(Scope.RELATIONAL)) {
+//					gen = new SQLQueryGenerator();
+//				} else if (scope.equals(Scope.ARRAY)) {
+//					gen = new AFLQueryGenerator();
+//				} else gen = null;
+//				gen.configure(true, false);
+//				o.accept(gen);
+//				System.out.printf("%d. %s\n\n", i, gen.generateStatementString());
+//				System.out.printf("%d. %s\n\n", i, gen.generateStatementString()); // duplicate command to test modification of underlying structure
 //				i++;
 //			}
 			
@@ -267,20 +277,6 @@ public class CrossIslandQueryNode {
 		if (root instanceof Join){
 			String predicate = ((Join) root).getOriginalJoinPredicate();
 			if (predicate != null){
-//<<<<<<< HEAD
-//				predicates.add(new String(predicate));
-//			}
-//			
-//			predicate = ((Join) root).getOriginalJoinFilter();
-//			if (predicate != null){
-//				predicates.add(new String(predicate));
-//			}
-//			
-//		} else if (root instanceof  Scan){
-//			String predicate = ((Scan) root).getJoinPredicate();
-//			if (predicate != null){
-//				predicates.add(new String(predicate));
-//=======
 				predicates.addAll(splitPredicates(predicate));
 			}
 
@@ -293,7 +289,6 @@ public class CrossIslandQueryNode {
 			String predicate = ((Scan) root).getJoinPredicate();
 			if (predicate != null){
 				predicates.addAll(splitPredicates(predicate));
-//>>>>>>> 3a3cdab4d84687cbe0e4e309ff5ddd778ff3e04a
 			}
 		}
 
@@ -329,7 +324,7 @@ public class CrossIslandQueryNode {
 	}
 	
 	
-	private List<Operator> getPermutatedOperatorsWithBlock(Operator root, Map<String, Map<String, String>> joinPredConnections,  Map<String, Map<String, String>> joinFilterConnections) throws Exception {
+	private List<Operator> getPermutatedOperatorsWithBlock(Operator root, Map<Pair<String, String>, String> joinPredConnections,  Map<Pair<String, String>, String> joinFilterConnections) throws Exception {
 		
 		/**
 		 * This function dictates which part of the tree could be permuted.
@@ -496,7 +491,7 @@ public class CrossIslandQueryNode {
 	}
 	
 	
-	private List<Operator> getPermutatedOperators(List<Operator> ops, Map<String, Map<String, String>> joinPredConnections, Map<String, Map<String, String>> joinFilterConnections) throws Exception {
+	private List<Operator> getPermutatedOperators(List<Operator> ops, Map<Pair<String, String>, String> joinPredConnections, Map<Pair<String, String>, String> joinFilterConnections) throws Exception {
 		
 		/**
 		 * Eventually 'ops' should be able to contain blocking operators,
@@ -612,13 +607,13 @@ public class CrossIslandQueryNode {
 	 * @param newEntry
 	 * @throws Exception
 	 */
-	private void addNewEntry (Operator k0o, Operator k1o, Map<String, Map<String, String>> joinPredConnections, Map<String, Map<String, String>> joinFilterConnections, List<Operator> newEntry) throws Exception {
+	private void addNewEntry (Operator k0o, Operator k1o, Map<Pair<String, String>, String> joinPredConnections, Map<Pair<String, String>, String> joinFilterConnections, List<Operator> newEntry) throws Exception {
 		
 		if (k1o instanceof Join) {
 			// all on-expression must precede cross-joins
 			if (k0o instanceof Join && (((Join)k0o).getOriginalJoinPredicate() == null && ((Join)k1o).getOriginalJoinPredicate() != null)) {
 				return;
-			}
+			} 
 				
 		
 			if ( ((Join)k1o).getOriginalJoinPredicate() != null || ((Join)k1o).getOriginalJoinFilter() != null) {
@@ -650,25 +645,29 @@ public class CrossIslandQueryNode {
 		}
 	}
 	
-	private Operator makeJoin(Operator o1, Operator o2, JoinType jt, Map<String, Map<String, String>> joinPredConnection, Map<String, Map<String, String>> joinFilterConnection, Set<String> used) throws Exception {
-		
+	private Operator makeJoin(Operator o1, Operator o2, JoinType jt, Map<Pair<String, String>, String> joinPredConnection, Map<Pair<String, String>, String> joinFilterConnection, Set<String> used) throws Exception {
 		
 		Map<String, Map<String, String>> jp = new HashMap<>();
 		Map<String, Map<String, String>> jf = new HashMap<>();
 		
-		for (String k : joinPredConnection.keySet()) {
-			jp.put(k, new HashMap<>());
-			for (String kin : joinPredConnection.get(k).keySet()) {
-				jp.get(k).put(kin, joinPredConnection.get(k).get(kin));
-			}
+		for (Pair<String, String> p : joinPredConnection.keySet()) {
+			if (!jp.containsKey(p.getLeft())) jp.put(p.getLeft(), new HashMap<>());
+			jp.get(p.getLeft()).put(p.getRight(), joinPredConnection.get(p));
 		}
 		
-		for (String k : joinFilterConnection.keySet()) {
-			jf.put(k, new HashMap<>());
-			for (String kin : joinFilterConnection.get(k).keySet()) {
-				jf.get(k).put(kin, joinFilterConnection.get(k).get(kin));
-			}
+		for (Pair<String, String> p : joinFilterConnection.keySet()) {
+			if (!jf.containsKey(p.getLeft())) jf.put(p.getLeft(), new HashMap<>());
+			jf.get(p.getLeft()).put(p.getRight(), joinFilterConnection.get(p));
 		}
+		
+//		System.out.printf("--->>>>> makeJoin: \n\tjp: %s; \n\tjf: %s;\n", jp, jf);
+		
+//		for (String k : joinFilterConnection.keySet()) {
+//			jf.put(k, new HashMap<>());
+//			for (String kin : joinFilterConnection.get(k).keySet()) {
+//				jf.get(k).put(kin, joinFilterConnection.get(k).get(kin));
+//			}
+//		}
 		
 		Set<String> o1ns = new HashSet<>(o1.getDataObjectAliasesOrNames().keySet());
 		Set<String> o2nsOriginal = new HashSet<>(o2.getDataObjectAliasesOrNames().keySet());
@@ -721,7 +720,14 @@ public class CrossIslandQueryNode {
 			
 			o2ns = new HashSet<>(o2nsOriginal);
 		}
-		return new Join(o1Temp, o2Temp, jt, null, false);
+		if (isTablesConnectedViaPredicates(o1Temp, o2Temp)) {
+			return null;
+		} else {
+			System.out.printf("\n\nCross island query node: raw cross join:  no1 class: %s; o1Temp tree: %s;\no1 class: %s, o2Temp tree: %s\n\n\n\n"
+					, o1Temp.getClass().getSimpleName(), o1Temp.getTreeRepresentation(true)
+					, o2Temp.getClass().getSimpleName(), o2Temp.getTreeRepresentation(true));
+			return new Join(o1Temp, o2Temp, jt, null, false);
+		}
 	}
 	
 	private boolean isDisjoint(Operator s1, Operator s2) throws Exception {
@@ -731,31 +737,26 @@ public class CrossIslandQueryNode {
 	}
 	
 	
-	
-	
-	
-	
-	private Map<String, Map<String, String>> processJoinPredicates(Set<String> jp) throws Exception {
+	private Map<Pair<String, String>, String> processJoinPredicates(Set<String> jp) throws Exception {
 		
-		Map<String, Map<String, String>> result = new HashMap<>();
+		Map<Pair<String, String>, String> result = new HashMap<>();
 		
 		for (String s : jp ) {
 			
 			Expression e = CCJSqlParserUtil.parseCondExpression(s);
-			List<Column> lc = SQLExpressionUtils.getAttributes(e);
+			List<Expression> le = SQLExpressionUtils.getFlatExpressions(e);
 			
-			String temp0 = lc.get(0).getTable().getFullyQualifiedName(); // we don't look for other dots because everything is pruned
-			String temp1 = lc.get(1).getTable().getFullyQualifiedName();
-			
-			if (!result.containsKey(temp0))
-				result.put(temp0, new HashMap<>());
-			if (!result.containsKey(temp1))
-				result.put(temp1, new HashMap<>());
-			
-			result.get(temp0).put(temp1, s);
-			result.get(temp1).put(temp0, s);
+			for (Expression expr : le) {
+				
+				List<Column> lc = SQLExpressionUtils.getAttributes(expr);
+				
+				String temp0 = lc.get(0).getTable().getFullyQualifiedName(); // we don't look for other dots because everything is pruned
+				String temp1 = lc.get(1).getTable().getFullyQualifiedName();
+				result.put(new ImmutablePair<>(temp0, temp1), s);
+				result.put(new ImmutablePair<>(temp1, temp0), s);
+			}
 		}
-		
+			
 		return result;
 	}
 	
@@ -840,9 +841,9 @@ public class CrossIslandQueryNode {
 			// do nothing if both are pruned before enter here, thus saving it for the remainder 
 			
 			if (joinNode.getOriginalJoinPredicate() != null)
-				joinPredicates.add(joinNode.updateOnExpression(joinNode.getOriginalJoinPredicate(), child0, child1, new Table(), new Table(), true));
+				joinPredicates.add(joinNode.updatePruneTokensForOnExpression(joinNode.getOriginalJoinPredicate()));//, child0, child1, new Table(), new Table(), true));
 			if (joinNode.getOriginalJoinFilter() != null)
-				joinPredicates.add(joinNode.updateOnExpression(joinNode.getOriginalJoinFilter(), child0, child1, new Table(), new Table(), true));
+				joinFilters.add(joinNode.updatePruneTokensForOnExpression(joinNode.getOriginalJoinFilter()));//, child0, child1, new Table(), new Table(), true));
 			
 		} else if (node instanceof Sort || node instanceof Aggregate || node instanceof Limit || node instanceof Distinct) {
 			
@@ -862,7 +863,7 @@ public class CrossIslandQueryNode {
 		return ret;
 	}
 	
-	public void pruneChild(Operator c, List<String> traverseResult) throws Exception {
+	private void pruneChild(Operator c, List<String> traverseResult) throws Exception {
 		// prune c
 		c.prune(true);
 		
@@ -946,5 +947,51 @@ public class CrossIslandQueryNode {
 		for (String str : signature.getSig4k()) {
 			System.out.println("- "+i+++". Container object: "+str);
 		}
+	}
+	
+	public String getName() {
+		return name;
+	}
+	
+	@Override
+	public String toString() {
+		return String.format("CIQN: %s, chilren: %s; ", name, children);
+	}
+	
+	private void populatePredicateConnectionSets(Map<Pair<String, String>, String> jp, Map<Pair<String, String>, String> jf) {
+		
+//		System.out.printf("\n-----------> populate table connectivity; jp: %s; jf: %s;\n", jp, jf);
+		
+		SimpleGraph<String, DefaultEdge> sg = new SimpleGraph<>(DefaultEdge.class);
+		for (Pair<String, String> pair : jp.keySet()) {
+			if (!sg.containsVertex(pair.getLeft())) sg.addVertex(pair.getLeft());
+			if (!sg.containsVertex(pair.getRight())) sg.addVertex(pair.getRight());
+			sg.addEdge(pair.getLeft(), pair.getRight());
+		}
+		for (Pair<String, String> pair : jf.keySet()) {
+			if (!sg.containsVertex(pair.getLeft())) sg.addVertex(pair.getLeft());
+			if (!sg.containsVertex(pair.getRight())) sg.addVertex(pair.getRight());
+			sg.addEdge(pair.getLeft(), pair.getRight());
+		}
+		predicateConnections = (new ConnectivityInspector<String, DefaultEdge>(sg)).connectedSets();
+	}
+	
+	private boolean isTablesConnectedViaPredicates(Operator left, Operator right) throws Exception {
+		Set<String> sl = left.getDataObjectAliasesOrNames().keySet();
+		Set<String> sr = right.getDataObjectAliasesOrNames().keySet();
+		
+		System.out.printf("\n-----------> table connectivity called; sl: %s; sr: %s; predicateConnections: %s;\n", sl, sr, predicateConnections);
+		
+		if (sr.removeAll(sl)) return true; 
+		
+		boolean found = false;
+		for (Set<String> s : predicateConnections) {
+			Set<String> scopy = new HashSet<>(s);
+			if (scopy.removeAll(sl) && scopy.removeAll(sr)) {
+				found = true;
+				break;
+			}
+		}
+		return found;
 	}
 }
