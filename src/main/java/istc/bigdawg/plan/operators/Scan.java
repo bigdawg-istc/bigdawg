@@ -5,6 +5,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import istc.bigdawg.extract.logical.SQLTableExpression;
 import istc.bigdawg.packages.SciDBArray;
@@ -18,7 +19,7 @@ import net.sf.jsqlparser.schema.Table;
 public class Scan extends Operator {
 	
 	private Expression filterExpression = null;
-	protected Expression indexCond = null;
+	private Expression indexCond = null;
 	private String srcTable;
 	private String operatorName = null;
 	
@@ -27,7 +28,7 @@ public class Scan extends Operator {
 	private boolean hasFunctionInFilterExpression = false;
 
 	public String getJoinPredicate(){
-		return indexCond != null ? indexCond.toString(): null;
+		return getIndexCond() != null ? getIndexCond().toString(): null;
 	}
 
 	
@@ -61,8 +62,8 @@ public class Scan extends Operator {
 		if (parameters.get("Index-Cond") != null) {
 			String s = SQLExpressionUtils.removeExpressionDataTypeArtifactAndConvertLike(parameters.get("Index-Cond"));
 			
-			indexCond = CCJSqlParserUtil.parseCondExpression(s);
-			SQLExpressionUtils.removeExcessiveParentheses(indexCond);
+			setIndexCond(CCJSqlParserUtil.parseCondExpression(s));
+			SQLExpressionUtils.removeExcessiveParentheses(getIndexCond());
 			
 //			System.out.println("---> indexCond: "+indexCond);
 			
@@ -230,9 +231,9 @@ public class Scan extends Operator {
 	}
 	
 	@Override
-	public Map<String, Expression> getChildrenIndexConds() throws Exception {
+	public Map<String, Expression> getChildrenPredicates() throws Exception {
 		Map<String, Expression> ret = new HashMap<>();
-		ret.put((this.getTableAlias() != null ? this.getTableAlias() : this.getSrcTable()), indexCond);
+		ret.put((this.getTableAlias() != null ? this.getTableAlias() : this.getSrcTable()), getIndexCond());
 		return ret;
 	}
 	
@@ -252,8 +253,8 @@ public class Scan extends Operator {
 		}
 		
 		// join condition
-		if (indexCond != null && !SQLExpressionUtils.containsArtificiallyConstructedTables(indexCond)) {
-			addToOut(CCJSqlParserUtil.parseCondExpression(indexCond.toString()), out, aliasMapping);
+		if (getIndexCond() != null && !SQLExpressionUtils.containsArtificiallyConstructedTables(getIndexCond())) {
+			addToOut(CCJSqlParserUtil.parseCondExpression(getIndexCond().toString()), out, aliasMapping);
 		}
 		
 		return out;
@@ -276,7 +277,7 @@ public class Scan extends Operator {
 			if (result != null) {
 				SQLExpressionUtils.updateFunctionInCondExpression(result, exp.get(1));
 				exp = SQLExpressionUtils.locateFunctionInCondExpression(getFilterExpression());
-				SQLExpressionUtils.renameAttributes(indexCond, names, null, sb.toString());
+				SQLExpressionUtils.renameAttributes(getIndexCond(), names, null, sb.toString());
 				
 			} else {
 				break;
@@ -338,4 +339,16 @@ public class Scan extends Operator {
 		this.operatorName = operatorName;
 	}
 
+
+	public Expression getIndexCond() {
+		return indexCond;
+	}
+
+
+	public void setIndexCond(Expression indexCond) {
+		this.indexCond = indexCond;
+	}
+
+	
+	
 }

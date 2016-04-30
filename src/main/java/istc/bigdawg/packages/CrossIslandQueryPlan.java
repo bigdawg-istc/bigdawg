@@ -3,47 +3,60 @@ package istc.bigdawg.packages;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import istc.bigdawg.plan.operators.Operator;
-import istc.bigdawg.signature.Signature;
-import istc.bigdawg.utils.IslandsAndCast;
-import istc.bigdawg.utils.IslandsAndCast.Scope;
+import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
+import org.jgrapht.graph.DefaultEdge;
 
-public class CrossIslandQueryPlan {
-	private Map<String, CrossIslandQueryNode> members;
-	private Map<String, Operator> rootsForSchemas;
-	private CrossIslandQueryNode root;
+import istc.bigdawg.plan.operators.Operator;
+import istc.bigdawg.utils.IslandsAndCast;
+
+public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandQueryNode, DefaultEdge> 
+	implements Iterable<CrossIslandQueryNode> {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -3609729432970736589L;
+	private Map<String, Operator> terminalOperatorsForSchemas;
+	private CrossIslandQueryNode terminalNode;
+	private static final String outputToken = "A_OUTPUT";
 	private static Pattern start = Pattern.compile("^((bdrel\\()|(bdarray\\()|(bdgraph\\()|(bdtext\\()|(bdstream\\()|(bdcast\\())");
 	private static Pattern end	 = Pattern.compile("\\);?$");
+	private static Pattern bigdawgtagpattern = Pattern.compile("(BIGDAWGTAG_[0-9]+)|("+outputToken+")");
 	private static int maxSerial = 0;
 	private int serial;
 	
+	
+	
 	public CrossIslandQueryPlan() {
-		members = new HashMap<>();
+		super(DefaultEdge.class);
+//		members = new HashMap<>();
 		maxSerial++;
 		this.serial = maxSerial;
 	};
 	
-	public CrossIslandQueryPlan(LinkedHashMap<String, String> queries) throws Exception {
-		members = new LinkedHashMap<>();
-		rootsForSchemas = new HashMap<>();
+	public CrossIslandQueryPlan(Map<String, String> queries) throws Exception {
+		this();
+		terminalOperatorsForSchemas = new HashMap<>();
 		addNodes(queries);
-		maxSerial++;
-		this.serial = maxSerial;
 	};
 	
 	
 	
 	public void addNodes(Map<String, String> queries) throws Exception {
 
+		// create a mapping between sources and destinations
+		
 		List<String> l = new ArrayList<>(queries.keySet());
 		Collections.sort(l, Collections.reverseOrder());
+		
+		System.out.printf("--> queries: %s;\n", queries);
+		
+		Map<String, List<String>> dependencies = new HashMap<>();
+		Map<String, CrossIslandQueryNode> members = new HashMap<>();
 		
 		for (String n : l) {
 			
@@ -53,63 +66,76 @@ public class CrossIslandQueryPlan {
 			Matcher queryEndMatcher = end.matcher(rawQueryString);
 			
 			CrossIslandQueryNode newNode;
-			Scope scope;
 			
 			if (islandMatcher.find() && queryEndMatcher.find()) {
 				
 				// creating the children tables for this islands
-				
-				scope = IslandsAndCast.convertScope(rawQueryString.substring(islandMatcher.start(), islandMatcher.end()));
 				newNode = new CrossIslandQueryNode(
-						scope
+						IslandsAndCast.convertScope(rawQueryString.substring(islandMatcher.start(), islandMatcher.end()))
 						, rawQueryString.substring(islandMatcher.end(), queryEndMatcher.start())
 						, n
-						, rootsForSchemas);
+						, terminalOperatorsForSchemas);
 				
-				rootsForSchemas.put(n, newNode.getRemainder(0));
+				this.addVertex(newNode);
+				terminalOperatorsForSchemas.put(n, newNode.getRemainder(0));
+				
+				// adding the dependencies for edge matching
+				Matcher m = bigdawgtagpattern.matcher(rawQueryString.substring(islandMatcher.end(), queryEndMatcher.start()));
+				dependencies.put(n, new ArrayList<>());
+				while(m.find()) 
+					dependencies.get(n).add(rawQueryString.substring(m.start(),m.end()));
 				
 			} else 
 				throw new Exception("Matcher cannot find token");
 			
-			
-			
-			if (n.equals("A_OUTPUT")) {
-				root = newNode;
+			if (n.equals(getOutputToken())) {
+				terminalNode = newNode;
 			}
 			
 			members.put(n, newNode);
 		}
 		
+		// edges
+		for (String n : dependencies.keySet()) {
+			for (String n2: dependencies.get(n)) {
+				this.addEdge(members.get(n2), members.get(n));
+			}
+		}
 	}
 	
-	public CrossIslandQueryNode getRoot() {
-		return root;
+	public CrossIslandQueryNode getTerminalNode() {
+		return terminalNode;
 	};
 	
-	public CrossIslandQueryNode getMember(String tag) {
-		return members.get(tag);
+	
+//	public CrossIslandQueryNode getMember(String tag) {
+//		return members.get(tag);
+//	}
+//	
+//	public Set<String> getMemberKeySet() {
+//		return members.keySet();
+//	}
+	
+	public Map<String, Operator> getTerminalsForSchemas() {
+		return terminalOperatorsForSchemas;
 	}
 	
-	public Set<String> getMemberKeySet() {
-		return members.keySet();
-	}
-	
-	public Map<String, Operator> getRootsForSchema() {
-		return rootsForSchemas;
-	}
-	
-	public List<CrossIslandQueryNode> getMemberChildren (String memberTag) {
-		
-		ArrayList<CrossIslandQueryNode> extraction = new ArrayList<>();
-		
-		for (String child : members.get(memberTag).getChildren()) {
-			extraction.add(members.get(child));
-		};
-		
-		return extraction;
-	}
+//	public List<CrossIslandQueryNode> getMemberChildren (String memberTag) {
+//		
+//		ArrayList<CrossIslandQueryNode> extraction = new ArrayList<>();
+//		
+////		for (String child : members.get(memberTag).getChildren()) {
+////			extraction.add(members.get(child));
+////		};
+//		
+//		return extraction;
+//	}
 	
 	public int getSerial() {
 		return serial;
+	}
+	
+	public static String getOutputToken () {
+		return new String (outputToken);
 	}
 }

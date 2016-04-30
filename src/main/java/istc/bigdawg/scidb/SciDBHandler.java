@@ -5,19 +5,14 @@ package istc.bigdawg.scidb;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.sql.*;
+import java.util.*;
 
 import javax.ws.rs.core.Response;
 
+import istc.bigdawg.executor.ExecutorEngine;
+import istc.bigdawg.executor.QueryResult;
+import istc.bigdawg.executor.JdbcQueryResult;
 import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
 import org.scidb.jdbc.IStatementWrapper;
@@ -47,7 +42,7 @@ import istc.bigdawg.utils.Tuple.Tuple2;
  * @author Adam Dziedzic
  * 
  */
-public class SciDBHandler implements DBHandler {
+public class SciDBHandler implements DBHandler, ExecutorEngine {
 
 	private static Logger log = Logger.getLogger(SciDBHandler.class.getName());
 	private SciDBConnectionInfo conInfo;
@@ -152,7 +147,7 @@ public class SciDBHandler implements DBHandler {
 	/**
 	 * This statement will be executed via jdbc in AFL language.
 	 * 
-	 * @param statement
+	 * @param stringStatement
 	 *            scidb statement
 	 * @throws SQLException
 	 */
@@ -164,7 +159,7 @@ public class SciDBHandler implements DBHandler {
 	/**
 	 * This statement will be executed via jdbc in AQL language.
 	 * 
-	 * @param statement
+	 * @param stringStatement
 	 *            scidb statement
 	 * @throws SQLException
 	 */
@@ -256,6 +251,9 @@ public class SciDBHandler implements DBHandler {
 			
 			Class.forName("org.scidb.jdbc.Driver");
 			
+			System.out.printf("---> connection info: %s\n", this.conInfo);
+			
+			
 			conn = DriverManager.getConnection("jdbc:scidb://"+this.conInfo.getHost()+":"+this.conInfo.getPort()+"/");
 			Statement st = conn.createStatement();
 			
@@ -286,6 +284,27 @@ public class SciDBHandler implements DBHandler {
 		return BDConstants.Shim.PSQLARRAY;
 	}
 
+	public Optional<QueryResult> execute(String query) throws LocalQueryExecutionException {
+		try (Statement st = connection.createStatement()) {
+			IStatementWrapper statementWrapper = st.unwrap(IStatementWrapper.class);
+			statementWrapper.setAfl(true);
+
+			log.debug("query: " + LogUtils.replace(query) + "");
+			log.debug("ConnectionInfo: " + this.conInfo.toString() + "\n");
+
+			if (st.execute(query)) {
+				try (ResultSet rs = st.getResultSet()) {
+					return Optional.of(new JdbcQueryResult(rs, this.conInfo));
+				}
+			} else {
+				return Optional.empty();
+			}
+		} catch (SQLException ex) {
+			log.error(ex.getMessage() + "; query: " + LogUtils.replace(query), ex);
+			throw new LocalQueryExecutionException(ex);
+		}
+	}
+
 	/**
 	 * Execute query in SciDB using command line iquery;
 	 * 
@@ -297,41 +316,29 @@ public class SciDBHandler implements DBHandler {
 	 */
 	private String executeQueryScidb(String queryString)
 			throws IOException, InterruptedException, SciDBException {
-		// String sciDBUser = BigDawgConfigProperties.INSTANCE.getScidbUser();
-		// String sciDBPassword = BigDawgConfigProperties.INSTANCE
-		// .getScidbPassword();
-		// System.out.println("sciDBHostname: " + sciDBHostname);
-		// System.out.println("sciDBUser: " + sciDBUser);
-		// System.out.println("sciDBPassword: " + sciDBPassword);
+
 		long lStartTime = System.nanoTime();
-		String resultString = getDataFromSciDB(queryString, conInfo.getHost(),
-				conInfo.getPort(), conInfo.getBinPath());
-		String messageGetData = "SciDB query execution time milliseconds: "
-				+ (System.nanoTime() - lStartTime) / 1000000 + ",";
-		System.out.print(messageGetData);
-		log.info(messageGetData);
-		// System.out.println("result_string: "+resultString);
+		String resultString = getDataFromSciDB(queryString);
+		log.info("SciDB query execution time milliseconds: "
+				+ (System.nanoTime() - lStartTime) / 1000000 + ",");
 
 		lStartTime = System.nanoTime();
-		Tuple2<List<String>, List<List<String>>> parsedData = ParseSciDBResponse
-				.parse(resultString);
+		Tuple2<List<String>, List<List<String>>> parsedData = ParseSciDBResponse.parse(resultString);
 		List<String> colNames = parsedData.getT1();
 		List<List<String>> tuples = parsedData.getT2();
+
 		QueryResponseTupleList resp = new QueryResponseTupleList("OK", 200,
-				tuples, 1, 1, colNames, new ArrayList<String>(),
-				new Timestamp(0));
-		String messageParsing = "Parsing data time milliseconds: "
-				+ (System.nanoTime() - lStartTime) / 1000000 + ",";
-		System.out.print(messageParsing);
-		log.info(messageParsing);
+				tuples, 1, 1, colNames, new ArrayList<String>(), new Timestamp(0));
+
+		log.info("Parsing data time milliseconds: "
+				+ (System.nanoTime() - lStartTime) / 1000000);
 
 		lStartTime = System.nanoTime();
 		String responseResult = ObjectMapperResource.INSTANCE.getObjectMapper()
 				.writeValueAsString(resp);
-		String messageJSON = "JSON formatting time milliseconds: "
-				+ (System.nanoTime() - lStartTime) / 1000000 + ",";
-		System.out.print(messageJSON);
-		log.info(messageJSON);
+
+		log.info("JSON formatting time milliseconds: "
+				+ (System.nanoTime() - lStartTime) / 1000000);
 
 		return responseResult;
 	}
@@ -348,11 +355,10 @@ public class SciDBHandler implements DBHandler {
 	 * @throws InterruptedException
 	 * @throws SciDBException
 	 */
-	private String getDataFromSciDB(final String queryString, final String host,
-			final String port, final String binPath)
+	private String getDataFromSciDB(final String queryString)
 					throws IOException, InterruptedException, SciDBException {
-		InputStream resultInStream = RunShell.runSciDBAFLquery(host, port,
-				binPath, queryString);
+		InputStream resultInStream = RunShell.runSciDBAFLquery(conInfo.getHost(),
+				conInfo.getPort(), conInfo.getBinPath(), queryString);
 		String resultString = IOUtils.toString(resultInStream,
 				Constants.ENCODING);
 		return resultString;

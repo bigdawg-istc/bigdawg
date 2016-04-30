@@ -4,10 +4,10 @@
 package istc.bigdawg.query;
 
 import java.io.Serializable;
-import java.sql.SQLException;
 import java.text.ParseException;
 import java.util.Collection;
 
+import istc.bigdawg.executor.ExecutorEngine;
 import org.apache.commons.lang3.tuple.Pair;
 
 /**
@@ -52,10 +52,10 @@ public interface ConnectionInfo extends Serializable {
 	/**
 	 * @param objects
 	 *            a Collection of objects to be removed
-	 * @return a query that when run on the instance, removes all of the given
+	 * @return a collection of queries that when run on the instance, removes all of the given
 	 *         objects.
 	 */
-	public String getCleanupQuery(Collection<String> objects);
+	public Collection<String> getCleanupQuery(Collection<String> objects);
 
 	/**
 	 *
@@ -74,11 +74,25 @@ public interface ConnectionInfo extends Serializable {
 	 *         elements stored in the ith bucket of the histogram
 	 */
 	public long[] computeHistogram(String object, String attribute,
-			double start, double end, int numBuckets) throws SQLException;
+			double start, double end, int numBuckets) throws ExecutorEngine.LocalQueryExecutionException;
 
 	public Pair<Number, Number> getMinMax(String object, String attribute)
-			throws SQLException, ParseException;
+			throws ExecutorEngine.LocalQueryExecutionException, ParseException;
 
-	public DBHandler getHandler();
+	public ExecutorEngine getLocalQueryExecutor() throws LocalQueryExecutorLookupException;
 
+	class LocalQueryExecutorLookupException extends Exception {
+		public LocalQueryExecutorLookupException() {
+			super();
+		}
+		public LocalQueryExecutorLookupException(String message) {
+			super(message);
+		}
+		public LocalQueryExecutorLookupException(Throwable cause) {
+			super(cause);
+		}
+		public LocalQueryExecutorLookupException(String message, Throwable cause) {
+			super(message, cause);
+		}
+	}
 }

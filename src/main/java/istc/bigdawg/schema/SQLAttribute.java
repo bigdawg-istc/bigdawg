@@ -33,7 +33,7 @@ public class SQLAttribute extends DataObjectAttribute {
 			String typeName = type.getDataType();
 			type.setDataType(new String(typeName));
 			typeString = type.getDataType();
-			expression = CCJSqlParserUtil.parseExpression(a.getColumnName());
+			expression = a.getColumnName();
 		}
 		
 		public SQLAttribute(SQLAttribute sa) throws JSQLParserException {

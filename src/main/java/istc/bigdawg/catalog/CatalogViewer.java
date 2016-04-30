@@ -12,6 +12,7 @@ import org.apache.log4j.Logger;
 
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
+import istc.bigdawg.utils.IslandsAndCast;
 
 public class CatalogViewer {
 
@@ -67,11 +68,13 @@ public class CatalogViewer {
 		SciDBConnectionInfo extraction = null;
 
 		ResultSet rs = cc.execRet(
-				"select dbid, eid, host, port, connection_properties, userid, password "
-				+ "from catalog.databases db join catalog.engines e on db.engine_id = e.eid where dbid = "+db_id);
+				"select dbid, db.engine_id, host, port, bin_path, userid, password "
+				+ "from catalog.databases db "
+				+ "join catalog.engines e on db.engine_id = e.eid "
+				+ "join catalog.scidbbinpaths sp on db.engine_id = sp.eid where dbid = "+db_id);
 		if (rs.next()) // String host, String port, String user, String password, String binPath
 			extraction = new SciDBConnectionInfo(rs.getString("host"), rs.getString("port"), 
-					rs.getString("userid"), rs.getString("password"), rs.getString("connection_properties"));
+					rs.getString("userid"), rs.getString("password"), rs.getString("bin_path"));
 		else {
 			rs.close();
 			throw new Exception("SciDB Connection Info Not Found: "+db_id);
@@ -125,7 +128,7 @@ public class CatalogViewer {
 	 * @return HashMap<String,ArrayList<String>>
 	 * @throws Exception
 	 */
-	public static HashMap<String,List<String>> getDBMappingByObj (List<String> inputs) throws Exception {
+	public static HashMap<String,List<String>> getDBMappingByObj (List<String> inputs, IslandsAndCast.Scope scope) throws Exception {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		
 		CatalogUtilities.checkConnection(cc);
@@ -139,9 +142,21 @@ public class CatalogViewer {
 			wherePred = wherePred + "or lower(o.name) = lower(\'" + inputs.get(i) + "\') ";
 		}
 		
-		ResultSet rs = cc.execRet("select name obj, string_agg(cast(physical_db as varchar), ',') db, count(name) c "
-				+ "from (select * from catalog.objects o where " + wherePred + " order by physical_db, name) as objs "
-				+ "group by name order by c desc, name;");
+		String islandName; 
+		if (scope == null) islandName = "";
+		else if (scope.equals(IslandsAndCast.Scope.RELATIONAL)) islandName = " AND scope_name = \'RELATIONAL\' ";
+		else if (scope.equals(IslandsAndCast.Scope.ARRAY)) islandName = " AND scope_name = \'ARRAY\' ";
+		else throw new Exception("Catalog: invalid scope from getDBMappingByObj: "+scope);
+		
+		ResultSet rs = cc.execRet("select o.name obj, string_agg(cast(physical_db as varchar), ',') db, count(o.name) c, scope_name island "
+								+ "from catalog.objects o "
+								+ "join catalog.databases d on o.physical_db = d.dbid "
+								+ "join catalog.shims s on d.engine_id = s.engine_id "
+								+ "join catalog.islands i on s.island_id = i.iid where " + wherePred + islandName + " group by o.name, island;");
+		
+//		ResultSet rs = cc.execRet("select name obj, string_agg(cast(physical_db as varchar), ',') db, count(name) c "
+//				+ "from (select * from catalog.objects o where " + wherePred + " order by physical_db, name) as objs "
+//				+ "group by name order by c desc, name;");
 		
 		if (rs.next()) extraction.put(rs.getString("obj"), new ArrayList<String>(Arrays.asList(rs.getString("db").split(","))));
 		while (rs.next()) {

@@ -10,13 +10,13 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
 
+import istc.bigdawg.executor.JdbcQueryResult;
 import org.junit.Before;
 import org.junit.Test;
 
 import istc.bigdawg.LoggerSetup;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
-import istc.bigdawg.postgresql.PostgreSQLHandler.QueryResult;
 
 /**
  * @author Adam Dziedzic
@@ -60,7 +60,7 @@ public class FromPostgresToPostgresTest {
 			assertEquals(result.getCountExtractedElements(), Long.valueOf(1L));
 			assertEquals(result.getCountLoadedElements(), Long.valueOf(1L));
 
-			QueryResult qresult = postgres2.executeQueryPostgreSQL("select * from " + tableName);
+			JdbcQueryResult qresult = postgres2.executeQueryPostgreSQL("select * from " + tableName);
 			List<List<String>> rows = qresult.getRows();
 			List<String> row = rows.get(0);
 			int currentInt = Integer.parseInt(row.get(0));

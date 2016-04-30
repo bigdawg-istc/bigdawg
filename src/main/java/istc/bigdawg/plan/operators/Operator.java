@@ -365,7 +365,8 @@ public class Operator implements OperatorInterface {
 	public String getSubTreeToken() throws Exception {
 		
 		if (!isSubTree && !(this instanceof Join)) {
-			throw new Exception("\n\n\n----> not the root of a SubTree: "+this.outSchema+"\n\n");
+			return null;
+//			throw new Exception("\n\n\n----> not the root of a SubTree: "+this.outSchema+"\n\n");
 		}
 		
 		if (this instanceof Join) return ((Join)this).getJoinToken(); 
@@ -403,26 +404,43 @@ public class Operator implements OperatorInterface {
 		
 		Map<String, String> aliasOrString = new LinkedHashMap<>();
 		
+		boolean masked = false;
+		String replaceToken = null;
+		
 		if (isSubTree) {
-			aliasOrString.put(getSubTreeToken(), getSubTreeToken());
-//			return aliasOrString;
+			replaceToken = getSubTreeToken();
+			aliasOrString.put(replaceToken, replaceToken);
+			masked = true;
 		}
 		
 		if (isPruned) {
-			aliasOrString.put(getPruneToken(), getPruneToken());
-//			return aliasOrString;
+			replaceToken = getPruneToken();
+			aliasOrString.put(replaceToken, replaceToken);
+			masked = true;
+			
 		}
 		
-//		if (this instanceof Join && ((Join)this).joinID != null)
-//			aliasOrString.put(((Join)this).getJoinToken(), ((Join)this).getJoinToken());
+		if (this instanceof Join && ((Join)this).joinID != null) {
+			replaceToken = ((Join)this).getJoinToken();
+			aliasOrString.put(replaceToken, replaceToken);
+			masked = true;
+		}
 		
-		if (this instanceof Aggregate && ((Aggregate)this).getAggregateID() != null)
-			aliasOrString.put(((Aggregate)this).getAggregateToken(), ((Aggregate)this).getAggregateToken());
+		if (this instanceof Aggregate && ((Aggregate)this).getAggregateID() != null) {
+			replaceToken = ((Aggregate)this).getAggregateToken();
+			aliasOrString.put(replaceToken, replaceToken);
+			masked = true;
+		}
 		
 		if (this.children.size() > 0 ) {
 			
 			for (Operator o : children) {
 				aliasOrString.putAll(o.getDataObjectAliasesOrNames());
+				if (masked) {
+					for (String s : o.getDataObjectAliasesOrNames().keySet()) {
+						aliasOrString.replace(s, replaceToken);
+					}
+				}
 			}
 		} else {
 			if (((Scan)this).getTableAlias() != null && !((Scan)this).getTableAlias().isEmpty())
@@ -641,8 +659,8 @@ public class Operator implements OperatorInterface {
 			o.seekScanAndProcessAggregateInFilter();
 	}
 	
-	public Map<String, Expression> getChildrenIndexConds() throws Exception {
-		return this.getChildren().get(0).getChildrenIndexConds();
+	public Map<String, Expression> getChildrenPredicates() throws Exception {
+		return this.getChildren().get(0).getChildrenPredicates();
 	}
 	
 	protected Select generateSelectWithToken(String token) throws Exception {

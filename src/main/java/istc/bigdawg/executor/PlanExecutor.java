@@ -11,8 +11,6 @@ import istc.bigdawg.executor.plan.QueryExecutionPlan;
 import istc.bigdawg.migration.MigrationResult;
 import istc.bigdawg.migration.Migrator;
 import istc.bigdawg.monitoring.Monitor;
-import istc.bigdawg.postgresql.PostgreSQLHandler;
-import istc.bigdawg.postgresql.PostgreSQLHandler.QueryResult;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.signature.Signature;
 import org.apache.commons.lang3.tuple.ImmutablePair;
@@ -52,8 +50,6 @@ class PlanExecutor {
      * @param plan
      *            a data structure of the queries to be run and their ordering,
      *            with edges pointing to dependencies
-     * @param signature value to pass to Monitor
-     * @param index value to pass to Monitor
      */
     public PlanExecutor(QueryExecutionPlan plan) {
         this.plan = plan;
@@ -71,7 +67,7 @@ class PlanExecutor {
                     .map(ExecutionNode::getQueryString)
                     .filter(Optional::isPresent).map(Optional::get)
                     .collect(Collectors.joining(" \n ---- then ---- \n ")));
-
+        
         // initialize countdown latches to the proper counts
         for(ExecutionNode node : plan) {
             int latchSize = plan.inDegreeOf(node);
@@ -83,7 +79,7 @@ class PlanExecutor {
     /**
      * Execute the plan, and return the result
      */
-    Optional<QueryResult> executePlan(Optional<Pair<Signature, Integer>> reportValues) throws SQLException, MigrationException {
+    Optional<QueryResult> executePlan(Optional<Pair<Signature, Integer>> reportValues) throws ExecutorEngine.LocalQueryExecutionException, MigrationException {
         final long start = System.currentTimeMillis();
 
         Logger.info(this, "Executing query plan %s...", plan.getSerializedName());
@@ -115,7 +111,11 @@ class PlanExecutor {
 
         if (reportValues.isPresent()) {
             Logger.info(this, "Sending timing to monitor...");
-            monitor.finishedBenchmark(reportValues.get().getLeft(), reportValues.get().getRight(), start, end);
+            try {
+                monitor.finishedBenchmark(reportValues.get().getLeft(), reportValues.get().getRight(), start, end);
+            } catch(SQLException e) {
+                throw new ExecutorEngine.LocalQueryExecutionException("Error reporting finished benchmark to Monitor", e);
+            }
         } else {
             Logger.info(this, "Not reporting timing to monitor.");
         }
@@ -154,14 +154,17 @@ class PlanExecutor {
         try {
         return node.getQueryString().flatMap((query) -> {
             try {
-                final Optional<QueryResult> result = ((PostgreSQLHandler) node.getEngine().getHandler()).executePostgreSQL(query);
+                final Optional<QueryResult> result = node.getEngine().getLocalQueryExecutor().execute(query);
                 Logger.info(this, "Successfully executed node %s", node);
                 return result;
-            } catch (SQLException e) {
+            } catch (ConnectionInfo.LocalQueryExecutorLookupException e) {
+                Logger.error(this, "Error looking up ExecutorEngine for node %s: %[exception]s", node, e);
+                return Optional.empty();
+            } catch (ExecutorEngine.LocalQueryExecutionException e) {
                 Logger.error(this, "Error executing node %s: %[exception]s", node, e);
-                // TODO: if error is actually bad, don't markNodeAsCompleted, and instead fail the QEP gracefully.
                 return Optional.empty();
             } finally {
+                // TODO: if error is actually bad, don't markNodeAsCompleted, and instead fail the QEP gracefully.
                 markNodeAsCompleted(node);
             }
         });
@@ -270,6 +273,7 @@ class PlanExecutor {
 
                     futureCollection.add(migration);
                 } else {
+                    futureCollection.add(migrations.get(migrationKey));
                     Logger.debug(PlanExecutor.this, "Already migrating %s, not queueing again.", d);
                 }
             }
@@ -308,7 +312,7 @@ class PlanExecutor {
         }).orElse(MigrationResult.getEmptyInstance(String.format("No table to migrate for node %s", dependency.getTableName())));
     }
 
-    private void dropTemporaryTables() throws SQLException {
+    private void dropTemporaryTables() throws ExecutorEngine.LocalQueryExecutionException {
         synchronized(temporaryTables) {
             final Multimap<ConnectionInfo, String> removed = HashMultimap.create();
 
@@ -316,7 +320,13 @@ class PlanExecutor {
                 final Collection<String> tables = temporaryTables.get(c);
 
                 Logger.debug(this, "Cleaning up %s by removing %s...", c, tables);
-                ((PostgreSQLHandler) c.getHandler()).executeStatementPostgreSQL(c.getCleanupQuery(tables));
+                Collection<String> cs = c.getCleanupQuery(tables);
+                try {
+                	for (String s : cs)
+                		c.getLocalQueryExecutor().execute(s);
+                } catch (ConnectionInfo.LocalQueryExecutorLookupException e) {
+                    Logger.error(this, "Error looking up ExecutorEngine for %s: %[exception]s", c, e);
+                }
 
                 removed.putAll(c, tables);
             }
@@ -327,55 +337,5 @@ class PlanExecutor {
         }
 
         Logger.debug(this, "Temporary tables for query plan %s have been cleaned up", plan.getSerializedName());
-    }
-
-
-    /**
-     * Colocates the dependencies for the given ExecutionNode onto that node's engine one at a time.
-     *
-     * Waits for any incomplete dependencies, and blocks the current thread until completion.
-     *
-     * @param node the ExecutionNOde whose dependencies we want to colocate
-     *
-     * @deprecated use {@link #colocateDependencies(ExecutionNode, Collection)} instead.
-     */
-    @Deprecated
-    private void colocateDependenciesSerially(ExecutionNode node) {
-        // Block until dependencies are all resolved
-        try {
-            Logger.debug(this, "Waiting for dependencies of query node %s to be resolved", node.getTableName());
-            this.locks.get(node).await();
-        } catch (InterruptedException e) {
-            Logger.error(this, "Execution of query node %s was interrupted while waiting for dependencies: %[exception]s", node.getTableName(), e);
-            Thread.currentThread().interrupt();
-        }
-
-        Logger.debug(this, "Colocating dependencies of query node %s", node.getTableName());
-
-        plan.getDependencies(node).stream()
-                // only look at dependencies not already on desired engine
-                .filter(d -> !resultLocations.containsEntry(d, node.getEngine()))
-                .forEach(d -> {
-                    // migrate to node.getEngine()
-                    d.getTableName().ifPresent((table) -> {
-                        Logger.debug(this, "Migrating dependency table %s from engine %s to engine %s...", table, d.getEngine(),
-                                node.getEngine());
-                        try {
-                            MigrationResult result = Migrator.migrate(d.getEngine(), table, node.getEngine(), table);
-
-                            if(result.isError()) {
-                                throw new MigrationException(result.toString());
-                            }
-
-                            // mark the dependency's data as being present on node.getEngine()
-                            resultLocations.put(d, node.getEngine());
-
-                            // mark that this engine now has a copy of the dependency's data
-                            temporaryTables.put(node.getEngine(), table);
-                        } catch (MigrationException e) {
-                            Logger.error(this, "Error migrating dependency %s of node %s: %[exception]s", d, node, e);
-                        }
-                    });
-                });
     }
 }

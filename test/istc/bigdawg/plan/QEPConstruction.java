@@ -210,20 +210,20 @@ public class QEPConstruction {
 		
 		System.out.println("\n\n\nRaw query: "+userinput);
 		
-		System.out.println("\n\nMember KeySet Size: "+ciqp.getMemberKeySet().size()+"\n");
+		System.out.println("\n\nMember KeySet Size: "+ciqp.vertexSet().size()+"\n");
 		
 		OperatorVisitor gen = new SQLQueryGenerator();
 		
-		for (String k : ciqp.getMemberKeySet()) {
+		for (CrossIslandQueryNode k : ciqp.vertexSet()) {
 			
-			CrossIslandQueryNode n = ciqp.getMember(k);
+			CrossIslandQueryNode n = k;
 			
 			System.out.println("Member: "+k+"; Island: "+n.getScope().toString());
 			
 			
 			// schemas
-			if (k.toLowerCase().startsWith("bigdawgtag_")){
-				System.out.println("Root schema in SQL: \n- "+gen.generateCreateStatementLocally(n.getRemainder(0), k));
+			if (k.getName().toLowerCase().startsWith("bigdawgtag_")){
+				System.out.println("Root schema in SQL: \n- "+gen.generateCreateStatementLocally(n.getRemainder(0), k.getName()));
 //				System.out.println("Root schema in AFL: \n- "+n.getRemainder(0).generateAFLCreateArrayStatementLocally(k));
 			}
 			

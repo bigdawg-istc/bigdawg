@@ -14,7 +14,7 @@ public class DataObjectAttribute {
 	protected DataObject srcDataObject = null;
 	protected String typeString = null;
 	protected boolean hidden = false;
-	protected Expression expression = null;
+	protected String expression = null;
 	
 	public DataObjectAttribute(String n) {
 		name = new String(n);
@@ -41,7 +41,7 @@ public class DataObjectAttribute {
 		}
 		
 		if (sa.expression != null)
-			this.expression = CCJSqlParserUtil.parseExpression(new String(sa.expression.toString()));
+			this.expression = new String(sa.expression.toString());
 	}
 
 
@@ -55,7 +55,7 @@ public class DataObjectAttribute {
 		this.typeString = new String(r.typeString);
 		this.sources = null;
 		if (r.expression != null)
-			this.expression = CCJSqlParserUtil.parseExpression(new String(r.expression.toString()));
+			this.expression = new String(r.expression.toString());
 		
 		addSourceAttribute(r);
 
@@ -188,17 +188,21 @@ public class DataObjectAttribute {
 //	}
 	
 	public Expression getSQLExpression() {
-		return expression;
+		try {
+			return CCJSqlParserUtil.parseExpression(expression);
+		} catch (JSQLParserException e) {
+			return null;
+		}
 	}
 	
-	public void setExpression(Expression expr) throws JSQLParserException {
+	public void setExpression(Expression expr) {
 		if (expr != null)
-			this.expression= CCJSqlParserUtil.parseExpression(new String (expr.toString()));
+			this.expression= new String (expr.toString());
 	}
 	
 	public void setExpression(String exprString) throws JSQLParserException {
 		if (exprString != null)
-			this.expression= CCJSqlParserUtil.parseExpression(new String (exprString));
+			this.expression= new String (exprString);
 	}
 	
 	public String getExpressionString() throws Exception {

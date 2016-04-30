@@ -8,6 +8,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import istc.bigdawg.cast.Cast;
+import istc.bigdawg.packages.CrossIslandQueryPlan;
 
 public class UserQueryParser {
 			
@@ -62,7 +63,7 @@ public class UserQueryParser {
 	    		} else {
 		    		// finish and extract this entry, add new variable for the prior
 		    		if (parenLevel == 1)
-		    			extraction.put("A_OUTPUT", stkwrite.pop() + str.substring(lastStop, matcher.end()));// + ";");
+		    			extraction.put(CrossIslandQueryPlan.getOutputToken(), stkwrite.pop() + str.substring(lastStop, matcher.end()));// + ";");
 		    		else 
 		    			extraction.put(extractTitle + extractionCounter, stkwrite.pop() + str.substring(lastStop, matcher.end()));
 		    		stkwrite.push(stkwrite.pop() + extractTitle + extractionCounter);

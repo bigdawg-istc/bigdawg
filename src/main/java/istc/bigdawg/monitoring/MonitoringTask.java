@@ -22,8 +22,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static istc.bigdawg.postgresql.PostgreSQLHandler.getColumnNames;
-import static istc.bigdawg.postgresql.PostgreSQLHandler.getRows;
+import static istc.bigdawg.utils.JdbcUtils.getColumnNames;
+import static istc.bigdawg.utils.JdbcUtils.getRows;
 
 /**
  * Created by chenp on 11/17/2015.
@@ -86,7 +86,7 @@ class Task implements Runnable {
                 if (signature != null) {
                     LinkedHashMap<String, String> crossIslandQuery = UserQueryParser.getUnwrappedQueriesByIslands(signature.getQuery());
                     CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(crossIslandQuery);
-                    CrossIslandQueryNode ciqn = ciqp.getRoot();
+                    CrossIslandQueryNode ciqn = ciqp.getTerminalNode();
                     List<QueryExecutionPlan> qeps = ciqn.getAllQEPs(true);
 
                     Monitor.runBenchmarks(qeps, signature);

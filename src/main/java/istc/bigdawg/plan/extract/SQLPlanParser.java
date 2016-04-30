@@ -22,7 +22,6 @@ import istc.bigdawg.plan.operators.OperatorFactory;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.utils.sqlutil.SQLPrepareQuery;
 import istc.bigdawg.utils.sqlutil.SQLUtilities;
-//import istc.bigdawg.postgresql.PostgreSQLHandler.QueryResult;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.select.Limit;
 import net.sf.jsqlparser.statement.select.PlainSelect;

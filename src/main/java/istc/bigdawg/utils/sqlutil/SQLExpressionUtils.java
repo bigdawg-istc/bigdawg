@@ -513,9 +513,9 @@ public class SQLExpressionUtils {
 	    return new ArrayList<>(attributes);
 	}
 	
-	public static String getRelevantFilterSections(Expression expr, Set<String> leftNames, Set<String> rightNames) throws JSQLParserException {
+	public static String getRelevantFilterSections(Expression expr, Map<String, String> leftNames, Map<String, String> rightNames) throws JSQLParserException {
 		
-		final Set<String> filters = new HashSet<String>();
+		final Set<String> filters = new HashSet<>();
 	
 		SQLExpressionHandler deparser = new SQLExpressionHandler() {
 	        
@@ -529,26 +529,41 @@ public class SQLExpressionUtils {
 					List <String> llc = getAttributes(expression.getLeftExpression()).stream().filter(d -> d.getTable() != null).map(d -> d.getTable().toString()).collect(Collectors.toList());
 					List <String> rlc = getAttributes(expression.getRightExpression()).stream().filter(d -> d.getTable() != null).map(d -> d.getTable().toString()).collect(Collectors.toList());
 					
-					if (llc.removeAll(leftNames) && llc.removeAll(rightNames)) leftFound = true;
-					if (rlc.removeAll(leftNames) && rlc.removeAll(rightNames)) rightFound = true;
+					List <String> llcDup = new ArrayList<>(llc);
+					List <String> rlcDup = new ArrayList<>(rlc);
+					List <String> llcDup2 = new ArrayList<>(llc);
+					List <String> rlcDup2 = new ArrayList<>(rlc);
+					
+					if (llc.removeAll(leftNames.keySet()) && llc.removeAll(rightNames.keySet())
+							|| llc.removeAll(leftNames.values()) && llc.removeAll(rightNames.values())) leftFound = true;
+					if (rlc.removeAll(leftNames.keySet()) && rlc.removeAll(rightNames.keySet())
+							|| rlc.removeAll(leftNames.values()) && rlc.removeAll(rightNames.values())) rightFound = true;
 
+					if (leftFound && rightFound) {
+						filters.add(expression.toString());
+					} else if (leftFound) {
+						filters.add(expression.getLeftExpression().toString());
+					} else if (rightFound) {
+						filters.add(expression.getRightExpression().toString());
+					} else {
+						leftFound = false;
+						if ((llcDup.removeAll(leftNames.keySet()) || llcDup.removeAll(leftNames.values())) 
+								&& (rlcDup.removeAll(rightNames.keySet()) || rlcDup.removeAll(rightNames.values()))) {
+							filters.add(expression.toString());
+							return;
+						}
+							
+						if ((llcDup2.removeAll(rightNames.keySet()) || llcDup2.removeAll(rightNames.values())) 
+								&& (rlcDup2.removeAll(leftNames.keySet()) || rlcDup2.removeAll(leftNames.values()))) {
+							filters.add(expression.toString());
+						}
+						
+					}
+					
 				} catch (JSQLParserException e) {
 					e.printStackTrace();
 				}
 				
-				
-				if (leftFound && rightFound) {
-					expression.getLeftExpression().accept(this);
-					expression.getRightExpression().accept(this);
-				}else if (leftFound) {
-					filters.add(expression.getLeftExpression().toString());
-					expression.getRightExpression().accept(this);
-				} else if (rightFound) {
-					filters.add(expression.getRightExpression().toString());
-					expression.getLeftExpression().accept(this);
-				} else {
-					filters.add(expression.toString());
-				}
 			}
 			
 			@Override
@@ -557,27 +572,43 @@ public class SQLExpressionUtils {
 				boolean rightFound = false;
 				
 				try {
+					
 					List <String> llc = getAttributes(expression.getLeftExpression()).stream().filter(d -> d.getTable() != null).map(d -> d.getTable().toString()).collect(Collectors.toList());
 					List <String> rlc = getAttributes(expression.getRightExpression()).stream().filter(d -> d.getTable() != null).map(d -> d.getTable().toString()).collect(Collectors.toList());
 					
-					if (llc.removeAll(leftNames) && llc.removeAll(rightNames)) leftFound = true;
-					if (rlc.removeAll(leftNames) && rlc.removeAll(rightNames)) rightFound = true;
+					List <String> llcDup = new ArrayList<>(llc);
+					List <String> rlcDup = new ArrayList<>(rlc);
+					List <String> llcDup2 = new ArrayList<>(llc);
+					List <String> rlcDup2 = new ArrayList<>(rlc);
+					
+					if (llc.removeAll(leftNames.keySet()) && llc.removeAll(rightNames.keySet())
+							|| llc.removeAll(leftNames.values()) && llc.removeAll(rightNames.values())) leftFound = true;
+					if (rlc.removeAll(leftNames.keySet()) && rlc.removeAll(rightNames.keySet())
+							|| rlc.removeAll(leftNames.values()) && rlc.removeAll(rightNames.values())) rightFound = true;
+					
+					if (leftFound && rightFound) {
+						filters.add(expression.toString());
+					} else if (leftFound) {
+						filters.add(expression.getLeftExpression().toString());
+					} else if (rightFound) {
+						filters.add(expression.getRightExpression().toString());
+					} else {
+						leftFound = false;
+						if ((llcDup.removeAll(leftNames.keySet()) || llcDup.removeAll(leftNames.values())) 
+								&& (rlcDup.removeAll(rightNames.keySet()) || rlcDup.removeAll(rightNames.values()))) {
+							filters.add(expression.toString());
+							return;
+						}
+							
+						if ((llcDup2.removeAll(rightNames.keySet()) || llcDup2.removeAll(rightNames.values())) 
+								&& (rlcDup2.removeAll(leftNames.keySet()) || rlcDup2.removeAll(leftNames.values()))) {
+							filters.add(expression.toString());
+						}
+						
+					}
 					
 				} catch (JSQLParserException e) {
 					e.printStackTrace();
-				}
-				
-				if (leftFound && rightFound) {
-					expression.getLeftExpression().accept(this);
-					expression.getRightExpression().accept(this);
-				} else if (leftFound) {
-					filters.add(expression.getLeftExpression().toString());
-					expression.getRightExpression().accept(this);
-				} else if (rightFound) {
-					filters.add(expression.getRightExpression().toString());
-					expression.getLeftExpression().accept(this);
-				} else {
-					filters.add(expression.toString());
 				}
 			}
 			
@@ -618,6 +649,63 @@ public class SQLExpressionUtils {
 	    return String.join(" AND ", filters);
 	}
 	
+	public static List<Expression> getFlatExpressions(Expression expr) throws JSQLParserException {
+		
+		final List<Expression> filters = new ArrayList<>();
+	
+		SQLExpressionHandler deparser = new SQLExpressionHandler() {
+	        
+			@Override
+			public void visitOldOracleJoinBinaryExpression(OldOracleJoinBinaryExpression expression, String operator) {
+				filters.add(expression);
+			}
+			
+			@Override
+			protected void visitBinaryExpression(BinaryExpression expression, String operator) {
+				if (operator.equals(" AND ") || operator.equals(" OR ")){
+					expression.getLeftExpression().accept(this);
+					expression.getRightExpression().accept(this);
+				} else {
+					filters.add(expression);
+				}
+			}
+			
+			@Override
+		    public void visit(CaseExpression caseExpression) {
+				if (caseExpression.getSwitchExpression() != null) caseExpression.getSwitchExpression().accept(this);
+		        for (int i = 0; i < caseExpression.getWhenClauses().size(); i++) {
+		        	((WhenClause)caseExpression.getWhenClauses().get(i)).getWhenExpression().accept(this);
+		        	((WhenClause)caseExpression.getWhenClauses().get(i)).getThenExpression().accept(this);;
+		        }
+		        if (caseExpression.getElseExpression() != null) caseExpression.getElseExpression().accept(this);
+		    }
+			
+			@Override
+			public void visit(InExpression inExpression) {
+				inExpression.getLeftExpression().accept(this);
+				if (inExpression.getLeftItemsList() != null) inExpression.getLeftItemsList().accept(this);
+				if (inExpression.getRightItemsList() != null) inExpression.getRightItemsList().accept(this);
+			}
+			
+			@Override public void visit(ExpressionList expressionList) {for (Iterator<Expression> iter = expressionList.getExpressions().iterator(); iter.hasNext();) iter.next().accept(this);}
+			@Override public void visit(Parenthesis parenthesis) {parenthesis.getExpression().accept(this);}
+			@Override public void visit(Function function) {function.getParameters().accept(this);}
+			@Override public void visit(SignedExpression se) {se.getExpression().accept(this);}
+			@Override public void visit(Column tableColumn) {}
+			@Override public void visit(LongValue lv) {};
+			@Override public void visit(DoubleValue lv) {};
+			@Override public void visit(HexValue lv) {};
+			@Override public void visit(NullValue lv) {};
+			@Override public void visit(TimeValue lv) {};
+			@Override public void visit(StringValue sv) {};
+	    };
+	    
+	    expr.accept(deparser);
+	    
+//	    System.out.printf("\n----> SQLExpressionUtils expression: \n	---%s;\n	---filters: %s;\n	---left: %s;\n	---right: %s;\n", expr, filters, leftNames, rightNames);
+	    
+	    return filters;
+	}
 	
 	public static void renameAttributes(Expression expr, Set<String> originalAliasSet, Set<String> aliasesAndNames, String replacement) throws JSQLParserException {
 		

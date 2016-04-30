@@ -3,13 +3,13 @@
  */
 package istc.bigdawg.scidb;
 
-import java.sql.SQLException;
 import java.text.ParseException;
 import java.util.Collection;
+import java.util.stream.Collectors;
 
+import istc.bigdawg.executor.ExecutorEngine;
 import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.query.ConnectionInfo;
-import istc.bigdawg.query.DBHandler;
 import org.apache.commons.lang3.tuple.Pair;
 
 /**
@@ -106,9 +106,9 @@ public class SciDBConnectionInfo implements ConnectionInfo {
 	 * istc.bigdawg.query.ConnectionInfo#getCleanupQuery(java.util.Collection)
 	 */
 	@Override
-	public String getCleanupQuery(Collection<String> objects) {
+	public Collection<String> getCleanupQuery(Collection<String> objects) {
 		// TODO(ankush) Auto-generated method stub
-		throw new UnsupportedOperationException();
+		return objects.stream().map(o -> "remove("+o+")").collect(Collectors.toSet());
 	}
 
 	@Override
@@ -118,19 +118,16 @@ public class SciDBConnectionInfo implements ConnectionInfo {
 	}
 
 	@Override
-	public Pair<Number, Number> getMinMax(String object, String attribute) throws SQLException, ParseException {
+	public Pair<Number, Number> getMinMax(String object, String attribute) throws ExecutorEngine.LocalQueryExecutionException, ParseException {
 		// TODO(ankush) implement min/max computation
 		throw new UnsupportedOperationException();	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see istc.bigdawg.query.ConnectionInfo#getHandler()
-	 */
-	@Override
-	public DBHandler getHandler() {
-		// TODO(ankush) Auto-generated method stub
-		throw new UnsupportedOperationException();
+	public ExecutorEngine getLocalQueryExecutor() throws LocalQueryExecutorLookupException {
+		try {
+			return new SciDBHandler(this);
+		} catch (Exception e) {
+			throw new LocalQueryExecutorLookupException(e);
+		}
 	}
 
 	/**
