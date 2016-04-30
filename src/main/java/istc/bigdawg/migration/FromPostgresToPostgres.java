@@ -144,7 +144,7 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 					+ connectionFrom.toSimpleString() + ",connectionTo,"
 					+ connectionTo.toSimpleString() + ",fromTable," + fromTable
 					+ ",toTable," + toTable + ",startTimeMigration,"
-					+ startTimeMigration + ",endTimeMigration,"
+					+ startTimeMigration + ",endTi	meMigration,"
 					+ endTimeMigration + ",countExtractedElements,"
 					+ countExtractedElements + ",countLoadedElements,"
 					+ countLoadedElements + ",durationMsec," + durationMsec);
