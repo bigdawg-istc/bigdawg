@@ -712,7 +712,7 @@ public class CrossIslandQueryNode {
 //					System.out.printf("---------> jp: %s, s: %s, key: %s; pred: %s; used: %s\n", jp, s, key, pred, used);
 					jp.get(s).remove(key);
 					jp.get(key).remove(s);
-				} else if (jf.get(s) == null && jf.get(key) != null && jf.get(s).get(key) != null) {
+				} else if (jf.get(s) != null && jf.get(key) != null && jf.get(s).get(key) != null) {
 					pred.add(jf.get(s).get(key));
 					jf.get(s).remove(key);
 					jf.get(key).remove(s);

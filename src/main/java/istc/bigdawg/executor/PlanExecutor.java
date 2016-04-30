@@ -286,6 +286,9 @@ class PlanExecutor {
             try {
                 final MigrationResult result = Migrator.migrate(dependency.getEngine(), table, dependant.getEngine(), table);
 
+                // THIS IS ADDED FOR APRIL 30 DEBUG
+                Logger.debug(PlanExecutor.this, "[][][][][][][] migrator has migrated for a single dependency");
+                
                 if(result.isError()) {
                     throw new MigrationException(result.toString());
                 }
