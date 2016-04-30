@@ -304,29 +304,7 @@ public class Join extends Operator {
 		}    	
     }
     
-    public String updatePruneTokensForOnExpression(String joinPred) throws Exception {
-    	
-    	if (!isAnyProgenyPruned()) return new String(joinPred);
-    	
-    	List<Operator> lo = new ArrayList<>();
-    	List<Operator> walker = this.children;
-    	while (!walker.isEmpty()) {
-    		List<Operator> nextgen = new ArrayList<>();
-    		for (Operator o : walker) {
-    			if (o.isPruned()) lo.add(o);
-    			else nextgen.addAll(o.getChildren());
-    		}
-    		walker = nextgen;
-    	}
-    	
-    	Expression expr = CCJSqlParserUtil.parseCondExpression(joinPred);
-    	for (Operator o : lo) {
-    		Map<String, String> s = o.getDataObjectAliasesOrNames();
-    		SQLExpressionUtils.renameAttributes(expr, s.keySet(), null, o.getPruneToken());
-    	}
-    	
-		return expr.toString();
-	}
+   
     
     
     public String toString() {
