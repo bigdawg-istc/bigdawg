@@ -118,7 +118,7 @@ function prepare_postgres2 {
     ./createuser -p ${port_2} -s -e -d ${pguser}
     ./psql -p ${port_2} -c "alter role ${pguser} with password 'test'" -d template1
 
-    ./psql -p ${port_2} -c "create database mimic2 owner ${pguser}" -d template1
+    ./psql -p ${port_2} -c "create database mimic2_copy owner ${pguser}" -d template1
     ./psql -p ${port_2} -f ${initial_dir}/data/mimic2.pgd -U ${pguser} -d mimic2
     # ./psql -p ${port_2} -c "create database ${database2} owner ${pguser}" -d template1
     # ./psql -p ${port_2} -c "create schema mimic2v26" -d ${database2} -U pguser
@@ -170,6 +170,6 @@ function load_tpch {
 
 # main exeuction path: the function with label main are meant to be exeucted in the main path, you can comment the functions that you don't want to be executed
 #install_postgres
-prepare_postgres1
+#prepare_postgres1
 prepare_postgres2
-load_tpch
+#load_tpch
