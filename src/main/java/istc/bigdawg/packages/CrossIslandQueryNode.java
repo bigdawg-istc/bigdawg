@@ -74,6 +74,7 @@ public class CrossIslandQueryNode {
 	private Set<String> originalJoinPredicates;
 	private Set<String> joinPredicates;
 	private Set<String> joinFilters;
+//	private Set<String> scansWithIndexCond;
 	List<Set<String>> predicateConnections;
 	
 	private static final int  psqlSchemaHandlerDBID = BigDawgConfigProperties.INSTANCE.getPostgresSchemaServerDBID();
@@ -123,6 +124,7 @@ public class CrossIslandQueryNode {
 		remainderLoc = new ArrayList<>();
 		joinPredicates = new HashSet<>();
 		joinFilters = new HashSet<>();
+//		scansWithIndexCond = new HashSet<>();
 		originalJoinPredicates = new HashSet<>();
 		populateQueryContainer();
 		
@@ -223,6 +225,12 @@ public class CrossIslandQueryNode {
 		// traverse add remainder
 		Map<String, DataObjectAttribute> rootOutSchema = root.getOutSchema();
 		remainderLoc = traverse(root); // this populated everything
+
+		// post process hidden predicates
+//		for (String s : scansWithIndexCond) 
+//			joinPredicates.add(s);
+		
+//		System.out.printf("---> joinPredicates from cross-node: %s;\n", joinPredicates);
 		
 		Map<Pair<String, String>, String> jp = processJoinPredicates(joinPredicates);
 		Map<Pair<String, String>, String> jf = processJoinPredicates(joinFilters);
@@ -660,7 +668,7 @@ public class CrossIslandQueryNode {
 			jf.get(p.getLeft()).put(p.getRight(), joinFilterConnection.get(p));
 		}
 		
-//		System.out.printf("--->>>>> makeJoin: \n\tjp: %s; \n\tjf: %s;\n", jp, jf);
+		
 		
 //		for (String k : joinFilterConnection.keySet()) {
 //			jf.put(k, new HashMap<>());
@@ -675,6 +683,8 @@ public class CrossIslandQueryNode {
 		
 		o1ns.retainAll(Sets.union(jp.keySet(), jf.keySet()));
 		
+//		System.out.printf("\n--->>>>> makeJoin: \n\tjp: %s; \n\tjf: %s;\no1ns: %s\n\n", jp, jf, o1ns);
+		
 		Operator o1Temp = o1;
 		Operator o2Temp = o2;
 		
@@ -687,25 +697,28 @@ public class CrossIslandQueryNode {
 			
 			o2ns.retainAll(Sets.union(jp.keySet(), jf.keySet()));
 			
-			if (!o2ns.isEmpty()) {
-				
-				String key = o2ns.iterator().next();
+			
+			List<String> pred = new ArrayList<>();
+			for  (String key : o2ns) {
 				
 				while (used.contains(key)) {
-					key = o2ns.iterator().next();
+					continue;
 				}
 				
 				boolean isFilter = false;
-				String pred;
-				if (jp.get(s) != null) {
-					pred = jp.get(s).get(key);
+				
+				if (jp.get(s) != null && jp.get(key) != null && jp.get(s).get(key) != null) {
+					pred.add(jp.get(s).get(key));
+//					System.out.printf("---------> jp: %s, s: %s, key: %s; pred: %s; used: %s\n", jp, s, key, pred, used);
 					jp.get(s).remove(key);
 					jp.get(key).remove(s);
-				} else {
-					pred = jf.get(s).get(key);
+				} else if (jf.get(s) == null && jf.get(key) != null && jf.get(s).get(key) != null) {
+					pred.add(jf.get(s).get(key));
 					jf.get(s).remove(key);
 					jf.get(key).remove(s);
 					isFilter = true;
+				} else {
+					continue;
 				} 
 				
 				// this is the final checking of whether we need to prune it
@@ -714,8 +727,8 @@ public class CrossIslandQueryNode {
 					
 					return null;
 				}
-					
-				return new Join(o1Temp, o2Temp, jt, pred, isFilter);
+//				System.out.printf("-------> jp: %s, s: %s, key: %s; pred: %s\n\n", jp, s, key, pred);
+				return new Join(o1Temp, o2Temp, jt, String.join(" AND ", pred), isFilter);
 			}
 			
 			o2ns = new HashSet<>(o2nsOriginal);
@@ -745,7 +758,6 @@ public class CrossIslandQueryNode {
 			
 			Expression e = CCJSqlParserUtil.parseCondExpression(s);
 			List<Expression> le = SQLExpressionUtils.getFlatExpressions(e);
-			
 			for (Expression expr : le) {
 				
 				List<Column> lc = SQLExpressionUtils.getAttributes(expr);
@@ -799,10 +811,11 @@ public class CrossIslandQueryNode {
 				List<String> result = traverse(node.getChildren().get(0));
 				if (result != null) ret = new ArrayList<String>(result); 
 			} else {
+//				if (((SeqScan)node).getIndexCond() != null) {
+//					scansWithIndexCond.add(((Scan)node).getIndexCond().toString());
+//				}
 				ret = new ArrayList<String>(originalMap.get(((SeqScan) node).getTable().getFullyQualifiedName()));
 			}
-				
-			
 			
 		} else if (node instanceof Join) {
 			
@@ -841,9 +854,9 @@ public class CrossIslandQueryNode {
 			// do nothing if both are pruned before enter here, thus saving it for the remainder 
 			
 			if (joinNode.getOriginalJoinPredicate() != null)
-				joinPredicates.add(joinNode.updatePruneTokensForOnExpression(joinNode.getOriginalJoinPredicate()));//, child0, child1, new Table(), new Table(), true));
+				joinPredicates.add(joinNode.getOriginalJoinPredicate());//, child0, child1, new Table(), new Table(), true));
 			if (joinNode.getOriginalJoinFilter() != null)
-				joinFilters.add(joinNode.updatePruneTokensForOnExpression(joinNode.getOriginalJoinFilter()));//, child0, child1, new Table(), new Table(), true));
+				joinFilters.add(joinNode.getOriginalJoinFilter());//, child0, child1, new Table(), new Table(), true));
 			
 		} else if (node instanceof Sort || node instanceof Aggregate || node instanceof Limit || node instanceof Distinct) {
 			
@@ -980,7 +993,7 @@ public class CrossIslandQueryNode {
 		Set<String> sl = left.getDataObjectAliasesOrNames().keySet();
 		Set<String> sr = right.getDataObjectAliasesOrNames().keySet();
 		
-		System.out.printf("\n-----------> table connectivity called; sl: %s; sr: %s; predicateConnections: %s;\n", sl, sr, predicateConnections);
+//		System.out.printf("\n-----------> table connectivity called; sl: %s; sr: %s; predicateConnections: %s;\n", sl, sr, predicateConnections);
 		
 		if (sr.removeAll(sl)) return true; 
 		
