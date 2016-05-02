@@ -8,6 +8,7 @@ import istc.bigdawg.executor.QueryResult;
 import istc.bigdawg.executor.plan.BinaryJoinExecutionNode;
 import istc.bigdawg.executor.plan.LocalQueryExecutionNode;
 import istc.bigdawg.executor.plan.QueryExecutionPlan;
+import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.utils.IslandsAndCast;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
@@ -18,7 +19,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class ShuffleJoinExecutor {
-    private static final int NUM_BUCKETS = 100;
 
     private BinaryJoinExecutionNode node;
 
@@ -27,22 +27,13 @@ public class ShuffleJoinExecutor {
     }
 
     private Collection<Histogram> extractHistograms(Collection<BinaryJoinExecutionNode.JoinOperand> operands) throws ExecutorEngine.LocalQueryExecutionException {
-        Stream<Pair<Double, Double>> minMaxStream =  operands.stream()
-                .map(Errors.rethrow().wrap((BinaryJoinExecutionNode.JoinOperand o) -> o.engine.getMinMax(o.table, o.attribute)))
-                .map(p -> new ImmutablePair<>(p.getLeft().doubleValue(), p.getRight().doubleValue()));
-
-        double min = minMaxStream.mapToDouble(Pair::getLeft).min().getAsDouble();
-        double max = minMaxStream.mapToDouble(Pair::getRight).max().getAsDouble();
-
-        return operands.stream()
-                .map(Errors.rethrow().wrap((BinaryJoinExecutionNode.JoinOperand o) -> new Histogram(o.engine.computeHistogram(o.table, o.attribute, min, max, NUM_BUCKETS), min, max, o)))
-                .collect(Collectors.toSet());
+        return ShuffleEngine.createHistogramsExhaustively(operands);
     }
 
     private String getPartitionQuery(BinaryJoinExecutionNode.JoinOperand operand, Collection<Integer> bucketsToInclude, String dest, double min, double max) {
         String query = "SELECT * INTO %s FROM %s WHERE width_bucket(%s, %s, %s, %s) IN %s;";
         String desiredBuckets = "(" + bucketsToInclude.stream().map(i -> i.toString()).collect(Collectors.joining(", ")) + ")";
-        return String.format(query, dest, operand.table, operand.attribute, min, max, NUM_BUCKETS, desiredBuckets);
+        return String.format(query, dest, operand.table, operand.attribute, min, max, ShuffleEngine.NUM_BUCKETS, desiredBuckets);
     }
 
     private QueryExecutionPlan createQueryExecutionPlan(Assignments assignments) {
@@ -87,9 +78,11 @@ public class ShuffleJoinExecutor {
         return plan;
     }
 
-    public Optional<QueryResult> execute() throws ExecutorEngine.LocalQueryExecutionException, MigrationException {
-        Collection<Histogram> histograms = this.extractHistograms(this.node.getOperands());
-        Assignments assignments = Assignments.minimizeBandwidth(histograms, NUM_BUCKETS);
+    public Optional<QueryResult> execute() throws ExecutorEngine.LocalQueryExecutionException, MigrationException, ConnectionInfo.LocalQueryExecutorLookupException {
+        Collection<Histogram> histograms = ShuffleEngine.createHistograms(this.node.getOperands(), ShuffleEngine.HistogramStrategy.SAMPLING);
+
+        Assignments assignments = Assignments.minimizeBandwidth(histograms, ShuffleEngine.NUM_BUCKETS);
+
         QueryExecutionPlan shufflePlan = this.createQueryExecutionPlan(assignments);
 
         return Optional.ofNullable(Executor.executePlan(shufflePlan));
