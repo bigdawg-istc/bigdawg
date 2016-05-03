@@ -127,7 +127,7 @@ class PlanExecutor {
         if (node instanceof BinaryJoinExecutionNode) {
             BinaryJoinExecutionNode joinNode = (BinaryJoinExecutionNode) node;
 
-            if(joinNode.isEquiJoin() && joinNode.getHint().orElse(BinaryJoinExecutionNode.JoinAlgorithms.SHUFFLE) == BinaryJoinExecutionNode.JoinAlgorithms.SHUFFLE) {
+            if(joinNode.isEquiJoin() && joinNode.getHint().orElse(BinaryJoinExecutionNode.JoinAlgorithms.BROADCAST) == BinaryJoinExecutionNode.JoinAlgorithms.SHUFFLE) {
                 try {
                     Logger.info(this, "Attempting to perform Shuffle Join for %s...", joinNode.getTableName().get());
                     Optional<QueryResult> result = new ShuffleJoinExecutor(joinNode).execute();

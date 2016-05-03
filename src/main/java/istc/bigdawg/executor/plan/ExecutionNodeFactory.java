@@ -155,9 +155,14 @@ public class ExecutionNodeFactory {
 		return result;
 	}
 
-	private static BinaryJoinExecutionNode createJoinNode(String broadcastQuery, ConnectionInfo engine, String joinDestinationTable, Join joinOp) throws Exception {
+	private static BinaryJoinExecutionNode createJoinNode(String broadcastQuery, ConnectionInfo engine, String joinDestinationTable, Join joinOp, Scope island) throws Exception {
 		Operator left = joinOp.getChildren().get(0);
 		Operator right = joinOp.getChildren().get(1);
+
+		OperatorVisitor gen = null;
+		if (island.equals(Scope.RELATIONAL)) gen = new SQLQueryGenerator();
+		else if (island.equals(Scope.ARRAY)) gen = new AFLQueryGenerator();
+		else throw new Exception("Unsupported Island from buildOperatorSubgraph: " + island.toString());
 
 		// Break apart Join Predicate Objects into usable Strings
 		List<String> predicateObjects = joinOp.getJoinPredicateObjectsForBinaryExecutionNode();
@@ -187,7 +192,6 @@ public class ExecutionNodeFactory {
 		StringBuilder sb = new StringBuilder();
 
 		OperatorVisitor gen = null;
-
 		if (island.equals(Scope.RELATIONAL)) gen = new SQLQueryGenerator();
 		else if (island.equals(Scope.ARRAY)) gen = new AFLQueryGenerator();
 		else throw new Exception("Unsupported Island from buildOperatorSubgraph: " + island.toString());
@@ -213,8 +217,8 @@ public class ExecutionNodeFactory {
 			String broadcastQuery;
 			if (sqlStatementForPresentNonJoinSegment.length() == 0 && isSelect) {
 //				broadcastQuery = joinOp.generateSQLString(null);
-				gen.configure(true, false);
-				joinOp.accept(gen);
+					gen.configure(true, false);
+					joinOp.accept(gen);
 				broadcastQuery = gen.generateStatementString();
 			} else {
 //				broadcastQuery = joinOp.generateSQLSelectIntoStringForExecutionTree(joinDestinationTable, true);
@@ -222,8 +226,8 @@ public class ExecutionNodeFactory {
 				joinOp.accept(gen);
 				broadcastQuery = gen.generateSelectIntoStatementForExecutionTree(joinDestinationTable);
 			}
-			
-			BinaryJoinExecutionNode joinNode = ExecutionNodeFactory.createJoinNode(broadcastQuery, engine, joinDestinationTable, joinOp);
+
+			BinaryJoinExecutionNode joinNode = ExecutionNodeFactory.createJoinNode(broadcastQuery, engine, joinDestinationTable, joinOp, island);
 //			LocalQueryExecutionNode joinNode = new LocalQueryExecutionNode(broadcastQuery, engine, joinDestinationTable);
 
 			result.addVertex(joinNode);
