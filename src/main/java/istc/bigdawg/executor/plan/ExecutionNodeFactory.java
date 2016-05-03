@@ -165,7 +165,7 @@ public class ExecutionNodeFactory {
 		else throw new Exception("Unsupported Island from buildOperatorSubgraph: " + island.toString());
 
 		// Break apart Join Predicate Objects into usable Strings
-		List<String> predicateObjects = joinOp.getJoinPredicateObjectsForBinaryExecutionNode();
+		List<String> predicateObjects = gen.getJoinPredicateObjectsForBinaryExecutionNode(joinOp);
 
 		if (predicateObjects.isEmpty()) {
 			throw new RuntimeException("No predicates for join!");
@@ -177,9 +177,10 @@ public class ExecutionNodeFactory {
 		String rightTable = StringUtils.substringBetween(predicateObjects.get(2), "{", ",");
 		String rightAttribute = StringUtils.substringBetween(predicateObjects.get(2), " ", "}");
 
-		String shuffleLeftJoinQuery = joinOp.generateSQLSelectIntoStringForExecutionTree(joinDestinationTable + "_LEFTRESULTS", true)
+		joinOp.accept(gen);
+		String shuffleLeftJoinQuery = gen.generateSelectIntoStatementForExecutionTree(joinDestinationTable + "_LEFTRESULTS")
 				.replace(rightTable, joinDestinationTable + "_RIGHTPARTIAL");
-		String shuffleRightJoinQuery = joinOp.generateSQLSelectIntoStringForExecutionTree(joinDestinationTable + "_RIGHTRESULTS", true)
+		String shuffleRightJoinQuery = gen.generateSelectIntoStatementForExecutionTree(joinDestinationTable + "_RIGHTRESULTS")
 				.replace(leftTable, joinDestinationTable + "_LEFTPARTIAL");
 
 		BinaryJoinExecutionNode.JoinOperand leftOp = new BinaryJoinExecutionNode.JoinOperand(engine, leftTable, leftAttribute, shuffleLeftJoinQuery);

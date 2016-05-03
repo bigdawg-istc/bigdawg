@@ -67,6 +67,16 @@ public class SQLQueryGenerator implements OperatorVisitor {
 		this.isRoot = isRoot;
 	}
 	
+	@Override
+	public void reset(boolean isRoot, boolean stopAtJoin) {
+		srcStatement = null;
+		dstStatement = null;
+		this.stopAtJoin = stopAtJoin;
+		this.isRoot = isRoot;
+		root = null;
+		allowedScans = new HashSet<>();
+	}
+	
 	public void saveRoot(Operator o) {
 		if (!this.isRoot) return;
 		this.root = o;

@@ -10,6 +10,8 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.Stack;
 
+import org.apache.zookeeper.server.UnimplementedRequestProcessor;
+
 import istc.bigdawg.extract.logical.SQLExpressionHandler;
 import istc.bigdawg.plan.operators.Aggregate;
 import istc.bigdawg.plan.operators.CommonSQLTableExpressionScan;
@@ -66,6 +68,14 @@ public class AFLQueryGenerator implements OperatorVisitor {
 	public void configure(boolean isRoot, boolean stopAtJoin) {
 		this.stopAtJoin = stopAtJoin;
 		this.isRoot = isRoot;
+	}
+	
+	@Override
+	public void reset(boolean isRoot, boolean stopAtJoin) {
+		lastFunction = new Stack<>();
+		this.stopAtJoin = stopAtJoin;
+		this.isRoot = isRoot;
+		root = null;
 	}
 
 	public void saveRoot(Operator o) {
@@ -791,5 +801,10 @@ public class AFLQueryGenerator implements OperatorVisitor {
 		
 		
 		return lastExpression.pop();
+	}
+
+	@Override
+	public List<String> getJoinPredicateObjectsForBinaryExecutionNode(Join join) throws Exception {
+		throw new Exception("Unsupported function for AFL visitor: getJoinPredicateObjectsForBinaryExecutionNode");
 	}
 }
