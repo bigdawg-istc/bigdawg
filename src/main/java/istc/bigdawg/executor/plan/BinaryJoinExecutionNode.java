@@ -46,6 +46,7 @@ public class BinaryJoinExecutionNode implements ExecutionNode {
             this.table = table;
             this.attribute = attribute;
             this.localJoinQuery = localJoinQuery;
+            this.hint = JoinAlgorithms.BROADCAST;
         }
 
         public String getQueryString() {
