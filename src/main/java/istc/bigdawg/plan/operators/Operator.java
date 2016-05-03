@@ -382,23 +382,23 @@ public class Operator implements OperatorInterface {
 		return this.isQueryRoot;
 	}
 	
-	public Set<String> getDataObjectNames() throws Exception {
-		
-		if (isPruned) {
-			Set<String> temps = new HashSet<>();
-			temps.add(getPruneToken());
-			return temps;
-		}
-		
-		if (!(this instanceof Scan)) {
-			this.dataObjects.clear();
-			for (Operator o : children) {
-				this.dataObjects.addAll(o.getDataObjectNames());
-			}
-		}
-		
-		return dataObjects;
-	}
+//	public Set<String> getDataObjectNames() throws Exception {
+//		
+//		if (isPruned) {
+//			Set<String> temps = new HashSet<>();
+//			temps.add(getPruneToken());
+//			return temps;
+//		}
+//		
+//		if (!(this instanceof Scan)) {
+//			this.dataObjects.clear();
+//			for (Operator o : children) {
+//				this.dataObjects.addAll(o.getDataObjectNames());
+//			}
+//		}
+//		
+//		return dataObjects;
+//	}
 	
 	public Map<String, String> getDataObjectAliasesOrNames() throws Exception {
 		
