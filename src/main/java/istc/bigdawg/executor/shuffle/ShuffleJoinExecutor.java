@@ -1,5 +1,6 @@
 package istc.bigdawg.executor.shuffle;
 
+import com.jcabi.log.Logger;
 import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.executor.Executor;
 import istc.bigdawg.executor.ExecutorEngine;
@@ -110,12 +111,15 @@ public class ShuffleJoinExecutor {
     }
 
     public Optional<QueryResult> execute() throws ExecutorEngine.LocalQueryExecutionException, MigrationException, ConnectionInfo.LocalQueryExecutorLookupException {
+        Logger.info(this, "Extracting histogram from engines...");
         // TODO: get histogram strat from node
         Collection<Histogram> histograms = ShuffleEngine.createHistograms(this.node.getOperands(), ShuffleEngine.HistogramStrategy.SAMPLING);
 
+        Logger.info(this, "Creating assignment from engines...");
         //TODO: get assignment strat from node
         Assignments assignments = Assignments.assignTuples(histograms, this.node.getEngine(), ShuffleEngine.NUM_BUCKETS, Assignments.AssignmentStrategies.MINIMUM_BANDWIDTH);
 
+        Logger.info(this, "Creating QEP from assignments...");
         QueryExecutionPlan shufflePlan = this.createQueryExecutionPlan(assignments);
 
         return Optional.ofNullable(Executor.executePlan(shufflePlan));

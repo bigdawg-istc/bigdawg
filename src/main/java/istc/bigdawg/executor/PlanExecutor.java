@@ -6,8 +6,10 @@ import com.google.common.collect.Multimaps;
 import com.jcabi.log.Logger;
 import com.jcabi.log.VerboseThreads;
 import istc.bigdawg.exceptions.MigrationException;
+import istc.bigdawg.executor.plan.BinaryJoinExecutionNode;
 import istc.bigdawg.executor.plan.ExecutionNode;
 import istc.bigdawg.executor.plan.QueryExecutionPlan;
+import istc.bigdawg.executor.shuffle.ShuffleJoinExecutor;
 import istc.bigdawg.migration.MigrationResult;
 import istc.bigdawg.migration.Migrator;
 import istc.bigdawg.monitoring.Monitor;
@@ -17,10 +19,7 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.sql.SQLException;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -125,29 +124,27 @@ class PlanExecutor {
     
     private Optional<QueryResult> executeNode(ExecutionNode node) {
         // perform shuffle join if equijoin and hint doesn't specify otherwise
-        // TODO(ankush): re-enable this and debug
-//        if (node instanceof BinaryJoinExecutionNode &&
-//                ((BinaryJoinExecutionNode) node).getHint().orElse(BinaryJoinExecutionNode.JoinAlgorithms.SHUFFLE) == BinaryJoinExecutionNode.JoinAlgorithms.SHUFFLE &&
-//                ((BinaryJoinExecutionNode) node).isEquiJoin()) {
-//            BinaryJoinExecutionNode joinNode = (BinaryJoinExecutionNode) node;
-//            if(!joinNode.getHint().isPresent() || joinNode.getHint().get() == BinaryJoinExecutionNode.JoinAlgorithms.SHUFFLE) {
-//                try {
-//                    colocateDependencies(node, Arrays.asList(joinNode.getLeft().table, joinNode.getRight().table));
-//
-//                    Optional<QueryResult> result = new ShuffleJoinExecutor(joinNode).execute();
-//                    markNodeAsCompleted(node);
-//                    return result;
-//                } catch (Exception e) {
-//                    log.error(String.format("Error executing node %s", joinNode), e);
-//                    return Optional.empty();
-//                }
-//            }
-//        }
+        if (node instanceof BinaryJoinExecutionNode) {
+            BinaryJoinExecutionNode joinNode = (BinaryJoinExecutionNode) node;
+
+            if(joinNode.isEquiJoin() && joinNode.getHint().orElse(BinaryJoinExecutionNode.JoinAlgorithms.SHUFFLE) == BinaryJoinExecutionNode.JoinAlgorithms.SHUFFLE) {
+                try {
+                    Logger.info(this, "Attempting to perform Shuffle Join for %s...", joinNode.getTableName().get());
+                    Optional<QueryResult> result = new ShuffleJoinExecutor(joinNode).execute();
+                    Logger.info(this, "Completed Shuffle Join for %s!", joinNode.getTableName().get());
+                    markNodeAsCompleted(node);
+                    return result;
+                } catch (Exception e) {
+                    Logger.error(this, "Error executing Shuffle Join for %s: %[exception]s", joinNode, e);
+                    return Optional.empty();
+                }
+            }
+        }
 
 
         // otherwise execute as local query execution (same as broadcast join)
         // colocate dependencies, blocking until completed
-        colocateDependencies(node, new HashSet<>());
+        colocateDependencies(node, Collections.emptySet());
 
         Logger.debug(this, "Executing query node %s...", node);
         try {

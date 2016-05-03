@@ -30,11 +30,12 @@ public class ExecutionNodeFactory {
 
 	/**
 	 * Produces a String representation of an ExecutionNode
+	 *
 	 * @param node The ExecutionNode we want to make into a String
 	 * @return The representation
 	 */
 	public static String executionNodeToString(ExecutionNode node) {
-		if (node.getClass().getName().contains("BinaryJoinExecutionNode")){
+		if (node.getClass().getName().contains("BinaryJoinExecutionNode")) {
 			return node.serialize();
 		}
 
@@ -64,6 +65,7 @@ public class ExecutionNodeFactory {
 
 	/**
 	 * Produces an ExecutionNode from the output of executionNodeToString
+	 *
 	 * @param representation an output of executionNodeToString
 	 * @return the ExecutionNode
 	 */
@@ -103,7 +105,7 @@ public class ExecutionNodeFactory {
 
 		// Extract the tableName
 		Optional<String> tableName = Optional.empty();
-		if (representation.contains("TABLE:")){
+		if (representation.contains("TABLE:")) {
 			m = table.matcher(representation);
 			if (m.find()) {
 				tableName = Optional.of(m.group());
@@ -119,7 +121,6 @@ public class ExecutionNodeFactory {
 		ConnectionInfo connectionInfo = ConnectionInfoParser.stringToConnectionInfo(engineInfo);
 
 
-
 		ExecutionNode result = null;
 		if (nodeClass.contains("LocalQueryExecutionNode")) {
 			result = new LocalQueryExecutionNode(query.get(), connectionInfo, tableName.get());
@@ -130,18 +131,18 @@ public class ExecutionNodeFactory {
 	}
 
 	@Deprecated
-	public static Map<String, Operator> traverseAndPickOutWiths (Operator root) throws Exception {
+	public static Map<String, Operator> traverseAndPickOutWiths(Operator root) throws Exception {
 		Map<String, Operator> result = new HashMap<>();
 		maxSerial++;
-		result.put("BIGDAWG_MAIN_"+maxSerial, root);//.generateSelectForExecutionTree(queryPlan.getStatement(), null));
-		
+		result.put("BIGDAWG_MAIN_" + maxSerial, root);//.generateSelectForExecutionTree(queryPlan.getStatement(), null));
+
 		List<Operator> treeWalker = root.getChildren();
-		while(treeWalker.size() > 0) {
+		while (treeWalker.size() > 0) {
 			List<Operator> nextGeneration = new ArrayList<Operator>();
-			for(Operator c : treeWalker) {
-				
+			for (Operator c : treeWalker) {
+
 				nextGeneration.addAll(c.getChildren());
-				if(c instanceof CommonSQLTableExpressionScan) {
+				if (c instanceof CommonSQLTableExpressionScan) {
 					CommonSQLTableExpressionScan co = ((CommonSQLTableExpressionScan) c);
 					String name = co.getTable().getName();
 					result.put(name, co);//co.generateSelectForExecutionTree(queryPlan.getStatement(), name));
@@ -189,26 +190,25 @@ public class ExecutionNodeFactory {
 
 	private static ExecutionNodeSubgraph buildOperatorSubgraph(Operator op, ConnectionInfo engine, String dest, Map<String, LocalQueryExecutionNode> containerNodes, boolean isSelect, Scope island) throws Exception {
 		StringBuilder sb = new StringBuilder();
-		
+
 		OperatorVisitor gen = null;
-		
+
 		if (island.equals(Scope.RELATIONAL)) gen = new SQLQueryGenerator();
 		else if (island.equals(Scope.ARRAY)) gen = new AFLQueryGenerator();
-		else throw new Exception("Unsupported Island from buildOperatorSubgraph: "+island.toString());
-		
+		else throw new Exception("Unsupported Island from buildOperatorSubgraph: " + island.toString());
+
 		Join joinOp = gen.generateStatementForPresentNonJoinSegment(op, sb, isSelect);
 		final String sqlStatementForPresentNonJoinSegment = sb.toString();
-		
+
 		// TODO CHANGE NAME OF JOIN'S CHILDREN
 		// TODO(ankush): allow for multiple types of engines (not just SQL)
 
 		ExecutionNodeSubgraph result = new ExecutionNodeSubgraph();
-		
+
 		LocalQueryExecutionNode lqn = null;
 		if (sqlStatementForPresentNonJoinSegment.length() > 0) {
 			// this and joinOp == null will not happen at the same time
 			lqn = new LocalQueryExecutionNode(sqlStatementForPresentNonJoinSegment, engine, dest);
-//			log.debug(String.format("Created new LocalQueryExecutionNode for %s, from sqlStatementForPresentNonJoinSegment\n", sqlStatementForPresentNonJoinSegment));
 			result.addVertex(lqn);
 			result.exitPoint = lqn;
 		}
@@ -228,21 +228,21 @@ public class ExecutionNodeFactory {
 				joinOp.accept(gen);
 				broadcastQuery = gen.generateSelectIntoStatementForExecutionTree(joinDestinationTable);
 			}
-			
+
 			// TODO(ankush): re-enable binary join handling
 //			BinaryJoinExecutionNode joinNode = ExecutionNodeFactory.createJoinNode(broadcastQuery, engine, joinDestinationTable, joinOp);
 			LocalQueryExecutionNode joinNode = new LocalQueryExecutionNode(broadcastQuery, engine, joinDestinationTable);
 
 			result.addVertex(joinNode);
-			
+
 			if (sqlStatementForPresentNonJoinSegment.length() == 0) {
 				result.exitPoint = joinNode;
 			} else {
 				result.addEdge(joinNode, result.exitPoint);
 			}
 
-			for(Operator child : joinOp.getChildren()) {
-				if(child.isPruned()) {
+			for (Operator child : joinOp.getChildren()) {
+				if (child.isPruned()) {
 					ExecutionNode containerNode = containerNodes.get(child.getPruneToken());
 					result.addVertex(containerNode);
 					result.addEdge(containerNode, joinNode);
@@ -258,7 +258,7 @@ public class ExecutionNodeFactory {
 		return result;
 	}
 
-	public static void addNodesAndEdgesWithJoinHandling(QueryExecutionPlan qep, Operator remainder, List<String> remainderLoc, Map<String,
+	public static void addNodesAndEdges(QueryExecutionPlan qep, Operator remainder, List<String> remainderLoc, Map<String,
 			QueryContainerForCommonDatabase> containers, boolean isSelect) throws Exception {
 		log.debug(String.format("Creating QEP %s...", qep.getSerializedName()));
 
@@ -283,9 +283,9 @@ public class ExecutionNodeFactory {
 		}
 		remainder.accept(gen);
 		remainderSelectIntoString = gen.generateStatementString();
-		
+
 		Map<String, LocalQueryExecutionNode> containerNodes = new HashMap<>();
-		for(Map.Entry<String, QueryContainerForCommonDatabase> entry : containers.entrySet()) {
+		for (Map.Entry<String, QueryContainerForCommonDatabase> entry : containers.entrySet()) {
 			String table = entry.getKey();
 			QueryContainerForCommonDatabase container = entry.getValue();
 
@@ -299,11 +299,9 @@ public class ExecutionNodeFactory {
 
 			LocalQueryExecutionNode localQueryNode = new LocalQueryExecutionNode(selectIntoString, container.getConnectionInfo(), table);
 
-//			log.debug(String.format("Created LQN %s for container.", table));
-
 			containerNodes.put(table, localQueryNode);
 		}
-		
+
 		remainder.setSubTree(true);
 		String remainderInto = remainder.getSubTreeToken();
 		qep.setTerminalTableName(remainderInto);
@@ -319,90 +317,5 @@ public class ExecutionNodeFactory {
 		}
 
 		log.debug(String.format("Finished creating QEP %s.", qep.getSerializedName()));
-	}
-
-	@Deprecated
-	public static void addNodesAndEdgesNaive(QueryExecutionPlan qep, Operator remainder, List<String> remainderLoc, Map<String, 
-			QueryContainerForCommonDatabase> container) throws Exception {
-		// this should take a new QEP, a local map, the remainder, the container, and something else about the query
-		
-		HashMap<String, ExecutionNode> dependentNodes = new HashMap<>();
-		ArrayList<String> edgesFrom = new ArrayList<>();
-		ArrayList<String> edgesTo = new ArrayList<>();
-		
-		int remainderDBID;
-		ConnectionInfo remainderCI;
-		if (remainderLoc != null) {
-//			System.out.println("remainderLoc not null; result: "+ remainderLoc.get(0));
-			remainderDBID = Integer.parseInt(remainderLoc.get(0));
-		} else {
-//			System.out.println("remainderLoc IS null; result: "+ remainderDBID);
-			remainderDBID = Integer.parseInt(container.values().iterator().next().getDBID());
-		}
-		
-		if (qep.getIsland().equals(Scope.RELATIONAL))
-			remainderCI = CatalogViewer.getPSQLConnectionInfo(remainderDBID);
-		else if (qep.getIsland().equals(Scope.ARRAY))
-			remainderCI = CatalogViewer.getSciDBConnectionInfo(remainderDBID);
-		else 
-			throw new Exception("Unsupported island code: "+qep.getIsland().toString());
-		
-		
-		String remainderInto = qep.getSerializedName();
-		String remainderSelectIntoString;
-
-		OperatorVisitor gen = null;
-		// if RELATIONAL
-		if (qep.getIsland().equals(Scope.RELATIONAL)) {
-			gen = new SQLQueryGenerator();
-		} else if (qep.getIsland().equals(Scope.ARRAY)) {
-			gen = new AFLQueryGenerator();
-		} else 
-			throw new Exception("Unsupported island code: "+qep.getIsland().toString());
-		remainder.accept(gen);
-		remainderSelectIntoString = gen.generateSelectIntoStatementForExecutionTree(null);
-		
-		
-		LocalQueryExecutionNode remainderNode = new LocalQueryExecutionNode(remainderSelectIntoString, remainderCI, remainderInto);
-		dependentNodes.put(remainderInto, remainderNode);
-			
-		qep.setTerminalTableName(remainderInto);
-		qep.setTerminalTableNode(remainderNode);
-		
-		// if there remainderLoc is not null, then there is nothing in the container. 
-		// Return.
-		if (remainderLoc != null) {
-			qep.addVertex(remainderNode);
-			return;
-		}
-		
-		
-		// this function is called the naive version because it just migrates everything to a random DB -- first brought up by iterator
-		for (String statementName : container.keySet()) {
-			
-			String selectIntoString;
-			
-			// if relational
-			if (qep.getIsland().equals(Scope.RELATIONAL))
-				selectIntoString = container.get(statementName).generateSQLSelectIntoString();
-			else if (qep.getIsland().equals(Scope.ARRAY))
-				selectIntoString = container.get(statementName).generateAFLStoreString();
-			else 
-				throw new Exception("Unsupported island code: "+qep.getIsland().toString());
-			
-			ConnectionInfo ci = container.get(statementName).getConnectionInfo();
-			dependentNodes.put(statementName, new LocalQueryExecutionNode(selectIntoString, ci, statementName));
-			
-			edgesFrom.add(statementName);
-			edgesTo.add(remainderInto);
-			
-		}
-		
-		for (String s : dependentNodes.keySet()) {
-			qep.addVertex(dependentNodes.get(s));
-		}
-		for (int i = 0; i < edgesFrom.size() ; i++) {
-			qep.addDagEdge(dependentNodes.get(edgesFrom.get(i)), dependentNodes.get(edgesTo.get(i)));
-		}
 	}
 }
