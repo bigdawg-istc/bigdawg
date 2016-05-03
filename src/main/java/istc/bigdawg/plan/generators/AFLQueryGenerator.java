@@ -58,6 +58,14 @@ public class AFLQueryGenerator implements OperatorVisitor {
 		this.stopAtJoin = stopAtJoin;
 		this.isRoot = isRoot;
 	}
+	
+	@Override
+	public void reset(boolean isRoot, boolean stopAtJoin) {
+		lastFunction = new Stack<>();
+		this.stopAtJoin = stopAtJoin;
+		this.isRoot = isRoot;
+		root = null;
+	}
 
 	public void saveRoot(Operator o) {
 		if (!this.isRoot) return;
@@ -782,5 +790,10 @@ public class AFLQueryGenerator implements OperatorVisitor {
 		
 		
 		return lastExpression.pop();
+	}
+
+	@Override
+	public List<String> getJoinPredicateObjectsForBinaryExecutionNode(Join join) throws Exception {
+		throw new Exception("Unsupported function for AFL visitor: getJoinPredicateObjectsForBinaryExecutionNode");
 	}
 }

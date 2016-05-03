@@ -111,7 +111,7 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
      * @throws DirectedAcyclicGraph.CycleFoundException
      *             if any dependency would induce a cycle
      */
-    public void addDependencies(ExecutionNode node, List<ExecutionNode> dependencies)
+    public void addDependencies(ExecutionNode node, Collection<ExecutionNode> dependencies)
             throws DirectedAcyclicGraph.CycleFoundException {
         this.addNode(node);
         for (ExecutionNode dep : dependencies) {

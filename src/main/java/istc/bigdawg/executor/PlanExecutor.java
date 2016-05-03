@@ -6,8 +6,10 @@ import com.google.common.collect.Multimaps;
 import com.jcabi.log.Logger;
 import com.jcabi.log.VerboseThreads;
 import istc.bigdawg.exceptions.MigrationException;
+import istc.bigdawg.executor.plan.BinaryJoinExecutionNode;
 import istc.bigdawg.executor.plan.ExecutionNode;
 import istc.bigdawg.executor.plan.QueryExecutionPlan;
+import istc.bigdawg.executor.shuffle.ShuffleJoinExecutor;
 import istc.bigdawg.migration.MigrationResult;
 import istc.bigdawg.migration.Migrator;
 import istc.bigdawg.monitoring.Monitor;
@@ -17,17 +19,13 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.sql.SQLException;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 /**
  * TODO:
- *   fully abstracted DbHandlers instead of casting to PostgreSQL
  *   shuffle joins
  *   better exception/error handling in the event of failure
  *
@@ -126,29 +124,27 @@ class PlanExecutor {
     
     private Optional<QueryResult> executeNode(ExecutionNode node) {
         // perform shuffle join if equijoin and hint doesn't specify otherwise
-        // TODO(ankush): re-enable this and debug
-//        if (node instanceof BinaryJoinExecutionNode &&
-//                ((BinaryJoinExecutionNode) node).getHint().orElse(BinaryJoinExecutionNode.JoinAlgorithms.SHUFFLE) == BinaryJoinExecutionNode.JoinAlgorithms.SHUFFLE &&
-//                ((BinaryJoinExecutionNode) node).isEquiJoin()) {
-//            BinaryJoinExecutionNode joinNode = (BinaryJoinExecutionNode) node;
-//            if(!joinNode.getHint().isPresent() || joinNode.getHint().get() == BinaryJoinExecutionNode.JoinAlgorithms.SHUFFLE) {
-//                try {
-//                    colocateDependencies(node, Arrays.asList(joinNode.getLeft().table, joinNode.getRight().table));
-//
-//                    Optional<QueryResult> result = new ShuffleJoinExecutor(joinNode).execute();
-//                    markNodeAsCompleted(node);
-//                    return result;
-//                } catch (Exception e) {
-//                    log.error(String.format("Error executing node %s", joinNode), e);
-//                    return Optional.empty();
-//                }
-//            }
-//        }
+        if (node instanceof BinaryJoinExecutionNode) {
+            BinaryJoinExecutionNode joinNode = (BinaryJoinExecutionNode) node;
+
+            if(joinNode.isEquiJoin() && joinNode.getHint().orElse(BinaryJoinExecutionNode.JoinAlgorithms.BROADCAST) == BinaryJoinExecutionNode.JoinAlgorithms.SHUFFLE) {
+                try {
+                    Logger.info(this, "Attempting to perform Shuffle Join for %s...", joinNode.getTableName().get());
+                    Optional<QueryResult> result = new ShuffleJoinExecutor(joinNode).execute();
+                    Logger.info(this, "Completed Shuffle Join for %s!", joinNode.getTableName().get());
+                    markNodeAsCompleted(node);
+                    return result;
+                } catch (Exception e) {
+                    Logger.error(this, "Error executing Shuffle Join for %s: %[exception]s", joinNode, e);
+                    return Optional.empty();
+                }
+            }
+        }
 
 
         // otherwise execute as local query execution (same as broadcast join)
         // colocate dependencies, blocking until completed
-        colocateDependencies(node, new HashSet<>());
+        colocateDependencies(node, Collections.emptySet());
 
         Logger.debug(this, "Executing query node %s...", node);
         try {
@@ -228,10 +224,14 @@ class PlanExecutor {
                 .collect(Collectors.toSet()));
         Logger.debug(this, "Ignoring dependencies %s of %s", ignoreCopy, node);
 
-//        java.util.stream.Stream<ExecutionNode> deps = plan.getDependencies(node).stream()
+//        final java.util.stream.Stream<ExecutionNode> deps = plan.getDependencies(node).stream()
 //                .filter(d -> d.getTableName().isPresent() && !ignoreCopy.contains(d.getTableName().get()));
-//
-//        Logger.debug(this, "Examining dependencies %s of %s", deps.collect(Collectors.toSet()), node);
+        final Collection<ExecutionNode> deps = plan.getDependencies(node).stream()
+                .filter(d -> d.getTableName().isPresent() && !ignoreCopy.contains(d.getTableName().get()))
+                .collect(Collectors.toSet());
+
+        Logger.debug(this, "Examining dependencies %s of %s", deps, node);
+
 //        CompletableFuture[] futures = deps
 //                .map((d) -> {
 //                    // computeIfAbsent gets a previous migration's Future, or creates one if it doesn't already exist
@@ -247,12 +247,6 @@ class PlanExecutor {
 //                        }, threadPool);
 //                    });
 //                }).toArray(CompletableFuture[]::new);
-
-        final Collection<ExecutionNode> deps = plan.getDependencies(node).stream()
-                .filter(d -> d.getTableName().isPresent() && !ignoreCopy.contains(d.getTableName().get()))
-                .collect(Collectors.toSet());
-
-        Logger.debug(this, "Examining dependencies %s of %s", deps, node);
 
         Collection<CompletableFuture<MigrationResult>> futureCollection = new HashSet<>();
         for(ExecutionNode d : deps) {

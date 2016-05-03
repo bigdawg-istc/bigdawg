@@ -1,10 +1,13 @@
 package istc.bigdawg.executor.plan;
 
+import java.util.Collection;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.google.common.base.Objects;
+import com.google.common.collect.Sets;
+import istc.bigdawg.plan.operators.Join;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.query.ConnectionInfoParser;
 
@@ -131,6 +134,10 @@ public class BinaryJoinExecutionNode implements ExecutionNode {
 
     public String getShuffleUnionString(String leftResults, String rightResults) {
         return "SELECT * INTO " + this.destinationTable + " FROM " + leftResults + " UNION ALL SELECT * FROM " + rightResults + ";";
+    }
+
+    public Collection<JoinOperand> getOperands() {
+        return Sets.newHashSet(this.right, this.left);
     }
 
     public JoinOperand getLeft(){

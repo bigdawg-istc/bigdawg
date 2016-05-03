@@ -44,7 +44,15 @@ public class JdbcUtils {
         return columnNames;
     }
 
-    public static List<String> getColumnTypes(final ResultSetMetaData rsmd) throws SQLException {
+    public static List<Integer> getColumnTypes(final ResultSetMetaData rsmd) throws SQLException {
+        List<Integer> columnTypes = new ArrayList<>();
+        for (int i = 1; i <= rsmd.getColumnCount(); ++i) {
+            columnTypes.add(rsmd.getColumnType(i));
+        }
+        return columnTypes;
+    }
+
+    public static List<String> getColumnTypeNames(final ResultSetMetaData rsmd) throws SQLException {
         List<String> columnTypes = new ArrayList<String>();
         for (int i = 1; i <= rsmd.getColumnCount(); ++i) {
             columnTypes.add(rsmd.getColumnTypeName(i));

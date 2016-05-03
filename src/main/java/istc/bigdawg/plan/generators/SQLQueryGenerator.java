@@ -67,6 +67,16 @@ public class SQLQueryGenerator implements OperatorVisitor {
 		this.isRoot = isRoot;
 	}
 	
+	@Override
+	public void reset(boolean isRoot, boolean stopAtJoin) {
+		srcStatement = null;
+		dstStatement = null;
+		this.stopAtJoin = stopAtJoin;
+		this.isRoot = isRoot;
+		root = null;
+		allowedScans = new HashSet<>();
+	}
+	
 	public void saveRoot(Operator o) {
 		if (!this.isRoot) return;
 		this.root = o;
@@ -1040,7 +1050,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	 * @param subTreeToken
 	 * @throws Exception
 	 */
-	protected void updateSubTreeTokens(PlainSelect ps, Set<String> originalAliases, Set<String> aliasesAndNames, String subTreeToken) throws Exception {
+	private void updateSubTreeTokens(PlainSelect ps, Set<String> originalAliases, Set<String> aliasesAndNames, String subTreeToken) throws Exception {
 		List<OrderByElement> obes 	= ps.getOrderByElements();
 		List<Expression> gbes 		= ps.getGroupByColumnReferences();
 		List<SelectItem> sis 		= ps.getSelectItems();
@@ -1102,7 +1112,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	 * @return
 	 * @throws Exception
 	 */
-	protected Select generateSelectWithToken(Operator o, String token) throws Exception {
+	private Select generateSelectWithToken(Operator o, String token) throws Exception {
     	Select dstStatement = SelectUtils.buildSelectFromTable(new Table(token));
 		PlainSelect ps = (PlainSelect)dstStatement.getSelectBody();
 		List<SelectItem> lsi = new ArrayList<>();
@@ -1122,7 +1132,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	 * @param o
 	 * @param first
 	 */
-	protected void populateComplexOutItem(Operator o, boolean first) {
+	private void populateComplexOutItem(Operator o, boolean first) {
 		// populate complexOutItemFromProgeny
 		for (Operator child : o.getChildren()){
 			if ((!first) && child.getComplexOutItemFromProgeny().isEmpty()) populateComplexOutItem(child, first);
@@ -1139,20 +1149,20 @@ public class SQLQueryGenerator implements OperatorVisitor {
 		}
 	}
 	
-	/**
-	 * OPERATOR
-	 * @param expr
-	 * @return
-	 * @throws Exception
-	 */
-	protected String rewriteComplextOutItem(Operator o, String expr) throws Exception {
-		// simplify
-		expr = CCJSqlParserUtil.parseExpression(expr).toString();
-		for (String alias : o.getComplexOutItemFromProgeny().keySet()) {
-			expr = expr.replaceAll("("+o.getComplexOutItemFromProgeny().get(alias)+")", alias);
-		}
-		return expr;
-	}
+//	/**
+//	 * OPERATOR
+//	 * @param expr
+//	 * @return
+//	 * @throws Exception
+//	 */
+//	private String rewriteComplextOutItem(Operator o, String expr) throws Exception {
+//		// simplify
+//		expr = CCJSqlParserUtil.parseExpression(expr).toString();
+//		for (String alias : o.getComplexOutItemFromProgeny().keySet()) {
+//			expr = expr.replaceAll("("+o.getComplexOutItemFromProgeny().get(alias)+")", alias);
+//		}
+//		return expr;
+//	}
 	
 	/**
 	 * OPERATOR
@@ -1160,7 +1170,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	 * @return
 	 * @throws Exception
 	 */
-	protected String rewriteComplextOutItem(Operator o, Expression e) throws Exception {
+	private String rewriteComplextOutItem(Operator o, Expression e) throws Exception {
 		// simplify
 		String expr = e.toString();
 		for (String alias : o.getComplexOutItemFromProgeny().keySet()) {
@@ -1180,7 +1190,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	 * @return
 	 * @throws Exception
 	 */
-	protected String updateOnExpression(String joinPred, Operator child0, Operator child1, Table t0, Table t1, boolean update) throws Exception {
+	private String updateOnExpression(String joinPred, Operator child0, Operator child1, Table t0, Table t1, boolean update) throws Exception {
     	
     	Expression expr = CCJSqlParserUtil.parseCondExpression(joinPred);
 		List<String> itemsSet = SQLExpressionUtils.getColumnTableNamesInAllForms(expr);
@@ -1347,6 +1357,29 @@ public class SQLQueryGenerator implements OperatorVisitor {
 		return ss;
 	}
 
+	private String updatePruneTokensForOnExpression(Join j, String joinPred) throws Exception {
+    	
+    	if (!j.isAnyProgenyPruned()) return new String(joinPred);
+    	
+    	List<Operator> lo = new ArrayList<>();
+    	List<Operator> walker = j.getChildren();
+    	while (!walker.isEmpty()) {
+    		List<Operator> nextgen = new ArrayList<>();
+    		for (Operator o : walker) {
+    			if (o.isPruned()) lo.add(o);
+    			else nextgen.addAll(o.getChildren());
+    		}
+    		walker = nextgen;
+    	}
+    	
+    	Expression expr = CCJSqlParserUtil.parseCondExpression(joinPred);
+    	for (Operator o : lo) {
+    		Map<String, String> s = o.getDataObjectAliasesOrNames();
+    		SQLExpressionUtils.renameAttributes(expr, s.keySet(), null, o.getPruneToken());
+    	}
+    	
+		return expr.toString();
+	}
 	
 	
 	// consider moving this to a separator visitor
@@ -1399,29 +1432,33 @@ public class SQLQueryGenerator implements OperatorVisitor {
 		
 	}
 	
-	private String updatePruneTokensForOnExpression(Join j, String joinPred) throws Exception {
-	    	
-    	if (!j.isAnyProgenyPruned()) return new String(joinPred);
-    	
-    	List<Operator> lo = new ArrayList<>();
-    	List<Operator> walker = j.getChildren();
-    	while (!walker.isEmpty()) {
-    		List<Operator> nextgen = new ArrayList<>();
-    		for (Operator o : walker) {
-    			if (o.isPruned()) lo.add(o);
-    			else nextgen.addAll(o.getChildren());
-    		}
-    		walker = nextgen;
-    	}
-    	
-    	Expression expr = CCJSqlParserUtil.parseCondExpression(joinPred);
-    	for (Operator o : lo) {
-    		Map<String, String> s = o.getDataObjectAliasesOrNames();
-    		SQLExpressionUtils.renameAttributes(expr, s.keySet(), null, o.getPruneToken());
-    	}
-    	
-		return expr.toString();
-	}
+//<<<<<<< HEAD
+//	private String updatePruneTokensForOnExpression(Join j, String joinPred) throws Exception {
+//	    	
+//    	if (!j.isAnyProgenyPruned()) return new String(joinPred);
+//    	
+//    	List<Operator> lo = new ArrayList<>();
+//    	List<Operator> walker = j.getChildren();
+//    	while (!walker.isEmpty()) {
+//    		List<Operator> nextgen = new ArrayList<>();
+//    		for (Operator o : walker) {
+//    			if (o.isPruned()) lo.add(o);
+//    			else nextgen.addAll(o.getChildren());
+//    		}
+//    		walker = nextgen;
+//    	}
+//    	
+//    	Expression expr = CCJSqlParserUtil.parseCondExpression(joinPred);
+//    	for (Operator o : lo) {
+//    		Map<String, String> s = o.getDataObjectAliasesOrNames();
+//    		SQLExpressionUtils.renameAttributes(expr, s.keySet(), null, o.getPruneToken());
+//    	}
+//    	
+//		return expr.toString();
+//	}
+//=======
+//	
+//>>>>>>> shuffles
 	
 	/**
 	 * This one only supports equal sign and Column expressions
@@ -1432,7 +1469,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 		
 		List<String> ret = new ArrayList<String>();
 		
-		if (join.getOriginalJoinPredicate() == null || join.getOriginalJoinPredicate().length() == 0) {
+		if (join.getOriginalJoinPredicate() == null && join.getOriginalJoinFilter() == null) {
 			
 			Expression extraction = null;
 			Column leftColumn = null;
@@ -1452,7 +1489,6 @@ public class SQLQueryGenerator implements OperatorVisitor {
 				s2 = ses.get(0);
 				extraction = join.getChildren().get(1).getChildrenPredicates().get(s2);
 			}
-			
 			
 			List<Expression> exprs = SQLExpressionUtils.getFlatExpressions(extraction);
 			for (Expression ex : exprs) {
@@ -1481,7 +1517,11 @@ public class SQLQueryGenerator implements OperatorVisitor {
 //		System.out.println("---> Right Child objects: "+rightChildObjects.toString());
 //		System.out.println("---> joinPredicate: "+joinPredicate);
 		
-		Expression e = CCJSqlParserUtil.parseCondExpression(join.getOriginalJoinPredicate());
+		String preds = join.getOriginalJoinPredicate();
+		if (preds == null) preds = join.getOriginalJoinFilter();
+		if (preds == null) return ret;
+		
+		Expression e = CCJSqlParserUtil.parseCondExpression(preds);
 		List<Expression> exprs = SQLExpressionUtils.getFlatExpressions(e);
 		
 		for (Expression ex : exprs) {
@@ -1505,8 +1545,9 @@ public class SQLQueryGenerator implements OperatorVisitor {
 				ret.add(String.format("{%s, %s}", right.getTable().getFullyQualifiedName(),right.getColumnName()));
 				ret.add(String.format("{%s, %s}", left.getTable().getFullyQualifiedName(),left.getColumnName()));
 			}
+//			System.out.printf("---> SQLQueryGenerator joinPredicate ret: %s\n", ret.toString());
 		}
-//		System.out.println("---> joinPredicate ret: "+ret.toString()+"\n\n\n");
+
 		
 		return ret;
 	}

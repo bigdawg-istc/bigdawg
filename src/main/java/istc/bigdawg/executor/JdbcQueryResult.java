@@ -1,8 +1,6 @@
 package istc.bigdawg.executor;
 
-import istc.bigdawg.executor.QueryResult;
 import istc.bigdawg.query.ConnectionInfo;
-import istc.bigdawg.query.QueryResponse;
 import istc.bigdawg.utils.JdbcUtils;
 
 import java.sql.ResultSet;
@@ -23,7 +21,7 @@ public class JdbcQueryResult implements QueryResult {
         this.results = resultSet;
         this.rows = JdbcUtils.getRows(resultSet);
         this.colNames = JdbcUtils.getColumnNames(resultSet.getMetaData());
-        this.colTypes = JdbcUtils.getColumnTypes(resultSet.getMetaData());
+        this.colTypes = JdbcUtils.getColumnTypeNames(resultSet.getMetaData());
         this.connectionInfo = conn;
     }
 

@@ -103,6 +103,13 @@
 			<version>0.9.1</version>
 		</dependency>
 
+		<!-- for Lambda exception handling -->
+		<dependency>
+			<groupId>com.diffplug.durian</groupId>
+			<artifactId>durian</artifactId>
+			<version>2.0</version>
+		</dependency>
+
 		<!-- For: org.jcp.xml.dsig.internal.dom.Utils -->
 		<dependency>
 			<groupId>org.apache.santuario</groupId>
