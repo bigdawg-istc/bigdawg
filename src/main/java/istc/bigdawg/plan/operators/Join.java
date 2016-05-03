@@ -251,7 +251,7 @@ public class Join extends Operator {
     private boolean replaceTableNameWithPruneName(Operator child, Expression e, Table t, List<String> itemsSet) throws Exception {
 		if (child.isPruned()) {
 			// does child have any of those names? 
-			Set<String> names = new HashSet<>(child.getDataObjectNames());
+			Set<String> names = new HashSet<>(child.getDataObjectAliasesOrNames().keySet());
 			if (child.getObjectAliases() == null) child.updateObjectAliases();
 			names.addAll(child.getObjectAliases());
 			names.retainAll(itemsSet);
@@ -284,7 +284,7 @@ public class Join extends Operator {
     
     private boolean findAndGetTableName(Operator child, Table t, List<String> itemsSet) throws Exception {
     	
-		Set<String> names = new HashSet<>(child.getDataObjectNames());
+		Set<String> names = new HashSet<>(child.getDataObjectAliasesOrNames().keySet());
 		child.updateObjectAliases();
 		names.addAll(child.getObjectAliases());
 		names.retainAll(itemsSet);
@@ -405,85 +405,6 @@ public class Join extends Operator {
 	}
 	
 	
-	
-//	/**
-//	 * This one only supports equal sign and Column expressions
-//	 * @return
-//	 * @throws Exception
-//	 */
-//	@Deprecated
-//	public List<String> getJoinPredicateObjectsForBinaryExecutionNode() throws Exception {
-//		
-//		List<String> ret = new ArrayList<String>();
-//		
-//		if (joinPredicate == null || joinPredicate.length() == 0) {
-//			
-//			Expression extraction = null;
-//			Column leftColumn = null;
-//			Column rightColumn = null;
-//			
-//			
-//			List<String> ses = processLeftAndRightWithIndexCond(true, null);
-//			String s, s2; 
-//			if (ses != null) {
-//				s = ses.get(0);
-//				s2 = ses.get(1);
-//				extraction = this.getChildren().get(0).getChildrenIndexConds().get(s);
-//			} else {
-//				ses = processLeftAndRightWithIndexCond(false, null);
-//				if (ses == null) return ret;
-//				s = ses.get(1);
-//				s2 = ses.get(0);
-//				extraction = this.getChildren().get(1).getChildrenIndexConds().get(s2);
-//			}
-//			
-//			List<Column> ls = SQLExpressionUtils.getAttributes(extraction);
-//			for (Column c2 : ls) if (c2.getTable().getName().equals(s)) {leftColumn = c2; break;}
-//			for (Column c2 : ls) if (c2.getTable().getName().equals(s2)) {rightColumn = c2; break;}
-//			
-//			while (extraction instanceof Parenthesis) extraction = ((Parenthesis)extraction).getExpression();
-//			ret.add(SQLExpressionUtils.getBinaryExpressionOperatorToken(extraction));
-//			ret.add(String.format("{%s, %s}", leftColumn.getTable().getFullyQualifiedName(),leftColumn.getColumnName()));
-//			ret.add(String.format("{%s, %s}", rightColumn.getTable().getFullyQualifiedName(),rightColumn.getColumnName()));
-//			
-//        	return ret;
-//		}
-//			
-//		
-//		
-//		Set<String> leftChildObjects = this.getChildren().get(0).getDataObjectNames();
-//
-////		System.out.println("---> Left Child objects: "+leftChildObjects.toString());
-////		System.out.println("---> Right Child objects: "+rightChildObjects.toString());
-////		System.out.println("---> joinPredicate: "+joinPredicate);
-//		
-//		Expression e = CCJSqlParserUtil.parseCondExpression(joinPredicate);
-//		
-//		
-//		while (e instanceof Parenthesis)
-//			e = ((Parenthesis)e).getExpression();
-//		
-//		
-//		ret.add(SQLExpressionUtils.getBinaryExpressionOperatorToken(e));
-//		
-//		
-//		// TODO SUPPORT MORE THAN COLUMN?
-//		
-//		Column left = (Column)((EqualsTo)e).getLeftExpression();
-//		Column right = (Column)((EqualsTo)e).getRightExpression();
-//		
-//		if (leftChildObjects.contains(left.getTable().getName()) || leftChildObjects.contains(left.getTable().getFullyQualifiedName())) {
-//			ret.add(String.format("{%s, %s}", left.getTable().getFullyQualifiedName(),left.getColumnName()));
-//			ret.add(String.format("{%s, %s}", right.getTable().getFullyQualifiedName(),right.getColumnName()));
-//		} else {
-//			ret.add(String.format("{%s, %s}", right.getTable().getFullyQualifiedName(),right.getColumnName()));
-//			ret.add(String.format("{%s, %s}", left.getTable().getFullyQualifiedName(),left.getColumnName()));
-//		}
-//		
-////		System.out.println("---> joinPredicate ret: "+ret.toString()+"\n\n\n");
-//		
-//		return ret;
-//	}
 	
 	@Override
 	public Map<String, Set<String>> getObjectToExpressionMappingForSignature() throws Exception{

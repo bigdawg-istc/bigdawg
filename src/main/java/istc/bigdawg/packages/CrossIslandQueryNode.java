@@ -89,10 +89,20 @@ public class CrossIslandQueryNode {
 		// collect the cross island children
 		children = getCrossIslandChildrenReferences();
 		
-//		System.out.println("CrossIslandChildren: "+children.toString());
-//		System.out.println("RootsForSchemas: "+rootsForSchemas.toString());
+		queryContainer = new HashMap<>();
+		remainderPermutations = new ArrayList<>();
+		remainderLoc = new ArrayList<>();
+		joinPredicates = new HashSet<>();
+		joinFilters = new HashSet<>();
+		originalJoinPredicates = new HashSet<>();
 		
-		System.out.println("Island query: " + islandQuery);
+		System.out.printf("\n-> Island query: %s;\n", islandQuery);
+		System.out.printf("---> CrossIslandChildren: %s;\n",children.toString());
+		System.out.printf("---> RootsForSchemas: %s;\n\n",rootsForSchemas.toString());
+		
+		
+		
+		// BELOW SHOULD BE SOMETHING THAT IS SEPARABLE
 		
 		OperatorVisitor gen = null;
 		
@@ -119,18 +129,9 @@ public class CrossIslandQueryNode {
 		} else
 			throw new Exception("Unsupported island code : "+scope.toString());
 		
-		queryContainer = new HashMap<>();
-		remainderPermutations = new ArrayList<>();
-		remainderLoc = new ArrayList<>();
-		joinPredicates = new HashSet<>();
-		joinFilters = new HashSet<>();
-//		scansWithIndexCond = new HashSet<>();
-		originalJoinPredicates = new HashSet<>();
 		populateQueryContainer();
 		
-		
 		this.signature = new Signature(islandQuery, scope, getRemainder(0), getQueryContainer(), originalJoinPredicates);
-		
 		
 		// removing temporary schema plates
 		if (scope.equals(Scope.RELATIONAL)) {
@@ -147,10 +148,6 @@ public class CrossIslandQueryNode {
 		
 	}
 
-	public Set<String> getJoinPredicates(){
-		return this.joinPredicates;
-	}
-	
 	public Set<String> getCrossIslandChildrenReferences() {
 		
 		// aka find children
@@ -238,7 +235,7 @@ public class CrossIslandQueryNode {
 		populatePredicateConnectionSets(jp, jf);
 		
 		
-		if (remainderLoc == null && root.getDataObjectNames().size() > 1) {
+		if (remainderLoc == null && root.getDataObjectAliasesOrNames().size() > 1) {
 			
 			List<Operator> permResult = getPermutatedOperatorsWithBlock(root, jp, jf);
 			
@@ -744,8 +741,8 @@ public class CrossIslandQueryNode {
 	}
 	
 	private boolean isDisjoint(Operator s1, Operator s2) throws Exception {
-		Set<String> set1 = new HashSet<String>(s1.getDataObjectNames());
-		Set<String> set2 = new HashSet<String>(s2.getDataObjectNames());
+		Set<String> set1 = new HashSet<String>(s1.getDataObjectAliasesOrNames().keySet()); // s1.getDataObjectNames()
+		Set<String> set2 = new HashSet<String>(s2.getDataObjectAliasesOrNames().keySet());
 		return (!(set1.removeAll(set2)));
 	}
 	
@@ -904,6 +901,10 @@ public class CrossIslandQueryNode {
 		}
 		
 		queryContainer.put(c.getPruneToken(), new QueryContainerForCommonDatabase(ci, dbid, c, c.getPruneToken()));
+	}
+	
+	public Set<String> getJoinPredicates(){
+		return this.joinPredicates;
 	}
 	
 	public Set<String> getChildren() {

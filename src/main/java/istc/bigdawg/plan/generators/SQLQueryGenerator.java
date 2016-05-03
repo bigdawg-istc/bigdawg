@@ -29,6 +29,8 @@ import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Function;
 import net.sf.jsqlparser.expression.Parenthesis;
 import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
+import net.sf.jsqlparser.expression.operators.conditional.OrExpression;
+import net.sf.jsqlparser.expression.operators.relational.EqualsTo;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
@@ -332,7 +334,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 				for (Operator o : treeWalker) {
 					if (o.isPruned()) {
 						Set<String> aliasesAndNames = new HashSet<>(o.getObjectAliases());
-						aliasesAndNames.addAll(o.getDataObjectNames());
+						aliasesAndNames.addAll(o.getDataObjectAliasesOrNames().keySet());
 						Set<String> duplicate = new HashSet<>(aliasesAndNames);
 						if (aliasesAndNames.removeAll(filterRelatedTables)) 
 							SQLExpressionUtils.renameAttributes(e, duplicate, null, o.getPruneToken());
@@ -1203,7 +1205,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	private boolean replaceTableNameWithPruneName(Operator child, Expression e, Table t, List<String> itemsSet) throws Exception {
 		if (child.isPruned()) {
 			// does child have any of those names? 
-			Set<String> names = new HashSet<>(child.getDataObjectNames());
+			Set<String> names = new HashSet<>(child.getDataObjectAliasesOrNames().keySet());
 			if (child.getObjectAliases() == null) child.updateObjectAliases();
 			names.addAll(child.getObjectAliases());
 			names.retainAll(itemsSet);
@@ -1243,7 +1245,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	 */
 	private boolean findAndGetTableName(Operator child, Table t, List<String> itemsSet) throws Exception {
 	    	
-		Set<String> names = new HashSet<>(child.getDataObjectNames());
+		Set<String> names = new HashSet<>(child.getDataObjectAliasesOrNames().keySet());
 		child.updateObjectAliases();
 		names.addAll(child.getObjectAliases());
 		names.retainAll(itemsSet);
@@ -1421,48 +1423,93 @@ public class SQLQueryGenerator implements OperatorVisitor {
 		return expr.toString();
 	}
 	
-//	private String updateIndexCondExpression(Scan s) throws Exception {
-//			
-//		if (s.getIndexCond() == null) return null;
-//		
-//		Set<String> names = SQLExpressionUtils.getAttributes(s.getIndexCond())
-//				.stream().map(
-//						ic -> ic.getTable().getAlias() != null 
-//							&& ic.getTable().getAlias().getName() != null 
-//								? ic.getTable().getAlias().getName() 
-//								: ic.getTable().getFullyQualifiedName()).collect(Collectors.toSet());
-//		
-//		Operator p = s;
-//		while (p.getParent() != null) {
-//			if (p instanceof Join && p.getDataObjectAliasesOrNames().keySet().containsAll(names)) {
-//				return updatePruneTokensForOnExpression((Join)p, s.getIndexCond().toString());
-//			}
-//			p = p.getParent();
-//		}
-//		
-//		return s.getIndexCond().toString();
-//	}
-//	
-//	private Expression updateFilterExpression(Scan s, Expression expr) throws Exception {
-//		
-//		if (expr == null) return null;
-//		Expression e = CCJSqlParserUtil.parseCondExpression(expr.toString());
-//		Set<String> names = SQLExpressionUtils.getAttributes(e)
-//				.stream().map(
-//						ic -> ic.getTable().getAlias() != null 
-//							&& ic.getTable().getAlias().getName() != null 
-//								? ic.getTable().getAlias().getName() 
-//								: ic.getTable().getFullyQualifiedName()).collect(Collectors.toSet());
-//		
-//		Operator p = s;
-//		while (p.getParent() != null) {
-//			if (p.isPruned()) {
-//				SQLExpressionUtils.renameAttributes(e, names, null, p.getPruneToken());
-//				return e;
-//			}
-//			p = p.getParent();
-//		}
-//		
-//		return e;
-//	}
+	/**
+	 * This one only supports equal sign and Column expressions
+	 * @return
+	 * @throws Exception
+	 */
+	public List<String> getJoinPredicateObjectsForBinaryExecutionNode(Join join) throws Exception {
+		
+		List<String> ret = new ArrayList<String>();
+		
+		if (join.getOriginalJoinPredicate() == null || join.getOriginalJoinPredicate().length() == 0) {
+			
+			Expression extraction = null;
+			Column leftColumn = null;
+			Column rightColumn = null;
+			
+			
+			List<String> ses = processLeftAndRightWithIndexCond(join, true, null);
+			String s, s2; 
+			if (ses != null) {
+				s = ses.get(0);
+				s2 = ses.get(1);
+				extraction = join.getChildren().get(0).getChildrenPredicates().get(s);
+			} else {
+				ses = processLeftAndRightWithIndexCond(join, false, null);
+				if (ses == null) return ret;
+				s = ses.get(1);
+				s2 = ses.get(0);
+				extraction = join.getChildren().get(1).getChildrenPredicates().get(s2);
+			}
+			
+			
+			List<Expression> exprs = SQLExpressionUtils.getFlatExpressions(extraction);
+			for (Expression ex : exprs) {
+				
+				if (ex instanceof OrExpression) throw new Exception("SQLQueryGenerator: OrExpression encountered");
+				if (!(ex instanceof EqualsTo)) throw new Exception("SQLQueryGenerator: Non-EqualsTo expression encountered");
+				
+				List<Column> ls = SQLExpressionUtils.getAttributes(ex);
+				for (Column c2 : ls) if (c2.getTable().getName().equals(s)) {leftColumn = c2; break;}
+				for (Column c2 : ls) if (c2.getTable().getName().equals(s2)) {rightColumn = c2; break;}
+				
+				while (extraction instanceof Parenthesis) extraction = ((Parenthesis)extraction).getExpression();
+				ret.add(SQLExpressionUtils.getBinaryExpressionOperatorToken(ex));
+				ret.add(String.format("{%s, %s}", leftColumn.getTable().getFullyQualifiedName(),leftColumn.getColumnName()));
+				ret.add(String.format("{%s, %s}", rightColumn.getTable().getFullyQualifiedName(),rightColumn.getColumnName()));
+			}
+			
+        	return ret;
+		}
+			
+		
+		
+		Set<String> leftChildObjects = join.getChildren().get(0).getDataObjectAliasesOrNames().keySet();
+
+//		System.out.println("---> Left Child objects: "+leftChildObjects.toString());
+//		System.out.println("---> Right Child objects: "+rightChildObjects.toString());
+//		System.out.println("---> joinPredicate: "+joinPredicate);
+		
+		Expression e = CCJSqlParserUtil.parseCondExpression(join.getOriginalJoinPredicate());
+		List<Expression> exprs = SQLExpressionUtils.getFlatExpressions(e);
+		
+		for (Expression ex : exprs) {
+			
+			while (ex instanceof Parenthesis)
+				ex = ((Parenthesis)ex).getExpression();
+			
+			if (ex instanceof OrExpression) throw new Exception("SQLQueryGenerator: OrExpression encountered");
+			if (!(ex instanceof EqualsTo)) throw new Exception("SQLQueryGenerator: Non-EqualsTo expression encountered");
+			
+			// TODO SUPPORT MORE THAN COLUMN?
+			
+			Column left = (Column)((EqualsTo)ex).getLeftExpression();
+			Column right = (Column)((EqualsTo)ex).getRightExpression();
+			
+			ret.add(SQLExpressionUtils.getBinaryExpressionOperatorToken(ex));
+			if (leftChildObjects.contains(left.getTable().getName()) || leftChildObjects.contains(left.getTable().getFullyQualifiedName())) {
+				ret.add(String.format("{%s, %s}", left.getTable().getFullyQualifiedName(),left.getColumnName()));
+				ret.add(String.format("{%s, %s}", right.getTable().getFullyQualifiedName(),right.getColumnName()));
+			} else {
+				ret.add(String.format("{%s, %s}", right.getTable().getFullyQualifiedName(),right.getColumnName()));
+				ret.add(String.format("{%s, %s}", left.getTable().getFullyQualifiedName(),left.getColumnName()));
+			}
+		}
+//		System.out.println("---> joinPredicate ret: "+ret.toString()+"\n\n\n");
+		
+		return ret;
+	}
+	
+	
 }
