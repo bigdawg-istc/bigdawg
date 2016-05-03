@@ -21,7 +21,6 @@ import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Parenthesis;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
-import net.sf.jsqlparser.schema.Table;
 
 
 public class Join extends Operator {
@@ -248,61 +247,61 @@ public class Join extends Operator {
 		operatorVisitor.visit(this);
 	}
     
-    private boolean replaceTableNameWithPruneName(Operator child, Expression e, Table t, List<String> itemsSet) throws Exception {
-		if (child.isPruned()) {
-			// does child have any of those names? 
-			Set<String> names = new HashSet<>(child.getDataObjectAliasesOrNames().keySet());
-			if (child.getObjectAliases() == null) child.updateObjectAliases();
-			names.addAll(child.getObjectAliases());
-			names.retainAll(itemsSet);
-			if (names.size() > 0) {
-				SQLExpressionUtils.renameAttributes(e, names, null, child.getPruneToken());
-				t.setName(child.getPruneToken());
-				return true;
-			} else 
-				return false;
-		} else if (child instanceof Aggregate && ((Aggregate)child).getAggregateID() != null) {
-			// does child have any of those names? 
-			Set<String> names = new HashSet<>(child.getDataObjectAliasesOrNames().keySet());
-//			names.addAll(child.objectAliases);
-			
-			names.retainAll(itemsSet);
-			if (names.size() > 0) {
-				SQLExpressionUtils.renameAttributes(e, names, null, ((Aggregate)child).getAggregateToken());
-				t.setName(((Aggregate)child).getAggregateToken());
-				return true;
-			} else 
-				return false;
-		}else {
-			boolean ret = false;
-			for (Operator o : child.getChildren()) {
-				ret = ret || replaceTableNameWithPruneName(o, e, t, itemsSet);
-			}
-			return ret;
-		}
-	}
-    
-    private boolean findAndGetTableName(Operator child, Table t, List<String> itemsSet) throws Exception {
-    	
-		Set<String> names = new HashSet<>(child.getDataObjectAliasesOrNames().keySet());
-		child.updateObjectAliases();
-		names.addAll(child.getObjectAliases());
-		names.retainAll(itemsSet);
-		if (names.size() > 0) {
-			if (child instanceof Scan) {
-				t.setName(((Scan)child).getTable().toString());
-			} else if (child.getChildren().size() > 0) {
-				return findAndGetTableName(child.getChildren().get(0), t, itemsSet);
-			}
-			return false;
-		} else {
-			boolean ret = false;
-			for (Operator o : child.getChildren()) {
-				ret = ret || findAndGetTableName(o, t, itemsSet);
-			}
-			return ret;
-		}    	
-    }
+//    private boolean replaceTableNameWithPruneName(Operator child, Expression e, Table t, List<String> itemsSet) throws Exception {
+//		if (child.isPruned()) {
+//			// does child have any of those names? 
+//			Set<String> names = new HashSet<>(child.getDataObjectAliasesOrNames().keySet());
+//			if (child.getObjectAliases() == null) child.updateObjectAliases();
+//			names.addAll(child.getObjectAliases());
+//			names.retainAll(itemsSet);
+//			if (names.size() > 0) {
+//				SQLExpressionUtils.renameAttributes(e, names, null, child.getPruneToken());
+//				t.setName(child.getPruneToken());
+//				return true;
+//			} else 
+//				return false;
+//		} else if (child instanceof Aggregate && ((Aggregate)child).getAggregateID() != null) {
+//			// does child have any of those names? 
+//			Set<String> names = new HashSet<>(child.getDataObjectAliasesOrNames().keySet());
+////			names.addAll(child.objectAliases);
+//			
+//			names.retainAll(itemsSet);
+//			if (names.size() > 0) {
+//				SQLExpressionUtils.renameAttributes(e, names, null, ((Aggregate)child).getAggregateToken());
+//				t.setName(((Aggregate)child).getAggregateToken());
+//				return true;
+//			} else 
+//				return false;
+//		}else {
+//			boolean ret = false;
+//			for (Operator o : child.getChildren()) {
+//				ret = ret || replaceTableNameWithPruneName(o, e, t, itemsSet);
+//			}
+//			return ret;
+//		}
+//	}
+//    
+//    private boolean findAndGetTableName(Operator child, Table t, List<String> itemsSet) throws Exception {
+//    	
+//		Set<String> names = new HashSet<>(child.getDataObjectAliasesOrNames().keySet());
+//		child.updateObjectAliases();
+//		names.addAll(child.getObjectAliases());
+//		names.retainAll(itemsSet);
+//		if (names.size() > 0) {
+//			if (child instanceof Scan) {
+//				t.setName(((Scan)child).getTable().toString());
+//			} else if (child.getChildren().size() > 0) {
+//				return findAndGetTableName(child.getChildren().get(0), t, itemsSet);
+//			}
+//			return false;
+//		} else {
+//			boolean ret = false;
+//			for (Operator o : child.getChildren()) {
+//				ret = ret || findAndGetTableName(o, t, itemsSet);
+//			}
+//			return ret;
+//		}    	
+//    }
     
    
     

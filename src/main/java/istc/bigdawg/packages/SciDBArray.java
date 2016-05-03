@@ -9,8 +9,6 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import scala.reflect.macros.Aliases;
-
 public class SciDBArray {
 	
 	private static Pattern lSchemaAttributes = Pattern.compile("<[-:,.@\\w_ ]+>");
