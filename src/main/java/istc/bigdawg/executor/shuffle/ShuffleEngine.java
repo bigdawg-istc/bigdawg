@@ -18,9 +18,14 @@ import java.util.stream.Stream;
  * Created by ankush on 4/25/16.
  */
 public class ShuffleEngine {
+    // TODO: convert this into an interface that all ConnectionInfos implement!
     public static final int NUM_BUCKETS = 100;
     private static final String PG_STATS_PREP_TEMPLATE = "ANALYZE %s %s";
     private static final String PG_STATS_TEMPLATE = "SELECT array_to_json(most_common_vals) AS most_common_vals, array_to_json(most_common_freqs) AS most_common_freqs, array_to_json(histogram_bounds) AS histogram_bounds, approximate_row_count AS count FROM pg_stats JOIN pg_class ON relname = tablename WHERE tablename = '%s' AND attname = '%s';";
+
+    private static final double DOWNLINK_RATE = 1.0;
+    private static final double UPLINK_RATE = 1.0;
+    private static final double COMPARISON_CONSTANT = 0.5;
 
     enum HistogramStrategy {
         EXHAUSTIVE,
@@ -125,5 +130,17 @@ public class ShuffleEngine {
         }
 
         return rescaled;
+    }
+
+    public static double computeUplinkCost(long size) {
+        return 1.0 / UPLINK_RATE * size;
+    }
+
+    public static double computeDownlinkCost(long size) {
+        return 1.0 / DOWNLINK_RATE * size;
+    }
+
+    public static double computeComparisonCost(long size) {
+        return COMPARISON_CONSTANT * size;
     }
 }
