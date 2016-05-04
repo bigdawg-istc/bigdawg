@@ -20,6 +20,8 @@ import java.util.stream.Stream;
 public class ShuffleEngine {
     // TODO: convert this into an interface that all ConnectionInfos implement!
     public static final int NUM_BUCKETS = 100;
+
+    private static final String PG_SINGLEBUCKET_TEMPLATE = "SELECT COUNT(*) FROM %s;";
     private static final String PG_STATS_PREP_TEMPLATE = "ANALYZE %s %s";
     private static final String PG_STATS_TEMPLATE = "SELECT array_to_json(most_common_vals) AS most_common_vals, array_to_json(most_common_freqs) AS most_common_freqs, array_to_json(histogram_bounds) AS histogram_bounds, approximate_row_count AS count FROM pg_stats JOIN pg_class ON relname = tablename WHERE tablename = '%s' AND attname = '%s';";
 
@@ -29,7 +31,8 @@ public class ShuffleEngine {
 
     enum HistogramStrategy {
         EXHAUSTIVE,
-        SAMPLING
+        SAMPLING,
+        SINGLE_BUCKET
     }
 
     public static Collection<Histogram> createHistograms(Collection<BinaryJoinExecutionNode.JoinOperand> operands, HistogramStrategy strategy) throws ConnectionInfo.LocalQueryExecutorLookupException, ExecutorEngine.LocalQueryExecutionException {
@@ -38,9 +41,19 @@ public class ShuffleEngine {
                 return createHistogramsExhaustively(operands);
             case SAMPLING:
                 return createHistogramsBySampling(operands);
+            case SINGLE_BUCKET:
+                return createSingleBucketHistograms(operands);
             default:
                 throw new IllegalArgumentException();
         }
+    }
+
+    private static Collection<Histogram> createSingleBucketHistograms(Collection<BinaryJoinExecutionNode.JoinOperand> operands) {
+        return operands.stream().map(Errors.rethrow().wrap((BinaryJoinExecutionNode.JoinOperand o) -> {
+            JdbcQueryResult r = (JdbcQueryResult) o.engine.getLocalQueryExecutor().execute(String.format(PG_SINGLEBUCKET_TEMPLATE, o.table)).get();
+            long[] bucket = { Long.parseLong(r.getRows().get(0).get(0)) };
+            return new Histogram(bucket, Collections.emptyMap(), Long.MIN_VALUE, Long.MAX_VALUE, o);
+        })).collect(Collectors.toSet());
     }
 
     static Collection<Histogram> createHistogramsExhaustively(Collection<BinaryJoinExecutionNode.JoinOperand> operands) {

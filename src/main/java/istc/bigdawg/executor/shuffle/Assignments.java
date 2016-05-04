@@ -85,7 +85,6 @@ public class Assignments {
     }
 
     private Assignments rebalanceAssignmentsForNode(Histogram h, Collection<Pair<Histogram, JoinUnit>> tabuList) {
-        // TODO: get this
         Assignments best = this;
 
         for (JoinUnit u : this.getJoinUnitsForJoinOperand(h.getOperand())) {
@@ -143,7 +142,6 @@ public class Assignments {
     }
 
     public Set<Range> getRangesForJoinOperand(BinaryJoinExecutionNode.JoinOperand operand) {
-
         Collection<Range> extremities = Collections.emptySet();
         if (operand.engine.equals(fallback)) {
             extremities = Arrays.asList(JoinUnit.of(-Double.MIN_VALUE, min), JoinUnit.of(max, -Double.MAX_VALUE));
@@ -241,10 +239,6 @@ public class Assignments {
 
     public void assignBucket(int bucket, BinaryJoinExecutionNode.JoinOperand operand) {
         bucketAssignments[bucket] = operand;
-    }
-
-    public ConnectionInfo getFallbackNode() {
-        return fallback;
     }
 
     @Override
