@@ -13,6 +13,7 @@ import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.FromItem;
 import net.sf.jsqlparser.statement.select.Join;
+import net.sf.jsqlparser.statement.select.Limit;
 import net.sf.jsqlparser.statement.select.OrderByElement;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.SelectExpressionItem;
@@ -33,6 +34,7 @@ public class SQLTableExpression {
     private PlainSelect parsedStatement; // usually contains a WithItem, PlainSelect, or both
     private List<Join> joins;
     private boolean outerSortProcessed = false;
+    private Limit limit = null;
     
     String name = null;
 	
@@ -289,5 +291,13 @@ public class SQLTableExpression {
 	
 	public void setOuterSortProcesssed(boolean processed) {
 		outerSortProcessed = processed;
+	}
+
+	public Limit getLimit() {
+		return limit;
+	}
+
+	public void setLimit(Limit limit) {
+		this.limit = limit;
 	}
 }

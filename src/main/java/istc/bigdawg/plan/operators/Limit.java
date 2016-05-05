@@ -26,13 +26,15 @@ public class Limit extends Operator {
 		blockerCount++;
 		this.blockerID = blockerCount;
 		
+		net.sf.jsqlparser.statement.select.Limit l = supplement.getLimit();
 		
-		if (parameters.get("LimitAll") != null) setLimitAll(true);
-		if (parameters.get("LimitNull") != null) setLimitNull(true);
-		if (parameters.get("LimitCount") != null) setLimitCount(Long.parseLong(parameters.get("LimitCount")));
-		if (parameters.get("LimitOffset") != null) {
+		
+		setLimitAll(l.isLimitAll());
+		setLimitNull(l.isLimitNull());
+		setLimitCount(l.getRowCount());
+		if (l.getOffset() != 0) {
 			setHasOffSet(true);
-			setLimitOffset(Long.parseLong(parameters.get("LimitOffset")));
+			setLimitOffset(l.getOffset());
 		}
 		
 		// iterate over outschema and 
