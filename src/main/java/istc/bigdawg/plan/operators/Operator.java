@@ -163,6 +163,31 @@ public class Operator implements OperatorInterface {
 
 	}
 	
+	
+	// SQL, UNION
+	public Operator(Map<String, String> parameters, List<String> output,  
+			List<Operator> childs, SQLTableExpression supplement) {
+
+		// order preserving
+		outSchema = new LinkedHashMap<String, DataObjectAttribute>();
+		setComplexOutItemFromProgeny(new LinkedHashMap<>());
+		children  = new ArrayList<Operator>();
+		dataObjects = new HashSet<>();
+		
+		children.addAll(childs);
+		for (Operator c : childs) c.setParent(this);
+		populateComplexOutItem(true);
+		
+		
+		// if it is a subplan, add it to the ctes list -- moved out to planparser
+		/* if(parameters.containsKey("Subplan-Name")) {
+			String planName = parameters.get("Subplan-Name");
+			planName = planName.substring(planName.indexOf(" "));
+			plan.addCommonSQLTableExpression(planName, this);
+		} */
+		
+	}
+	
 	public Operator() {
 		
 	}

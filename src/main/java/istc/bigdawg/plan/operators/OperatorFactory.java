@@ -37,6 +37,8 @@ public class OperatorFactory {
 				return new WindowAggregate(parameters, output, children.get(0), supplement);
 			case "Limit":
 				return new Limit(parameters, output, children.get(0), supplement);
+			case "Append":
+				System.out.printf("Append caught! children count: %s\n", children.size());
 			default: // skip it, only designed for 1:1 io like hash and materialize
 //				System.out.println("---> opType from OperatorFactory: "+opType);
 				return children.get(0);
