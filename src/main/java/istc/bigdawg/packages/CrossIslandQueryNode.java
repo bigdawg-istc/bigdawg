@@ -33,6 +33,7 @@ import istc.bigdawg.plan.operators.Distinct;
 import istc.bigdawg.plan.operators.Join;
 import istc.bigdawg.plan.operators.Join.JoinType;
 import istc.bigdawg.plan.operators.Limit;
+import istc.bigdawg.plan.operators.Merge;
 import istc.bigdawg.plan.operators.Operator;
 import istc.bigdawg.plan.operators.Scan;
 import istc.bigdawg.plan.operators.SeqScan;
@@ -182,12 +183,7 @@ public class CrossIslandQueryNode {
 		
 		for (int i = 0; i < remainderPermutations.size(); i++ ){
 			QueryExecutionPlan qep = new QueryExecutionPlan(scope); 
-//<<<<<<< HEAD
-//			ExecutionNodeFactory.addNodesAndEdgesWithJoinHandling(qep, remainderPermutations.get(i), remainderLoc, queryContainer, isSelect); 
-//=======
 			ExecutionNodeFactory.addNodesAndEdges(qep, remainderPermutations.get(i), remainderLoc, queryContainer, isSelect);
-//			ExecutionNodeFactory.addNodesAndEdgesNaive( qep, remainderPermutations.get(i), remainderLoc, queryContainer);
-//>>>>>>> shuffles
 			qepl.add(qep);
 		}
 		
@@ -227,12 +223,6 @@ public class CrossIslandQueryNode {
 		Map<String, DataObjectAttribute> rootOutSchema = root.getOutSchema();
 		remainderLoc = traverse(root); // this populated everything
 
-		// post process hidden predicates
-//		for (String s : scansWithIndexCond) 
-//			joinPredicates.add(s);
-		
-//		System.out.printf("---> joinPredicates from cross-node: %s;\n", joinPredicates);
-		
 		Map<Pair<String, String>, String> jp = processJoinPredicates(joinPredicates);
 		Map<Pair<String, String>, String> jf = processJoinPredicates(joinFilters);
 		
@@ -371,7 +361,7 @@ public class CrossIslandQueryNode {
 			
 			for (Operator o: ninos) {
 				
-				Operator t = root.duplicate(true); // TODO USED TO BE FALSE
+				Operator t = root.duplicate(true); // FULL REPLICATION
 
 				extraction.add(t);
 				
@@ -403,7 +393,7 @@ public class CrossIslandQueryNode {
 						
 					} else if (c.blockingStatus()) {
 						
-						Operator t = c.duplicate(true); // TODO USED TO BE FALSE
+						Operator t = c.duplicate(true); // FULL REPLICATION
 						leaves.add(t);
 						blockers.add(t);
 						
@@ -803,7 +793,7 @@ public class CrossIslandQueryNode {
 			if (((SeqScan) node).getTable().getFullyQualifiedName().toLowerCase().startsWith("bigdawgtag_")){
 				ret = new ArrayList<String>();
 				if (scope.equals(Scope.RELATIONAL))
-					ret.add(String.valueOf(psqlSchemaHandlerDBID));						// TODO IMPORTANT. CHANGE ORIGINAL MAPPING TO INCLUDE THIS
+					ret.add(String.valueOf(psqlSchemaHandlerDBID));						// IMPORTANT. CHANGE ORIGINAL MAPPING TO INCLUDE THIS
 				else if (scope.equals(Scope.ARRAY))
 					ret.add(String.valueOf(scidbSchemaHandlerDBID));
 				else 
@@ -859,13 +849,51 @@ public class CrossIslandQueryNode {
 			if (joinNode.getOriginalJoinFilter() != null)
 				joinFilters.add(joinNode.getOriginalJoinFilter());//, child0, child1, new Table(), new Table(), true));
 			
-		} else if (node instanceof Sort || node instanceof Aggregate || node instanceof Limit || node instanceof Distinct) {
+		} else if (node instanceof Sort || node instanceof Aggregate || node instanceof Limit || node instanceof Distinct ) {
 			
 			// blocking come into effect
 			List<String> result = traverse(node.getChildren().get(0));
 			if (result != null) ret = new ArrayList<String>(result); 
 		
-		} else {
+		} else if (node instanceof Merge) {
+			
+			Merge mergeNode = (Merge) node;
+			
+			Map<Operator, List<String>> traverseResults = new HashMap<>();
+			List<Operator> nulled = new ArrayList<>();
+			
+			for (Operator o: mergeNode.getChildren()) {
+				List <String> c = traverse(o);
+				if (c == null) nulled.add(o);
+				else traverseResults.put(o, c);
+			}
+			
+			if (traverseResults.size() > 0) {
+				// now the fancy largest sets problem... TODO
+				Map<String, Set<Operator>> intersections = findIntersectionsSortByLargest(traverseResults);
+				
+				// if there are more than one Entry, then break all of them into groups, make new Merges, prune
+				
+				
+			}
+			
+			
+//			if (c0 != null && c1 != null) {
+//				
+//				Set <String> intersection = new HashSet<> (c0);
+//				intersection.retainAll(c1);
+//				
+//				if (intersection.isEmpty()) {
+//					pruneChild(child1, c1);
+//					pruneChild(child0, c0);
+//					
+//				} else {
+//					ret = new ArrayList<String>(intersection);
+//				}
+//			}
+			
+			
+		}else {
 			 throw new Exception("unsupported Operator in CrossIslandQueryNode");
 		}
 		
@@ -1011,5 +1039,12 @@ public class CrossIslandQueryNode {
 			}
 		}
 		return found;
+	}
+	
+	
+	
+	private Map<String, Set<Operator>> findIntersectionsSortByLargest(Map<Operator, List<String>> traverseResults) {
+		
+		return new HashMap<>();
 	}
 }

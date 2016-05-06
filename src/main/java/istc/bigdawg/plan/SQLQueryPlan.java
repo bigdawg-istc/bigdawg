@@ -19,7 +19,6 @@ public class SQLQueryPlan {
 	
 	private Select statement;
 	
-	
 	Operator rootNode;
 	
 	public SQLQueryPlan() {

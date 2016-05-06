@@ -1,7 +1,6 @@
 package istc.bigdawg.plan;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Scanner;
 import java.util.regex.Matcher;
@@ -19,6 +18,9 @@ import istc.bigdawg.planner.Planner;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.signature.Signature;
 import istc.bigdawg.utils.sqlutil.SQLPrepareQuery;
+import net.sf.jsqlparser.parser.CCJSqlParserUtil;
+import net.sf.jsqlparser.statement.select.Select;
+import net.sf.jsqlparser.statement.select.SetOperationList;
 
 public class TrialsAndErrors {
 	
@@ -87,7 +89,7 @@ public class TrialsAndErrors {
 		System.out.println("Builder -- Type query or \"quit\" to exit: ");
 		Scanner scanner = new Scanner(System.in);
 //		String query = scanner.nextLine();
-		String query = "select c_custkey, c_name from customer where c_custkey = 1 union all select c_custkey, c_name from customer where c_custkey = 3 ;";
+		String query = "select c_custkey, c_name from customer where c_custkey = 1 union select c_custkey, c_name from customer where c_custkey = 3 union all select c_custkey, c_name from customer where c_custkey = 5;";
 //		String query = "select c_custkey, c_name from customer limit 3;";
 		
 //		String query = "select bucket, count(*) from ( select width_bucket(value1num, 0, 300, 300) as bucket from mimic2v26.chartevents ce,  mimic2v26.d_patients dp  where itemid in (6, 51, 455, 6701)  and ce.subject_id = dp.subject_id  and ((DATE_PART('year',ce.charttime) - DATE_PART('year',dp.dob))*12 + DATE_PART('month',ce.charttime) - DATE_PART('month',dp.dob)) > 15 ) as sbp group by bucket order by bucket;";
@@ -100,7 +102,12 @@ public class TrialsAndErrors {
 			SQLQueryGenerator gen = new SQLQueryGenerator();
 			gen.configure(true, false);
 			root.accept(gen);
+			
 			System.out.printf("Generated function: %s\n",gen.generateStatementString());
+			
+//			Select s = (Select)CCJSqlParserUtil.parse(query);
+//			System.out.printf("Select body operation class: %s\n", ((SetOperationList)s.getSelectBody()).getOperations().get(0).getClass().getSimpleName());
+			
 			System.out.printf("Tree representation: %s\n",root.getTreeRepresentation(true));
 			Signature.printO2EMapping(root);
 			System.out.println();

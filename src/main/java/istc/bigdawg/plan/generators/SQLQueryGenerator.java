@@ -14,6 +14,7 @@ import istc.bigdawg.plan.operators.CommonSQLTableExpressionScan;
 import istc.bigdawg.plan.operators.Distinct;
 import istc.bigdawg.plan.operators.Join;
 import istc.bigdawg.plan.operators.Limit;
+import istc.bigdawg.plan.operators.Merge;
 import istc.bigdawg.plan.operators.Operator;
 import istc.bigdawg.plan.operators.Scan;
 import istc.bigdawg.plan.operators.SeqScan;
@@ -46,8 +47,11 @@ import net.sf.jsqlparser.statement.select.SelectBody;
 import net.sf.jsqlparser.statement.select.SelectExpressionItem;
 import net.sf.jsqlparser.statement.select.SelectItem;
 import net.sf.jsqlparser.statement.select.SelectItemVisitor;
+import net.sf.jsqlparser.statement.select.SetOperation;
+import net.sf.jsqlparser.statement.select.SetOperationList;
 import net.sf.jsqlparser.statement.select.SubJoin;
 import net.sf.jsqlparser.statement.select.SubSelect;
+import net.sf.jsqlparser.statement.select.UnionOp;
 import net.sf.jsqlparser.statement.select.ValuesList;
 import net.sf.jsqlparser.statement.select.WithItem;
 import net.sf.jsqlparser.util.SelectUtils;
@@ -625,6 +629,35 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	}
 	
 	@Override
+	public void visit(Merge merge) throws Exception {
+		saveRoot(merge);
+		
+//		Select oldDstStatement = dstStatement;
+		
+		List<SelectBody> dsts = new ArrayList<>();
+		List<SetOperation> ops = new ArrayList<>();
+		boolean started = false;
+		for (Operator o : merge.getChildren()) {
+			dstStatement = null;
+			o.accept(this);
+			dsts.add(dstStatement.getSelectBody());
+			
+			UnionOp u = new UnionOp();
+			u.setAll(merge.isUnionAll());
+			
+			if (started) ops.add(u);
+			else started = true;
+		};
+		
+		SetOperationList sol = new SetOperationList();
+		sol.setOpsAndSelects(dsts, ops);
+		dstStatement = new Select();
+		dstStatement.setSelectBody(sol);
+		
+	}
+	
+	
+	@Override
 	public Join generateStatementForPresentNonJoinSegment(Operator operator, StringBuilder sb, boolean isSelect) throws Exception {
 		
 		// find the join		
@@ -729,7 +762,8 @@ public class SQLQueryGenerator implements OperatorVisitor {
 
 		operator.updateObjectAliases();
 		
-		changeAttributesForSelectItems(operator, srcStatement, (PlainSelect) dstStatement.getSelectBody(), selects, stopAtJoin);
+		changeAttributesForSelectItems(operator, srcStatement, dstStatement.getSelectBody(), selects, stopAtJoin);
+		
 		
 		if (operator.isAnyProgenyPruned()) {
 			PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
@@ -793,32 +827,38 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	 * @param stopAtJoin
 	 * @throws Exception
 	 */
-	private void changeAttributesForSelectItems(Operator o, Select srcStatement, PlainSelect ps, HashMap<String, SelectItem> selects, boolean stopAtJoin) throws Exception {
-		List<SelectItem> selectItemList = new ArrayList<>(); 
+	private void changeAttributesForSelectItems(Operator o, Select srcStatement, SelectBody ps, HashMap<String, SelectItem> selects, boolean stopAtJoin) throws Exception {
 		
-		for(String s : o.getOutSchema().keySet()) {
-			SQLAttribute attr = new SQLAttribute((SQLAttribute)o.getOutSchema().get(s));
-
-			// find the table where it is pruned
-			changeAttributeName(o, attr, stopAtJoin);
+		if (ps instanceof SetOperationList) {
+			for (SelectBody p : ((SetOperationList)ps).getSelects()) {
+				changeAttributesForSelectItems(o, srcStatement, p, selects, stopAtJoin);
+			}
+		} else {
+			List<SelectItem> selectItemList = new ArrayList<>(); 
 			
-			SelectExpressionItem si = new SelectExpressionItem(attr.getSQLExpression());
-			
-			if(!(si.toString().equals(attr.getName())) && !(attr.getSQLExpression() instanceof Column)) {
-				si.setAlias(new Alias(attr.getFullyQualifiedName()));
+			for(String s : o.getOutSchema().keySet()) {
+				SQLAttribute attr = new SQLAttribute((SQLAttribute)o.getOutSchema().get(s));
+	
+				// find the table where it is pruned
+				changeAttributeName(o, attr, stopAtJoin);
+				
+				SelectExpressionItem si = new SelectExpressionItem(attr.getSQLExpression());
+				
+				if(!(si.toString().equals(attr.getName())) && !(attr.getSQLExpression() instanceof Column)) {
+					si.setAlias(new Alias(attr.getFullyQualifiedName()));
+				}
+				
+				if (srcStatement == null)
+					selectItemList.add(si);
+				else 
+					selects.put(s, si);
 			}
 			
 			if (srcStatement == null)
-				selectItemList.add(si);
+				((PlainSelect)ps).setSelectItems(selectItemList);
 			else 
-				selects.put(s, si);
+				((PlainSelect)ps).setSelectItems(changeSelectItemsOrder(srcStatement, selects));
 		}
-		
-		if (srcStatement == null)
-			ps.setSelectItems(selectItemList);
-		else 
-			ps.setSelectItems(changeSelectItemsOrder(srcStatement, selects));
-		
 	}
 	
 	/**
@@ -1382,6 +1422,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	}
 	
 	
+	
 	// consider moving this to a separator visitor
 	
 	@Override
@@ -1431,34 +1472,6 @@ public class SQLQueryGenerator implements OperatorVisitor {
 		}
 		
 	}
-	
-//<<<<<<< HEAD
-//	private String updatePruneTokensForOnExpression(Join j, String joinPred) throws Exception {
-//	    	
-//    	if (!j.isAnyProgenyPruned()) return new String(joinPred);
-//    	
-//    	List<Operator> lo = new ArrayList<>();
-//    	List<Operator> walker = j.getChildren();
-//    	while (!walker.isEmpty()) {
-//    		List<Operator> nextgen = new ArrayList<>();
-//    		for (Operator o : walker) {
-//    			if (o.isPruned()) lo.add(o);
-//    			else nextgen.addAll(o.getChildren());
-//    		}
-//    		walker = nextgen;
-//    	}
-//    	
-//    	Expression expr = CCJSqlParserUtil.parseCondExpression(joinPred);
-//    	for (Operator o : lo) {
-//    		Map<String, String> s = o.getDataObjectAliasesOrNames();
-//    		SQLExpressionUtils.renameAttributes(expr, s.keySet(), null, o.getPruneToken());
-//    	}
-//    	
-//		return expr.toString();
-//	}
-//=======
-//	
-//>>>>>>> shuffles
 	
 	/**
 	 * This one only supports equal sign and Column expressions
@@ -1547,10 +1560,13 @@ public class SQLQueryGenerator implements OperatorVisitor {
 			}
 //			System.out.printf("---> SQLQueryGenerator joinPredicate ret: %s\n", ret.toString());
 		}
-
 		
 		return ret;
 	}
 	
 	
+	
+	// New data structure for Union
+//	public class UnionOp extends SetOperation {boolean isUnionAll = false; public UnionOp(SetOperationType type) {super(SetOperationType.UNION);} public UnionOp(boolean isUnionAll) {super(SetOperationType.UNION);this.isUnionAll = isUnionAll;}}
+
 }
