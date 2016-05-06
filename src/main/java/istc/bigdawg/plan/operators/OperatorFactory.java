@@ -13,7 +13,12 @@ public class OperatorFactory {
 	public static Operator get(String opType, Map<String, String> parameters, List<String> output,  List<String> sortKeys, List<Operator> children, SQLQueryPlan plan, SQLTableExpression supplement) throws Exception {
 	
 		switch (opType) {
+			case "Unique":
 			case "Aggregate":
+				if (children.get(0) instanceof Merge) {
+					((Merge)children.get(0)).setUnionAll(false);
+					return children.get(0);
+				}
 			case "HashAggregate":
 			case "GroupAggregate":
 				if(supplement != null && supplement.hasDistinct()) {
@@ -38,7 +43,7 @@ public class OperatorFactory {
 			case "Limit":
 				return new Limit(parameters, output, children.get(0), supplement);
 			case "Append":
-				System.out.printf("Append caught! children count: %s\n", children.size());
+				return new Merge(parameters, output, children, supplement);
 			default: // skip it, only designed for 1:1 io like hash and materialize
 //				System.out.println("---> opType from OperatorFactory: "+opType);
 				return children.get(0);

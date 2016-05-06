@@ -177,9 +177,11 @@ public class SQLPlanParser {
 			case "Node-Type":
 				nodeType = c.getTextContent();
 				parameters.put("Node-Type", nodeType);
-				if(nodeType.equals("Merge Join")) {
+				if (nodeType.equals("Merge Join")) {
 					localSkipSort = determineLocalSortSkip(planName);
-				} 
+				} else if (nodeType.equals("Unique")) {
+					localSkipSort = true;
+				}
 //				else if (nodeType.equals("Limit")) {
 //					parameters.putAll(extraInformation);
 //				}
