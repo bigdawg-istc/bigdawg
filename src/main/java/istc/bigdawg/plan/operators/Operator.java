@@ -1,6 +1,7 @@
 package istc.bigdawg.plan.operators;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -311,7 +312,7 @@ public class Operator implements OperatorInterface {
 		children.add(aChild);
 	}
 
-	public void addChilds(List<Operator> childs) {
+	public void addChilds(Collection<Operator> childs) {
 		children.addAll(childs);
 	}
 		

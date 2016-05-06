@@ -279,7 +279,7 @@ public class SQLOutItem extends CommonOutItem{
 	
 	// takes in alias src, determines if it has a match in src schema
 	// if so, it prefixes the column reference with the src table
-	String fullyQualify(String expr, Map<String, DataObjectAttribute> srcSchema) throws JSQLParserException {
+	public String fullyQualify(String expr, Map<String, DataObjectAttribute> srcSchema) throws JSQLParserException {
 		
 		ExpressionDeParser deparser = new ExpressionDeParser() {
 		

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -859,13 +860,13 @@ public class CrossIslandQueryNode {
 			
 			Merge mergeNode = (Merge) node;
 			
-			Map<Operator, List<String>> traverseResults = new HashMap<>();
+			Map<Operator, Set<String>> traverseResults = new HashMap<>();
 			List<Operator> nulled = new ArrayList<>();
 			
 			for (Operator o: mergeNode.getChildren()) {
 				List <String> c = traverse(o);
 				if (c == null) nulled.add(o);
-				else traverseResults.put(o, c);
+				else traverseResults.put(o, new HashSet<>(c));
 			}
 			
 			if (traverseResults.size() > 0) {
@@ -873,27 +874,35 @@ public class CrossIslandQueryNode {
 				Map<String, Set<Operator>> intersections = findIntersectionsSortByLargest(traverseResults);
 				
 				// if there are more than one Entry, then break all of them into groups, make new Merges, prune
-				
+				if (intersections.size() == 1) {
+					ret = new ArrayList<>((intersections.keySet()));
+				} else {
+					for (String s : intersections.keySet()) {
+						List<String> ls = new ArrayList<>();
+						ls.add(s);
+						
+						if (intersections.get(s).size() == 1) {
+							pruneChild(intersections.get(s).iterator().next(), ls);
+						} else {
+							// for each group, make a new union; reset children and make parents TODO
+							Set<Operator> so = intersections.get(s);
+							Merge merge = new Merge(node, false);
+							for (Operator o : so) {
+								node.getChildren().remove(o);
+								o.setParent(merge);
+							}
+							merge.addChilds(so);
+							node.addChild(merge);
+							merge.setParent(node);
+							
+							pruneChild(merge, ls);
+						}
+					}
+				}
 				
 			}
 			
-			
-//			if (c0 != null && c1 != null) {
-//				
-//				Set <String> intersection = new HashSet<> (c0);
-//				intersection.retainAll(c1);
-//				
-//				if (intersection.isEmpty()) {
-//					pruneChild(child1, c1);
-//					pruneChild(child0, c0);
-//					
-//				} else {
-//					ret = new ArrayList<String>(intersection);
-//				}
-//			}
-			
-			
-		}else {
+		} else {
 			 throw new Exception("unsupported Operator in CrossIslandQueryNode");
 		}
 		
@@ -1043,8 +1052,52 @@ public class CrossIslandQueryNode {
 	
 	
 	
-	private Map<String, Set<Operator>> findIntersectionsSortByLargest(Map<Operator, List<String>> traverseResults) {
+	private Map<String, Set<Operator>> findIntersectionsSortByLargest(Map<Operator, Set<String>> traverseResults) {
 		
-		return new HashMap<>();
+		Map<String, Set<Operator>> result = new LinkedHashMap<>();
+		Map<String, Set<Operator>> dbids = new HashMap<>();
+		
+		for (Operator o : traverseResults.keySet()) {
+			for (String s : traverseResults.get(o)) {
+				if (dbids.containsKey(s)) {
+					dbids.get(s).add(o);
+				} else {
+					Set<Operator> so = new HashSet<>();
+					so.add(o);
+					dbids.put(s, so);
+				}
+			}
+		}
+		
+		// performance tip: allow multiple destination choices TODO 
+		
+		String maxString = null;
+		Set<Operator> set = null;
+		int maxCount = 0;
+		
+		while (!dbids.isEmpty()) {
+			maxCount = 0;
+			for (String s : dbids.keySet()) {
+				int count = dbids.get(s).size();
+				if (maxCount < count) {
+					maxString = s;
+					maxCount = count;
+					set = new HashSet<>(dbids.get(s));
+				}
+			}
+			result.put(maxString, new HashSet<>(set));
+			
+			// removal
+			for (Operator o : set) {
+				for (String s : traverseResults.get(o)) {
+					dbids.get(s).remove(o);
+					if (dbids.get(s).isEmpty()) dbids.remove(s);
+				}
+			}
+		}
+		
+		System.out.printf("----> findIntersectionsSortByLargest result: %s\n", result);
+		
+		return result;
 	}
 }
