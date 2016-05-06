@@ -494,13 +494,14 @@ public class CatalogViewer {
 		CatalogUtilities.checkLength(objName, 30);
 
 		List<Integer> extraction = new ArrayList<>();
-
-		ResultSet rs = cc.execRet("select d.dbid " + "from catalog.objects o "
-				+ "join catalog.databases d 	on o.physical_db = d.dbid "
-				+ "join catalog.engines e 		on d.engine_id = e.eid "
-				+ "where o.name = \'" + objName + "\' "
-				+ " and e.name ilike \'%"+dbname+"%\' "
-				+ "order by d.dbid;");
+		
+		ResultSet rs = cc.execRet("select d.dbid "
+								+ "from catalog.objects o "
+								+ "join catalog.databases d 	on o.physical_db = d.dbid "
+								+ "join catalog.engines e 		on d.engine_id = e.eid "
+								+ "where o.name = \'" + objName + "\' "
+								+  " and e.name ilike \'%"+dbname+"%\' "
+								+ "order by d.dbid;");
 
 		while (rs.next()) {
 			extraction.add(rs.getInt("dbid"));

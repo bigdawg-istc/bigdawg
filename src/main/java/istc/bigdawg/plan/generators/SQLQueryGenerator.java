@@ -637,14 +637,19 @@ public class SQLQueryGenerator implements OperatorVisitor {
 		List<SelectBody> dsts = new ArrayList<>();
 		List<SetOperation> ops = new ArrayList<>();
 		boolean started = false;
+		
+//		System.out.printf("--> Merge start: %s\n", dstStatement);
+		
 		for (Operator o : merge.getChildren()) {
 			dstStatement = null;
 			o.accept(this);
-			dsts.add(dstStatement.getSelectBody());
 			
+			
+			
+			dsts.add(dstStatement.getSelectBody());
+//			System.out.printf("----> Merge step: %s\n", dstStatement);
 			UnionOp u = new UnionOp();
 			u.setAll(merge.isUnionAll());
-			
 			if (started) ops.add(u);
 			else started = true;
 		};
@@ -654,6 +659,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 		dstStatement = new Select();
 		dstStatement.setSelectBody(sol);
 		
+//		System.out.printf("------> Merge result: %s\n", dstStatement);
 	}
 	
 	
@@ -758,15 +764,21 @@ public class SQLQueryGenerator implements OperatorVisitor {
 //		operator.prune(originalPruneStatus);
 		
 		// iterate over out schema and add it to select clause
-		HashMap<String, SelectItem> selects = new HashMap<String, SelectItem>();
+		Map<String, SelectItem> selects = new HashMap<String, SelectItem>();
 
 		operator.updateObjectAliases();
 		
-		changeAttributesForSelectItems(operator, srcStatement, dstStatement.getSelectBody(), selects, stopAtJoin);
+		if (srcStatement != null)
+			changeAttributesForSelectItems(operator, srcStatement.getSelectBody(), dstStatement.getSelectBody(), selects, stopAtJoin);
 		
 		
 		if (operator.isAnyProgenyPruned()) {
-			PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
+			
+			PlainSelect ps = null;
+			if (dstStatement.getSelectBody() instanceof SetOperationList) {
+				ps = (PlainSelect)((SetOperationList)dstStatement.getSelectBody()).getSelects().get(0);
+			} else
+				ps = (PlainSelect) dstStatement.getSelectBody();
 			
 			List<Operator> walker = operator.getChildren();
 			List<Operator> nextgen;
@@ -827,11 +839,11 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	 * @param stopAtJoin
 	 * @throws Exception
 	 */
-	private void changeAttributesForSelectItems(Operator o, Select srcStatement, SelectBody ps, HashMap<String, SelectItem> selects, boolean stopAtJoin) throws Exception {
+	private void changeAttributesForSelectItems(Operator o, SelectBody ss, SelectBody ps, Map<String, SelectItem> selects, boolean stopAtJoin) throws Exception {
 		
 		if (ps instanceof SetOperationList) {
 			for (SelectBody p : ((SetOperationList)ps).getSelects()) {
-				changeAttributesForSelectItems(o, srcStatement, p, selects, stopAtJoin);
+				changeAttributesForSelectItems(o, ss, p, selects, stopAtJoin);
 			}
 		} else {
 			List<SelectItem> selectItemList = new ArrayList<>(); 
@@ -848,16 +860,16 @@ public class SQLQueryGenerator implements OperatorVisitor {
 					si.setAlias(new Alias(attr.getFullyQualifiedName()));
 				}
 				
-				if (srcStatement == null)
+				if (ss == null)
 					selectItemList.add(si);
 				else 
 					selects.put(s, si);
 			}
 			
-			if (srcStatement == null)
+			if (ss == null)
 				((PlainSelect)ps).setSelectItems(selectItemList);
 			else 
-				((PlainSelect)ps).setSelectItems(changeSelectItemsOrder(srcStatement, selects));
+				((PlainSelect)ps).setSelectItems(changeSelectItemsOrder(ss, selects));
 		}
 	}
 	
@@ -1008,9 +1020,18 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	 * @return
 	 * @throws Exception
 	 */
-	private List<SelectItem> changeSelectItemsOrder(Select srcStatement, HashMap<String, SelectItem> selects) throws Exception {
-		List<SelectItem> orders = ((PlainSelect) srcStatement.getSelectBody()).getSelectItems();
+	private List<SelectItem> changeSelectItemsOrder(SelectBody ss, Map<String, SelectItem> selects) throws Exception {
+		
+		List<SelectItem> orders = null;
 		List<SelectItem> holder = new ArrayList<>();
+		
+		if (ss instanceof SetOperationList) {
+			// because the schema should be the same
+			orders = ((PlainSelect) ((SetOperationList)ss).getSelects().get(0)).getSelectItems();
+		} else 
+			orders = ((PlainSelect) ss).getSelectItems();
+		
+		
 		
 		SelectItemVisitor siv = new SelectItemVisitor() {
 
