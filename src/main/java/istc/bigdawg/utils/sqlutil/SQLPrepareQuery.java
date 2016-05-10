@@ -13,10 +13,6 @@ import org.apache.commons.lang3.StringUtils;
 
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.properties.BigDawgConfigProperties;
-import istc.bigdawg.schema.SQLDatabase;
-import istc.bigdawg.schema.SQLDatabaseSingleton;
-import net.sf.jsqlparser.JSQLParserException;
-import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 
 
 
@@ -97,55 +93,5 @@ public class SQLPrepareQuery {
 		return explainFilename;
 	}
 	
-	public static void generatePlan(String srcFilename, String dstFilename) throws Exception {
-		
-		
-		String explainFilename = generateExplainFile(srcFilename);
-		
-
-		SQLDatabaseSingleton d = SQLDatabaseSingleton.getInstance();
-		SQLDatabase sd = d.getDatabase();
-		String dbName = sd.getName();
-		
-		String path = SQLUtilities.getSMCQLRoot();
-		
-		
-		String[] cmd = new String[] {path + "/scripts/explain.sh", dbName, explainFilename, dstFilename};
-		
-		Process p = java.lang.Runtime.getRuntime().exec(cmd);
-		p.waitFor();
-
-		
-		
-		int retVal = p.exitValue();
-		assert(retVal == 0);
-		
-	}
-	
-	public static String generatePlanDirect(String path, String query) throws Exception {
-		
-		
-		String explainQueryName = generateExplainQueryString(query);
-		String xmlFileName = path + "explain_generated_xml_"+xmlCounter+".xml";
-		xmlCounter += 1;
-		
-		SQLDatabaseSingleton d = SQLDatabaseSingleton.getInstance();
-		SQLDatabase sd = d.getDatabase();
-		String dbName = sd.getName();
-		
-		String shPath = SQLUtilities.getSMCQLRoot();
-		
-		
-		String[] cmd = new String[] {shPath + "/scripts/explainDirect.sh", dbName, "5431", explainQueryName, xmlFileName};
-		
-		Process p = java.lang.Runtime.getRuntime().exec(cmd);
-		p.waitFor();
-		
-		
-		int retVal = p.exitValue();
-		assert(retVal == 0);
-		
-		return xmlFileName;
-	}
 	
 }

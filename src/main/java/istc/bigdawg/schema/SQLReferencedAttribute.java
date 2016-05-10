@@ -2,8 +2,9 @@ package istc.bigdawg.schema;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -20,7 +21,7 @@ public class SQLReferencedAttribute extends SQLStoredAttribute  implements java.
 	 */
 	private static final long serialVersionUID = -5356339777481520704L;
 	private String attrAlias = null; 
-	protected Map<SQLStoredAttribute, Integer> sources = null; //  the provenance of each attribute, map to prevent duplicates
+	protected Set<SQLStoredAttribute> sources = null; //  the provenance of each attribute, map to prevent duplicates
 	private String cteName = null;
 	private String SQLStoredTableName = null;
 	private String tableAlias = null; // srcTable always equal to null here
@@ -38,8 +39,8 @@ public class SQLReferencedAttribute extends SQLStoredAttribute  implements java.
 		SQLStoredTableName = s.getTable().getName();
 		tableAlias = null;
 		
-		sources = new HashMap<SQLStoredAttribute, Integer>();
-		sources.put(s, 1);
+		sources = new HashSet<SQLStoredAttribute>();
+		sources.add(s);
 		
 		this.srcTable = null;
 		
@@ -103,7 +104,7 @@ public class SQLReferencedAttribute extends SQLStoredAttribute  implements java.
 	public SQLReferencedAttribute(SQLReferencedAttribute r) {
 		super(r);
 		this.attrAlias = r.attrAlias;
-		this.sources = new HashMap<SQLStoredAttribute, Integer>(r.sources);
+		this.sources = new HashSet<SQLStoredAttribute>(r.sources);
 		this.cteName = r.cteName;
 		this.SQLStoredTableName = r.SQLStoredTableName;
 		
@@ -227,24 +228,24 @@ public class SQLReferencedAttribute extends SQLStoredAttribute  implements java.
 	// all source attributes must appear in a SecureTable
 	public void addSourceAttribute(SQLReferencedAttribute s) {
 		if(sources == null) {
-			sources = new HashMap<SQLStoredAttribute, Integer>();
+			sources = new HashSet<SQLStoredAttribute>();
 		}
 		
 		if(s.getSourceAttributes() == null) {
-			sources.put(s, 1);
+			sources.add(s);
 
 			updateSecurityPolicy(s);
 		}
 		else {
-			sources.putAll(s.sources);
-			for(SQLStoredAttribute src : s.sources.keySet()) {
+			sources.addAll(s.sources);
+			for(SQLStoredAttribute src : s.sources) {
 				updateSecurityPolicy(src);
 			}
 		}
 	}
 	
 	public List<SQLStoredAttribute> getSourceAttributes() {
-		return new ArrayList<SQLStoredAttribute>(sources.keySet());
+		return new ArrayList<SQLStoredAttribute>(sources);
 	}
 	
 //	public String getBitmask() throws Exception {
