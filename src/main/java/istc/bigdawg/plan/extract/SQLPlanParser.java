@@ -107,23 +107,6 @@ public class SQLPlanParser {
 		    
 	}
 	
-	public static SQLQueryPlan extract(String sql) throws Exception {
-
-		String xml = sql.replace(".sql", ".xml");
-		
-		SQLPrepareQuery.generatePlan(sql, xml);
-		
-		// set up supplement
-		String query = SQLPrepareQuery.readSQL(sql);
-		SQLParseLogical parser = new SQLParseLogical(query);
-		SQLQueryPlan queryPlan = parser.getSQLQueryPlan();
-		
-		// run parser
-		@SuppressWarnings("unused")
-		SQLPlanParser p = new SQLPlanParser(xml, queryPlan, query);
-		
-		return queryPlan;
-	}
 	
 	public static SQLQueryPlan extractDirect(PostgreSQLHandler psqlh, String query) throws Exception {
 

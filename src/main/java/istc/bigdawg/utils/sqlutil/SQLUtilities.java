@@ -1,7 +1,6 @@
 package istc.bigdawg.utils.sqlutil;
 
 import java.io.IOException;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -9,10 +8,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import istc.bigdawg.schema.SQLAttribute;
-import istc.bigdawg.schema.SQLDatabase;
-import istc.bigdawg.schema.SQLDatabaseSingleton;
 
 public class SQLUtilities {
 
@@ -100,22 +95,6 @@ public class SQLUtilities {
 			return lines;
 				
 		}
-	}
-	
-	public static SQLAttribute lookUpAttribute(String table, String attribute) throws Exception {
-		SQLDatabase d = SQLDatabaseSingleton.getInstance().getDatabase();
-		SQLAttribute s = d.getTable(table).getAttribute(attribute);
-		return s;
-	}
-	
-	// look up smcql working directory
-	public static String getSMCQLRoot() {
-		URL location = SQLUtilities.class.getProtectionDomain().getCodeSource().getLocation();
-		String path = location.getFile();
-		
-		// chop off trailing "/bin/"
-		path = path.substring(0, path.length()-5);
-		return path;
 	}
 	
 	public static boolean isDBRef(String s) {

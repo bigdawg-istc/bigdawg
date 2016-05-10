@@ -368,7 +368,6 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	public void visit(Sort sort) throws Exception{
 		saveRoot(sort);
 		sort.getChildren().get(0).accept(this);
-//		dstStatement = children.get(0).generateSQLStringDestOnly(dstStatement, false, stopAtJoin, allowedScans);
 
 		if (sort.getChildren().get(0) instanceof Join) {
 			PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
@@ -384,7 +383,10 @@ public class SQLQueryGenerator implements OperatorVisitor {
 		}
 		
 		if(!sort.isWinAgg()) {
-			((PlainSelect) dstStatement.getSelectBody()).setOrderByElements(sort.updateOrderByElements());
+			if (dstStatement.getSelectBody() instanceof PlainSelect)
+				((PlainSelect) dstStatement.getSelectBody()).setOrderByElements(sort.updateOrderByElements());
+			else 
+				((SetOperationList) dstStatement.getSelectBody()).setOrderByElements(sort.updateOrderByElements());
 		}
 
 	}
@@ -392,7 +394,6 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	@Override
 	public void visit(Distinct distinct) throws Exception {
 		saveRoot(distinct);
-//		dstStatement = children.get(0).generateSQLStringDestOnly(dstStatement, false, stopAtJoin, allowedScans);
 		distinct.getChildren().get(0).accept(this);
 
 		PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
@@ -416,7 +417,28 @@ public class SQLQueryGenerator implements OperatorVisitor {
 		boolean rootStatus = isRoot;
 		saveRoot(scan);
 		if(dstStatement == null) {
-			dstStatement = SelectUtils.buildSelectFromTable(scan.getTable());
+			
+			if (!scan.isPruned() || rootStatus) 
+				dstStatement = generateSelectWithToken(scan, null);
+			else if (scan.isPruned() && !rootStatus)
+				dstStatement = generateSelectWithToken(scan, scan.getPruneToken());// SelectUtils.buildSelectFromTable(new Table(scan.getPruneToken()));
+		} 
+		
+		if (((PlainSelect)dstStatement.getSelectBody()).getSelectItems().size() == 1 
+				&& ((PlainSelect)dstStatement.getSelectBody()).getSelectItems().get(0) instanceof AllColumns)
+			((PlainSelect)dstStatement.getSelectBody()).setSelectItems(new ArrayList<>());
+		
+		for (String alias: scan.getOutSchema().keySet()) {
+			
+			Expression e = CCJSqlParserUtil.parseExpression(rewriteComplextOutItem(scan, scan.getOutSchema().get(alias).getSQLExpression()));
+			SelectItem s = new SelectExpressionItem(e);
+			
+			if (!(e instanceof Column)) {
+				((SelectExpressionItem)s).setAlias(new Alias(alias));
+			}
+			
+			
+			((PlainSelect)dstStatement.getSelectBody()).addSelectItems(s);
 		}
 		
 		if (scan.getFilterExpression() != null && (!scan.isPruned() || rootStatus) && !scan.isHasFunctionInFilterExpression()) { // FilterExpression with function is pulled
@@ -644,8 +666,6 @@ public class SQLQueryGenerator implements OperatorVisitor {
 			dstStatement = null;
 			o.accept(this);
 			
-			
-			
 			dsts.add(dstStatement.getSelectBody());
 //			System.out.printf("----> Merge step: %s\n", dstStatement);
 			UnionOp u = new UnionOp();
@@ -774,58 +794,65 @@ public class SQLQueryGenerator implements OperatorVisitor {
 		
 		if (operator.isAnyProgenyPruned()) {
 			
-			PlainSelect ps = null;
+			List<SelectBody> psl = new ArrayList<>();
+			
 			if (dstStatement.getSelectBody() instanceof SetOperationList) {
-				ps = (PlainSelect)((SetOperationList)dstStatement.getSelectBody()).getSelects().get(0);
+				psl.addAll( ((SetOperationList)dstStatement.getSelectBody()).getSelects() );
 			} else
-				ps = (PlainSelect) dstStatement.getSelectBody();
+				psl.add( dstStatement.getSelectBody() );
+
 			
-			List<Operator> walker = operator.getChildren();
-			List<Operator> nextgen;
-			
-			while (!walker.isEmpty()) {
-				nextgen = new ArrayList<>();
-				for (Operator o : walker) {
-					
-					if (!o.isPruned() && !(stopAtJoin && o instanceof Join) && !(stopAtJoin && o instanceof Aggregate && ((Aggregate)o).getAggregateID() != null)) {
-						nextgen.addAll(o.getChildren());
-						continue;
-					}
+			for (SelectBody sb : psl) {
+				PlainSelect ps = (PlainSelect)sb;
+				
+				
+				List<Operator> walker = operator.getChildren();
+				List<Operator> nextgen;
+				
+				while (!walker.isEmpty()) {
+					nextgen = new ArrayList<>();
+					for (Operator o : walker) {
 						
-					
-					Map<String, String> ane				= o.getDataObjectAliasesOrNames();
-					Set<String> childAliases			= ane.keySet();
-					Set<String> childAliasesAndNames	= new HashSet<>(ane.values());
-					for (String s : ane.values()) childAliasesAndNames.add(s);
-					
-					populateComplexOutItem(operator, false);
-					
-					List<SelectItem> sil = ps.getSelectItems();
-					for (int i = 0 ; i < sil.size(); i ++) {
-						if (sil.get(i) instanceof SelectExpressionItem) {
-							SelectExpressionItem sei = (SelectExpressionItem)sil.get(i);
-							sei.setExpression(CCJSqlParserUtil.parseExpression(rewriteComplextOutItem(operator, sei.getExpression())));
+						if (!o.isPruned() && !(stopAtJoin && o instanceof Join) && !(stopAtJoin && o instanceof Aggregate && ((Aggregate)o).getAggregateID() != null)) {
+							nextgen.addAll(o.getChildren());
+							continue;
 						}
-					}
-					
-					String token;
-					
-					if (o.isPruned())
-						token = o.getPruneToken();
-					else if (o instanceof Join)
-						token = ((Join)o).getJoinToken();
-					else if (o instanceof Aggregate && ((Aggregate)o).getAggregateID() != null)
-						token = ((Aggregate)o).getAggregateToken();
-					else 
-						throw new Exception("Uncovered case: "+o.getClass().getSimpleName());
+							
 						
-					updateSubTreeTokens(ps, childAliases, childAliasesAndNames, token);
-					if (dstStatement.getWithItemsList() != null) 
-						for (WithItem wi : dstStatement.getWithItemsList())
-							updateSubTreeTokens(((PlainSelect)wi.getSelectBody()), childAliases, childAliasesAndNames, token);
-					
+						Map<String, String> ane				= o.getDataObjectAliasesOrNames();
+						Set<String> childAliases			= ane.keySet();
+						Set<String> childAliasesAndNames	= new HashSet<>(ane.values());
+						for (String s : ane.values()) childAliasesAndNames.add(s);
+						
+						populateComplexOutItem(operator, false);
+						
+						List<SelectItem> sil = ps.getSelectItems();
+						for (int i = 0 ; i < sil.size(); i ++) {
+							if (sil.get(i) instanceof SelectExpressionItem) {
+								SelectExpressionItem sei = (SelectExpressionItem)sil.get(i);
+								sei.setExpression(CCJSqlParserUtil.parseExpression(rewriteComplextOutItem(operator, sei.getExpression())));
+							}
+						}
+						
+						String token;
+						
+						if (o.isPruned())
+							token = o.getPruneToken();
+						else if (o instanceof Join)
+							token = ((Join)o).getJoinToken();
+						else if (o instanceof Aggregate && ((Aggregate)o).getAggregateID() != null)
+							token = ((Aggregate)o).getAggregateToken();
+						else 
+							throw new Exception("Uncovered case: "+o.getClass().getSimpleName());
+							
+						updateSubTreeTokens(ps, childAliases, childAliasesAndNames, token);
+						if (dstStatement.getWithItemsList() != null) 
+							for (WithItem wi : dstStatement.getWithItemsList())
+								updateSubTreeTokens(((PlainSelect)wi.getSelectBody()), childAliases, childAliasesAndNames, token);
+						
+					}
+					walker = nextgen;
 				}
-				walker = nextgen;
 			}
 		}
 	}
@@ -842,9 +869,17 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	private void changeAttributesForSelectItems(Operator o, SelectBody ss, SelectBody ps, Map<String, SelectItem> selects, boolean stopAtJoin) throws Exception {
 		
 		if (ps instanceof SetOperationList) {
-			for (SelectBody p : ((SetOperationList)ps).getSelects()) {
-				changeAttributesForSelectItems(o, ss, p, selects, stopAtJoin);
+			
+			// THE CHILDREN SHOULD MATCH ONE TO ONE WITH THE PS
+			
+			for (int i = 0; i < o.getChildren().size(); ++i) {
+				
+				Operator c = o.getChildren().get(i);
+				PlainSelect p = ((PlainSelect)((SetOperationList)ps).getSelects().get(i));
+				
+				changeAttributesForSelectItems(c, null, p, selects, stopAtJoin); // TODO SS?????
 			}
+			
 		} else {
 			List<SelectItem> selectItemList = new ArrayList<>(); 
 			
@@ -929,8 +964,8 @@ public class SQLQueryGenerator implements OperatorVisitor {
 				} else if (o instanceof Aggregate && ((Aggregate)o).getAggregateID() != null) {
 					
 					
-					// TODO REDO: change the entire expression to match the output of children aggregates 
-					// TODO SOLVE DUPLICATION PROBLEM
+					// REDO: change the entire expression to match the output of children aggregates 
+					// SOLVE DUPLICATION PROBLEM
 					
 					if (o.getOutSchema().containsKey(attr.getName()) || attribs.removeAll(o.getOutSchema().keySet())) {
 						
@@ -996,13 +1031,13 @@ public class SQLQueryGenerator implements OperatorVisitor {
 		List<SelectItem> seli = new ArrayList<>();
 		SelectItemVisitor siv = new SelectItemVisitor() {
 			@Override public void visit(AllColumns allColumns) {}
-			@Override public void visit(AllTableColumns allTableColumns) {} // this is bad, but we can't do too much about it TODO
+			@Override public void visit(AllTableColumns allTableColumns) {} // this is bad, but we can't do too much about it
 			@Override
 			public void visit(SelectExpressionItem selectExpressionItem) {
 				try {
 					List<String> columns = SQLExpressionUtils.getColumnNamesInAllForms(selectExpressionItem.getExpression());
 					if (!columns.removeAll(columnNames)) {
-						columnNames.addAll(columns); // TODO EXTREMELY BAD PRACTICE. BETTER SOLUTION NEEDED
+						columnNames.addAll(columns); // EXTREMELY BAD PRACTICE. BETTER SOLUTION NEEDED
 						seli.add(selectExpressionItem);
 					}
 					
@@ -1174,18 +1209,22 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	 * @throws Exception
 	 */
 	private Select generateSelectWithToken(Operator o, String token) throws Exception {
-    	Select dstStatement = SelectUtils.buildSelectFromTable(new Table(token));
-		PlainSelect ps = (PlainSelect)dstStatement.getSelectBody();
+    	Select outStatement = null;
+    	if (token != null) outStatement = SelectUtils.buildSelectFromTable(new Table(token));
+    	else if (o instanceof Scan) outStatement = SelectUtils.buildSelectFromTable(((Scan)o).getTable());
+    	else throw new Exception("Unhandled token name in generateSelectWithToken; operator: "+o.getClass().getSimpleName()+"; "+o.toString());
+		PlainSelect ps = (PlainSelect)outStatement.getSelectBody();
 		List<SelectItem> lsi = new ArrayList<>();
 		for (String s : o.getOutSchema().keySet()) {
 			SelectExpressionItem sei = new SelectExpressionItem();
 			Expression e = CCJSqlParserUtil.parseExpression(o.getOutSchema().get(s).getExpressionString());
-			SQLExpressionUtils.renameAttributes(e, null, null, token);
+			if (token != null)
+				SQLExpressionUtils.renameAttributes(e, null, null, token);
 			sei.setExpression(e);
 			lsi.add(sei);
 		}
 		ps.setSelectItems(lsi);
-		return dstStatement;
+		return outStatement;
     }
 	
 	/**

@@ -279,8 +279,15 @@ public class ExecutionNodeFactory {
 		} else {
 			throw new Exception("Unsupported island code: " + qep.getIsland().toString());
 		}
+		
 		remainder.accept(gen);
 		remainderSelectIntoString = gen.generateStatementString();
+		
+		System.out.printf("<><><> Remainder class: %s; QEP: %s; children count: %s; query string: %s\n"
+				, remainder.getClass().getSimpleName()
+				, qep.getSerializedName()
+				, remainder.getChildren().size()
+				, remainderSelectIntoString);
 
 		Map<String, LocalQueryExecutionNode> containerNodes = new HashMap<>();
 		for (Map.Entry<String, QueryContainerForCommonDatabase> entry : containers.entrySet()) {
@@ -295,6 +302,8 @@ public class ExecutionNodeFactory {
 			else
 				throw new Exception("Unsupported island code: " + qep.getIsland().toString());
 
+			System.out.printf("<><><> Container query string: %s; QEP: %s;\n" , selectIntoString, qep.getSerializedName());
+			
 			LocalQueryExecutionNode localQueryNode = new LocalQueryExecutionNode(selectIntoString, container.getConnectionInfo(), table);
 
 			containerNodes.put(table, localQueryNode);
