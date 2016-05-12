@@ -684,11 +684,11 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	
 	
 	@Override
-	public Join generateStatementForPresentNonJoinSegment(Operator operator, StringBuilder sb, boolean isSelect) throws Exception {
+	public Operator generateStatementForPresentNonMigratingSegment(Operator operator, StringBuilder sb, boolean isSelect) throws Exception {
 		
 		// find the join		
 		Operator child = operator;
-		while (!(child instanceof Join) && !child.getChildren().get(0).isPruned()) 
+		while (!(child instanceof Join) && !(child instanceof Merge) && !child.getChildren().get(0).isPruned()) 
 			// then there could be one child only
 			child = child.getChildren().get(0);
 		
@@ -696,7 +696,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 		Select originalDst = dstStatement;
 		dstStatement = null;
 		
-		if ( !(operator instanceof Join) && (child instanceof Join)) {
+		if ( !(operator instanceof Join || operator instanceof Merge) && (child instanceof Join || child instanceof Merge)) {
 			// TODO targeted strike? CURRENTLY WASH EVERYTHING // Set<String> names = child.getDataObjectNames();
 			configure(true, true);
 			setAllowedScan(operator.getDataObjectAliasesOrNames().keySet());
@@ -747,8 +747,8 @@ public class SQLQueryGenerator implements OperatorVisitor {
 		
 		dstStatement = originalDst;
 		
-		if (child instanceof Join)
-			return (Join) child;
+		if (child instanceof Join || child instanceof Merge)
+			return child;
 		else 
 			return null;
 	}
