@@ -348,4 +348,33 @@ public class SStoreSQLHandler implements DBHandler {
 	}
     }
 
+    public static void executePreparedStatement(Connection connection, String copyFromString, String tableName,
+	    String trim) throws SQLException {
+	
+	PreparedStatement statement = null;
+	try {
+		statement = connection.prepareCall(copyFromString);
+		statement.setInt(1, 0);
+		statement.setString(2, tableName);
+		statement.setString(3, trim);
+		statement.executeQuery();
+		statement.close();
+	} catch (SQLException ex) {
+		ex.printStackTrace();
+		// remove ' from the statement - otherwise it won't be inserted into
+		// log table in Postgres
+		log.error(ex.getMessage() + "; statement to be executed: " + LogUtils.replace(copyFromString) + " "
+				+ ex.getStackTrace(), ex);
+		throw ex;
+	} finally {
+		if (statement != null) {
+			statement.close();
+		}
+	}
+    }
+    
+    public static String getExportCommand() {
+	return "{call @ExtractionRemote(?, ?, ?)}";
+    }
+
 }

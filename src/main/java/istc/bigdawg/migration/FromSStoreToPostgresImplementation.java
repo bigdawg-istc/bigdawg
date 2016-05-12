@@ -1,6 +1,7 @@
 package istc.bigdawg.migration;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -21,11 +22,11 @@ import istc.bigdawg.monitoring.Monitor;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.postgresql.PostgreSQLSchemaTableName;
-import istc.bigdawg.sstore.CopyFromSStoreExecutor;
 import istc.bigdawg.sstore.SStoreSQLColumnMetaData;
 import istc.bigdawg.sstore.SStoreSQLConnectionInfo;
 import istc.bigdawg.sstore.SStoreSQLHandler;
 import istc.bigdawg.sstore.SStoreSQLTableMetaData;
+import istc.bigdawg.utils.LogUtils;
 import istc.bigdawg.utils.Pipe;
 
 public class FromSStoreToPostgresImplementation implements MigrationImplementation {
@@ -75,16 +76,16 @@ public class FromSStoreToPostgresImplementation implements MigrationImplementati
     private MigrationResult migrateSingleThreadCSV() throws MigrationException {
 	log.info(generalMessage + " Mode: migrateSingleThreadCSV");
 	long startTimeMigration = System.currentTimeMillis();
-	String delimiter = "|";
+	
 	try {
-	    sStorePipe = Pipe.INSTANCE.createAndGetFullName(this.getClass().getName() + "_fromSStore_" + fromTable);
-	    postgresPipe = Pipe.INSTANCE.createAndGetFullName(this.getClass().getName() + "_toPostgres_" + toTable);
-	    executor = Executors.newFixedThreadPool(3);
-
-//	    CopyFromPostgresExecutor exportExecutor = new CopyFromSStoreExecutor(connectionFrom,
-//		    SStoreSQLHandler.getExportCsvCommand(fromTable, delimiter), sStorePipe);
-//	    FutureTask<Long> exportTask = new FutureTask<Long>(exportExecutor);
-//	    executor.submit(exportTask);
+	    sStorePipe = Pipe.INSTANCE.createAndGetFullName("sstore.out");
+//	    postgresPipe = Pipe.INSTANCE.createAndGetFullName(this.getClass().getName() + "_toPostgres_" + toTable);
+	    executor = Executors.newFixedThreadPool(2);
+	    
+	    String copyFromString = SStoreSQLHandler.getExportCommand();
+	    CopyFromSStoreExecutor exportExecutor = new CopyFromSStoreExecutor(connectionFrom, copyFromString, fromTable, "csv",  sStorePipe);
+	    FutureTask<Long> exportTask = new FutureTask<Long>(exportExecutor);
+	    executor.submit(exportTask);
 
 	    String createTableStatement = null;
 	    createTableStatement = getCreatePostgreSQLTableStatementFromSStoreTable();
@@ -93,31 +94,102 @@ public class FromSStoreToPostgresImplementation implements MigrationImplementati
 	    connectionPostgres.setAutoCommit(false);
 	    createTargetTableSchema(connectionPostgres, createTableStatement);
 	    
+	    CopyToPostgresExecutor loadExecutor = new CopyToPostgresExecutor(connectionPostgres,
+			getCopyToPostgreSQLCsvCommand(toTable), sStorePipe);
+	    FutureTask<Long> loadTask = new FutureTask<Long>(loadExecutor);
+	    executor.submit(loadTask);
+	    
+	    Long countexportElements = exportTask.get();
+	    Long countLoadedElements = loadTask.get();
+	    
 
 	    long endTimeMigration = System.currentTimeMillis();
 	    long durationMsec = endTimeMigration - startTimeMigration;
-//	    MigrationStatistics stats = new MigrationStatistics(connectionFrom, connectionTo, fromTable, toTable,
-//		    startTimeMigration, endTimeMigration, null, countExtractedElements, this.getClass().getName());
-//	    Monitor.addMigrationStats(stats);
-//	    log.debug("Migration result,connectionFrom," + connectionFrom.toSimpleString() + ",connectionTo,"
-//		    + connectionTo.toString() + ",fromTable," + fromTable + ",toArray," + toArray
-//		    + ",startTimeMigration," + startTimeMigration + ",endTimeMigration," + endTimeMigration
-//		    + ",countExtractedElements," + countExtractedElements + ",countLoadedElements," + "N/A"
-//		    + ",durationMsec," + durationMsec + ","
-//		    + Thread.currentThread().getStackTrace()[1].getMethodName());
-//	    return new MigrationResult(countExtractedElements, null,
-//		    loadMessage + " No information about number of loaded rows.", false);
-	    return null;
+	    MigrationStatistics stats = new MigrationStatistics(connectionFrom, connectionTo, fromTable, toTable,
+		    startTimeMigration, endTimeMigration, countexportElements, countLoadedElements, this.getClass().getName());
+	    Monitor.addMigrationStats(stats);
+	    log.debug("Migration result,connectionFrom," + connectionFrom.toSimpleString() + ",connectionTo,"
+		    + connectionTo.toString() + ",fromTable," + fromTable + ",toArray," + toTable
+		    + ",startTimeMigration," + startTimeMigration + ",endTimeMigration," + endTimeMigration
+		    + ",countExtractedElements," + countLoadedElements + ",countLoadedElements," + "N/A"
+		    + ",durationMsec," + durationMsec + ","
+		    + Thread.currentThread().getStackTrace()[1].getMethodName());
+	    return new MigrationResult(countLoadedElements, countexportElements, " No information about number of loaded rows.", false);
+//	    return null;
 	} catch (SQLException | UnsupportedTypeException | InterruptedException
-		| IOException | RunShellException exception) {
+		| ExecutionException | IOException | RunShellException exception) {
 //	     MigrationException migrationException =
 //	     handleException(exception, "Migration in CSV format failed. ");
 	     throw new MigrationException(errMessage + " " + exception.getMessage());
 	} finally {
-	    // cleanResources();
+	     cleanResources();
 	}
 
     }
+    
+    /**
+	 * Clean resources of this instance of the migrator at the end of migration.
+	 * 
+	 * @throws MigrationException
+	 */
+	private void cleanResources() throws MigrationException {
+		if (postgresPipe != null) {
+			try {
+				Pipe.INSTANCE.deletePipeIfExists(postgresPipe);
+			} catch (IOException e) {
+				throw new MigrationException("Could not remove pipe: " + postgresPipe + " " + e.getMessage());
+			}
+		}
+		if (sStorePipe != null) {
+			try {
+				Pipe.INSTANCE.deletePipeIfExists(sStorePipe);
+			} catch (IOException e) {
+				throw new MigrationException("Could not remove pipe: " + sStorePipe + " " + e.getMessage());
+			}
+		}
+		if (executor != null && !executor.isShutdown()) {
+			executor.shutdownNow();
+		}
+		if (connectionPostgres != null) {
+			try {
+				connectionPostgres.close();
+			} catch (SQLException e) {
+				e.printStackTrace();
+				String msg = "Could not close connection to PostgreSQL!" + e.getMessage() + " " + generalMessage;
+				log.error(msg);
+				throw new MigrationException(msg);
+			}
+		}
+		
+		if (connectionSStore != null) {
+			try {
+			    	connectionSStore.close();
+			} catch (SQLException e) {
+				e.printStackTrace();
+				String msg = "Could not close connection to PostgreSQL!" + e.getMessage() + " " + generalMessage;
+				log.error(msg);
+				throw new MigrationException(msg);
+			}
+		}
+	}
+    
+    /**
+	 * Get the copy to command to PostgreSQL.
+	 * 
+	 * example: copy region from '/tmp/adam_test.csv' with (format 'csv',
+	 * delimiter ',', header true, quote "'");
+	 *
+	 * @return the copy command
+	 */
+	private String getCopyToPostgreSQLCsvCommand(String table) {
+		StringBuilder copyTo = new StringBuilder("copy ");
+		copyTo.append(table);
+		copyTo.append(" from STDIN with ");
+		copyTo.append("(format csv, delimiter ',', header true, quote \"'\")");
+		String copyCommand = copyTo.toString();
+		log.debug(LogUtils.replace(copyCommand));
+		return copyCommand;
+	}
     
     /**
 	 * Create a new schema and table in the connectionTo if they not exist. The

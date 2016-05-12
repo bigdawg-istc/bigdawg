@@ -25,7 +25,7 @@ public class DataTypesFromSStoreSQLToPostgreSQL {
 		map.put("string", "varchar");
 //		map.put("char", "character(1)");
 		// time
-		map.put("timestamp", "timestamp (0)");
+		map.put("timestamp", "bigint");
 	}
 
     public static String getPostgreSQLTypeFromSStoreType(String sStoreType) throws UnsupportedTypeException {
