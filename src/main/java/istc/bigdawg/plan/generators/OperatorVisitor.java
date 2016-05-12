@@ -29,7 +29,7 @@ public interface OperatorVisitor {
 	public void visit(Limit limit) throws Exception;
 	public void visit(Merge merge) throws Exception;
 	public String generateStatementString() throws Exception;
-	public Join generateStatementForPresentNonJoinSegment(Operator operator, StringBuilder sb, boolean isSelect) throws Exception;
+	public Operator generateStatementForPresentNonMigratingSegment(Operator operator, StringBuilder sb, boolean isSelect) throws Exception;
 	public String generateSelectIntoStatementForExecutionTree(String destinationTable) throws Exception;
 	public List<String> getJoinPredicateObjectsForBinaryExecutionNode(Join join) throws Exception;
 	public String generateCreateStatementLocally(Operator op, String name) throws Exception;

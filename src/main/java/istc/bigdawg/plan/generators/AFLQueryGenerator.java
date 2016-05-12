@@ -260,8 +260,10 @@ public class AFLQueryGenerator implements OperatorVisitor {
 	}
 
 	@Override
-	public Join generateStatementForPresentNonJoinSegment(Operator operator, StringBuilder sb, boolean isSelect)
+	public Operator generateStatementForPresentNonMigratingSegment(Operator operator, StringBuilder sb, boolean isSelect)
 			throws Exception {
+		
+		if (true) throw new Exception("AFL generator Not updated for Merge");
 		
 		// find the join		
 		Operator child = operator;
