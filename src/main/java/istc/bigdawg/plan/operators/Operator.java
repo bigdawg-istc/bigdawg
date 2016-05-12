@@ -1,6 +1,7 @@
 package istc.bigdawg.plan.operators;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -66,7 +67,7 @@ public class Operator implements OperatorInterface {
 	protected boolean isCopy = false;  // used in building permutations; only remainder join operators could attain true, so far
 	
 	
-	// SQL, single non sort
+	// SQL, single non sort non union
 	public Operator(Map<String, String> parameters, List<String> output,  
 			Operator child, // this is changed to 
 			SQLTableExpression supplement) {
@@ -161,6 +162,49 @@ public class Operator implements OperatorInterface {
 		lhs.setParent(this);
 		rhs.setParent(this);
 
+	}
+	
+	
+	// SQL, UNION
+	public Operator(Map<String, String> parameters, List<String> output,  
+			List<Operator> childs, SQLTableExpression supplement) {
+
+		// order preserving
+		outSchema = new LinkedHashMap<String, DataObjectAttribute>();
+		setComplexOutItemFromProgeny(new LinkedHashMap<>());
+		children  = new ArrayList<Operator>();
+		dataObjects = new HashSet<>();
+		
+		children.addAll(childs);
+		for (Operator c : childs) c.setParent(this);
+		populateComplexOutItem(true);
+		
+		
+		// if it is a subplan, add it to the ctes list -- moved out to planparser
+		/* if(parameters.containsKey("Subplan-Name")) {
+			String planName = parameters.get("Subplan-Name");
+			planName = planName.substring(planName.indexOf(" "));
+			plan.addCommonSQLTableExpression(planName, this);
+		} */
+		
+	}
+	
+	// for AFL UNION
+	public Operator(Map<String, String> parameters, SciDBArray output,  
+			List<Operator> childs) {
+
+		// order preserving
+		outSchema = new LinkedHashMap<String, DataObjectAttribute>();
+		setComplexOutItemFromProgeny(new HashMap<>());
+		children  = new ArrayList<Operator>();
+		dataObjects = new HashSet<>();
+		
+		for (Operator o : childs) { // check for leaf nodes
+			children.add(o);
+			o.setParent(this);
+			
+		}
+		
 	}
 	
 	public Operator() {
@@ -268,7 +312,7 @@ public class Operator implements OperatorInterface {
 		children.add(aChild);
 	}
 
-	public void addChilds(List<Operator> childs) {
+	public void addChilds(Collection<Operator> childs) {
 		children.addAll(childs);
 	}
 		
@@ -339,11 +383,8 @@ public class Operator implements OperatorInterface {
 	}
 	
 	public String getPruneToken() throws Exception {
-		
-		if (!isPruned) {
+		if (!isPruned) 
 			throw new Exception("\n\n\n----> unpruned token: "+this.outSchema+"\n\n");
-		}
-		
 		return "BIGDAWGPRUNED_"+this.pruneID;
 	}
 	
@@ -352,9 +393,7 @@ public class Operator implements OperatorInterface {
 	}
 	
 	public void setSubTree(boolean t) {
-		
 		if (this instanceof Join) return;
-		
 		if (t && this.subTreeID == null) {
 			subTreeCount += 1;
 			this.subTreeID = subTreeCount;
@@ -363,12 +402,7 @@ public class Operator implements OperatorInterface {
 	}
 	
 	public String getSubTreeToken() throws Exception {
-		
-		if (!isSubTree && !(this instanceof Join)) {
-			return null;
-//			throw new Exception("\n\n\n----> not the root of a SubTree: "+this.outSchema+"\n\n");
-		}
-		
+		if (!isSubTree && !(this instanceof Join)) return null;
 		if (this instanceof Join) return ((Join)this).getJoinToken(); 
 		else if (this instanceof Aggregate && ((Aggregate)this).getAggregateID() != null) return ((Aggregate)this).getAggregateToken();
 		else return "BIGDAWGSUBTREE_"+this.subTreeID;
@@ -381,24 +415,6 @@ public class Operator implements OperatorInterface {
 	public boolean isQueryRoot() {
 		return this.isQueryRoot;
 	}
-	
-//	public Set<String> getDataObjectNames() throws Exception {
-//		
-//		if (isPruned) {
-//			Set<String> temps = new HashSet<>();
-//			temps.add(getPruneToken());
-//			return temps;
-//		}
-//		
-//		if (!(this instanceof Scan)) {
-//			this.dataObjects.clear();
-//			for (Operator o : children) {
-//				this.dataObjects.addAll(o.getDataObjectNames());
-//			}
-//		}
-//		
-//		return dataObjects;
-//	}
 	
 	public Map<String, String> getDataObjectAliasesOrNames() throws Exception {
 		
@@ -515,6 +531,8 @@ public class Operator implements OperatorInterface {
 			return new Limit(this, addChild);
 		} else if (this instanceof Distinct) {
 			return new Distinct(this, addChild);
+		} else if (this instanceof Merge) {
+			return new Merge (this, addChild);
 		} else {
 			throw new Exception("Unsupported Operator Copy: "+this.getClass().toString());
 		}

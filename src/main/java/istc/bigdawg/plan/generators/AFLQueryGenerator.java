@@ -12,6 +12,7 @@ import istc.bigdawg.plan.operators.CommonSQLTableExpressionScan;
 import istc.bigdawg.plan.operators.Distinct;
 import istc.bigdawg.plan.operators.Join;
 import istc.bigdawg.plan.operators.Limit;
+import istc.bigdawg.plan.operators.Merge;
 import istc.bigdawg.plan.operators.Operator;
 import istc.bigdawg.plan.operators.Scan;
 import istc.bigdawg.plan.operators.SeqScan;
@@ -246,6 +247,11 @@ public class AFLQueryGenerator implements OperatorVisitor {
 	public void visit(Limit limit) throws Exception {
 		throw new Exception("Unsupported Operator AFL output: Limit");
 	}
+	
+	@Override
+	public void visit(Merge merge) throws Exception {
+		throw new Exception("Unsupported Operator AFL output: Merge");
+	}
 
 	@Override
 	public String generateStatementString() throws Exception {
@@ -254,8 +260,10 @@ public class AFLQueryGenerator implements OperatorVisitor {
 	}
 
 	@Override
-	public Join generateStatementForPresentNonJoinSegment(Operator operator, StringBuilder sb, boolean isSelect)
+	public Operator generateStatementForPresentNonMigratingSegment(Operator operator, StringBuilder sb, boolean isSelect)
 			throws Exception {
+		
+		if (true) throw new Exception("AFL generator Not updated for Merge");
 		
 		// find the join		
 		Operator child = operator;
@@ -796,4 +804,6 @@ public class AFLQueryGenerator implements OperatorVisitor {
 	public List<String> getJoinPredicateObjectsForBinaryExecutionNode(Join join) throws Exception {
 		throw new Exception("Unsupported function for AFL visitor: getJoinPredicateObjectsForBinaryExecutionNode");
 	}
+
+	
 }

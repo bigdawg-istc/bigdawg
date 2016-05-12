@@ -2,17 +2,14 @@ package istc.bigdawg.extract.logical;
 
 import java.util.Iterator;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
-import istc.bigdawg.extract.logical.SQLExpressionHandler;
-import istc.bigdawg.extract.logical.SQLHandler;
 import istc.bigdawg.plan.SQLQueryPlan;
 import istc.bigdawg.utils.sqlutil.SQLPrepareQuery;
-import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.Select;
+import net.sf.jsqlparser.statement.select.SelectBody;
+import net.sf.jsqlparser.statement.select.SetOperationList;
 import net.sf.jsqlparser.statement.select.WithItem;
 
 // Extract parts of SQL statement that do not appear in EXPLAIN VERBOSE
@@ -38,14 +35,18 @@ public class SQLParseLogical {
 
 		
 		SQLTableExpression supplement = new SQLTableExpression();
-		supplement.setSelect((PlainSelect) select.getSelectBody()); 
+		if (select.getSelectBody() instanceof PlainSelect)
+			supplement.setSelect((PlainSelect) select.getSelectBody());
+		else if (select.getSelectBody() instanceof SetOperationList)
+			supplement.setSelect((PlainSelect)(((SetOperationList)select.getSelectBody()).getSelects().get(0)));
+		else 
+			throw new Exception("Unsupported selectBody type: "+select.getSelectBody().getClass().getSimpleName());
+			
 		
 		SQLHandler deparser = new SQLHandler(expressionSupplement, buffer, supplement);
 		expressionSupplement.setSelectVisitor(deparser);
 		expressionSupplement.setBuffer(buffer);
 
-		
-		
 		List<WithItem> withItemsList = select.getWithItemsList();
         if (withItemsList != null && !withItemsList.isEmpty()) {
             buffer.append("WITH ");
@@ -72,9 +73,29 @@ public class SQLParseLogical {
 		expressionSupplement.setTableSupplement(supplement);
 
 		select.getSelectBody().accept(deparser);
-		queryPlan.addTableSupplement("main", supplement);
+		queryPlan.addTableSupplement("main_0", supplement);
 
-		
+		if (select.getSelectBody() instanceof SetOperationList) {
+			List<SelectBody> sbs = ((SetOperationList)select.getSelectBody()).getSelects();
+			for (int i = 1; i < sbs.size(); ++i ) {
+				
+				expressionSupplement = new SQLExpressionHandler();
+				buffer = new StringBuilder();
+				
+				supplement = new SQLTableExpression();
+				supplement.setSelect((PlainSelect)(sbs.get(i)));
+				
+				deparser = new SQLHandler(expressionSupplement, buffer, supplement);
+				expressionSupplement.setSelectVisitor(deparser);
+				expressionSupplement.setBuffer(buffer);
+				
+				deparser.setTableSupplement(supplement);
+				expressionSupplement.setTableSupplement(supplement);
+
+				select.getSelectBody().accept(deparser);
+				queryPlan.addTableSupplement("main_"+i, supplement);
+			}
+		}
 		
 	}
 	

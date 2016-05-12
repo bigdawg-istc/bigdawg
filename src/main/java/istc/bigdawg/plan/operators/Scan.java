@@ -5,7 +5,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import istc.bigdawg.extract.logical.SQLTableExpression;
 import istc.bigdawg.packages.SciDBArray;
@@ -13,6 +12,7 @@ import istc.bigdawg.plan.generators.OperatorVisitor;
 import istc.bigdawg.utils.sqlutil.SQLExpressionUtils;
 import net.sf.jsqlparser.expression.Alias;
 import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Table;
 
@@ -49,9 +49,9 @@ public class Scan extends Operator {
 			String s = SQLExpressionUtils.removeExpressionDataTypeArtifactAndConvertLike(parameters.get("Filter"));
 			
 			setFilterExpression(CCJSqlParserUtil.parseCondExpression(s));
-			SQLExpressionUtils.removeExcessiveParentheses(getFilterExpression());
+			SQLExpressionUtils.removeExcessiveParentheses(filterExpression);
 			
-			setHasFunctionInFilterExpression(SQLExpressionUtils.isFunctionPresentInCondExpression(getFilterExpression()));
+			setHasFunctionInFilterExpression(SQLExpressionUtils.isFunctionPresentInCondExpression(filterExpression));
 //			System.out.println("---> filterExpression: "+filterExpression);
 //			
 //			filterSet = new HashSet<Expression>();
@@ -63,7 +63,24 @@ public class Scan extends Operator {
 			String s = SQLExpressionUtils.removeExpressionDataTypeArtifactAndConvertLike(parameters.get("Index-Cond"));
 			
 			setIndexCond(CCJSqlParserUtil.parseCondExpression(s));
-			SQLExpressionUtils.removeExcessiveParentheses(getIndexCond());
+			SQLExpressionUtils.removeExcessiveParentheses(indexCond);
+			
+			List<Expression> exprs = SQLExpressionUtils.getFlatExpressions(getIndexCond());
+			Expression result = null; 
+			for (Expression e : exprs) {
+				if (SQLExpressionUtils.getAttributes(e).size() == 1) {
+					if (filterExpression == null)
+						filterExpression = e;
+					else 
+						filterExpression = new AndExpression(filterExpression, e);
+					continue;
+				}
+				if (result == null)
+					result = e; 
+				else 
+					result = new AndExpression(result, e);
+			}
+			indexCond = result;
 			
 //			System.out.println("---> indexCond: "+indexCond);
 			
@@ -96,7 +113,7 @@ public class Scan extends Operator {
 		if(parameters.get("Filter") != null) {
 			
 			setFilterExpression(CCJSqlParserUtil.parseCondExpression(parameters.get("Filter")));
-			setHasFunctionInFilterExpression(SQLExpressionUtils.isFunctionPresentInCondExpression(getFilterExpression()));
+			setHasFunctionInFilterExpression(SQLExpressionUtils.isFunctionPresentInCondExpression(filterExpression));
 		}
 		
 		table = new Table(getSrcTable()); // new one to accommodate aliasing

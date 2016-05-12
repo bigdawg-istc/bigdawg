@@ -146,7 +146,7 @@ public class SeqScan extends Scan {
 	
 	
 	public String toString() {
-		return "Sequential scan over " + getSrcTable() + " Filter: " + getFilterExpression();
+		return "SeqScan " + getSrcTable() + " subject to (" + getFilterExpression()+")";
 	}
 	
 	

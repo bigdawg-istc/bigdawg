@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -33,6 +34,7 @@ import istc.bigdawg.plan.operators.Distinct;
 import istc.bigdawg.plan.operators.Join;
 import istc.bigdawg.plan.operators.Join.JoinType;
 import istc.bigdawg.plan.operators.Limit;
+import istc.bigdawg.plan.operators.Merge;
 import istc.bigdawg.plan.operators.Operator;
 import istc.bigdawg.plan.operators.Scan;
 import istc.bigdawg.plan.operators.SeqScan;
@@ -182,12 +184,7 @@ public class CrossIslandQueryNode {
 		
 		for (int i = 0; i < remainderPermutations.size(); i++ ){
 			QueryExecutionPlan qep = new QueryExecutionPlan(scope); 
-//<<<<<<< HEAD
-//			ExecutionNodeFactory.addNodesAndEdgesWithJoinHandling(qep, remainderPermutations.get(i), remainderLoc, queryContainer, isSelect); 
-//=======
 			ExecutionNodeFactory.addNodesAndEdges(qep, remainderPermutations.get(i), remainderLoc, queryContainer, isSelect);
-//			ExecutionNodeFactory.addNodesAndEdgesNaive( qep, remainderPermutations.get(i), remainderLoc, queryContainer);
-//>>>>>>> shuffles
 			qepl.add(qep);
 		}
 		
@@ -227,12 +224,6 @@ public class CrossIslandQueryNode {
 		Map<String, DataObjectAttribute> rootOutSchema = root.getOutSchema();
 		remainderLoc = traverse(root); // this populated everything
 
-		// post process hidden predicates
-//		for (String s : scansWithIndexCond) 
-//			joinPredicates.add(s);
-		
-//		System.out.printf("---> joinPredicates from cross-node: %s;\n", joinPredicates);
-		
 		Map<Pair<String, String>, String> jp = processJoinPredicates(joinPredicates);
 		Map<Pair<String, String>, String> jf = processJoinPredicates(joinFilters);
 		
@@ -249,22 +240,26 @@ public class CrossIslandQueryNode {
 					o.updateOutSchema(rootOutSchema);
 				}
 			}
-//			// debug
-//			System.out.println("\n\n\nResult of Permutation: ");
-//			int i = 1;
-//			OperatorVisitor gen;
-//			for (Operator o : permResult) {
-//				if (scope.equals(Scope.RELATIONAL)) {
-//					gen = new SQLQueryGenerator();
-//				} else if (scope.equals(Scope.ARRAY)) {
-//					gen = new AFLQueryGenerator();
-//				} else gen = null;
-//				gen.configure(true, false);
-//				o.accept(gen);
-//				System.out.printf("%d. %s\n\n", i, gen.generateStatementString());
-//				System.out.printf("%d. %s\n\n", i, gen.generateStatementString()); // duplicate command to test modification of underlying structure
-//				i++;
-//			}
+			
+			// debug
+			System.out.println("\n\n\nResult of Permutation: ");
+			int i = 1;
+			OperatorVisitor gen;
+			for (Operator o : permResult) {
+				if (scope.equals(Scope.RELATIONAL)) {
+					gen = new SQLQueryGenerator();
+				} else if (scope.equals(Scope.ARRAY)) {
+					gen = new AFLQueryGenerator();
+				} else gen = null;
+				gen.configure(true, false);
+				o.accept(gen);
+				System.out.printf("%d.  first formulation: %s\n\n", i, gen.generateStatementString());
+				System.out.printf("%d. second formulation: %s\n\n", i, gen.generateStatementString()); // duplicate command to test modification of underlying structure
+				i++;
+			}
+			System.out.println("\n");
+			// end of debug
+			
 			
 			remainderPermutations.clear();
 			remainderPermutations.addAll(permResult);
@@ -345,11 +340,47 @@ public class CrossIslandQueryNode {
 		List<Operator> leaves 	  = new ArrayList<>();
 
 		
-		if (root.blockingStatus()) {
-			
-			// then it must have only one child, because join does not block
-			// root spear-heads the rest of the subtree
-			
+		if (root.blockingStatus() ) { //&& !(root instanceof Merge)) {
+//			
+//			// then it must have only one child, because join does not block
+//			// root spear-heads the rest of the subtree
+//			
+//			// DEBUG ONLY
+//			OperatorVisitor gen = null;
+//			if (scope.equals(Scope.RELATIONAL)) {
+//				gen = new SQLQueryGenerator();
+//				((SQLQueryGenerator)gen).setSrcStatement(select);
+//			}
+//			gen.configure(true, false);
+//			root.accept(gen);
+//			
+//			System.out.println("--> blocking root; class: "+root.getClass().getSimpleName()+"; ");
+//			System.out.println("--> tree rep: "+root.getTreeRepresentation(true)+"; ");
+//			System.out.println("--> SQL: "+gen.generateStatementString()+"; \n");
+//			// DEBUG OUTPUT END
+//			
+//			Operator next = root.getChildren().get(0);
+//			while (!(next instanceof Join) && !(next instanceof Merge) && next.getChildren().size() > 0) next = next.getChildren().get(0);
+//			
+//			List<Operator> ninos = getPermutatedOperatorsWithBlock(next, joinPredConnections, joinFilterConnections);
+//			
+//			for (Operator o: ninos) {
+//				
+//				Operator t = root.duplicate(true); // FULL REPLICATION
+//
+//				extraction.add(t);
+//				
+//				t.getChildren().get(0).setParent(t);
+//				while (!(t instanceof Join) && !(t instanceof Merge)) {
+//					t = t.getChildren().get(0);
+//					t.getChildren().get(0).setParent(t);
+//				}
+//				t = t.getParent();
+//				t.getChildren().clear();
+//				t.addChild(o);
+//				
+//			}
+//		} else if (root instanceof Merge) {
 			// DEBUG ONLY
 			OperatorVisitor gen = null;
 			if (scope.equals(Scope.RELATIONAL)) {
@@ -364,22 +395,34 @@ public class CrossIslandQueryNode {
 			System.out.println("--> SQL: "+gen.generateStatementString()+"; \n");
 			// DEBUG OUTPUT END
 			
-			Operator next = root.getChildren().get(0);
-			while (!(next instanceof Join)) next = next.getChildren().get(0);
 			
-			List<Operator> ninos = getPermutatedOperatorsWithBlock(next, joinPredConnections, joinFilterConnections);
+			List<Operator> ninos = new ArrayList<>();
+			for (Operator o : root.getChildren()) {
+				
+				Operator next = o;
+				while (!(next instanceof Join) && !(next instanceof Merge) && next.getChildren().size() > 0) next = next.getChildren().get(0);
+				ninos.addAll(getPermutatedOperatorsWithBlock(next, joinPredConnections, joinFilterConnections));
+				
+			}
+			
+			if (ninos.isEmpty()) {
+				extraction.add(root);
+				return extraction;
+			}
 			
 			for (Operator o: ninos) {
 				
-				Operator t = root.duplicate(true); // TODO USED TO BE FALSE
+				Operator t = root.duplicate(true); // FULL REPLICATION
 
 				extraction.add(t);
 				
-				t.getChildren().get(0).setParent(t);
-				while (!(t instanceof Join)) {
+				for (Operator op : t.getChildren()) op.setParent(t);
+				
+				while (!(t instanceof Join) && !(t instanceof Merge)) {
 					t = t.getChildren().get(0);
 					t.getChildren().get(0).setParent(t);
 				}
+//				if (t.getParent() == null) continue;
 				t = t.getParent();
 				t.getChildren().clear();
 				t.addChild(o);
@@ -388,10 +431,14 @@ public class CrossIslandQueryNode {
 			
 		} else {
 			
+			if (root.isPruned()) {
+				return extraction;
+			}
+			
 			// add all leaves and blockers to the lists, 
 			
 			List<Operator> treeWalker = root.getChildren();
-			while(treeWalker.size() > 0) {
+			while (treeWalker.size() > 0) {
 				List<Operator> nextGeneration = new ArrayList<>();
 				
 				for (Operator c : treeWalker) {
@@ -403,7 +450,7 @@ public class CrossIslandQueryNode {
 						
 					} else if (c.blockingStatus()) {
 						
-						Operator t = c.duplicate(true); // TODO USED TO BE FALSE
+						Operator t = c.duplicate(true); // FULL REPLICATION
 						leaves.add(t);
 						blockers.add(t);
 						
@@ -415,6 +462,7 @@ public class CrossIslandQueryNode {
 				
 				treeWalker = nextGeneration;
 			}
+			
 			
 			/**
 			 *  now we have all the blockers and leaves
@@ -803,7 +851,7 @@ public class CrossIslandQueryNode {
 			if (((SeqScan) node).getTable().getFullyQualifiedName().toLowerCase().startsWith("bigdawgtag_")){
 				ret = new ArrayList<String>();
 				if (scope.equals(Scope.RELATIONAL))
-					ret.add(String.valueOf(psqlSchemaHandlerDBID));						// TODO IMPORTANT. CHANGE ORIGINAL MAPPING TO INCLUDE THIS
+					ret.add(String.valueOf(psqlSchemaHandlerDBID));						// IMPORTANT. CHANGE ORIGINAL MAPPING TO INCLUDE THIS
 				else if (scope.equals(Scope.ARRAY))
 					ret.add(String.valueOf(scidbSchemaHandlerDBID));
 				else 
@@ -859,12 +907,59 @@ public class CrossIslandQueryNode {
 			if (joinNode.getOriginalJoinFilter() != null)
 				joinFilters.add(joinNode.getOriginalJoinFilter());//, child0, child1, new Table(), new Table(), true));
 			
-		} else if (node instanceof Sort || node instanceof Aggregate || node instanceof Limit || node instanceof Distinct) {
+		} else if (node instanceof Sort || node instanceof Aggregate || node instanceof Limit || node instanceof Distinct ) {
 			
 			// blocking come into effect
 			List<String> result = traverse(node.getChildren().get(0));
 			if (result != null) ret = new ArrayList<String>(result); 
 		
+		} else if (node instanceof Merge) {
+			
+			Merge mergeNode = (Merge) node;
+			
+			Map<Operator, Set<String>> traverseResults = new HashMap<>();
+			List<Operator> nulled = new ArrayList<>();
+			
+			for (Operator o: mergeNode.getChildren()) {
+				List <String> c = traverse(o);
+				if (c == null) nulled.add(o);
+				else traverseResults.put(o, new HashSet<>(c));
+			}
+			
+			if (traverseResults.size() > 0) {
+				// now the fancy largest sets problem... TODO
+				Map<String, Set<Operator>> intersections = findIntersectionsSortByLargest(traverseResults);
+				
+				// if there are more than one Entry, then break all of them into groups, make new Merges, prune
+				if (intersections.size() == 1) {
+					ret = new ArrayList<>((intersections.keySet()));
+				} else {
+					
+					for (String s : intersections.keySet()) {
+						List<String> ls = new ArrayList<>();
+						ls.add(s);
+						
+						if (intersections.get(s).size() == 1) {
+							pruneChild(intersections.get(s).iterator().next(), ls);
+						} else {
+							// for each group, make a new union; reset children and make parents TODO
+							Set<Operator> so = intersections.get(s);
+							Merge merge = new Merge(node, false);
+							for (Operator o : so) {
+								node.getChildren().remove(o);
+								o.setParent(merge);
+							}
+							merge.addChilds(so);
+							node.addChild(merge);
+							merge.setParent(node);
+							
+							pruneChild(merge, ls);
+						}
+					}
+				}
+				
+			}
+			
 		} else {
 			 throw new Exception("unsupported Operator in CrossIslandQueryNode");
 		}
@@ -1011,5 +1106,56 @@ public class CrossIslandQueryNode {
 			}
 		}
 		return found;
+	}
+	
+	
+	
+	private Map<String, Set<Operator>> findIntersectionsSortByLargest(Map<Operator, Set<String>> traverseResults) {
+		
+		Map<String, Set<Operator>> result = new HashMap<>();
+		Map<String, Set<Operator>> dbids = new HashMap<>();
+		
+		for (Operator o : traverseResults.keySet()) {
+			for (String s : traverseResults.get(o)) {
+				if (dbids.containsKey(s)) {
+					dbids.get(s).add(o);
+				} else {
+					Set<Operator> so = new HashSet<>();
+					so.add(o);
+					dbids.put(s, so);
+				}
+			}
+		}
+		
+		// performance tip: allow multiple destination choices TODO 
+		
+		String maxString = null;
+		Set<Operator> set = null;
+		int maxCount = 0;
+		
+		while (!dbids.isEmpty()) {
+			maxCount = 0;
+			for (String s : dbids.keySet()) {
+				int count = dbids.get(s).size();
+				if (maxCount < count) {
+					maxString = s;
+					maxCount = count;
+					set = new HashSet<>(dbids.get(s));
+				}
+			}
+			result.put(maxString, new HashSet<>(set));
+			
+			// removal
+			for (Operator o : set) {
+				for (String s : traverseResults.get(o)) {
+					dbids.get(s).remove(o);
+					if (dbids.get(s).isEmpty()) dbids.remove(s);
+				}
+			}
+		}
+		
+		System.out.printf("----> findIntersectionsSortByLargest result: %s\n", result);
+		
+		return result;
 	}
 }

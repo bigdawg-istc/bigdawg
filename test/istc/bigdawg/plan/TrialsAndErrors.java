@@ -1,7 +1,6 @@
 package istc.bigdawg.plan;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Scanner;
 import java.util.regex.Matcher;
@@ -19,6 +18,9 @@ import istc.bigdawg.planner.Planner;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.signature.Signature;
 import istc.bigdawg.utils.sqlutil.SQLPrepareQuery;
+import net.sf.jsqlparser.parser.CCJSqlParserUtil;
+import net.sf.jsqlparser.statement.select.Select;
+import net.sf.jsqlparser.statement.select.SetOperationList;
 
 public class TrialsAndErrors {
 	
@@ -87,8 +89,8 @@ public class TrialsAndErrors {
 		System.out.println("Builder -- Type query or \"quit\" to exit: ");
 		Scanner scanner = new Scanner(System.in);
 //		String query = scanner.nextLine();
-//		String query = "select l_returnflag, l_linestatus, sum(l_quantity) as sum_qty, sum(l_extendedprice) as sum_base_price, sum(l_extendedprice * (1 - l_discount)) as sum_disc_price, sum(l_extendedprice * (1 - l_discount) * (1 + l_tax)) as sum_charge, avg(l_quantity) as avg_qty, avg(l_extendedprice) as avg_price, avg(l_discount) as avg_disc, count(*) as count_order from lineitem where l_shipdate <= date '1998-12-01' - interval '1' day group by l_returnflag, l_linestatus order by l_returnflag, l_linestatus;";
-		String query = "select l_returnflag, l_linestatus from lineitem where l_shipdate <= date '1998-12-01' - interval '1' day limit 3;";
+		String query = "select c_custkey, c_name from customer where c_custkey = 1 union select c_custkey as ckey, c_name from customer where c_custkey = 3 union all select c_custkey, c_name from customer where c_custkey = 5;";
+//		String query = "select c1.c_custkey, c2.c_name from customer c2, customer c1 where c2.c_custkey = c1.c_custkey limit 3;";
 		
 //		String query = "select bucket, count(*) from ( select width_bucket(value1num, 0, 300, 300) as bucket from mimic2v26.chartevents ce,  mimic2v26.d_patients dp  where itemid in (6, 51, 455, 6701)  and ce.subject_id = dp.subject_id  and ((DATE_PART('year',ce.charttime) - DATE_PART('year',dp.dob))*12 + DATE_PART('month',ce.charttime) - DATE_PART('month',dp.dob)) > 15 ) as sbp group by bucket order by bucket;";
 		while (!query.toLowerCase().equals("quit")) {
@@ -100,15 +102,15 @@ public class TrialsAndErrors {
 			SQLQueryGenerator gen = new SQLQueryGenerator();
 			gen.configure(true, false);
 			root.accept(gen);
-			System.out.println(gen.generateStatementString() + "\n");
-//			System.out.println(root.generateSQLString(null) + "\n");
 			
-			System.out.println(root.getTreeRepresentation(true) + "\n");
+			System.out.printf("Generated function: %s\n",gen.generateStatementString());
 			
+//			Select s = (Select)CCJSqlParserUtil.parse(query);
+//			System.out.printf("Select body operation class: %s\n", ((SetOperationList)s.getSelectBody()).getOperations().get(0).getClass().getSimpleName());
+			
+			System.out.printf("Tree representation: %s\n",root.getTreeRepresentation(true));
 			Signature.printO2EMapping(root);
-			
 			System.out.println();
-			
 			Signature.printStrippedO2EMapping(root);
 			
 //			System.out.println(RTED.computeDistance(root.getTreeRepresentation(true), "{}"));
@@ -192,7 +194,8 @@ public class TrialsAndErrors {
 	public void testPlanner() throws Exception {
 		if ( !runPlanner ) return;
 		
-		String userinput = "bdrel(SELECT lineitem.l_orderkey, sum(lineitem.l_extendedprice * (1 - lineitem.l_discount)) AS revenue, orders.o_orderdate, orders.o_shippriority FROM orders, customer, lineitem WHERE (orders.o_custkey = customer.c_custkey) AND (orders.o_orderdate < '1996-01-02') AND (customer.c_mktsegment = 'AUTOMOBILE') AND (lineitem.l_shipdate > '1996-01-02') AND (lineitem.l_orderkey = orders.o_orderkey) GROUP BY lineitem.l_orderkey, orders.o_orderdate, orders.o_shippriority ORDER BY revenue DESC, orders.o_orderdate);";
+//		String userinput = "bdrel(SELECT lineitem.l_orderkey, sum(lineitem.l_extendedprice * (1 - lineitem.l_discount)) AS revenue, orders.o_orderdate, orders.o_shippriority FROM orders, customer, lineitem WHERE (orders.o_custkey = customer.c_custkey) AND (orders.o_orderdate < '1996-01-02') AND (customer.c_mktsegment = 'AUTOMOBILE') AND (lineitem.l_shipdate > '1996-01-02') AND (lineitem.l_orderkey = orders.o_orderkey) GROUP BY lineitem.l_orderkey, orders.o_orderdate, orders.o_shippriority ORDER BY revenue DESC, orders.o_orderdate);";
+		String userinput = "bdrel(select c_custkey, c_name from customer where c_custkey = 1 union select c_custkey as ckey, c_name from customer where c_custkey = 3 union all select c_custkey, c_name from customer where c_custkey = 5);";
 		try {
 		Planner.processQuery(userinput, false);
 		} catch (Exception e) {

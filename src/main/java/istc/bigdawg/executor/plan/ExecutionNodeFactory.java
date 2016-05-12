@@ -19,6 +19,7 @@ import istc.bigdawg.plan.generators.OperatorVisitor;
 import istc.bigdawg.plan.generators.SQLQueryGenerator;
 import istc.bigdawg.plan.operators.CommonSQLTableExpressionScan;
 import istc.bigdawg.plan.operators.Join;
+import istc.bigdawg.plan.operators.Merge;
 import istc.bigdawg.plan.operators.Operator;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.query.ConnectionInfoParser;
@@ -197,9 +198,12 @@ public class ExecutionNodeFactory {
 		else if (island.equals(Scope.ARRAY)) gen = new AFLQueryGenerator();
 		else throw new Exception("Unsupported Island from buildOperatorSubgraph: " + island.toString());
 
-		Join joinOp = gen.generateStatementForPresentNonJoinSegment(op, sb, isSelect);
+//		Join joinOp = gen.generateStatementForPresentNonJoinSegment(op, sb, isSelect);
+		Operator joinOp = gen.generateStatementForPresentNonMigratingSegment(op, sb, isSelect);
 		final String sqlStatementForPresentNonJoinSegment = sb.toString();
 
+		System.out.printf("joinOp: %s; statement: %s\n", joinOp, sqlStatementForPresentNonJoinSegment);
+		
 		// TODO CHANGE NAME OF JOIN'S CHILDREN
 
 		ExecutionNodeSubgraph result = new ExecutionNodeSubgraph();
@@ -213,7 +217,7 @@ public class ExecutionNodeFactory {
 		}
 
 		if (joinOp != null) {
-			String joinDestinationTable = joinOp.getJoinToken();
+			String joinDestinationTable = joinOp.getSubTreeToken();
 
 			String broadcastQuery;
 			if (sqlStatementForPresentNonJoinSegment.length() == 0 && isSelect) {
@@ -228,7 +232,11 @@ public class ExecutionNodeFactory {
 				broadcastQuery = gen.generateSelectIntoStatementForExecutionTree(joinDestinationTable);
 			}
 
-			BinaryJoinExecutionNode joinNode = ExecutionNodeFactory.createJoinNode(broadcastQuery, engine, joinDestinationTable, joinOp, island);
+			ExecutionNode joinNode = null;
+			
+			if (joinOp instanceof Join) joinNode = ExecutionNodeFactory.createJoinNode(broadcastQuery, engine, joinDestinationTable, (Join)joinOp, island);
+			else if (joinOp instanceof Merge)joinNode = new LocalQueryExecutionNode(broadcastQuery, engine, joinDestinationTable);
+//			BinaryJoinExecutionNode joinNode = ExecutionNodeFactory.createJoinNode(broadcastQuery, engine, joinDestinationTable, joinOp, island);
 //			LocalQueryExecutionNode joinNode = new LocalQueryExecutionNode(broadcastQuery, engine, joinDestinationTable);
 
 			result.addVertex(joinNode);
@@ -279,8 +287,15 @@ public class ExecutionNodeFactory {
 		} else {
 			throw new Exception("Unsupported island code: " + qep.getIsland().toString());
 		}
+		
 		remainder.accept(gen);
 		remainderSelectIntoString = gen.generateStatementString();
+		
+		System.out.printf("<><><> Remainder class: %s; QEP: %s; children count: %s; query string: %s\n"
+				, remainder.getClass().getSimpleName()
+				, qep.getSerializedName()
+				, remainder.getChildren().size()
+				, remainderSelectIntoString);
 
 		Map<String, LocalQueryExecutionNode> containerNodes = new HashMap<>();
 		for (Map.Entry<String, QueryContainerForCommonDatabase> entry : containers.entrySet()) {
@@ -295,6 +310,8 @@ public class ExecutionNodeFactory {
 			else
 				throw new Exception("Unsupported island code: " + qep.getIsland().toString());
 
+			System.out.printf("<><><> Container query string: %s; QEP: %s;\n" , selectIntoString, qep.getSerializedName());
+			
 			LocalQueryExecutionNode localQueryNode = new LocalQueryExecutionNode(selectIntoString, container.getConnectionInfo(), table);
 
 			containerNodes.put(table, localQueryNode);

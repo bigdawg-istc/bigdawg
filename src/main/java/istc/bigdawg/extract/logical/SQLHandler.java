@@ -320,22 +320,33 @@ public class SQLHandler implements SelectVisitor, OrderByVisitor, SelectItemVisi
 
     public void deparseLimit(Limit limit) {
         // LIMIT n OFFSET skip
+    	
+    	Limit l =  new Limit();
+    	
         if (limit.isRowCountJdbcParameter()) {
             buffer.append(" LIMIT ");
             buffer.append("?");
+            l.setRowCountJdbcParameter(limit.isRowCountJdbcParameter());
         } else if (limit.getRowCount() >= 0) {
             buffer.append(" LIMIT ");
             buffer.append(limit.getRowCount());
+            l.setRowCount(limit.getRowCount());
         } else if (limit.isLimitNull()) {
             buffer.append(" LIMIT NULL");
+            l.setLimitNull(limit.isLimitNull());
+        } else {
+        	l.setLimitAll(limit.isLimitAll()); 
         }
 
         if (limit.isOffsetJdbcParameter()) {
             buffer.append(" OFFSET ?");
+            l.setOffsetJdbcParameter(limit.isOffsetJdbcParameter());
         } else if (limit.getOffset() != 0) {
             buffer.append(" OFFSET ").append(limit.getOffset());
+            l.setOffset(limit.getOffset());
         }
-
+        
+        supplementVariables.setLimit(l);
     }
 
     public void deparseOffset(Offset offset) {
