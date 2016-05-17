@@ -127,6 +127,60 @@ public class FromSStoreToPostgresImplementation implements MigrationImplementati
 
     }
     
+    public MigrationResult migrateBin() throws MigrationException {
+	log.info(generalMessage + " Mode: migrate postgreSQL binary format");
+	long startTimeMigration = System.currentTimeMillis();
+	
+	try {
+	    sStorePipe = Pipe.INSTANCE.createAndGetFullName("sstore.out");
+	    executor = Executors.newFixedThreadPool(2);
+	    
+	    String copyFromString = SStoreSQLHandler.getExportCommand();
+	    System.out.println("pipe path is " + sStorePipe);
+	    CopyFromSStoreExecutor exportExecutor = new CopyFromSStoreExecutor(connectionFrom, copyFromString, fromTable, "psql",  sStorePipe);
+	    FutureTask<Long> exportTask = new FutureTask<Long>(exportExecutor);
+	    executor.submit(exportTask);
+
+//	    String createTableStatement = null;
+//	    createTableStatement = getCreatePostgreSQLTableStatementFromSStoreTable();
+
+	    connectionPostgres = PostgreSQLHandler.getConnection(connectionTo);
+	    connectionPostgres.setAutoCommit(false);
+//	    createTargetTableSchema(connectionPostgres, createTableStatement);
+	    
+	    CopyToPostgresExecutor loadExecutor = new CopyToPostgresExecutor(connectionPostgres,
+			PostgreSQLHandler.getLoadBinCommand(toTable), sStorePipe);
+	    FutureTask<Long> loadTask = new FutureTask<Long>(loadExecutor);
+	    executor.submit(loadTask);
+	    
+	    Long countexportElements = exportTask.get();
+	    Long countLoadedElements = loadTask.get();
+	    
+
+	    long endTimeMigration = System.currentTimeMillis();
+	    long durationMsec = endTimeMigration - startTimeMigration;
+	    MigrationStatistics stats = new MigrationStatistics(connectionFrom, connectionTo, fromTable, toTable,
+		    startTimeMigration, endTimeMigration, countexportElements, countLoadedElements, this.getClass().getName());
+//	    Monitor.addMigrationStats(stats);
+	    log.debug("Migration result,connectionFrom," + connectionFrom.toSimpleString() + ",connectionTo,"
+		    + connectionTo.toString() + ",fromTable," + fromTable + ",toArray," + toTable
+		    + ",startTimeMigration," + startTimeMigration + ",endTimeMigration," + endTimeMigration
+		    + ",countExtractedElements," + countLoadedElements + ",countLoadedElements," + "N/A"
+		    + ",durationMsec," + durationMsec + ","
+		    + Thread.currentThread().getStackTrace()[1].getMethodName());
+	    return new MigrationResult(countLoadedElements, countexportElements, " No information about number of loaded rows.", false);
+//	    return null;
+	} catch (SQLException | InterruptedException
+		| ExecutionException | IOException | RunShellException exception) {
+//	     MigrationException migrationException =
+//	     handleException(exception, "Migration in CSV format failed. ");
+	     throw new MigrationException(errMessage + " " + exception.getMessage());
+	} finally {
+	     cleanResources();
+	}
+
+    }
+    
     /**
 	 * Clean resources of this instance of the migrator at the end of migration.
 	 * 
@@ -175,9 +229,7 @@ public class FromSStoreToPostgresImplementation implements MigrationImplementati
     
     /**
 	 * Get the copy to command to PostgreSQL.
-	 * 
-	 * example: copy region from '/tmp/adam_test.csv' with (format 'csv',
-	 * delimiter ',', header true, quote "'");
+	 *
 	 *
 	 * @return the copy command
 	 */
@@ -185,7 +237,7 @@ public class FromSStoreToPostgresImplementation implements MigrationImplementati
 		StringBuilder copyTo = new StringBuilder("copy ");
 		copyTo.append(table);
 		copyTo.append(" from STDIN with ");
-		copyTo.append("(format csv, delimiter ',', header true, quote \"'\")");
+		copyTo.append("(format csv, delimiter '|', header true, quote \"'\")");
 		String copyCommand = copyTo.toString();
 		log.debug(LogUtils.replace(copyCommand));
 		return copyCommand;

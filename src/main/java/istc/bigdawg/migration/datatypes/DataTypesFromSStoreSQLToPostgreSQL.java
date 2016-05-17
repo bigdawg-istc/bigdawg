@@ -14,6 +14,7 @@ public class DataTypesFromSStoreSQLToPostgreSQL {
 		// boolean
 		map.put("boolean","boolean");
 		// integers
+		map.put("int", "integer");
 		map.put("tinyint", "smallint");
 		map.put("smallint", "smallint");
 		map.put("integer", "integer");

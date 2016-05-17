@@ -36,6 +36,7 @@ public class FromSStoreToPostgres
         FromSStoreToPostgresImplementation migrator = new FromSStoreToPostgresImplementation(
         		connectionFrom, fromTable, connectionTo, toTable);
         return migrator.migrate();
+//        return migrator.migrateBin();
     }
 
     @Override
@@ -78,10 +79,10 @@ public class FromSStoreToPostgres
 		FromSStoreToPostgres migrator = new FromSStoreToPostgres();
 		SStoreSQLConnectionInfo conFrom = new SStoreSQLConnectionInfo("localhost",
 				"21212", "", "user", "password");
-		String tableFrom = "contestants";
+		String tableFrom = "dimtrade";
 		PostgreSQLConnectionInfo conTo = new PostgreSQLConnectionInfo(
-				"localhost", "5432", "test_db", "postgres", "test");
-		String tableTo = "contestants";
+				"localhost", "5432", "test_db", "pguser", "test");
+		String tableTo = "dimtrade1";
 		migrator.migrate(conFrom, tableFrom, conTo, tableTo);
 //		System.out.println(result);
 	}
