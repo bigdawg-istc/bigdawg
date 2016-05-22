@@ -89,7 +89,7 @@ public class FromSStoreToPostgresImplementation implements MigrationImplementati
 
 	    String createTableStatement = null;
 	    createTableStatement = getCreatePostgreSQLTableStatementFromSStoreTable();
-
+	    System.out.print(createTableStatement);
 	    connectionPostgres = PostgreSQLHandler.getConnection(connectionTo);
 	    connectionPostgres.setAutoCommit(false);
 	    createTargetTableSchema(connectionPostgres, createTableStatement);
@@ -107,7 +107,7 @@ public class FromSStoreToPostgresImplementation implements MigrationImplementati
 	    long durationMsec = endTimeMigration - startTimeMigration;
 	    MigrationStatistics stats = new MigrationStatistics(connectionFrom, connectionTo, fromTable, toTable,
 		    startTimeMigration, endTimeMigration, countexportElements, countLoadedElements, this.getClass().getName());
-	    Monitor.addMigrationStats(stats);
+//	    Monitor.addMigrationStats(stats);
 	    log.debug("Migration result,connectionFrom," + connectionFrom.toSimpleString() + ",connectionTo,"
 		    + connectionTo.toString() + ",fromTable," + fromTable + ",toArray," + toTable
 		    + ",startTimeMigration," + startTimeMigration + ",endTimeMigration," + endTimeMigration
@@ -141,12 +141,11 @@ public class FromSStoreToPostgresImplementation implements MigrationImplementati
 	    FutureTask<Long> exportTask = new FutureTask<Long>(exportExecutor);
 	    executor.submit(exportTask);
 
-//	    String createTableStatement = null;
-//	    createTableStatement = getCreatePostgreSQLTableStatementFromSStoreTable();
-
 	    connectionPostgres = PostgreSQLHandler.getConnection(connectionTo);
 	    connectionPostgres.setAutoCommit(false);
-//	    createTargetTableSchema(connectionPostgres, createTableStatement);
+	    String createTableStatement = null;
+	    createTableStatement = getCreatePostgreSQLTableStatementFromSStoreTable();
+	    createTargetTableSchema(connectionPostgres, createTableStatement);
 	    
 	    CopyToPostgresExecutor loadExecutor = new CopyToPostgresExecutor(connectionPostgres,
 			PostgreSQLHandler.getLoadBinCommand(toTable), sStorePipe);
@@ -170,7 +169,7 @@ public class FromSStoreToPostgresImplementation implements MigrationImplementati
 		    + Thread.currentThread().getStackTrace()[1].getMethodName());
 	    return new MigrationResult(countLoadedElements, countexportElements, " No information about number of loaded rows.", false);
 //	    return null;
-	} catch (SQLException | InterruptedException
+	} catch (SQLException | InterruptedException | UnsupportedTypeException
 		| ExecutionException | IOException | RunShellException exception) {
 //	     MigrationException migrationException =
 //	     handleException(exception, "Migration in CSV format failed. ");

@@ -3,6 +3,8 @@ package istc.bigdawg.migration;
 import static istc.bigdawg.network.NetworkUtils.isThisMyIpAddress;
 
 import java.net.InetAddress;
+import java.sql.*;
+import java.util.Properties;
 
 import org.apache.log4j.Logger;
 
@@ -75,16 +77,30 @@ public class FromSStoreToPostgres
 	 * @throws Exception
 	 */
 	public static void main(String[] args) throws Exception {
-		LoggerSetup.setLogging();
+//		LoggerSetup.setLogging();
 		FromSStoreToPostgres migrator = new FromSStoreToPostgres();
 		SStoreSQLConnectionInfo conFrom = new SStoreSQLConnectionInfo("localhost",
 				"21212", "", "user", "password");
-		String tableFrom = "dimtrade";
+		String tableFrom = "ORDERS";
 		PostgreSQLConnectionInfo conTo = new PostgreSQLConnectionInfo(
 				"localhost", "5432", "test_db", "pguser", "test");
-		String tableTo = "dimtrade1";
-		migrator.migrate(conFrom, tableFrom, conTo, tableTo);
-//		System.out.println(result);
+		String tableTo = "ORDERS";
+		long startTime = System.currentTimeMillis();
+		MigrationResult result = migrator.migrate(conFrom, tableFrom, conTo, tableTo);
+		long endTime = System.currentTimeMillis();
+		System.out.println("time duration is: " + (endTime - startTime));
+		System.out.println(result);
+		
+//		Properties props = new Properties();
+//		props.setProperty("user","pguser");
+//		props.setProperty("password","test");
+//		Connection conn = DriverManager.getConnection("jdbc:postgresql://localhost:5432/test_db", props);
+//		long startTime = System.currentTimeMillis();
+//        String sql1 = "select * from orders union select * from orders1";
+//        Statement stmt1 = conn.createStatement();
+//        ResultSet results1 = stmt1.executeQuery(sql1);
+//        long endTime = System.currentTimeMillis();
+//        System.out.println("time duration is: " + (endTime - startTime));
 	}
 
 }
