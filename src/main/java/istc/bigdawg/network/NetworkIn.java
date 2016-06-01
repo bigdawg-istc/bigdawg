@@ -37,10 +37,12 @@ public class NetworkIn implements Runnable {
 			responder.bind(fullAddress);
 
 			while (!Thread.currentThread().isInterrupted()) {
-				// Wait for next request from the client
+				log.debug("Wait for the next request from a client ...");
 				byte[] requestBytes = responder.recv(0);
+				log.debug("New message was received!");
 				if (requestBytes == null) {
-					log.error("ZeroMQ: The message was not received properly!");
+					log.error("ZeroMQ: The message was not received properly (request bytes is null)!");
+					continue; /* go back and wait for a next message */
 				}
 				Object requestObject = null;
 				try {
@@ -52,6 +54,7 @@ public class NetworkIn implements Runnable {
 					if (!isSuccess) {
 						log.error("ZeroMQ: The response was not sent properly!");
 					}
+					log.debug("The request was processed.");
 				} catch (NetworkException ex) {
 					String message = "The request could not be processed properly! " + ex.getMessage();
 					handleException(message, ex, responder);

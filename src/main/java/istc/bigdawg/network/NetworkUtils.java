@@ -36,7 +36,7 @@ public class NetworkUtils {
 	/** the address of this host/machine */
 	public static InetAddress THIS_HOST_ADDRESS;
 
-	/** the address of this host/machine */
+	/** the default timeout to wait for a reply from a server */
 	public static int TIMEOUT = 1000;
 
 	static {
