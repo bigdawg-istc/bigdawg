@@ -25,8 +25,7 @@ public interface MigrationNetworkRequest extends NetworkObject {
 	public MigrationResult execute() throws MigrationException;
 
 	/**
-	 * Process the result returned by the remote request to migrate some data
-	 * between.
+	 * Process the result returned by the remote request to migrate some data.
 	 * 
 	 * @param result
 	 *            the result (Object) returned by the request.
