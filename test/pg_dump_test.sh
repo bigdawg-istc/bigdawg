@@ -1,4 +1,4 @@
-#!/bin/bash 
+1;2802;0c#!/bin/bash 
 data_folder=/home/adam/data/
 file_from_postgres=${data_folder}from_postgres_waveform_.bin
 file_from_postgres_csv=${data_folder}from_postgres_waveform_.csv
@@ -88,14 +88,11 @@ function create_table {
 }
 
 function load_csv_postgres {
-    csv_file=${data_folder}waveform_${size}GB.csv
-    scp adam@francisco:${csv_file} ${csv_file}
-
     prepare_environment
     # load csv data to postgresql
     START=$(date +%s.%N)
     psql -U ${user} -d ${database} -p ${port} -a -c "drop table if exists ${postgresql_table}"
-    #psql -U adam -d test -p 5431 -a -c "begin; create table test_waveform (a bigint not null, b bigint not null, val double precision not null); copy test_waveform from '/home/adam/data/waveform_1GB.csv' with (format csv, header true, freeze); commit;"
+    #psql -U adam -d test -p 5431 -a -c "begin; create table test_waveform (a bigint not null, b bigint not null, val double precision not null); copy test_waveform from '/home/adam/data/waveform_001GB.csv' with (format csv, header true, freeze); commit;"
     psql -U ${user} -d ${database} -p ${port} -a -c "begin; create table ${postgresql_table} (a bigint not null, b bigint not null, val double precision not null); copy ${postgresql_table} from '${csv_file}' with (format csv, header true, freeze); commit;"
     END=$(date +%s.%N)
     DIFF_POSTGRES_CSV=$(echo "$END - $START" | bc)
@@ -106,24 +103,60 @@ function load_csv_postgres {
     TIMESTAMP=$(date -d"$CURRENT +$MINUTES minutes" '+%F_%T.%N_%Z')
     echo $TIMESTAMP, Loading time to postgresql,${DIFF_POSTGRES_CSV}, number of tuples in ${postgresql_table}, ${tuples}, size, $size >> potgres_load.log
 
-    rm ${csv_file}
+    prepare_environment
+    START=$(date +%s.%N)
+    time psql -U ${user} -d ${database} -p ${port} -a -c "copy ${postgresql_table} to '${csv_file}_copy' with (format csv, header true, freeze)"
+    END=$(date +%s.%N)
+    DIFF_POSTGRES_CSV_DUMP=$(echo "$END - $START" | bc)
+    size_file_copy=`du -s -h ${csv_file}_copy | awk '{print $1}'`
+    echo size of the csv exported from postgresql file: ${size_file_copy},DIFF_POSTGRES_CSV_DUMP,size,$size >> postgres_csv_dump.log
+    rm ${csv_file}_copy
+
+    prepare_environment
+    START=$(date +%s.%N)
+    time psql -U ${user} -d ${database} -p ${port} -a -c "copy ${postgresql_table} to '${csv_file}_copy_bin' with (format binary, freeze)"
+    END=$(date +%s.%N)
+    DIFF_POSTGRES_BIN_DUMP=$(echo "$END - $START" | bc)
+    size_file_copy=`du -s -h ${csv_file}_copy_bin | awk '{print $1}'`
+    echo size of the binary exported from postgresql file: ${size_file_copy},DIFF_POSTGRES_BIN_DUMP, size, $size >> postgres_bin_dump.log
+
+    prepare_environment
+    # load csv data to postgresql
+    START=$(date +%s.%N)
+    psql -U ${user} -d ${database} -p ${port} -a -c "drop table if exists ${postgresql_table}"
+    #psql -U adam -d test -p 5431 -a -c "begin; create table test_waveform (a bigint not null, b bigint not null, val double precision not null); copy test_waveform from '/home/adam/data/waveform_001GB.csv' with (format csv, header true, freeze); commit;"
+    psql -U ${user} -d ${database} -p ${port} -a -c "begin; create table ${postgresql_table} (a bigint not null, b bigint not null, val double precision not null); copy ${postgresql_table} from '${csv_file}_copy_bin' with (format binary, freeze); commit;"
+    END=$(date +%s.%N)
+    DIFF_POSTGRES_bin=$(echo "$END - $START" | bc)
+
+    select="select count(*) from ${postgresql_table}"
+    echo $select
+    tuples=$(echo $select | psql -d ${database} -p ${port} -P t -P format=unaligned)
+    TIMESTAMP=$(date -d"$CURRENT +$MINUTES minutes" '+%F_%T.%N_%Z')
+    echo $TIMESTAMP, Loading time to postgresql bin,${DIFF_POSTGRES_bin}, number of tuples ${postgresql_table}, ${tuples}, size, $size >> potgres_bin_load.log
+
+    rm ${csv_file}_copy_bin
 }
 
-for size in 10 1 2 5 10 15 20 30; do # 5 10 15 20 30 1 2 5 10 15 20 30; 1 2 5 10 15 20 1 2 5 10 15 20 1 2 5 10 15 20 30 ;  2 5 10 15 20 30 1 2 5 10 15 20 30 1 2 5 10 15 20 30 001
+for size in 10; do # 5 10 15 20 30 1 2 5 10 15 20 30; 1 2 5 10 15 20 1 2 5 10 15 20 1 2 5 10 15 20 30 ;  2 5 10 15 20 30 1 2 5 10 15 20 30 1 2 5 10 15 20 30 001
+    csv_file=${data_folder}waveform_${size}GB.csv
+    #scp adam@francisco:${csv_file} ${csv_file}
+    #load_csv_postgres
+
+    size_file=`du -s --block-size=1M ${csv_file} | awk '{print $1}'`
+    echo size of the csv file: $size_file
+    #rm ${csv_file}
+
     for compress in 0 1 2 3 4 5 6 7 8 9; do
 	export LD_LIBRARY_PATH=${pg_path}/lib:$LD_LIBRARY_PATH
 	export PATH=${pg_path}/lib:$PATH
 	export PATH=${pg_path}/bin:$PATH
 
-	load_csv_postgres
-
 	# between postgres
 	prepare_environment
 
-	size_file=`du -s -h ${csv_file} | awk '{print $1}'`
-	echo size of the csv file: $size_file
-
 	time_script pg_dump_restore.sh ${compress} ${size} ${size_file}
+	time_script pg_dump_restore_pipe.sh ${compress} ${size} ${size_file}
 
     done;
 done;

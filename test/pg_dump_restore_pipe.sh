@@ -52,41 +52,25 @@ size_file=${3:-"unkonwn"}
 
 psql -U ${user} -d ${database} -p 5430 -a -c "drop table if exists ${postgresql_table}; create table ${postgresql_table} (a bigint not null, b bigint not null, val double precision not null);"
 #time pg_dump --data-only --file /home/adam/data/pg_dump.out --format custom --schema public --no-owner --table test_waveform -v --compress 0 --lock-wait-timeout=10 --no-security-labels --no-tablespaces --section=data --dbname=test -p 5431 -h localhost -U postgres --no-password 
-dump_file=/home/adam/data/pg_dump.out
-rm -f ${dump_file}
-#mkfifo ${dump_file}
-chmod a+rw ${dump_file}
 
 START=$(date +%s.%N)
-time pg_dump --file ${dump_file} --format custom --schema public --no-owner --table ${postgresql_table} -v --compress ${compress} --lock-wait-timeout=10 --no-security-labels --no-tablespaces --section=data --dbname=${database} -p 5431 -h localhost -U adam --no-password --clean --if-exists --encoding=SQL_ASCII
+pg_dump --format custom --schema public --no-owner --table ${postgresql_table} -v --compress ${compress} --lock-wait-timeout=10 --no-security-labels --no-tablespaces --section=data --dbname=${database} -p 5431 -h localhost -U adam --no-password --clean --if-exists | pg_restore -v --host localhost --port 5430 -U adam --no-password --single-transaction -d test
 END=$(date +%s.%N)
 
 DIFF=$(echo "$END - $START" | bc)
 
-MSG="dump, $DIFF"
+MSG="migration (dump restore pipe), $DIFF"
 echo $MSG
 
-size_dump=`du -s --block-size=1M ${dump_file} | awk '{print $1}'`
-echo size of the backup: $size_dump
-
-TIMESTAMP=$(date -d"$CURRENT +$MINUTES minutes" '+%F_%T.%N_%Z')
-
-echo $TIMESTAMP,data size,$size,size dump,$size_dump,$START,$END,$MSG >> dump.log
-
-START=$(date +%s.%N)
-time pg_restore -v --host localhost --port 5430 -U adam --no-password --single-transaction -d test "${dump_file}"
-END=$(date +%s.%N)
-
-DIFF=$(echo "$END - $START" | bc)
-
-MSG="restore, $DIFF"
-echo $MSG
-LOG_MSG="${LOG_MSG},${MSG}"
 #psql -U ${user} -d ${database} -p 5430 -a -c "select count(*) from test_waveform"
 select="select count(*) from test_waveform"
 echo $select
 tuples=$(echo $select | psql -d ${database} -p 5430 -U ${user} -P t -P format=unaligned)
 
-echo $TIMESTAMP,data size,$size,size dump,$size_dump,size file,${size_file},tuples,${tuples},$START,$END,$MSG >> restore.log
+TIMESTAMP=$(date -d"$CURRENT +$MINUTES minutes" '+%F_%T.%N_%Z')
+echo $TIMESTAMP,data size,$size,size dump,tuples,${tuples},$size_dump,$START,$END,$MSG >> dump_restore_pipe.log
+
+
+
 
 
