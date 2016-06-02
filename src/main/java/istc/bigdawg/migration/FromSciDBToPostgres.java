@@ -3,15 +3,10 @@
  */
 package istc.bigdawg.migration;
 
-import static istc.bigdawg.network.NetworkUtils.isThisMyIpAddress;
-
-import java.net.InetAddress;
-
 import org.apache.log4j.Logger;
 
 import istc.bigdawg.LoggerSetup;
 import istc.bigdawg.exceptions.MigrationException;
-import istc.bigdawg.network.NetworkOut;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
@@ -21,8 +16,7 @@ import istc.bigdawg.scidb.SciDBConnectionInfo;
  * 
  * @author Adam Dziedzic
  */
-public class FromSciDBToPostgres
-		implements FromDatabaseToDatabase, MigrationNetworkRequest {
+public class FromSciDBToPostgres extends FromDatabaseToDatabase {
 
 	/**
 	 * The objects of the class are serializable.
@@ -51,19 +45,7 @@ public class FromSciDBToPostgres
 			this.connectionTo = (PostgreSQLConnectionInfo) connectionTo;
 			this.toTable = objectTo;
 			try {
-				/*
-				 * check if the address is not a local host
-				 */
-				String hostname = connectionFrom.getHost();
-				log.debug("SciDB hostname: " + hostname);
-				if (!isThisMyIpAddress(InetAddress.getByName(hostname))) {
-					log.debug("Migration will be executed remotely.");
-					Object result = NetworkOut.send(this, hostname);
-					return processResult(result);
-				}
-				/* execute the migration locally */
-				log.debug("Migration will be executed locally.");
-				return execute();
+				return this.dispatch(connectionTo);
 			} catch (Exception e) {
 				throw new MigrationException(e.getMessage(), e);
 			}
@@ -100,7 +82,8 @@ public class FromSciDBToPostgres
 		PostgreSQLConnectionInfo conTo = new PostgreSQLConnectionInfo(
 				"localhost", "5431", "test", "postgres", "test");
 		String tableTo = "region";
-		MigrationResult result = migrator.migrate(conFrom, arrayFrom, conTo, tableTo);
+		MigrationResult result = migrator.migrate(conFrom, arrayFrom, conTo,
+				tableTo);
 		System.out.println(result);
 	}
 

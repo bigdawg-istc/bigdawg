@@ -29,7 +29,12 @@ import istc.bigdawg.utils.StackTrace;
  * @author Adam Dziedzic
  * 
  */
-public class FromPostgresToPostgres implements FromDatabaseToDatabase {
+public class FromPostgresToPostgres extends FromDatabaseToDatabase {
+
+	/**
+	 * The objects of the class are serializable.
+	 */
+	private static final long serialVersionUID = 1L;
 
 	/*
 	 * log
@@ -38,6 +43,11 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 			.getLogger(FromPostgresToPostgres.class);
 
 	private static final int numberOfThreads = 2;
+
+	private PostgreSQLConnectionInfo connectionFrom;
+	private String fromTable;
+	private PostgreSQLConnectionInfo connectionTo;
+	private String toTable;
 
 	/**
 	 * Migrate data between instances of PostgreSQL.
@@ -48,10 +58,12 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 		logger.debug("General data migration: " + this.getClass().getName());
 		if (connectionFrom instanceof PostgreSQLConnectionInfo
 				&& connectionTo instanceof PostgreSQLConnectionInfo) {
+			this.connectionFrom = (PostgreSQLConnectionInfo) connectionFrom;
+			this.fromTable = fromTable;
+			this.connectionTo = (PostgreSQLConnectionInfo) connectionTo;
+			this.toTable = toTable;
 			try {
-				return this.migrate((PostgreSQLConnectionInfo) connectionFrom,
-						fromTable, (PostgreSQLConnectionInfo) connectionTo,
-						toTable);
+				return this.dispatch(connectionTo);
 			} catch (Exception e) {
 				throw new MigrationException(e.getMessage(), e);
 			}
@@ -86,14 +98,14 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 	}
 
 	/**
+	 * @see istc.bigdawg.migration.MigrationNetworkRequest#execute()
+	 * 
 	 * @return {@link MigrationResult} with information about the migration
 	 *         process
-	 * @throws Exception
 	 * 
 	 */
-	public MigrationResult migrate(PostgreSQLConnectionInfo connectionFrom,
-			String fromTable, PostgreSQLConnectionInfo connectionTo,
-			String toTable) throws Exception {
+	@Override
+	public MigrationResult execute() throws MigrationException {
 		long startTimeMigration = System.currentTimeMillis();
 		TimeStamp startTimeStamp = TimeStamp.getCurrentTime();
 		logger.debug("start migration: " + startTimeStamp.toDateString());
@@ -149,7 +161,9 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 					+ countExtractedElements + ",countLoadedElements,"
 					+ countLoadedElements + ",durationMsec," + durationMsec);
 			/**
-			 * log table query: copy (select time,message from logs where message like 'Migration result,%' order by time desc) to '/tmp/migration_log.csv' with (format csv);
+			 * log table query: copy (select time,message from logs where
+			 * message like 'Migration result,%' order by time desc) to
+			 * '/tmp/migration_log.csv' with (format csv);
 			 */
 			return new MigrationResult(countExtractedElements,
 					countLoadedElements);
@@ -158,17 +172,43 @@ public class FromPostgresToPostgres implements FromDatabaseToDatabase {
 			String msg = e.getMessage()
 					+ " Migration failed. Task did not finish correctly.";
 			logger.error(msg + StackTrace.getFullStackTrace(e), e);
-			conTo.rollback();
-			conFrom.rollback();
-			throw e;
+			try {
+				conTo.rollback();
+			} catch (SQLException ex) {
+				String message = "Could not roll back transactions in the source database after failure in data migration: "
+						+ ex.getMessage();
+				logger.error(message);
+				throw new MigrationException(message, ex);
+			}
+			try {
+				conFrom.rollback();
+			} catch (SQLException ex) {
+				String message = "Could not roll back transactions in the destination database after failure in data migration: "
+						+ ex.getMessage();
+				logger.error(message);
+				throw new MigrationException(message, ex);
+			}
+			throw new MigrationException(e.getMessage(), e);
 		} finally {
 			if (conFrom != null) {
-				// calling closed on an already closed connection has no effect
-				conFrom.close();
+				/*
+				 * calling closed on an already closed connection has no effect
+				 */
+				try {
+					conFrom.close();
+				} catch (SQLException e) {
+					String msg = "Could not close the source database connection.";
+					logger.error(msg + StackTrace.getFullStackTrace(e), e);
+				}
 				conFrom = null;
 			}
 			if (conTo != null) {
-				conTo.close();
+				try {
+					conTo.close();
+				} catch (SQLException e) {
+					String msg = "Could not close the destination database connection.";
+					logger.error(msg + StackTrace.getFullStackTrace(e), e);
+				}
 				conTo = null;
 			}
 			if (executor != null && !executor.isShutdown()) {
