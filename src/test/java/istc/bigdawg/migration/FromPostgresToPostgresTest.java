@@ -58,8 +58,8 @@ public class FromPostgresToPostgresTest {
 			MigrationResult result = migrator.migrate(conInfoFrom, tableName,
 					conInfoTo, tableName);
 
-			assertEquals(result.getCountExtractedElements(), Long.valueOf(1L));
-			assertEquals(result.getCountLoadedElements(), Long.valueOf(1L));
+			assertEquals(Long.valueOf(1L), result.getCountExtractedElements());
+			assertEquals(Long.valueOf(1L), result.getCountLoadedElements());
 
 			JdbcQueryResult qresult = postgres2
 					.executeQueryPostgreSQL("select * from " + tableName);

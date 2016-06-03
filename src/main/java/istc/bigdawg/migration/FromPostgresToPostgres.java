@@ -63,7 +63,7 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 			this.connectionTo = (PostgreSQLConnectionInfo) connectionTo;
 			this.toTable = toTable;
 			try {
-				return this.dispatch(connectionTo);
+				return this.dispatch(connectionFrom);
 			} catch (Exception e) {
 				throw new MigrationException(e.getMessage(), e);
 			}

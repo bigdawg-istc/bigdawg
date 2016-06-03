@@ -45,12 +45,12 @@ public abstract class FromDatabaseToDatabase
 	 * @throws NetworkException
 	 * @throws MigrationException
 	 */
-	MigrationResult dispatch(ConnectionInfo connectionTo)
+	MigrationResult dispatch(ConnectionInfo connectionFrom)
 			throws UnknownHostException, NetworkException, MigrationException {
 		/*
 		 * check if the address is not a local host
 		 */
-		String hostname = connectionTo.getHost();
+		String hostname = connectionFrom.getHost();
 		log.debug("hostname from which the data is migrated: " + hostname);
 		if (!isThisMyIpAddress(InetAddress.getByName(hostname))) {
 			log.debug("Migration will be executed remotely.");

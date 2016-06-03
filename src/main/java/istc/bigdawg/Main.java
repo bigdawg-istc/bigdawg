@@ -12,7 +12,6 @@ import istc.bigdawg.catalog.CatalogInstance;
 import istc.bigdawg.migration.MigratorTask;
 import istc.bigdawg.monitoring.MonitoringTask;
 import istc.bigdawg.properties.BigDawgConfigProperties;
-import istc.bigdawg.utils.IslandsAndCast;
 
 /**
  * Main class.
@@ -42,7 +41,8 @@ public class Main {
 		// create and start a new instance of grizzly http server
 		// exposing the Jersey application at BASE_URI
 		System.out.println("base uri: " + BASE_URI);
-		return GrizzlyHttpServerFactory.createHttpServer(URI.create(BASE_URI), rc);
+		return GrizzlyHttpServerFactory.createHttpServer(URI.create(BASE_URI),
+				rc);
 	}
 
 	/**
@@ -70,7 +70,8 @@ public class Main {
 		MigratorTask migratorTask = new MigratorTask();
 		logger.info("Server started");
 		System.out.println(String.format(
-				"Jersey app started with WADL available at " + "%sapplication.wadl\nHit enter to stop it...",
+				"Jersey app started with WADL available at "
+						+ "%sapplication.wadl\nHit enter to stop it...",
 				BASE_URI));
 		System.in.read();
 		CatalogInstance.INSTANCE.closeCatalog();

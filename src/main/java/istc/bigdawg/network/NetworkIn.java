@@ -31,7 +31,9 @@ public class NetworkIn implements Runnable {
 		// Socket to talk to clients
 		ZMQ.Socket responder = context.socket(ZMQ.REP);
 		try {
-			String fullAddress = "tcp://" + BigDawgConfigProperties.INSTANCE.getGrizzlyIpAddress() + ":"
+			// The * can be replaced by:
+			// BigDawgConfigProperties.INSTANCE.getGrizzlyIpAddress()
+			String fullAddress = "tcp://" + "*" + ":"
 					+ BigDawgConfigProperties.INSTANCE.getNetworkMessagePort();
 			log.debug(fullAddress);
 			responder.bind(fullAddress);
@@ -41,7 +43,8 @@ public class NetworkIn implements Runnable {
 				byte[] requestBytes = responder.recv(0);
 				log.debug("New message was received!");
 				if (requestBytes == null) {
-					log.error("ZeroMQ: The message was not received properly (request bytes is null)!");
+					log.error(
+							"ZeroMQ: The message was not received properly (request bytes is null)!");
 					continue; /* go back and wait for a next message */
 				}
 				Object requestObject = null;
@@ -52,11 +55,13 @@ public class NetworkIn implements Runnable {
 					// Send reply back
 					boolean isSuccess = responder.send(serialize(result), 0);
 					if (!isSuccess) {
-						log.error("ZeroMQ: The response was not sent properly!");
+						log.error(
+								"ZeroMQ: The response was not sent properly!");
 					}
 					log.debug("The request was processed.");
 				} catch (NetworkException ex) {
-					String message = "The request could not be processed properly! " + ex.getMessage();
+					String message = "The request could not be processed properly! "
+							+ ex.getMessage();
 					handleException(message, ex, responder);
 				} catch (Exception ex) {
 					ex.printStackTrace();
@@ -78,7 +83,8 @@ public class NetworkIn implements Runnable {
 	 * @param ex
 	 * @param responder
 	 */
-	private void handleException(String message, Exception ex, ZMQ.Socket responder) {
+	private void handleException(String message, Exception ex,
+			ZMQ.Socket responder) {
 		log.error(message);
 		byte[] exBytes = message.getBytes();
 		/* try to send the exception message */
@@ -90,7 +96,8 @@ public class NetworkIn implements Runnable {
 		}
 		boolean isSuccess = responder.send(exBytes, 0);
 		if (!isSuccess) {
-			log.error("ZeroMQ: The response (from NetworkException) was not sent properly!");
+			log.error(
+					"ZeroMQ: The response (from NetworkException) was not sent properly!");
 		}
 	}
 
