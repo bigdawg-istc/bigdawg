@@ -1,7 +1,7 @@
 /**
  * 
  */
-package istc.bigdawg.zookeeper;
+package istc.bigdawg.zookeeper.znode;
 
 import java.io.Serializable;
 

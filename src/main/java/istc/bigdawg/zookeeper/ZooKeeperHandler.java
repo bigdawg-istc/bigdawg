@@ -13,6 +13,7 @@ import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.ZooKeeper;
+import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Stat;
 
 import istc.bigdawg.LoggerSetup;
@@ -38,11 +39,40 @@ public class ZooKeeperHandler {
 		this.zk = zk;
 	}
 
-	/** Create a znode in ZooKeeper ensemble */
+	/**
+	 * Create a znode in ZooKeeper ensemble, with default ACL - completely open
+	 * and in persistent mode.
+	 */
 	public void createZnode(String path, byte[] data)
 			throws KeeperException, InterruptedException {
-		zk.create(path, data, ZooDefs.Ids.OPEN_ACL_UNSAFE,
+		this.createZnode(path, data, ZooDefs.Ids.OPEN_ACL_UNSAFE,
 				CreateMode.PERSISTENT);
+	}
+
+	/** Create znode with all parameters provided. */
+	public void createZnode(String path, byte[] data, List<ACL> acl,
+			CreateMode createMode)
+					throws KeeperException, InterruptedException {
+		zk.create(path, data, acl, createMode);
+	}
+
+	/**
+	 * Create a znode in ZooKeeper ensemble if it does not already exists.
+	 * 
+	 * @throws InterruptedException
+	 * @throws KeeperException
+	 */
+	public void createZnodeIfNotExists(String path, byte[] data, List<ACL> acl,
+			CreateMode createMode)
+					throws KeeperException, InterruptedException {
+		/* check if the znode exists */
+		Stat stat = this.znodeExists(path);
+		if (stat != null) {
+			log.info("The znode with path: '" + path + "' already exists.");
+		} else {
+			log.info("There is no znode with the path: '" + path + "'");
+			this.createZnode(path, data, acl, createMode);
+		}
 	}
 
 	/**

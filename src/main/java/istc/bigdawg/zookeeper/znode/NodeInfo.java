@@ -1,7 +1,7 @@
 /**
  * 
  */
-package istc.bigdawg.zookeeper;
+package istc.bigdawg.zookeeper.znode;
 
 import java.time.Instant;
 
@@ -16,7 +16,10 @@ public class NodeInfo implements ZooKeeperData {
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
-	
+
+	/* General information about the znode. */
+	private String information;
+
 	/*
 	 * The number of milliseconds since January 1, 1970, 00:00:00 GMT
 	 * 
@@ -34,10 +37,25 @@ public class NodeInfo implements ZooKeeperData {
 	}
 
 	/**
-	 * @return the creationTime
+	* 
+	*/
+	public NodeInfo(String information) {
+		this();
+		this.information = information;
+	}
+
+	/**
+	 * @return the creationTime of this info
 	 */
 	public Instant getCreationTime() {
 		return creationTime;
+	}
+
+	/**
+	 * @return the information
+	 */
+	public String getInformation() {
+		return information;
 	}
 
 }

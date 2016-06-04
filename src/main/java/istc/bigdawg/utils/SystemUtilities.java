@@ -33,8 +33,7 @@ public class SystemUtilities {
 	/*
 	 * @return name of this machine
 	 */
-	@SuppressWarnings("unused")
-	private String getHostName() {
+	public static String getHostName() {
 		Map<String, String> env = System.getenv();
 		if (env.containsKey("COMPUTERNAME")) {
 			return env.get("COMPUTERNAME");
