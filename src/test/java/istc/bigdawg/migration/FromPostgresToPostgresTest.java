@@ -27,7 +27,10 @@ import istc.bigdawg.postgresql.PostgreSQLHandler;
 public class FromPostgresToPostgresTest {
 
 	/* the class for the PostgreSQL <-> PostgreSQL migration */
-	FromPostgresToPostgres migrator = new FromPostgresToPostgres();
+	private FromPostgresToPostgres migrator = new FromPostgresToPostgres();
+
+	private String localIP = "205.208.123.174";
+	private String remoteIP = "madison";
 
 	@Before
 	public void setUp() throws IOException {
@@ -99,12 +102,24 @@ public class FromPostgresToPostgresTest {
 	}
 
 	@Test
-	public void testFromPostgresToPostgresNetwork() throws Exception {
+	public void testFromPostgresToPostgresNetworkFromLocalToRemote()
+			throws Exception {
 		System.out.println("Migrating data from PostgreSQL to PostgreSQL");
 		PostgreSQLConnectionInfo conInfoFrom = new PostgreSQLConnectionInfo(
-				"localhost", "5431", "test", "pguser", "test");
+				localIP, "5431", "test", "pguser", "test");
 		PostgreSQLConnectionInfo conInfoTo = new PostgreSQLConnectionInfo(
-				"madison", "5431", "test", "pguser", "ADAM12345testBorja2016");
+				remoteIP, "5431", "test", "pguser", "ADAM12345testBorja2016");
+		migrateTest(conInfoFrom, conInfoTo);
+	}
+
+	@Test
+	public void testFromPostgresToPostgresNetworkFromRemoteToLocal()
+			throws Exception {
+		System.out.println("Migrating data from PostgreSQL to PostgreSQL");
+		PostgreSQLConnectionInfo conInfoFrom = new PostgreSQLConnectionInfo(
+				remoteIP, "5431", "test", "pguser", "ADAM12345testBorja2016");
+		PostgreSQLConnectionInfo conInfoTo = new PostgreSQLConnectionInfo(
+				localIP, "5431", "test", "pguser", "test");
 		migrateTest(conInfoFrom, conInfoTo);
 	}
 

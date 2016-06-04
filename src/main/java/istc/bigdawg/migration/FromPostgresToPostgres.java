@@ -63,7 +63,7 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 			this.connectionTo = (PostgreSQLConnectionInfo) connectionTo;
 			this.toTable = toTable;
 			try {
-				return this.dispatch(connectionFrom);
+				return this.dispatch();
 			} catch (Exception e) {
 				throw new MigrationException(e.getMessage(), e);
 			}
@@ -215,6 +215,22 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 				executor.shutdownNow();
 			}
 		}
+	}
+	
+	/* (non-Javadoc)
+	 * @see istc.bigdawg.migration.FromDatabaseToDatabase#getConnectionFrom()
+	 */
+	@Override
+	public ConnectionInfo getConnectionFrom() {
+		return connectionFrom;
+	}
+
+	/* (non-Javadoc)
+	 * @see istc.bigdawg.migration.FromDatabaseToDatabase#getConnecitonTo()
+	 */
+	@Override
+	public ConnectionInfo getConnecitonTo() {
+		return connectionTo;
 	}
 
 	/**

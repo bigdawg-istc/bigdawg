@@ -34,19 +34,16 @@ public class NetworkUtils {
 	private static Logger log = Logger.getLogger(NetworkUtils.class);
 
 	/** the address of this host/machine */
-	public static InetAddress THIS_HOST_ADDRESS;
+	public static String THIS_HOST_ADDRESS;
 
 	/** the default timeout to wait for a reply from a server */
 	public static int TIMEOUT = 1000;
 
 	static {
-		try {
-			THIS_HOST_ADDRESS = InetAddress.getLocalHost();
-			TIMEOUT = BigDawgConfigProperties.INSTANCE
-					.getNetworkRequestTimeout();
-		} catch (UnknownHostException e) {
-			e.printStackTrace();
-		}
+		THIS_HOST_ADDRESS = BigDawgConfigProperties.INSTANCE
+				.getGrizzlyIpAddress() + ":"
+				+ BigDawgConfigProperties.INSTANCE.getGrizzlyPort();
+		TIMEOUT = BigDawgConfigProperties.INSTANCE.getNetworkRequestTimeout();
 	}
 
 	/**

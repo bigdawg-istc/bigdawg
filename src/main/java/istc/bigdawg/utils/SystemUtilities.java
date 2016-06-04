@@ -6,6 +6,7 @@ package istc.bigdawg.utils;
 import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
+import java.util.Map;
 
 import org.apache.log4j.Logger;
 
@@ -27,6 +28,23 @@ public class SystemUtilities {
 		String property = "java.io.tmpdir";
 		String tempDir = System.getProperty(property);
 		return tempDir;
+	}
+
+	/*
+	 * @return name of this machine
+	 */
+	@SuppressWarnings("unused")
+	private String getHostName() {
+		Map<String, String> env = System.getenv();
+		if (env.containsKey("COMPUTERNAME")) {
+			return env.get("COMPUTERNAME");
+		}
+		else if (env.containsKey("HOSTNAME")) {
+			return env.get("HOSTNAME");
+		}
+		else {
+			return "Unknown Computer";
+		}
 	}
 
 	/**

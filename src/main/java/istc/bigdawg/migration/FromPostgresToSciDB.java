@@ -21,12 +21,11 @@ import istc.bigdawg.scidb.SciDBConnectionInfo;
  * @author Adam Dziedzic
  *
  */
-public class FromPostgresToSciDB
-		extends FromDatabaseToDatabase {
+public class FromPostgresToSciDB extends FromDatabaseToDatabase {
 
 	/* log */
 	private static Logger log = Logger.getLogger(FromPostgresToSciDB.class);
-	
+
 	/**
 	 * The object of the class is serializable.
 	 */
@@ -62,7 +61,7 @@ public class FromPostgresToSciDB
 				this.fromTable = fromTable;
 				this.connectionTo = (SciDBConnectionInfo) connectionTo;
 				this.toArray = toArray;
-				return this.dispatch(connectionTo);
+				return this.dispatch();
 			} catch (MigrationException | UnknownHostException
 					| NetworkException e) {
 				throw new MigrationException(e.getMessage(), e);
@@ -88,6 +87,26 @@ public class FromPostgresToSciDB
 		return migrator.migrate();
 	}
 
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see istc.bigdawg.migration.FromDatabaseToDatabase#getConnectionFrom()
+	 */
+	@Override
+	public ConnectionInfo getConnectionFrom() {
+		return connectionFrom;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see istc.bigdawg.migration.FromDatabaseToDatabase#getConnecitonTo()
+	 */
+	@Override
+	public ConnectionInfo getConnecitonTo() {
+		return connectionTo;
+	}
+
 	/**
 	 * @param args
 	 * @throws IOException
@@ -98,14 +117,15 @@ public class FromPostgresToSciDB
 		LoggerSetup.setLogging();
 		PostgreSQLConnectionInfo conFrom = new PostgreSQLConnectionInfo(
 				"localhost", "5431", "test", "postgres", "test");
-//		PostgreSQLConnectionInfo conFrom = new PostgreSQLConnectionInfo(
-//				"localhost", "5431", "test", "postgres", "test");
+		// PostgreSQLConnectionInfo conFrom = new PostgreSQLConnectionInfo(
+		// "localhost", "5431", "test", "postgres", "test");
 		String fromTable = "region";
 		SciDBConnectionInfo conTo = new SciDBConnectionInfo("localhost", "1239",
 				"scidb", "mypassw", "/opt/scidb/14.12/bin/");
 		String toArray = "region";
 		FromPostgresToSciDB migrator = new FromPostgresToSciDB();
-		MigrationResult result = migrator.migrate(conFrom, fromTable, conTo, toArray);
+		MigrationResult result = migrator.migrate(conFrom, fromTable, conTo,
+				toArray);
 		System.out.println("migration result: " + result);
 	}
 

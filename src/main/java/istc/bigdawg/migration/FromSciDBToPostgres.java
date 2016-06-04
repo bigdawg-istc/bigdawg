@@ -45,7 +45,7 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase {
 			this.connectionTo = (PostgreSQLConnectionInfo) connectionTo;
 			this.toTable = objectTo;
 			try {
-				return this.dispatch(connectionTo);
+				return this.dispatch();
 			} catch (Exception e) {
 				throw new MigrationException(e.getMessage(), e);
 			}
@@ -85,6 +85,22 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase {
 		MigrationResult result = migrator.migrate(conFrom, arrayFrom, conTo,
 				tableTo);
 		System.out.println(result);
+	}
+
+	/* (non-Javadoc)
+	 * @see istc.bigdawg.migration.FromDatabaseToDatabase#getConnectionFrom()
+	 */
+	@Override
+	public ConnectionInfo getConnectionFrom() {
+		return connectionFrom;
+	}
+
+	/* (non-Javadoc)
+	 * @see istc.bigdawg.migration.FromDatabaseToDatabase#getConnecitonTo()
+	 */
+	@Override
+	public ConnectionInfo getConnecitonTo() {
+		return connectionTo;
 	}
 
 }

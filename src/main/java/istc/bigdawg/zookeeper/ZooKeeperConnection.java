@@ -37,9 +37,9 @@ public class ZooKeeperConnection {
 	 *            connection string containing a comma separated list of
 	 *            host:port pairs
 	 */
-	public ZooKeeper connect(String hostPort, int timeout)
+	public ZooKeeper connect(String hostPort, int sessionTimeout)
 			throws IOException, InterruptedException {
-		zoo = new ZooKeeper(hostPort, timeout, new Watcher() {
+		zoo = new ZooKeeper(hostPort, sessionTimeout, new Watcher() {
 			public void process(WatchedEvent we) {
 				/**
 				 * KeeperState.SyncConnected - the client is in the connected

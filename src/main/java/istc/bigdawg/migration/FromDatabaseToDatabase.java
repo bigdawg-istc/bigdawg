@@ -23,6 +23,10 @@ import istc.bigdawg.query.ConnectionInfo;
 public abstract class FromDatabaseToDatabase
 		implements MigrationNetworkRequest {
 
+	
+	abstract public ConnectionInfo getConnectionFrom();
+	abstract public ConnectionInfo getConnecitonTo(); 
+	
 	/**
 	 * For serialization.
 	 */
@@ -45,12 +49,12 @@ public abstract class FromDatabaseToDatabase
 	 * @throws NetworkException
 	 * @throws MigrationException
 	 */
-	MigrationResult dispatch(ConnectionInfo connectionFrom)
+	MigrationResult dispatch()
 			throws UnknownHostException, NetworkException, MigrationException {
 		/*
 		 * check if the address is not a local host
 		 */
-		String hostname = connectionFrom.getHost();
+		String hostname = this.getConnectionFrom().getHost();
 		log.debug("hostname from which the data is migrated: " + hostname);
 		if (!isThisMyIpAddress(InetAddress.getByName(hostname))) {
 			log.debug("Migration will be executed remotely.");

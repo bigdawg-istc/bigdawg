@@ -26,7 +26,6 @@ public enum BigDawgConfigProperties {
 
 	private String accumuloIstanceType;
 	private String accumuloIstanceName;
-	private String accumuloZooKeepers;
 	private String accumuloUser;
 	private String accumuloPasswordToken;
 
@@ -55,6 +54,8 @@ public enum BigDawgConfigProperties {
 
 	private String migratorTempDir;
 	private String cmigratorDir;
+	
+	private String zooKeepers;
 
 	private BigDawgConfigProperties() throws AssertionError {
 		Properties prop = new Properties();
@@ -89,7 +90,6 @@ public enum BigDawgConfigProperties {
 
 		this.accumuloIstanceType = prop.getProperty("main.accumulo.instanceType");
 		this.accumuloIstanceName = prop.getProperty("main.accumulo.instanceName");
-		this.accumuloZooKeepers = prop.getProperty("main.accumulo.zooKeepers");
 		this.accumuloUser = prop.getProperty("main.accumulo.user");
 		this.accumuloPasswordToken = prop.getProperty("main.accumulo.passwordToken");
 		this.accumuloShellScript = prop.getProperty("main.accumulo.shell.script");
@@ -117,6 +117,8 @@ public enum BigDawgConfigProperties {
 		this.networkRequestTimeout = Integer.valueOf(prop.getProperty("main.network.request.timeout"));
 		this.migratorTempDir = prop.getProperty("main.migrator.temp.dir");
 		this.cmigratorDir = prop.getProperty("main.cmigrator.dir");
+		
+		this.zooKeepers = prop.getProperty("main.zooKeepers");
 	}
 
 	/**
@@ -136,8 +138,8 @@ public enum BigDawgConfigProperties {
 	/**
 	 * @return the accumuloZooKeepers
 	 */
-	public String getAccumuloZooKeepers() {
-		return accumuloZooKeepers;
+	public String getZooKeepers() {
+		return zooKeepers;
 	}
 
 	/**

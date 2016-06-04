@@ -113,6 +113,7 @@ public class AccumuloInstance {
 			throws AccumuloException, AccumuloSecurityException {
 		System.out.println("Started mock instance.");
 		Instance inst = new MockInstance(accInst.instanceType.name());
+		@SuppressWarnings("deprecation")
 		Connector conn = inst.getConnector("root", new byte[] {});
 		accInst.conn = conn;
 		return accInst;
@@ -121,7 +122,7 @@ public class AccumuloInstance {
 	private static AccumuloInstance getFullInstance(AccumuloInstance accInst)
 			throws AccumuloException, AccumuloSecurityException {
 		accInst.zooKeepers = BigDawgConfigProperties.INSTANCE
-				.getAccumuloZooKeepers();
+				.getZooKeepers();
 		accInst.username = BigDawgConfigProperties.INSTANCE.getAccumuloUser();
 		accInst.passwordToken = BigDawgConfigProperties.INSTANCE
 				.getAccumuloPasswordToken();
