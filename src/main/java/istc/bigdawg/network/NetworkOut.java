@@ -81,9 +81,12 @@ public class NetworkOut {
 			/* -1 is no timeout (wait forever) */
 			int timeout = -1;
 			log.debug(
-					"the receiver is active now; send request and wait for the reply from: " + fullAddress);
+					"the receiver is active now; send request and wait for the reply from: "
+							+ fullAddress);
+
 			Object reply = sendWaitForReply(object, requester, timeout);
 			log.debug("Reply was received from: " + fullAddress);
+			log.debug("Reply content: " + reply);
 			return reply;
 		} finally {
 			requester.close();

@@ -168,7 +168,6 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 			return new MigrationResult(countExtractedElements,
 					countLoadedElements);
 		} catch (Exception e) {
-			e.printStackTrace();
 			String msg = e.getMessage()
 					+ " Migration failed. Task did not finish correctly.";
 			logger.error(msg + StackTrace.getFullStackTrace(e), e);

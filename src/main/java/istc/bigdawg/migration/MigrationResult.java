@@ -5,6 +5,11 @@ package istc.bigdawg.migration;
 
 import java.io.Serializable;
 
+import org.apache.log4j.Logger;
+
+import istc.bigdawg.exceptions.MigrationException;
+import istc.bigdawg.exceptions.NetworkException;
+
 /**
  * Results from a migration execution.
  * 
@@ -13,7 +18,7 @@ import java.io.Serializable;
 public class MigrationResult implements Serializable {
 
 	/**
-	 * the objects of the class are serializable
+	 * THE objects of the class are serializable
 	 */
 	private static final long serialVersionUID = 1L;
 	private Long countExtractedElements;
@@ -76,7 +81,46 @@ public class MigrationResult implements Serializable {
 		return countLoadedElements;
 	}
 
-	/* (non-Javadoc)
+	/**
+	 * Process the result returned by the remote request to migrate some data.
+	 * 
+	 * @param result
+	 *            the result (Object) returned by the request.
+	 * @return {@link MigrationResult} if request was successful
+	 * @throws MigrationException
+	 */
+	public static MigrationResult processResult(Object result)
+			throws MigrationException {
+		/* log */
+		Logger log = Logger.getLogger(MigrationResult.class);
+		if (result == null) {
+			String message = "No result returned from migration!";
+			log.error(message);
+			throw new MigrationException(message);
+		}
+		if (result instanceof MigrationResult) {
+			return (MigrationResult) result;
+		} else if (result instanceof MigrationException) {
+			throw (MigrationException) result;
+		} else if (result instanceof NetworkException) {
+			NetworkException ex = (NetworkException) result;
+			String message = "Problem with the network: " + ex.getMessage();
+			log.error(message);
+			throw new MigrationException(message);
+		} else if (result instanceof Exception) {
+			Exception e = (Exception) result;
+			log.error(e.getMessage());
+			throw new MigrationException(e.getMessage());
+		}
+		String message = "Migration was executed on a remote host but the returned result is unexepcted: "
+				+ result.toString();
+		log.error(message);
+		throw new MigrationException(message);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#toString()
 	 */
 	@Override
@@ -87,7 +131,9 @@ public class MigrationResult implements Serializable {
 				+ isError + "]";
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#hashCode()
 	 */
 	@Override
@@ -103,7 +149,9 @@ public class MigrationResult implements Serializable {
 		return result;
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
@@ -134,5 +182,5 @@ public class MigrationResult implements Serializable {
 			return false;
 		return true;
 	}
-	
+
 }

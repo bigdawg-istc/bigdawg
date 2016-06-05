@@ -7,7 +7,6 @@ import org.apache.log4j.Logger;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs;
-import org.apache.zookeeper.ZooKeeper;
 
 import istc.bigdawg.exceptions.NetworkException;
 import istc.bigdawg.network.NetworkUtils;
@@ -52,17 +51,21 @@ public class ZooKeeperUtils {
 	 */
 	public static final String tables = "/tables";
 
-	/*
-	 * the object that represents an active connection of this BigDAWG node to
-	 * ZooKeeper
-	 */
-	private static ZooKeeperConnection zooKeeperConnection = new ZooKeeperConnection();
+	private static final String znodePath;
+
+	static {
+		/* each node in BigDAWG is defined by a separate ipAddress and port. */
+		String ipAddress = BigDawgConfigProperties.INSTANCE
+				.getGrizzlyIpAddress();
+		String port = BigDawgConfigProperties.INSTANCE.getGrizzlyPort();
+		znodePath = ZooKeeperUtils.BigDAWGPath + ZooKeeperUtils.nodes + "/"
+				+ ipAddress + ":" + port;
+	}
 
 	/**
-	 * The timeout for this client when maintaining the connection with
-	 * ZooKeeper.
+	 * Handle zookeeper operations.
 	 */
-	private static final int sessionTimeout = 2000;
+	public static ZooKeeperHandler zooHandler;
 
 	/**
 	 * Create the root znodes in ZooKeeper for BigDAWG.
@@ -97,32 +100,17 @@ public class ZooKeeperUtils {
 	 * Register the node as BigDAWG active node in Zookeeper.
 	 */
 	public static void registerNodeInZooKeeper() {
-		/*
-		 * Set of zookeeper host addresses and their port numbers. These are
-		 * physical nodes, not znodes.
-		 */
-		String zooKeeperNodes = BigDawgConfigProperties.INSTANCE
-				.getZooKeepers();
-
-		/* each node in BigDAWG is defined by a separate ipAddress and port. */
-		String ipAddress = BigDawgConfigProperties.INSTANCE
-				.getGrizzlyIpAddress();
-		String port = BigDawgConfigProperties.INSTANCE.getGrizzlyPort();
 
 		try {
-			ZooKeeper zooKeeper = zooKeeperConnection.connect(zooKeeperNodes,
-					sessionTimeout);
-			ZooKeeperHandler zooHandler = new ZooKeeperHandler(zooKeeper);
+			ZooKeeperHandler zooHandler = new ZooKeeperHandler(
+					ZooKeeperInstance.INSTANCE.getZooKeeper());
 			ZooKeeperUtils.createBigDAWGZnodes(zooHandler);
 			NodeInfo nodeInfo = new NodeInfo(
 					"By computer with name: " + SystemUtilities.getHostName());
 			byte[] znodeData = NetworkUtils.serialize(nodeInfo);
 			/* create the znode to denote the active BigDAWG node */
-			zooHandler.createZnode(
-					ZooKeeperUtils.BigDAWGPath + ZooKeeperUtils.nodes + "/"
-							+ ipAddress + ":" + port,
-					znodeData, ZooDefs.Ids.READ_ACL_UNSAFE,
-					CreateMode.EPHEMERAL);
+			zooHandler.createZnode(znodePath, znodeData,
+					ZooDefs.Ids.READ_ACL_UNSAFE, CreateMode.EPHEMERAL);
 		} catch (Exception ex) {
 			String stackTrace = StackTrace.getFullStackTrace(ex);
 			logger.error("Initialization of BigDAWG in ZooKeeper failed. "
@@ -134,13 +122,21 @@ public class ZooKeeperUtils {
 	/**
 	 * In a normal case, the znode should be removed at the end of the life of
 	 * the node.
+	 * 
+	 * @throws KeeperException
 	 */
 	public static void unregisterNodeInZooKeeper() {
 		try {
-			zooKeeperConnection.close();
-		} catch (InterruptedException ex) {
+			/*
+			 * Try to clean/remove the znodes that were created for this BigDAWG
+			 * nodes.
+			 */
+			zooHandler.deleteZnode(znodePath);
+		} catch (KeeperException | InterruptedException ex) {
 			String stackTrace = StackTrace.getFullStackTrace(ex);
 			logger.error(LogUtils.replace(stackTrace));
+		} finally {
+			ZooKeeperInstance.INSTANCE.close();
 		}
 	}
 

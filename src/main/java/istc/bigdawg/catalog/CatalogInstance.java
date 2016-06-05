@@ -50,7 +50,6 @@ public enum CatalogInstance {
 			System.err.println(msg);
 			logger.error(msg);
 			e.printStackTrace();
-			System.exit(1);
 		}
 	}
 }
