@@ -22,15 +22,15 @@ import istc.bigdawg.postgresql.PostgreSQLHandler;
 /**
  * @author Adam Dziedzic
  * 
- *
+ *         Test data migration between Postgres instances.
  */
 public class FromPostgresToPostgresTest {
 
 	/* the class for the PostgreSQL <-> PostgreSQL migration */
 	private FromPostgresToPostgres migrator = new FromPostgresToPostgres();
 
-	private String localIP = "205.208.121.99";
-	private String remoteIP = "madison";
+	private String localIP = "205.208.122.6";
+	private String remoteIP = "128.135.11.26";
 
 	private String localPassword = "test";
 	private String remotePassword = "ADAM12345testBorja2016";
@@ -133,8 +133,9 @@ public class FromPostgresToPostgresTest {
 				localIP, "5431", "tpch", "pguser", localPassword);
 		PostgreSQLConnectionInfo conInfoTo = new PostgreSQLConnectionInfo(
 				remoteIP, "5431", "tpch", "pguser", remotePassword);
-		MigrationResult result = migrator.migrate(conInfoFrom, "lineitem",
-				conInfoTo, "lineitem");
+		String table = "lineitem";
+		MigrationResult result = migrator.migrate(conInfoFrom, table, conInfoTo,
+				table);
 		System.out.println(result);
 	}
 
@@ -142,12 +143,13 @@ public class FromPostgresToPostgresTest {
 	public void testFromPostgresToPostgresNetworkNotExistingLineitem()
 			throws Exception {
 		System.out.println("Migrating data from PostgreSQL to PostgreSQL");
-		PostgreSQLConnectionInfo conInfoTo = new PostgreSQLConnectionInfo(
-				localIP, "5431", "tpch", "pguser", localPassword);
 		PostgreSQLConnectionInfo conInfoFrom = new PostgreSQLConnectionInfo(
 				remoteIP, "5431", "tpch", "pguser", remotePassword);
-		MigrationResult result = migrator.migrate(conInfoFrom, "lineitem",
-				conInfoTo, "lineitem");
+		PostgreSQLConnectionInfo conInfoTo = new PostgreSQLConnectionInfo(
+				localIP, "5431", "tpch", "pguser", localPassword);
+		String table = "lineitem";
+		MigrationResult result = migrator.migrate(conInfoFrom, table, conInfoTo,
+				table);
 		System.out.println(result);
 	}
 

@@ -3,11 +3,11 @@
  */
 package istc.bigdawg;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PropertyConfigurator;
 
@@ -19,16 +19,26 @@ import org.apache.log4j.PropertyConfigurator;
 public class LoggerSetup {
 	private static Logger logger;
 
-	public static void setLogging() throws IOException {
+	public static void setLogging() {
 		logger = Logger.getLogger(LoggerSetup.class);
+		/* turn off the excessive logging from ZooKeeper client! */
+		Logger.getLogger("org.apache.zookeeper.ClientCnxn").setLevel(Level.INFO);
 		String log4JPropertyFile = "bigdawg-log4j.properties";
 		Properties prop = new Properties();
-		InputStream inputStream = LoggerSetup.class.getClassLoader().getResourceAsStream(log4JPropertyFile);
+		InputStream inputStream = LoggerSetup.class.getClassLoader()
+				.getResourceAsStream(log4JPropertyFile);
 		if (inputStream != null) {
-			prop.load(inputStream);
+			try {
+				prop.load(inputStream);
+			} catch (IOException e) {
+				System.err.println(
+						"Wrong properties file for log4j - check your settings for logging.");
+				System.exit(1);
+			}
 		} else {
-			throw new FileNotFoundException(
-					"log4j property file '" + log4JPropertyFile + "' not found in the classpath");
+			System.err.println("log4j property file '" + log4JPropertyFile
+					+ "' not found in the classpath");
+			System.exit(1);
 		}
 		PropertyConfigurator.configure(prop);
 		logger.info("Logging was configured!");

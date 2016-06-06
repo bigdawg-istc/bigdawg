@@ -65,6 +65,7 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 			try {
 				return this.dispatch();
 			} catch (Exception e) {
+				logger.error(StackTrace.getFullStackTrace(e));
 				throw new MigrationException(e.getMessage(), e);
 			}
 		}
@@ -97,15 +98,13 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 		PostgreSQLHandler.executeStatement(connectionTo, createTableStatement);
 	}
 
-	/**
-	 * @see istc.bigdawg.migration.MigrationNetworkRequest#execute()
+	/*
+	 * (non-Javadoc)
 	 * 
-	 * @return {@link MigrationResult} with information about the migration
-	 *         process
-	 * 
+	 * @see istc.bigdawg.migration.FromDatabaseToDatabase#execute()
 	 */
 	@Override
-	public MigrationResult execute() throws MigrationException {
+	public MigrationResult executeMigration() throws MigrationException {
 		long startTimeMigration = System.currentTimeMillis();
 		TimeStamp startTimeStamp = TimeStamp.getCurrentTime();
 		logger.debug("start migration: " + startTimeStamp.toDateString());
@@ -168,26 +167,32 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 			return new MigrationResult(countExtractedElements,
 					countLoadedElements);
 		} catch (Exception e) {
-			String msg = e.getMessage()
-					+ " Migration failed. Task did not finish correctly.";
-			logger.error(msg + StackTrace.getFullStackTrace(e), e);
-			try {
-				conTo.rollback();
-			} catch (SQLException ex) {
-				String message = "Could not roll back transactions in the source database after failure in data migration: "
-						+ ex.getMessage();
-				logger.error(message);
-				throw new MigrationException(message, ex);
+			String message = e.getMessage()
+					+ " Migration failed. Task did not finish correctly. ";
+			logger.error(message + " Stack Trace: "
+					+ StackTrace.getFullStackTrace(e), e);
+			if (conTo != null) {
+				try {
+					conTo.rollback();
+				} catch (SQLException ex) {
+					String messageRollbackConTo = " Could not roll back transactions in the source database after failure in data migration: "
+							+ ex.getMessage();
+					logger.error(messageRollbackConTo);
+					message += messageRollbackConTo;
+				}
 			}
-			try {
-				conFrom.rollback();
-			} catch (SQLException ex) {
-				String message = "Could not roll back transactions in the destination database after failure in data migration: "
-						+ ex.getMessage();
-				logger.error(message);
-				throw new MigrationException(message, ex);
+			if (conFrom != null) {
+				try {
+
+					conFrom.rollback();
+				} catch (SQLException ex) {
+					String messageRollbackConFrom = " Could not roll back transactions in the destination database after failure in data migration: "
+							+ ex.getMessage();
+					logger.error(messageRollbackConFrom);
+					message += messageRollbackConFrom;
+				}
 			}
-			throw new MigrationException(e.getMessage(), e);
+			throw new MigrationException(message, e);
 		} finally {
 			if (conFrom != null) {
 				/*
@@ -215,8 +220,10 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 			}
 		}
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see istc.bigdawg.migration.FromDatabaseToDatabase#getConnectionFrom()
 	 */
 	@Override
@@ -224,7 +231,9 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 		return connectionFrom;
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see istc.bigdawg.migration.FromDatabaseToDatabase#getConnecitonTo()
 	 */
 	@Override

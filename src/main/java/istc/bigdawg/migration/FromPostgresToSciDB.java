@@ -4,13 +4,11 @@
 package istc.bigdawg.migration;
 
 import java.io.IOException;
-import java.net.UnknownHostException;
 
 import org.apache.log4j.Logger;
 
 import istc.bigdawg.LoggerSetup;
 import istc.bigdawg.exceptions.MigrationException;
-import istc.bigdawg.exceptions.NetworkException;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
@@ -56,16 +54,11 @@ public class FromPostgresToSciDB extends FromDatabaseToDatabase {
 		log.debug("General data migration: " + this.getClass().getName());
 		if (connectionFrom instanceof PostgreSQLConnectionInfo
 				&& connectionTo instanceof SciDBConnectionInfo) {
-			try {
-				this.connectionFrom = (PostgreSQLConnectionInfo) connectionFrom;
-				this.fromTable = fromTable;
-				this.connectionTo = (SciDBConnectionInfo) connectionTo;
-				this.toArray = toArray;
-				return this.dispatch();
-			} catch (MigrationException | UnknownHostException
-					| NetworkException e) {
-				throw new MigrationException(e.getMessage(), e);
-			}
+			this.connectionFrom = (PostgreSQLConnectionInfo) connectionFrom;
+			this.fromTable = fromTable;
+			this.connectionTo = (SciDBConnectionInfo) connectionTo;
+			this.toArray = toArray;
+			return this.dispatch();
 		}
 		return null;
 
@@ -77,7 +70,8 @@ public class FromPostgresToSciDB extends FromDatabaseToDatabase {
 	 * @return
 	 * @throws MigrationException
 	 */
-	public MigrationResult execute() throws MigrationException {
+	@Override
+	public MigrationResult executeMigration() throws MigrationException {
 		if (this.connectionFrom == null || this.fromTable == null
 				|| this.connectionTo == null || this.toArray == null) {
 			throw new MigrationException("The object was not initialized");

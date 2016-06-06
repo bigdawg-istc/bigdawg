@@ -59,7 +59,7 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase {
 	 * @see istc.bigdawg.migration.MigrationNetworkRequest#execute()
 	 */
 	@Override
-	public MigrationResult execute() throws MigrationException {
+	public MigrationResult executeMigration() throws MigrationException {
 		if (this.connectionFrom == null || this.fromArray == null
 				|| this.connectionTo == null || this.toTable == null) {
 			throw new MigrationException("The object was not initialized");

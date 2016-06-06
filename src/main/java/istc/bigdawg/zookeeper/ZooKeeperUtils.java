@@ -63,6 +63,29 @@ public class ZooKeeperUtils {
 	}
 
 	/**
+	 * 
+	 * @param ipAddress
+	 * @param port
+	 * @return full znode path for the given ipAddress and port
+	 */
+	public static String getZnodePath(String ipAddress, String port) {
+		return ZooKeeperUtils.BigDAWGPath + ZooKeeperUtils.nodes + "/"
+				+ ipAddress + ":" + port;
+	}
+
+	/**
+	 * see: {@link #getZnodePath(String, String)}; we set default address which
+	 * was given to BigDAWG (grizzly port)
+	 * 
+	 * @param ipAddress
+	 * @return full znode path for the given ipAddress and port
+	 */
+	public static String getZnodePath(String ipAddress) {
+		return getZnodePath(ipAddress,
+				BigDawgConfigProperties.INSTANCE.getGrizzlyPort());
+	}
+
+	/**
 	 * Handle zookeeper operations.
 	 */
 	public static ZooKeeperHandler zooHandler;

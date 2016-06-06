@@ -25,6 +25,7 @@ import org.apache.zookeeper.data.Stat;
 import istc.bigdawg.LoggerSetup;
 import istc.bigdawg.utils.LogUtils;
 import istc.bigdawg.utils.StackTrace;
+import jline.internal.Log;
 
 /**
  * @author Adam Dziedzic
@@ -36,7 +37,7 @@ public class ZooKeeperHandler {
 	private static Logger logger = Logger.getLogger(ZooKeeperHandler.class);
 
 	/** The prefix of the message returned from the ZooKeeper watcher */
-	public static final String watchMessagePrefix = "The following event was triggered: ";
+	public static final String watchMessagePrefix = "The following event was triggered in ZooKeeper: ";
 
 	/** Instance for ZooKeeper class. */
 	private ZooKeeper zk;
@@ -101,7 +102,7 @@ public class ZooKeeperHandler {
 	/**
 	 * Wait/watch for an event from ZooKeeper for a given znode.
 	 * 
-	 * @param path
+	 * @param znodePath
 	 *            Path to a znode in ZooKeeper ensemble.
 	 * @param eventType
 	 *            The type of event on which we await.
@@ -109,7 +110,8 @@ public class ZooKeeperHandler {
 	 * @throws KeeperException
 	 * @throws InterruptedException
 	 */
-	public String watchEvent(String path, Watcher.Event.EventType eventType) {
+	public String watchEvent(String znodePath, Watcher.Event.EventType eventType) {
+		logger.debug("Watch event executed.");
 		/**
 		 * Count down latch is a synchronization mechanism.
 		 * 
@@ -120,30 +122,37 @@ public class ZooKeeperHandler {
 		 */
 		CountDownLatch signal = new CountDownLatch(1);
 		try {
-			zk.exists(path, new Watcher() {
+			if (zk.exists(znodePath, true) == null) {
+				return "The znode: " + znodePath + " does not exists.";
+			}
+			zk.exists(znodePath, new Watcher() {
 				public void process(WatchedEvent watchedEvent) {
 					if (watchedEvent.getType() == eventType)
 						signal.countDown();
 				}
 			});
 		} catch (KeeperException | InterruptedException e) {
-			String stackTrace = StackTrace.getFullStackTrace(e);
-			logger.error(
-					"Problem with ZooKeeper, path: " + path + " " + stackTrace);
+			String message = e.getMessage() + " Problem with ZooKeeper, path: "
+					+ znodePath;
+			logger.error(message + " Stack trace: "
+					+ StackTrace.getFullStackTrace(e));
+			return message;
 		} catch (IllegalArgumentException e) {
-			String stackTrace = StackTrace.getFullStackTrace(e);
-			logger.error(
-					"Invalid path was specified: " + path + " " + stackTrace);
+			String message = e.getMessage() + "Invalid path was specified: "
+					+ znodePath;
+			logger.error(message + " Stack trace: "
+					+ StackTrace.getFullStackTrace(e));
+			return message;
 		}
 		try {
 			signal.await();
 		} catch (InterruptedException e) {
-			String stackTrace = StackTrace.getFullStackTrace(e);
-			logger.warn(
-					"The watchEvent from ZooKeeper thread was interrupted while waiting. "
-							+ stackTrace);
+			String message = "The watchEvent from ZooKeeper thread was interrupted while waiting. ";
+			logger.warn(message + "Stack trace: "
+					+ StackTrace.getFullStackTrace(e));
+			return message;
 		}
-		return watchMessagePrefix + eventType;
+		return watchMessagePrefix + eventType + " path: "+znodePath;
 	}
 
 	/**
@@ -162,6 +171,8 @@ public class ZooKeeperHandler {
 	 */
 	public Callable<Object> callableWatch(String znodePath,
 			EventType eventType) {
+		logger.debug("Set watch for znode: " + znodePath + " watch for event: "
+				+ eventType);
 		return () -> {
 			return watchEvent(znodePath, eventType);
 		};

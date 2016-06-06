@@ -84,12 +84,7 @@ public class Migrator {
 	}
 
 	public static void main(String[] args) {
-		try {
-			LoggerSetup.setLogging();
-		} catch (IOException e1) {
-			e1.printStackTrace();
-			System.err.print("Logger setup failed!");
-		}
+		LoggerSetup.setLogging();
 		PostgreSQLConnectionInfo conInfoFrom = new PostgreSQLConnectionInfo(
 				"localhost", "5431", "mimic2", "pguser", "test");
 		PostgreSQLConnectionInfo conInfoTo = new PostgreSQLConnectionInfo(

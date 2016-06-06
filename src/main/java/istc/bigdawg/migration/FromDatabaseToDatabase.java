@@ -1,6 +1,3 @@
-/**
- * 
- */
 package istc.bigdawg.migration;
 
 import static istc.bigdawg.network.NetworkUtils.isThisMyIpAddress;
@@ -15,6 +12,7 @@ import org.apache.log4j.Logger;
 import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.exceptions.NetworkException;
 import istc.bigdawg.network.NetworkOut;
+import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.zookeeper.FollowRemoteNodes;
 
@@ -26,8 +24,10 @@ import istc.bigdawg.zookeeper.FollowRemoteNodes;
 public abstract class FromDatabaseToDatabase
 		implements MigrationNetworkRequest {
 
+	/** From where to migrate the data (which node/machine). */
 	abstract public ConnectionInfo getConnectionFrom();
 
+	/* To where to migrate the data (to which node/machine). */
 	abstract public ConnectionInfo getConnecitonTo();
 
 	/**
@@ -38,32 +38,73 @@ public abstract class FromDatabaseToDatabase
 	/* log */
 	private static Logger log = Logger.getLogger(FromDatabaseToDatabase.class);
 
+	/**
+	 * General method (interface) for other modules to call the migration.
+	 * 
+	 * @param connectionFrom
+	 * @param objectFrom
+	 *            which object/table/array to migrate from
+	 * @param connectionTo
+	 * @param objectTo
+	 *            which object/table/array to migrate to
+	 * @return {@link MigrationResult} with information about the migration
+	 *         process
+	 * @throws MigrationException
+	 */
 	abstract MigrationResult migrate(ConnectionInfo connectionFrom,
 			String objectFrom, ConnectionInfo connectionTo, String objectTo)
 					throws MigrationException;
 
+	/** The method which implements the execution of data migration */
+	public abstract MigrationResult executeMigration()
+			throws MigrationException;
+
+	/**
+	 * This Callable object should be executed in a separate thread. The
+	 * intention is that we wait for the response in a thread but in another
+	 * thread we control if the machine to which we sent the request is up and
+	 * running.
+	 * 
+	 * @param hostname
+	 *            to which node/machine we should send the network request
+	 * @return result (response) in reply to the request
+	 */
 	Callable<Object> sendNetworkRequest(String hostname) {
 		return () -> {
 			try {
 				Object result = NetworkOut.send(this, hostname);
 				return result;
-			} catch (Exception e) {
+			} catch (NetworkException e) {
 				return e;
 			}
 		};
 	}
 
-	/** Execute the migration request; this node is the corrdinator. */
-	Callable<Object> executeMigration() {
+	/**
+	 * Execute the migration request; this node is the coordinator.
+	 * 
+	 */
+	Callable<Object> executeMigrationFromLocalToRemote() {
 		return () -> {
 			/* execute the migration locally - on this machine */
-			log.debug("Migration will be executed locally.");
+			log.debug(
+					"Migration will be executed from local database to a remote one.");
 			try {
-				return execute();
-			} catch (Exception e) {
+				return executeMigration();
+			} catch (MigrationException e) {
+				log.debug(e.getMessage());
 				return e;
 			}
 		};
+	}
+
+	/**
+	 * The execution for migration starts from the dispatch method which handles
+	 * the request in the network.
+	 */
+	@Override
+	public MigrationResult execute() throws MigrationException {
+		return dispatch();
 	}
 
 	/**
@@ -75,8 +116,7 @@ public abstract class FromDatabaseToDatabase
 	 * @throws NetworkException
 	 * @throws MigrationException
 	 */
-	MigrationResult dispatch()
-			throws UnknownHostException, NetworkException, MigrationException {
+	public MigrationResult dispatch() throws MigrationException {
 		Object result = null;
 		/*
 		 * check if the address is not a local host
@@ -84,21 +124,33 @@ public abstract class FromDatabaseToDatabase
 		String hostnameFrom = this.getConnectionFrom().getHost();
 		String hostnameTo = this.getConnecitonTo().getHost();
 		log.debug("hostname from which the data is migrated: " + hostnameFrom);
-		if (!isThisMyIpAddress(InetAddress.getByName(hostnameFrom))) {
-			log.debug("Migration will be executed remotely.");
-			/* this node is only a coordinator/dispatcher for the migration */
-			result = FollowRemoteNodes.execute(Arrays.asList(hostnameFrom),
-					sendNetworkRequest(hostnameFrom));
-		} else {
-			if (!isThisMyIpAddress(InetAddress.getByName(hostnameTo))) {
-				/** only the coordinator of the migration is local */
-				result = FollowRemoteNodes.execute(Arrays.asList(hostnameTo),
-						executeMigration());
+		try {
+			if (!isThisMyIpAddress(InetAddress.getByName(hostnameFrom))) {
+				log.debug(
+						"Migration will be executed remotely (this node only coordinates the migration).");
+				/*
+				 * this node is only a coordinator/dispatcher for the migration
+				 */
+				result = FollowRemoteNodes.execute(Arrays.asList(hostnameFrom),
+						sendNetworkRequest(hostnameFrom));
 			} else {
-				/* the total migration is executed locally */
-				return execute();
+				if (!isThisMyIpAddress(InetAddress.getByName(hostnameTo))) {
+					log.debug("Migration from a local to remote database.");
+					result = FollowRemoteNodes.execute(
+							Arrays.asList(hostnameTo),
+							executeMigrationFromLocalToRemote());
+					log.debug("Result of migration: " + result);
+				} else {
+					log.debug("The total migration is executed locally.");
+					return executeMigration();
+				}
 			}
+		} catch (MigrationException e) {
+			throw e;
+		} catch (Exception e) {
+			throw new MigrationException(e.getMessage(), e);
 		}
+		log.debug("Process results of the migration.");
 		return MigrationResult.processResult(result);
 	}
 }

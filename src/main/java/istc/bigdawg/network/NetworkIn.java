@@ -63,12 +63,13 @@ public class NetworkIn implements Runnable {
 				} catch (Exception ex) {
 					log.debug(
 							"Add information about remote host where the error happened.");
-					String message = "The request command could not be executed on the remote server (host: "
+					String message = " The request command could not be executed on the remote server (host: "
 							+ THIS_HOST_ADDRESS + "; "
 							+ BigDawgConfigProperties.INSTANCE
 									.getGrizzlyIpAddress()
 							+ "). " + ex.getMessage();
-					handleException(message, ex, responder);
+					Exception e = new Exception(ex.getMessage() + message);
+					handleException(message, e, responder);
 				}
 			}
 		} finally {

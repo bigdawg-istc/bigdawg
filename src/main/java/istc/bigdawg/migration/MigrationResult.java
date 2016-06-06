@@ -99,12 +99,15 @@ public class MigrationResult implements Serializable {
 			throw new MigrationException(message);
 		}
 		if (result instanceof MigrationResult) {
+			log.debug("Final result: " + result.toString());
 			return (MigrationResult) result;
 		} else if (result instanceof MigrationException) {
-			throw (MigrationException) result;
+			MigrationException ex = (MigrationException) result;
+			log.error(ex.toString());
+			throw ex;
 		} else if (result instanceof NetworkException) {
 			NetworkException ex = (NetworkException) result;
-			String message = "Problem with the network: " + ex.getMessage();
+			String message = "Problem with network: " + ex.getMessage();
 			log.error(message);
 			throw new MigrationException(message);
 		} else if (result instanceof Exception) {
