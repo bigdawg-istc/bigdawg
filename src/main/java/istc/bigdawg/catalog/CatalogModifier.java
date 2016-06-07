@@ -200,7 +200,7 @@ public class CatalogModifier {
 		cc.commit();
 	}
 	
-	public static void addObject(String newName, String newFields, int newLogDB, int newPhyDB) throws Exception {
+	public static int addObject(String newName, String newFields, int newLogDB, int newPhyDB) throws Exception {
 		
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		
@@ -215,10 +215,10 @@ public class CatalogModifier {
 								+ "fields = \'"		+ newFields.toLowerCase()	+ "\' AND "
 								+ "logical_db = "	+ newLogDB 					+ " AND "
 								+ "physical_db = "	+ newPhyDB					+ ";");
+		int newpos  = 0;
 		if ( !rs.next() ) {
 			// add new record
-        	rs 			= cc.execRet("SELECT max(oid) m from catalog.objects;");
-        	int newpos  = 0; 
+        	rs 	= cc.execRet("SELECT max(oid) m from catalog.objects;");
         	if (rs.next() && rs.getString(1) != null) newpos = rs.getInt("m") + 1;
         	cc.execNoRet("INSERT INTO catalog.objects (oid, name, fields, logical_db, physical_db) "
 	        			+ "VALUES ("+ newpos 					+ ", "
@@ -228,6 +228,20 @@ public class CatalogModifier {
 	    							+ newPhyDB 					+ ");");
         }
         rs.close();
+
+        // commit
+		cc.commit();
+		
+		return newpos;
+	}
+	
+	public static void deleteObject(int oid) throws Exception {
+		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
+		
+		// check if cc is connected and length are correct 
+		CatalogUtilities.checkConnection(cc);
+		
+    	cc.execNoRet("DELETE FROM catalog.objects WHERE oid = "+oid);
 
         // commit
 		cc.commit();

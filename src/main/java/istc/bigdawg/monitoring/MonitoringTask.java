@@ -1,29 +1,36 @@
 package istc.bigdawg.monitoring;
 
-import istc.bigdawg.executor.plan.QueryExecutionPlan;
-import istc.bigdawg.packages.CrossIslandQueryNode;
-import istc.bigdawg.packages.CrossIslandQueryPlan;
-import istc.bigdawg.parsers.UserQueryParser;
-import istc.bigdawg.postgresql.PostgreSQLInstance;
-import istc.bigdawg.query.QueryClient;
-import istc.bigdawg.signature.Signature;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
+import static istc.bigdawg.utils.JdbcUtils.getColumnNames;
+import static istc.bigdawg.utils.JdbcUtils.getRows;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.sql.*;
-import java.util.LinkedHashMap;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static istc.bigdawg.utils.JdbcUtils.getColumnNames;
-import static istc.bigdawg.utils.JdbcUtils.getRows;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.jgrapht.graph.DefaultEdge;
+
+import istc.bigdawg.executor.plan.QueryExecutionPlan;
+import istc.bigdawg.packages.CrossIslandCastNode;
+import istc.bigdawg.packages.CrossIslandQueryNode;
+import istc.bigdawg.packages.CrossIslandQueryPlan;
+import istc.bigdawg.parsers.UserQueryParser;
+import istc.bigdawg.postgresql.PostgreSQLInstance;
+import istc.bigdawg.query.QueryClient;
+import istc.bigdawg.signature.Signature;
 
 /**
  * Created by chenp on 11/17/2015.
@@ -84,9 +91,22 @@ class Task implements Runnable {
             try {
                 final Signature signature= this.getSignature();
                 if (signature != null) {
-                    LinkedHashMap<String, String> crossIslandQuery = UserQueryParser.getUnwrappedQueriesByIslands(signature.getQuery());
-                    CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(crossIslandQuery);
-                    CrossIslandQueryNode ciqn = ciqp.getTerminalNode();
+//                    Map<String, String> crossIslandQuery = UserQueryParser.getUnwrappedQueriesByIslands(signature.getQuery());
+//                    CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(crossIslandQuery);
+//                    CrossIslandQueryNode ciqn = (CrossIslandQueryNode)ciqp.getTerminalNode();
+                	CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(signature.getQuery());
+                	CrossIslandQueryNode ciqn = null;
+                    if (ciqp.getTerminalNode() instanceof CrossIslandQueryNode)
+                    	ciqn = (CrossIslandQueryNode)ciqp.getTerminalNode();
+                    else {
+                    	ciqp.edgesOf(ciqp.getTerminalNode());
+                    	for (DefaultEdge e : ciqp.edgeSet()) {
+                    		if (ciqp.getEdgeTarget(e) instanceof CrossIslandCastNode) {
+                    			ciqn = (CrossIslandQueryNode)(ciqp.getEdgeSource(e));
+                    			break;
+                    		};
+                    	} 
+                    }
                     List<QueryExecutionPlan> qeps = ciqn.getAllQEPs(true);
 
                     Monitor.runBenchmarks(qeps, signature);

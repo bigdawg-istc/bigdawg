@@ -111,6 +111,8 @@ public class SQLPlanParser {
 	public static SQLQueryPlan extractDirect(PostgreSQLHandler psqlh, String query) throws Exception {
 
 		String explainQuery = SQLPrepareQuery.generateExplainQueryString(query);
+		
+		System.out.printf("explainQuery: %s; psqlh: %s;\n", explainQuery, psqlh);
 		String xmlString = psqlh.generatePostgreSQLQueryXML(explainQuery);
 		
 		// set up supplement

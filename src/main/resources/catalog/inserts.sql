@@ -1,6 +1,24 @@
+-- catalog.islands
+-- iid	scope_name	access_method
+insert into catalog.islands values (0, 'RELATIONAL', 'PSQL');
+insert into catalog.islands values (1, 'ARRAY', 'AFL');
+
 --add database catalog engines: engine_id, name, host, port, connection_properties
-insert into catalog.engines values(0,'postgres1','localhost',5431,'9.4.5');
-insert into catalog.engines values(1,'postgres2','localhost',5430,'9.4.5');
+insert into catalog.engines values(0,'postgres1','localhost',5431,'PostgreSQL 9.4.5');
+insert into catalog.engines values(1,'postgres2','localhost',5430,'PostgreSQL 9.4.5');
+insert into catalog.engines values(2,'scidb_codd7','codd07',1239,'SciDB 14.12');
+insert into catalog.engines values(3,'scidb_codd6','codd06',1239,'SciDB 14.12');
+insert into catalog.engines values(4,'postgres_codd8','codd08',5432,'PostgreSQL 9.4.5');
+insert into catalog.engines values(5,'postgres_codd9','codd09',5432,'PostgreSQL 9.4.5');
+
+-- catalog.shims
+-- shim_id	island_id	engine_id	access_method	
+insert into catalog.shims values (0, 0, 0, 'N/A');
+insert into catalog.shims values (1, 0, 1, 'N/A');
+insert into catalog.shims values (2, 1, 2, 'N/A');
+insert into catalog.shims values (3, 1, 3, 'N/A');
+insert into catalog.shims values (4, 0, 4, 'N/A');
+insert into catalog.shims values (5, 0, 5, 'N/A');
 
 --add catalog.databases inside the database instances: dbid, engine_id, name, userid, password
 insert into catalog.databases values(0,0,'bigdawg_catalog','postgres','test');
@@ -9,26 +27,17 @@ insert into catalog.databases values(2,0,'mimic2','pguser','test');
 insert into catalog.databases values(3,1,'mimic2_copy','pguser','test');
 insert into catalog.databases values(4,0,'genbase','pguser','test');
 insert into catalog.databases values(5,1,'genbase','pguser','test');
-insert into catalog.databases values(6,0,'tpch','pguser','test');
-insert into catalog.databases values(7,1,'tpch','pguser','test');
-
-
--- catalog.islands
--- iid	scope_name	access_method
-insert into catalog.islands values (0, 'RELATIONAL', 'PSQL');
-insert into catalog.islands values (1, 'ARRAY', 'AFL');
-
--- catalog.shims
--- shim_id	island_id	engine_id	access_method	
-insert into catalog.shims values (0, 0, 0, 'N/A');
-insert into catalog.shims values (1, 1, 5, 'N/A');
-insert into catalog.shims values (2, 1, 6, 'N/A');
+insert into catalog.databases values(6,4,'tpch','pguser','test');
+insert into catalog.databases values(7,5,'tpch','pguser','test');
+insert into catalog.databases values(8,2,'codd07','scidb','scidb123');
+insert into catalog.databases values(9,3,'codd06','scidb','scidb123');
 
 -- catalog.scidbbinapath
 -- binary path to scidb utilities: csv2scidb, iquery, etc.
 insert into catalog.scidbbinpaths values (2,'/opt/scidb/14.12/bin/');
-insert into catalog.scidbbinpaths values (5,'/opt/scidb/14.12/bin/');
-insert into catalog.scidbbinpaths values (6,'/opt/scidb/14.12/bin/');
+insert into catalog.scidbbinpaths values (3,'/opt/scidb/14.12/bin/');
+-- insert into catalog.scidbbinpaths values (5,'/opt/scidb/14.12/bin/');
+-- insert into catalog.scidbbinpaths values (6,'/opt/scidb/14.12/bin/');
 
 -- catalog.objects
 -- oid	name	fields	logical_db	physical_db

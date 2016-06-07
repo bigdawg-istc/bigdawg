@@ -48,8 +48,8 @@ public class SeqScan extends Scan {
 			dbid = CatalogViewer.getDbsOfObject(schemaAndName, "postgres").get(0);
 		
 		
-		
-		Connection con = PostgreSQLHandler.getConnection(((PostgreSQLConnectionInfo)PostgreSQLHandler.generateConnectionInfo(dbid)));
+//		Connection con = PostgreSQLHandler.getConnection(((PostgreSQLConnectionInfo)PostgreSQLHandler.generateConnectionInfo(dbid)));
+		Connection con = PostgreSQLHandler.getConnection(CatalogViewer.getConnection(dbid));
 		
 		String createTableString = PostgreSQLHandler.getCreateTable(con, schemaAndName).replaceAll("\\scharacter[\\(]", " char(");
 		CreateTable create = null;

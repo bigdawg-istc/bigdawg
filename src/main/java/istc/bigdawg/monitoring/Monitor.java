@@ -2,8 +2,12 @@ package istc.bigdawg.monitoring;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+
+import org.apache.log4j.Logger;
+import org.jgrapht.graph.DefaultEdge;
+import org.mortbay.log.Log;
 
 import istc.bigdawg.BDConstants;
 import istc.bigdawg.exceptions.MigrationException;
@@ -13,6 +17,7 @@ import istc.bigdawg.executor.ExecutorEngine;
 import istc.bigdawg.executor.JdbcQueryResult;
 import istc.bigdawg.executor.plan.QueryExecutionPlan;
 import istc.bigdawg.migration.MigrationStatistics;
+import istc.bigdawg.packages.CrossIslandCastNode;
 import istc.bigdawg.packages.CrossIslandQueryNode;
 import istc.bigdawg.packages.CrossIslandQueryPlan;
 import istc.bigdawg.parsers.UserQueryParser;
@@ -20,9 +25,6 @@ import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.query.ConnectionInfoParser;
 import istc.bigdawg.signature.Signature;
-
-import org.apache.log4j.Logger;
-import org.mortbay.log.Log;
 
 public class Monitor {
 
@@ -45,10 +47,23 @@ public class Monitor {
     }
 
     public static boolean addBenchmarks(Signature signature, boolean lean, BDConstants.Shim[] shims) throws Exception {
-        LinkedHashMap<String, String> crossIslandQuery = UserQueryParser.getUnwrappedQueriesByIslands(signature.getQuery());
+//        Map<String, String> crossIslandQuery = UserQueryParser.getUnwrappedQueriesByIslands(signature.getQuery());
         logger.debug("Query for signature: " + signature.getQuery());
-        CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(crossIslandQuery);
-        CrossIslandQueryNode ciqn = ciqp.getTerminalNode();
+//        CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(crossIslandQuery);
+//        CrossIslandQueryNode ciqn = ciqp.getTerminalNode();
+        CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(signature.getQuery());
+        CrossIslandQueryNode ciqn = null;
+        if (ciqp.getTerminalNode() instanceof CrossIslandQueryNode)
+        	ciqn = (CrossIslandQueryNode)ciqp.getTerminalNode();
+        else {
+        	ciqp.edgesOf(ciqp.getTerminalNode());
+        	for (DefaultEdge e : ciqp.edgeSet()) {
+        		if (ciqp.getEdgeTarget(e) instanceof CrossIslandCastNode) {
+        			ciqn = (CrossIslandQueryNode)(ciqp.getEdgeSource(e));
+        			break;
+        		};
+        	} 
+        }
         List<QueryExecutionPlan> qeps = ciqn.getAllQEPs(true);
 
         for (int i = 0; i < qeps.size(); i++){

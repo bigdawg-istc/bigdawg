@@ -2,7 +2,6 @@ package istc.bigdawg.plan;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -10,12 +9,11 @@ import org.junit.Before;
 import org.junit.Test;
 
 import istc.bigdawg.catalog.CatalogInstance;
+import istc.bigdawg.packages.CrossIslandPlanNode;
 import istc.bigdawg.packages.CrossIslandQueryNode;
 import istc.bigdawg.packages.CrossIslandQueryPlan;
-import istc.bigdawg.parsers.UserQueryParser;
 import istc.bigdawg.plan.generators.OperatorVisitor;
 import istc.bigdawg.plan.generators.SQLQueryGenerator;
-import istc.bigdawg.plan.operators.Join;
 import istc.bigdawg.plan.operators.Operator;
 
 public class QEPConstruction {
@@ -203,10 +201,9 @@ public class QEPConstruction {
 
 	private void testCaseCrossIslandPlanConstruction(String testName, boolean unsupportedToken) throws Exception {
 		String userinput = inputs.get(testName);
-		LinkedHashMap<String, String> crossIslandQuery = UserQueryParser.getUnwrappedQueriesByIslands(userinput);
-		
-		CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(crossIslandQuery);
-		
+//		Map<String, String> crossIslandQuery = UserQueryParser.getUnwrappedQueriesByIslands(userinput);
+//		CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(crossIslandQuery);
+		CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(userinput);
 		
 		System.out.println("\n\n\nRaw query: "+userinput);
 		
@@ -214,11 +211,11 @@ public class QEPConstruction {
 		
 		OperatorVisitor gen = new SQLQueryGenerator();
 		
-		for (CrossIslandQueryNode k : ciqp.vertexSet()) {
+		for (CrossIslandPlanNode k : ciqp.vertexSet()) {
 			
-			CrossIslandQueryNode n = k;
+			CrossIslandQueryNode n = (CrossIslandQueryNode)k; // TODO BUGGY; CANNOT MAKE THIS ASSUMPTION
 			
-			System.out.println("Member: "+k+"; Island: "+n.getScope().toString());
+			System.out.println("Member: "+k+"; Island: "+n.getSourceScope().toString());
 			
 			
 			// schemas

@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -56,12 +55,9 @@ import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.statement.select.Select;
 
-public class CrossIslandQueryNode {
+public class CrossIslandQueryNode extends CrossIslandPlanNode {
 	
-	private IslandsAndCast.Scope scope;
-	private String query;
 	private Select select;
-	private String name;
 	private Signature signature;
 	private DBHandler dbSchemaHandler = null;
 	
@@ -71,7 +67,7 @@ public class CrossIslandQueryNode {
 	
 	private Map<String, List<String>> originalMap;
 	private Set<String> children;
-	private Matcher tagMatcher;
+//	private Matcher tagMatcher;
 	
 	private Set<String> originalJoinPredicates;
 	private Set<String> joinPredicates;
@@ -81,15 +77,11 @@ public class CrossIslandQueryNode {
 	
 	private static final int  psqlSchemaHandlerDBID = BigDawgConfigProperties.INSTANCE.getPostgresSchemaServerDBID();
 	private static final int  scidbSchemaHandlerDBID = BigDawgConfigProperties.INSTANCE.getSciDBSchemaServerDBID();
+	private static final String tokenOfIndecision = "-1";
 	
-	
-	public CrossIslandQueryNode (IslandsAndCast.Scope scope, String islandQuery, String name, Map<String, Operator> rootsForSchemas) throws Exception {
-		this.scope = scope;
-		this.query = islandQuery;
-		this.name  = name;
-		
-		// collect the cross island children
-		children = getCrossIslandChildrenReferences();
+//	public CrossIslandQueryNode (IslandsAndCast.Scope scope, String islandQuery, String name, Map<String, Operator> rootsForSchemas) throws Exception {
+	public CrossIslandQueryNode (IslandsAndCast.Scope scope, String islandQuery, String name, Map<String, String> transitionSchemas) throws Exception {
+		super(scope, islandQuery, name);
 		
 		queryContainer = new HashMap<>();
 		remainderPermutations = new ArrayList<>();
@@ -98,70 +90,110 @@ public class CrossIslandQueryNode {
 		joinFilters = new HashSet<>();
 		originalJoinPredicates = new HashSet<>();
 		
+//		// collect the cross island children
+		children = getCrossIslandChildrenReferences(transitionSchemas);
+		
 		System.out.printf("\n-> Island query: %s;\n", islandQuery);
 		System.out.printf("---> CrossIslandChildren: %s;\n",children.toString());
-		System.out.printf("---> RootsForSchemas: %s;\n\n",rootsForSchemas.toString());
+		System.out.printf("---> TransitionSchemas: %s;\n\n",transitionSchemas.toString());
 		
+		// create temporary tables that are used for as schemas
+		createTableForPlanning(transitionSchemas);
 		
-		
-		// BELOW SHOULD BE SOMETHING THAT IS SEPARABLE
-		
-		OperatorVisitor gen = null;
-		
-		// create new tables or arrays for planning use
-		if (scope.equals(Scope.RELATIONAL)) {
-			this.select = (Select) CCJSqlParserUtil.parse(islandQuery);
-			dbSchemaHandler = new PostgreSQLHandler(psqlSchemaHandlerDBID);
-			gen = new SQLQueryGenerator();
-			for (String key : rootsForSchemas.keySet()) {
-				if (children.contains(key)) {
-					System.out.println("key: "+key+"; query: "+gen.generateCreateStatementLocally(rootsForSchemas.get(key), key)+"\n\n");
-					((PostgreSQLHandler)dbSchemaHandler).executeStatementPostgreSQL(gen.generateCreateStatementLocally(rootsForSchemas.get(key), key));
-				}
-			}
-		} else if (scope.equals(Scope.ARRAY)) {
-			dbSchemaHandler = new SciDBHandler(scidbSchemaHandlerDBID);
-			gen = new AFLQueryGenerator();
-			for (String key : rootsForSchemas.keySet()) {
-				if (children.contains(key)) {
-					System.out.println("key: "+key+"; query: "+gen.generateCreateStatementLocally(rootsForSchemas.get(key), key)+"\n\n");
-					((SciDBHandler)dbSchemaHandler).executeStatement(gen.generateCreateStatementLocally(rootsForSchemas.get(key), key));
-				}
-			}
-		} else
-			throw new Exception("Unsupported island code : "+scope.toString());
-		
-		populateQueryContainer();
-		
-		this.signature = new Signature(islandQuery, scope, getRemainder(0), getQueryContainer(), originalJoinPredicates);
+		populateQueryContainer(transitionSchemas);
+		this.signature = new Signature(getQueryString(), getSourceScope(), getRemainder(0), getQueryContainer(), originalJoinPredicates);
 		
 		// removing temporary schema plates
-		if (scope.equals(Scope.RELATIONAL)) {
-			for (String key : rootsForSchemas.keySet()) 
-				if (children.contains(key)) 
-					((PostgreSQLHandler)dbSchemaHandler).executeStatementPostgreSQL("drop table "+key);
-		} else if (scope.equals(Scope.ARRAY)) {
-			for (String key : rootsForSchemas.keySet()) 
-				if (children.contains(key)) 
-					((SciDBHandler)dbSchemaHandler).executeStatement("remove("+key+")");
-		} else
-			throw new Exception("Unsupported island code : "+scope.toString());
+		removeTemporaryTableCreatedForPlanning(transitionSchemas);
 		
 		
 	}
+	
+//	private void createTableForPlanning(Map<String, Operator> rootsForSchemas) throws Exception {
+	private void createTableForPlanning(Map<String, String> transitionSchemas) throws Exception {
 
-	public Set<String> getCrossIslandChildrenReferences() {
+		// NEW METHOD
+		if (sourceScope.equals(Scope.RELATIONAL)) {
+			dbSchemaHandler = new PostgreSQLHandler(psqlSchemaHandlerDBID);
+			for (String key : transitionSchemas.keySet()) 
+				if (children.contains(key)) {
+					((PostgreSQLHandler)dbSchemaHandler).executeStatementPostgreSQL(transitionSchemas.get(key));
+				}
+		} else if (sourceScope.equals(Scope.ARRAY)) {
+			dbSchemaHandler = new SciDBHandler(scidbSchemaHandlerDBID);
+			for (String key : transitionSchemas.keySet()) 
+				if (children.contains(key)) {
+					((SciDBHandler)dbSchemaHandler).executeStatement(transitionSchemas.get(key));
+					((SciDBHandler)dbSchemaHandler).commit();
+				}
+		} else
+			throw new Exception("Unsupported island code : "+sourceScope.toString());
+		// NEW METHOD END
 		
-		// aka find children
+//		OperatorVisitor gen = null;
+//		
+//		// create new tables or arrays for planning use
+//		if (sourceScope.equals(Scope.RELATIONAL)) {
+//			this.select = (Select) CCJSqlParserUtil.parse(queryString);
+//			dbSchemaHandler = new PostgreSQLHandler(psqlSchemaHandlerDBID);
+//			gen = new SQLQueryGenerator();
+//			for (String key : transitionSchemas.keySet()) {
+//				if (children.contains(key)) {
+//					System.out.println("key: "+key+"; query: "+gen.generateCreateStatementLocally(transitionSchemas.get(key), key)+"\n\n");
+//					((PostgreSQLHandler)dbSchemaHandler).executeStatementPostgreSQL(gen.generateCreateStatementLocally(transitionSchemas.get(key), key));
+//				}
+//			}
+//		} else if (sourceScope.equals(Scope.ARRAY)) {
+//			dbSchemaHandler = new SciDBHandler(scidbSchemaHandlerDBID);
+//			gen = new AFLQueryGenerator();
+//			for (String key : transitionSchemas.keySet()) {
+//				if (children.contains(key)) {
+//					System.out.println("key: "+key+"; query: "+gen.generateCreateStatementLocally(transitionSchemas.get(key), key)+"\n\n");
+//					((SciDBHandler)dbSchemaHandler).executeStatement(gen.generateCreateStatementLocally(transitionSchemas.get(key), key));
+//				}
+//			}
+//		} else
+//			throw new Exception("Unsupported island code : "+sourceScope.toString());
+	}
+	
+//	private void removeTemporaryTableCreatedForPlanning(Map<String, Operator> rootsForSchemas) throws Exception {
+	private void removeTemporaryTableCreatedForPlanning(Map<String, String> transitionSchemas) throws Exception {
+		System.out.print("--> started removing temp table\n");
+		if (sourceScope.equals(Scope.RELATIONAL)) {
+			for (String key : transitionSchemas.keySet()) 
+				if (children.contains(key)) 
+					((PostgreSQLHandler)dbSchemaHandler).executeStatementPostgreSQL("drop table "+key);
+		} else if (sourceScope.equals(Scope.ARRAY)) {
+			for (String key : transitionSchemas.keySet()) 
+				if (children.contains(key)) {
+					((SciDBHandler)dbSchemaHandler).executeStatementAFL("remove("+key+")");
+					((SciDBHandler)dbSchemaHandler).commit();
+				}
+		} else
+			throw new Exception("Unsupported island code : "+sourceScope.toString());
 		
-		tagMatcher = Pattern.compile("\\bBIGDAWGTAG_[0-9]+\\b").matcher(query);
-		Set<String> offsprings = new HashSet<>();
 		
-		while (tagMatcher.find()) {
-			offsprings.add(query.substring(tagMatcher.start(), tagMatcher.end()));
-		}
-		
+		System.out.print("--> done removing temp table\n");
+	}
+	
+
+	public Set<String> getCrossIslandChildrenReferences(Map<String, String> transitionSchemas) {
+
+		// NEW METHOD
+		Set<String> offsprings = new HashSet<>(transitionSchemas.keySet());
 		return offsprings;
+		// NEW METHOD END
+		
+//		// aka find children
+//		
+//		tagMatcher = Pattern.compile("\\bBIGDAWGTAG_[0-9]+\\b").matcher(queryString);
+//		Set<String> offsprings = new HashSet<>();
+//		
+//		while (tagMatcher.find()) {
+//			offsprings.add(queryString.substring(tagMatcher.start(), tagMatcher.end()));
+//		}
+//		
+//		return offsprings;
 	}
 	
 	public QueryExecutionPlan getQEP(int perm, boolean isSelect) throws Exception {
@@ -171,7 +203,7 @@ public class CrossIslandQueryNode {
 		// use perm to pick a specific permutation
 		if (perm >= remainderPermutations.size()) throw new Exception ("Permutation reference index out of bound");
 		
-		QueryExecutionPlan qep = new QueryExecutionPlan(scope); 
+		QueryExecutionPlan qep = new QueryExecutionPlan(sourceScope); 
 		ExecutionNodeFactory.addNodesAndEdges(qep, remainderPermutations.get(perm), remainderLoc, queryContainer, isSelect);
 //		ExecutionNodeFactory.addNodesAndEdgesNaive( qep, remainderPermutations.get(perm), remainderLoc, queryContainer);
 		
@@ -183,7 +215,7 @@ public class CrossIslandQueryNode {
 		List<QueryExecutionPlan> qepl = new ArrayList<>();
 		
 		for (int i = 0; i < remainderPermutations.size(); i++ ){
-			QueryExecutionPlan qep = new QueryExecutionPlan(scope); 
+			QueryExecutionPlan qep = new QueryExecutionPlan(getSourceScope()); 
 			ExecutionNodeFactory.addNodesAndEdges(qep, remainderPermutations.get(i), remainderLoc, queryContainer, isSelect);
 			qepl.add(qep);
 		}
@@ -195,7 +227,7 @@ public class CrossIslandQueryNode {
 	 * 
 	 * @throws Exception
 	 */
-	private void populateQueryContainer() throws Exception {
+	private void populateQueryContainer(Map<String, String> transitionSchemas) throws Exception {
 		
 		// NOW WE ONLY SUPPORT RELATIONAL ISLAND
 		// SUPPORT OTHER ISLANDS && ISLAND CHECK 
@@ -203,26 +235,27 @@ public class CrossIslandQueryNode {
 		Operator root = null;
 		List<String> objs = null;
 		
-		System.out.println("Original query to be parsed: \n"+query);
+		System.out.println("Original query to be parsed: \n"+queryString);
 		
-		if (scope.equals(Scope.RELATIONAL)) {
-			SQLQueryPlan queryPlan = SQLPlanParser.extractDirect((PostgreSQLHandler)dbSchemaHandler, query);
+		if (getSourceScope().equals(Scope.RELATIONAL)) {
+			SQLQueryPlan queryPlan = SQLPlanParser.extractDirect((PostgreSQLHandler)dbSchemaHandler, queryString);
 			root = queryPlan.getRootNode();
-			objs = new ArrayList<>(RelationalSignatureBuilder.sig2(query));
-		} else if (scope.equals(Scope.ARRAY)) {
-			AFLQueryPlan queryPlan = AFLPlanParser.extractDirect((SciDBHandler)dbSchemaHandler, query);
+			objs = new ArrayList<>(RelationalSignatureBuilder.sig2(queryString));
+		} else if (getSourceScope().equals(Scope.ARRAY)) {
+			AFLQueryPlan queryPlan = AFLPlanParser.extractDirect((SciDBHandler)dbSchemaHandler, queryString);
 			root = queryPlan.getRootNode();
-			objs = new ArrayList<>(ArraySignatureBuilder.sig2(query));
+			objs = new ArrayList<>(ArraySignatureBuilder.sig2(queryString));
 		} else 
-			throw new Exception("Unsupported island code: "+scope.toString());
+			throw new Exception("Unsupported island code: "+getSourceScope().toString());
 
 		originalJoinPredicates.addAll(getOriginalJoinPredicates(root));
-		originalMap = CatalogViewer.getDBMappingByObj(objs, scope);
+		originalMap = CatalogViewer.getDBMappingByObj(objs, getSourceScope());
 		
+//		System.out.printf("----> printing original map from Populate: %s; objs: %s; scope: %s\n", originalMap, objs, scope.toString());
 		
 		// traverse add remainder
 		Map<String, DataObjectAttribute> rootOutSchema = root.getOutSchema();
-		remainderLoc = traverse(root); // this populated everything
+		remainderLoc = traverse(root, transitionSchemas); // this populated everything
 
 		Map<Pair<String, String>, String> jp = processJoinPredicates(joinPredicates);
 		Map<Pair<String, String>, String> jf = processJoinPredicates(joinFilters);
@@ -246,9 +279,9 @@ public class CrossIslandQueryNode {
 			int i = 1;
 			OperatorVisitor gen;
 			for (Operator o : permResult) {
-				if (scope.equals(Scope.RELATIONAL)) {
+				if (getSourceScope().equals(Scope.RELATIONAL)) {
 					gen = new SQLQueryGenerator();
-				} else if (scope.equals(Scope.ARRAY)) {
+				} else if (getSourceScope().equals(Scope.ARRAY)) {
 					gen = new AFLQueryGenerator();
 				} else gen = null;
 				gen.configure(true, false);
@@ -309,9 +342,9 @@ public class CrossIslandQueryNode {
 		Pattern predicatePattern = Pattern.compile("(?<=\\()([^\\(^\\)]+)(?=\\))");
 
 		String joinDelim = "";
-		if (scope.equals(Scope.RELATIONAL)){
+		if (getSourceScope().equals(Scope.RELATIONAL)){
 			joinDelim = "=";
-		} else if (scope.equals(Scope.ARRAY)){
+		} else if (getSourceScope().equals(Scope.ARRAY)){
 			// TODO ensure this is correct for SciDB
 			joinDelim = ",";
 		}
@@ -383,7 +416,7 @@ public class CrossIslandQueryNode {
 //		} else if (root instanceof Merge) {
 			// DEBUG ONLY
 			OperatorVisitor gen = null;
-			if (scope.equals(Scope.RELATIONAL)) {
+			if (getSourceScope().equals(Scope.RELATIONAL)) {
 				gen = new SQLQueryGenerator();
 				((SQLQueryGenerator)gen).setSrcStatement(select);
 			}
@@ -822,7 +855,7 @@ public class CrossIslandQueryNode {
 	}
 	
 	
-	private List<String> traverse(Operator node) throws Exception, Exception {
+	private List<String> traverse(Operator node, Map<String, String> transitionSchemas) throws Exception, Exception {
 		// now traverse nodes and group things together
 		// So the remainders should be some things that does not contain individual nodes?
 		// what about mimic2v26.d_patients join d?
@@ -848,22 +881,36 @@ public class CrossIslandQueryNode {
 		
 		if (node instanceof SeqScan) {
 			
-			if (((SeqScan) node).getTable().getFullyQualifiedName().toLowerCase().startsWith("bigdawgtag_")){
+			if ( transitionSchemas.containsKey(((SeqScan) node).getTable().getFullyQualifiedName())){
+				
+				System.out.print("--> transitionSchema marked\n");
+				
 				ret = new ArrayList<String>();
-				if (scope.equals(Scope.RELATIONAL))
+				if (getSourceScope().equals(Scope.RELATIONAL))
 					ret.add(String.valueOf(psqlSchemaHandlerDBID));						// IMPORTANT. CHANGE ORIGINAL MAPPING TO INCLUDE THIS
-				else if (scope.equals(Scope.ARRAY))
+				else if (getSourceScope().equals(Scope.ARRAY))
 					ret.add(String.valueOf(scidbSchemaHandlerDBID));
 				else 
-					throw new Exception("Unsupported island: "+scope.name());
+					throw new Exception("Unsupported island: "+getSourceScope().name());
 			} else if (node.getChildren().size() > 0) {
-				List<String> result = traverse(node.getChildren().get(0));
+				List<String> result = traverse(node.getChildren().get(0), transitionSchemas);
 				if (result != null) ret = new ArrayList<String>(result); 
 			} else {
 //				if (((SeqScan)node).getIndexCond() != null) {
 //					scansWithIndexCond.add(((Scan)node).getIndexCond().toString());
 //				}
-				ret = new ArrayList<String>(originalMap.get(((SeqScan) node).getTable().getFullyQualifiedName()));
+				
+				System.out.printf("--->> printing qualified name: %s; originalMap: %s; \n", ((SeqScan) node).getTable().getFullyQualifiedName(), originalMap);
+				
+				if (originalMap.get(((SeqScan) node).getTable().getFullyQualifiedName()) != null)
+					ret = new ArrayList<String>(originalMap.get(((SeqScan) node).getTable().getFullyQualifiedName()));
+				else {
+					System.out.print("--> tokenOfIndecision evoked at SeqScan\n");
+					// in case it's not assigned
+					ret = new ArrayList<> ();
+					ret.add(tokenOfIndecision);
+				}
+				
 			}
 			
 		} else if (node instanceof Join) {
@@ -873,8 +920,8 @@ public class CrossIslandQueryNode {
 			Operator child0 = joinNode.getChildren().get(0);
 			Operator child1 = joinNode.getChildren().get(1);
 			
-			List <String> c0 = traverse(child0);
-			List <String> c1 = traverse(child1);
+			List <String> c0 = traverse(child0, transitionSchemas);
+			List <String> c1 = traverse(child1, transitionSchemas);
 			
 			
 			if (c0 != null && c1 != null) {
@@ -883,11 +930,18 @@ public class CrossIslandQueryNode {
 				intersection.retainAll(c1);
 				
 				if (intersection.isEmpty()) {
-					pruneChild(child1, c1);
-					pruneChild(child0, c0);
+					
+					if (c0.contains(tokenOfIndecision) ) {
+						ret = new ArrayList<>(c1);
+					} else if (c1.contains(tokenOfIndecision)) {
+						ret = new ArrayList<>(c0);
+					} else {
+						pruneChild(child1, c1);
+						pruneChild(child0, c0);
+					}
 					
 				} else {
-					ret = new ArrayList<String>(intersection);
+					ret = new ArrayList<>(intersection);
 				}
 			}
 			
@@ -910,7 +964,7 @@ public class CrossIslandQueryNode {
 		} else if (node instanceof Sort || node instanceof Aggregate || node instanceof Limit || node instanceof Distinct ) {
 			
 			// blocking come into effect
-			List<String> result = traverse(node.getChildren().get(0));
+			List<String> result = traverse(node.getChildren().get(0), transitionSchemas);
 			if (result != null) ret = new ArrayList<String>(result); 
 		
 		} else if (node instanceof Merge) {
@@ -921,7 +975,7 @@ public class CrossIslandQueryNode {
 			List<Operator> nulled = new ArrayList<>();
 			
 			for (Operator o: mergeNode.getChildren()) {
-				List <String> c = traverse(o);
+				List <String> c = traverse(o, transitionSchemas);
 				if (c == null) nulled.add(o);
 				else traverseResults.put(o, new HashSet<>(c));
 			}
@@ -969,6 +1023,7 @@ public class CrossIslandQueryNode {
 			remainderPermutations.add(node);
 		}
 		
+		System.out.print("--> right before return from traverse\n");
 		return ret;
 	}
 	
@@ -985,18 +1040,11 @@ public class CrossIslandQueryNode {
 		
 		for (String s : traverseResult) {
 			
-			if (scope.equals(Scope.RELATIONAL)) {
-				ci = CatalogViewer.getPSQLConnectionInfo(Integer.parseInt(s));
-				if (ci == null) continue;
-				dbid = s;
-				if (ci != null) break;
-			} else if (scope.equals(Scope.ARRAY)) {
-				ci = CatalogViewer.getSciDBConnectionInfo(Integer.parseInt(s));
-				if (ci == null) continue;
-				dbid = s;
-				if (ci != null) break;
-			} else 
-				throw new Exception("Unsupported island code: "+scope.toString());
+			ci = CatalogViewer.getConnectionInfo(Integer.parseInt(s));
+			if (ci == null) continue;
+			dbid = s;
+			if (ci != null) break;
+			
 		}
 		
 		queryContainer.put(c.getPruneToken(), new QueryContainerForCommonDatabase(ci, dbid, c, c.getPruneToken()));
@@ -1009,18 +1057,6 @@ public class CrossIslandQueryNode {
 	public Set<String> getChildren() {
 		return this.children;
 	};
-	
-	/**
-	 * Get scope of this Node. It could be an island token or a 'cast'
-	 * @return
-	 */
-	public IslandsAndCast.Scope getScope() {
-		return this.scope;
-	}
-	
-	public String getQuery() {
-		return this.query;
-	}
 	
 	public Operator getRemainder(int index) {
 		return remainderPermutations.get(index);
@@ -1062,9 +1098,7 @@ public class CrossIslandQueryNode {
 		}
 	}
 	
-	public String getName() {
-		return name;
-	}
+
 	
 	@Override
 	public String toString() {
@@ -1157,5 +1191,9 @@ public class CrossIslandQueryNode {
 		System.out.printf("----> findIntersectionsSortByLargest result: %s\n", result);
 		
 		return result;
+	}
+
+	public List<CrossIslandPlanNode> getSourceVertices(CrossIslandQueryPlan ciqp) throws Exception {
+		return getSourceOrTarget(ciqp, true);
 	}
 }

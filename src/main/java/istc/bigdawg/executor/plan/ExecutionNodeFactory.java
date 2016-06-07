@@ -276,13 +276,11 @@ public class ExecutionNodeFactory {
 		}
 
 		String remainderSelectIntoString;
-		ConnectionInfo remainderCI;
+		ConnectionInfo remainderCI = CatalogViewer.getConnectionInfo(remainderDBID);
 		OperatorVisitor gen = null;
 		if (qep.getIsland().equals(Scope.RELATIONAL)) {
-			remainderCI = CatalogViewer.getPSQLConnectionInfo(remainderDBID);
 			gen = new SQLQueryGenerator();
 		} else if (qep.getIsland().equals(Scope.ARRAY)) {
-			remainderCI = CatalogViewer.getSciDBConnectionInfo(remainderDBID);
 			gen = new AFLQueryGenerator();
 		} else {
 			throw new Exception("Unsupported island code: " + qep.getIsland().toString());

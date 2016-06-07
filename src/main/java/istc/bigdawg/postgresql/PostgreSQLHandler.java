@@ -48,6 +48,13 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 	private PreparedStatement preparedSt = null;
 	private ResultSet rs = null;
 
+	
+
+	public PostgreSQLHandler(PostgreSQLConnectionInfo conInfo) {
+		this.conInfo = conInfo;
+	}
+	
+	@Deprecated
 	public PostgreSQLHandler(int dbId) throws Exception {
 		try {
 			this.conInfo = CatalogViewer.getConnection(dbId);
@@ -58,10 +65,6 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 			e.printStackTrace();
 			throw e;
 		}
-	}
-
-	public PostgreSQLHandler(PostgreSQLConnectionInfo conInfo) {
-		this.conInfo = conInfo;
 	}
 
 	public PostgreSQLHandler() {
@@ -502,8 +505,9 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 	 * @return connection info associated with the DBID
 	 * @throws Exception
 	 */
+	@Deprecated
 	public static ConnectionInfo generateConnectionInfo(int dbid) throws Exception {
-		return CatalogViewer.getPSQLConnectionInfo(dbid);
+		return CatalogViewer.getConnectionInfo(dbid);
 	}
 
 	/**

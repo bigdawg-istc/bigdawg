@@ -10,6 +10,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import istc.bigdawg.catalog.CatalogInstance;
+import istc.bigdawg.parsers.UserQueryParser;
 import istc.bigdawg.plan.extract.SQLPlanParser;
 import istc.bigdawg.plan.generators.SQLQueryGenerator;
 import istc.bigdawg.plan.operators.Join;
@@ -18,12 +19,10 @@ import istc.bigdawg.planner.Planner;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.signature.Signature;
 import istc.bigdawg.utils.sqlutil.SQLPrepareQuery;
-import net.sf.jsqlparser.parser.CCJSqlParserUtil;
-import net.sf.jsqlparser.statement.select.Select;
-import net.sf.jsqlparser.statement.select.SetOperationList;
 
 public class TrialsAndErrors {
 	
+	private static boolean runInterIslandParse = false;
 	private static boolean runExplainer = false;
 	private static boolean runBuilder = false;
 	private static boolean runRegex = false;
@@ -34,12 +33,17 @@ public class TrialsAndErrors {
 	public void setUp() throws Exception {
 		CatalogInstance.INSTANCE.getCatalog();
 		
+//		setupInterIslandParse();
 //		setupQueryExplainer();
 //		setupQueryBuilder();
-//		setupRegexTester();
+		setupRegexTester();
 //		setupTreeWalker();
-		setupPlannerTester();
+//		setupPlannerTester();
 	}
+	
+	public void setupInterIslandParse() {
+		runInterIslandParse = true;
+	}; 
 	
 	public void setupQueryExplainer() {
 		runExplainer = true;
@@ -59,6 +63,26 @@ public class TrialsAndErrors {
 	
 	public void setupPlannerTester() {
 		runPlanner = true;
+	}
+	
+	@Test
+	public void testRunInterIslandParse() throws Exception {
+		
+		if ( !runInterIslandParse ) return;
+			
+		System.out.println("InterIslandParse -- Type query or \"quit\" to exit: ");
+//		Scanner scanner = new Scanner(System.in);
+//		String query = scanner.nextLine();
+		String query = "bdrel(abc bdarray(cded bdcast(bdrel(asd))) bdgraph(cde))";
+		while (!query.toLowerCase().equals("quit")) {
+			
+			UserQueryParser.getUnwrappedQueriesByIslands(query);
+//			System.out.println(UserQueryParser.getUnwrappedQueriesByIslands(query) + "\n");
+//			query = scanner.nextLine();
+			break;
+			
+		}
+//		scanner.close();
 	}
 
 	@Test
@@ -128,28 +152,23 @@ public class TrialsAndErrors {
 		
 		if ( !runRegex ) return;
 		
-		String s = "width_bucket(valuenum, 0, 100, 1001)";
-		
-		StringBuilder sb = new StringBuilder();
-		sb.append(s);
+		String strippedQuery = "bigdawgtag_1, alphabet_2, 'create array alphabet_2 <abc:int64, bcd:string>[i=*:*,100,0,j=*:100,100,0]', array";
 
-		Pattern pDayInterval = Pattern.compile("[(]");
-		Matcher m3 = pDayInterval.matcher(sb);
-		
-		if (m3.find()) {
-			System.out.println("--> INTERVAL: "+sb.substring(m3.start(), m3.end()));
+		System.out.println("Builder -- Type regexfinder or \"quit\" to exit: ");
+		Scanner scanner = new Scanner(System.in);
+		String regex = scanner.nextLine();
+		while (!regex.toLowerCase().equals("quit")) {
+			
+			Matcher m = Pattern.compile(regex).matcher(strippedQuery);
+			
+			if (m.find())
+				System.out.printf("-> {%s}\n", strippedQuery.substring(m.start(), m.end()));
+			else 
+				System.out.printf("-X Not found: %s;\n", regex);
+			
+			regex = scanner.nextLine();
 		}
-		
-		
-		s = s.replaceAll("[(]", "\\[\\(\\]"); 
-//		Pattern p = Pattern.compile("'[0-9]+'");
-//		Matcher m = p.matcher(s);
-//		while (m.find()) {
-//			s = m.replaceFirst(s.substring(m.start()+1, m.end()-1));
-//			m.reset(s);
-//		}
-		
-		System.out.println(s);
+		scanner.close();
 	}
 	
 	@Test
@@ -195,7 +214,8 @@ public class TrialsAndErrors {
 		if ( !runPlanner ) return;
 		
 //		String userinput = "bdrel(SELECT lineitem.l_orderkey, sum(lineitem.l_extendedprice * (1 - lineitem.l_discount)) AS revenue, orders.o_orderdate, orders.o_shippriority FROM orders, customer, lineitem WHERE (orders.o_custkey = customer.c_custkey) AND (orders.o_orderdate < '1996-01-02') AND (customer.c_mktsegment = 'AUTOMOBILE') AND (lineitem.l_shipdate > '1996-01-02') AND (lineitem.l_orderkey = orders.o_orderkey) GROUP BY lineitem.l_orderkey, orders.o_orderdate, orders.o_shippriority ORDER BY revenue DESC, orders.o_orderdate);";
-		String userinput = "bdrel(select c_custkey, c_name from customer where c_custkey = 1 union select c_custkey as ckey, c_name from customer where c_custkey = 3 union all select c_custkey, c_name from customer where c_custkey = 5);";
+//		String userinput = "bdrel(select c_custkey, c_name from customer where c_custkey = 1 union select c_custkey as ckey, c_name from customer where c_custkey = 3 union all select c_custkey, c_name from customer where c_custkey = 5);";
+		String userinput = "bdrel(select c_custkey, c_name from bdcast(bdarray(filter(customer, c_custkey = 1)), relational));";
 		try {
 		Planner.processQuery(userinput, false);
 		} catch (Exception e) {
@@ -204,11 +224,11 @@ public class TrialsAndErrors {
 		}
 	}
 	
-	public void printIndentation(int recLevel) {
-		String token = "--";
-		for (int i = 0; i < recLevel; i++)
-			System.out.print(token);
-		System.out.print(' ');
-	}
+//	private void printIndentation(int recLevel) {
+//		String token = "--";
+//		for (int i = 0; i < recLevel; i++)
+//			System.out.print(token);
+//		System.out.print(' ');
+//	}
 	
 }

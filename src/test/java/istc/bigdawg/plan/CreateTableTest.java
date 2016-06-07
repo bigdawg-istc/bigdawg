@@ -7,6 +7,7 @@ import java.util.Map;
 
 import org.junit.Test;
 
+import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import junit.framework.TestCase;
@@ -19,7 +20,7 @@ public class CreateTableTest extends TestCase {
 	
 	protected void setUp() throws Exception {
 		expectedOutputs = new HashMap<>();
-		psqlci = (PostgreSQLConnectionInfo) PostgreSQLHandler.generateConnectionInfo(0);
+		psqlci = (PostgreSQLConnectionInfo) CatalogViewer.getConnection(0);
 		
 		setupCreateTableEngines();
 	}

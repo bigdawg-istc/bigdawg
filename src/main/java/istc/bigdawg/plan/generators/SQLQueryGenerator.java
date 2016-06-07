@@ -1523,6 +1523,8 @@ public class SQLQueryGenerator implements OperatorVisitor {
 		case "strin":
 			return "varchar";
 		case "float":
+			return "float";
+		case "doubl":
 			return "double precision";
 		case "bool ":
 			return "boolean";
