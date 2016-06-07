@@ -3,12 +3,16 @@
  */
 package istc.bigdawg.zookeeper;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs;
 
 import istc.bigdawg.exceptions.NetworkException;
+import istc.bigdawg.network.IpAddressPort;
 import istc.bigdawg.network.NetworkUtils;
 import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.utils.LogUtils;
@@ -51,15 +55,23 @@ public class ZooKeeperUtils {
 	 */
 	public static final String tables = "/tables";
 
-	private static final String znodePath;
+	/** Znode Path for this machine. */
+	private static final String znodeBigDAWGNodesPath;
+
+	/**
+	 * Handle zookeeper operations.
+	 */
+	public static ZooKeeperHandler zooHandler;
 
 	static {
 		/* each node in BigDAWG is defined by a separate ipAddress and port. */
 		String ipAddress = BigDawgConfigProperties.INSTANCE
 				.getGrizzlyIpAddress();
 		String port = BigDawgConfigProperties.INSTANCE.getGrizzlyPort();
-		znodePath = ZooKeeperUtils.BigDAWGPath + ZooKeeperUtils.nodes + "/"
-				+ ipAddress + ":" + port;
+		znodeBigDAWGNodesPath = ZooKeeperUtils.BigDAWGPath
+				+ ZooKeeperUtils.nodes + "/" + ipAddress + ":" + port;
+		zooHandler = new ZooKeeperHandler(
+				ZooKeeperInstance.INSTANCE.getZooKeeper());
 	}
 
 	/**
@@ -68,27 +80,47 @@ public class ZooKeeperUtils {
 	 * @param port
 	 * @return full znode path for the given ipAddress and port
 	 */
-	public static String getZnodePath(String ipAddress, String port) {
+	public static String getZnodePathNodes(String ipAddress, String port) {
 		return ZooKeeperUtils.BigDAWGPath + ZooKeeperUtils.nodes + "/"
 				+ ipAddress + ":" + port;
 	}
 
 	/**
-	 * see: {@link #getZnodePath(String, String)}; we set default address which
-	 * was given to BigDAWG (grizzly port)
+	 * Get path for a lock.
+	 * 
+	 * @param ipAddress
+	 * @param port
+	 * @return full znode path for the given ipAddress and port
+	 */
+	public static String getZnodePathMigrationLocks(String ipAddress,
+			String port) {
+		return ZooKeeperUtils.BigDAWGPath + ZooKeeperUtils.migrationLocks + "/"
+				+ ipAddress + ":" + port;
+	}
+
+	/**
+	 * see: {@link #getZnodePathNodes(String, String)}; we set default address
+	 * which was given to BigDAWG (grizzly port)
 	 * 
 	 * @param ipAddress
 	 * @return full znode path for the given ipAddress and port
 	 */
-	public static String getZnodePath(String ipAddress) {
-		return getZnodePath(ipAddress,
+	public static String getZnodePathNodes(String ipAddress) {
+		return getZnodePathNodes(ipAddress,
 				BigDawgConfigProperties.INSTANCE.getGrizzlyPort());
 	}
 
 	/**
-	 * Handle zookeeper operations.
+	 * see: {@link #getZnodePathNodes(String, String)}; we set default address
+	 * which was given to BigDAWG (grizzly port)
+	 * 
+	 * @param ipAddress
+	 * @return full znode path for the given ipAddress and port
 	 */
-	public static ZooKeeperHandler zooHandler;
+	public static String getZnodePathMigrationLocks(String ipAddress) {
+		return getZnodePathMigrationLocks(ipAddress,
+				BigDawgConfigProperties.INSTANCE.getGrizzlyPort());
+	}
 
 	/**
 	 * Create the root znodes in ZooKeeper for BigDAWG.
@@ -98,7 +130,7 @@ public class ZooKeeperUtils {
 	 * @throws KeeperException
 	 * @throws InterruptedException
 	 */
-	public static void createBigDAWGZnodes(ZooKeeperHandler zooHandler)
+	public static void createBigDAWGZnodes()
 			throws NetworkException, KeeperException, InterruptedException {
 		zooHandler.createZnodeIfNotExists(ZooKeeperUtils.BigDAWGPath,
 				NetworkUtils.serialize(new NodeInfo("BigDAWG")),
@@ -123,16 +155,13 @@ public class ZooKeeperUtils {
 	 * Register the node as BigDAWG active node in Zookeeper.
 	 */
 	public static void registerNodeInZooKeeper() {
-
 		try {
-			ZooKeeperHandler zooHandler = new ZooKeeperHandler(
-					ZooKeeperInstance.INSTANCE.getZooKeeper());
-			ZooKeeperUtils.createBigDAWGZnodes(zooHandler);
+			createBigDAWGZnodes();
 			NodeInfo nodeInfo = new NodeInfo(
 					"By computer with name: " + SystemUtilities.getHostName());
 			byte[] znodeData = NetworkUtils.serialize(nodeInfo);
 			/* create the znode to denote the active BigDAWG node */
-			zooHandler.createZnode(znodePath, znodeData,
+			zooHandler.createZnode(znodeBigDAWGNodesPath, znodeData,
 					ZooDefs.Ids.READ_ACL_UNSAFE, CreateMode.EPHEMERAL);
 		} catch (Exception ex) {
 			String stackTrace = StackTrace.getFullStackTrace(ex);
@@ -149,17 +178,61 @@ public class ZooKeeperUtils {
 	 * @throws KeeperException
 	 */
 	public static void unregisterNodeInZooKeeper() {
+		ZooKeeperHandler zooHandler = new ZooKeeperHandler(
+				ZooKeeperInstance.INSTANCE.getZooKeeper());
 		try {
 			/*
 			 * Try to clean/remove the znodes that were created for this BigDAWG
 			 * nodes.
 			 */
-			zooHandler.deleteZnode(znodePath);
+			zooHandler.deleteZnode(znodeBigDAWGNodesPath);
 		} catch (KeeperException | InterruptedException ex) {
 			String stackTrace = StackTrace.getFullStackTrace(ex);
 			logger.error(LogUtils.replace(stackTrace));
 		} finally {
 			ZooKeeperInstance.INSTANCE.close();
+		}
+	}
+
+	/**
+	 * Lock the nodes for migration. The locking is executed on the server from
+	 * which the data is migrated.
+	 * 
+	 * @param hostnameFrom
+	 * @param hostnameTo
+	 * @throws InterruptedException
+	 * @throws KeeperException
+	 */
+	public static List<String> acquireLockMigrationNodes(
+			List<IpAddressPort> ipPortPairs)
+					throws KeeperException, InterruptedException {
+		List<String> locks = new ArrayList<String>();
+		if (ipPortPairs.isEmpty()) {
+			return locks;
+		}
+		/* our locking mechanism locks addresses in lexicographical order */
+		String message = "lock created by: "
+				+ BigDawgConfigProperties.INSTANCE.getGrizzlyIpAddress();
+		byte[] data = message.getBytes();
+		for (IpAddressPort ipPort : ipPortPairs) {
+			String znodePath = ZooKeeperUtils.getZnodePathMigrationLocks(
+					ipPort.getIpAddress(), ipPort.getPort());
+			locks.add(zooHandler.getLock(znodePath, data));
+		}
+		return locks;
+	}
+
+	/**
+	 * Release the lock for the migration process.
+	 * 
+	 * @param locks
+	 * @throws KeeperException
+	 * @throws InterruptedException
+	 */
+	public static void releaseLockMigrationNodes(List<String> locks)
+			throws KeeperException, InterruptedException {
+		for (String lock : locks) {
+			zooHandler.releaseLock(lock);
 		}
 	}
 

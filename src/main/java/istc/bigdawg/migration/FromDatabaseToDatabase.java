@@ -5,16 +5,19 @@ import static istc.bigdawg.network.NetworkUtils.isThisMyIpAddress;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.Callable;
 
 import org.apache.log4j.Logger;
 
 import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.exceptions.NetworkException;
+import istc.bigdawg.network.IpAddressPort;
 import istc.bigdawg.network.NetworkOut;
 import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.zookeeper.FollowRemoteNodes;
+import istc.bigdawg.zookeeper.ZooKeeperUtils;
 
 /**
  * @author Adam Dziedzic
@@ -121,8 +124,8 @@ public abstract class FromDatabaseToDatabase
 		/*
 		 * check if the address is not a local host
 		 */
-		String hostnameFrom = this.getConnectionFrom().getHost();
-		String hostnameTo = this.getConnecitonTo().getHost();
+		final String hostnameFrom = this.getConnectionFrom().getHost();
+		final String hostnameTo = this.getConnecitonTo().getHost();
 		log.debug("hostname from which the data is migrated: " + hostnameFrom);
 		try {
 			if (!isThisMyIpAddress(InetAddress.getByName(hostnameFrom))) {
@@ -134,6 +137,13 @@ public abstract class FromDatabaseToDatabase
 				result = FollowRemoteNodes.execute(Arrays.asList(hostnameFrom),
 						sendNetworkRequest(hostnameFrom));
 			} else {
+				/* change the local hostname to the general ip address */
+				String thisHostname = BigDawgConfigProperties.INSTANCE
+						.getGrizzlyIpAddress();
+				String port = BigDawgConfigProperties.INSTANCE.getGrizzlyPort();
+				List<String> zooKeeperLocks = ZooKeeperUtils.acquireLockMigrationNodes(
+						Arrays.asList(new IpAddressPort(thisHostname, port),
+								new IpAddressPort(hostnameTo, port)));
 				if (!isThisMyIpAddress(InetAddress.getByName(hostnameTo))) {
 					log.debug("Migration from a local to remote database.");
 					result = FollowRemoteNodes.execute(
@@ -144,6 +154,7 @@ public abstract class FromDatabaseToDatabase
 					log.debug("The total migration is executed locally.");
 					return executeMigration();
 				}
+				ZooKeeperUtils.releaseLockMigrationNodes(zooKeeperLocks);
 			}
 		} catch (MigrationException e) {
 			throw e;
@@ -153,4 +164,5 @@ public abstract class FromDatabaseToDatabase
 		log.debug("Process results of the migration.");
 		return MigrationResult.processResult(result);
 	}
+
 }

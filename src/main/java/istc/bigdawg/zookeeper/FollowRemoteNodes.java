@@ -50,7 +50,7 @@ public class FollowRemoteNodes {
 		List<Callable<Object>> callables = new ArrayList<>();
 		for (String ipAddress : ipAddresses) {
 			callables.add(zooHandler.callableWatch(
-					ZooKeeperUtils.getZnodePath(ipAddress),
+					ZooKeeperUtils.getZnodePathNodes(ipAddress),
 					EventType.NodeDeleted));
 		}
 		callables.add(callable);

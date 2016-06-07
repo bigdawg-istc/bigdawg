@@ -39,6 +39,12 @@ public class ZooKeeperHandler {
 	/** The prefix of the message returned from the ZooKeeper watcher */
 	public static final String watchMessagePrefix = "The following event was triggered in ZooKeeper: ";
 
+	/** Information that the lock was acquired but after some waiting. */
+	public static final String lockAcquiredAfterWaiting = "The lock was acquired after wait. ";
+
+	/** Information that the lock was acquired immediately. */
+	public static final String lockAcquiredImmediately = "The lock was acquired immediately. ";
+
 	/** Instance for ZooKeeper class. */
 	private ZooKeeper zk;
 
@@ -86,17 +92,17 @@ public class ZooKeeperHandler {
 	 * Create a znode in ZooKeeper ensemble, with default ACL (Access Control
 	 * List) - completely open and in persistent mode.
 	 */
-	public void createZnode(String path, byte[] data)
+	public String createZnode(String path, byte[] data)
 			throws KeeperException, InterruptedException {
-		this.createZnode(path, data, ZooDefs.Ids.OPEN_ACL_UNSAFE,
+		return this.createZnode(path, data, ZooDefs.Ids.OPEN_ACL_UNSAFE,
 				CreateMode.PERSISTENT);
 	}
 
 	/** Create znode with all parameters provided. */
-	public void createZnode(String path, byte[] data, List<ACL> acl,
+	public String createZnode(String path, byte[] data, List<ACL> acl,
 			CreateMode createMode)
 					throws KeeperException, InterruptedException {
-		zk.create(path, data, acl, createMode);
+		return zk.create(path, data, acl, createMode);
 	}
 
 	/**
@@ -110,7 +116,8 @@ public class ZooKeeperHandler {
 	 * @throws KeeperException
 	 * @throws InterruptedException
 	 */
-	public String watchEvent(String znodePath, Watcher.Event.EventType eventType) {
+	public String watchEvent(String znodePath,
+			Watcher.Event.EventType eventType) {
 		logger.debug("Watch event executed.");
 		/**
 		 * Count down latch is a synchronization mechanism.
@@ -123,12 +130,13 @@ public class ZooKeeperHandler {
 		CountDownLatch signal = new CountDownLatch(1);
 		try {
 			if (zk.exists(znodePath, true) == null) {
-				return "The znode: " + znodePath + " does not exists.";
+				return "The znode: " + znodePath + " does not exist.";
 			}
 			zk.exists(znodePath, new Watcher() {
 				public void process(WatchedEvent watchedEvent) {
-					if (watchedEvent.getType() == eventType)
+					if (watchedEvent.getType() == eventType) {
 						signal.countDown();
+					}
 				}
 			});
 		} catch (KeeperException | InterruptedException e) {
@@ -152,7 +160,7 @@ public class ZooKeeperHandler {
 					+ StackTrace.getFullStackTrace(e));
 			return message;
 		}
-		return watchMessagePrefix + eventType + " path: "+znodePath;
+		return watchMessagePrefix + eventType + " path: " + znodePath;
 	}
 
 	/**
@@ -181,19 +189,22 @@ public class ZooKeeperHandler {
 	/**
 	 * Create a znode in ZooKeeper ensemble if it does not already exists.
 	 * 
+	 * @return
+	 * 
 	 * @throws InterruptedException
 	 * @throws KeeperException
 	 */
-	public void createZnodeIfNotExists(String path, byte[] data, List<ACL> acl,
-			CreateMode createMode)
+	public String createZnodeIfNotExists(String path, byte[] data,
+			List<ACL> acl, CreateMode createMode)
 					throws KeeperException, InterruptedException {
 		/* check if the znode exists */
 		Stat stat = this.znodeExists(path);
 		if (stat != null) {
 			logger.info("The znode with path: '" + path + "' already exists.");
+			return path;
 		} else {
 			logger.info("There is no znode with the path: '" + path + "'");
-			this.createZnode(path, data, acl, createMode);
+			return this.createZnode(path, data, acl, createMode);
 		}
 	}
 
@@ -209,7 +220,10 @@ public class ZooKeeperHandler {
 	/** Delete the znode with the given path. */
 	public void deleteZnode(String path)
 			throws KeeperException, InterruptedException {
-		zk.delete(path, zk.exists(path, true).getVersion());
+		Stat stat = zk.exists(path, true);
+		if (stat != null) {
+			zk.delete(path, stat.getVersion());
+		}
 	}
 
 	/** Get the data from the znode path. */
@@ -236,6 +250,70 @@ public class ZooKeeperHandler {
 	public List<String> getChildren(String path)
 			throws KeeperException, InterruptedException {
 		return zk.getChildren(path, false);
+	}
+
+	/**
+	 * Get lock in ZooKeeper. check paper on ZooKeeper - ZooKeeper: Wait-free
+	 * coordination for Internet-scale systems - page 6 - simple locks without
+	 * Herd Effects. It blocks until the lock can be acquired.
+	 * 
+	 * @param znodePath
+	 *            path to be locked
+	 * @param data
+	 *            data to be put in the lock
+	 * @return the full path to the znode which represents the lock
+	 * @throws InterruptedException
+	 * @throws KeeperException
+	 */
+	public String getLock(String znodePath, byte[] data,
+			ZnodePathMessage znodePathMessage)
+					throws KeeperException, InterruptedException {
+		logger.debug("get lock method started");
+		String createdZnode = createZnode(znodePath + "/lock-", data,
+				ZooDefs.Ids.READ_ACL_UNSAFE, CreateMode.EPHEMERAL_SEQUENTIAL);
+		znodePathMessage.setZnodePath(createdZnode);
+		List<String> children = getChildren(znodePath);
+		children.sort(String::compareTo);
+		/* If this machine is not the first one to acquire the lock. */
+		/*
+		 * The collection of children contains only the final name of znode
+		 * without a full path!
+		 */
+		if (!createdZnode.equals(znodePath + "/" + children.get(0))) {
+			for (int i = 1; i < children.size(); ++i) {
+				if (createdZnode.equals(znodePath + "/" + children.get(i))) {
+					String previousZnodeLock = children.get(i - 1);
+					String watchEventMessage = watchEvent(znodePath + "/" + previousZnodeLock,
+							EventType.NodeDeleted);
+					znodePathMessage.setMessage(lockAcquiredAfterWaiting + watchEventMessage);
+				}
+			}
+		} else {
+			znodePathMessage.setMessage(lockAcquiredImmediately);
+		}
+		return createdZnode;
+	}
+
+	/**
+	 * {@link #getLock(String, byte[], ZnodePathMessage)}
+	 */
+	public String getLock(String znodePath, byte[] data)
+			throws KeeperException, InterruptedException {
+		return this.getLock(znodePath, data, new ZnodePathMessage());
+	}
+
+	/**
+	 * Release the lock in ZooKeeper.
+	 * 
+	 * @param lock
+	 *            the full path to the znode in ZooKeeper that represents the
+	 *            lock
+	 * @throws KeeperException
+	 * @throws InterruptedException
+	 */
+	public void releaseLock(String lock)
+			throws KeeperException, InterruptedException {
+		deleteZnode(lock);
 	}
 
 	/**

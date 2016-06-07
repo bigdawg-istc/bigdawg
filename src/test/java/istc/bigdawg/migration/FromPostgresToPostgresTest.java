@@ -29,7 +29,7 @@ public class FromPostgresToPostgresTest {
 	/* the class for the PostgreSQL <-> PostgreSQL migration */
 	private FromPostgresToPostgres migrator = new FromPostgresToPostgres();
 
-	private String localIP = "205.208.122.6";
+	private String localIP = "205.208.123.154";
 	private String remoteIP = "128.135.11.26";
 
 	private String localPassword = "test";
@@ -127,7 +127,7 @@ public class FromPostgresToPostgresTest {
 	}
 
 	@Test
-	public void testFromPostgresToPostgresNetworkLineitem() throws Exception {
+	public void testFromPostgresToPostgresNetworkTPCH() throws Exception {
 		System.out.println("Migrating data from PostgreSQL to PostgreSQL");
 		PostgreSQLConnectionInfo conInfoFrom = new PostgreSQLConnectionInfo(
 				localIP, "5431", "tpch", "pguser", localPassword);
@@ -140,14 +140,14 @@ public class FromPostgresToPostgresTest {
 	}
 
 	@Test
-	public void testFromPostgresToPostgresNetworkNotExistingLineitem()
+	public void testFromPostgresToPostgresNetworkTPCHRemote()
 			throws Exception {
 		System.out.println("Migrating data from PostgreSQL to PostgreSQL");
 		PostgreSQLConnectionInfo conInfoFrom = new PostgreSQLConnectionInfo(
 				remoteIP, "5431", "tpch", "pguser", remotePassword);
 		PostgreSQLConnectionInfo conInfoTo = new PostgreSQLConnectionInfo(
 				localIP, "5431", "tpch", "pguser", localPassword);
-		String table = "lineitem";
+		String table = "supplier";
 		MigrationResult result = migrator.migrate(conInfoFrom, table, conInfoTo,
 				table);
 		System.out.println(result);
