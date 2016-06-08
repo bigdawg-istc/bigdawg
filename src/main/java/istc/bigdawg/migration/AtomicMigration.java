@@ -209,6 +209,7 @@ public class AtomicMigration {
 		} catch (SQLException e) {
 			prepareTo(connectionFrom, fromTable);
 		}
+		/* the end of the window with no target table */
 		cleanFrom(connectionFrom, fromTable);
 	}
 
@@ -305,7 +306,7 @@ public class AtomicMigration {
 				"localhost", "5431", "tpch", "pguser", "test");
 		PostgreSQLConnectionInfo connectionTo = new PostgreSQLConnectionInfo(
 				"localhost", "5430", "tpch", "pguser", "test");
-		String table = "nation";
+		String table = "orders";
 
 		PostgreSQLHandler handlerFrom = new PostgreSQLHandler(connectionFrom);
 		try {
