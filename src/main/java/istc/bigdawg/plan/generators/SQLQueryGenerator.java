@@ -424,22 +424,23 @@ public class SQLQueryGenerator implements OperatorVisitor {
 				dstStatement = generateSelectWithToken(scan, scan.getPruneToken());// SelectUtils.buildSelectFromTable(new Table(scan.getPruneToken()));
 		} 
 		
-		if (((PlainSelect)dstStatement.getSelectBody()).getSelectItems().size() == 1 
-				&& ((PlainSelect)dstStatement.getSelectBody()).getSelectItems().get(0) instanceof AllColumns)
-			((PlainSelect)dstStatement.getSelectBody()).setSelectItems(new ArrayList<>());
-		
-		for (String alias: scan.getOutSchema().keySet()) {
+		if (((PlainSelect)dstStatement.getSelectBody()).getSelectItems().size() == 1 && ((PlainSelect)dstStatement.getSelectBody()).getSelectItems().get(0) instanceof AllColumns) {
 			
-			Expression e = CCJSqlParserUtil.parseExpression(rewriteComplextOutItem(scan, scan.getOutSchema().get(alias).getSQLExpression()));
-			SelectItem s = new SelectExpressionItem(e);
-			
-			if (!(e instanceof Column)) {
-				((SelectExpressionItem)s).setAlias(new Alias(alias));
+			((PlainSelect)dstStatement.getSelectBody()).getSelectItems().clear();
+
+			for (String alias: scan.getOutSchema().keySet()) {
+				
+				Expression e = CCJSqlParserUtil.parseExpression(rewriteComplextOutItem(scan, scan.getOutSchema().get(alias).getSQLExpression()));
+				SelectItem s = new SelectExpressionItem(e);
+				
+				if (!(e instanceof Column)) {
+					((SelectExpressionItem)s).setAlias(new Alias(alias));
+				}
+				
+				((PlainSelect)dstStatement.getSelectBody()).addSelectItems(s);
 			}
-			
-			
-			((PlainSelect)dstStatement.getSelectBody()).addSelectItems(s);
 		}
+		
 		
 		if (scan.getFilterExpression() != null && (!scan.isPruned() || rootStatus) && !scan.isHasFunctionInFilterExpression()) { // FilterExpression with function is pulled
 			
@@ -1224,6 +1225,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 			lsi.add(sei);
 		}
 		ps.setSelectItems(lsi);
+		
 		return outStatement;
     }
 	

@@ -38,11 +38,13 @@ import istc.bigdawg.plan.operators.Operator;
 import istc.bigdawg.plan.operators.Scan;
 import istc.bigdawg.plan.operators.SeqScan;
 import istc.bigdawg.plan.operators.Sort;
+import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.query.DBHandler;
 import istc.bigdawg.schema.DataObjectAttribute;
+import istc.bigdawg.scidb.SciDBConnectionInfo;
 import istc.bigdawg.scidb.SciDBHandler;
 import istc.bigdawg.signature.Signature;
 import istc.bigdawg.signature.builder.ArraySignatureBuilder;
@@ -113,14 +115,15 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 	private void createTableForPlanning(Map<String, String> transitionSchemas) throws Exception {
 
 		// NEW METHOD
+		
 		if (sourceScope.equals(Scope.RELATIONAL)) {
-			dbSchemaHandler = new PostgreSQLHandler(psqlSchemaHandlerDBID);
+			dbSchemaHandler = new PostgreSQLHandler((PostgreSQLConnectionInfo)CatalogViewer.getConnectionInfo(psqlSchemaHandlerDBID));
 			for (String key : transitionSchemas.keySet()) 
 				if (children.contains(key)) {
 					((PostgreSQLHandler)dbSchemaHandler).executeStatementPostgreSQL(transitionSchemas.get(key));
 				}
 		} else if (sourceScope.equals(Scope.ARRAY)) {
-			dbSchemaHandler = new SciDBHandler(scidbSchemaHandlerDBID);
+			dbSchemaHandler = new SciDBHandler((SciDBConnectionInfo)CatalogViewer.getConnectionInfo(scidbSchemaHandlerDBID));
 			for (String key : transitionSchemas.keySet()) 
 				if (children.contains(key)) {
 					((SciDBHandler)dbSchemaHandler).executeStatement(transitionSchemas.get(key));
@@ -158,7 +161,6 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 	
 //	private void removeTemporaryTableCreatedForPlanning(Map<String, Operator> rootsForSchemas) throws Exception {
 	private void removeTemporaryTableCreatedForPlanning(Map<String, String> transitionSchemas) throws Exception {
-		System.out.print("--> started removing temp table\n");
 		if (sourceScope.equals(Scope.RELATIONAL)) {
 			for (String key : transitionSchemas.keySet()) 
 				if (children.contains(key)) 
@@ -171,9 +173,6 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 				}
 		} else
 			throw new Exception("Unsupported island code : "+sourceScope.toString());
-		
-		
-		System.out.print("--> done removing temp table\n");
 	}
 	
 
@@ -1023,7 +1022,6 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 			remainderPermutations.add(node);
 		}
 		
-		System.out.print("--> right before return from traverse\n");
 		return ret;
 	}
 	
