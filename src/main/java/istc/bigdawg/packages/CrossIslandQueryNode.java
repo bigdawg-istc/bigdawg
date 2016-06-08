@@ -904,7 +904,7 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 				if (originalMap.get(((SeqScan) node).getTable().getFullyQualifiedName()) != null)
 					ret = new ArrayList<String>(originalMap.get(((SeqScan) node).getTable().getFullyQualifiedName()));
 				else {
-					System.out.print("--> tokenOfIndecision evoked at SeqScan\n");
+					System.out.printf("--> tokenOfIndecision evoked at SeqScan: %s\n", ((SeqScan) node).getTable().getFullyQualifiedName());
 					// in case it's not assigned
 					ret = new ArrayList<> ();
 					ret.add(tokenOfIndecision);

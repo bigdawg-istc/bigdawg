@@ -42,18 +42,20 @@ public class Planner {
 
 	public static Response processQuery(String userinput, boolean isTrainingMode) throws Exception {
 		
+		String input = userinput.replaceAll("([/\n/]|[ /\t/][ /\t/])", "");
+		
 		// UNROLLING
-		logger.debug("User query received. Parsing... " + userinput.replaceAll("[\"']", "*"));
+		logger.debug("User query received. Parsing... " + input.replaceAll("[\"']", "*"));
 		
 		// NEW CODE 1
-		if (userinput.startsWith("bdcatalog(")) {
+		if (input.startsWith("bdcatalog(")) {
 			// process catalog query
 			throw new Exception("bdcatalog function not implemented");
 		}
 		// NEW CODE 1 END
 		
-		CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(userinput);
-
+		CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(input);
+		if (ciqp.getTerminalNode() == null) throw new Exception("Ill formed input: "+input);
 		
 		// NEW CODE 2
 		// use a walker
@@ -155,7 +157,7 @@ public class Planner {
 		} else {
 			// business as usual
 			
-			CrossIslandQueryNode ciqn = (CrossIslandQueryNode)ciqp.getTerminalNode(); // TODO is this a cast??
+			CrossIslandQueryNode ciqn = (CrossIslandQueryNode)cipn;
 			int choice = getGetPerformanceAndPickTheBest(ciqn, isTrainingMode);
 			
 			

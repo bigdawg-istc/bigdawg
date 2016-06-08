@@ -11,12 +11,16 @@ import org.junit.Test;
 
 import istc.bigdawg.catalog.CatalogInstance;
 import istc.bigdawg.parsers.UserQueryParser;
+import istc.bigdawg.plan.extract.AFLPlanParser;
 import istc.bigdawg.plan.extract.SQLPlanParser;
+import istc.bigdawg.plan.generators.AFLQueryGenerator;
+import istc.bigdawg.plan.generators.OperatorVisitor;
 import istc.bigdawg.plan.generators.SQLQueryGenerator;
 import istc.bigdawg.plan.operators.Join;
 import istc.bigdawg.plan.operators.Operator;
 import istc.bigdawg.planner.Planner;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
+import istc.bigdawg.scidb.SciDBHandler;
 import istc.bigdawg.signature.Signature;
 import istc.bigdawg.utils.sqlutil.SQLPrepareQuery;
 
@@ -109,21 +113,22 @@ public class TrialsAndErrors {
 		
 		if ( !runBuilder ) return;
 			
-		PostgreSQLHandler psqlh = new PostgreSQLHandler(3);
+		SciDBHandler handler = new SciDBHandler(8);
 		System.out.println("Builder -- Type query or \"quit\" to exit: ");
 		Scanner scanner = new Scanner(System.in);
-//		String query = scanner.nextLine();
-		String query = "select c_custkey, c_name from customer where c_custkey = 1 union select c_custkey as ckey, c_name from customer where c_custkey = 3 union all select c_custkey, c_name from customer where c_custkey = 5;";
+		String query = scanner.nextLine();
+//		String query = "select c_custkey, c_name from customer where c_custkey = 1 union select c_custkey as ckey, c_name from customer where c_custkey = 3 union all select c_custkey, c_name from customer where c_custkey = 5;";
 //		String query = "select c1.c_custkey, c2.c_name from customer c2, customer c1 where c2.c_custkey = c1.c_custkey limit 3;";
+//		String query = "cross_join(filter(region, region.r_name = 'AMERICA') as region_trimmed, nation as nation_trimmed, region_trimmed.r_regionkey, nation_trimmed.n_regionkey);";
 		
 //		String query = "select bucket, count(*) from ( select width_bucket(value1num, 0, 300, 300) as bucket from mimic2v26.chartevents ce,  mimic2v26.d_patients dp  where itemid in (6, 51, 455, 6701)  and ce.subject_id = dp.subject_id  and ((DATE_PART('year',ce.charttime) - DATE_PART('year',dp.dob))*12 + DATE_PART('month',ce.charttime) - DATE_PART('month',dp.dob)) > 15 ) as sbp group by bucket order by bucket;";
 		while (!query.toLowerCase().equals("quit")) {
 			
-			SQLQueryPlan queryPlan = SQLPlanParser.extractDirect(psqlh, query);
+			AFLQueryPlan queryPlan = AFLPlanParser.extractDirect(handler, query);
 			
 			Operator root = queryPlan.getRootNode();
 			
-			SQLQueryGenerator gen = new SQLQueryGenerator();
+			OperatorVisitor gen = new AFLQueryGenerator();
 			gen.configure(true, false);
 			root.accept(gen);
 			
@@ -152,19 +157,25 @@ public class TrialsAndErrors {
 		
 		if ( !runRegex ) return;
 		
-		String strippedQuery = "bigdawgtag_1, alphabet_2, 'create array alphabet_2 <abc:int64, bcd:string>[i=*:*,100,0,j=*:100,100,0]', array";
+		String strippedQuery = "cross_join("
+								+"	cross_join("
+								+"		filter(region, region.r_name = 'AMERICA') as region_trimmed"
+								+"		, nation as nation_trimmed"
+								+"		, region_trimmed.r_regionkey, nation_trimmed.n_regionkey)"
+								+"	, supplier as supplier_trimmed"
+								+"	, nation_trimmed.n_nationkey, supplier_trimmed.s_nationkey)";
 
 		System.out.println("Builder -- Type regexfinder or \"quit\" to exit: ");
 		Scanner scanner = new Scanner(System.in);
 		String regex = scanner.nextLine();
 		while (!regex.toLowerCase().equals("quit")) {
 			
-			Matcher m = Pattern.compile(regex).matcher(strippedQuery);
+//			Matcher m = Pattern.compile(regex).matcher(strippedQuery);
 			
-			if (m.find())
-				System.out.printf("-> {%s}\n", strippedQuery.substring(m.start(), m.end()));
-			else 
-				System.out.printf("-X Not found: %s;\n", regex);
+//			if (m.find())
+				System.out.printf("-> {%s}\n", strippedQuery.replaceAll(regex, "")); //strippedQuery.substring(m.start(), m.end()));
+//			else 
+//				System.out.printf("-X Not found: %s;\n", regex);
 			
 			regex = scanner.nextLine();
 		}

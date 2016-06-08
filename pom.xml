@@ -122,7 +122,7 @@
 			<artifactId>scidb</artifactId>
 			<version>1.0</version>
 <!-- 			<scope>system</scope> -->
-<!-- 			<systemPath>${project.basedir}/src/main/resources/org.scidb.jdbc-1.0.jar</systemPath> -->
+<!-- 			<systemPath>${project.basedir}/src/main/resources/scidb4j.jar</systemPath> -->
 		</dependency>
 
 
