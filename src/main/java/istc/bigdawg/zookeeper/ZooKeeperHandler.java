@@ -276,8 +276,16 @@ public class ZooKeeperHandler {
 		return zk.getChildren(path, false);
 	}
 
+	/** Return the sorted list of the children of the node of the given path. */
+	public List<String> getSortedChildren(String path)
+			throws KeeperException, InterruptedException {
+		List<String> children = zk.getChildren(path, false);
+		children.sort(String::compareTo);
+		return children;
+	}
+
 	/**
-	 * Get lock in ZooKeeper. check paper on ZooKeeper - ZooKeeper: Wait-free
+	 * Acquire lock in ZooKeeper. check paper on ZooKeeper - ZooKeeper: Wait-free
 	 * coordination for Internet-scale systems - page 6 - simple locks without
 	 * Herd Effects. It blocks until the lock can be acquired.
 	 * 
@@ -289,7 +297,7 @@ public class ZooKeeperHandler {
 	 * @throws InterruptedException
 	 * @throws KeeperException
 	 */
-	public String getLock(String znodePath, byte[] data,
+	public String acquireLock(String znodePath, byte[] data,
 			ZnodePathMessage znodePathMessage)
 					throws KeeperException, InterruptedException {
 		logger.debug("get lock for: " + znodePath + ", data: "
@@ -297,38 +305,56 @@ public class ZooKeeperHandler {
 		String createdZnode = createZnode(znodePath + "/lock-", data,
 				ZooDefs.Ids.READ_ACL_UNSAFE, CreateMode.EPHEMERAL_SEQUENTIAL);
 		znodePathMessage.setZnodePath(createdZnode);
-		List<String> children = getChildren(znodePath);
-		children.sort(String::compareTo);
-		/* If this machine is not the first one to acquire the lock. */
 		/*
-		 * The collection of children contains only the final name of znode
-		 * without a full path!
+		 * When the process was waiting for the lock and another processes
+		 * released the lock (the znode being watched by the client goes away,
+		 * the client must check if it now holds the lock. The previous lock
+		 * request may have been abandoned and there is a znode with a lower
+		 * sequence number still waiting for or holding the lock.
 		 */
-		if (!createdZnode.equals(znodePath + "/" + children.get(0))) {
-			for (int i = 1; i < children.size(); ++i) {
-				if (createdZnode.equals(znodePath + "/" + children.get(i))) {
-					String previousZnodeLock = children.get(i - 1);
-					logger.debug("Waiting to acquire the following lock: "
-							+ createdZnode);
-					String watchEventMessage = watchEvent(
-							znodePath + "/" + previousZnodeLock,
-							EventType.NodeDeleted);
-					znodePathMessage.setMessage(
-							lockAcquiredAfterWaiting + watchEventMessage);
+		boolean lockAcquired = false;
+		/* indicates if the process was waiting for the lock */
+		boolean wasWaiting = false;
+		while (!lockAcquired) {
+			List<String> children = getChildren(znodePath);
+			children.sort(String::compareTo);
+			/* If this machine is not the first one to acquire the lock. */
+			/*
+			 * The collection of children contains only the final name of znode
+			 * without a full path!
+			 */
+			if (!createdZnode.equals(znodePath + "/" + children.get(0))) {
+				wasWaiting = true;
+				for (int i = 1; i < children.size(); ++i) {
+					if (createdZnode
+							.equals(znodePath + "/" + children.get(i))) {
+						String previousZnodeLock = children.get(i - 1);
+						logger.debug("Waiting to acquire the following lock: "
+								+ createdZnode);
+						String watchEventMessage = watchEvent(
+								znodePath + "/" + previousZnodeLock,
+								EventType.NodeDeleted);
+						znodePathMessage.setMessage(
+								lockAcquiredAfterWaiting + watchEventMessage);
+						break;
+					}
 				}
+			} else {
+				if (!wasWaiting) {
+					znodePathMessage.setMessage(lockAcquiredImmediately);
+				}
+				lockAcquired = true;
 			}
-		} else {
-			znodePathMessage.setMessage(lockAcquiredImmediately);
 		}
 		return createdZnode;
 	}
 
 	/**
-	 * {@link #getLock(String, byte[], ZnodePathMessage)}
+	 * {@link #acquireLock(String, byte[], ZnodePathMessage)}
 	 */
 	public String getLock(String znodePath, byte[] data)
 			throws KeeperException, InterruptedException {
-		return this.getLock(znodePath, data, new ZnodePathMessage());
+		return this.acquireLock(znodePath, data, new ZnodePathMessage());
 	}
 
 	/**

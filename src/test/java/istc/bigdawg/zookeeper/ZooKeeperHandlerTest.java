@@ -30,6 +30,7 @@ import istc.bigdawg.LoggerSetup;
 import istc.bigdawg.exceptions.NetworkException;
 import istc.bigdawg.network.NetworkUtils;
 import istc.bigdawg.zookeeper.znode.NodeInfo;
+import jline.internal.Log;
 
 /**
  * @author Adam Dziedzic
@@ -94,7 +95,7 @@ public class ZooKeeperHandlerTest {
 	}
 
 	@Test
-	public void testGetLock()
+	public void testAcquireLock()
 			throws KeeperException, InterruptedException, ExecutionException {
 		logger.debug("Test get lock");
 		String lockPath = "/_test_locks___";
@@ -106,7 +107,7 @@ public class ZooKeeperHandlerTest {
 			zooHandler.deleteZnode(lock);
 		}
 		ZnodePathMessage znodePathMessage = new ZnodePathMessage();
-		String firstLock = zooHandler.getLock(lockPath, "test".getBytes(),
+		String firstLock = zooHandler.acquireLock(lockPath, "test".getBytes(),
 				znodePathMessage);
 		logger.debug("frist lock:" + firstLock);
 		assertEquals(firstLock,
@@ -119,11 +120,17 @@ public class ZooKeeperHandlerTest {
 			String secondLock = null;
 			try {
 				ZnodePathMessage znodePathMessageSecondLock = new ZnodePathMessage();
-				secondLock = zooHandler.getLock(lockPath, "test".getBytes(),
+				secondLock = zooHandler.acquireLock(lockPath, "test".getBytes(),
 						znodePathMessageSecondLock);
 				logger.debug("second lock: " + secondLock);
 				assertEquals(secondLock,
 						znodePathMessageSecondLock.getZnodePath());
+				logger.debug("expected: "
+						+ ZooKeeperHandler.lockAcquiredAfterWaiting
+						+ ZooKeeperHandler.watchMessagePrefix
+						+ EventType.NodeDeleted + " path: " + firstLock);
+				logger.debug(
+						"obtained: " + znodePathMessageSecondLock.getMessage());
 				assertEquals(
 						ZooKeeperHandler.lockAcquiredAfterWaiting
 								+ ZooKeeperHandler.watchMessagePrefix

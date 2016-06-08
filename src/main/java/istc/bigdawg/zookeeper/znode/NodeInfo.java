@@ -8,7 +8,8 @@ import java.time.Instant;
 /**
  * @author Adam Dziedzic
  * 
- *
+ *         To store information in znodes in ZooKeeper (this is for production
+ *         mode, in the dev mode, please use bytes from the String object.
  */
 public class NodeInfo implements ZooKeeperData {
 
