@@ -23,6 +23,7 @@ import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Stat;
 
 import istc.bigdawg.LoggerSetup;
+import istc.bigdawg.exceptions.BigDawgException;
 import istc.bigdawg.utils.LogUtils;
 import istc.bigdawg.utils.StackTrace;
 
@@ -285,9 +286,9 @@ public class ZooKeeperHandler {
 	}
 
 	/**
-	 * Acquire lock in ZooKeeper. check paper on ZooKeeper - ZooKeeper: Wait-free
-	 * coordination for Internet-scale systems - page 6 - simple locks without
-	 * Herd Effects. It blocks until the lock can be acquired.
+	 * Acquire lock in ZooKeeper. check paper on ZooKeeper - ZooKeeper:
+	 * Wait-free coordination for Internet-scale systems - page 6 - simple locks
+	 * without Herd Effects. It blocks until the lock can be acquired.
 	 * 
 	 * @param znodePath
 	 *            path to be locked
@@ -296,10 +297,11 @@ public class ZooKeeperHandler {
 	 * @return the full path to the znode which represents the lock
 	 * @throws InterruptedException
 	 * @throws KeeperException
+	 * @throws BigDawgException
 	 */
 	public String acquireLock(String znodePath, byte[] data,
-			ZnodePathMessage znodePathMessage)
-					throws KeeperException, InterruptedException {
+			ZnodePathMessage znodePathMessage) throws KeeperException,
+					InterruptedException, BigDawgException {
 		logger.debug("get lock for: " + znodePath + ", data: "
 				+ new String(data, StandardCharsets.UTF_8));
 		String createdZnode = createZnode(znodePath + "/lock-", data,
@@ -317,33 +319,46 @@ public class ZooKeeperHandler {
 		boolean wasWaiting = false;
 		while (!lockAcquired) {
 			List<String> children = getChildren(znodePath);
-			children.sort(String::compareTo);
-			/* If this machine is not the first one to acquire the lock. */
-			/*
-			 * The collection of children contains only the final name of znode
-			 * without a full path!
-			 */
-			if (!createdZnode.equals(znodePath + "/" + children.get(0))) {
-				wasWaiting = true;
-				for (int i = 1; i < children.size(); ++i) {
-					if (createdZnode
-							.equals(znodePath + "/" + children.get(i))) {
-						String previousZnodeLock = children.get(i - 1);
-						logger.debug("Waiting to acquire the following lock: "
-								+ createdZnode);
-						String watchEventMessage = watchEvent(
-								znodePath + "/" + previousZnodeLock,
-								EventType.NodeDeleted);
-						znodePathMessage.setMessage(
-								lockAcquiredAfterWaiting + watchEventMessage);
-						break;
-					}
-				}
+			if (children == null || children.size() == 0) {
+				String message = "This should not happen. The znode has been just created "
+						+ "for this process as a child of: " + znodePath
+						+ " in ZooKeeper!";
+				logger.error(message);
+				throw new BigDawgException(message);
 			} else {
-				if (!wasWaiting) {
-					znodePathMessage.setMessage(lockAcquiredImmediately);
+				children.sort(String::compareTo);
+				/* If this machine is not the first one to acquire the lock. */
+				/*
+				 * The collection of children contains only the final name of
+				 * znode without a full path!
+				 */
+				if (!createdZnode.equals(znodePath + "/" + children.get(0))) {
+					wasWaiting = true;
+					for (int i = 1; i < children.size(); ++i) {
+						if (createdZnode
+								.equals(znodePath + "/" + children.get(i))) {
+							String previousZnodeLock = children.get(i - 1);
+							logger.debug(
+									"Waiting to acquire the following lock: "
+											+ createdZnode);
+							String watchEventMessage = watchEvent(
+									znodePath + "/" + previousZnodeLock,
+									EventType.NodeDeleted);
+							znodePathMessage.setMessage(lockAcquiredAfterWaiting
+									+ watchEventMessage);
+							/*
+							 * the for loop - we found the previous node in
+							 * first check
+							 */
+							break;
+						}
+					}
+				} else {
+					if (!wasWaiting) {
+						znodePathMessage.setMessage(lockAcquiredImmediately);
+					}
+					lockAcquired = true;
 				}
-				lockAcquired = true;
 			}
 		}
 		return createdZnode;
@@ -351,9 +366,11 @@ public class ZooKeeperHandler {
 
 	/**
 	 * {@link #acquireLock(String, byte[], ZnodePathMessage)}
+	 * 
+	 * @throws BigDawgException
 	 */
 	public String getLock(String znodePath, byte[] data)
-			throws KeeperException, InterruptedException {
+			throws KeeperException, InterruptedException, BigDawgException {
 		return this.acquireLock(znodePath, data, new ZnodePathMessage());
 	}
 

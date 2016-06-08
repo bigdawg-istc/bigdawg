@@ -27,10 +27,10 @@ import org.junit.Before;
 import org.junit.Test;
 
 import istc.bigdawg.LoggerSetup;
+import istc.bigdawg.exceptions.BigDawgException;
 import istc.bigdawg.exceptions.NetworkException;
 import istc.bigdawg.network.NetworkUtils;
 import istc.bigdawg.zookeeper.znode.NodeInfo;
-import jline.internal.Log;
 
 /**
  * @author Adam Dziedzic
@@ -96,7 +96,8 @@ public class ZooKeeperHandlerTest {
 
 	@Test
 	public void testAcquireLock()
-			throws KeeperException, InterruptedException, ExecutionException {
+ throws KeeperException, InterruptedException,
+			ExecutionException, BigDawgException {
 		logger.debug("Test get lock");
 		String lockPath = "/_test_locks___";
 		zooHandler.createZnodeIfNotExists(lockPath, "test locks".getBytes(),

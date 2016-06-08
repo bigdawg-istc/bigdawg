@@ -6,12 +6,16 @@ package istc.bigdawg.network;
 /**
  * @author Adam Dziedzic
  * 
- *
+ *         Store information about the pair: ip address and port.
  */
 public class IpAddressPort implements Comparable<IpAddressPort> {
 
+	/**
+	 * ip address
+	 */
 	private String IpAddress;
 
+	/** port number */
 	private String port;
 
 	public IpAddressPort(String ipAddress, String port) {

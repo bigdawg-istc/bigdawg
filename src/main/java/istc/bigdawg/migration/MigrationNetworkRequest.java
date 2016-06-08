@@ -19,5 +19,5 @@ public interface MigrationNetworkRequest extends NetworkObject {
 	/**
 	 * Execute the command (it should migrate some data).
 	 */
-	public MigrationResult dispatch() throws MigrationException;
+	public MigrationResult execute() throws MigrationException;
 }

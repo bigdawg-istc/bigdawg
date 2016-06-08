@@ -135,7 +135,6 @@ public class NetworkOut {
 	public static void main(String[] args)
 			throws NetworkException, IOException {
 		LoggerSetup.setLogging();
-		ZMQ.Context context = ZMQ.context(1);
 
 		/* Socket to talk to the server */
 		System.out.println("Connecting to hello world server...");

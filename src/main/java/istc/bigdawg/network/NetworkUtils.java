@@ -33,11 +33,14 @@ public class NetworkUtils {
 	/* log */
 	private static Logger log = Logger.getLogger(NetworkUtils.class);
 
-	/** the address of this host/machine */
-	public static String THIS_HOST_ADDRESS;
+	/** The address of this host/machine - get it from the config file */
+	public static final String THIS_HOST_ADDRESS;
 
-	/** the default timeout to wait for a reply from a server */
-	public static int TIMEOUT = 1000;
+	/**
+	 * The default timeout to wait for a reply from a server - get it from the
+	 * config file.
+	 */
+	public static final int TIMEOUT;
 
 	static {
 		THIS_HOST_ADDRESS = BigDawgConfigProperties.INSTANCE

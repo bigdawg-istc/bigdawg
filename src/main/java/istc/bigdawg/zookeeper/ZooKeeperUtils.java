@@ -12,6 +12,7 @@ import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs;
 
+import istc.bigdawg.exceptions.BigDawgException;
 import istc.bigdawg.exceptions.NetworkException;
 import istc.bigdawg.network.IpAddressPort;
 import istc.bigdawg.network.NetworkUtils;
@@ -234,9 +235,11 @@ public class ZooKeeperUtils {
 	 *         represents local execution).
 	 * @throws KeeperException
 	 * @throws InterruptedException
+	 * @throws BigDawgException
 	 */
 	public static List<String> acquireMigrationLocks(List<String> ipAddresses,
-			byte[] data) throws KeeperException, InterruptedException {
+			byte[] data) throws KeeperException, InterruptedException,
+					BigDawgException {
 		/* IP address on this very machine where the code is running. */
 		String thisIpAddress = BigDawgConfigProperties.INSTANCE
 				.getGrizzlyIpAddress();
@@ -268,10 +271,12 @@ public class ZooKeeperUtils {
 	 * @param hostnameTo
 	 * @throws InterruptedException
 	 * @throws KeeperException
+	 * @throws BigDawgException
 	 */
 	private static List<String> acquireMigrationLocks(
 			TreeSet<IpAddressPort> ipPortPairs, byte[] data)
-					throws KeeperException, InterruptedException {
+					throws KeeperException, InterruptedException,
+					BigDawgException {
 		assert ipPortPairs != null;
 		List<String> locks = new ArrayList<String>();
 		if (ipPortPairs.isEmpty()) {
