@@ -5,7 +5,9 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 
-import istc.bigdawg.BDConstants;
+import org.apache.log4j.Logger;
+import org.mortbay.log.Log;
+
 import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.exceptions.NotSupportIslandException;
 import istc.bigdawg.executor.Executor;
@@ -20,9 +22,6 @@ import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.query.ConnectionInfoParser;
 import istc.bigdawg.signature.Signature;
-
-import org.apache.log4j.Logger;
-import org.mortbay.log.Log;
 
 public class Monitor {
     /**

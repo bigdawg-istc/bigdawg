@@ -49,6 +49,20 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 	private PostgreSQLConnectionInfo connectionTo;
 	private String toTable;
 
+	public FromPostgresToPostgres() {
+		super();
+	}
+
+	public FromPostgresToPostgres(PostgreSQLConnectionInfo connectionFrom,
+			String fromTable, PostgreSQLConnectionInfo connectionTo,
+			String toTable) {
+		super();
+		this.connectionFrom = connectionFrom;
+		this.fromTable = fromTable;
+		this.connectionTo = connectionTo;
+		this.toTable = toTable;
+	}
+
 	/**
 	 * Migrate data between instances of PostgreSQL.
 	 */

@@ -612,6 +612,23 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 	}
 
 	/**
+	 * Get names of the column in the table.
+	 * 
+	 * @param table
+	 *            the name of the table
+	 * @return list of names of columns for the table
+	 * @throws SQLException
+	 */
+	public List<String> getColumnNames(String table) throws SQLException {
+		List<String> columnNames = new ArrayList<>();
+		for (PostgreSQLColumnMetaData meta : getColumnsMetaData(table)
+				.getColumnsOrdered()) {
+			columnNames.add(meta.getName());
+		}
+		return columnNames;
+	}
+
+	/**
 	 * Check if a schema exists.
 	 * 
 	 * @param conInfo

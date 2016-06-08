@@ -9,7 +9,6 @@ import java.util.Map;
 import org.apache.log4j.Logger;
 
 import istc.bigdawg.exceptions.UnsupportedTypeException;
-import jline.internal.Log;
 
 /**
  * @author Adam Dziedzic

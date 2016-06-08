@@ -15,7 +15,6 @@ import org.apache.zookeeper.Watcher.Event.EventType;
 
 import istc.bigdawg.utils.LogUtils;
 import istc.bigdawg.utils.StackTrace;
-import jline.internal.Log;
 
 /**
  * @author Adam Dziedzic
@@ -44,7 +43,9 @@ public class FollowRemoteNodes {
 	 */
 	public static Object execute(List<String> ipAddresses,
 			Callable<Object> callable) {
-		logger.debug("Execution in follow remote nodes.");
+		logger.debug(
+				"Execution of data migration and following the remote nodes: "
+						+ ipAddresses.toString());
 		ZooKeeperHandler zooHandler = new ZooKeeperHandler(
 				ZooKeeperInstance.INSTANCE.getZooKeeper());
 		List<Callable<Object>> callables = new ArrayList<>();

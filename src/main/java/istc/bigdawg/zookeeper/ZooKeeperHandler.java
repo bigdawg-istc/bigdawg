@@ -25,7 +25,6 @@ import org.apache.zookeeper.data.Stat;
 import istc.bigdawg.LoggerSetup;
 import istc.bigdawg.utils.LogUtils;
 import istc.bigdawg.utils.StackTrace;
-import jline.internal.Log;
 
 /**
  * @author Adam Dziedzic
@@ -118,7 +117,8 @@ public class ZooKeeperHandler {
 	 */
 	public String watchEvent(String znodePath,
 			Watcher.Event.EventType eventType) {
-		logger.debug("Watch event executed.");
+		logger.debug("Watch event of type: " + eventType + " for znode path: "
+				+ znodePath);
 		/**
 		 * Count down latch is a synchronization mechanism.
 		 * 
@@ -135,6 +135,9 @@ public class ZooKeeperHandler {
 			zk.exists(znodePath, new Watcher() {
 				public void process(WatchedEvent watchedEvent) {
 					if (watchedEvent.getType() == eventType) {
+						logger.debug("The event of type: " + eventType
+								+ " was triggered for znode path: "
+								+ znodePath);
 						signal.countDown();
 					}
 				}
@@ -226,6 +229,27 @@ public class ZooKeeperHandler {
 		}
 	}
 
+	/**
+	 * Delete the znode specified by the path with all of its children.
+	 * 
+	 * @param path
+	 *            the path to a znode in ZooKeeper
+	 * @throws KeeperException
+	 * @throws InterruptedException
+	 */
+	public void deleteZnodeWithChildren(String path)
+			throws KeeperException, InterruptedException {
+		Stat stat = zk.exists(path, true);
+		if (stat != null) {
+			List<String> children = getChildren(path);
+			for (String child : children) {
+				String fullPath = path + "/" + child;
+				deleteZnodeWithChildren(fullPath);
+			}
+			zk.delete(path, stat.getVersion());
+		}
+	}
+
 	/** Get the data from the znode path. */
 	public byte[] getZnodeData(String path)
 			throws KeeperException, InterruptedException {
@@ -268,7 +292,8 @@ public class ZooKeeperHandler {
 	public String getLock(String znodePath, byte[] data,
 			ZnodePathMessage znodePathMessage)
 					throws KeeperException, InterruptedException {
-		logger.debug("get lock method started");
+		logger.debug("get lock for: " + znodePath + ", data: "
+				+ new String(data, StandardCharsets.UTF_8));
 		String createdZnode = createZnode(znodePath + "/lock-", data,
 				ZooDefs.Ids.READ_ACL_UNSAFE, CreateMode.EPHEMERAL_SEQUENTIAL);
 		znodePathMessage.setZnodePath(createdZnode);
@@ -283,9 +308,13 @@ public class ZooKeeperHandler {
 			for (int i = 1; i < children.size(); ++i) {
 				if (createdZnode.equals(znodePath + "/" + children.get(i))) {
 					String previousZnodeLock = children.get(i - 1);
-					String watchEventMessage = watchEvent(znodePath + "/" + previousZnodeLock,
+					logger.debug("Waiting to acquire the following lock: "
+							+ createdZnode);
+					String watchEventMessage = watchEvent(
+							znodePath + "/" + previousZnodeLock,
 							EventType.NodeDeleted);
-					znodePathMessage.setMessage(lockAcquiredAfterWaiting + watchEventMessage);
+					znodePathMessage.setMessage(
+							lockAcquiredAfterWaiting + watchEventMessage);
 				}
 			}
 		} else {
@@ -392,7 +421,6 @@ public class ZooKeeperHandler {
 			for (String child : children) {
 				logger.info(child);
 			}
-
 			/* close the connection/session to ZooKeeper */
 			zk.close();
 		} catch (Exception ex) {

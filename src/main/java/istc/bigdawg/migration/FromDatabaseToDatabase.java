@@ -9,13 +9,14 @@ import java.util.List;
 import java.util.concurrent.Callable;
 
 import org.apache.log4j.Logger;
+import org.apache.zookeeper.KeeperException;
 
 import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.exceptions.NetworkException;
-import istc.bigdawg.network.IpAddressPort;
 import istc.bigdawg.network.NetworkOut;
 import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.query.ConnectionInfo;
+import istc.bigdawg.utils.StackTrace;
 import istc.bigdawg.zookeeper.FollowRemoteNodes;
 import istc.bigdawg.zookeeper.ZooKeeperUtils;
 
@@ -32,6 +33,13 @@ public abstract class FromDatabaseToDatabase
 
 	/* To where to migrate the data (to which node/machine). */
 	abstract public ConnectionInfo getConnecitonTo();
+
+	/*
+	 * List of locks acquired in ZooKeeper for data migration. Empty or null
+	 * list indicates that locks for the data migration process have not been
+	 * acquired as yet.
+	 */
+	private List<String> zooKeeperLocks = null;
 
 	/**
 	 * For serialization.
@@ -124,28 +132,38 @@ public abstract class FromDatabaseToDatabase
 		/*
 		 * check if the address is not a local host
 		 */
-		final String hostnameFrom = this.getConnectionFrom().getHost();
-		final String hostnameTo = this.getConnecitonTo().getHost();
-		log.debug("hostname from which the data is migrated: " + hostnameFrom);
+		String hostnameFrom = this.getConnectionFrom().getHost();
+		String hostnameTo = this.getConnecitonTo().getHost();
+		String debugMessage = "current hostname is: "
+				+ BigDawgConfigProperties.INSTANCE.getGrizzlyIpAddress()
+				+ "; hostname from which the data is migrated: " + hostnameFrom
+				+ "; hostname to which the data is migrated: " + hostnameTo;
+		log.debug(debugMessage);
 		try {
 			if (!isThisMyIpAddress(InetAddress.getByName(hostnameFrom))) {
-				log.debug(
-						"Migration will be executed remotely (this node only coordinates the migration).");
+				log.debug("Migration will be executed remotely (this node: "
+						+ BigDawgConfigProperties.INSTANCE.getGrizzlyIpAddress()
+						+ " only coordinates the migration).");
 				/*
 				 * this node is only a coordinator/dispatcher for the migration
 				 */
 				result = FollowRemoteNodes.execute(Arrays.asList(hostnameFrom),
 						sendNetworkRequest(hostnameFrom));
 			} else {
-				/* change the local hostname to the general ip address */
+				/*
+				 * This machine contains the source database for the migration.
+				 */
+				/* Change the local hostname to the general ip address. */
 				String thisHostname = BigDawgConfigProperties.INSTANCE
 						.getGrizzlyIpAddress();
-				String port = BigDawgConfigProperties.INSTANCE.getGrizzlyPort();
-				List<String> zooKeeperLocks = ZooKeeperUtils.acquireLockMigrationNodes(
-						Arrays.asList(new IpAddressPort(thisHostname, port),
-								new IpAddressPort(hostnameTo, port)));
+				if (zooKeeperLocks == null) {
+					byte[] data = debugMessage.getBytes();
+					zooKeeperLocks = ZooKeeperUtils.acquireMigrationLocks(
+							Arrays.asList(thisHostname, hostnameTo), data);
+				}
 				if (!isThisMyIpAddress(InetAddress.getByName(hostnameTo))) {
-					log.debug("Migration from a local to remote database.");
+					log.debug("Migration from a local: " + thisHostname
+							+ " to remote database: " + hostnameTo);
 					result = FollowRemoteNodes.execute(
 							Arrays.asList(hostnameTo),
 							executeMigrationFromLocalToRemote());
@@ -154,15 +172,27 @@ public abstract class FromDatabaseToDatabase
 					log.debug("The total migration is executed locally.");
 					return executeMigration();
 				}
-				ZooKeeperUtils.releaseLockMigrationNodes(zooKeeperLocks);
 			}
+			log.debug("Process results of the migration.");
+			return MigrationResult.processResult(result);
 		} catch (MigrationException e) {
 			throw e;
 		} catch (Exception e) {
 			throw new MigrationException(e.getMessage(), e);
+		} finally {
+			if (zooKeeperLocks != null) {
+				log.debug("Release the locks in ZooKeeper.");
+				try {
+					ZooKeeperUtils.releaseMigrationLocks(zooKeeperLocks);
+				} catch (KeeperException | InterruptedException e) {
+					log.error(
+							"Could not release the following locks in ZooKeeper: "
+									+ zooKeeperLocks.toString() + " "
+									+ e.getMessage() + "Stack trace: "
+									+ StackTrace.getFullStackTrace(e));
+				}
+			}
 		}
-		log.debug("Process results of the migration.");
-		return MigrationResult.processResult(result);
 	}
 
 }

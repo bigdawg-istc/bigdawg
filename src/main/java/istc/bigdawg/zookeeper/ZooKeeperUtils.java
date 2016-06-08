@@ -5,6 +5,7 @@ package istc.bigdawg.zookeeper;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.TreeSet;
 
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.CreateMode;
@@ -17,7 +18,6 @@ import istc.bigdawg.network.NetworkUtils;
 import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.utils.LogUtils;
 import istc.bigdawg.utils.StackTrace;
-import istc.bigdawg.utils.SystemUtilities;
 import istc.bigdawg.zookeeper.znode.NodeInfo;
 
 /**
@@ -55,8 +55,14 @@ public class ZooKeeperUtils {
 	 */
 	public static final String tables = "/tables";
 
-	/** Znode Path for this machine. */
+	/** Znode Path for this machine - indicates active node. */
 	private static final String znodeBigDAWGNodesPath;
+
+	/**
+	 * Znode Path for this machine - denotes a node for which a lock can be
+	 * acquired.
+	 */
+	private static final String znodeBigDAWGMigrationLocksPath;
 
 	/**
 	 * Handle zookeeper operations.
@@ -70,6 +76,8 @@ public class ZooKeeperUtils {
 		String port = BigDawgConfigProperties.INSTANCE.getGrizzlyPort();
 		znodeBigDAWGNodesPath = ZooKeeperUtils.BigDAWGPath
 				+ ZooKeeperUtils.nodes + "/" + ipAddress + ":" + port;
+		znodeBigDAWGMigrationLocksPath = ZooKeeperUtils.BigDAWGPath
+				+ ZooKeeperUtils.migrationLocks + "/" + ipAddress + ":" + port;
 		zooHandler = new ZooKeeperHandler(
 				ZooKeeperInstance.INSTANCE.getZooKeeper());
 	}
@@ -157,12 +165,21 @@ public class ZooKeeperUtils {
 	public static void registerNodeInZooKeeper() {
 		try {
 			createBigDAWGZnodes();
-			NodeInfo nodeInfo = new NodeInfo(
-					"By computer with name: " + SystemUtilities.getHostName());
-			byte[] znodeData = NetworkUtils.serialize(nodeInfo);
+			String info = "The znode was created by node: "
+					+ BigDawgConfigProperties.INSTANCE.getGrizzlyIpAddress();
+			byte[] znodeData = info.getBytes();
+			/* delete any ephemeral znode which was not garbage collected */
+			zooHandler.deleteZnode(znodeBigDAWGNodesPath);
 			/* create the znode to denote the active BigDAWG node */
 			zooHandler.createZnode(znodeBigDAWGNodesPath, znodeData,
 					ZooDefs.Ids.READ_ACL_UNSAFE, CreateMode.EPHEMERAL);
+			/*
+			 * create the znode to denote the active BigDAWG node for migration
+			 * locks
+			 */
+			zooHandler.deleteZnodeWithChildren(znodeBigDAWGMigrationLocksPath);
+			zooHandler.createZnode(znodeBigDAWGMigrationLocksPath, znodeData,
+					ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
 		} catch (Exception ex) {
 			String stackTrace = StackTrace.getFullStackTrace(ex);
 			logger.error("Initialization of BigDAWG in ZooKeeper failed. "
@@ -183,15 +200,64 @@ public class ZooKeeperUtils {
 		try {
 			/*
 			 * Try to clean/remove the znodes that were created for this BigDAWG
-			 * nodes.
+			 * node.
 			 */
 			zooHandler.deleteZnode(znodeBigDAWGNodesPath);
+			List<String> children = zooHandler
+					.getChildren(znodeBigDAWGMigrationLocksPath);
+			for (String child : children) {
+				zooHandler.deleteZnode(
+						znodeBigDAWGMigrationLocksPath + "/" + child);
+			}
+			zooHandler.deleteZnode(znodeBigDAWGMigrationLocksPath);
 		} catch (KeeperException | InterruptedException ex) {
 			String stackTrace = StackTrace.getFullStackTrace(ex);
-			logger.error(LogUtils.replace(stackTrace));
+			logger.error(
+					"Could not clean znodes in ZooKeeper for this machine: "
+							+ BigDawgConfigProperties.INSTANCE
+									.getGrizzlyIpAddress()
+							+ "Exception info: " + ex.getMessage()
+							+ LogUtils.replace(stackTrace));
 		} finally {
 			ZooKeeperInstance.INSTANCE.close();
 		}
+	}
+
+	/**
+	 * Acquire locks in ZooKeeper for data migration.
+	 * 
+	 * @param ipAddresses
+	 *            list of BigDAWG nodes to be locked for the migration.
+	 * @param data
+	 *            data to be put in the locks
+	 * @return Names of znodes that represents locks in ZooKeeper (empty list
+	 *         represents local execution).
+	 * @throws KeeperException
+	 * @throws InterruptedException
+	 */
+	public static List<String> acquireMigrationLocks(List<String> ipAddresses,
+			byte[] data) throws KeeperException, InterruptedException {
+		/* IP address on this very machine where the code is running. */
+		String thisIpAddress = BigDawgConfigProperties.INSTANCE
+				.getGrizzlyIpAddress();
+		if (thisIpAddress.equals("localhost")
+				|| thisIpAddress.equals("127.0.0.1")) {
+			/* this BigDAWG instance is running only locally. */
+			return new ArrayList<>();
+		}
+		String port = BigDawgConfigProperties.INSTANCE.getGrizzlyPort();
+		/*
+		 * The addresses to acquire the locks for have to be unique and sorted
+		 * (so we use the tree set directly without the set interface). If the
+		 * migration is executed only within one node (the source and target
+		 * databases are on the same node) then only the lock should be acquired
+		 * for this single machine.
+		 */
+		TreeSet<IpAddressPort> ipAddressPortPairs = new TreeSet<>();
+		for (String ipAddress : ipAddresses) {
+			ipAddressPortPairs.add(new IpAddressPort(ipAddress, port));
+		}
+		return ZooKeeperUtils.acquireMigrationLocks(ipAddressPortPairs, data);
 	}
 
 	/**
@@ -203,17 +269,15 @@ public class ZooKeeperUtils {
 	 * @throws InterruptedException
 	 * @throws KeeperException
 	 */
-	public static List<String> acquireLockMigrationNodes(
-			List<IpAddressPort> ipPortPairs)
+	private static List<String> acquireMigrationLocks(
+			TreeSet<IpAddressPort> ipPortPairs, byte[] data)
 					throws KeeperException, InterruptedException {
+		assert ipPortPairs != null;
 		List<String> locks = new ArrayList<String>();
 		if (ipPortPairs.isEmpty()) {
 			return locks;
 		}
 		/* our locking mechanism locks addresses in lexicographical order */
-		String message = "lock created by: "
-				+ BigDawgConfigProperties.INSTANCE.getGrizzlyIpAddress();
-		byte[] data = message.getBytes();
 		for (IpAddressPort ipPort : ipPortPairs) {
 			String znodePath = ZooKeeperUtils.getZnodePathMigrationLocks(
 					ipPort.getIpAddress(), ipPort.getPort());
@@ -225,13 +289,16 @@ public class ZooKeeperUtils {
 	/**
 	 * Release the lock for the migration process.
 	 * 
-	 * @param locks
+	 * @param zooKeeperLocks
 	 * @throws KeeperException
 	 * @throws InterruptedException
 	 */
-	public static void releaseLockMigrationNodes(List<String> locks)
+	public static void releaseMigrationLocks(List<String> zooKeeperLocks)
 			throws KeeperException, InterruptedException {
-		for (String lock : locks) {
+		if (zooKeeperLocks == null) {
+			return;
+		}
+		for (String lock : zooKeeperLocks) {
 			zooHandler.releaseLock(lock);
 		}
 	}
