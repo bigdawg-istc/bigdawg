@@ -16,11 +16,11 @@ import org.junit.Test;
 
 import istc.bigdawg.LoggerSetup;
 import istc.bigdawg.exceptions.MigrationException;
-import istc.bigdawg.migration.CopyFromPostgresExecutor;
+import istc.bigdawg.migration.ExportPostgres;
 import istc.bigdawg.migration.FromPostgresToPostgres;
 import istc.bigdawg.migration.FromPostgresToSciDBImplementation;
 import istc.bigdawg.migration.FromSciDBToPostgresImplementation;
-import istc.bigdawg.migration.LoadToSciDBExecutor;
+import istc.bigdawg.migration.LoadSciDB;
 import istc.bigdawg.migration.SciDBArrays;
 import istc.bigdawg.migration.TransformBinExecutor;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
@@ -88,7 +88,7 @@ public class WaveformTest {
 	public void loadToSciDB() throws InterruptedException, ExecutionException {
 		long startTimeMigration = System.currentTimeMillis();
 		ExecutorService executor = Executors.newFixedThreadPool(1);
-		LoadToSciDBExecutor loadExecutor = new LoadToSciDBExecutor(conSciDB, new SciDBArrays(array, null),
+		LoadSciDB loadExecutor = new LoadSciDB(conSciDB, new SciDBArrays(array, null),
 				"/tmp/scidb.bin","int64,int64,double");
 		FutureTask<String> loadTask = new FutureTask<String>(loadExecutor);
 		executor.submit(loadTask);
@@ -104,7 +104,7 @@ public class WaveformTest {
 	public void exportPostgres() throws SQLException, InterruptedException, ExecutionException {
 		ExecutorService executor = Executors.newFixedThreadPool(1);
 		String copyFromCommand = PostgreSQLHandler.getExportBinCommand(table);
-		CopyFromPostgresExecutor exportExecutor = new CopyFromPostgresExecutor(conPostgres, copyFromCommand,
+		ExportPostgres exportExecutor = new ExportPostgres(conPostgres, copyFromCommand,
 				"/tmp/postgres.bin");
 		FutureTask<Long> exportTask = new FutureTask<Long>(exportExecutor);
 		executor.submit(exportTask);

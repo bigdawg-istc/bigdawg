@@ -50,17 +50,29 @@ public abstract class FromDatabaseToDatabase
 	private static Logger log = Logger.getLogger(FromDatabaseToDatabase.class);
 
 	/**
-	 * General method (interface) for other modules to call the migration.
+	 * General method (interface) for other modules to call the migration process.
 	 * 
 	 * @param connectionFrom
+	 *            Information about the source database (host, port, database
+	 *            name, user password) from which the data should be extracted.
 	 * @param objectFrom
-	 *            which object/table/array to migrate from
+	 *            The name of the object (e.g. table, array) which should be
+	 *            extracted from the source database.
 	 * @param connectionTo
+	 *            Information about the destination database (host, port,
+	 *            database name, user password) to which the data should be
+	 *            loaded.
 	 * @param objectTo
-	 *            which object/table/array to migrate to
-	 * @return {@link MigrationResult} with information about the migration
-	 *         process
+	 *            The name of the object (e.g. table, array) which should be
+	 *            loaded to the destination database.
+	 * @return {@link MigrationResult} Information about the results of the
+	 *         migration process: number of elements (e.g. rows, items) which
+	 *         were migrated, migration time and other statistics.
 	 * @throws MigrationException
+	 *             Informs that the migration process fails and returns details
+	 *             information about the failure (general information about the
+	 *             failure, what caused the failure, stack trace and other debug
+	 *             information).
 	 */
 	abstract MigrationResult migrate(ConnectionInfo connectionFrom,
 			String objectFrom, ConnectionInfo connectionTo, String objectTo)

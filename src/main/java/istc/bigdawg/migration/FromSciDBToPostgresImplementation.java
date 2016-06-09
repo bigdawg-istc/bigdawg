@@ -307,7 +307,7 @@ public class FromSciDBToPostgresImplementation implements MigrationImplementatio
 			postgresPipe = Pipe.INSTANCE.createAndGetFullName(this.getClass().getName() + "_toPostgres_" + toTable);
 
 			executor = Executors.newFixedThreadPool(3);
-			ExportFromSciDBExecutor exportExecutor = new ExportFromSciDBExecutor(connectionFrom, arrays, scidbPipe,
+			ExportSciDB exportExecutor = new ExportSciDB(connectionFrom, arrays, scidbPipe,
 					format, true);
 			FutureTask<String> exportTask = new FutureTask<String>(exportExecutor);
 			executor.submit(exportTask);
@@ -321,7 +321,7 @@ public class FromSciDBToPostgresImplementation implements MigrationImplementatio
 			connectionPostgres.setAutoCommit(false);
 			createTargetTableSchema(connectionPostgres, createTableStatement);
 			String copyToCommand = PostgreSQLHandler.getLoadBinCommand(toTable);
-			CopyToPostgresExecutor loadExecutor = new CopyToPostgresExecutor(connectionPostgres, copyToCommand,
+			LoadPostgres loadExecutor = new LoadPostgres(connectionPostgres, copyToCommand,
 					postgresPipe);
 			FutureTask<Long> loadTask = new FutureTask<Long>(loadExecutor);
 			executor.submit(loadTask);
@@ -435,7 +435,7 @@ public class FromSciDBToPostgresImplementation implements MigrationImplementatio
 			scidbPipe = Pipe.INSTANCE.createAndGetFullName(this.getClass().getName() + "_fromSciDB_" + fromArray);
 
 			String defultCsvFormat = "csv+";
-			ExportFromSciDBExecutor exportExecutor = new ExportFromSciDBExecutor(connectionFrom, arrays, scidbPipe,
+			ExportSciDB exportExecutor = new ExportSciDB(connectionFrom, arrays, scidbPipe,
 					defultCsvFormat, false);
 			FutureTask<String> exportTask = new FutureTask<String>(exportExecutor);
 			executor.submit(exportTask);
@@ -443,7 +443,7 @@ public class FromSciDBToPostgresImplementation implements MigrationImplementatio
 			connectionPostgres = PostgreSQLHandler.getConnection(connectionTo);
 			connectionPostgres.setAutoCommit(false);
 			createTargetTableSchema(connectionPostgres, createTableStatement);
-			CopyToPostgresExecutor loadExecutor = new CopyToPostgresExecutor(connectionPostgres,
+			LoadPostgres loadExecutor = new LoadPostgres(connectionPostgres,
 					getCopyToPostgreSQLCsvCommand(toTable), scidbPipe);
 			FutureTask<Long> loadTask = new FutureTask<Long>(loadExecutor);
 			executor.submit(loadTask);

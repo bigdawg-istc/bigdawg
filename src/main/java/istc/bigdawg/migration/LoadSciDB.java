@@ -17,10 +17,10 @@ import istc.bigdawg.utils.LogUtils;
  * 
  *         Feb 26, 2016 4:39:08 PM
  */
-public class LoadToSciDBExecutor implements Callable<String> {
+public class LoadSciDB implements Callable<String> {
 
 	/* log */
-	private static Logger log = Logger.getLogger(LoadToSciDBExecutor.class);
+	private static Logger log = Logger.getLogger(LoadSciDB.class);
 
 	/* SciDB connection info */
 	private SciDBConnectionInfo connectionTo;
@@ -28,7 +28,7 @@ public class LoadToSciDBExecutor implements Callable<String> {
 	private final String scidbFilePath;
 	private String binaryFormat = null;
 
-	public LoadToSciDBExecutor(SciDBConnectionInfo connectionTo, SciDBArrays arrays, String scidbFilePath) {
+	public LoadSciDB(SciDBConnectionInfo connectionTo, SciDBArrays arrays, String scidbFilePath) {
 		this.connectionTo = connectionTo;
 		this.arrays = arrays;
 		this.scidbFilePath = scidbFilePath;
@@ -39,7 +39,7 @@ public class LoadToSciDBExecutor implements Callable<String> {
 	 * @param arrays
 	 * @param scidbFilePath
 	 */
-	public LoadToSciDBExecutor(SciDBConnectionInfo connectionTo, SciDBArrays arrays, String scidbFilePath,
+	public LoadSciDB(SciDBConnectionInfo connectionTo, SciDBArrays arrays, String scidbFilePath,
 			String binaryFormat) {
 		this.connectionTo = connectionTo;
 		this.arrays = arrays;

@@ -17,10 +17,10 @@ import istc.bigdawg.utils.LogUtils;
  * 
  *         Feb 26, 2016 4:39:08 PM
  */
-public class ExportFromSciDBExecutor implements Callable<String> {
+public class ExportSciDB implements Callable<String> {
 
 	/* log */
-	private static Logger log = Logger.getLogger(LoadToSciDBExecutor.class);
+	private static Logger log = Logger.getLogger(LoadSciDB.class);
 
 	/* SciDB connection info */
 	private SciDBConnectionInfo connection;
@@ -29,8 +29,9 @@ public class ExportFromSciDBExecutor implements Callable<String> {
 	private final String format;
 	private boolean isBinary;
 
-	public ExportFromSciDBExecutor(SciDBConnectionInfo connection, SciDBArrays arrays, String scidbFilePath,
-			String format, boolean isBinary) {
+	public ExportSciDB(SciDBConnectionInfo connection,
+			SciDBArrays arrays, String scidbFilePath, String format,
+			boolean isBinary) {
 		this.connection = connection;
 		this.arrays = arrays;
 		this.scidbFilePath = scidbFilePath;
@@ -58,16 +59,18 @@ public class ExportFromSciDBExecutor implements Callable<String> {
 			/* this is only a flat array so export only the attributes */
 			if (arrays.getFlat() != null) {
 				/* for flat array we export only the attributes */
-				csvFormat = "csv"; 
+				csvFormat = "csv";
 				array = arrays.getFlat();
 			}
-			saveCommandFinal = "save(" + array + ",'" + scidbFilePath + "',-2,'" + csvFormat + "')";
+			saveCommandFinal = "save(" + array + ",'" + scidbFilePath + "',-2,'"
+					+ csvFormat + "')";
 		} else { /* this is the binary migration */
 			String array = null;
 			if (arrays.getMultiDimensional() != null) {
 				String multiDimArray = arrays.getMultiDimensional();
 				String flatArray = arrays.getFlat();
-				array = "store(redimension(" + multiDimArray + "," + flatArray + ")," + flatArray + ")";
+				array = "store(redimension(" + multiDimArray + "," + flatArray
+						+ ")," + flatArray + ")";
 			} else {
 				/* only the flat array */
 				array = arrays.getFlat();

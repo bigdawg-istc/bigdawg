@@ -467,8 +467,11 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 	 * schemaAntTableName)}
 	 * 
 	 * @param con
+	 *            Connection to the database where the table is stored.
 	 * @param schemaAndTableName
-	 * @return
+	 *            name of the schema and name of the table
+	 * @return The SQL create table statement from the table in the database
+	 *         represetned by con.
 	 * @throws SQLException
 	 */
 	public static String getCreateTable(Connection con,

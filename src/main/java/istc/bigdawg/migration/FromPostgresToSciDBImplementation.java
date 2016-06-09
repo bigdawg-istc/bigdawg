@@ -128,7 +128,7 @@ public class FromPostgresToSciDBImplementation implements MigrationImplementatio
 
 			String copyFromCommand = PostgreSQLHandler.getExportBinCommand(fromTable);
 			//String copyFromCommand = "copy from " + fromTable + " to " + postgresPipe + " with (format binary, freeze)";
-			CopyFromPostgresExecutor exportExecutor = new CopyFromPostgresExecutor(connectionFrom, copyFromCommand,
+			ExportPostgres exportExecutor = new ExportPostgres(connectionFrom, copyFromCommand,
 					postgresPipe);
 			FutureTask<Long> exportTask = new FutureTask<Long>(exportExecutor);
 			executor.submit(exportTask);
@@ -138,7 +138,7 @@ public class FromPostgresToSciDBImplementation implements MigrationImplementatio
 			FutureTask<Long> transformTask = new FutureTask<Long>(transformExecutor);
 			executor.submit(transformTask);
 
-			LoadToSciDBExecutor loadExecutor = new LoadToSciDBExecutor(connectionTo, arrays, scidbPipe,
+			LoadSciDB loadExecutor = new LoadSciDB(connectionTo, arrays, scidbPipe,
 					getSciDBBinFormat());
 			FutureTask<String> loadTask = new FutureTask<String>(loadExecutor);
 			executor.submit(loadTask);
@@ -207,7 +207,7 @@ public class FromPostgresToSciDBImplementation implements MigrationImplementatio
 			scidbPipe = Pipe.INSTANCE.createAndGetFullName(this.getClass().getName() + "_toSciDB_" + toArray);
 			executor = Executors.newFixedThreadPool(3);
 
-			CopyFromPostgresExecutor exportExecutor = new CopyFromPostgresExecutor(connectionFrom,
+			ExportPostgres exportExecutor = new ExportPostgres(connectionFrom,
 					PostgreSQLHandler.getExportCsvCommand(fromTable, delimiter), postgresPipe);
 			FutureTask<Long> exportTask = new FutureTask<Long>(exportExecutor);
 			executor.submit(exportTask);
@@ -219,7 +219,7 @@ public class FromPostgresToSciDBImplementation implements MigrationImplementatio
 			executor.submit(csvSciDBTask);
 
 			SciDBArrays arrays = prepareFlatTargetArrays();
-			LoadToSciDBExecutor loadExecutor = new LoadToSciDBExecutor(connectionTo, arrays, scidbPipe);
+			LoadSciDB loadExecutor = new LoadSciDB(connectionTo, arrays, scidbPipe);
 			FutureTask<String> loadTask = new FutureTask<String>(loadExecutor);
 			executor.submit(loadTask);
 

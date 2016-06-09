@@ -87,8 +87,9 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 	}
 
 	/**
-	 * Create a new schema and table in the connectionTo if they not exist. Get
-	 * the table definition from connectionFrom.
+	 * Create a new schema and table in the connectionTo if they do not exist.
+	 * 
+	 * Get the table definition from the connectionFrom.
 	 * 
 	 * @param connectionFrom
 	 *            from which database we fetch the data
@@ -103,10 +104,16 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 	private void createTargetTableSchema(Connection connectionFrom,
 			String fromTable, Connection connectionTo, String toTable)
 					throws SQLException {
+		/* separate schema name from the table name */
 		PostgreSQLSchemaTableName schemaTable = new PostgreSQLSchemaTableName(
 				toTable);
+		/* create the target schema if it is not already there */
 		PostgreSQLHandler.executeStatement(connectionTo,
 				"create schema if not exists " + schemaTable.getSchemaName());
+		/*
+		 * get the create table statement for the source table from the source
+		 * database
+		 */
 		String createTableStatement = PostgreSQLHandler
 				.getCreateTable(connectionFrom, fromTable);
 		PostgreSQLHandler.executeStatement(connectionTo, createTableStatement);
@@ -119,9 +126,10 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 	 */
 	@Override
 	public MigrationResult executeMigration() throws MigrationException {
-		long startTimeMigration = System.currentTimeMillis();
 		TimeStamp startTimeStamp = TimeStamp.getCurrentTime();
 		logger.debug("start migration: " + startTimeStamp.toDateString());
+
+		long startTimeMigration = System.currentTimeMillis();
 		String copyFromCommand = PostgreSQLHandler
 				.getExportBinCommand(fromTable);
 		String copyToCommand = PostgreSQLHandler.getLoadBinCommand(toTable);
@@ -141,13 +149,13 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 			final PipedOutputStream output = new PipedOutputStream();
 			final PipedInputStream input = new PipedInputStream(output);
 
-			CopyFromPostgresExecutor copyFromExecutor = new CopyFromPostgresExecutor(
-					conFrom, copyFromCommand, output);
+			ExportPostgres copyFromExecutor = new ExportPostgres(conFrom,
+					copyFromCommand, output);
 			FutureTask<Long> taskCopyFromExecutor = new FutureTask<Long>(
 					copyFromExecutor);
 
-			CopyToPostgresExecutor copyToExecutor = new CopyToPostgresExecutor(
-					conTo, copyToCommand, input);
+			LoadPostgres copyToExecutor = new LoadPostgres(conTo, copyToCommand,
+					input);
 			FutureTask<Long> taskCopyToExecutor = new FutureTask<Long>(
 					copyToExecutor);
 
@@ -189,8 +197,9 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 				try {
 					conTo.rollback();
 				} catch (SQLException ex) {
-					String messageRollbackConTo = " Could not roll back transactions in the source database after failure in data migration: "
-							+ ex.getMessage();
+					String messageRollbackConTo = " Could not roll back "
+							+ "transactions in the source database after "
+							+ "failure in data migration: " + ex.getMessage();
 					logger.error(messageRollbackConTo);
 					message += messageRollbackConTo;
 				}
@@ -200,7 +209,9 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 
 					conFrom.rollback();
 				} catch (SQLException ex) {
-					String messageRollbackConFrom = " Could not roll back transactions in the destination database after failure in data migration: "
+					String messageRollbackConFrom = " Could not roll back "
+							+ "transactions in the destination database "
+							+ "after failure in data migration: "
 							+ ex.getMessage();
 					logger.error(messageRollbackConFrom);
 					message += messageRollbackConFrom;
@@ -262,39 +273,23 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 	public static void main(String[] args) throws Exception {
 		LoggerSetup.setLogging();
 		System.out.println("Migrating data from PostgreSQL to PostgreSQL");
-		FromPostgresToPostgres migrator = new FromPostgresToPostgres();
-		PostgreSQLConnectionInfo conInfoFrom = new PostgreSQLConnectionInfo(
-				"localhost", "5431", "mimic2", "pguser", "test");
-		PostgreSQLConnectionInfo conInfoTo = new PostgreSQLConnectionInfo(
-				"localhost", "5430", "mimic2_copy", "pguser", "test");
+		FromDatabaseToDatabase migrator = new FromPostgresToPostgres();
+		ConnectionInfo conInfoFrom = new PostgreSQLConnectionInfo("localhost",
+				"5431", "mimic2", "pguser", "test");
+		ConnectionInfo conInfoTo = new PostgreSQLConnectionInfo("localhost",
+				"5430", "mimic2", "pguser", "test");
 		MigrationResult result;
 		try {
 			result = migrator.migrate(conInfoFrom, "mimic2v26.d_patients",
-					conInfoTo, "mimic2v26.d_patients");
-		} catch (Exception e) {
+					conInfoTo, "patients2");
+		} catch (MigrationException e) {
 			e.printStackTrace();
-			return;
+			logger.error(e.getMessage());
+			throw e;
 		}
 		logger.debug("Number of extracted rows: "
 				+ result.getCountExtractedElements()
 				+ " Number of loaded rows: " + result.getCountLoadedElements());
-
-		ConnectionInfo conFrom = conInfoFrom;
-		ConnectionInfo conTo = conInfoTo;
-		MigrationResult result1;
-		try {
-			result1 = migrator.migrate(conFrom, "mimic2v26.d_patients", conTo,
-					"mimic2v26.d_patients");
-			logger.debug("Number of extracted rows: "
-					+ result1.getCountExtractedElements()
-					+ " Number of loaded rows: "
-					+ result1.getCountLoadedElements());
-		} catch (MigrationException e) {
-			String msg = "Problem with general data migration.";
-			logger.error(msg);
-			e.printStackTrace();
-		}
-
 	}
 
 }

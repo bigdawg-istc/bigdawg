@@ -27,9 +27,9 @@ import istc.bigdawg.utils.StackTrace;
  * 
  *         Jan 14, 2016 6:06:36 PM
  */
-public class CopyFromPostgresExecutor implements Callable<Long> {
+public class ExportPostgres implements Callable<Long> {
 
-	private static Logger log = Logger.getLogger(CopyFromPostgresExecutor.class);
+	private static Logger log = Logger.getLogger(ExportPostgres.class);
 
 	private final CopyManager cpFrom;
 	private String copyFromString;
@@ -37,7 +37,7 @@ public class CopyFromPostgresExecutor implements Callable<Long> {
 	private OutputStream output = null;
 	private Connection connection;
 	
-	public CopyFromPostgresExecutor(Connection connectionPostgreSQL, final String copyFromString,
+	public ExportPostgres(Connection connectionPostgreSQL, final String copyFromString,
 			OutputStream output) throws SQLException {
 		this.connection = connectionPostgreSQL;
 		this.copyFromString = copyFromString;
@@ -45,7 +45,7 @@ public class CopyFromPostgresExecutor implements Callable<Long> {
 		this.cpFrom = new CopyManager((BaseConnection) connection);
 	}
 
-	public CopyFromPostgresExecutor(PostgreSQLConnectionInfo connectionPostgreSQL, final String copyFromString,
+	public ExportPostgres(PostgreSQLConnectionInfo connectionPostgreSQL, final String copyFromString,
 			final String outputFile) throws SQLException {
 		connection = PostgreSQLHandler.getConnection(connectionPostgreSQL);
 		connection.setAutoCommit(false);

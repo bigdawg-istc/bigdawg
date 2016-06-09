@@ -32,7 +32,7 @@ import istc.bigdawg.query.ConnectionInfo;
  */
 public class FromPostgresToPostgresTest {
 
-	/* the class for the PostgreSQL <-> PostgreSQL migration */
+	/** Data migrator for the PostgreSQL <-> PostgreSQL migration */
 	private FromPostgresToPostgres migrator = new FromPostgresToPostgres();
 
 	private String localIP = "205.208.122.55";
@@ -159,7 +159,15 @@ public class FromPostgresToPostgresTest {
 		System.out.println(result);
 	}
 
-	Callable<MigrationResult> getMigrationTask(ConnectionInfo conFrom,
+	/**
+	 * 
+	 * @param conFrom
+	 * @param tableFrom
+	 * @param conTo
+	 * @param tableTo
+	 * @return
+	 */
+	private Callable<MigrationResult> getMigrationTask(ConnectionInfo conFrom,
 			String tableFrom, ConnectionInfo conTo, String tableTo) {
 		Callable<MigrationResult> task = () -> {
 			MigrationResult result = migrator.migrate(conFrom, tableFrom, conTo,
