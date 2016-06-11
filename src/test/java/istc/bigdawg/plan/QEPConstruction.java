@@ -9,12 +9,12 @@ import org.junit.Before;
 import org.junit.Test;
 
 import istc.bigdawg.catalog.CatalogInstance;
-import istc.bigdawg.packages.CrossIslandPlanNode;
-import istc.bigdawg.packages.CrossIslandQueryNode;
-import istc.bigdawg.packages.CrossIslandQueryPlan;
-import istc.bigdawg.plan.generators.OperatorVisitor;
-import istc.bigdawg.plan.generators.SQLQueryGenerator;
-import istc.bigdawg.plan.operators.Operator;
+import istc.bigdawg.islands.CrossIslandPlanNode;
+import istc.bigdawg.islands.CrossIslandQueryNode;
+import istc.bigdawg.islands.CrossIslandQueryPlan;
+import istc.bigdawg.islands.OperatorVisitor;
+import istc.bigdawg.islands.PostgreSQL.SQLQueryGenerator;
+import istc.bigdawg.islands.operators.Operator;
 
 public class QEPConstruction {
 

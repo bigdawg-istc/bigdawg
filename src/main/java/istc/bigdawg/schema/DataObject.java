@@ -5,7 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import istc.bigdawg.packages.SciDBArray;
+import istc.bigdawg.islands.SciDB.SciDBArray;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.statement.create.table.ColumnDefinition;
 import net.sf.jsqlparser.statement.create.table.CreateTable;

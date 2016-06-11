@@ -3,30 +3,28 @@ package istc.bigdawg.plan;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.junit.Before;
 import org.junit.Test;
 
 import istc.bigdawg.catalog.CatalogInstance;
-import istc.bigdawg.parsers.UserQueryParser;
-import istc.bigdawg.plan.extract.AFLPlanParser;
-import istc.bigdawg.plan.extract.SQLPlanParser;
-import istc.bigdawg.plan.generators.AFLQueryGenerator;
-import istc.bigdawg.plan.generators.OperatorVisitor;
-import istc.bigdawg.plan.generators.SQLQueryGenerator;
-import istc.bigdawg.plan.operators.Join;
-import istc.bigdawg.plan.operators.Operator;
+import istc.bigdawg.islands.OperatorVisitor;
+import istc.bigdawg.islands.PostgreSQL.SQLPlanParser;
+import istc.bigdawg.islands.PostgreSQL.SQLQueryGenerator;
+import istc.bigdawg.islands.PostgreSQL.SQLQueryPlan;
+import istc.bigdawg.islands.PostgreSQL.utils.SQLPrepareQuery;
+import istc.bigdawg.islands.SciDB.AFLPlanParser;
+import istc.bigdawg.islands.SciDB.AFLQueryGenerator;
+import istc.bigdawg.islands.SciDB.AFLQueryPlan;
+import istc.bigdawg.islands.operators.Join;
+import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.planner.Planner;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.scidb.SciDBHandler;
 import istc.bigdawg.signature.Signature;
-import istc.bigdawg.utils.sqlutil.SQLPrepareQuery;
 
 public class TrialsAndErrors {
 	
-	private static boolean runInterIslandParse = false;
 	private static boolean runExplainer = false;
 	private static boolean runBuilder = false;
 	private static boolean runRegex = false;
@@ -37,17 +35,12 @@ public class TrialsAndErrors {
 	public void setUp() throws Exception {
 		CatalogInstance.INSTANCE.getCatalog();
 		
-//		setupInterIslandParse();
 //		setupQueryExplainer();
-//		setupQueryBuilder();
-		setupRegexTester();
+		setupQueryBuilder();
+//		setupRegexTester();
 //		setupTreeWalker();
 //		setupPlannerTester();
 	}
-	
-	public void setupInterIslandParse() {
-		runInterIslandParse = true;
-	}; 
 	
 	public void setupQueryExplainer() {
 		runExplainer = true;
@@ -69,25 +62,6 @@ public class TrialsAndErrors {
 		runPlanner = true;
 	}
 	
-	@Test
-	public void testRunInterIslandParse() throws Exception {
-		
-		if ( !runInterIslandParse ) return;
-			
-		System.out.println("InterIslandParse -- Type query or \"quit\" to exit: ");
-//		Scanner scanner = new Scanner(System.in);
-//		String query = scanner.nextLine();
-		String query = "bdrel(abc bdarray(cded bdcast(bdrel(asd))) bdgraph(cde))";
-		while (!query.toLowerCase().equals("quit")) {
-			
-			UserQueryParser.getUnwrappedQueriesByIslands(query);
-//			System.out.println(UserQueryParser.getUnwrappedQueriesByIslands(query) + "\n");
-//			query = scanner.nextLine();
-			break;
-			
-		}
-//		scanner.close();
-	}
 
 	@Test
 	public void testRunExplainer() throws Exception {
@@ -116,10 +90,10 @@ public class TrialsAndErrors {
 		SciDBHandler handler = new SciDBHandler(8);
 		System.out.println("Builder -- Type query or \"quit\" to exit: ");
 		Scanner scanner = new Scanner(System.in);
-		String query = scanner.nextLine();
+//		String query = scanner.nextLine();
 //		String query = "select c_custkey, c_name from customer where c_custkey = 1 union select c_custkey as ckey, c_name from customer where c_custkey = 3 union all select c_custkey, c_name from customer where c_custkey = 5;";
 //		String query = "select c1.c_custkey, c2.c_name from customer c2, customer c1 where c2.c_custkey = c1.c_custkey limit 3;";
-//		String query = "cross_join(filter(region, region.r_name = 'AMERICA') as region_trimmed, nation as nation_trimmed, region_trimmed.r_regionkey, nation_trimmed.n_regionkey);";
+		String query = "cross_join(filter(region, region.r_name = 'AMERICA') as region_trimmed, nation as nation_trimmed, region_trimmed.r_regionkey, nation_trimmed.n_regionkey);";
 		
 //		String query = "select bucket, count(*) from ( select width_bucket(value1num, 0, 300, 300) as bucket from mimic2v26.chartevents ce,  mimic2v26.d_patients dp  where itemid in (6, 51, 455, 6701)  and ce.subject_id = dp.subject_id  and ((DATE_PART('year',ce.charttime) - DATE_PART('year',dp.dob))*12 + DATE_PART('month',ce.charttime) - DATE_PART('month',dp.dob)) > 15 ) as sbp group by bucket order by bucket;";
 		while (!query.toLowerCase().equals("quit")) {
@@ -144,8 +118,8 @@ public class TrialsAndErrors {
 			
 //			System.out.println(RTED.computeDistance(root.getTreeRepresentation(true), "{}"));
 			
-			break;
-//			query = scanner.nextLine();
+//			break;
+			query = scanner.nextLine();
 			
 		}
 		scanner.close();

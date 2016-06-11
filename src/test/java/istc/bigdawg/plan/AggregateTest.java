@@ -9,9 +9,10 @@ import org.junit.Before;
 import org.junit.Test;
 
 import istc.bigdawg.catalog.CatalogInstance;
-import istc.bigdawg.plan.extract.SQLPlanParser;
-import istc.bigdawg.plan.generators.SQLQueryGenerator;
-import istc.bigdawg.plan.operators.Operator;
+import istc.bigdawg.islands.PostgreSQL.SQLPlanParser;
+import istc.bigdawg.islands.PostgreSQL.SQLQueryGenerator;
+import istc.bigdawg.islands.PostgreSQL.SQLQueryPlan;
+import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.select.Select;

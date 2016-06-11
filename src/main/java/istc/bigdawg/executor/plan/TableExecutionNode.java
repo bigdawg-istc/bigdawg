@@ -7,6 +7,9 @@ import istc.bigdawg.query.ConnectionInfo;
 /**
  * Represents a single table on a given engine.
  * 
+ * June 9 2016 -
+ * This is currently not in use. In place of this, we issue a simple Projection on the designated table. 
+ * 
  * @author ankushg
  */
 public class TableExecutionNode implements ExecutionNode {

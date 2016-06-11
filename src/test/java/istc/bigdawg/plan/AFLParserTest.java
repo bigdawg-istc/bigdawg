@@ -7,11 +7,13 @@ import org.junit.Test;
 
 import convenience.RTED;
 import istc.bigdawg.catalog.CatalogViewer;
-import istc.bigdawg.plan.extract.AFLPlanParser;
-import istc.bigdawg.plan.generators.AFLQueryGenerator;
-import istc.bigdawg.plan.generators.OperatorVisitor;
-import istc.bigdawg.plan.operators.Operator;
+import istc.bigdawg.islands.OperatorVisitor;
+import istc.bigdawg.islands.SciDB.AFLPlanParser;
+import istc.bigdawg.islands.SciDB.AFLQueryGenerator;
+import istc.bigdawg.islands.SciDB.AFLQueryPlan;
+import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.planner.Planner;
+import istc.bigdawg.scidb.SciDBConnectionInfo;
 import istc.bigdawg.scidb.SciDBHandler;
 import junit.framework.TestCase;
 
@@ -28,7 +30,7 @@ public class AFLParserTest extends TestCase {
 		input2 = new HashMap<>();
 		
 		setupParse();
-		setupTreeEditDistance();
+//		setupTreeEditDistance();
 		
 //		setupBasicProjection();
 //		setupCrossJoins();
@@ -42,9 +44,9 @@ public class AFLParserTest extends TestCase {
 //		expectedOutputs.put("parse1", "filter(patients, id < 10)");
 //		expectedOutputs.put("parse2", "cross_join(cross_join(cross_join(geo, filter(go_matrix, goid < 3), geo.geneid, go_matrix.geneid), filter(genes, id < 10), geo.geneid, genes.id), filter(patients, id <= 10 or id >= 30), geo.patientid, patients.id)");
 //		expectedOutputs.put("parse2", "aggregate(cross_join(project(filter(nation, n_name = 'brazil'), n_name) AS a, project(region, r_name) AS b, a.n_regionkey, b.r_regionkey), count(n_name), count(r_name) as rcnt, n_nationkey, nation.n_regionkey)");
-		expectedOutputs.put("parse2", "redimension(cross_join(project(filter(nation, n_name = 'brazil'), n_name) AS a, project(region, r_name) AS b, a.n_regionkey, b.r_regionkey), <n_name:string> [n_nationkey=0:*,10,0,n_regionkey=0:*,3,0])");
+		expectedOutputs.put("parse2", "cross_join(cross_join(filter(region, region.r_name = 'AMERICA') as region_trimmed, nation, region_trimmed.r_regionkey, nation.n_regionkey), supplier as supplier_trimmed, nation.n_nationkey, supplier_trimmed.s_nationkey)");
 		
-		expectedOutputs.put("planner1", "bdarray(redimension(cross_join(project(filter(nation, n_name = 'brazil'), n_name) AS a, project(region, r_name) AS b, a.n_regionkey, b.r_regionkey), <n_name:string> [n_nationkey=0:*,10,0,n_regionkey=0:*,3,0]));");
+//		expectedOutputs.put("planner1", "bdarray(redimension(cross_join(project(filter(nation, n_name = 'brazil'), n_name) AS a, project(region, r_name) AS b, a.n_regionkey, b.r_regionkey), <n_name:string> [n_nationkey=0:*,10,0,n_regionkey=0:*,3,0]));");
 	}
 	
 	private void setupTreeEditDistance() {
@@ -58,15 +60,15 @@ public class AFLParserTest extends TestCase {
 //		testParse("parse1");
 //	}
 //	
-//	@Test
-//	public void testParse2() throws Exception {
-//		testParse("parse2");
-//	}
-	
 	@Test
-	public void testPlanner() throws Exception {
-		testPlanner("planner1");
+	public void testParse2() throws Exception {
+		testParse("parse2");
 	}
+//	
+//	@Test
+//	public void testPlanner() throws Exception {
+//		testPlanner("planner1");
+//	}
 	
 //	@Test
 //	public void testTreeEdit() throws Exception {
@@ -112,13 +114,13 @@ public class AFLParserTest extends TestCase {
 	
 	public void testParse(String testname) throws Exception {
 		
-		AFLQueryPlan queryPlan = AFLPlanParser.extractDirect(new SciDBHandler(CatalogViewer.getSciDBConnectionInfo(9)), expectedOutputs.get(testname));
+		AFLQueryPlan queryPlan = AFLPlanParser.extractDirect(new SciDBHandler((SciDBConnectionInfo)CatalogViewer.getConnectionInfo(8)), expectedOutputs.get(testname));
 		Operator root = queryPlan.getRootNode();
 		
 		OperatorVisitor gen = new AFLQueryGenerator();
 		gen.configure(true, false);
 		root.accept(gen);
-		System.out.println(gen.generateStatementString());
+		System.out.println(gen.generateStatementString()+"\n");
 		
 		System.out.println("Tree representation: "+root.getTreeRepresentation(true)+"\n");
 		
