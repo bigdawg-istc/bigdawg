@@ -20,7 +20,8 @@ public class DataTypesFromSStoreSQLToPostgreSQL {
 		map.put("integer", "integer");
 		map.put("bigint", "bigint");
 		// float
-		map.put("float", "real");
+//		map.put("float", "real");
+		map.put("float", "double precision");
 		map.put("decimal", "double precision");
 		// string
 		map.put("string", "varchar");
