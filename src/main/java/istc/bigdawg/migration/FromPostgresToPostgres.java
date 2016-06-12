@@ -7,9 +7,12 @@ import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.FutureTask;
+import java.util.concurrent.Future;
 
 import org.apache.commons.net.ntp.TimeStamp;
 import org.apache.log4j.Logger;
@@ -22,6 +25,7 @@ import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.postgresql.PostgreSQLSchemaTableName;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.utils.StackTrace;
+import istc.bigdawg.utils.TaskExecutor;
 
 /**
  * Data migration between instances of PostgreSQL.
@@ -41,8 +45,6 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 	 */
 	private static Logger logger = Logger
 			.getLogger(FromPostgresToPostgres.class);
-
-	private static final int numberOfThreads = 2;
 
 	private PostgreSQLConnectionInfo connectionFrom;
 	private String fromTable;
@@ -101,7 +103,7 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 	 *            to which table we want to load the data
 	 * @throws SQLException
 	 */
-	private void createTargetTableSchema(Connection connectionFrom,
+	private PostgreSQLSchemaTableName createTargetTableSchema(Connection connectionFrom,
 			String fromTable, Connection connectionTo, String toTable)
 					throws SQLException {
 		/* separate schema name from the table name */
@@ -115,8 +117,9 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 		 * database
 		 */
 		String createTableStatement = PostgreSQLHandler
-				.getCreateTable(connectionFrom, fromTable);
+				.getCreateTable(connectionFrom, fromTable, toTable);
 		PostgreSQLHandler.executeStatement(connectionTo, createTableStatement);
+		return schemaTable;
 	}
 
 	/*
@@ -149,21 +152,15 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 			final PipedOutputStream output = new PipedOutputStream();
 			final PipedInputStream input = new PipedInputStream(output);
 
-			ExportPostgres copyFromExecutor = new ExportPostgres(conFrom,
-					copyFromCommand, output);
-			FutureTask<Long> taskCopyFromExecutor = new FutureTask<Long>(
-					copyFromExecutor);
+			List<Callable<Object>> tasks = new ArrayList<>();
+			tasks.add(new ExportPostgres(conFrom, copyFromCommand, output));
+			tasks.add(new LoadPostgres(conTo, copyToCommand, input));
+			executor = Executors.newFixedThreadPool(tasks.size());
+			List<Future<Object>> results = TaskExecutor.execute(executor,
+					tasks);
 
-			LoadPostgres copyToExecutor = new LoadPostgres(conTo, copyToCommand,
-					input);
-			FutureTask<Long> taskCopyToExecutor = new FutureTask<Long>(
-					copyToExecutor);
-
-			executor = Executors.newFixedThreadPool(numberOfThreads);
-			executor.submit(taskCopyFromExecutor);
-			executor.submit(taskCopyToExecutor);
-			long countExtractedElements = taskCopyFromExecutor.get();
-			long countLoadedElements = taskCopyToExecutor.get();
+			long countExtractedElements = (Long) results.get(0).get();
+			long countLoadedElements = (Long) results.get(0).get();
 
 			long endTimeMigration = System.currentTimeMillis();
 			long durationMsec = endTimeMigration - startTimeMigration;
@@ -194,27 +191,37 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 			logger.error(message + " Stack Trace: "
 					+ StackTrace.getFullStackTrace(e), e);
 			if (conTo != null) {
+				ExecutorService executorTerminator = null;
 				try {
-					conTo.rollback();
+					conTo.abort(executorTerminator);
 				} catch (SQLException ex) {
 					String messageRollbackConTo = " Could not roll back "
-							+ "transactions in the source database after "
+							+ "transactions in the destination database after "
 							+ "failure in data migration: " + ex.getMessage();
 					logger.error(messageRollbackConTo);
 					message += messageRollbackConTo;
+				} finally {
+					if (executorTerminator != null) {
+						executorTerminator.shutdownNow();
+					}
 				}
 			}
 			if (conFrom != null) {
+				ExecutorService executorTerminator = null;
 				try {
-
-					conFrom.rollback();
+					executorTerminator = Executors.newCachedThreadPool();
+					conFrom.abort(executorTerminator);
 				} catch (SQLException ex) {
 					String messageRollbackConFrom = " Could not roll back "
-							+ "transactions in the destination database "
+							+ "transactions in the source database "
 							+ "after failure in data migration: "
 							+ ex.getMessage();
 					logger.error(messageRollbackConFrom);
 					message += messageRollbackConFrom;
+				} finally {
+					if (executorTerminator != null) {
+						executorTerminator.shutdownNow();
+					}
 				}
 			}
 			throw new MigrationException(message, e);

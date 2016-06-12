@@ -27,7 +27,7 @@ import istc.bigdawg.utils.StackTrace;
  * 
  *         Jan 14, 2016 6:06:36 PM
  */
-public class ExportPostgres implements Callable<Long> {
+public class ExportPostgres implements Callable<Object> {
 
 	private static Logger log = Logger.getLogger(ExportPostgres.class);
 
@@ -36,17 +36,19 @@ public class ExportPostgres implements Callable<Long> {
 	private String outputFile;
 	private OutputStream output = null;
 	private Connection connection;
-	
-	public ExportPostgres(Connection connectionPostgreSQL, final String copyFromString,
-			OutputStream output) throws SQLException {
+
+	public ExportPostgres(Connection connectionPostgreSQL,
+			final String copyFromString, OutputStream output)
+					throws SQLException {
 		this.connection = connectionPostgreSQL;
 		this.copyFromString = copyFromString;
-		this.output = output;		
+		this.output = output;
 		this.cpFrom = new CopyManager((BaseConnection) connection);
 	}
 
-	public ExportPostgres(PostgreSQLConnectionInfo connectionPostgreSQL, final String copyFromString,
-			final String outputFile) throws SQLException {
+	public ExportPostgres(PostgreSQLConnectionInfo connectionPostgreSQL,
+			final String copyFromString, final String outputFile)
+					throws SQLException {
 		connection = PostgreSQLHandler.getConnection(connectionPostgreSQL);
 		connection.setAutoCommit(false);
 		connection.setReadOnly(true);
@@ -59,34 +61,38 @@ public class ExportPostgres implements Callable<Long> {
 	 * Copy data from PostgreSQL.
 	 * 
 	 * @return number of extracted rows
-	 * @throws FileNotFoundException 
+	 * @throws Exception
 	 */
-	public Long call() {
+	public Long call() throws Exception {
 		log.debug("start call: Copy from PostgreSQL (Executor)");
 		if (output == null) {
 			try {
-				output = new BufferedOutputStream(new FileOutputStream(outputFile));
+				output = new BufferedOutputStream(
+						new FileOutputStream(outputFile));
 			} catch (FileNotFoundException e) {
 				e.printStackTrace();
-				String msg = e.getMessage() + " Problem with thread for PostgreSQL copy manager "
-					+ "while copying (extracting) data from PostgreSQL.";
+				String msg = e.getMessage()
+						+ " Problem with thread for PostgreSQL copy manager "
+						+ "while copying (extracting) data from PostgreSQL.";
 				log.error(msg + StackTrace.getFullStackTrace(e), e);
-				return -1L;
+				throw e;
 			}
 		}
 		Long countExtractedRows = 0L;
-		log.debug("issue command to PostgreSQL: Copy from PostgreSQL (Executor)");
+		log.debug(
+				"issue command to PostgreSQL: Copy from PostgreSQL (Executor)");
 		try {
 			countExtractedRows = cpFrom.copyOut(copyFromString, output);
-			//log.debug("psql statement: " + copyFromString);
-			//PostgreSQLHandler.executeStatement(connection, copyFromString);
+			// log.debug("psql statement: " + copyFromString);
+			// PostgreSQLHandler.executeStatement(connection, copyFromString);
 			connection.commit();
 			output.close();
 		} catch (IOException | SQLException e) {
-			String msg = e.getMessage() + " Problem with thread for PostgreSQL copy manager "
+			String msg = e.getMessage()
+					+ " Problem with thread for PostgreSQL copy manager "
 					+ "while copying (extracting) data from PostgreSQL.";
 			log.error(msg + StackTrace.getFullStackTrace(e), e);
-			e.printStackTrace();
+			throw e;
 		}
 		return countExtractedRows;
 	}

@@ -68,7 +68,7 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 	}
 
 	public PostgreSQLHandler() {
-		String msg = "Default handler. PostgreSQL parameters from a file.";
+		String msg = "Default handler. PostgreSQL parameters are taken from the BigDAWG configuration file.";
 		log.info(msg);
 	}
 
@@ -218,6 +218,8 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 		Statement statement = null;
 		try {
 			statement = connection.createStatement();
+			log.debug(
+					"Statement to be executed in Postgres: " + stringStatement);
 			statement.execute(stringStatement);
 			statement.close();
 		} catch (SQLException ex) {
@@ -468,14 +470,17 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 	 * 
 	 * @param con
 	 *            Connection to the database where the table is stored.
-	 * @param schemaAndTableName
+	 * @param fromTable
 	 *            name of the schema and name of the table
+	 * @param toTable
+	 *            the name of the table in the final sql statement (it can be
+	 *            different from the current name of the table in the database)
 	 * @return The SQL create table statement from the table in the database
 	 *         represetned by con.
 	 * @throws SQLException
 	 */
-	public static String getCreateTable(Connection con,
-			String schemaAndTableName) throws SQLException {
+	public static String getCreateTable(Connection con, String fromTable,
+			String toTable) throws SQLException {
 		try {
 			StringBuilder extraction = new StringBuilder();
 
@@ -485,13 +490,13 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 					"SELECT attrelid, attname, format_type(atttypid, atttypmod) AS type, atttypid, atttypmod "
 							+ "FROM pg_catalog.pg_attribute "
 							+ "WHERE NOT attisdropped AND attrelid = '"
-							+ schemaAndTableName
+							+ fromTable
 							+ "'::regclass AND atttypid NOT IN (26,27,28,29) "
 							+ "ORDER BY attnum;");
 
 			if (rs.next()) {
-				extraction.append("CREATE TABLE IF NOT EXISTS ")
-						.append(schemaAndTableName).append(" (");
+				extraction.append("CREATE TABLE IF NOT EXISTS ").append(toTable)
+						.append(" (");
 				extraction.append(rs.getString("attname")).append(" ");
 				extraction.append(rs.getString("type"));
 			}
@@ -507,7 +512,7 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 		} catch (SQLException ex) {
 			ex.printStackTrace();
 			log.error(ex.getMessage() + "; conInfo: " + con.getClientInfo()
-					+ "; schemaAndTableName: " + schemaAndTableName + " "
+					+ "; fromTable: " + fromTable + " ; toTable: " + toTable
 					+ StackTrace.getFullStackTrace(ex), ex);
 			throw ex;
 		}
@@ -526,7 +531,7 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 			throws SQLException {
 		try {
 			getConnection();
-			return getCreateTable(con, schemaAndTableName);
+			return getCreateTable(con, schemaAndTableName, schemaAndTableName);
 		} finally {
 			try {
 				this.cleanPostgreSQLResources();
