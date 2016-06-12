@@ -5,7 +5,10 @@ import java.io.OutputStream;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -256,25 +259,43 @@ public class FromSStoreToPostgresImplementation implements MigrationImplementati
 
     private String getCreatePostgreSQLTableStatementFromSStoreTable()
 	    throws SQLException, UnsupportedTypeException {
-	List<SStoreSQLColumnMetaData> attributes = sStoreSQLTableMetaData.getColumnsOrdered();
-	List<SStoreSQLColumnMetaData> columns = new ArrayList<>();
-	columns.addAll(attributes);
-	StringBuilder createTableStringBuf = new StringBuilder();
-	createTableStringBuf.append("create table if not exists " + toTable + " (");
-	for (SStoreSQLColumnMetaData column : columns) {
-	    String colName = column.getName();
-	    String sStoreType = column.getdataType();
-	    String postgresType = DataTypesFromSStoreSQLToPostgreSQL.getPostgreSQLTypeFromSStoreType(sStoreType);
-	    if ("varchar".equals(postgresType)) {
-		postgresType += "(" + column.getCharacterMaximumLength() + ")";
-	    }
-	    String nullable = column.isNullable() ? "" : "NOT NULL";
-	    createTableStringBuf.append(colName + " " + postgresType +  " " + nullable + ",");
-	}
-	createTableStringBuf.deleteCharAt(createTableStringBuf.length() - 1);
-	createTableStringBuf.append(")");
-	log.debug("create table command: " + createTableStringBuf.toString());
-	return createTableStringBuf.toString();
+    	return getCreatePostgreSQLTableStatementFromSStoreTable(false);
     }
-
+    
+    // Sort the attributes by their positions
+    class SStoreSQLColumnMetaDataComparator implements Comparator<SStoreSQLColumnMetaData> {
+    	public int compare(SStoreSQLColumnMetaData s1, SStoreSQLColumnMetaData s2) {
+    		return s1.getPosition() - s2.getPosition();
+    	}
+    }
+    
+    private String getCreatePostgreSQLTableStatementFromSStoreTable(Boolean sortByNames)
+	    throws SQLException, UnsupportedTypeException {
+    	List<SStoreSQLColumnMetaData> attributes = sStoreSQLTableMetaData.getColumnsOrdered();
+    	
+    	List<SStoreSQLColumnMetaData> origOrderAttr = new ArrayList<SStoreSQLColumnMetaData>();
+    	if (!sortByNames) { // Original order
+    		Collections.sort(attributes, new SStoreSQLColumnMetaDataComparator());
+    	}
+    	
+    	List<SStoreSQLColumnMetaData> columns = new ArrayList<>();
+    	columns.addAll(attributes);
+    	StringBuilder createTableStringBuf = new StringBuilder();
+    	createTableStringBuf.append("create table if not exists " + toTable + " (");
+    	for (SStoreSQLColumnMetaData column : columns) {
+    	    String colName = column.getName();
+    	    String sStoreType = column.getdataType();
+    	    String postgresType = DataTypesFromSStoreSQLToPostgreSQL.getPostgreSQLTypeFromSStoreType(sStoreType);
+    	    if ("varchar".equals(postgresType)) {
+    		postgresType += "(" + column.getCharacterMaximumLength() + ")";
+    	    }
+    	    String nullable = column.isNullable() ? "" : "NOT NULL";
+    	    createTableStringBuf.append(colName + " " + postgresType +  " " + nullable + ",");
+    	}
+    	createTableStringBuf.deleteCharAt(createTableStringBuf.length() - 1);
+    	createTableStringBuf.append(")");
+    	log.debug("create table command: " + createTableStringBuf.toString());
+    	return createTableStringBuf.toString();
+    	
+    }
 }
