@@ -15,6 +15,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.log4j.Logger;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -24,6 +25,7 @@ import istc.bigdawg.executor.JdbcQueryResult;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.query.ConnectionInfo;
+import istc.bigdawg.utils.StackTrace;
 
 /**
  * @author Adam Dziedzic
@@ -31,6 +33,12 @@ import istc.bigdawg.query.ConnectionInfo;
  *         Test data migration between Postgres instances.
  */
 public class FromPostgresToPostgresTest {
+
+	/*
+	 * log
+	 */
+	private static Logger logger = Logger
+			.getLogger(FromPostgresToPostgresTest.class);
 
 	/** Data migrator for the PostgreSQL <-> PostgreSQL migration */
 	private FromPostgresToPostgres migrator = new FromPostgresToPostgres();
@@ -42,40 +50,67 @@ public class FromPostgresToPostgresTest {
 	private String localPassword = "test";
 	private String remotePassword = "ADAM12345testBorja2016";
 
+	/** The name of the source table in PostgreSQL. */
+	private String tableNameFrom = "test1_from_postgres_to_postgres_table_from";
+
+	/** The name of the target table in PostgreSQL. */
+	private String tableNameTo = "test1_from_postgres_to_postgres_table_to";
+
+	/** Dummy data for migration. */
+	private int intValue = 14;
+	private double doubleValue = 1.2;
+	private String stringValue = "adamdziedzic";
+
 	@Before
 	public void setUp() throws IOException {
 		LoggerSetup.setLogging();
 	}
 
-	public void migrateTest(PostgreSQLConnectionInfo conInfoFrom,
+	/**
+	 * 
+	 * @param tableName
+	 *            The table name in the database.
+	 * @return SQL create table statement with the provided tableName.
+	 */
+	private String getCreateTableTest(String tableName) {
+		String createTableSQL = "create table " + tableName
+				+ "(a int,b double precision,c varchar)";
+		logger.debug("create table SQL statement: " + createTableSQL);
+		return createTableSQL;
+	}
+
+	/**
+	 * 
+	 * @param tableName The name of the table where the data should be inserted.
+	 * @return SQL insert into statement for the test table.
+	 */
+	private String getInsertInto(String tableName) {
+		String insertIntoSQL = "insert into " + tableNameFrom + " values("
+				+ intValue + "," + doubleValue + ",'" + stringValue + "')";
+		logger.debug("insert into test table SQL statement: " + insertIntoSQL);
+		return insertIntoSQL;
+	}
+
+	private void migrateTest(PostgreSQLConnectionInfo conInfoFrom,
 			PostgreSQLConnectionInfo conInfoTo)
 					throws MigrationException, SQLException {
 		PostgreSQLHandler postgres1 = new PostgreSQLHandler(conInfoFrom);
 		PostgreSQLHandler postgres2 = new PostgreSQLHandler(conInfoTo);
-		String tableName = "test1_from_postgres_to_postgres_";
+
 		try {
-			int intValue = 14;
-			double doubleValue = 1.2;
-			String stringValue = "adamdziedzic";
-			String createTable = "create table " + tableName
-					+ "(a int,b double precision,c varchar)";
-			postgres1.executeStatementPostgreSQL(createTable);
+			postgres1.executeStatementPostgreSQL(
+					getCreateTableTest(tableNameFrom));
 
-			String insertInto = "insert into " + tableName + " values("
-					+ intValue + "," + doubleValue + ",'" + stringValue + "')";
-			System.out.println(insertInto);
-			postgres1.executeStatementPostgreSQL(insertInto);
+			postgres1.executeStatementPostgreSQL(getInsertInto(tableNameFrom));
 
-			postgres2.executeStatementPostgreSQL(createTable);
-
-			MigrationResult result = migrator.migrate(conInfoFrom, tableName,
-					conInfoTo, tableName);
+			MigrationResult result = migrator.migrate(conInfoFrom,
+					tableNameFrom, conInfoTo, tableNameTo);
 
 			assertEquals(Long.valueOf(1L), result.getCountExtractedElements());
 			assertEquals(Long.valueOf(1L), result.getCountLoadedElements());
 
 			JdbcQueryResult qresult = postgres2
-					.executeQueryPostgreSQL("select * from " + tableName);
+					.executeQueryPostgreSQL("select * from " + tableNameTo);
 			List<List<String>> rows = qresult.getRows();
 			List<String> row = rows.get(0);
 			int currentInt = Integer.parseInt(row.get(0));
@@ -92,12 +127,14 @@ public class FromPostgresToPostgresTest {
 
 		} catch (SQLException e) {
 			String msg = "Problem with data migration.";
-			System.err.print(msg);
-			e.printStackTrace();
+			logger.error(e.getMessage() + msg + " "
+					+ StackTrace.getFullStackTrace(e), e);
 			throw e;
 		} finally {
-			postgres1.executeStatementPostgreSQL("drop table " + tableName);
-			postgres2.executeStatementPostgreSQL("drop table " + tableName);
+			postgres1.executeStatementPostgreSQL(
+					"drop table if exists " + tableNameFrom);
+			postgres2.executeStatementPostgreSQL(
+					"drop table if exists " + tableNameTo);
 		}
 	}
 

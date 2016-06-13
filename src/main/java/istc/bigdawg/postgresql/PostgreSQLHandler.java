@@ -465,22 +465,41 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 	}
 
 	/**
+	 * see: {@link #getCreateTable(Connection, String, String)}
+	 * 
+	 * @param con
+	 *            connection to postgresql
+	 * @param fromTable
+	 *            the table for which you want the original create table
+	 *            statement
+	 * @return the sql statement with create table
+	 * @throws SQLException
+	 */
+	public static String getCreateTable(Connection con, String fromTable)
+			throws SQLException {
+		return getCreateTable(con, fromTable, fromTable);
+	}
+
+	/**
 	 * Get SQL create table statement. {@link getCtreateTable(String
 	 * schemaAntTableName)}
 	 * 
 	 * @param con
 	 *            Connection to the database where the table is stored.
 	 * @param fromTable
-	 *            name of the schema and name of the table
-	 * @param toTable
-	 *            the name of the table in the final sql statement (it can be
+	 *            Name of the schema and name of the table.
+	 * @param targetTableName
+	 *            The name of the table in the final sql statement (it can be
 	 *            different from the current name of the table in the database)
+	 *            - the current name of the table will be replace with this
+	 *            name.
 	 * @return The SQL create table statement from the table in the database
 	 *         represetned by con.
 	 * @throws SQLException
+	 *             When there is a problem with accessing the database.
 	 */
 	public static String getCreateTable(Connection con, String fromTable,
-			String toTable) throws SQLException {
+			String targetTableName) throws SQLException {
 		try {
 			StringBuilder extraction = new StringBuilder();
 
@@ -495,8 +514,8 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 							+ "ORDER BY attnum;");
 
 			if (rs.next()) {
-				extraction.append("CREATE TABLE IF NOT EXISTS ").append(toTable)
-						.append(" (");
+				extraction.append("CREATE TABLE IF NOT EXISTS ")
+						.append(targetTableName).append(" (");
 				extraction.append(rs.getString("attname")).append(" ");
 				extraction.append(rs.getString("type"));
 			}
@@ -512,8 +531,8 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 		} catch (SQLException ex) {
 			ex.printStackTrace();
 			log.error(ex.getMessage() + "; conInfo: " + con.getClientInfo()
-					+ "; fromTable: " + fromTable + " ; toTable: " + toTable
-					+ StackTrace.getFullStackTrace(ex), ex);
+					+ "; fromTable: " + fromTable + " ; toTable: "
+					+ targetTableName + StackTrace.getFullStackTrace(ex), ex);
 			throw ex;
 		}
 

@@ -37,10 +37,13 @@ public class FromPostgresToSciDB extends FromDatabaseToDatabase {
 	/**
 	 * This is migration from PostgreSQL to SciDB.
 	 * 
-	 * @param connectionFrom the connection to PostgreSQL @param fromTable the
-	 * name of the table in PostgreSQL to be migrated @param connectionTo the
-	 * connection to SciDB database @param arrayTo the name of the array in
-	 * SciDB
+	 * @param connectionFrom the connection to PostgreSQL
+	 * 
+	 * @param fromTable the name of the table in PostgreSQL to be migrated
+	 * 
+	 * @param connectionTo the connection to SciDB database
+	 * 
+	 * @param arrayTo the name of the array in SciDB
 	 * 
 	 * @see
 	 * istc.bigdawg.migration.FromDatabaseToDatabase#migrate(istc.bigdawg.query.
@@ -65,9 +68,9 @@ public class FromPostgresToSciDB extends FromDatabaseToDatabase {
 	}
 
 	/**
-	 * Execute the migration
+	 * Execute the migration.
 	 * 
-	 * @return
+	 * @return MigrationResult
 	 * @throws MigrationException
 	 */
 	@Override
@@ -97,11 +100,13 @@ public class FromPostgresToSciDB extends FromDatabaseToDatabase {
 	 * @see istc.bigdawg.migration.FromDatabaseToDatabase#getConnecitonTo()
 	 */
 	@Override
-	public ConnectionInfo getConnecitonTo() {
+	public ConnectionInfo getConnectionTo() {
 		return connectionTo;
 	}
 
 	/**
+	 * This is only for fast tests.
+	 * 
 	 * @param args
 	 * @throws IOException
 	 * @throws MigrationException

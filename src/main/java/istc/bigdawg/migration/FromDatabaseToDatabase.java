@@ -32,7 +32,7 @@ public abstract class FromDatabaseToDatabase
 	abstract public ConnectionInfo getConnectionFrom();
 
 	/* To where to migrate the data (to which node/machine). */
-	abstract public ConnectionInfo getConnecitonTo();
+	abstract public ConnectionInfo getConnectionTo();
 
 	/*
 	 * List of locks acquired in ZooKeeper for data migration. Empty or null
@@ -145,7 +145,7 @@ public abstract class FromDatabaseToDatabase
 		 * check if the address is not a local host
 		 */
 		String hostnameFrom = this.getConnectionFrom().getHost();
-		String hostnameTo = this.getConnecitonTo().getHost();
+		String hostnameTo = this.getConnectionTo().getHost();
 		String debugMessage = "current hostname is: "
 				+ BigDawgConfigProperties.INSTANCE.getGrizzlyIpAddress()
 				+ "; hostname from which the data is migrated: " + hostnameFrom

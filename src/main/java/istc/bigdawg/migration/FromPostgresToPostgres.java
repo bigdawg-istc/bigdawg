@@ -269,7 +269,7 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 	 * @see istc.bigdawg.migration.FromDatabaseToDatabase#getConnecitonTo()
 	 */
 	@Override
-	public ConnectionInfo getConnecitonTo() {
+	public ConnectionInfo getConnectionTo() {
 		return connectionTo;
 	}
 

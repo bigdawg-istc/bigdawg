@@ -16,6 +16,8 @@ import istc.bigdawg.utils.LogUtils;
  * @author Adam Dziedzic
  * 
  *         Feb 26, 2016 4:39:08 PM
+ * 
+ *         Load data to the SciDB database.
  */
 public class LoadSciDB implements Callable<String> {
 
@@ -28,7 +30,8 @@ public class LoadSciDB implements Callable<String> {
 	private final String scidbFilePath;
 	private String binaryFormat = null;
 
-	public LoadSciDB(SciDBConnectionInfo connectionTo, SciDBArrays arrays, String scidbFilePath) {
+	public LoadSciDB(SciDBConnectionInfo connectionTo, SciDBArrays arrays,
+			String scidbFilePath) {
 		this.connectionTo = connectionTo;
 		this.arrays = arrays;
 		this.scidbFilePath = scidbFilePath;
@@ -39,8 +42,8 @@ public class LoadSciDB implements Callable<String> {
 	 * @param arrays
 	 * @param scidbFilePath
 	 */
-	public LoadSciDB(SciDBConnectionInfo connectionTo, SciDBArrays arrays, String scidbFilePath,
-			String binaryFormat) {
+	public LoadSciDB(SciDBConnectionInfo connectionTo, SciDBArrays arrays,
+			String scidbFilePath, String binaryFormat) {
 		this.connectionTo = connectionTo;
 		this.arrays = arrays;
 		this.scidbFilePath = scidbFilePath;
@@ -82,7 +85,8 @@ public class LoadSciDB implements Callable<String> {
 		}
 		loadCommand += ")";
 		if (arrays.getMultiDimensional() != null) {
-			loadCommand = "store(redimension(" + loadCommand + "," + arrays.getMultiDimensional() + "),"
+			loadCommand = "store(redimension(" + loadCommand + ","
+					+ arrays.getMultiDimensional() + "),"
 					+ arrays.getMultiDimensional() + ")";
 		}
 		log.debug("load command: " + LogUtils.replace(loadCommand));

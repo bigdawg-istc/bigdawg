@@ -99,7 +99,7 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase {
 	 * @see istc.bigdawg.migration.FromDatabaseToDatabase#getConnecitonTo()
 	 */
 	@Override
-	public ConnectionInfo getConnecitonTo() {
+	public ConnectionInfo getConnectionTo() {
 		return connectionTo;
 	}
 

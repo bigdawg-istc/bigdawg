@@ -18,9 +18,10 @@ import istc.bigdawg.exceptions.NetworkException;
 public class MigrationResult implements Serializable {
 
 	/**
-	 * THE objects of the class are serializable
+	 * The objects of the class are serializable
 	 */
 	private static final long serialVersionUID = 1L;
+	
 	private Long countExtractedElements;
 	private Long countLoadedElements;
 	private String message;
