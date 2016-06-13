@@ -283,7 +283,12 @@ public class AFLPlanParser {
 			StringBuilder joinFilterSB = new StringBuilder();
 			boolean started = false;
 			boolean left = true;
-			int pos = 1;
+			
+//			AFLPlanNode c = node.children.get(0);
+//			while (c.name.equals("cross_join")) {
+//				c = c.children.get(0);
+//			}
+//			node.schema.setAlias(c.schema.getAlias());
 			
 			for(int k = 0; k < joinAttributes.size(); ++k) {
 				
@@ -293,13 +298,24 @@ public class AFLPlanParser {
 				if (outExpr.name.equals("paramDimensionReference")) { //Join-Filter
 					
 					if (started) {
-						if (pos % 2 == 1) joinFilterSB.append(" = ");
+						if (k % 2 == 1) joinFilterSB.append(" = ");
 						else joinFilterSB.append(" AND ");
 					}
 					else started = true;
 					
-					if (left) joinFilterSB.append(node.children.get(0).schema.getAlias()).append('.');
-					else joinFilterSB.append(node.children.get(1).schema.getAlias()).append('.');
+					AFLPlanNode c;
+					if (left) {
+						c = node.children.get(0);
+//						joinFilterSB.append(node.children.get(0).schema.getAlias()).append('.');
+					}
+					else {
+						c = node.children.get(1);
+//						joinFilterSB.append(node.children.get(1).schema.getAlias()).append('.');
+					}
+					while (c.name.equals("cross_join")) {
+						c = c.children.get(0);
+					}
+					joinFilterSB.append(c.schema.getAlias()).append('.');
 					left = !left;
 					
 					joinFilterSB.append(outExpr.properties.get(1));
@@ -308,7 +324,6 @@ public class AFLPlanParser {
 			}
 			parameters.put("Join-Predicate", joinFilterSB.toString());
 			parameters.put("Children-Aliases", node.children.get(0).schema.getAlias()+" "+node.children.get(1).schema.getAlias());
-			
 			
 			break;
 		case "sort":

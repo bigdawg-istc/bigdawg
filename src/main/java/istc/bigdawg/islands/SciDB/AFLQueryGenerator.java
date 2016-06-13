@@ -4,10 +4,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Stack;
 
 import istc.bigdawg.islands.OperatorVisitor;
 import istc.bigdawg.islands.PostgreSQL.SQLExpressionHandler;
+import istc.bigdawg.islands.PostgreSQL.utils.SQLExpressionUtils;
 import istc.bigdawg.islands.operators.Aggregate;
 import istc.bigdawg.islands.operators.CommonSQLTableExpressionScan;
 import istc.bigdawg.islands.operators.Distinct;
@@ -34,6 +36,8 @@ import net.sf.jsqlparser.expression.Parenthesis;
 import net.sf.jsqlparser.expression.SignedExpression;
 import net.sf.jsqlparser.expression.StringValue;
 import net.sf.jsqlparser.expression.TimeValue;
+import net.sf.jsqlparser.expression.operators.conditional.OrExpression;
+import net.sf.jsqlparser.expression.operators.relational.EqualsTo;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 import net.sf.jsqlparser.expression.operators.relational.InExpression;
 import net.sf.jsqlparser.expression.operators.relational.IsNullExpression;
@@ -90,10 +94,12 @@ public class AFLQueryGenerator implements OperatorVisitor {
 		List<SciDBExpression> expressions = new ArrayList<>();
 		
 		join.getChildren().get(0).accept(this);
+//		if (!lastFunction.isEmpty() && lastFunction.peek().pruneToken != null) lastFunction.peek().alias = lastFunction.peek().pruneToken; else
 		if (!lastFunction.isEmpty() && !join.getAliases().isEmpty()) lastFunction.peek().alias = join.getAliases().get(0);
 		expressions.add(lastFunction.pop());
 		
 		join.getChildren().get(1).accept(this);
+//		if (!lastFunction.isEmpty() && lastFunction.peek().pruneToken != null) lastFunction.peek().alias = lastFunction.peek().pruneToken; else
 		if (!lastFunction.isEmpty() && !join.getAliases().isEmpty()) lastFunction.peek().alias = join.getAliases().get(1);
 		expressions.add(lastFunction.pop());
 		
@@ -101,10 +107,14 @@ public class AFLQueryGenerator implements OperatorVisitor {
 		if (join.getOriginalJoinPredicate() != null) {
 			
 			String[] split = join.getOriginalJoinPredicate().replaceAll("( AND )|( = )", ", ").replaceAll("[<>= ()]+", " ").replace("\\s+", ", ").split(", ");
+			int pos = 0;
 			for (String s : split ) {
 				Column c = (Column) CCJSqlParserUtil.parseExpression(s);
-				expressions.add(new SciDBColumn(c.getColumnName(), null, c.getTable() == null ? null : c.getTable().toString(), isRootOriginal
-						, null, null));
+				String tableName = c.getTable() == null ? null : c.getTable().toString();
+				if (pos % 2 == 0 && join.getChildren().get(0).isPruned()) tableName = join.getChildren().get(0).getPruneToken();
+				else if (pos % 2 == 1 && join.getChildren().get(0).isPruned()) tableName = join.getChildren().get(1).getPruneToken();
+				expressions.add(new SciDBColumn(c.getColumnName(), null, tableName, isRootOriginal, null, null));
+				pos ++;
 			}
 		}
 		
@@ -187,7 +197,7 @@ public class AFLQueryGenerator implements OperatorVisitor {
 			break;
 		}
 		
-		lastFunction.push(new SciDBFunction(scan.getOperatorName(), scan.getTableAlias(), expressions, scan.isPruned() ? scan.getPruneToken() : null
+		lastFunction.push(new SciDBFunction(scan.getOperatorName(), scan.isPruned() ? null : scan.getTableAlias(), expressions, scan.isPruned() ? scan.getPruneToken() : null
 				, scan.getSubTreeToken(), isRootOriginal, new SciDBSchema(scan.getOutSchema())));
 		
 
@@ -264,7 +274,7 @@ public class AFLQueryGenerator implements OperatorVisitor {
 	public Operator generateStatementForPresentNonMigratingSegment(Operator operator, StringBuilder sb, boolean isSelect)
 			throws Exception {
 		
-		if (true) throw new Exception("AFL generator Not updated for Merge");
+//		if (true) throw new Exception("AFL generator Not updated for Merge");
 		
 		// find the join		
 		Operator child = operator;
@@ -401,6 +411,7 @@ public class AFLQueryGenerator implements OperatorVisitor {
 		public SciDBExpression whiteWashArrayName(String arrayToken) {
 			return this;
 		}
+		
 	}
 	
 	public class SciDBArrayHolder extends SciDBExpression {
@@ -455,6 +466,10 @@ public class AFLQueryGenerator implements OperatorVisitor {
 		@Override
 		public SciDBExpression whiteWashArrayName(String arrayToken) {
 			return new SciDBBinaryExpression(name, leftExpression.whiteWashArrayName(arrayToken), rightExpression.whiteWashArrayName(arrayToken));
+		}
+		
+		public SciDBExpression whiteWashArrayNameBySide(String leftReplacement, String rightReplacement) {
+			return new SciDBBinaryExpression(name, leftExpression.whiteWashArrayName(leftReplacement), rightExpression.whiteWashArrayName(rightReplacement));
 		}
 		
 		@Override
@@ -801,9 +816,61 @@ public class AFLQueryGenerator implements OperatorVisitor {
 		return lastExpression.pop();
 	}
 
+	
 	@Override
 	public List<String> getJoinPredicateObjectsForBinaryExecutionNode(Join join) throws Exception {
-		throw new Exception("Unsupported function for AFL visitor: getJoinPredicateObjectsForBinaryExecutionNode");
+//		throw new Exception("Unsupported function for AFL visitor: getJoinPredicateObjectsForBinaryExecutionNode");
+		
+		
+		List<String> ret = new ArrayList<String>();
+		
+		
+		Set<String> leftChildObjects = join.getChildren().get(0).getDataObjectAliasesOrNames().keySet();
+
+		System.out.println("---> Left Child objects: "+leftChildObjects.toString());
+		System.out.println("---> Right Child objects: "+join.getChildren().get(1).getDataObjectAliasesOrNames().keySet().toString());
+		System.out.println("---> joinPredicate: "+join.getOriginalJoinPredicate());
+		
+		String preds = join.getOriginalJoinPredicate();
+		if (preds == null) preds = join.getOriginalJoinFilter();
+		if (preds == null) return ret;
+		
+		Expression e = CCJSqlParserUtil.parseCondExpression(preds);
+		List<Expression> exprs = SQLExpressionUtils.getFlatExpressions(e);
+		
+		for (Expression ex : exprs) {
+			
+			while (ex instanceof Parenthesis)
+				ex = ((Parenthesis)ex).getExpression();
+			
+			if (ex instanceof OrExpression) throw new Exception("AFLQueryGenerator: OrExpression encountered");
+			if (!(ex instanceof EqualsTo)) throw new Exception("AFLQueryGenerator: Non-EqualsTo expression encountered");
+			
+			// TODO SUPPORT MORE THAN COLUMN?
+			
+			Column left = (Column)((EqualsTo)ex).getLeftExpression();
+			Column right = (Column)((EqualsTo)ex).getRightExpression();
+			
+			ret.add(SQLExpressionUtils.getBinaryExpressionOperatorToken(ex));
+			if (leftChildObjects.contains(left.getTable().getName()) || leftChildObjects.contains(left.getTable().getFullyQualifiedName())) {
+				ret.add(left.getTable().getFullyQualifiedName());
+				ret.add(left.getColumnName());
+				ret.add(right.getTable().getFullyQualifiedName());
+				ret.add(right.getColumnName());
+			} else {
+				ret.add(right.getTable().getFullyQualifiedName());
+				ret.add(right.getColumnName());
+				ret.add(left.getTable().getFullyQualifiedName());
+				ret.add(left.getColumnName());
+			}
+//			System.out.printf("---> SQLQueryGenerator joinPredicate ret: %s\n", ret.toString());
+		}
+		
+		System.out.printf("\n---->>>> getJoinPredForBin ret last: %s\n", ret);
+		
+		return ret;
+		
+		
 	}
 
 	

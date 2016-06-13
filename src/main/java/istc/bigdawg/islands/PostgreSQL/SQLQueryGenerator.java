@@ -1621,12 +1621,21 @@ public class SQLQueryGenerator implements OperatorVisitor {
 			Column right = (Column)((EqualsTo)ex).getRightExpression();
 			
 			ret.add(SQLExpressionUtils.getBinaryExpressionOperatorToken(ex));
+			
 			if (leftChildObjects.contains(left.getTable().getName()) || leftChildObjects.contains(left.getTable().getFullyQualifiedName())) {
-				ret.add(String.format("{%s, %s}", left.getTable().getFullyQualifiedName(),left.getColumnName()));
-				ret.add(String.format("{%s, %s}", right.getTable().getFullyQualifiedName(),right.getColumnName()));
+//				ret.add(String.format("{%s, %s}", left.getTable().getFullyQualifiedName(),left.getColumnName()));
+//				ret.add(String.format("{%s, %s}", right.getTable().getFullyQualifiedName(),right.getColumnName()));
+				ret.add(left.getTable().getFullyQualifiedName());
+				ret.add(left.getColumnName());
+				ret.add(right.getTable().getFullyQualifiedName());
+				ret.add(right.getColumnName());
 			} else {
-				ret.add(String.format("{%s, %s}", right.getTable().getFullyQualifiedName(),right.getColumnName()));
-				ret.add(String.format("{%s, %s}", left.getTable().getFullyQualifiedName(),left.getColumnName()));
+//				ret.add(String.format("{%s, %s}", right.getTable().getFullyQualifiedName(),right.getColumnName()));
+//				ret.add(String.format("{%s, %s}", left.getTable().getFullyQualifiedName(),left.getColumnName()));
+				ret.add(right.getTable().getFullyQualifiedName());
+				ret.add(right.getColumnName());
+				ret.add(left.getTable().getFullyQualifiedName());
+				ret.add(left.getColumnName());
 			}
 //			System.out.printf("---> SQLQueryGenerator joinPredicate ret: %s\n", ret.toString());
 		}
@@ -1635,8 +1644,4 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	}
 	
 	
-	
-	// New data structure for Union
-//	public class UnionOp extends SetOperation {boolean isUnionAll = false; public UnionOp(SetOperationType type) {super(SetOperationType.UNION);} public UnionOp(boolean isUnionAll) {super(SetOperationType.UNION);this.isUnionAll = isUnionAll;}}
-
 }

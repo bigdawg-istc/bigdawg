@@ -124,7 +124,7 @@ public class Join extends Operator {
 		
 		isBlocking = false;
 		
-		joinPredicate = parameters.get("Join-Predicate");
+		joinPredicate = parameters.get("Join-Predicate"); System.out.printf("--> Join AFL Constructor, Join Predicate: %s\n", joinPredicate);
 		setAliases(Arrays.asList(parameters.get("Children-Aliases").split(" ")));
 
 		srcSchema = new LinkedHashMap<String, DataObjectAttribute>(lhs.outSchema);
@@ -149,7 +149,7 @@ public class Join extends Operator {
 			outSchema.put(attrName, attr);
 				
 		}
-		inferJoinParameters();
+//		inferJoinParameters();
 	}
 	
 	// combine join ON clause with WHEREs that combine two tables

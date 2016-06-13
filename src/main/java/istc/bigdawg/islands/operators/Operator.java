@@ -450,6 +450,13 @@ public class Operator implements OperatorInterface {
 		
 		if (this.children.size() > 0 ) {
 			
+			if (this instanceof Scan) {
+				if (((Scan)this).getTableAlias() != null && !((Scan)this).getTableAlias().isEmpty())
+					aliasOrString.put(((Scan)this).getTableAlias(), ((Scan)this).table.getFullyQualifiedName());
+				else 
+					aliasOrString.put(((Scan)this).getSrcTable(), ((Scan)this).table.getFullyQualifiedName());
+			}
+			
 			for (Operator o : children) {
 				aliasOrString.putAll(o.getDataObjectAliasesOrNames());
 				if (masked) {

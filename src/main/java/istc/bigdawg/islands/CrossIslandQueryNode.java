@@ -31,13 +31,13 @@ import istc.bigdawg.islands.SciDB.AFLQueryPlan;
 import istc.bigdawg.islands.operators.Aggregate;
 import istc.bigdawg.islands.operators.Distinct;
 import istc.bigdawg.islands.operators.Join;
+import istc.bigdawg.islands.operators.Join.JoinType;
 import istc.bigdawg.islands.operators.Limit;
 import istc.bigdawg.islands.operators.Merge;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.operators.Scan;
 import istc.bigdawg.islands.operators.SeqScan;
 import istc.bigdawg.islands.operators.Sort;
-import istc.bigdawg.islands.operators.Join.JoinType;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.properties.BigDawgConfigProperties;
@@ -249,7 +249,7 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 		originalJoinPredicates.addAll(getOriginalJoinPredicates(root));
 		originalMap = CatalogViewer.getDBMappingByObj(objs, getSourceScope());
 		
-//		System.out.printf("----> printing original map from Populate: %s; objs: %s; scope: %s\n", originalMap, objs, scope.toString());
+		System.out.printf("----> printing original map from Populate: %s; objs: %s; scope: %s\n", originalMap, objs, getSourceScope().toString());
 		
 		// traverse add remainder
 		Map<String, DataObjectAttribute> rootOutSchema = root.getOutSchema();
@@ -763,7 +763,7 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 		
 		o1ns.retainAll(Sets.union(jp.keySet(), jf.keySet()));
 		
-//		System.out.printf("\n--->>>>> makeJoin: \n\tjp: %s; \n\tjf: %s;\no1ns: %s\n\n", jp, jf, o1ns);
+		System.out.printf("\n--->>>>> makeJoin: \n\tjp: %s; \n\tjf: %s;\n\to1ns: %s;\n\to2ns: %s\n\n", jp, jf, o1ns, o2ns);
 		
 		Operator o1Temp = o1;
 		Operator o2Temp = o2;
@@ -789,7 +789,7 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 				
 				if (jp.get(s) != null && jp.get(key) != null && jp.get(s).get(key) != null) {
 					pred.add(jp.get(s).get(key));
-//					System.out.printf("---------> jp: %s, s: %s, key: %s; pred: %s; used: %s\n", jp, s, key, pred, used);
+					System.out.printf("---------> jp: %s, s: %s, key: %s; pred: %s; used: %s\n", jp, s, key, pred, used);
 					jp.get(s).remove(key);
 					jp.get(key).remove(s);
 				} else if (jf.get(s) != null && jf.get(key) != null && jf.get(s).get(key) != null) {
@@ -807,7 +807,7 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 					
 					return null;
 				}
-//				System.out.printf("-------> jp: %s, s: %s, key: %s; pred: %s\n\n", jp, s, key, pred);
+				System.out.printf("-------> jp: %s, s: %s, key: %s; pred: %s\n\n", jp, s, key, pred);
 				return new Join(o1Temp, o2Temp, jt, String.join(" AND ", pred), isFilter);
 			}
 			

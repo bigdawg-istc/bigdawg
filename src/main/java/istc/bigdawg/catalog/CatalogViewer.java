@@ -193,10 +193,11 @@ public class CatalogViewer {
 		int len = inputs.size();
 		HashMap<String, List<String>> extraction = new HashMap<>();
 		
-		String wherePred = new String(" lower(o.name) = lower(\'"+ inputs.get(0) + "\') ");
+		String wherePred = new String(" (lower(o.name) = lower(\'"+ inputs.get(0) + "\') ");
 		for (int i = 1; i < len; i++) {
 			wherePred = wherePred + "or lower(o.name) = lower(\'" + inputs.get(i) + "\') ";
 		}
+		wherePred += ")";
 		
 		String islandName; 
 		if (scope == null) islandName = "";
