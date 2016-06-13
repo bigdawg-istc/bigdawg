@@ -85,8 +85,8 @@ public abstract class FromDatabaseToDatabase
 	/**
 	 * This Callable object should be executed in a separate thread. The
 	 * intention is that we wait for the response in a thread but in another
-	 * thread we control if the machine to which we sent the request is up and
-	 * running.
+	 * thread we control if the remote machine to which we sent the request is up and
+	 * running. If the remote machine fails, then we stop the migration process.
 	 * 
 	 * @param hostname
 	 *            to which node/machine we should send the network request

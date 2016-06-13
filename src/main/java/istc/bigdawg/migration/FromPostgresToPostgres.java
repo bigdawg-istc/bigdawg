@@ -35,16 +35,16 @@ import istc.bigdawg.utils.TaskExecutor;
  */
 public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 
-	/**
-	 * The objects of the class are serializable.
-	 */
-	private static final long serialVersionUID = 1L;
-
 	/*
 	 * log
 	 */
 	private static Logger logger = Logger
 			.getLogger(FromPostgresToPostgres.class);
+
+	/**
+	 * The objects of the class are serializable.
+	 */
+	private static final long serialVersionUID = 1L;
 
 	private PostgreSQLConnectionInfo connectionFrom;
 	private String fromTable;
@@ -103,9 +103,9 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 	 *            to which table we want to load the data
 	 * @throws SQLException
 	 */
-	private PostgreSQLSchemaTableName createTargetTableSchema(Connection connectionFrom,
-			String fromTable, Connection connectionTo, String toTable)
-					throws SQLException {
+	private PostgreSQLSchemaTableName createTargetTableSchema(
+			Connection connectionFrom, String fromTable,
+			Connection connectionTo, String toTable) throws SQLException {
 		/* separate schema name from the table name */
 		PostgreSQLSchemaTableName schemaTable = new PostgreSQLSchemaTableName(
 				toTable);

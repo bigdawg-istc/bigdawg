@@ -58,7 +58,7 @@ public class FromPostgresToSciDBImplementation
 		/* export only the attributes from SciDB */}
 
 	private MigrationType migrationType;
-	
+
 	/*
 	 * These are the arrays that were created during migration of data from
 	 * PostgreSQL to SciDB. If something fails on the way, then the arrays
@@ -76,7 +76,7 @@ public class FromPostgresToSciDBImplementation
 	private String fromTable;
 	private SciDBConnectionInfo connectionTo;
 	private String toArray;
-	
+
 	/** Meta-data about the table in PostgreSQL. */
 	private PostgreSQLTableMetaData postgresqlTableMetaData;
 
@@ -508,9 +508,9 @@ public class FromPostgresToSciDBImplementation
 	@Override
 	public MigrationResult migrate() throws MigrationException {
 		/*
-		 * the CSV migration is used for debugging and development, if you want
-		 * to go much faster then change it to migrateBin() but then the C++
-		 * migrator has to be compiled on each machine where bigdawg is running
+		 * The CSV migration is used for debugging and development, if you want
+		 * to go faster then change it to migrateBin() but then the C++ migrator
+		 * has to be compiled on each machine where bigdawg is running.
 		 */
 		return migrateSingleThreadCSV();
 	}
