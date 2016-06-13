@@ -37,6 +37,7 @@ public class SStoreSQLHandler implements DBHandler {
     private Statement st = null;
     private PreparedStatement preparedSt = null;
     private ResultSet rs = null;
+    private Integer rc = null;
 
     public SStoreSQLHandler(int dbId) throws Exception {
 	try {
@@ -189,6 +190,29 @@ public class SStoreSQLHandler implements DBHandler {
 
 	return Response.status(200).entity(out).build();
     }
+    
+    public Response executeUpdateQuery(String queryString) {
+	long lStartTime = System.nanoTime();
+	try {
+	    executeSStoreUpdateSQL(queryString);
+	} catch (SQLException e) {
+	    return Response.status(500)
+		    .entity("Problem with query execution in SSToreSQL: " + e.getMessage() + "; query: " + queryString)
+		    .build();
+	}
+	String messageQuery = "SSToreSQL query execution time milliseconds: "
+		+ (System.nanoTime() - lStartTime) / 1000000 + ",";
+	log.info(messageQuery);
+
+	lStartTime = System.nanoTime();
+
+	String messageTABLE = "format TABLE Java time milliseconds: " + (System.nanoTime() - lStartTime) / 1000000
+		+ ",";
+	log.info(messageTABLE);
+
+	return Response.status(200).entity("update").build();
+    }
+    
 
     /**
      * Clean resource after a query/statement was executed in SStoreSQL.
@@ -238,6 +262,43 @@ public class SStoreSQLHandler implements DBHandler {
 	    List<String> types = getColumnTypes(rsmd);
 	    List<List<String>> rows = getRows(rs);
 	    return new QueryResult(rows, types, colNames);
+	} catch (SQLException ex) {
+	    Logger lgr = Logger.getLogger(QueryClient.class.getName());
+	    // ex.printStackTrace();
+	    lgr.log(Level.ERROR, ex.getMessage() + "; query: " + LogUtils.replace(query), ex);
+	    throw ex;
+	} finally {
+	    try {
+		this.cleanSStoreSQLResources();
+	    } catch (SQLException ex) {
+		Logger lgr = Logger.getLogger(QueryClient.class.getName());
+		// ex.printStackTrace();
+		lgr.log(Level.INFO, ex.getMessage() + "; query: " + LogUtils.replace(query), ex);
+		throw ex;
+	    }
+	}
+    }
+
+    /**
+     * It executes the update query and releases the resources at the end.
+     * 
+     * @param query
+     * @return #QueryResult
+     * @throws SQLException
+     */
+    public int executeSStoreUpdateSQL(final String query) throws SQLException {
+	try {
+	    this.getConnection();
+
+	    log.debug("\n\nquery: " + LogUtils.replace(query) + "");
+	    if (this.conInfo != null) {
+		log.debug("ConnectionInfo: " + this.conInfo.toString() + "\n");
+	    }
+
+	    st = con.createStatement();
+	    rc = st.executeUpdate(query);
+
+	    return rc;
 	} catch (SQLException ex) {
 	    Logger lgr = Logger.getLogger(QueryClient.class.getName());
 	    // ex.printStackTrace();

@@ -158,6 +158,11 @@ public class FromSStoreToPostgresImplementation implements MigrationImplementati
 	    Long countexportElements = exportTask.get();
 	    Long countLoadedElements = loadTask.get();
 	    
+	    // Delete all tuples from S-Store
+	    String rmTupleStatement = "DELETE FROM " + fromTable;
+	    SStoreSQLHandler sstoreH = new SStoreSQLHandler(connectionFrom);
+	    sstoreH.executeUpdateQuery(rmTupleStatement);
+	    
 
 	    long endTimeMigration = System.currentTimeMillis();
 	    long durationMsec = endTimeMigration - startTimeMigration;
