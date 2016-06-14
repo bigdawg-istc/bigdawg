@@ -28,6 +28,9 @@ public class DataIn {
 	 */
 	private static Logger logger = Logger.getLogger(DataIn.class);
 
+	/** Chunk size for the buffer to receive data. */
+	private final static int CHUNK_SIZE = 64 * 1024;
+
 	/**
 	 * Receive data to this machine to a remote host.
 	 * 
@@ -80,7 +83,11 @@ public class DataIn {
 						+ StackTrace.getFullStackTrace(e), e);
 				throw e;
 			}
-			byte[] bytes = new byte[64 * 1024];
+			byte[] bytes = new byte[CHUNK_SIZE];
+			/*
+			 * Count how many bytes were read from the socket and how many bytes
+			 * should be written to the stream.
+			 */
 			int count;
 			try {
 				while ((count = in.read(bytes)) > 0) {
