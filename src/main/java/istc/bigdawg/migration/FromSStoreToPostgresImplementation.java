@@ -105,6 +105,7 @@ public class FromSStoreToPostgresImplementation implements MigrationImplementati
 	    Long countexportElements = exportTask.get();
 	    Long countLoadedElements = loadTask.get();
 	    
+	    finishTransaction(countexportElements, countLoadedElements);
 
 	    long endTimeMigration = System.currentTimeMillis();
 	    long durationMsec = endTimeMigration - startTimeMigration;
@@ -129,6 +130,20 @@ public class FromSStoreToPostgresImplementation implements MigrationImplementati
 	}
 
     }
+
+	private void finishTransaction(Long countexportElements,
+			Long countLoadedElements) throws SQLException, MigrationException {
+		if (!countexportElements.equals(countLoadedElements)) { // failed
+	    	connectionPostgres.rollback();
+	    	throw new MigrationException(errMessage + " " + "number of rows do not match");
+	    } else {
+	    	connectionPostgres.commit();
+	    	// Delete all tuples from S-Store
+	    	String rmTupleStatement = "DELETE FROM " + fromTable;
+	    	SStoreSQLHandler sstoreH = new SStoreSQLHandler(connectionFrom);
+	    	sstoreH.executeUpdateQuery(rmTupleStatement);
+	    }
+	}
     
     public MigrationResult migrateBin() throws MigrationException {
 	log.info(generalMessage + " Mode: migrate postgreSQL binary format");
@@ -158,15 +173,7 @@ public class FromSStoreToPostgresImplementation implements MigrationImplementati
 	    Long countexportElements = exportTask.get();
 	    Long countLoadedElements = loadTask.get();
 	    
-	    if (!countexportElements.equals(countLoadedElements)) { // failed
-	    	connectionPostgres.rollback();
-	    } else {
-	    	connectionPostgres.commit();
-	    	// Delete all tuples from S-Store
-	    	String rmTupleStatement = "DELETE FROM " + fromTable;
-	    	SStoreSQLHandler sstoreH = new SStoreSQLHandler(connectionFrom);
-	    	sstoreH.executeUpdateQuery(rmTupleStatement);
-	    }
+	    finishTransaction(countexportElements, countLoadedElements);
 
 	    long endTimeMigration = System.currentTimeMillis();
 	    long durationMsec = endTimeMigration - startTimeMigration;
