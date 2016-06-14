@@ -1,5 +1,6 @@
 package istc.bigdawg.sstore;
 
+import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
@@ -17,6 +18,7 @@ import javax.ws.rs.core.Response;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.voltdb.VoltTable;
 
 import istc.bigdawg.BDConstants.Shim;
 import istc.bigdawg.catalog.CatalogViewer;
@@ -409,10 +411,11 @@ public class SStoreSQLHandler implements DBHandler {
 	}
     }
 
-    public static void executePreparedStatement(Connection connection, String copyFromString, String tableName,
+    public static Long executePreparedStatement(Connection connection, String copyFromString, String tableName,
 	    String trim) throws SQLException {
 	
 	PreparedStatement statement = null;
+	Long countExtractedRows = 0L;
 	try {
 		statement = connection.prepareCall(copyFromString);
 		statement.setInt(1, 0);
@@ -432,10 +435,48 @@ public class SStoreSQLHandler implements DBHandler {
 			statement.close();
 		}
 	}
+	// Currently the VoltDBEngine does not return the number of rows extracted,
+	// so we do a workaround here.
+	Statement st = connection.createStatement();
+	ResultSet rs = st.executeQuery("SELECT count(*) AS rowcount FROM " + tableName);
+	rs.next();
+	countExtractedRows = rs.getLong("rowcount");
+	rs.close();
+	return countExtractedRows;
     }
     
     public static String getExportCommand() {
 	return "{call @ExtractionRemote(?, ?, ?)}";
+    }
+    
+    public static void executePreparedImportStatement(
+    		Connection connection, String copyToString, 
+    		String tableName, InputStream inStream, String trim) throws SQLException {
+    	
+    	PreparedStatement statement = null;
+    	try {
+    		statement = connection.prepareCall(copyToString);
+    		statement.setString(1, tableName);
+    		statement.setBinaryStream(2, inStream);
+    		statement.setString(3, trim);
+    		statement.executeQuery();
+    		statement.close();
+    	} catch (SQLException ex) {
+    		ex.printStackTrace();
+    		// remove ' from the statement - otherwise it won't be inserted into
+    		// log table in Postgres
+    		log.error(ex.getMessage() + "; statement to be executed: " + LogUtils.replace(copyToString) + " "
+    				+ ex.getStackTrace(), ex);
+    		throw ex;
+    	} finally {
+    		if (statement != null) {
+    			statement.close();
+    		}
+    	}
+        }
+        
+   public static String getImportCommand() {
+    	return "{call @LoadMultipartitionTable(?, ?, ?)}";
     }
 
 }

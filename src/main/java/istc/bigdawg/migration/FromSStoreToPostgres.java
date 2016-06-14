@@ -81,15 +81,43 @@ public class FromSStoreToPostgres
 		FromSStoreToPostgres migrator = new FromSStoreToPostgres();
 		SStoreSQLConnectionInfo conFrom = new SStoreSQLConnectionInfo("localhost",
 				"21212", "", "user", "password");
-		String tableFrom = "ORDERS";
+		String tableFrom = "CUSTOMER";
 		PostgreSQLConnectionInfo conTo = new PostgreSQLConnectionInfo(
-				"localhost", "5432", "test_db", "pguser", "test");
-		String tableTo = "ORDERS";
+				"localhost", "5430", "test_db", "pguser", "");
+		String tableTo = "CUSTOMER";
 		long startTime = System.currentTimeMillis();
 		MigrationResult result = migrator.migrate(conFrom, tableFrom, conTo, tableTo);
 		long endTime = System.currentTimeMillis();
 		System.out.println("time duration is: " + (endTime - startTime));
 		System.out.println(result);
+		
+//		Properties props = new Properties();
+//		props.setProperty("user","pguser");
+//		props.setProperty("password","test");
+//		Connection conn = DriverManager.getConnection("jdbc:postgresql://localhost:5430/tpch", props);
+//		startTime = System.currentTimeMillis();
+//		String sql1 = "select count(*) from customer";
+//		Statement stmt1 = conn.createStatement();
+//		ResultSet results1 = stmt1.executeQuery(sql1);
+//		while (results1.next()) {
+//			System.out.println(results1.getInt(1));
+//		}
+//		stmt1.close();
+//		results1.close();
+//		conn.close();
+//		endTime = System.currentTimeMillis();
+//		System.out.println("time duration is: " + (endTime - startTime));
+
+//		Class.forName("org.voltdb.jdbc.Driver");
+//		conn = DriverManager.getConnection("jdbc:voltdb://localhost:21212");
+//		String sql = "Select count(*) from orders;";
+//		Statement stmt = conn.createStatement();
+//		ResultSet results = stmt.executeQuery(sql);
+//		while(results.next()) {	
+//			System.out.println(results.getInt(1));
+//		}
+		
+		
 		
 //		Properties props = new Properties();
 //		props.setProperty("user","pguser");

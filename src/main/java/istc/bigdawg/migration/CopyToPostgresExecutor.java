@@ -76,7 +76,7 @@ public class CopyToPostgresExecutor implements Callable<Long> {
 		try {
 			countLoadedRows = cpTo.copyIn(copyToString, input);
 			input.close();
-			connection.commit();
+//			connection.commit();
 		} catch (IOException | SQLException e) {
 			String msg = e.getMessage()
 					+ " Problem with thread for PostgreSQL copy manager "
