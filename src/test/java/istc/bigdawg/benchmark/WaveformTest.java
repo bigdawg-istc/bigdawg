@@ -50,37 +50,43 @@ public class WaveformTest {
 	}
 
 	@Test
-	public void testFromSciDBToPostgresBin() throws MigrationException, SQLException {
-		FromSciDBToPostgresImplementation migrator = new FromSciDBToPostgresImplementation(conSciDB, array, conPostgres,
-				table);
+	public void testFromSciDBToPostgresBin()
+			throws MigrationException, SQLException {
+		FromSciDBToPostgresImplementation migrator = new FromSciDBToPostgresImplementation(
+				conSciDB, array, conPostgres, table);
 		migrator.migrateBin();
 	}
 
 	@Test
-	public void testFromSciDBToPostgresCsv() throws MigrationException, SQLException {
-		FromSciDBToPostgresImplementation migrator = new FromSciDBToPostgresImplementation(conSciDB, array, conPostgres,
-				table);
+	public void testFromSciDBToPostgresCsv()
+			throws MigrationException, SQLException {
+		FromSciDBToPostgresImplementation migrator = new FromSciDBToPostgresImplementation(
+				conSciDB, array, conPostgres, table);
 		migrator.migrateSingleThreadCSV();
 	}
 
 	@Test
-	public void testFromPostgresToSciDBBin() throws MigrationException, SQLException {
-		FromPostgresToSciDBImplementation migrator = new FromPostgresToSciDBImplementation(conPostgres, table, conSciDB,
-				array);
+	public void testFromPostgresToSciDBBin()
+			throws MigrationException, SQLException {
+		FromPostgresToSciDBImplementation migrator = new FromPostgresToSciDBImplementation(
+				conPostgres, table, conSciDB, array);
 		migrator.migrateBin();
 	}
 
 	@Test
-	public void testFromPostgresToSciDBCsv() throws MigrationException, SQLException {
-		FromPostgresToSciDBImplementation migrator = new FromPostgresToSciDBImplementation(conPostgres, table, conSciDB,
-				array);
+	public void testFromPostgresToSciDBCsv()
+			throws MigrationException, SQLException {
+		FromPostgresToSciDBImplementation migrator = new FromPostgresToSciDBImplementation(
+				conPostgres, table, conSciDB, array);
 		migrator.migrateSingleThreadCSV();
 	}
 
 	@Test
 	public void testFromPostgresToPostgres() throws Exception {
-		PostgreSQLConnectionInfo conFrom = new PostgreSQLConnectionInfo("localhost", "5431", "test", "pguser", "test");
-		PostgreSQLConnectionInfo conTo = new PostgreSQLConnectionInfo("localhost", "5430", "test", "pguser", "test");
+		PostgreSQLConnectionInfo conFrom = new PostgreSQLConnectionInfo(
+				"localhost", "5431", "test", "pguser", "test");
+		PostgreSQLConnectionInfo conTo = new PostgreSQLConnectionInfo(
+				"localhost", "5430", "test", "pguser", "test");
 		new FromPostgresToPostgres().migrate(conFrom, table, conTo, table);
 	}
 
@@ -88,11 +94,12 @@ public class WaveformTest {
 	public void loadToSciDB() throws InterruptedException, ExecutionException {
 		long startTimeMigration = System.currentTimeMillis();
 		ExecutorService executor = Executors.newFixedThreadPool(1);
-		LoadSciDB loadExecutor = new LoadSciDB(conSciDB, new SciDBArrays(array, null),
-				"/tmp/scidb.bin","int64,int64,double");
-		FutureTask<String> loadTask = new FutureTask<String>(loadExecutor);
+		LoadSciDB loadExecutor = new LoadSciDB(conSciDB,
+				new SciDBArrays(array, null), "/tmp/scidb.bin",
+				"int64,int64,double");
+		FutureTask<Object> loadTask = new FutureTask<Object>(loadExecutor);
 		executor.submit(loadTask);
-		String loadMessage = loadTask.get();
+		String loadMessage = (String) loadTask.get();
 		log.debug(loadMessage);
 		executor.shutdown();
 		long endTimeMigration = System.currentTimeMillis();
@@ -101,11 +108,12 @@ public class WaveformTest {
 	}
 
 	@Test
-	public void exportPostgres() throws SQLException, InterruptedException, ExecutionException {
+	public void exportPostgres()
+			throws SQLException, InterruptedException, ExecutionException {
 		ExecutorService executor = Executors.newFixedThreadPool(1);
 		String copyFromCommand = PostgreSQLHandler.getExportBinCommand(table);
-		ExportPostgres exportExecutor = new ExportPostgres(conPostgres, copyFromCommand,
-				"/tmp/postgres.bin");
+		ExportPostgres exportExecutor = new ExportPostgres(conPostgres,
+				copyFromCommand, "/tmp/postgres.bin");
 		FutureTask<Object> exportTask = new FutureTask<Object>(exportExecutor);
 		executor.submit(exportTask);
 		long countExtractedElements = (long) exportTask.get();
@@ -114,11 +122,14 @@ public class WaveformTest {
 	}
 
 	@Test
-	public void transformPostgresScidb() throws InterruptedException, ExecutionException {
+	public void transformPostgresScidb()
+			throws InterruptedException, ExecutionException {
 		ExecutorService executor = Executors.newFixedThreadPool(1);
-		TransformBinExecutor transformExecutor = new TransformBinExecutor("/tmp/postgres.bin", "/tmp/scidb.bin",
-				"int64,int64,double", TransformBinExecutor.TYPE.FromPostgresToSciDB);
-		FutureTask<Long> transformTask = new FutureTask<Long>(transformExecutor);
+		TransformBinExecutor transformExecutor = new TransformBinExecutor(
+				"/tmp/postgres.bin", "/tmp/scidb.bin", "int64,int64,double",
+				TransformBinExecutor.TYPE.FromPostgresToSciDB);
+		FutureTask<Long> transformTask = new FutureTask<Long>(
+				transformExecutor);
 		executor.submit(transformTask);
 		transformTask.get();
 		executor.shutdown();
