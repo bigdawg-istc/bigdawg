@@ -2,12 +2,20 @@
 # Adam Dziedzic
 # logs=# select * from logs where logger like '%FromSciDBToPostgresImplementation%' and message like 'Migration result,%Bin%FULL' order by time desc;
 
+# install updates
+sudo apt-get update
+sudo apt-get install -y libreadline-dev zlib1g-dev
+
 initial_dir=$(pwd)
 mkdir Downloads
 cd Downloads
 downloads_dir=$(pwd)
 
-# get catalog resource 
+# Download and extract postgres
+wget https://ftp.postgresql.org/pub/source/v9.4.5/postgresql-9.4.5.tar.gz
+tar -xf postgresql-9.4.5.tar.gz
+
+# get catalog resource
 resources=${initial_dir}/../src/main/resources/
 catalog_resource=${resources}catalog/
 monitor_resource=${resources}/monitor/
@@ -29,7 +37,7 @@ port_2=5430
 postgres1_bin=${downloads_dir}/postgres1/bin
 postgres2_bin=${downloads_dir}/postgres2/bin
 
-# tpch 
+# tpch
 scale_factor=1
 #TABLES_TPCH_POSTGRES1=(region part partsupp orders)
 TABLES_TPCH_POSTGRES1=(region part partsupp orders nation supplier customer lineitem) # for tests
@@ -55,6 +63,8 @@ function setDB {
     cd ${postgres_bin}
     ./initdb -D ${postgres_data}
     cp ${postgres_data}/postgresql.conf ${postgres_data}/postgresql.conf.backup
+
+    # dies here
     python ${initial_dir}/change_port.py -f ${postgres_data}/postgresql.conf -p ${port}
     ./pg_ctl -w start -l postgres.log -D ${postgres_data}
     cd ${init_dir}
@@ -163,13 +173,13 @@ function load_tpch {
 
     # postgres1
     load_tables  ${postgres1_bin} ${port_1} TABLES_TPCH_POSTGRES1[*]
-    
+
     # postgres2
     load_tables ${postgres2_bin} ${port_2} TABLES_TPCH_POSTGRES2[*]
 }
 
 # main exeuction path: the function with label main are meant to be exeucted in the main path, you can comment the functions that you don't want to be executed
-#install_postgres
+install_postgres
 prepare_postgres1
 prepare_postgres2
 #load_tpch
