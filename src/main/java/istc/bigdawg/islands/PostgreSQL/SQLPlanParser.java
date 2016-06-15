@@ -14,13 +14,12 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
+import istc.bigdawg.islands.PostgreSQL.operators.PostgreSQLIslandOperatorFactory;
 import istc.bigdawg.islands.PostgreSQL.utils.SQLPrepareQuery;
 import istc.bigdawg.islands.PostgreSQL.utils.SQLUtilities;
 import istc.bigdawg.islands.operators.Operator;
-import istc.bigdawg.islands.operators.OperatorFactory;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
-import net.sf.jsqlparser.statement.select.Limit;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.Select;
 import net.sf.jsqlparser.statement.select.WithItem;
@@ -221,12 +220,12 @@ public class SQLPlanParser {
 		}
 		else {
 			parameters.put("sectionName", planName);
-			op =  OperatorFactory.get(nodeType, parameters, outItems, sortKeys, childOps, queryPlan, supplement);
+			op =  PostgreSQLIslandOperatorFactory.get(nodeType, parameters, outItems, sortKeys, childOps, queryPlan, supplement);
 		}
 
 		
 		if(!localPlan.equals(planName)) { // we created a cte
-			op.setCTERootStatus(true);
+			op.setCTERoot(true);
 			queryPlan.addPlan(localPlan, op);
 		}
 		
@@ -272,7 +271,7 @@ public class SQLPlanParser {
 				Operator o = parsePlanTail(planName, c, recursionLevel+1, skipSort);
 				
 				// only add children that are part of the main plan, not the CTEs which are accounted for in CTEScan
-				if(!o.CTERoot()) {
+				if(!o.isCTERoot()) {
 					childNodes.add(o);
 				}
 			}

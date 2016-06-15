@@ -16,7 +16,7 @@ import istc.bigdawg.islands.OperatorVisitor;
 import istc.bigdawg.islands.QueryContainerForCommonDatabase;
 import istc.bigdawg.islands.PostgreSQL.SQLQueryGenerator;
 import istc.bigdawg.islands.SciDB.AFLQueryGenerator;
-import istc.bigdawg.islands.operators.CommonSQLTableExpressionScan;
+import istc.bigdawg.islands.operators.CommonTableExpressionScan;
 import istc.bigdawg.islands.operators.Join;
 import istc.bigdawg.islands.operators.Merge;
 import istc.bigdawg.islands.operators.Operator;
@@ -143,9 +143,9 @@ public class ExecutionNodeFactory {
 			for (Operator c : treeWalker) {
 
 				nextGeneration.addAll(c.getChildren());
-				if (c instanceof CommonSQLTableExpressionScan) {
-					CommonSQLTableExpressionScan co = ((CommonSQLTableExpressionScan) c);
-					String name = co.getTable().getName();
+				if (c instanceof CommonTableExpressionScan) {
+					CommonTableExpressionScan co = ((CommonTableExpressionScan) c);
+					String name = co.getSourceTableName();//.getTable().getName();
 					result.put(name, co);//co.generateSelectForExecutionTree(queryPlan.getStatement(), name));
 					nextGeneration.add(co.getSourceStatement());
 				}

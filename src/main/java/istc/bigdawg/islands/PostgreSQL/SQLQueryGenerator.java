@@ -9,9 +9,17 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import istc.bigdawg.islands.OperatorVisitor;
+import istc.bigdawg.islands.PostgreSQL.operators.PostgreSQLIslandAggregate;
+import istc.bigdawg.islands.PostgreSQL.operators.PostgreSQLIslandCommonTableExpressionScan;
+import istc.bigdawg.islands.PostgreSQL.operators.PostgreSQLIslandDistinct;
+import istc.bigdawg.islands.PostgreSQL.operators.PostgreSQLIslandJoin;
+import istc.bigdawg.islands.PostgreSQL.operators.PostgreSQLIslandLimit;
+import istc.bigdawg.islands.PostgreSQL.operators.PostgreSQLIslandOperator;
+import istc.bigdawg.islands.PostgreSQL.operators.PostgreSQLIslandScan;
+import istc.bigdawg.islands.PostgreSQL.operators.PostgreSQLIslandSort;
 import istc.bigdawg.islands.PostgreSQL.utils.SQLExpressionUtils;
 import istc.bigdawg.islands.operators.Aggregate;
-import istc.bigdawg.islands.operators.CommonSQLTableExpressionScan;
+import istc.bigdawg.islands.operators.CommonTableExpressionScan;
 import istc.bigdawg.islands.operators.Distinct;
 import istc.bigdawg.islands.operators.Join;
 import istc.bigdawg.islands.operators.Limit;
@@ -98,7 +106,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 
 	@Override
 	public String generateStatementString() throws Exception {
-		postprocessSQLStatement(root);
+		postprocessSQLStatement((PostgreSQLIslandOperator)root);
 		return dstStatement.toString();
 	}
 	
@@ -112,18 +120,21 @@ public class SQLQueryGenerator implements OperatorVisitor {
 
 	@Override
 	public void visit(Join join) throws Exception {
-		if (root == null) root = join; 
-		if (!isRoot && join.isPruned()) {
-			dstStatement = generateSelectWithToken(join, join.getPruneToken());
+		
+		PostgreSQLIslandJoin joinOp = (PostgreSQLIslandJoin) join;
+		
+		if (root == null) root = joinOp; 
+		if (!isRoot && joinOp.isPruned()) {
+			dstStatement = generateSelectWithToken(joinOp, joinOp.getPruneToken());
 			return ;
 		}
 		if (!isRoot && stopAtJoin) {
-			dstStatement = generateSelectWithToken(join, join.getJoinToken());
+			dstStatement = generateSelectWithToken(joinOp, joinOp.getJoinToken());
 			return ;
 		}
-		saveRoot(join);
-    	Operator child0 = join.getChildren().get(0);
-    	Operator child1 = join.getChildren().get(1);
+		saveRoot(joinOp);
+		PostgreSQLIslandOperator child0 = (PostgreSQLIslandOperator)joinOp.getChildren().get(0);
+		PostgreSQLIslandOperator child1 = (PostgreSQLIslandOperator)joinOp.getChildren().get(1);
     	
     	// constructing the ON expression
     	
@@ -133,30 +144,30 @@ public class SQLQueryGenerator implements OperatorVisitor {
 		List<String> discoveredJoinPredicate = new ArrayList<>();
 		StringBuilder jf = new StringBuilder();
 		
-    	if (join.getOriginalJoinPredicate() != null) {
-    		jf.append(updateOnExpression(join.getOriginalJoinPredicate(), child0, child1, t0, t1, true));
+    	if (joinOp.generateJoinPredicate() != null) {
+    		jf.append(updateOnExpression(joinOp.generateJoinPredicate(), child0, child1, t0, t1, true));
     	} else {
         	Map<String, String> child0ObjectMap = child0.getDataObjectAliasesOrNames();
         	Map<String, String> child1ObjectMap = child1.getDataObjectAliasesOrNames();
 
         	String s, s2;
         	List<String> ses;
-        	if ((ses = processLeftAndRightWithIndexCond(join, true, discoveredJoinPredicate)) != null) {
+        	if ((ses = processLeftAndRightWithIndexCond(joinOp, true, discoveredJoinPredicate)) != null) {
         		s = ses.get(0);
         		s2 = ses.get(1);
         		
-        	} else if ((ses = processLeftAndRightWithIndexCond(join, false, discoveredJoinPredicate)) != null) {
+        	} else if ((ses = processLeftAndRightWithIndexCond(joinOp, false, discoveredJoinPredicate)) != null) {
         		s = ses.get(1);
         		s2 = ses.get(0);
         	} else {
         		
         		if (stopAtJoin) {
-	        		Operator leftChild = join.getChildren().get(0);
+	        		Operator leftChild = joinOp.getChildren().get(0);
 	        		String pred;
 	        		while (!(leftChild instanceof Join) && leftChild.getChildren().size() > 0) leftChild = leftChild.getChildren().get(0);
 	        			
 	        		
-	        		if (leftChild.getChildren().size() > 0 && (pred = ((Join)leftChild).getOriginalJoinPredicate()) != null) {
+	        		if (leftChild.getChildren().size() > 0 && (pred = ((Join)leftChild).generateJoinPredicate()) != null) {
 	        			
 	        			System.out.printf("::::::: Pred left: %s; \n", pred);
 	        			
@@ -170,9 +181,9 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	        		} 
 	        		
 	        		
-	        		Operator rightChild = join.getChildren().get(1);
+	        		Operator rightChild = joinOp.getChildren().get(1);
 	        		while (!(rightChild instanceof Join) && rightChild.getChildren().size() > 0) rightChild = rightChild.getChildren().get(0);
-	        		if ( rightChild.getChildren().size() > 0 && (pred = ((Join)rightChild).getOriginalJoinPredicate()) != null) {
+	        		if ( rightChild.getChildren().size() > 0 && (pred = ((Join)rightChild).generateJoinPredicate()) != null) {
 	        			System.out.printf("::::::: Pred right: %s; \n", pred);
 	        			Expression e = CCJSqlParserUtil.parseCondExpression(pred);
 	        			List<String> es = SQLExpressionUtils.getAttributes(e).stream().map(a -> a.getTable().getFullyQualifiedName()).collect(Collectors.toList());
@@ -186,26 +197,26 @@ public class SQLQueryGenerator implements OperatorVisitor {
         		
         		
         		
-        		if (join.getOriginalJoinFilter() == null || join.getOriginalJoinFilter().isEmpty())  {
+        		if (joinOp.generateJoinFilter() == null || joinOp.generateJoinFilter().isEmpty())  {
         			s = child0ObjectMap.keySet().iterator().next();
         			s2 = child1ObjectMap.keySet().iterator().next();
         		} else {
         			try {
-    	        		List<Column> lc = SQLExpressionUtils.getAttributes(CCJSqlParserUtil.parseCondExpression(join.getOriginalJoinFilter()));
+    	        		List<Column> lc = SQLExpressionUtils.getAttributes(CCJSqlParserUtil.parseCondExpression(joinOp.generateJoinFilter()));
     	        		s = lc.get(0).getTable().getName();
     	        		s2 = lc.get(1).getTable().getName();
             		} catch (Exception e) {
             			e.printStackTrace();
             			throw new Exception(String.format("Ses from Join gen dest only doesn't find match: %s; %s; %s;\n"
-            					,child0.getChildrenPredicates(), child1.getChildrenPredicates(), join.getOriginalJoinFilter()));
+            					,child0.getChildrenPredicates(), child1.getChildrenPredicates(), joinOp.generateJoinFilter()));
             		}
         		}
         	}
         	
-//        	System.out.printf("--->> join, discoveredJoinPredicate: %s; joinPredicate: %s;\n"
-//        			, discoveredJoinPredicate, join.getOriginalJoinPredicate());
+//        	System.out.printf("--->> joinOp, discoveredJoinPredicate: %s; joinOpPredicate: %s;\n"
+//        			, discoveredJoinPredicate, joinOp.generateJoinPredicate());
         	
-        	boolean anyPruned = join.isAnyProgenyPruned();
+        	boolean anyPruned = ((PostgreSQLIslandJoin)joinOp).isAnyProgenyPruned();
         	
         	if (child0.isPruned()) {
         		t0.setName(child0.getPruneToken());
@@ -240,14 +251,14 @@ public class SQLQueryGenerator implements OperatorVisitor {
     	} else if (child0 instanceof Aggregate && stopAtJoin) {
     		dstStatement = SelectUtils.buildSelectFromTable(new Table(((Aggregate)child0).getAggregateToken()));
     		List<SelectItem> sil = new ArrayList<>();
-    		for (String s : child0.getOutSchema().keySet()){
+    		for (String s : ((PostgreSQLIslandOperator)child0).getOutSchema().keySet()){
     			sil.add(new SelectExpressionItem(new Column(new Table(((Aggregate)child0).getAggregateToken()), s)));
     		};
     		((PlainSelect)dstStatement.getSelectBody()).setSelectItems(sil);
 		} else {
 			child0.accept(this);
 		}
-		// Resolve pruning and add join
+		// Resolve pruning and add joinOp
     	if (child0.isPruned()) ((PlainSelect) dstStatement.getSelectBody()).setFromItem(t0);
     	addJSQLParserJoin(dstStatement, t1);
 		
@@ -261,7 +272,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
     		ps.getSelectItems().addAll(sil);
     		
     		// need to go fetch a potential having filter
-    		List<Operator> treeWalker = new ArrayList<>(join.getChildren());
+    		List<Operator> treeWalker = new ArrayList<>(joinOp.getChildren());
 			List<Operator> nextGen;
 			boolean found = false;
 
@@ -269,10 +280,10 @@ public class SQLQueryGenerator implements OperatorVisitor {
 				nextGen = new ArrayList<>();
 				for (Operator o : treeWalker) {
 					if (o instanceof Scan) {
-						Expression f = ((Scan) o).getFilterExpression();
-						if (f != null && ((Scan)o).isHasFunctionInFilterExpression()) {
-							populateComplexOutItem(join, false);
-							Expression e = CCJSqlParserUtil.parseCondExpression(rewriteComplextOutItem(join, f));
+						Expression f = ((PostgreSQLIslandScan) o).getFilterExpression();
+						if (f != null && ((PostgreSQLIslandScan)o).isHasFunctionInFilterExpression()) {
+							populateComplexOutItem(joinOp, false);
+							Expression e = CCJSqlParserUtil.parseCondExpression(rewriteComplextOutItem(joinOp, f));
 							Set<String> aliases = child1.getDataObjectAliasesOrNames().keySet();
 							SQLExpressionUtils.renameAttributes(e, aliases, aliases, ((Aggregate)child1).getAggregateToken());
 							discoveredAggregateFilter = e.toString();
@@ -294,14 +305,14 @@ public class SQLQueryGenerator implements OperatorVisitor {
 		// WHERE setup
 		Expression w = ((PlainSelect) dstStatement.getSelectBody()).getWhere();
 		
-		if (join.getOriginalJoinFilter() != null || join.getOriginalJoinPredicate() != null) {
+		if (joinOp.generateJoinFilter() != null || joinOp.generateJoinPredicate() != null) {
 			
-			if (jf.length() == 0 && join.getOriginalJoinPredicate() != null && join.getOriginalJoinPredicate().length() > 0) 
-				jf.append(updatePruneTokensForOnExpression(join, join.getOriginalJoinPredicate()));
+			if (jf.length() == 0 && joinOp.generateJoinPredicate() != null && joinOp.generateJoinPredicate().length() > 0) 
+				jf.append(updatePruneTokensForOnExpression(joinOp, joinOp.generateJoinPredicate()));
 			
-			if (join.getOriginalJoinFilter() != null && join.getOriginalJoinFilter().length() > 0) {
+			if (joinOp.generateJoinFilter() != null && joinOp.generateJoinFilter().length() > 0) {
 				if (jf.length() > 0) jf.append(" AND ");
-				jf.append(updatePruneTokensForOnExpression(join, join.getOriginalJoinFilter()));
+				jf.append(updatePruneTokensForOnExpression(joinOp, joinOp.generateJoinFilter()));
 			}
 		}
 
@@ -309,7 +320,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 		addToJoinFilter(discoveredAggregateFilter, jf);
 		if (!discoveredJoinPredicate.isEmpty()) for (String s : discoveredJoinPredicate) addToJoinFilter(s, jf); // there should be only one entry
 		
-//		System.out.printf("--->>>> join getRelevantFilterSections: \n\texpr: %s;\n\tjf: %s;\n\tleft: %s,\n\tright: %s\n", 
+//		System.out.printf("--->>>> joinOp getRelevantFilterSections: \n\texpr: %s;\n\tjf: %s;\n\tleft: %s,\n\tright: %s\n", 
 //				SQLExpressionUtils.getRelevantFilterSections(CCJSqlParserUtil.parseCondExpression(jf), 
 //						child0.getDataObjectAliasesOrNames(), 
 //						child1.getDataObjectAliasesOrNames()),
@@ -320,7 +331,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 		String estring = null;
 		// WHERE UPDATE
 		
-//		System.out.printf("----> jf: %s\njoinPred: %s\njoinFilter: %s\n\n", jf, join.getOriginalJoinPredicate(), join.getOriginalJoinFilter());
+//		System.out.printf("----> jf: %s\njoinOpPred: %s\njoinOpFilter: %s\n\n", jf, joinOp.generateJoinPredicate(), joinOp.generateJoinFilter());
 		
 		if (jf.length() > 0 && !((estring = SQLExpressionUtils.getRelevantFilterSections(
 				CCJSqlParserUtil.parseCondExpression(jf.toString()), 
@@ -338,16 +349,16 @@ public class SQLQueryGenerator implements OperatorVisitor {
 				if (c.getTable().getAlias() != null) filterRelatedTables.add(c.getTable().getAlias().getName());
 			}
 			
-			List<Operator> treeWalker = new ArrayList<>(join.getChildren());
+			List<Operator> treeWalker = new ArrayList<>(joinOp.getChildren());
 			List<Operator> nextGen;
 
-			join.updateObjectAliases();
+			((PostgreSQLIslandJoin)joinOp).updateObjectAliases();
 			
 			while (!treeWalker.isEmpty()) {
 				nextGen = new ArrayList<>();
 				for (Operator o : treeWalker) {
 					if (o.isPruned()) {
-						Set<String> aliasesAndNames = new HashSet<>(o.getObjectAliases());
+						Set<String> aliasesAndNames = new HashSet<>(((PostgreSQLIslandOperator)o).getObjectAliases());
 						aliasesAndNames.addAll(o.getDataObjectAliasesOrNames().keySet());
 						Set<String> duplicate = new HashSet<>(aliasesAndNames);
 						if (aliasesAndNames.removeAll(filterRelatedTables)) 
@@ -366,14 +377,17 @@ public class SQLQueryGenerator implements OperatorVisitor {
 
 	@Override
 	public void visit(Sort sort) throws Exception{
-		saveRoot(sort);
-		sort.getChildren().get(0).accept(this);
+		
+		PostgreSQLIslandSort sortOp = (PostgreSQLIslandSort)sort;
+		
+		saveRoot(sortOp);
+		sortOp.getChildren().get(0).accept(this);
 
-		if (sort.getChildren().get(0) instanceof Join) {
+		if (sortOp.getChildren().get(0) instanceof PostgreSQLIslandJoin) {
 			PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
 			ps.getSelectItems().clear();
-			for (String alias: sort.getOutSchema().keySet()) {
-				Expression e = CCJSqlParserUtil.parseExpression(sort.getOutSchema().get(alias).getExpressionString());
+			for (String alias: sortOp.getOutSchema().keySet()) {
+				Expression e = CCJSqlParserUtil.parseExpression(sortOp.getOutSchema().get(alias).getExpressionString());
 				SelectItem s = new SelectExpressionItem(e);
 				if (!(e instanceof Column)) {
 					((SelectExpressionItem)s).setAlias(new Alias(alias));
@@ -382,25 +396,28 @@ public class SQLQueryGenerator implements OperatorVisitor {
 			}
 		}
 		
-		if(!sort.isWinAgg()) {
+		if(!sortOp.isWinAgg()) {
 			if (dstStatement.getSelectBody() instanceof PlainSelect)
-				((PlainSelect) dstStatement.getSelectBody()).setOrderByElements(sort.updateOrderByElements());
+				((PlainSelect) dstStatement.getSelectBody()).setOrderByElements(sortOp.updateOrderByElements());
 			else 
-				((SetOperationList) dstStatement.getSelectBody()).setOrderByElements(sort.updateOrderByElements());
+				((SetOperationList) dstStatement.getSelectBody()).setOrderByElements(sortOp.updateOrderByElements());
 		}
 
 	}
 
 	@Override
 	public void visit(Distinct distinct) throws Exception {
-		saveRoot(distinct);
-		distinct.getChildren().get(0).accept(this);
+		
+		PostgreSQLIslandDistinct distinctOp = (PostgreSQLIslandDistinct)distinct;
+		
+		saveRoot(distinctOp);
+		distinctOp.getChildren().get(0).accept(this);
 
 		PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
-		if (distinct.getChildren().get(0) instanceof Join) {
+		if (distinctOp.getChildren().get(0) instanceof Join) {
 			ps.getSelectItems().clear();
-			for (String alias: distinct.getOutSchema().keySet()) {
-				Expression e = CCJSqlParserUtil.parseExpression(distinct.getOutSchema().get(alias).getExpressionString());
+			for (String alias: distinctOp.getOutSchema().keySet()) {
+				Expression e = CCJSqlParserUtil.parseExpression(distinctOp.getOutSchema().get(alias).getExpressionString());
 				SelectItem s = new SelectExpressionItem(e);
 				if (!(e instanceof Column)) {
 					((SelectExpressionItem)s).setAlias(new Alias(alias));
@@ -414,23 +431,26 @@ public class SQLQueryGenerator implements OperatorVisitor {
 
 	@Override
 	public void visit(Scan scan) throws Exception {
+		
+		PostgreSQLIslandScan scanOp = (PostgreSQLIslandScan) scan;
+		
 		boolean rootStatus = isRoot;
-		saveRoot(scan);
+		saveRoot(scanOp);
 		if(dstStatement == null) {
 			
-			if (!scan.isPruned() || rootStatus) 
-				dstStatement = generateSelectWithToken(scan, null);
-			else if (scan.isPruned() && !rootStatus)
-				dstStatement = generateSelectWithToken(scan, scan.getPruneToken());// SelectUtils.buildSelectFromTable(new Table(scan.getPruneToken()));
+			if (!scanOp.isPruned() || rootStatus) 
+				dstStatement = generateSelectWithToken(scanOp, null);
+			else if (scanOp.isPruned() && !rootStatus)
+				dstStatement = generateSelectWithToken(scanOp, scanOp.getPruneToken());// SelectUtils.buildSelectFromTable(new Table(scanOp.getPruneToken()));
 		} 
 		
 		if (((PlainSelect)dstStatement.getSelectBody()).getSelectItems().size() == 1 && ((PlainSelect)dstStatement.getSelectBody()).getSelectItems().get(0) instanceof AllColumns) {
 			
 			((PlainSelect)dstStatement.getSelectBody()).getSelectItems().clear();
 
-			for (String alias: scan.getOutSchema().keySet()) {
+			for (String alias: scanOp.getOutSchema().keySet()) {
 				
-				Expression e = CCJSqlParserUtil.parseExpression(rewriteComplextOutItem(scan, scan.getOutSchema().get(alias).getSQLExpression()));
+				Expression e = CCJSqlParserUtil.parseExpression(rewriteComplextOutItem(scanOp, scanOp.getOutSchema().get(alias).getSQLExpression()));
 				SelectItem s = new SelectExpressionItem(e);
 				
 				if (!(e instanceof Column)) {
@@ -442,15 +462,15 @@ public class SQLQueryGenerator implements OperatorVisitor {
 		}
 		
 		
-		if (scan.getFilterExpression() != null && (!scan.isPruned() || rootStatus) && !scan.isHasFunctionInFilterExpression()) { // FilterExpression with function is pulled
+		if (scanOp.getFilterExpression() != null && (!scanOp.isPruned() || rootStatus) && !scanOp.isHasFunctionInFilterExpression()) { // FilterExpression with function is pulled
 			
-			Expression fe = CCJSqlParserUtil.parseCondExpression(scan.getFilterExpression().toString());
+			Expression fe = CCJSqlParserUtil.parseCondExpression(scanOp.getFilterExpression().toString());
 			
 			List<Column> cs = SQLExpressionUtils.getAttributes(fe);
 			List<String> ss = new ArrayList<>();
 			for (Column c : cs)  ss.add(c.getTable().getName());
-			ss.remove(scan.getSrcTable());
-			if (scan.getTableAlias() != null) ss.remove(scan.getTableAlias());
+			ss.remove(scanOp.getSrcTable());
+			if (scanOp.getTableAlias() != null) ss.remove(scanOp.getTableAlias());
 			ss.removeAll(allowedScans);
 			
 			if (ss.isEmpty()) {
@@ -476,7 +496,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	}
 
 	@Override
-	public void visit(CommonSQLTableExpressionScan cte) throws Exception {
+	public void visit(CommonTableExpressionScan cte) throws Exception {
 		saveRoot(cte);
 //		dstStatement = super.generateSQLStringDestOnly(dstStatement, isSubTreeRoot, stopAtJoin, allowedScans);
 		visit((Scan) cte);
@@ -486,7 +506,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 		boolean found = false;
 		if(withs != null && !withs.isEmpty()) {
 			for(WithItem w : withs) {
-				if(w.getName().equals(cte.getCteName())) {
+				if(w.getName().equals(cte.getSourceTableName())) {
 					found = true;
 				}
 			}
@@ -500,7 +520,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 			if(dstStatement.getWithItemsList() != null && !(dstStatement.getWithItemsList().isEmpty())) {
 				dstWiths.addAll(dstStatement.getWithItemsList());
 			}
-			dstWiths.add(cte.getWith());
+			dstWiths.add(((PostgreSQLIslandCommonTableExpressionScan)cte).getWith());
 
 			
 			dstStatement.setWithItemsList(dstWiths);
@@ -537,25 +557,28 @@ public class SQLQueryGenerator implements OperatorVisitor {
 
 	@Override
 	public void visit(Aggregate aggregate) throws Exception {
-		saveRoot(aggregate);
+		
+		PostgreSQLIslandAggregate aggregateOp = (PostgreSQLIslandAggregate)aggregate;
+		
+		saveRoot(aggregateOp);
 		
 		Select originalDST = null;
 		if (dstStatement != null) originalDST = (Select)CCJSqlParserUtil.parse(dstStatement.toString());
 		
-		if (isRoot || aggregate.getAggregateID() == null) 
-			aggregate.getChildren().get(0).accept(this);//.generateSQLStringDestOnly(dstStatement, false, stopAtJoin, allowedScans);
+		if (isRoot || aggregateOp.getAggregateID() == null) 
+			aggregateOp.getChildren().get(0).accept(this);//.generateSQLStringDestOnly(dstStatement, false, stopAtJoin, allowedScans);
 		else {
 			dstStatement = null;
-			aggregate.getChildren().get(0).accept(this);
+			aggregateOp.getChildren().get(0).accept(this);
 		}
 				
 		PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
 
 		ps.getSelectItems().clear();
 		
-		for (String alias: aggregate.getOutSchema().keySet()) {
+		for (String alias: aggregateOp.getOutSchema().keySet()) {
 			
-			Expression e = CCJSqlParserUtil.parseExpression(rewriteComplextOutItem(aggregate, aggregate.getOutSchema().get(alias).getSQLExpression()));
+			Expression e = CCJSqlParserUtil.parseExpression(rewriteComplextOutItem(aggregateOp, aggregateOp.getOutSchema().get(alias).getSQLExpression()));
 			SelectItem s = new SelectExpressionItem(e);
 			
 			if (!(e instanceof Column)) {
@@ -567,19 +590,19 @@ public class SQLQueryGenerator implements OperatorVisitor {
 		
 		// check if pruneToken or join token needs to be implemented
 		
-		List<Expression> updatedGroupBy = aggregate.updateGroupByElements(stopAtJoin);
+		List<Expression> updatedGroupBy = aggregateOp.updateGroupByElements(stopAtJoin);
 		ps.setGroupByColumnReferences(updatedGroupBy);
 		
-		if (aggregate.getAggregateFilter() != null) {
-			Expression e = CCJSqlParserUtil.parseCondExpression(aggregate.getAggregateFilter());
+		if (aggregateOp.getAggregateFilter() != null) {
+			Expression e = CCJSqlParserUtil.parseCondExpression(aggregateOp.getAggregateFilter());
 			ps.setHaving(e);
 		}
 		
 		
-		if (isRoot || aggregate.getAggregateID() == null) return;
+		if (isRoot || aggregateOp.getAggregateID() == null) return;
 		if (originalDST == null) {
 			
-			SubSelect ss = makeNewSubSelectUpdateDST(aggregate, dstStatement);
+			SubSelect ss = makeNewSubSelectUpdateDST(aggregateOp, dstStatement);
 			originalDST = SelectUtils.buildSelectFromTable(new Table()); // immediately replaced
 			((PlainSelect)originalDST.getSelectBody()).setFromItem(ss);
 			
@@ -587,7 +610,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 			return;
 		}
 		
-		SubSelect ss = makeNewSubSelectUpdateDST(aggregate, dstStatement);
+		SubSelect ss = makeNewSubSelectUpdateDST(aggregateOp, dstStatement);
 		net.sf.jsqlparser.statement.select.Join insert = new net.sf.jsqlparser.statement.select.Join();
 		insert.setRightItem(ss);
 		insert.setSimple(true);
@@ -597,14 +620,14 @@ public class SQLQueryGenerator implements OperatorVisitor {
 		if (pselect.getJoins() != null) {
 			boolean isFound = false;
 			
-			Map<String, String> aliasMapping = aggregate.getDataObjectAliasesOrNames();
+			Map<String, String> aliasMapping = aggregateOp.getDataObjectAliasesOrNames();
 			
 			for (int pos = 0; pos < pselect.getJoins().size(); pos++) { 
 				FromItem r = pselect.getJoins().get(pos).getRightItem();
 				if (!(r instanceof Table)) continue;
 				
 				Table t = (Table)r;
-				if (t.getName().equals(aggregate.getAggregateToken())) {
+				if (t.getName().equals(aggregateOp.getAggregateToken())) {
 					pselect.getJoins().remove(pos);
 					isFound = true;
 				} else if (t.getAlias() != null && aliasMapping.containsKey(t.getAlias().getName()) && 
@@ -635,18 +658,21 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	
 	@Override
 	public void visit(Limit limit) throws Exception {
-		saveRoot(limit);
-		limit.getChildren().get(0).accept(this);
+		
+		PostgreSQLIslandLimit limitOp = (PostgreSQLIslandLimit) limit;
+		
+		saveRoot(limitOp);
+		limitOp.getChildren().get(0).accept(this);
 		
 		PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
 
 		net.sf.jsqlparser.statement.select.Limit sqllim = new net.sf.jsqlparser.statement.select.Limit();
 		
-		if (limit.isLimitAll()) sqllim.setLimitAll(limit.isLimitAll());
-		else if (limit.isLimitNull()) sqllim.setLimitNull(limit.isLimitNull());
-		else sqllim.setRowCount(limit.getLimitCount());
+		if (limitOp.isLimitAll()) sqllim.setLimitAll(limitOp.isLimitAll());
+		else if (limitOp.isLimitNull()) sqllim.setLimitNull(limitOp.isLimitNull());
+		else sqllim.setRowCount(limitOp.getLimitCount());
 		
-		if (limit.isHasOffSet()) sqllim.setOffset(limit.getLimitOffset());
+		if (limitOp.isHasOffSet()) sqllim.setOffset(limitOp.getLimitOffset());
 		
 		ps.setLimit(sqllim);
 	}
@@ -709,14 +735,14 @@ public class SQLQueryGenerator implements OperatorVisitor {
 			Set<String> childAliasesAndNames	= new HashSet<>(ane.values());
 			for (String s : ane.values()) childAliasesAndNames.add(s);
 			
-			populateComplexOutItem(operator, false);
+			populateComplexOutItem((PostgreSQLIslandOperator)operator, false);
 			
 			PlainSelect ps = ((PlainSelect)outputSelect.getSelectBody());
 			List<SelectItem> sil = ps.getSelectItems();
 			for (int i = 0 ; i < sil.size(); i ++) {
 				if (sil.get(i) instanceof SelectExpressionItem) {
 					SelectExpressionItem sei = (SelectExpressionItem)sil.get(i);
-					sei.setExpression(CCJSqlParserUtil.parseExpression(rewriteComplextOutItem(operator, sei.getExpression())));
+					sei.setExpression(CCJSqlParserUtil.parseExpression(rewriteComplextOutItem((PostgreSQLIslandOperator)operator, sei.getExpression())));
 				}
 			}
 			
@@ -764,7 +790,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	@Override
 	public String generateSelectIntoStatementForExecutionTree(String into) throws Exception {
 		if (root == null) throw new Exception("SQLQueryGenerator, selectinto: root is null");
-		postprocessSQLStatement(root);
+		postprocessSQLStatement((PostgreSQLIslandOperator) root);
 		String output = addSelectIntoToken(dstStatement, into);
 		return output;
 	}
@@ -774,7 +800,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	 * @param operator
 	 * @throws Exception
 	 */
-	private void postprocessSQLStatement(Operator operator) throws Exception {
+	private void postprocessSQLStatement(PostgreSQLIslandOperator operator) throws Exception {
 
 //		boolean originalPruneStatus = operator.isPruned();
 //		operator.prune(false);
@@ -867,7 +893,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	 * @param stopAtJoin
 	 * @throws Exception
 	 */
-	private void changeAttributesForSelectItems(Operator o, SelectBody ss, SelectBody ps, Map<String, SelectItem> selects, boolean stopAtJoin) throws Exception {
+	private void changeAttributesForSelectItems(PostgreSQLIslandOperator o, SelectBody ss, SelectBody ps, Map<String, SelectItem> selects, boolean stopAtJoin) throws Exception {
 		
 		if (ps instanceof SetOperationList) {
 			
@@ -875,7 +901,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 			
 			for (int i = 0; i < o.getChildren().size(); ++i) {
 				
-				Operator c = o.getChildren().get(i);
+				PostgreSQLIslandOperator c = (PostgreSQLIslandOperator) o.getChildren().get(i);
 				PlainSelect p = ((PlainSelect)((SetOperationList)ps).getSelects().get(i));
 				
 				changeAttributesForSelectItems(c, null, p, selects, stopAtJoin); // TODO SS?????
@@ -915,7 +941,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	 * @return
 	 * @throws Exception
 	 */
-	private boolean changeAttributeName(Operator operator, SQLAttribute attr, boolean stopAtJoin) throws Exception {
+	private boolean changeAttributeName(PostgreSQLIslandOperator operator, SQLAttribute attr, boolean stopAtJoin) throws Exception {
 		// if no children, then do nothing 
 		// for each children, 
 		// check if the child is pruned, 
@@ -931,7 +957,8 @@ public class SQLQueryGenerator implements OperatorVisitor {
 		boolean ret = false;
 		
 		if (operator.getChildren().size() > 0) {
-			for (Operator o : operator.getChildren()) {
+			for (Operator op : operator.getChildren()) {
+				PostgreSQLIslandOperator o = (PostgreSQLIslandOperator) op;
 				if (o.isPruned()) {
 					
 					if (o.getOutSchema().containsKey(attr.getName())) {
@@ -1212,13 +1239,13 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	private Select generateSelectWithToken(Operator o, String token) throws Exception {
     	Select outStatement = null;
     	if (token != null) outStatement = SelectUtils.buildSelectFromTable(new Table(token));
-    	else if (o instanceof Scan) outStatement = SelectUtils.buildSelectFromTable(((Scan)o).getTable());
+    	else if (o instanceof PostgreSQLIslandScan) outStatement = SelectUtils.buildSelectFromTable(((PostgreSQLIslandScan)o).getTable());
     	else throw new Exception("Unhandled token name in generateSelectWithToken; operator: "+o.getClass().getSimpleName()+"; "+o.toString());
 		PlainSelect ps = (PlainSelect)outStatement.getSelectBody();
 		List<SelectItem> lsi = new ArrayList<>();
-		for (String s : o.getOutSchema().keySet()) {
+		for (String s : ((PostgreSQLIslandOperator) o).getOutSchema().keySet()) {
 			SelectExpressionItem sei = new SelectExpressionItem();
-			Expression e = CCJSqlParserUtil.parseExpression(o.getOutSchema().get(s).getExpressionString());
+			Expression e = CCJSqlParserUtil.parseExpression(((PostgreSQLIslandOperator) o).getOutSchema().get(s).getExpressionString());
 			if (token != null)
 				SQLExpressionUtils.renameAttributes(e, null, null, token);
 			sei.setExpression(e);
@@ -1234,9 +1261,10 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	 * @param o
 	 * @param first
 	 */
-	private void populateComplexOutItem(Operator o, boolean first) {
+	private void populateComplexOutItem(PostgreSQLIslandOperator o, boolean first) {
 		// populate complexOutItemFromProgeny
-		for (Operator child : o.getChildren()){
+		for (Operator c : o.getChildren()){
+			PostgreSQLIslandOperator child = (PostgreSQLIslandOperator) c;
 			if ((!first) && child.getComplexOutItemFromProgeny().isEmpty()) populateComplexOutItem(child, first);
 			for (String s: child.getOutSchema().keySet()) {
 				Expression e = child.getOutSchema().get(s).getSQLExpression();
@@ -1272,7 +1300,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	 * @return
 	 * @throws Exception
 	 */
-	private String rewriteComplextOutItem(Operator o, Expression e) throws Exception {
+	private String rewriteComplextOutItem(PostgreSQLIslandOperator o, Expression e) throws Exception {
 		// simplify
 		String expr = e.toString();
 		for (String alias : o.getComplexOutItemFromProgeny().keySet()) {
@@ -1292,7 +1320,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	 * @return
 	 * @throws Exception
 	 */
-	private String updateOnExpression(String joinPred, Operator child0, Operator child1, Table t0, Table t1, boolean update) throws Exception {
+	private String updateOnExpression(String joinPred, PostgreSQLIslandOperator child0, PostgreSQLIslandOperator child1, Table t0, Table t1, boolean update) throws Exception {
     	
     	Expression expr = CCJSqlParserUtil.parseCondExpression(joinPred);
 		List<String> itemsSet = SQLExpressionUtils.getColumnTableNamesInAllForms(expr);
@@ -1314,7 +1342,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	 * @return
 	 * @throws Exception
 	 */
-	private boolean replaceTableNameWithPruneName(Operator child, Expression e, Table t, List<String> itemsSet) throws Exception {
+	private boolean replaceTableNameWithPruneName(PostgreSQLIslandOperator child, Expression e, Table t, List<String> itemsSet) throws Exception {
 		if (child.isPruned()) {
 			// does child have any of those names? 
 			Set<String> names = new HashSet<>(child.getDataObjectAliasesOrNames().keySet());
@@ -1341,7 +1369,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 		}else {
 			boolean ret = false;
 			for (Operator o : child.getChildren()) {
-				ret = ret || replaceTableNameWithPruneName(o, e, t, itemsSet);
+				ret = ret || replaceTableNameWithPruneName(((PostgreSQLIslandOperator)o), e, t, itemsSet);
 			}
 			return ret;
 		}
@@ -1355,7 +1383,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	 * @return
 	 * @throws Exception
 	 */
-	private boolean findAndGetTableName(Operator child, Table t, List<String> itemsSet) throws Exception {
+	private boolean findAndGetTableName(PostgreSQLIslandOperator child, Table t, List<String> itemsSet) throws Exception {
 	    	
 		Set<String> names = new HashSet<>(child.getDataObjectAliasesOrNames().keySet());
 		child.updateObjectAliases();
@@ -1363,15 +1391,15 @@ public class SQLQueryGenerator implements OperatorVisitor {
 		names.retainAll(itemsSet);
 		if (names.size() > 0) {
 			if (child instanceof Scan) {
-				t.setName(((Scan)child).getTable().toString());
+				t.setName(((PostgreSQLIslandScan)child).getTable().toString());
 			} else if (child.getChildren().size() > 0) {
-				return findAndGetTableName(child.getChildren().get(0), t, itemsSet);
+				return findAndGetTableName((PostgreSQLIslandOperator)child.getChildren().get(0), t, itemsSet);
 			}
 			return false;
 		} else {
 			boolean ret = false;
 			for (Operator o : child.getChildren()) {
-				ret = ret || findAndGetTableName(o, t, itemsSet);
+				ret = ret || findAndGetTableName((PostgreSQLIslandOperator)o, t, itemsSet);
 			}
 			return ret;
 		}    	
@@ -1385,17 +1413,17 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	 * @return
 	 * @throws Exception
 	 */
-	private List<String> processLeftAndRightWithIndexCond(Operator o, boolean zeroFirst, List<String> foundExpression) throws Exception {
+	private List<String> processLeftAndRightWithIndexCond(PostgreSQLIslandOperator o, boolean zeroFirst, List<String> foundExpression) throws Exception {
     	
     	Map<String, Expression> child0Cond;
     	Map<String, Expression> child1Cond;
 
     	if (zeroFirst) {
-    		child0Cond = o.getChildren().get(0).getChildrenPredicates();
-    		child1Cond = o.getChildren().get(1).getChildrenPredicates();
+    		child0Cond = ((PostgreSQLIslandOperator)o.getChildren().get(0)).getChildrenPredicates();
+    		child1Cond = ((PostgreSQLIslandOperator)o.getChildren().get(1)).getChildrenPredicates();
     	} else {
-    		child0Cond = o.getChildren().get(1).getChildrenPredicates();
-    		child1Cond = o.getChildren().get(0).getChildrenPredicates();
+    		child0Cond = ((PostgreSQLIslandOperator)o.getChildren().get(1)).getChildrenPredicates();
+    		child1Cond = ((PostgreSQLIslandOperator)o.getChildren().get(0)).getChildrenPredicates();
     	}
     	
 		for (String s : child0Cond.keySet()) {
@@ -1452,14 +1480,14 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	 * @param dstStatement
 	 * @return
 	 */
-	private SubSelect makeNewSubSelectUpdateDST(Aggregate agg, Select dstStatement) {
+	private SubSelect makeNewSubSelectUpdateDST(PostgreSQLIslandAggregate agg, Select dstStatement) {
 		SubSelect ss = new SubSelect();
 		ss.setAlias(new Alias(agg.getAggregateToken()));
 		ss.setSelectBody(dstStatement.getSelectBody());
 		return ss;
 	}
 
-	private String updatePruneTokensForOnExpression(Join j, String joinPred) throws Exception {
+	private String updatePruneTokensForOnExpression(PostgreSQLIslandJoin j, String joinPred) throws Exception {
     	
     	if (!j.isAnyProgenyPruned()) return new String(joinPred);
     	
@@ -1495,7 +1523,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 		
 		boolean started = false;
 		
-		for (DataObjectAttribute doa : op.getOutSchema().values()) {
+		for (DataObjectAttribute doa : ((PostgreSQLIslandOperator)op).getOutSchema().values()) {
 			if (started == true) sb.append(',');
 			else started = true;
 			
@@ -1546,25 +1574,25 @@ public class SQLQueryGenerator implements OperatorVisitor {
 		
 		List<String> ret = new ArrayList<String>();
 		
-		if (join.getOriginalJoinPredicate() == null && join.getOriginalJoinFilter() == null) {
+		if (join.generateJoinPredicate() == null && join.generateJoinFilter() == null) {
 			
 			Expression extraction = null;
 			Column leftColumn = null;
 			Column rightColumn = null;
 			
 			
-			List<String> ses = processLeftAndRightWithIndexCond(join, true, null);
+			List<String> ses = processLeftAndRightWithIndexCond((PostgreSQLIslandJoin) join, true, null);
 			String s, s2; 
 			if (ses != null) {
 				s = ses.get(0);
 				s2 = ses.get(1);
-				extraction = join.getChildren().get(0).getChildrenPredicates().get(s);
+				extraction = ((PostgreSQLIslandOperator)join.getChildren().get(0)).getChildrenPredicates().get(s);
 			} else {
-				ses = processLeftAndRightWithIndexCond(join, false, null);
+				ses = processLeftAndRightWithIndexCond((PostgreSQLIslandJoin) join, false, null);
 				if (ses == null) return ret;
 				s = ses.get(1);
 				s2 = ses.get(0);
-				extraction = join.getChildren().get(1).getChildrenPredicates().get(s2);
+				extraction = ((PostgreSQLIslandOperator)join.getChildren().get(1)).getChildrenPredicates().get(s2);
 			}
 			
 			List<Expression> exprs = SQLExpressionUtils.getFlatExpressions(extraction);
@@ -1600,8 +1628,8 @@ public class SQLQueryGenerator implements OperatorVisitor {
 //		System.out.println("---> Right Child objects: "+rightChildObjects.toString());
 //		System.out.println("---> joinPredicate: "+joinPredicate);
 		
-		String preds = join.getOriginalJoinPredicate();
-		if (preds == null) preds = join.getOriginalJoinFilter();
+		String preds = join.generateJoinPredicate();
+		if (preds == null) preds = join.generateJoinFilter();
 		if (preds == null) return ret;
 		
 		Expression e = CCJSqlParserUtil.parseCondExpression(preds);
@@ -1642,6 +1670,6 @@ public class SQLQueryGenerator implements OperatorVisitor {
 		
 		return ret;
 	}
-	
+
 	
 }

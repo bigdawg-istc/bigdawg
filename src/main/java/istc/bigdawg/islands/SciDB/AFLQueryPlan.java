@@ -5,14 +5,13 @@ import java.util.HashMap;
 import java.util.Map;
 
 import istc.bigdawg.islands.OperatorVisitor;
-import istc.bigdawg.islands.PostgreSQL.SQLTableExpression;
 import istc.bigdawg.islands.operators.Operator;
 
 // keep track of query root node and any CTEs
 public class AFLQueryPlan {
 
 	private Map<String, Operator> planRoots;
-	private Map<String,SQLTableExpression> tableExpressions; 
+//	private Map<String,SQLTableExpression> tableExpressions; 
 	
 	private String statement;
 	
@@ -21,7 +20,7 @@ public class AFLQueryPlan {
 	
 	public AFLQueryPlan() {
 		planRoots = new HashMap<String, Operator>();
-		tableExpressions = new HashMap<String, SQLTableExpression>();
+//		tableExpressions = new HashMap<String, SQLTableExpression>();
 	}
 	
 	
@@ -29,12 +28,12 @@ public class AFLQueryPlan {
 	public AFLQueryPlan(Operator root) {
 		planRoots = new HashMap<String, Operator>();
 		rootNode = root;
-		root.setQueryRoot();
+		root.setQueryRoot(true);
 	}
 	
 	public void setRootNode(Operator o) {
 		rootNode = o;
-		o.setQueryRoot();
+		o.setQueryRoot(true);
 	}
 	
 	// get root of a CTE statement or main
@@ -79,20 +78,20 @@ public class AFLQueryPlan {
 	}
 	
 	
-	public void addTableSupplement(String name, SQLTableExpression sup) {
-		sup.setName(name);
-		tableExpressions.put(name, sup);
-	}
-	
-	
-	public Map<String, SQLTableExpression> getSupplements() {
-		return tableExpressions;
-	}
-
-	public SQLTableExpression getSQLTableExpression(String name) {
-		return tableExpressions.get(name);
-	}
-	
+//	public void addTableSupplement(String name, SQLTableExpression sup) {
+//		sup.setName(name);
+//		tableExpressions.put(name, sup);
+//	}
+//	
+//	
+//	public Map<String, SQLTableExpression> getSupplements() {
+//		return tableExpressions;
+//	}
+//
+//	public SQLTableExpression getSQLTableExpression(String name) {
+//		return tableExpressions.get(name);
+//	}
+//	
 	
 
 }

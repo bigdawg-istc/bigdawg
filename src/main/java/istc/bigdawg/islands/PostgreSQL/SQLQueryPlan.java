@@ -29,7 +29,7 @@ public class SQLQueryPlan {
 	public SQLQueryPlan(Operator root) {
 		planRoots = new HashMap<String, Operator>();
 		rootNode = root;
-		root.setQueryRoot();
+		root.setQueryRoot(true);
 	}
 	
 	public Map<String, Operator> getPlanRoots() {
@@ -38,7 +38,7 @@ public class SQLQueryPlan {
 	
 	public void setRootNode(Operator o) {
 		rootNode = o;
-		o.setQueryRoot();
+		o.setQueryRoot(true);
 	}
 	
 	// get root of a CTE statement or main

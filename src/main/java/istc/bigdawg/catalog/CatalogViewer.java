@@ -912,6 +912,7 @@ public class CatalogViewer {
 	 * 
 	 * Get connection to a database based on engineId and dbId.
 	 * 
+	 * Deprecation notice: use getConnectionInfo(int) instead.
 	 * 
 	 * @param cc
 	 *            catalog with the connection to catalog to PostgreSQL

@@ -3,7 +3,7 @@ package istc.bigdawg.islands;
 import java.util.List;
 
 import istc.bigdawg.islands.operators.Aggregate;
-import istc.bigdawg.islands.operators.CommonSQLTableExpressionScan;
+import istc.bigdawg.islands.operators.CommonTableExpressionScan;
 import istc.bigdawg.islands.operators.Distinct;
 import istc.bigdawg.islands.operators.Join;
 import istc.bigdawg.islands.operators.Limit;
@@ -22,7 +22,7 @@ public interface OperatorVisitor {
 	public void visit(Sort sort) throws Exception;
 	public void visit(Distinct distinct) throws Exception;
 	public void visit(Scan scan) throws Exception;
-	public void visit(CommonSQLTableExpressionScan cte) throws Exception;
+	public void visit(CommonTableExpressionScan cte) throws Exception;
 	public void visit(SeqScan operator) throws Exception;
 	public void visit(Aggregate aggregate) throws Exception;
 	public void visit(WindowAggregate operator) throws Exception;

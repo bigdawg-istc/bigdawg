@@ -1,4 +1,4 @@
-package istc.bigdawg.islands.operators;
+package istc.bigdawg.islands.PostgreSQL.operators;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -12,32 +12,33 @@ import istc.bigdawg.islands.OperatorVisitor;
 import istc.bigdawg.islands.PostgreSQL.SQLOutItem;
 import istc.bigdawg.islands.PostgreSQL.SQLQueryPlan;
 import istc.bigdawg.islands.PostgreSQL.SQLTableExpression;
+import istc.bigdawg.islands.operators.CommonTableExpressionScan;
 import istc.bigdawg.schema.DataObjectAttribute;
 import istc.bigdawg.schema.SQLAttribute;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.WithItem;
 
-public class CommonSQLTableExpressionScan extends Scan {
+public class PostgreSQLIslandCommonTableExpressionScan extends PostgreSQLIslandScan implements CommonTableExpressionScan {
 
 	private String cteName;
 	private WithItem with;
-	private Operator sourceStatement;
+	private PostgreSQLIslandOperator sourceStatement;
 	
 	
-	CommonSQLTableExpressionScan(Map<String, String> parameters, List<String> output, Operator child, SQLQueryPlan plan, SQLTableExpression supplement) throws Exception  {
+	PostgreSQLIslandCommonTableExpressionScan(Map<String, String> parameters, List<String> output, PostgreSQLIslandOperator child, SQLQueryPlan plan, SQLTableExpression supplement) throws Exception  {
 		super(parameters, output, child, supplement);
 		
-		setCteName(parameters.get("CTE-Name"));
-		setWith(plan.getWithItem(getCteName()));
+		setSourceTableName(parameters.get("CTE-Name"));
+		setWith(plan.getWithItem(getSourceTableName()));
 		
-		this.dataObjects.add(getCteName());
+		this.dataObjects.add(getSourceTableName());
 		
 		// match output to base relation
 		Map<String, DataObjectAttribute> cteSchema = new HashMap<String, DataObjectAttribute>();
 		// insert cte alias for schema resolution
 		// delete everything before the first dot and replace it with the tableAlias
-		sourceStatement = plan.getPlanRoot(getCteName());
+		sourceStatement = (PostgreSQLIslandOperator) plan.getPlanRoot(getSourceTableName());
 		
 		Iterator<Map.Entry<String, DataObjectAttribute>  > schemaItr = sourceStatement.outSchema.entrySet().iterator();
 
@@ -70,25 +71,25 @@ public class CommonSQLTableExpressionScan extends Scan {
 	}
 
 	
-	public CommonSQLTableExpressionScan(Operator o, boolean addChild) throws Exception {
+	public PostgreSQLIslandCommonTableExpressionScan(PostgreSQLIslandOperator o, boolean addChild) throws Exception {
 		super(o, addChild);
-		CommonSQLTableExpressionScan c = (CommonSQLTableExpressionScan) o;
-		this.setCteName(new String(c.getCteName()));
+		PostgreSQLIslandCommonTableExpressionScan c = (PostgreSQLIslandCommonTableExpressionScan) o;
+		this.setSourceTableName(new String(c.getSourceTableName()));
 		
-		Operator s = c.sourceStatement.duplicate(true);
+		PostgreSQLIslandOperator s = (PostgreSQLIslandOperator) c.sourceStatement.duplicate(true);
 		
-		if (s instanceof Join) {
-			this.sourceStatement = new Join(s, addChild);
-		} else if (s instanceof SeqScan) {
-			this.sourceStatement = new SeqScan(s, addChild);
-		} else if (s instanceof CommonSQLTableExpressionScan) {
-			this.sourceStatement = new CommonSQLTableExpressionScan(s, addChild);
-		} else if (s instanceof Sort) {
-			this.sourceStatement = new Sort(s, addChild);
+		if (s instanceof PostgreSQLIslandJoin) {
+			this.sourceStatement = new PostgreSQLIslandJoin(s, addChild);
+		} else if (s instanceof PostgreSQLIslandSeqScan) {
+			this.sourceStatement = new PostgreSQLIslandSeqScan(s, addChild);
+		} else if (s instanceof PostgreSQLIslandCommonTableExpressionScan) {
+			this.sourceStatement = new PostgreSQLIslandCommonTableExpressionScan(s, addChild);
+		} else if (s instanceof PostgreSQLIslandSort) {
+			this.sourceStatement = new PostgreSQLIslandSort(s, addChild);
 		} else {
-			if (s instanceof Aggregate) {
-			} else if (s instanceof Distinct) {
-			} else if (s instanceof WindowAggregate) {
+			if (s instanceof PostgreSQLIslandAggregate) {
+			} else if (s instanceof PostgreSQLIslandDistinct) {
+			} else if (s instanceof PostgreSQLIslandWindowAggregate) {
 			} else {
 				throw new Exception("Unknown Operator from Operator Copy: "+s.getClass().toString());
 			}
@@ -116,10 +117,10 @@ public class CommonSQLTableExpressionScan extends Scan {
 	}
 	
 	public String toString() {
-		return "CTE scan over " + getCteName() + " Filter: " + getFilterExpression();
+		return "CTE scan over " + getSourceTableName() + " Filter: " + getFilterExpression();
 	}
 	
-	public Operator getSourceStatement() {
+	public PostgreSQLIslandOperator getSourceStatement() {
 		return sourceStatement;
 	}
 	
@@ -156,17 +157,17 @@ public class CommonSQLTableExpressionScan extends Scan {
 		}
 		
 		outs.addAll(sas);
-		result.put(getCteName(), outs);
+		result.put(getSourceTableName(), outs);
 		
 		locations.putAll(sourceStatement.getTableLocations(locations));
-		locations.put(getCteName(), outs);
+		locations.put(getSourceTableName(), outs);
 		
 		return result;
 	}
 	
 	@Override
 	public String getTreeRepresentation(boolean isRoot) throws Exception{
-		return "{with{"+this.getCteName()+"}"+this.sourceStatement.getTreeRepresentation(false)+"}";
+		return "{with{"+this.getSourceTableName()+"}"+this.sourceStatement.getTreeRepresentation(false)+"}";
 	}
 	
 	@Override
@@ -175,22 +176,22 @@ public class CommonSQLTableExpressionScan extends Scan {
 	}
 	
 	@Override
-	public void removeCTEEntriesFromObjectToExpressionMapping(Map<String, Set<String>> entry) {
+	public void removeCTEEntriesFromObjectToExpressionMapping(Map<String, Set<String>> entry) throws Exception {
 		
-		if (entry.containsKey(getCteName()))
-			entry.remove(getCteName());
-		sourceStatement.removeCTEEntriesFromObjectToExpressionMapping(entry);
+		if (entry.containsKey(getSourceTableName()))
+			entry.remove(getSourceTableName());
+		((PostgreSQLIslandOperator) sourceStatement).removeCTEEntriesFromObjectToExpressionMapping(entry);
 	}
 
 
-	public String getCteName() {
-		return cteName;
-	}
-
-
-	public void setCteName(String cteName) {
-		this.cteName = cteName;
-	}
+//	public String getCteName() {
+//		return cteName;
+//	}
+//
+//
+//	public void setCteName(String cteName) {
+//		this.cteName = cteName;
+//	}
 
 
 	public WithItem getWith() {
@@ -201,4 +202,17 @@ public class CommonSQLTableExpressionScan extends Scan {
 	public void setWith(WithItem with) {
 		this.with = with;
 	}
+
+
+	@Override
+	public String getSourceTableName() {
+		return cteName;
+	}
+
+
+	@Override
+	public void setSourceTableName(String srcTableName) {
+		this.cteName = srcTableName;
+	}
+
 };

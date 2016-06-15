@@ -3,15 +3,14 @@ package istc.bigdawg.islands.SciDB;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Stack;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import istc.bigdawg.islands.SciDB.operators.SciDBIslandOperatorFactory;
 import istc.bigdawg.islands.operators.Operator;
-import istc.bigdawg.islands.operators.OperatorFactory;
 import istc.bigdawg.scidb.SciDBHandler;
 
 
@@ -425,7 +424,7 @@ public class AFLPlanParser {
 		Operator op;
 		parameters.put("sectionName", "main");
 		node.schema.addSchemaAliases(node.schemaAlias);
-		op =  OperatorFactory.get(nodeType, parameters, node.schema, sortKeys, childOps, queryPlan);
+		op =  SciDBIslandOperatorFactory.get(nodeType, parameters, node.schema, sortKeys, childOps, queryPlan);
 
 		return op;
 	}

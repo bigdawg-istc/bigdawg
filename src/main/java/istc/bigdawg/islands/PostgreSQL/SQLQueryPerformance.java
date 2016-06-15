@@ -1,7 +1,5 @@
 package istc.bigdawg.islands.PostgreSQL;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.HashMap;

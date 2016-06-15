@@ -10,8 +10,13 @@ import java.util.Stack;
 import istc.bigdawg.islands.OperatorVisitor;
 import istc.bigdawg.islands.PostgreSQL.SQLExpressionHandler;
 import istc.bigdawg.islands.PostgreSQL.utils.SQLExpressionUtils;
+import istc.bigdawg.islands.SciDB.operators.SciDBIslandAggregate;
+import istc.bigdawg.islands.SciDB.operators.SciDBIslandJoin;
+import istc.bigdawg.islands.SciDB.operators.SciDBIslandOperator;
+import istc.bigdawg.islands.SciDB.operators.SciDBIslandScan;
+import istc.bigdawg.islands.SciDB.operators.SciDBIslandSort;
 import istc.bigdawg.islands.operators.Aggregate;
-import istc.bigdawg.islands.operators.CommonSQLTableExpressionScan;
+import istc.bigdawg.islands.operators.CommonTableExpressionScan;
 import istc.bigdawg.islands.operators.Distinct;
 import istc.bigdawg.islands.operators.Join;
 import istc.bigdawg.islands.operators.Limit;
@@ -86,7 +91,9 @@ public class AFLQueryGenerator implements OperatorVisitor {
 	}
 
 	@Override
-	public void visit(Join join) throws Exception {
+	public void visit(Join joinOp) throws Exception {
+		
+		SciDBIslandJoin join = (SciDBIslandJoin) joinOp;
 		
 		boolean isRootOriginal = isRoot;
 		saveRoot(join);
@@ -102,9 +109,9 @@ public class AFLQueryGenerator implements OperatorVisitor {
 		expressions.add(lastFunction.pop());
 		
 
-		if (join.getOriginalJoinPredicate() != null) {
+		if (join.generateJoinPredicate() != null) {
 			
-			String[] split = join.getOriginalJoinPredicate().replaceAll("( AND )|( = )", ", ").replaceAll("[<>= ()]+", " ").replace("\\s+", ", ").split(", ");
+			String[] split = join.generateJoinPredicate().replaceAll("( AND )|( = )", ", ").replaceAll("[<>= ()]+", " ").replace("\\s+", ", ").split(", ");
 			int pos = 0;
 			for (String s : split ) {
 				Column c = (Column) CCJSqlParserUtil.parseExpression(s);
@@ -122,7 +129,9 @@ public class AFLQueryGenerator implements OperatorVisitor {
 	}
 
 	@Override
-	public void visit(Sort sort) throws Exception {
+	public void visit(Sort sortOp) throws Exception {
+		
+		SciDBIslandSort sort = (SciDBIslandSort) sortOp; 
 		
 		boolean isRootOriginal = isRoot;
 		saveRoot(sort);
@@ -148,7 +157,9 @@ public class AFLQueryGenerator implements OperatorVisitor {
 	}
 
 	@Override
-	public void visit(Scan scan) throws Exception {
+	public void visit(Scan scanOp) throws Exception {
+		
+		SciDBIslandScan scan = (SciDBIslandScan) scanOp;
 		
 		boolean isRootOriginal = isRoot;
 		
@@ -157,7 +168,7 @@ public class AFLQueryGenerator implements OperatorVisitor {
 
 		List<SciDBExpression> expressions = new ArrayList<>();
 		if (scan.getChildren().isEmpty()) 
-			expressions.add(new SciDBArrayHolder(scan.getSrcTable(), null));
+			expressions.add(new SciDBArrayHolder(scan.getSourceTableName(), null));
 		else {
 			scan.getChildren().get(0).accept(this);
 			expressions.add(lastFunction.pop());
@@ -202,7 +213,7 @@ public class AFLQueryGenerator implements OperatorVisitor {
 	}
 
 	@Override
-	public void visit(CommonSQLTableExpressionScan cte) throws Exception {
+	public void visit(CommonTableExpressionScan cte) throws Exception {
 		throw new Exception("Unsupported Operator AFL output: CTE");
 	}
 
@@ -212,7 +223,9 @@ public class AFLQueryGenerator implements OperatorVisitor {
 	}
 
 	@Override
-	public void visit(Aggregate aggregate) throws Exception {
+	public void visit(Aggregate aggregateOp) throws Exception {
+		
+		SciDBIslandAggregate aggregate = (SciDBIslandAggregate) aggregateOp;
 		
 		boolean isRootOriginal = isRoot;
 		saveRoot(aggregate);
@@ -321,7 +334,7 @@ public class AFLQueryGenerator implements OperatorVisitor {
 		List<DataObjectAttribute> attribs = new ArrayList<>();
 		List<DataObjectAttribute> dims = new ArrayList<>();
 		
-		for (DataObjectAttribute doa : op.getOutSchema().values()) {
+		for (DataObjectAttribute doa : ((SciDBIslandOperator) op).getOutSchema().values()) {
 			if (doa.isHidden()) dims.add(doa);
 			else attribs.add(doa);
 		}
@@ -827,10 +840,10 @@ public class AFLQueryGenerator implements OperatorVisitor {
 
 		System.out.println("---> Left Child objects: "+leftChildObjects.toString());
 		System.out.println("---> Right Child objects: "+join.getChildren().get(1).getDataObjectAliasesOrNames().keySet().toString());
-		System.out.println("---> joinPredicate: "+join.getOriginalJoinPredicate());
+		System.out.println("---> joinPredicate: "+join.generateJoinPredicate());
 		
-		String preds = join.getOriginalJoinPredicate();
-		if (preds == null) preds = join.getOriginalJoinFilter();
+		String preds = join.generateJoinPredicate();
+		if (preds == null) preds = join.generateJoinFilter();
 		if (preds == null) return ret;
 		
 		Expression e = CCJSqlParserUtil.parseCondExpression(preds);

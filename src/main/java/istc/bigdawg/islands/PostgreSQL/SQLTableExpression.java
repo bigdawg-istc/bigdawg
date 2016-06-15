@@ -5,7 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import istc.bigdawg.islands.operators.Sort;
+import istc.bigdawg.islands.PostgreSQL.operators.PostgreSQLIslandSort;
 import istc.bigdawg.islands.operators.Sort.SortOrder;
 import net.sf.jsqlparser.expression.Alias;
 import net.sf.jsqlparser.expression.AnalyticExpression;
@@ -195,7 +195,7 @@ public class SQLTableExpression {
     
     // have a sort from the query execution plan
     // need to resolve it to OrderByElement to get ASC or DESC clause
-    public Sort.SortOrder getSortOrder(List<String> sortKeys, String sectionName) throws Exception {
+    public PostgreSQLIslandSort.SortOrder getSortOrder(List<String> sortKeys, String sectionName) throws Exception {
     	
     	if(sortList == null) {
     		createSortList(sectionName);
