@@ -4,7 +4,6 @@
 package istc.bigdawg.migration;
 
 import java.sql.SQLException;
-import java.util.concurrent.Callable;
 
 import org.apache.log4j.Logger;
 
@@ -19,7 +18,7 @@ import istc.bigdawg.utils.LogUtils;
  * 
  *         Load data to the SciDB database.
  */
-public class LoadSciDB implements Callable<String> {
+public class LoadSciDB implements Load {
 
 	/* log */
 	private static Logger log = Logger.getLogger(LoadSciDB.class);
@@ -60,7 +59,7 @@ public class LoadSciDB implements Callable<String> {
 	 * @return
 	 * @throws SQLException
 	 */
-	public String call() throws SQLException {
+	public Object call() throws Exception {
 		/*
 		 * we have to create a flat array and redimension it to the final result
 		 */

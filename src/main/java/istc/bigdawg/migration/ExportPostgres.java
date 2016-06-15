@@ -10,7 +10,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.concurrent.Callable;
 
 import org.apache.log4j.Logger;
 import org.postgresql.copy.CopyManager;
@@ -26,8 +25,8 @@ import istc.bigdawg.utils.StackTrace;
  * @author Adam Dziedzic
  * 
  *         Jan 14, 2016 6:06:36 PM
- */
-public class ExportPostgres implements Callable<Object> {
+ */	
+public class ExportPostgres implements Export {
 
 	private static Logger log = Logger.getLogger(ExportPostgres.class);
 

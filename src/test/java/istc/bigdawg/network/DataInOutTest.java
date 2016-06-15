@@ -38,7 +38,8 @@ import istc.bigdawg.utils.TaskExecutor;
 /**
  * @author Adam Dziedzic
  * 
- * run form maven: mvn -Dtest=DataInOutTest#testBigDataTransfer test -P dev
+ *         run form maven: mvn -Dtest=DataInOutTest#testBigDataTransfer test -P
+ *         dev
  */
 public class DataInOutTest {
 
@@ -55,7 +56,15 @@ public class DataInOutTest {
 	private final static long GB = 1024L * MB;
 
 	/* 2 GB of data: 2 * 2^30 */
+	@SuppressWarnings("unused")
 	private final static long totalBytes = 4L * GB;
+
+	/**
+	 * The address of the remote host. This is for real performance tests over
+	 * network.
+	 */
+	@SuppressWarnings("unused")
+	private final static String remoteHost = "francisco";
 
 	@Before
 	public void setUp() {
@@ -64,7 +73,7 @@ public class DataInOutTest {
 	}
 
 	/* The separate thread to receive the data. */
-	Callable<Object> getReceiverCallable(String fullPathIn) {
+	private Callable<Object> getReceiverCallable(String fullPathIn) {
 		return () -> {
 			try {
 				logger.debug("Start receiving data.");
@@ -79,7 +88,7 @@ public class DataInOutTest {
 	}
 
 	/** The separate thread to send the data. */
-	Callable<Object> getSenderCallable(String fullPathOut, int sleepSeconds,
+	private Callable<Object> getSenderCallable(String fullPathOut, int sleepSeconds,
 			String host) {
 		return () -> {
 			try {
@@ -107,7 +116,7 @@ public class DataInOutTest {
 	 * 
 	 * @throws IOException
 	 */
-	Callable<Object> getWriteBytesCallable(String filePath, long bytesWritten)
+	private Callable<Object> getWriteBytesCallable(String filePath, long bytesWritten)
 			throws IOException {
 		return () -> {
 			try {
@@ -140,7 +149,7 @@ public class DataInOutTest {
 	 * @return number of bytes read
 	 * @throws IOException
 	 */
-	Callable<Object> getReadBytesCallable(String filePath) throws IOException {
+	private Callable<Object> getReadBytesCallable(String filePath) throws IOException {
 		return () -> {
 			try {
 				logger.debug(
@@ -252,55 +261,56 @@ public class DataInOutTest {
 		logger.debug("speed: " + speed + " MB/sec");
 	}
 
-	@Test
-	/** Test transfer of big data via network. */
-	public void testSendBigDataTransfer() throws IOException,
-			InterruptedException, RunShellException, ExecutionException {
-		String pipeOut = Pipe.INSTANCE.createAndGetFullName("data_out");
-
-		logger.debug("Total number of bytes for transfer: " + totalBytes);
-		long startTimeMigration = System.currentTimeMillis();
-		List<Callable<Object>> tasks = new ArrayList<>();
-		/* send data to francisco */
-		tasks.add(getSenderCallable(pipeOut, 2, "francisco"));
-		tasks.add(getWriteBytesCallable(pipeOut, totalBytes));
-		ExecutorService executor = Executors.newFixedThreadPool(tasks.size());
-		List<Future<Object>> results = TaskExecutor.execute(executor, tasks);
-		assertNull(results.get(0).get());
-		assertNull(results.get(1).get());
-		long endTimeMigration = System.currentTimeMillis();
-		long durationMsec = endTimeMigration - startTimeMigration;
-		double durationSec = (durationMsec / 1000.0);
-		logger.debug("data transfer duration: " + durationSec + " sec");
-		logger.debug(
-				"total number of GBs transferred: " + totalBytes * 1.0 / GB);
-		double speed = (totalBytes / MB) / durationSec;
-		logger.debug("speed: " + speed + " MB/sec");
-	}
-
-	@Test
-	/** Test transfer of big data via network. */
-	public void testReceiveBigDataTransfer() throws IOException,
-			InterruptedException, RunShellException, ExecutionException {
-		String pipeIn = Pipe.INSTANCE.createAndGetFullName("data_in");
-
-		logger.debug("Total number of bytes for transfer: " + totalBytes);
-		long startTimeMigration = System.currentTimeMillis();
-		List<Callable<Object>> tasks = new ArrayList<>();
-		tasks.add(getReceiverCallable(pipeIn));
-		tasks.add(getReadBytesCallable(pipeIn));
-		ExecutorService executor = Executors.newFixedThreadPool(tasks.size());
-		List<Future<Object>> results = TaskExecutor.execute(executor, tasks);
-		assertNull(results.get(0).get());
-		assertEquals(totalBytes, (long) results.get(1).get());
-		long endTimeMigration = System.currentTimeMillis();
-		long durationMsec = endTimeMigration - startTimeMigration;
-		double durationSec = (durationMsec / 1000.0);
-		logger.debug("data transfer duration: " + durationSec + " sec");
-		logger.debug(
-				"total number of GBs transferred: " + totalBytes * 1.0 / GB);
-		double speed = (totalBytes / MB) / durationSec;
-		logger.debug("speed: " + speed + " MB/sec");
-	}
+	/* Tests which are run on the real network. */
+	// @Test
+	// /** Test transfer of big data via network. */
+	// public void testSendBigDataTransfer() throws IOException,
+	// InterruptedException, RunShellException, ExecutionException {
+	// String pipeOut = Pipe.INSTANCE.createAndGetFullName("data_out");
+	//
+	// logger.debug("Total number of bytes for transfer: " + totalBytes);
+	// long startTimeMigration = System.currentTimeMillis();
+	// List<Callable<Object>> tasks = new ArrayList<>();
+	// /* send data to francisco */
+	// tasks.add(getSenderCallable(pipeOut, 2, remoteHost));
+	// tasks.add(getWriteBytesCallable(pipeOut, totalBytes));
+	// ExecutorService executor = Executors.newFixedThreadPool(tasks.size());
+	// List<Future<Object>> results = TaskExecutor.execute(executor, tasks);
+	// assertNull(results.get(0).get());
+	// assertNull(results.get(1).get());
+	// long endTimeMigration = System.currentTimeMillis();
+	// long durationMsec = endTimeMigration - startTimeMigration;
+	// double durationSec = (durationMsec / 1000.0);
+	// logger.debug("data transfer duration: " + durationSec + " sec");
+	// logger.debug(
+	// "total number of GBs transferred: " + totalBytes * 1.0 / GB);
+	// double speed = (totalBytes / MB) / durationSec;
+	// logger.debug("speed: " + speed + " MB/sec");
+	// }
+	//
+	// @Test
+	// /** Test transfer of big data via network. */
+	// public void testReceiveBigDataTransfer() throws IOException,
+	// InterruptedException, RunShellException, ExecutionException {
+	// String pipeIn = Pipe.INSTANCE.createAndGetFullName("data_in");
+	//
+	// logger.debug("Total number of bytes for transfer: " + totalBytes);
+	// long startTimeMigration = System.currentTimeMillis();
+	// List<Callable<Object>> tasks = new ArrayList<>();
+	// tasks.add(getReceiverCallable(pipeIn));
+	// tasks.add(getReadBytesCallable(pipeIn));
+	// ExecutorService executor = Executors.newFixedThreadPool(tasks.size());
+	// List<Future<Object>> results = TaskExecutor.execute(executor, tasks);
+	// assertNull(results.get(0).get());
+	// assertEquals(totalBytes, (long) results.get(1).get());
+	// long endTimeMigration = System.currentTimeMillis();
+	// long durationMsec = endTimeMigration - startTimeMigration;
+	// double durationSec = (durationMsec / 1000.0);
+	// logger.debug("data transfer duration: " + durationSec + " sec");
+	// logger.debug(
+	// "total number of GBs transferred: " + totalBytes * 1.0 / GB);
+	// double speed = (totalBytes / MB) / durationSec;
+	// logger.debug("speed: " + speed + " MB/sec");
+	// }
 
 }

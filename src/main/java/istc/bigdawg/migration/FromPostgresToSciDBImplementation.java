@@ -156,12 +156,12 @@ public class FromPostgresToSciDBImplementation
 
 			LoadSciDB loadExecutor = new LoadSciDB(connectionTo, arrays,
 					scidbPipe, getSciDBBinFormat());
-			FutureTask<String> loadTask = new FutureTask<String>(loadExecutor);
+			FutureTask<Object> loadTask = new FutureTask<Object>(loadExecutor);
 			executor.submit(loadTask);
 
 			long countExtractedElements = (Long) exportTask.get();
 			long transformationResult = transformTask.get();
-			String loadMessage = loadTask.get();
+			String loadMessage = (String) loadTask.get();
 
 			String transformationMessage;
 			if (transformationResult != 0) {
@@ -254,12 +254,12 @@ public class FromPostgresToSciDBImplementation
 			SciDBArrays arrays = prepareFlatTargetArrays();
 			LoadSciDB loadExecutor = new LoadSciDB(connectionTo, arrays,
 					scidbPipe);
-			FutureTask<String> loadTask = new FutureTask<String>(loadExecutor);
+			FutureTask<Object> loadTask = new FutureTask<Object>(loadExecutor);
 			executor.submit(loadTask);
 
 			long countExtractedElements = (long) exportTask.get();
 			csvSciDBTask.get();
-			String loadMessage = loadTask.get();
+			String loadMessage = (String) loadTask.get();
 
 			/**
 			 * the migration was successful so only clear the intermediate

@@ -60,7 +60,8 @@ public class FromAccumuloToPostgres {
 	private int postgreSQLReaderCharSize = 1000000;
 	private char delimiter = '|';
 
-	public FromAccumuloToPostgres() throws AccumuloException, AccumuloSecurityException, AccumuloBigDawgException {
+	public FromAccumuloToPostgres() throws AccumuloException,
+			AccumuloSecurityException, AccumuloBigDawgException {
 		accInst = AccumuloInstance.getInstance();
 	}
 
@@ -83,25 +84,31 @@ public class FromAccumuloToPostgres {
 		sBuilder.append(rowString);
 	}
 
-	public void flushRowsToPostgreSQL(StringBuilder sBuilder, PushbackReader reader, CopyManager cpManager,
-			String postgresTable, String copyString) throws IOException, SQLException {
-		//System.out.println(sBuilder.toString());
+	public void flushRowsToPostgreSQL(StringBuilder sBuilder,
+			PushbackReader reader, CopyManager cpManager, String postgresTable,
+			String copyString) throws IOException, SQLException {
+		// System.out.println(sBuilder.toString());
 		reader.unread(sBuilder.toString().toCharArray());
 		cpManager.copyIn(copyString.toString(), reader);
 		sBuilder.delete(0, sBuilder.length());
 	}
 
-	private ResultSet getPostgreSQLResultSet(final String table) throws SQLException {
-		String query = "Select * from " + table.replace(";", "").replace(" ", "") + " limit 1";
+	private ResultSet getPostgreSQLResultSet(final String table)
+			throws SQLException {
+		String query = "Select * from "
+				+ table.replace(";", "").replace(" ", "") + " limit 1";
 		con = PostgreSQLInstance.getConnection();
 		con.setReadOnly(true);
 		con.setAutoCommit(false);
-		st = con.prepareStatement(query, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
+		st = con.prepareStatement(query, ResultSet.TYPE_FORWARD_ONLY,
+				ResultSet.CONCUR_READ_ONLY);
 		return st.executeQuery();
 	}
 
-	public void fromAccumuloToPostgres(final String accumuloTable, final String postgresTable) throws AccumuloException,
-			AccumuloSecurityException, AccumuloBigDawgException, SQLException, TableNotFoundException, IOException {
+	public void fromAccumuloToPostgres(final String accumuloTable,
+			final String postgresTable) throws AccumuloException,
+					AccumuloSecurityException, AccumuloBigDawgException,
+					SQLException, TableNotFoundException, IOException {
 		StringBuilder copyStringBuf = new StringBuilder();
 		copyStringBuf.append("COPY ");
 		copyStringBuf.append(postgresTable);
@@ -109,12 +116,14 @@ public class FromAccumuloToPostgres {
 		copyStringBuf.append(delimiter);
 		copyStringBuf.append("')");
 		String copyString = copyStringBuf.toString();
-		//System.out.println(copyString);
-		Iterator<Entry<Key, Value>> iter = accInst.getTableIterator(accumuloTable);
+		// System.out.println(copyString);
+		Iterator<Entry<Key, Value>> iter = accInst
+				.getTableIterator(accumuloTable);
 		try {
 			rs = getPostgreSQLResultSet(postgresTable);
 			if (rs == null) {
-				String message = "No results were fetched for the table: " + postgresTable;
+				String message = "No results were fetched for the table: "
+						+ postgresTable;
 				// System.out.println(message);
 				lgr.log(Level.INFO, message);
 				return;
@@ -125,7 +134,8 @@ public class FromAccumuloToPostgres {
 			StringBuilder sBuilder = new StringBuilder();
 			CopyManager cpManager = new CopyManager((BaseConnection) con); // ((PGConnection)
 																			// con).getCopyAPI();
-			PushbackReader reader = new PushbackReader(new StringReader(""), postgreSQLReaderCharSize);
+			PushbackReader reader = new PushbackReader(new StringReader(""),
+					postgreSQLReaderCharSize);
 			/*
 			 * count rows in sense of PostgreSQL one PostgreSQL row == many rows
 			 * combined from Accumulo)
@@ -143,7 +153,8 @@ public class FromAccumuloToPostgres {
 					++fullCounter;
 					createNewRowForPostgres(row, sBuilder);
 					if (fullCounter % postgreSQLWritebatchSize == 0) {
-						flushRowsToPostgreSQL(sBuilder, reader, cpManager, postgresTable, copyString);
+						flushRowsToPostgreSQL(sBuilder, reader, cpManager,
+								postgresTable, copyString);
 					}
 					row = new String[numOfCol];
 				}
@@ -156,9 +167,10 @@ public class FromAccumuloToPostgres {
 				// from 1)
 				row[thisColNum - 1] = value;
 			}
-			if(rowId!=null) {
+			if (rowId != null) {
 				createNewRowForPostgres(row, sBuilder);
-				flushRowsToPostgreSQL(sBuilder, reader, cpManager, postgresTable, copyString);
+				flushRowsToPostgreSQL(sBuilder, reader, cpManager,
+						postgresTable, copyString);
 			}
 		} finally {
 			cleanPostgreSQLResources();
@@ -174,8 +186,9 @@ public class FromAccumuloToPostgres {
 	 * @throws AccumuloException
 	 * @throws SQLException
 	 */
-	public static void main(String[] args) throws IOException, SQLException, AccumuloException,
-			AccumuloSecurityException, AccumuloBigDawgException, TableNotFoundException {
+	public static void main(String[] args) throws IOException, SQLException,
+			AccumuloException, AccumuloSecurityException,
+			AccumuloBigDawgException, TableNotFoundException {
 		boolean all = true;
 		System.out.print("Command line arguments: ");
 		for (String s : args) {
@@ -195,7 +208,8 @@ public class FromAccumuloToPostgres {
 		FromAccumuloToPostgres fromAccumuloToPostgres = null;
 		try {
 			fromAccumuloToPostgres = new FromAccumuloToPostgres();
-		} catch (AccumuloException | AccumuloSecurityException | AccumuloBigDawgException e1) {
+		} catch (AccumuloException | AccumuloSecurityException
+				| AccumuloBigDawgException e1) {
 			e1.printStackTrace();
 			return;
 		}
@@ -219,19 +233,20 @@ public class FromAccumuloToPostgres {
 			st.close();
 		}
 
-		PrintWriter fullWriter = new PrintWriter(
-				new BufferedWriter(new FileWriter("fromAccumuloToPostgresFull.log", true)));
+		PrintWriter fullWriter = new PrintWriter(new BufferedWriter(
+				new FileWriter("fromAccumuloToPostgresFull.log", true)));
 		String fullMessage = "";
 		if (mode.equals("fromAccumuloToPostgres") || all) {
-			PrintWriter writer = new PrintWriter(
-					new BufferedWriter(new FileWriter("fromAccumuloToPostgres.log", true)));
+			PrintWriter writer = new PrintWriter(new BufferedWriter(
+					new FileWriter("fromAccumuloToPostgres.log", true)));
 			long lStartTime = System.nanoTime();
 			for (String table : tables) {
 				// System.out.println("Table: " + table);
 				fromAccumuloToPostgres.fromAccumuloToPostgres(table, table);
 			}
 			String message = "From Accumulo To Postgres execution time in seconds: "
-					+ (System.nanoTime() - lStartTime) / 1000000000L + " :scale factor: " + scaleFactor;
+					+ (System.nanoTime() - lStartTime) / 1000000000L
+					+ " :scale factor: " + scaleFactor;
 			fullMessage += message;
 			System.out.println(message);
 			writer.append(message + "\n");
@@ -239,13 +254,15 @@ public class FromAccumuloToPostgres {
 		}
 		long allRowsNumber = 0;
 		if (mode.equals("countRowsPostgres") || all) {
-			PrintWriter writer = new PrintWriter(new BufferedWriter(new FileWriter("countRowsPostgres.log", true)));
+			PrintWriter writer = new PrintWriter(new BufferedWriter(
+					new FileWriter("countRowsPostgres.log", true)));
 			con = PostgreSQLInstance.getConnection();
 			con.setReadOnly(true);
 			con.setAutoCommit(false);
 			for (String table : tables) {
 				String query = "select count(*) from " + table;
-				PreparedStatement st = con.prepareStatement(query, ResultSet.TYPE_FORWARD_ONLY,
+				PreparedStatement st = con.prepareStatement(query,
+						ResultSet.TYPE_FORWARD_ONLY,
 						ResultSet.CONCUR_READ_ONLY);
 				ResultSet rs = st.executeQuery();
 				String messageString = "";
@@ -256,14 +273,16 @@ public class FromAccumuloToPostgres {
 				st.close();
 				rs.close();
 				allRowsNumber += rowNumber;
-				messageString = "PostgreSQL number of rows for table " + table + " is: " + rowNumber;
+				messageString = "PostgreSQL number of rows for table " + table
+						+ " is: " + rowNumber;
 				System.out.println(messageString);
 				writer.append(messageString + "\n");
 			}
 			con.close();
 			writer.close();
 		}
-		fullWriter.append(TestTpchPostgresAccumulo.getFullLog(fullMessage + ":Total number of rows:" + allRowsNumber + "\n"));
+		fullWriter.append(TestTpchPostgresAccumulo.getFullLog(
+				fullMessage + ":Total number of rows:" + allRowsNumber + "\n"));
 		fullWriter.close();
 	}
 }

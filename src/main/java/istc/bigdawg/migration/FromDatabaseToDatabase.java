@@ -50,7 +50,8 @@ public abstract class FromDatabaseToDatabase
 	private static Logger log = Logger.getLogger(FromDatabaseToDatabase.class);
 
 	/**
-	 * General method (interface) for other modules to call the migration process.
+	 * General method (interface) for other modules to call the migration
+	 * process.
 	 * 
 	 * @param connectionFrom
 	 *            Information about the source database (host, port, database
@@ -85,8 +86,9 @@ public abstract class FromDatabaseToDatabase
 	/**
 	 * This Callable object should be executed in a separate thread. The
 	 * intention is that we wait for the response in a thread but in another
-	 * thread we control if the remote machine to which we sent the request is up and
-	 * running. If the remote machine fails, then we stop the migration process.
+	 * thread we control if the remote machine to which we sent the request is
+	 * up and running. If the remote machine fails, then we stop the migration
+	 * process.
 	 * 
 	 * @param hostname
 	 *            to which node/machine we should send the network request
@@ -205,6 +207,11 @@ public abstract class FromDatabaseToDatabase
 				}
 			}
 		}
+	}
+	
+	/** Register migrators: Export and Load executors. */
+	public void register(Export exporter, Load loader) {
+		
 	}
 
 }
