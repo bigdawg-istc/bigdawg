@@ -92,7 +92,7 @@ public class FromSStoreToPostgresImplementation implements MigrationImplementati
 
 	    String createTableStatement = null;
 	    createTableStatement = getCreatePostgreSQLTableStatementFromSStoreTable();
-	    System.out.print(createTableStatement);
+//	    System.out.print(createTableStatement);
 	    connectionPostgres = PostgreSQLHandler.getConnection(connectionTo);
 	    connectionPostgres.setAutoCommit(false);
 	    createTargetTableSchema(connectionPostgres, createTableStatement);
@@ -154,7 +154,7 @@ public class FromSStoreToPostgresImplementation implements MigrationImplementati
 	    executor = Executors.newFixedThreadPool(2);
 	    
 	    String copyFromString = SStoreSQLHandler.getExportCommand();
-	    System.out.println("pipe path is " + sStorePipe);
+//	    System.out.println("pipe path is " + sStorePipe);
 	    CopyFromSStoreExecutor exportExecutor = new CopyFromSStoreExecutor(connectionFrom, copyFromString, fromTable, "psql",  sStorePipe);
 	    FutureTask<Long> exportTask = new FutureTask<Long>(exportExecutor);
 	    executor.submit(exportTask);
@@ -255,7 +255,7 @@ public class FromSStoreToPostgresImplementation implements MigrationImplementati
 		StringBuilder copyTo = new StringBuilder("copy ");
 		copyTo.append(table);
 		copyTo.append(" from STDIN with ");
-		copyTo.append("(format csv, delimiter '|', header true, quote \"'\")");
+		copyTo.append("(format csv, delimiter '|', header false, quote \"'\")");
 		String copyCommand = copyTo.toString();
 		log.debug(LogUtils.replace(copyCommand));
 		return copyCommand;

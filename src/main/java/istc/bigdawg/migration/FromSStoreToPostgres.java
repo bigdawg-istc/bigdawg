@@ -37,8 +37,8 @@ public class FromSStoreToPostgres
         }
         FromSStoreToPostgresImplementation migrator = new FromSStoreToPostgresImplementation(
         		connectionFrom, fromTable, connectionTo, toTable);
-//        return migrator.migrate();
-        return migrator.migrateBin();
+        return migrator.migrate();
+//        return migrator.migrateBin();
     }
 
     @Override
@@ -81,10 +81,10 @@ public class FromSStoreToPostgres
 		FromSStoreToPostgres migrator = new FromSStoreToPostgres();
 		SStoreSQLConnectionInfo conFrom = new SStoreSQLConnectionInfo("localhost",
 				"21212", "", "user", "password");
-		String tableFrom = "CUSTOMER";
+		String tableFrom = "ORDERS";
 		PostgreSQLConnectionInfo conTo = new PostgreSQLConnectionInfo(
 				"localhost", "5430", "test_db", "pguser", "");
-		String tableTo = "CUSTOMER";
+		String tableTo = "ORDERS1";
 		long startTime = System.currentTimeMillis();
 		MigrationResult result = migrator.migrate(conFrom, tableFrom, conTo, tableTo);
 		long endTime = System.currentTimeMillis();

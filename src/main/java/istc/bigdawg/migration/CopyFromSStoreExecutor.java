@@ -59,7 +59,7 @@ public class CopyFromSStoreExecutor implements Callable<Long> {
 	 */
 	public Long call() {
 		log.info("start call: Copy from PostgreSQL (Executor)");
-	    	System.out.println("copy from expert has been called! outputfile is: " + outputFile);
+//	    	System.out.println("copy from expert has been called! outputfile is: " + outputFile);
 		if (output == null) {
 			try {
 				output = new BufferedOutputStream(new FileOutputStream(outputFile));

@@ -66,7 +66,6 @@ public class CopyToSStoreExecutor implements Callable<Long> {
 	 */
 	public Long call() {
 		log.info("start call: Copy to S-Store (Executor)");
-    	System.out.println("copy from expert has been called! inputfile is: " + inputFile);
 		if (input == null) {
 			try {
 				input = new BufferedInputStream(new FileInputStream(inputFile));
