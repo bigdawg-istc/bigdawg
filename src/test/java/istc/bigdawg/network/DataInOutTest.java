@@ -261,7 +261,8 @@ public class DataInOutTest {
 		logger.debug("Total number of bytes for transfer: " + totalBytes);
 		long startTimeMigration = System.currentTimeMillis();
 		List<Callable<Object>> tasks = new ArrayList<>();
-		tasks.add(getSenderCallable(pipeOut, 2, "localhost"));
+		/* send data to francisco */
+		tasks.add(getSenderCallable(pipeOut, 2, "francisco"));
 		tasks.add(getWriteBytesCallable(pipeOut, totalBytes));
 		ExecutorService executor = Executors.newFixedThreadPool(tasks.size());
 		List<Future<Object>> results = TaskExecutor.execute(executor, tasks);
