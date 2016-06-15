@@ -31,13 +31,14 @@ import org.junit.Test;
 import istc.bigdawg.LoggerSetup;
 import istc.bigdawg.exceptions.RunShellException;
 import istc.bigdawg.utils.Pipe;
+import istc.bigdawg.utils.StackTrace;
 import istc.bigdawg.utils.SystemUtilities;
 import istc.bigdawg.utils.TaskExecutor;
 
 /**
  * @author Adam Dziedzic
  * 
- *
+ * run form maven: mvn -Dtest=DataInOutTest#testBigDataTransfer test -P dev
  */
 public class DataInOutTest {
 
@@ -50,6 +51,12 @@ public class DataInOutTest {
 	/** Chunk size for the buffer - how much data we read/write in one go. */
 	private final static int CHUNK_SIZE = 64 * 1024;
 
+	private final static long MB = 1024L * 1024L;
+	private final static long GB = 1024L * MB;
+
+	/* 2 GB of data: 2 * 2^30 */
+	private final static long totalBytes = 4L * GB;
+
 	@Before
 	public void setUp() {
 		LoggerSetup.setLogging();
@@ -59,21 +66,35 @@ public class DataInOutTest {
 	/* The separate thread to receive the data. */
 	Callable<Object> getReceiverCallable(String fullPathIn) {
 		return () -> {
-			logger.debug("Start receiving data.");
-			DataIn.receive(4444, fullPathIn);
-			return null;
+			try {
+				logger.debug("Start receiving data.");
+				DataIn.receive(4444, fullPathIn);
+				return null;
+			} catch (Exception e) {
+				logger.error(
+						e.getMessage() + " " + StackTrace.getFullStackTrace(e));
+				throw e;
+			}
 		};
 	}
 
 	/** The separate thread to send the data. */
-	Callable<Object> getSenderCallable(String fullPathOut, int sleepSeconds) {
+	Callable<Object> getSenderCallable(String fullPathOut, int sleepSeconds,
+			String host) {
 		return () -> {
-			/* the main part of the test */
-			TimeUnit.SECONDS.sleep(sleepSeconds);
-			logger.debug("Start sending data.");
-			DataOut.send("localhost", 4444, fullPathOut);
-			return null;
+			try {
+				/* the main part of the test */
+				TimeUnit.SECONDS.sleep(sleepSeconds);
+				logger.debug("Start sending data.");
+				DataOut.send(host, 4444, fullPathOut);
+				return null;
+			} catch (Exception e) {
+				logger.error(
+						e.getMessage() + " " + StackTrace.getFullStackTrace(e));
+				throw e;
+			}
 		};
+
 	}
 
 	/**
@@ -89,18 +110,25 @@ public class DataInOutTest {
 	Callable<Object> getWriteBytesCallable(String filePath, long bytesWritten)
 			throws IOException {
 		return () -> {
-			logger.debug("Start writing data to the pipe/file: " + filePath);
-			File file = new File(filePath);
-			byte[] bytes = new byte[CHUNK_SIZE];
-			OutputStream out = new BufferedOutputStream(
-					new FileOutputStream(file));
-			long iterationNumber = bytesWritten / CHUNK_SIZE;
-			for (int i = 0; i < iterationNumber; ++i) {
-				logger.debug("iteration number in writes: " + i);
-				out.write(bytes, 0, CHUNK_SIZE);
+			try {
+				logger.debug(
+						"Start writing data to the pipe/file: " + filePath);
+				File file = new File(filePath);
+				byte[] bytes = new byte[CHUNK_SIZE];
+				OutputStream out = new BufferedOutputStream(
+						new FileOutputStream(file));
+				long iterationNumber = bytesWritten / CHUNK_SIZE;
+				for (int i = 0; i < iterationNumber; ++i) {
+					// logger.debug("iteration number in writes: " + i);
+					out.write(bytes, 0, CHUNK_SIZE);
+				}
+				out.close();
+				return null;
+			} catch (Exception e) {
+				logger.error(
+						e.getMessage() + " " + StackTrace.getFullStackTrace(e));
+				throw e;
 			}
-			out.close();
-			return null;
 		};
 	}
 
@@ -114,18 +142,26 @@ public class DataInOutTest {
 	 */
 	Callable<Object> getReadBytesCallable(String filePath) throws IOException {
 		return () -> {
-			logger.debug("Start reading data from the pipe/file: " + filePath);
-			File file = new File(filePath);
-			byte[] bytes = new byte[CHUNK_SIZE];
-			InputStream in = new BufferedInputStream(new FileInputStream(file));
-			long totalBytesRead = 0;
-			int bytesRead;
-			do {
-				bytesRead = in.read(bytes);
-				totalBytesRead += bytesRead;
-			} while (bytesRead > 0);
-			in.close();
-			return totalBytesRead;
+			try {
+				logger.debug(
+						"Start reading data from the pipe/file: " + filePath);
+				File file = new File(filePath);
+				byte[] bytes = new byte[CHUNK_SIZE];
+				InputStream in = new BufferedInputStream(
+						new FileInputStream(file));
+				long totalBytesRead = 0;
+				long bytesRead = 0;
+				do {
+					totalBytesRead += bytesRead;
+					bytesRead = in.read(bytes);
+				} while (bytesRead > 0);
+				in.close();
+				return totalBytesRead;
+			} catch (Exception e) {
+				logger.error(
+						e.getMessage() + " " + StackTrace.getFullStackTrace(e));
+				throw e;
+			}
 		};
 	}
 
@@ -161,7 +197,7 @@ public class DataInOutTest {
 		/* run the network transfer */
 		List<Callable<Object>> tasks = new ArrayList<>();
 		tasks.add(getReceiverCallable(fullPathIn));
-		tasks.add(getSenderCallable(fullPathOut, 2));
+		tasks.add(getSenderCallable(fullPathOut, 2, "localhost"));
 		ExecutorService executor = Executors.newFixedThreadPool(tasks.size());
 		List<Future<Object>> results = TaskExecutor.execute(executor, tasks);
 		assertNull(results.get(0).get());
@@ -191,13 +227,13 @@ public class DataInOutTest {
 		String pipeOut = Pipe.INSTANCE.createAndGetFullName("data_out");
 		String pipeIn = Pipe.INSTANCE.createAndGetFullName("data_in");
 
-		/* 2 GB of data: 2 ^ 32 */
-		long totalBytes = 2 * 1024 * 1024 * 1024;
-		logger.debug("total bytes: " + totalBytes);
+		/* 2 GB of data: 2 * 2^30 */
+		long totalBytes = 4L * GB;
+		logger.debug("Total number of bytes for transfer: " + totalBytes);
 		long startTimeMigration = System.currentTimeMillis();
 		List<Callable<Object>> tasks = new ArrayList<>();
 		tasks.add(getReceiverCallable(pipeIn));
-		tasks.add(getSenderCallable(pipeOut, 2));
+		tasks.add(getSenderCallable(pipeOut, 2, "localhost"));
 		tasks.add(getWriteBytesCallable(pipeOut, totalBytes));
 		tasks.add(getReadBytesCallable(pipeIn));
 		ExecutorService executor = Executors.newFixedThreadPool(tasks.size());
@@ -205,10 +241,64 @@ public class DataInOutTest {
 		assertNull(results.get(0).get());
 		assertNull(results.get(1).get());
 		assertNull(results.get(2).get());
-		assertEquals(totalBytes, results.get(3).get());
+		assertEquals(totalBytes, (long) results.get(3).get());
 		long endTimeMigration = System.currentTimeMillis();
 		long durationMsec = endTimeMigration - startTimeMigration;
-		double speed = (totalBytes / 1024) / (durationMsec / 1000.0);
+		double durationSec = (durationMsec / 1000.0);
+		logger.debug("data transfer duration: " + durationSec + " sec");
+		logger.debug(
+				"total number of GBs transferred: " + totalBytes * 1.0 / GB);
+		double speed = (totalBytes / MB) / durationSec;
+		logger.debug("speed: " + speed + " MB/sec");
+	}
+
+	@Test
+	/** Test transfer of big data via network. */
+	public void testSendBigDataTransfer() throws IOException,
+			InterruptedException, RunShellException, ExecutionException {
+		String pipeOut = Pipe.INSTANCE.createAndGetFullName("data_out");
+
+		logger.debug("Total number of bytes for transfer: " + totalBytes);
+		long startTimeMigration = System.currentTimeMillis();
+		List<Callable<Object>> tasks = new ArrayList<>();
+		tasks.add(getSenderCallable(pipeOut, 2, "localhost"));
+		tasks.add(getWriteBytesCallable(pipeOut, totalBytes));
+		ExecutorService executor = Executors.newFixedThreadPool(tasks.size());
+		List<Future<Object>> results = TaskExecutor.execute(executor, tasks);
+		assertNull(results.get(0).get());
+		assertNull(results.get(1).get());
+		long endTimeMigration = System.currentTimeMillis();
+		long durationMsec = endTimeMigration - startTimeMigration;
+		double durationSec = (durationMsec / 1000.0);
+		logger.debug("data transfer duration: " + durationSec + " sec");
+		logger.debug(
+				"total number of GBs transferred: " + totalBytes * 1.0 / GB);
+		double speed = (totalBytes / MB) / durationSec;
+		logger.debug("speed: " + speed + " MB/sec");
+	}
+
+	@Test
+	/** Test transfer of big data via network. */
+	public void testReceiveBigDataTransfer() throws IOException,
+			InterruptedException, RunShellException, ExecutionException {
+		String pipeIn = Pipe.INSTANCE.createAndGetFullName("data_in");
+
+		logger.debug("Total number of bytes for transfer: " + totalBytes);
+		long startTimeMigration = System.currentTimeMillis();
+		List<Callable<Object>> tasks = new ArrayList<>();
+		tasks.add(getReceiverCallable(pipeIn));
+		tasks.add(getReadBytesCallable(pipeIn));
+		ExecutorService executor = Executors.newFixedThreadPool(tasks.size());
+		List<Future<Object>> results = TaskExecutor.execute(executor, tasks);
+		assertNull(results.get(0).get());
+		assertEquals(totalBytes, (long) results.get(1).get());
+		long endTimeMigration = System.currentTimeMillis();
+		long durationMsec = endTimeMigration - startTimeMigration;
+		double durationSec = (durationMsec / 1000.0);
+		logger.debug("data transfer duration: " + durationSec + " sec");
+		logger.debug(
+				"total number of GBs transferred: " + totalBytes * 1.0 / GB);
+		double speed = (totalBytes / MB) / durationSec;
 		logger.debug("speed: " + speed + " MB/sec");
 	}
 
