@@ -52,13 +52,12 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 	private String toTable;
 
 	public FromPostgresToPostgres() {
-		super();
+
 	}
 
 	public FromPostgresToPostgres(PostgreSQLConnectionInfo connectionFrom,
 			String fromTable, PostgreSQLConnectionInfo connectionTo,
 			String toTable) {
-		super();
 		this.connectionFrom = connectionFrom;
 		this.fromTable = fromTable;
 		this.connectionTo = connectionTo;
@@ -122,12 +121,17 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 		return schemaTable;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see istc.bigdawg.migration.FromDatabaseToDatabase#execute()
-	 */
 	@Override
+	public MigrationResult executeMigrationLocalRemote()
+			throws MigrationException {
+		return this.executeMigration();
+	}
+
+	@Override
+	public MigrationResult executeMigrationLocally() throws MigrationException {
+		return this.executeMigration();
+	}
+
 	public MigrationResult executeMigration() throws MigrationException {
 		TimeStamp startTimeStamp = TimeStamp.getCurrentTime();
 		logger.debug("start migration: " + startTimeStamp.toDateString());

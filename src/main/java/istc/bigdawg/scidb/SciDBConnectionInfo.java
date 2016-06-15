@@ -197,4 +197,12 @@ public class SciDBConnectionInfo implements ConnectionInfo {
 		return database;
 	}
 
+	/* (non-Javadoc)
+	 * @see istc.bigdawg.query.ConnectionInfo#toSimpleString()
+	 */
+	@Override
+	public String toSimpleString() {
+		
+	}
+
 }

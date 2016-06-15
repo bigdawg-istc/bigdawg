@@ -8,9 +8,10 @@ import java.util.concurrent.Callable;
 /**
  * @author Adam Dziedzic
  * 
- * Export interface - export data from a database.
+ *         Export interface - export data from a database.
  */
-public interface Export extends Callable<Object> {
+public interface Export
+		extends Callable<Object>, ConnectorChecker, SetMigrationInfo {
 
 	/**
 	 * Export data from a database.
@@ -20,4 +21,11 @@ public interface Export extends Callable<Object> {
 	 *             Problem during export.
 	 */
 	public Object call() throws Exception;
+
+	/**
+	 * 
+	 * @param filePath
+	 *            Full path to the file to which the data should be exported.
+	 */
+	public void setExportTo(String filePath);
 }

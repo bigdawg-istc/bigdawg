@@ -53,12 +53,11 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase {
 		return null;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see istc.bigdawg.migration.MigrationNetworkRequest#execute()
-	 */
 	@Override
+	public MigrationResult executeMigrationLocally() throws MigrationException {
+		return this.executeMigration();
+	}
+
 	public MigrationResult executeMigration() throws MigrationException {
 		if (this.connectionFrom == null || this.fromArray == null
 				|| this.connectionTo == null || this.toTable == null) {
@@ -87,7 +86,9 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase {
 		System.out.println(result);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see istc.bigdawg.migration.FromDatabaseToDatabase#getConnectionFrom()
 	 */
 	@Override
@@ -95,7 +96,9 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase {
 		return connectionFrom;
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see istc.bigdawg.migration.FromDatabaseToDatabase#getConnecitonTo()
 	 */
 	@Override

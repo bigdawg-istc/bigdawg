@@ -16,4 +16,12 @@ package istc.bigdawg.migration;
  */
 public enum FileFormat {
 	CSV, BIN_POSTGRES, BIN_SCIDB;
+
+	/**
+	 * 
+	 * @return Vertical pipe '|' as the default CSV delimiter.
+	 */
+	public char getCsvDelimiter() {
+		return '|';
+	}
 }

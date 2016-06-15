@@ -95,4 +95,9 @@ public interface ConnectionInfo extends Serializable {
 			super(message, cause);
 		}
 	}
+
+	/**
+	 * @return
+	 */
+	public String toSimpleString();
 }

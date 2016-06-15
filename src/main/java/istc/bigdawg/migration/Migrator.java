@@ -21,7 +21,15 @@ import istc.bigdawg.query.ConnectionInfo;
  */
 public class Migrator {
 
+	/**
+	 * log
+	 */
 	private static Logger logger = Logger.getLogger(Migrator.class.getName());
+
+	/**
+	 * Register migrators - they will be called for migration between database
+	 * when the requests come.
+	 */
 	private static List<FromDatabaseToDatabase> registeredMigrators;
 
 	/**
@@ -68,8 +76,8 @@ public class Migrator {
 					throws MigrationException {
 		logger.debug("Migrator - main facade.");
 		for (FromDatabaseToDatabase migrator : registeredMigrators) {
-			MigrationResult result = migrator.migrate(connectionFrom,
-					objectFrom, connectionTo, objectTo);
+			MigrationResult result = migrator.migrate(new MigrationInfo(
+					connectionFrom, objectFrom, connectionTo, objectTo));
 			if (result != null) {
 				return result;
 			}

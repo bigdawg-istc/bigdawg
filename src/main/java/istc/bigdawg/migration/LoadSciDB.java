@@ -7,6 +7,7 @@ import java.sql.SQLException;
 
 import org.apache.log4j.Logger;
 
+import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
 import istc.bigdawg.scidb.SciDBHandler;
 import istc.bigdawg.utils.LogUtils;
@@ -23,11 +24,18 @@ public class LoadSciDB implements Load {
 	/* log */
 	private static Logger log = Logger.getLogger(LoadSciDB.class);
 
-	/* SciDB connection info */
+	/* SciDB connection info - to which database we want to load the data. */
 	private SciDBConnectionInfo connectionTo;
 	private final SciDBArrays arrays;
-	private final String scidbFilePath;
+	private String scidbFilePath;
 	private String binaryFormat = null;
+
+	/**
+	 * Information about the migration process.
+	 * 
+	 * {@link #setMigrationInfo(MigrationInfo)}
+	 */
+	private MigrationInfo migrationInfo = null;
 
 	public LoadSciDB(SciDBConnectionInfo connectionTo, SciDBArrays arrays,
 			String scidbFilePath) {
@@ -93,6 +101,48 @@ public class LoadSciDB implements Load {
 		handler.commit();
 		handler.close();
 		return "Data successfuly loaded to SciDB";
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * istc.bigdawg.migration.ConnectorChecker#isSupportedConnector(istc.bigdawg
+	 * .query.ConnectionInfo)
+	 */
+	@Override
+	public boolean isSupportedConnector(ConnectionInfo connection) {
+		if (connection instanceof SciDBConnectionInfo) {
+			return true;
+		}
+		return false;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * istc.bigdawg.migration.SetMigrationInfo#setMigrationInfo(istc.bigdawg.
+	 * migration.MigrationInfo)
+	 */
+	@Override
+	public void setMigrationInfo(MigrationInfo migrationInfo) {
+		this.migrationInfo = migrationInfo;
+	}
+
+	/**
+	 * @return the migrationInfo
+	 */
+	public MigrationInfo getMigrationInfo() {
+		return migrationInfo;
+	}
+
+	/* (non-Javadoc)
+	 * @see istc.bigdawg.migration.Load#setLoadFrom(java.lang.String)
+	 */
+	@Override
+	public void setLoadFrom(String filePath) {
+		this.scidbFilePath = filePath;
 	}
 
 }

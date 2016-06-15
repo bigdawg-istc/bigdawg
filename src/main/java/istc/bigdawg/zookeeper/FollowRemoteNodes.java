@@ -55,8 +55,8 @@ public class FollowRemoteNodes {
 					EventType.NodeDeleted));
 		}
 		callables.add(callable);
-		logger.debug(
-				"The number of threads in the executor: number of nodes to follow + the migration execution.");
+		logger.debug("The number of threads in the executor: "
+				+ "number of nodes to follow + the migration execution.");
 		ExecutorService executor = Executors
 				.newFixedThreadPool(ipAddresses.size() + 1);
 		try {

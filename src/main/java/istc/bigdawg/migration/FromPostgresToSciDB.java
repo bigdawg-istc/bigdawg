@@ -67,13 +67,17 @@ public class FromPostgresToSciDB extends FromDatabaseToDatabase {
 
 	}
 
+	@Override
+	public MigrationResult executeMigrationLocally() throws MigrationException {
+		return this.executeMigration();
+	}
+
 	/**
 	 * Execute the migration.
 	 * 
 	 * @return MigrationResult
 	 * @throws MigrationException
 	 */
-	@Override
 	public MigrationResult executeMigration() throws MigrationException {
 		if (this.connectionFrom == null || this.fromTable == null
 				|| this.connectionTo == null || this.toArray == null) {
