@@ -94,12 +94,10 @@ public class AFLQueryGenerator implements OperatorVisitor {
 		List<SciDBExpression> expressions = new ArrayList<>();
 		
 		join.getChildren().get(0).accept(this);
-//		if (!lastFunction.isEmpty() && lastFunction.peek().pruneToken != null) lastFunction.peek().alias = lastFunction.peek().pruneToken; else
 		if (!lastFunction.isEmpty() && !join.getAliases().isEmpty()) lastFunction.peek().alias = join.getAliases().get(0);
 		expressions.add(lastFunction.pop());
 		
 		join.getChildren().get(1).accept(this);
-//		if (!lastFunction.isEmpty() && lastFunction.peek().pruneToken != null) lastFunction.peek().alias = lastFunction.peek().pruneToken; else
 		if (!lastFunction.isEmpty() && !join.getAliases().isEmpty()) lastFunction.peek().alias = join.getAliases().get(1);
 		expressions.add(lastFunction.pop());
 		
