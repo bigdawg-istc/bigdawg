@@ -30,4 +30,7 @@ hs_err_pid*
 src/main/cmigrator/postgres2scidb
 src/main/cmigrator/scidb2postgres
 
+.vagrant
+.DS_Store
+*.DS_Store
 
