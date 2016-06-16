@@ -171,6 +171,7 @@ function load_tables {
 
 # main function
 function load_tpch {
+# This is widely used benchmark dataset for business settings
     cd ${downloads_dir}
     mkdir -p tpch
     cd tpch
