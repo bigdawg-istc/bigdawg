@@ -12,7 +12,7 @@ initial_dir=$(pwd)
 ln -s ~/Downloads Downloads
 
 # OR use this for a non-vagrant setup
-mkdir Downloads
+# mkdir Downloads
 
 cd Downloads
 downloads_dir=$(pwd)
