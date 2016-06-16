@@ -76,7 +76,7 @@ public class CopyFromSStoreExecutor implements Callable<Long> {
 //		System.out.println("issue command to PostgreSQL: Copy from PostgreSQL (Executor)");
 		try {
 			countExtractedRows =
-					SStoreSQLHandler.executePreparedStatement(connection, copyFromString, tableName, trim);
+					SStoreSQLHandler.executePreparedStatement(connection, copyFromString, tableName, trim, outputFile);
 //			connection.commit();
 			output.close();
 		} catch (IOException | SQLException e) {

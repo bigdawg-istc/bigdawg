@@ -412,7 +412,7 @@ public class SStoreSQLHandler implements DBHandler {
     }
 
     public static Long executePreparedStatement(Connection connection, String copyFromString, String tableName,
-	    String trim) throws SQLException {
+	    String trim, String outputFile) throws SQLException {
 	
 	PreparedStatement statement = null;
 	Long countExtractedRows = 0L;
@@ -421,6 +421,7 @@ public class SStoreSQLHandler implements DBHandler {
 		statement.setInt(1, 0);
 		statement.setString(2, tableName);
 		statement.setString(3, trim);
+		statement.setString(4, outputFile);
 		statement.executeQuery();
 		statement.close();
 	} catch (SQLException ex) {
@@ -446,12 +447,12 @@ public class SStoreSQLHandler implements DBHandler {
     }
     
     public static String getExportCommand() {
-	return "{call @ExtractionRemote(?, ?, ?)}";
+	return "{call @ExtractionRemote(?, ?, ?, ?)}";
     }
     
     public static void executePreparedImportStatement(
     		Connection connection, String copyToString, 
-    		String tableName, InputStream inStream, String trim) throws SQLException {
+    		String tableName, InputStream inStream, String trim, String outputFile) throws SQLException {
     	
     	PreparedStatement statement = null;
     	try {
@@ -459,6 +460,7 @@ public class SStoreSQLHandler implements DBHandler {
     		statement.setString(1, tableName);
     		statement.setBinaryStream(2, inStream);
     		statement.setString(3, trim);
+    		statement.setString(4, outputFile);
     		statement.executeQuery();
     		statement.close();
     	} catch (SQLException ex) {
@@ -476,7 +478,7 @@ public class SStoreSQLHandler implements DBHandler {
         }
         
    public static String getImportCommand() {
-    	return "{call @LoadMultipartitionTable(?, ?, ?)}";
+    	return "{call @LoadMultipartitionTable(?, ?, ?, ?)}";
     }
 
 }
