@@ -134,37 +134,25 @@ public class PostgreSQLConnectionInfo implements ConnectionInfo {
 
 		return result.toString();
 	}
-	
-	public String toSimpleString() {
-		StringBuilder result = new StringBuilder();
-
-		result.append(this.getClass().getName() + " Object {");
-		result.append(" Host: " + this.getHost());
-		result.append(" Port: " + this.getPort());
-		result.append(" Database: " + this.getDatabase());
-		result.append(" User: " + this.getUser());
-		result.append(" Password: This is a secret!");
-		result.append("}");
-
-		return result.toString();
-	}
 
 	@Override
 	public Collection<String> getCleanupQuery(Collection<String> objects) {
-		return Collections.singleton(String.format(CLEANUP_STRING, String.join(", ", objects)));
+		return Collections.singleton(
+				String.format(CLEANUP_STRING, String.join(", ", objects)));
 	}
 
 	@Override
 	public long[] computeHistogram(String object, String attribute,
-			double start, double end, int numBuckets) throws ExecutorEngine.LocalQueryExecutionException {
+			double start, double end, int numBuckets)
+					throws ExecutorEngine.LocalQueryExecutionException {
 		// TODO: handle non-numerical data
 		long[] result = new long[numBuckets];
 
 		String query = "SELECT width_bucket(%s, %s, %s, %s), COUNT(*) FROM %s GROUP BY 1 ORDER BY 1;";
 		List<List<String>> raw = ((JdbcQueryResult) new PostgreSQLHandler(this)
-				.execute(String.format(query, attribute, start,
-						end, numBuckets, object)).get())
-				.getRows();
+				.execute(String.format(query, attribute, start, end, numBuckets,
+						object))
+				.get()).getRows();
 
 		for (int i = 0; i < raw.size(); i++) {
 			List<String> row = raw.get(i);
@@ -179,8 +167,7 @@ public class PostgreSQLConnectionInfo implements ConnectionInfo {
 			throws ExecutorEngine.LocalQueryExecutionException, ParseException {
 		String query = "SELECT min(%s), max(%s) FROM %s;";
 		List<String> raw = ((JdbcQueryResult) new PostgreSQLHandler(this)
-				.execute(
-						String.format(query, attribute, attribute, object))
+				.execute(String.format(query, attribute, attribute, object))
 				.get()).getRows().get(0);
 		NumberFormat nf = NumberFormat.getInstance();
 		return new ImmutablePair<>(nf.parse(raw.get(0)), nf.parse(raw.get(1)));

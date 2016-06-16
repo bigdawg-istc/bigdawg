@@ -21,9 +21,12 @@ public class MigrationResult implements Serializable {
 	 * The objects of the class are serializable
 	 */
 	private static final long serialVersionUID = 1L;
-	
+
 	private Long countExtractedElements;
 	private Long countLoadedElements;
+	private Long startTimeMigration;
+	private Long endTimeMigration;
+	private Long durationMsec;
 	private String message;
 	private boolean isError;
 
@@ -56,6 +59,17 @@ public class MigrationResult implements Serializable {
 		this.isError = isError;
 	}
 
+	public MigrationResult(Long countExtractedElements,
+			Long countLoadedElements, Long startTimeMigration,
+			Long endTimeMigration, Long durationMsec) {
+		super();
+		this.countExtractedElements = countExtractedElements;
+		this.countLoadedElements = countLoadedElements;
+		this.startTimeMigration = startTimeMigration;
+		this.endTimeMigration = endTimeMigration;
+		this.durationMsec = durationMsec;
+	}
+
 	/** General message about the migration process. */
 	public String getMessage() {
 		return message;
@@ -80,6 +94,27 @@ public class MigrationResult implements Serializable {
 	 */
 	public Long getCountLoadedElements() {
 		return countLoadedElements;
+	}
+
+	/**
+	 * @return the startTimeMigration
+	 */
+	public Long getStartTimeMigration() {
+		return startTimeMigration;
+	}
+
+	/**
+	 * @return the endTimeMigration
+	 */
+	public Long getEndTimeMigration() {
+		return endTimeMigration;
+	}
+
+	/**
+	 * @return the durationMsec
+	 */
+	public Long getDurationMsec() {
+		return durationMsec;
 	}
 
 	/**
@@ -131,7 +166,9 @@ public class MigrationResult implements Serializable {
 	public String toString() {
 		return "MigrationResult [countExtractedElements="
 				+ countExtractedElements + ", countLoadedElements="
-				+ countLoadedElements + ", message=" + message + ", isError="
+				+ countLoadedElements + ", durationMsec=" + durationMsec
+				+ ", startTime=" + startTimeMigration + ", endTime="
+				+ endTimeMigration + ", message=" + message + ", isError="
 				+ isError + "]";
 	}
 
@@ -148,8 +185,14 @@ public class MigrationResult implements Serializable {
 				: countExtractedElements.hashCode());
 		result = prime * result + ((countLoadedElements == null) ? 0
 				: countLoadedElements.hashCode());
+		result = prime * result
+				+ ((durationMsec == null) ? 0 : durationMsec.hashCode());
+		result = prime * result + ((endTimeMigration == null) ? 0
+				: endTimeMigration.hashCode());
 		result = prime * result + (isError ? 1231 : 1237);
 		result = prime * result + ((message == null) ? 0 : message.hashCode());
+		result = prime * result + ((startTimeMigration == null) ? 0
+				: startTimeMigration.hashCode());
 		return result;
 	}
 
@@ -177,12 +220,27 @@ public class MigrationResult implements Serializable {
 				return false;
 		} else if (!countLoadedElements.equals(other.countLoadedElements))
 			return false;
+		if (durationMsec == null) {
+			if (other.durationMsec != null)
+				return false;
+		} else if (!durationMsec.equals(other.durationMsec))
+			return false;
+		if (endTimeMigration == null) {
+			if (other.endTimeMigration != null)
+				return false;
+		} else if (!endTimeMigration.equals(other.endTimeMigration))
+			return false;
 		if (isError != other.isError)
 			return false;
 		if (message == null) {
 			if (other.message != null)
 				return false;
 		} else if (!message.equals(other.message))
+			return false;
+		if (startTimeMigration == null) {
+			if (other.startTimeMigration != null)
+				return false;
+		} else if (!startTimeMigration.equals(other.startTimeMigration))
 			return false;
 		return true;
 	}

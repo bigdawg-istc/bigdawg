@@ -125,13 +125,14 @@ public class FromDatabaseToDatabase implements MigrationNetworkRequest {
 	/** The method which implements the execution of data migration */
 	public MigrationResult executeMigrationLocalRemote()
 			throws MigrationException {
-		if
+		// TODO: migration via network
+		return null;
 	}
 
 	/**
 	 * Execute the migration on this single machine.
 	 * 
-	 * @return
+	 * @return {@link MigrationResult}
 	 * @throws MigrationException
 	 * @throws @throws
 	 *             RunShellException
@@ -158,34 +159,54 @@ public class FromDatabaseToDatabase implements MigrationNetworkRequest {
 			long countLoadedElements = (Long) results.get(0).get();
 			long endTimeMigration = System.currentTimeMillis();
 			long durationMsec = endTimeMigration - startTimeMigration;
-			log.debug("migration duration time msec: " + durationMsec);
-			MigrationStatistics stats = new MigrationStatistics(
-					migrationInfo.getConnectionFrom(),
-					migrationInfo.getConnectionTo(),
-					migrationInfo.getObjectFrom(), migrationInfo.getObjectTo(),
-					startTimeMigration, endTimeMigration,
-					countExtractedElements, countLoadedElements,
-					this.getClass().getName());
-			Monitor.addMigrationStats(stats);
-			log.debug("Migration result,connectionFrom,"
-					+ migrationInfo.getConnectionFrom().toSimpleString()
-					+ ",connectionTo,"
-					+ migrationInfo.getConnectionTo().toSimpleString()
-					+ ",fromTable," + migrationInfo.getObjectFrom()
-					+ ",toTable," + migrationInfo.getObjectTo()
-					+ ",startTimeMigration," + startTimeMigration
-					+ ",endTi	meMigration," + endTimeMigration
-					+ ",countExtractedElements," + countExtractedElements
-					+ ",countLoadedElements," + countLoadedElements
-					+ ",durationMsec," + durationMsec);
-			return new MigrationResult(countExtractedElements,
-					countLoadedElements);
+			return summary(new MigrationResult(countExtractedElements,
+					countLoadedElements, durationMsec, startTimeMigration,
+					endTimeMigration));
 		} catch (IOException | InterruptedException | RunShellException
 				| ExecutionException | SQLException e) {
 			String msg = e.getMessage();
 			log.error(msg + " " + StackTrace.getFullStackTrace(e), e);
 			throw new MigrationException(msg, e);
 		}
+	}
+
+	/**
+	 * Generate the summary of the information about the migration process, send
+	 * it to the monitor and log it.
+	 * 
+	 * @param migrationResult
+	 * @return {@link MigrationResult}
+	 * @throws SQLException
+	 */
+	MigrationResult summary(MigrationResult migrationResult)
+			throws SQLException {
+		log.debug("migration duration time msec: "
+				+ migrationResult.getDurationMsec());
+		MigrationStatistics stats = new MigrationStatistics(
+				migrationInfo.getConnectionFrom(),
+				migrationInfo.getConnectionTo(), migrationInfo.getObjectFrom(),
+				migrationInfo.getObjectTo(),
+				migrationResult.getStartTimeMigration(),
+				migrationResult.getEndTimeMigration(),
+				migrationResult.getCountExtractedElements(),
+				migrationResult.getCountLoadedElements(),
+				this.getClass().getName());
+		Monitor.addMigrationStats(stats);
+		log.debug("Migration result,connectionFrom,"
+				+ migrationInfo.getConnectionFrom().toSimpleString()
+				+ ",connectionTo,"
+				+ migrationInfo.getConnectionTo().toSimpleString()
+				+ ",fromTable," + migrationInfo.getObjectFrom() + ",toTable,"
+				+ migrationInfo.getObjectTo() + ",startTimeMigration,"
+				+ migrationResult.getStartTimeMigration()
+				+ ",endTi	meMigration,"
+				+ migrationResult.getEndTimeMigration()
+				+ ",countExtractedElements,"
+				+ migrationResult.getCountExtractedElements()
+				+ ",countLoadedElements,"
+				+ migrationResult.getCountLoadedElements() + ",durationMsec,"
+				+ migrationResult.getDurationMsec());
+		return migrationResult;
 	}
 
 	/**

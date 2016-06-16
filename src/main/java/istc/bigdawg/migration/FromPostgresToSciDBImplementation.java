@@ -227,7 +227,7 @@ public class FromPostgresToSciDBImplementation
 	public MigrationResult migrateSingleThreadCSV() throws MigrationException {
 		log.info(generalMessage + " Mode: migrateSingleThreadCSV");
 		long startTimeMigration = System.currentTimeMillis();
-		String delimiter = "|";
+		String delimiter = FileFormat.getCsvDelimiter();
 		try {
 			postgresPipe = Pipe.INSTANCE.createAndGetFullName(
 					this.getClass().getName() + "_fromPostgres_" + fromTable);

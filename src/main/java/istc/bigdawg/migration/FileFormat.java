@@ -19,9 +19,11 @@ public enum FileFormat {
 
 	/**
 	 * 
-	 * @return Vertical pipe '|' as the default CSV delimiter.
+	 * @return CSV delimiter (e.g. comma, vertical bar, etc). In some cases it
+	 *         can be longer than one character.
 	 */
-	public char getCsvDelimiter() {
-		return '|';
+	public static String getCsvDelimiter() {
+		/* Vertical pipe '|' as the default CSV delimiter. */
+		return "|";
 	}
 }

@@ -112,7 +112,7 @@ public class ExportPostgres implements Export {
 	}
 
 	/**
-	 * Initalize the required objects for the migration.  
+	 * Initialize the required objects for the migration.
 	 * 
 	 * @throws SQLException
 	 * @throws FileNotFoundException
@@ -143,9 +143,12 @@ public class ExportPostgres implements Export {
 		}
 		if (copyFromString == null) {
 			if (fileFormat == FileFormat.CSV) {
-				copyFromString = 
+				copyFromString = PostgreSQLHandler.getExportCsvCommand(
+						migrationInfo.getObjectFrom(),
+						FileFormat.getCsvDelimiter());
 			} else if (fileFormat == FileFormat.BIN_POSTGRES) {
-
+				copyFromString = PostgreSQLHandler
+						.getExportBinCommand(migrationInfo.getObjectFrom());
 			} else {
 				String msg = "Usupported type: " + fileFormat;
 				log.error(msg);
@@ -195,13 +198,6 @@ public class ExportPostgres implements Export {
 			return true;
 		}
 		return false;
-	}
-
-	/**
-	 * @return the fileFormat in which the data is exported
-	 */
-	public FileFormat getFileFormat() {
-		return fileFormat;
 	}
 
 	/*
