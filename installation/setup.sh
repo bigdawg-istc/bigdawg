@@ -7,7 +7,13 @@ sudo apt-get update
 sudo apt-get install -y libreadline-dev zlib1g-dev
 
 initial_dir=$(pwd)
+
+# use this for vagrant
+ln -s ~/Downloads Downloads
+
+# OR use this for a non-vagrant setup
 mkdir Downloads
+
 cd Downloads
 downloads_dir=$(pwd)
 
@@ -64,7 +70,6 @@ function setDB {
     ./initdb -D ${postgres_data}
     cp ${postgres_data}/postgresql.conf ${postgres_data}/postgresql.conf.backup
 
-    # dies here
     python ${initial_dir}/change_port.py -f ${postgres_data}/postgresql.conf -p ${port}
     ./pg_ctl -w start -l postgres.log -D ${postgres_data}
     cd ${init_dir}
@@ -129,10 +134,15 @@ function prepare_postgres2 {
     ./psql -p ${port_2} -c "alter role ${pguser} with password 'test'" -d template1
 
     ./psql -p ${port_2} -c "create database ${database2} owner ${pguser}" -d template1
+
+    # May return an error about there not being a root role. It's not an issue, so ignore
     ./psql -p ${port_2} -f ${initial_dir}/data/mimic2.pgd -U ${pguser} -d ${database2}
+
     # ./psql -p ${port_2} -c "create database ${database2} owner ${pguser}" -d template1
     # ./psql -p ${port_2} -c "create schema mimic2v26" -d ${database2} -U pguser
-    ./psql -p ${port_2} -f ${initial_dir}/../scripts/mimic2_sql/d_patients.sql -d ${database2}
+
+    # d_patients.sql is a legacy sample that's not even supposed to run
+    # ./psql -p ${port_2} -f ${initial_dir}/../scripts/mimic2_sql/d_patients.sql -d ${database2}
 
     # tests
     ./psql -p ${port_2} -c "create database test owner ${pguser}" -d template1 -U postgres
