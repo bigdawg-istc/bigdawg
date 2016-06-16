@@ -1,7 +1,7 @@
 /**
  * 
  */
-package istc.bigdawg.migration;
+package istc.bigdawg.migration.direct;
 
 import java.io.IOException;
 import java.sql.Connection;
@@ -22,6 +22,14 @@ import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.exceptions.NoTargetArrayException;
 import istc.bigdawg.exceptions.RunShellException;
 import istc.bigdawg.exceptions.UnsupportedTypeException;
+import istc.bigdawg.migration.ExportSciDB;
+import istc.bigdawg.migration.LoadPostgres;
+import istc.bigdawg.migration.MigrationImplementation;
+import istc.bigdawg.migration.MigrationResult;
+import istc.bigdawg.migration.MigrationStatistics;
+import istc.bigdawg.migration.PostgreSQLSciDBMigrationUtils;
+import istc.bigdawg.migration.SciDBArrays;
+import istc.bigdawg.migration.TransformBinExecutor;
 import istc.bigdawg.migration.datatypes.DataTypesFromSciDBToPostgreSQL;
 import istc.bigdawg.monitoring.Monitor;
 import istc.bigdawg.postgresql.PostgreSQLColumnMetaData;

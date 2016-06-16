@@ -11,6 +11,8 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import istc.bigdawg.exceptions.MigrationException;
+import istc.bigdawg.exceptions.UnsupportedTypeException;
+import istc.bigdawg.migration.datatypes.DataTypesFromPostgreSQLToSciDB;
 import istc.bigdawg.postgresql.PostgreSQLColumnMetaData;
 import istc.bigdawg.postgresql.PostgreSQLTableMetaData;
 import istc.bigdawg.scidb.SciDBArrayMetaData;
@@ -149,6 +151,35 @@ public class PostgreSQLSciDBMigrationUtils {
 			return true;
 		}
 		return false;
+	}
+
+	/**
+	 * example types=int32_t,int32_t null,double,double null,string,string null
+	 * 
+	 * @return scidb bin format for the transformation
+	 * 
+	 * 
+	 * @throws UnsupportedTypeException
+	 */
+	public static String getSciDBBinFormat(
+			PostgreSQLTableMetaData postgresqlTableMetaData)
+					throws UnsupportedTypeException {
+		StringBuilder binFormatBuffer = new StringBuilder();
+		List<PostgreSQLColumnMetaData> postgresColumnsOrdered = postgresqlTableMetaData
+				.getColumnsOrdered();
+		for (PostgreSQLColumnMetaData postgresColumnMetaData : postgresColumnsOrdered) {
+			String postgresColumnType = postgresColumnMetaData.getDataType();
+			String attributeType = DataTypesFromPostgreSQLToSciDB
+					.getSciDBTypeFromPostgreSQLType(postgresColumnType);
+			String attributeNULL = "";
+			if (postgresColumnMetaData.isNullable()) {
+				attributeNULL = " null";
+			}
+			binFormatBuffer.append(attributeType + attributeNULL + ",");
+		}
+		/* delete the last comma "," */
+		binFormatBuffer.deleteCharAt(binFormatBuffer.length() - 1);
+		return binFormatBuffer.toString();
 	}
 
 	/**

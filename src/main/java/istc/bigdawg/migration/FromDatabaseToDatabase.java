@@ -178,7 +178,7 @@ public class FromDatabaseToDatabase implements MigrationNetworkRequest {
 	 * @return {@link MigrationResult}
 	 * @throws SQLException
 	 */
-	MigrationResult summary(MigrationResult migrationResult)
+	public MigrationResult summary(MigrationResult migrationResult)
 			throws SQLException {
 		log.debug("migration duration time msec: "
 				+ migrationResult.getDurationMsec());
@@ -222,7 +222,7 @@ public class FromDatabaseToDatabase implements MigrationNetworkRequest {
 	 * 
 	 *         This is accessible only in this package.
 	 */
-	Callable<Object> sendNetworkRequest(String hostname) {
+	public Callable<Object> sendNetworkRequest(String hostname) {
 		return () -> {
 			try {
 				Object result = NetworkOut.send(this, hostname);
@@ -237,7 +237,7 @@ public class FromDatabaseToDatabase implements MigrationNetworkRequest {
 	 * Execute the migration request; this node is the coordinator.
 	 * 
 	 */
-	Callable<Object> executeMigrationFromLocalToRemote() {
+	public Callable<Object> executeMigrationFromLocalToRemote() {
 		return () -> {
 			/*
 			 * execute the migration: export from local machine, load on a
@@ -352,7 +352,7 @@ public class FromDatabaseToDatabase implements MigrationNetworkRequest {
 	}
 
 	/** Implicit constructor. */
-	FromDatabaseToDatabase() {
+	protected FromDatabaseToDatabase() {
 	}
 
 	/**
@@ -361,7 +361,7 @@ public class FromDatabaseToDatabase implements MigrationNetworkRequest {
 	 * @param exporter
 	 * @param loader
 	 */
-	FromDatabaseToDatabase(Export exporter, Load loader) {
+	protected FromDatabaseToDatabase(Export exporter, Load loader) {
 		this.exporter = exporter;
 		this.loader = loader;
 	}

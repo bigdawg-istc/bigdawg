@@ -52,7 +52,8 @@ public class ExportPostgres implements Export {
 	private OutputStream output = null;
 
 	/**
-	 * The format in which data should be written to the file/pipe/output strea.
+	 * The format in which data should be written to the file/pipe/output
+	 * stream.
 	 */
 	private FileFormat fileFormat = null;
 
@@ -76,7 +77,7 @@ public class ExportPostgres implements Export {
 	 * @param fileFormat
 	 *            File format in which the data should be exported.
 	 */
-	public ExportPostgres(FileFormat fileFormat) {
+	private ExportPostgres(FileFormat fileFormat) {
 		this.fileFormat = fileFormat;
 	}
 
@@ -87,7 +88,7 @@ public class ExportPostgres implements Export {
 	 * @return Instance of ExportPostgres which will export data in the
 	 *         fileFormat.
 	 */
-	public static ExportPostgres exportFormat(FileFormat fileFormat) {
+	public static ExportPostgres ofFormat(FileFormat fileFormat) {
 		return new ExportPostgres(fileFormat);
 	}
 

@@ -18,8 +18,9 @@ public class PostgreSQLColumnMetaData {
 	private int numericPrecision;
 	private int numericScale;
 
-	public PostgreSQLColumnMetaData(String name, int position, boolean isNullable, String dataType,
-			int characterMaximumLength, int numericPrecision, int numericScale) {
+	public PostgreSQLColumnMetaData(String name, int position,
+			boolean isNullable, String dataType, int characterMaximumLength,
+			int numericPrecision, int numericScale) {
 		this.name = name;
 		this.position = position;
 		this.isNullable = isNullable;
@@ -31,9 +32,11 @@ public class PostgreSQLColumnMetaData {
 
 	@Override
 	public String toString() {
-		return "PostgreSQLColumnMetaData [name=" + name + ", position=" + position + ", isNullable=" + isNullable
-				+ ", dataType=" + dataType + ", characterMaximumLength=" + characterMaximumLength
-				+ ", numericPrecision=" + numericPrecision + ", numericScale=" + numericScale + "]";
+		return "PostgreSQLColumnMetaData [name=" + name + ", position="
+				+ position + ", isNullable=" + isNullable + ", dataType="
+				+ dataType + ", characterMaximumLength="
+				+ characterMaximumLength + ", numericPrecision="
+				+ numericPrecision + ", numericScale=" + numericScale + "]";
 	}
 
 	@Override
@@ -41,7 +44,8 @@ public class PostgreSQLColumnMetaData {
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + characterMaximumLength;
-		result = prime * result + ((dataType == null) ? 0 : dataType.hashCode());
+		result = prime * result
+				+ ((dataType == null) ? 0 : dataType.hashCode());
 		result = prime * result + (isNullable ? 1231 : 1237);
 		result = prime * result + ((name == null) ? 0 : name.hashCode());
 		result = prime * result + numericPrecision;

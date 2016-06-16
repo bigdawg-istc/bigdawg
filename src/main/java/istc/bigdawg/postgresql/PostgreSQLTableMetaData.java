@@ -19,7 +19,8 @@ public class PostgreSQLTableMetaData {
 	private Map<String, PostgreSQLColumnMetaData> columnsMap;
 	private List<PostgreSQLColumnMetaData> columnsOrdered;
 
-	public PostgreSQLTableMetaData(PostgreSQLSchemaTableName schemaTable, Map<String, PostgreSQLColumnMetaData> columnsMap,
+	public PostgreSQLTableMetaData(PostgreSQLSchemaTableName schemaTable,
+			Map<String, PostgreSQLColumnMetaData> columnsMap,
 			List<PostgreSQLColumnMetaData> columnsOrdered) {
 		this.schemaTable = schemaTable;
 		this.columnsMap = columnsMap;

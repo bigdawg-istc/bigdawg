@@ -15,7 +15,7 @@ package istc.bigdawg.migration;
  *         BIN_SCIDB - binary format supported by SciDB.
  */
 public enum FileFormat {
-	CSV, BIN_POSTGRES, BIN_SCIDB;
+	CSV, BIN_POSTGRES, BIN_SCIDB, SCIDB_TEXT_FORMAT;
 
 	/**
 	 * 
@@ -25,5 +25,13 @@ public enum FileFormat {
 	public static String getCsvDelimiter() {
 		/* Vertical pipe '|' as the default CSV delimiter. */
 		return "|";
+	}
+	
+	/**
+	 * 
+	 * @return quota character " or '
+	 */
+	public static String getQuoteCharacter() {
+		return "\"";
 	}
 }

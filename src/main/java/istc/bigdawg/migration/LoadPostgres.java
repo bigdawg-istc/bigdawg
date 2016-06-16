@@ -31,7 +31,7 @@ import istc.bigdawg.utils.StackTrace;
  * 
  *         Jan 14, 2016 6:07:05 PM
  */
-class LoadPostgres implements Callable<Object> {
+public class LoadPostgres implements Callable<Object> {
 
 	/** For internal logging in the class. */
 	private static Logger log = Logger.getLogger(LoadPostgres.class);

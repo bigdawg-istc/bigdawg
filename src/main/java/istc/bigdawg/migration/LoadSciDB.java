@@ -7,10 +7,12 @@ import java.sql.SQLException;
 
 import org.apache.log4j.Logger;
 
+import istc.bigdawg.exceptions.UnsupportedTypeException;
+import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
+import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
 import istc.bigdawg.scidb.SciDBHandler;
-import istc.bigdawg.utils.LogUtils;
 
 /**
  * @author Adam Dziedzic
@@ -26,9 +28,16 @@ public class LoadSciDB implements Load {
 
 	/* SciDB connection info - to which database we want to load the data. */
 	private SciDBConnectionInfo connectionTo;
-	private final SciDBArrays arrays;
+	private SciDBArrays arrays;
+
+	/** Path to the file from which the data should be loaded. */
 	private String scidbFilePath;
-	private String binaryFormat = null;
+
+	/**
+	 * The load operator uses the format string as a guide for interpreting the
+	 * contents of the binary file.
+	 */
+	private String binaryFormatString = null;
 
 	/**
 	 * Information about the migration process.
@@ -37,11 +46,41 @@ public class LoadSciDB implements Load {
 	 */
 	private MigrationInfo migrationInfo = null;
 
+	/**
+	 * The format in which data should be written to the file/pipe/output
+	 * stream.
+	 */
+	private FileFormat fileFormat;
+
+	/**
+	 * Declare only the file format in which the data should be exported. The
+	 * remaining parameters should be added when the migration is prepared.
+	 * 
+	 * @param fileFormat
+	 *            File format in which the data should be exported.
+	 */
+	private LoadSciDB(FileFormat fileFormat) {
+		this.fileFormat = fileFormat;
+	}
+
+	/**
+	 * see: {@link #ExportPostgres(FileFormat)}
+	 * 
+	 * @param fileFormat
+	 * @return Instance of ExportPostgres which will export data in the
+	 *         fileFormat.
+	 */
+	public static LoadSciDB ofFormat(FileFormat fileFormat) {
+		return new LoadSciDB(fileFormat);
+	}
+
 	public LoadSciDB(SciDBConnectionInfo connectionTo, SciDBArrays arrays,
 			String scidbFilePath) {
 		this.connectionTo = connectionTo;
 		this.arrays = arrays;
 		this.scidbFilePath = scidbFilePath;
+		/* declare the default file format - native scidb format. */
+		this.fileFormat = FileFormat.SCIDB_TEXT_FORMAT;
 	}
 
 	/**
@@ -54,7 +93,76 @@ public class LoadSciDB implements Load {
 		this.connectionTo = connectionTo;
 		this.arrays = arrays;
 		this.scidbFilePath = scidbFilePath;
-		this.binaryFormat = binaryFormat;
+		this.binaryFormatString = binaryFormat;
+		if (this.binaryFormatString != null) {
+			this.fileFormat = FileFormat.BIN_SCIDB;
+		}
+	}
+
+	/** Get the Csv format String for CSV loading to SciDB. */
+	public static String getSciDBCsvString() {
+		StringBuilder csvString = new StringBuilder();
+		csvString.append("'");
+		csvString.append("CSV");
+		csvString.append(":");
+		final String delimiter = FileFormat.getCsvDelimiter();
+		switch (delimiter) {
+		case "|":
+			csvString.append("p");
+			break;
+		case ",":
+			csvString.append("c");
+			break;
+		case "\t":
+			csvString.append("t");
+			break;
+		default:
+			String msg = "SciDB does not support the CSV delimiter: "
+					+ delimiter + " It only supports:"
+					+ " | (vertical pipe) , (comma) and tab. ";
+			log.error(msg);
+			throw new IllegalStateException(msg);
+		}
+		final String quoteCharacter = FileFormat.getQuoteCharacter();
+		switch (quoteCharacter) {
+		case "\"":
+			csvString.append("d");
+			break;
+		case "'":
+			csvString.append("s");
+			break;
+		default:
+			String msg = "SciDB does not support the quote: " + quoteCharacter
+					+ " It only supports:" + " \" and '.";
+			log.error(msg);
+			throw new IllegalStateException(msg);
+		}
+		csvString.append("'");
+		return csvString.toString();
+	}
+
+	/**
+	 * 
+	 * @return binary format string required for binary loading to SciDB:
+	 *         http://www.paradigm4.com/HTMLmanual/14.12/scidb_ug/re30.html
+	 * @throws UnsupportedTypeException
+	 * @throws SQLException
+	 */
+	public String getBinaryFormatString()
+			throws UnsupportedTypeException, SQLException {
+		String binaryFormatString = null;
+		if (migrationInfo
+				.getConnectionFrom() instanceof PostgreSQLConnectionInfo) {
+			binaryFormatString = PostgreSQLSciDBMigrationUtils
+					.getSciDBBinFormat(new PostgreSQLHandler(
+							(PostgreSQLConnectionInfo) migrationInfo
+									.getConnectionFrom()).getColumnsMetaData(
+											migrationInfo.getObjectFrom()));
+			return binaryFormatString;
+		} else {
+			throw new IllegalArgumentException(
+					"Could not infer binary format string for SciDB loading.");
+		}
 	}
 
 	/**
@@ -85,19 +193,38 @@ public class LoadSciDB implements Load {
 		// Constants.ENCODING);
 		// log.debug("Load data to SciDB: " + resultString);
 		SciDBHandler handler = new SciDBHandler(connectionTo);
-		String loadCommand = null;
-		loadCommand = "load(" + arrays.getFlat() + ", '" + scidbFilePath + "'";
-		if (binaryFormat != null) {
-			loadCommand += ",-2,'(" + binaryFormat + ")'";
+		StringBuilder loadCommand = new StringBuilder(
+				"load(" + arrays.getFlat() + ", '" + scidbFilePath + "'");
+		if (this.fileFormat != FileFormat.SCIDB_TEXT_FORMAT) {
+			/*
+			 * -2: Load all data using the coordinator instance of the query.
+			 * This is the default.
+			 */
+			loadCommand.append(",-2,");
+		} else if (this.fileFormat == FileFormat.BIN_SCIDB) {
+			if (binaryFormatString == null) {
+				/*
+				 * We have to construct the binary format string for SciDB.
+				 */
+				binaryFormatString = getBinaryFormatString();
+			} else {
+				throw new IllegalStateException(
+						"Could not creat the binary format string for SciDB. "
+								+ "Check the supported data types and data formats.");
+			}
+			loadCommand.append("'(" + binaryFormatString + ")'");
+		} else if (this.fileFormat == FileFormat.CSV) {
+			loadCommand.append(getSciDBCsvString());
 		}
-		loadCommand += ")";
+		loadCommand.append(")");
 		if (arrays.getMultiDimensional() != null) {
-			loadCommand = "store(redimension(" + loadCommand + ","
+			loadCommand.append("store(redimension(" + loadCommand + ","
 					+ arrays.getMultiDimensional() + "),"
-					+ arrays.getMultiDimensional() + ")";
+					+ arrays.getMultiDimensional() + ")");
 		}
-		log.debug("load command: " + LogUtils.replace(loadCommand));
-		handler.executeStatementAFL(loadCommand);
+		String finalLoadCommand = loadCommand.toString();
+		log.debug("load command: " + finalLoadCommand);
+		handler.executeStatementAFL(finalLoadCommand);
 		handler.commit();
 		handler.close();
 		return "Data successfuly loaded to SciDB";
@@ -137,7 +264,9 @@ public class LoadSciDB implements Load {
 		return migrationInfo;
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see istc.bigdawg.migration.Load#setLoadFrom(java.lang.String)
 	 */
 	@Override

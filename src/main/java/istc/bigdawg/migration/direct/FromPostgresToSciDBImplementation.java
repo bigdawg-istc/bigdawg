@@ -1,7 +1,7 @@
 /**
  * 
  */
-package istc.bigdawg.migration;
+package istc.bigdawg.migration.direct;
 
 import java.io.IOException;
 import java.sql.Connection;
@@ -21,6 +21,16 @@ import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.exceptions.NoTargetArrayException;
 import istc.bigdawg.exceptions.RunShellException;
 import istc.bigdawg.exceptions.UnsupportedTypeException;
+import istc.bigdawg.migration.ExportPostgres;
+import istc.bigdawg.migration.FileFormat;
+import istc.bigdawg.migration.LoadSciDB;
+import istc.bigdawg.migration.MigrationImplementation;
+import istc.bigdawg.migration.MigrationResult;
+import istc.bigdawg.migration.MigrationStatistics;
+import istc.bigdawg.migration.PostgreSQLSciDBMigrationUtils;
+import istc.bigdawg.migration.SciDBArrays;
+import istc.bigdawg.migration.TransformBinExecutor;
+import istc.bigdawg.migration.TransformFromCsvToSciDBExecutor;
 import istc.bigdawg.migration.datatypes.DataTypesFromPostgreSQLToSciDB;
 import istc.bigdawg.monitoring.Monitor;
 import istc.bigdawg.postgresql.PostgreSQLColumnMetaData;
@@ -148,14 +158,17 @@ public class FromPostgresToSciDBImplementation
 			executor.submit(exportTask);
 
 			TransformBinExecutor transformExecutor = new TransformBinExecutor(
-					postgresPipe, scidbPipe, getSciDBBinFormat(),
+					postgresPipe, scidbPipe,
+					PostgreSQLSciDBMigrationUtils
+							.getSciDBBinFormat(postgresqlTableMetaData),
 					TransformBinExecutor.TYPE.FromPostgresToSciDB);
 			FutureTask<Long> transformTask = new FutureTask<Long>(
 					transformExecutor);
 			executor.submit(transformTask);
 
 			LoadSciDB loadExecutor = new LoadSciDB(connectionTo, arrays,
-					scidbPipe, getSciDBBinFormat());
+					scidbPipe, PostgreSQLSciDBMigrationUtils
+							.getSciDBBinFormat(postgresqlTableMetaData));
 			FutureTask<Object> loadTask = new FutureTask<Object>(loadExecutor);
 			executor.submit(loadTask);
 
@@ -165,7 +178,8 @@ public class FromPostgresToSciDBImplementation
 
 			String transformationMessage;
 			if (transformationResult != 0) {
-				String message = "Check the C++ migrator! It might need to be compiled and checked separately!";
+				String message = "Check the C++ migrator! "
+						+ "It might need to be compiled and checked separately!";
 				log.error(message);
 				throw new MigrationException(message);
 			} else {
@@ -367,33 +381,6 @@ public class FromPostgresToSciDBImplementation
 			return ex;
 		}
 		return new MigrationException(msg);
-	}
-
-	/**
-	 * example types=int32_t,int32_t null,double,double null,string,string null
-	 * 
-	 * @return scidb bin format for the transformation
-	 * 
-	 * 
-	 * @throws UnsupportedTypeException
-	 */
-	private String getSciDBBinFormat() throws UnsupportedTypeException {
-		StringBuilder binFormatBuffer = new StringBuilder();
-		List<PostgreSQLColumnMetaData> postgresColumnsOrdered = postgresqlTableMetaData
-				.getColumnsOrdered();
-		for (PostgreSQLColumnMetaData postgresColumnMetaData : postgresColumnsOrdered) {
-			String postgresColumnType = postgresColumnMetaData.getDataType();
-			String attributeType = DataTypesFromPostgreSQLToSciDB
-					.getSciDBTypeFromPostgreSQLType(postgresColumnType);
-			String attributeNULL = "";
-			if (postgresColumnMetaData.isNullable()) {
-				attributeNULL = " null";
-			}
-			binFormatBuffer.append(attributeType + attributeNULL + ",");
-		}
-		/* delete the last comma "," */
-		binFormatBuffer.deleteCharAt(binFormatBuffer.length() - 1);
-		return binFormatBuffer.toString();
 	}
 
 	/**

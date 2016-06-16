@@ -24,9 +24,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * 
  */
 public class MyriaHandler implements DBHandler {
-	
-	Logger log = org.apache.log4j.Logger.getLogger(MyriaHandler.class
-			.getName());
+
+	/**
+	 * log
+	 */
+	Logger log = Logger.getLogger(MyriaHandler.class.getName());
 
 	/*
 	 * (non-Javadoc)

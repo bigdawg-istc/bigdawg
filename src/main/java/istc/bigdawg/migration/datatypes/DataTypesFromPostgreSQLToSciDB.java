@@ -16,8 +16,9 @@ import istc.bigdawg.exceptions.UnsupportedTypeException;
  *         Feb 24, 2016 12:24:52 PM
  */
 public class DataTypesFromPostgreSQLToSciDB {
-	
-	private static Logger log = Logger.getLogger(DataTypesFromPostgreSQLToSciDB.class.getName());
+
+	private static Logger log = Logger
+			.getLogger(DataTypesFromPostgreSQLToSciDB.class.getName());
 
 	private static Map<String, String> map;
 
@@ -62,18 +63,23 @@ public class DataTypesFromPostgreSQLToSciDB {
 		} else if (postgreSQLType.contains("timestamp")
 				&& postgreSQLType.contains("with time zone")) {
 			return "datetimetz";
-		} else if (postgreSQLType.contains("timestamp") || postgreSQLType.contains("date")) {
+		} else if (postgreSQLType.contains("timestamp")
+				|| postgreSQLType.contains("date")) {
 			return "datetime";
-		} else if (postgreSQLType.contains("decimal") || postgreSQLType.contains("numeric")) {
-			log.warn("The decimal or numeric types cannot be cast precisely to types in SciDB.");
-			if(postgreSQLType.contains(",") || postgreSQLType.equals("decimal") || postgreSQLType.equals("numeric")) {
+		} else if (postgreSQLType.contains("decimal")
+				|| postgreSQLType.contains("numeric")) {
+			log.warn(
+					"The decimal or numeric types cannot be cast precisely to types in SciDB.");
+			if (postgreSQLType.contains(",") || postgreSQLType.equals("decimal")
+					|| postgreSQLType.equals("numeric")) {
 				return "double";
-			}
-			else { /* the decimal type does not contain any digits after the decimal point */
+			} else { /*
+						 * the decimal type does not contain any digits after the
+						 * decimal point
+						 */
 				return "int64"; /* this type can be insufficient */
 			}
-		}
-		else {
+		} else {
 			throw new UnsupportedTypeException("The type from PostgreSQL: "
 					+ postgreSQLType + " is not supported in SciDB.");
 		}

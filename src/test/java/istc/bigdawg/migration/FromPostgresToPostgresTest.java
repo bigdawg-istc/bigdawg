@@ -22,6 +22,7 @@ import org.junit.Test;
 import istc.bigdawg.LoggerSetup;
 import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.executor.JdbcQueryResult;
+import istc.bigdawg.migration.direct.FromPostgresToPostgres;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.query.ConnectionInfo;

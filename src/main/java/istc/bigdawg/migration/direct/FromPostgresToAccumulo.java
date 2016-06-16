@@ -1,7 +1,7 @@
 /**
  * 
  */
-package istc.bigdawg.migration;
+package istc.bigdawg.migration.direct;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;

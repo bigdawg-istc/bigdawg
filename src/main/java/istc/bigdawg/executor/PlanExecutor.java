@@ -1,10 +1,29 @@
 package istc.bigdawg.executor;
 
+import java.sql.SQLException;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
+
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
+
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 import com.jcabi.log.Logger;
 import com.jcabi.log.VerboseThreads;
+
 import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.executor.plan.BinaryJoinExecutionNode;
 import istc.bigdawg.executor.plan.ExecutionNode;
@@ -15,14 +34,6 @@ import istc.bigdawg.migration.Migrator;
 import istc.bigdawg.monitoring.Monitor;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.signature.Signature;
-import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.apache.commons.lang3.tuple.Pair;
-
-import java.sql.SQLException;
-import java.util.*;
-import java.util.concurrent.*;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 /**
  * TODO:
