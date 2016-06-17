@@ -612,10 +612,10 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 				throw e;
 			}
 			ResultSet resultSet = preparedSt.executeQuery();
-			Map<String, PostgreSQLColumnMetaData> columnsMap = new HashMap<>();
-			List<PostgreSQLColumnMetaData> columnsOrdered = new ArrayList<>();
+			Map<String, AttributeMetaData> columnsMap = new HashMap<>();
+			List<AttributeMetaData> columnsOrdered = new ArrayList<>();
 			while (resultSet.next()) {
-				PostgreSQLColumnMetaData columnMetaData = new PostgreSQLColumnMetaData(
+				AttributeMetaData columnMetaData = new AttributeMetaData(
 						resultSet.getString(1), resultSet.getInt(2),
 						resultSet.getBoolean(3), resultSet.getString(4),
 						resultSet.getInt(5), resultSet.getInt(6),
@@ -648,7 +648,7 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 	 */
 	public List<String> getColumnNames(String table) throws SQLException {
 		List<String> columnNames = new ArrayList<>();
-		for (PostgreSQLColumnMetaData meta : getColumnsMetaData(table)
+		for (AttributeMetaData meta : getColumnsMetaData(table)
 				.getColumnsOrdered()) {
 			columnNames.add(meta.getName());
 		}

@@ -30,9 +30,9 @@ import istc.bigdawg.migration.MigrationStatistics;
 import istc.bigdawg.migration.PostgreSQLSciDBMigrationUtils;
 import istc.bigdawg.migration.SciDBArrays;
 import istc.bigdawg.migration.TransformBinExecutor;
-import istc.bigdawg.migration.datatypes.DataTypesFromSciDBToPostgreSQL;
+import istc.bigdawg.migration.datatypes.FromSciDBToSQLTypes;
 import istc.bigdawg.monitoring.Monitor;
-import istc.bigdawg.postgresql.PostgreSQLColumnMetaData;
+import istc.bigdawg.postgresql.AttributeMetaData;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.postgresql.PostgreSQLSchemaTableName;
@@ -153,8 +153,8 @@ public class FromSciDBToPostgresImplementation
 		for (SciDBColumnMetaData column : columns) {
 			String colName = column.getColumnName();
 			String scidbType = column.getColumnType();
-			String postgresType = DataTypesFromSciDBToPostgreSQL
-					.getPostgreSQLTypeFromSciDBType(scidbType);
+			String postgresType = FromSciDBToSQLTypes
+					.getSQLTypeFromSciDBType(scidbType);
 			createTableStringBuf.append(colName + " " + postgresType + ",");
 		}
 		createTableStringBuf.deleteCharAt(createTableStringBuf.length() - 1);
@@ -192,8 +192,8 @@ public class FromSciDBToPostgresImplementation
 		for (SciDBColumnMetaData column : columns) {
 			String colName = column.getColumnName();
 			String scidbType = column.getColumnType();
-			String postgresType = DataTypesFromSciDBToPostgreSQL
-					.getPostgreSQLTypeFromSciDBType(scidbType);
+			String postgresType = FromSciDBToSQLTypes
+					.getSQLTypeFromSciDBType(scidbType);
 			createTableStringBuf.append(colName + " " + postgresType + ",");
 		}
 		createTableStringBuf.deleteCharAt(createTableStringBuf.length() - 1);
@@ -271,7 +271,7 @@ public class FromSciDBToPostgresImplementation
 				// can we migrate only the attributes from the SciDB array
 				List<SciDBColumnMetaData> scidbColumnsOrdered = scidbArrayMetaData
 						.getAttributesOrdered();
-				List<PostgreSQLColumnMetaData> postgresColumnsOrdered = tableMetaData
+				List<AttributeMetaData> postgresColumnsOrdered = tableMetaData
 						.getColumnsOrdered();
 				if (postgresColumnsOrdered.size() == scidbColumnsOrdered.size()
 						&& PostgreSQLSciDBMigrationUtils

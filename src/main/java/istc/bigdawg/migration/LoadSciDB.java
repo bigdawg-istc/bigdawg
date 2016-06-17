@@ -26,8 +26,14 @@ public class LoadSciDB implements Load {
 	/* log */
 	private static Logger log = Logger.getLogger(LoadSciDB.class);
 
-	/* SciDB connection info - to which database we want to load the data. */
-	private SciDBConnectionInfo connectionTo;
+	/*
+	 * SciDB connection info - to which database we want to load the data.
+	 * Information about the migration process.
+	 * 
+	 * {@link #setMigrationInfo(MigrationInfo)}
+	 */
+	private MigrationInfo migrationInfo = null;
+
 	private SciDBArrays arrays;
 
 	/** Path to the file from which the data should be loaded. */
@@ -38,13 +44,6 @@ public class LoadSciDB implements Load {
 	 * contents of the binary file.
 	 */
 	private String binaryFormatString = null;
-
-	/**
-	 * Information about the migration process.
-	 * 
-	 * {@link #setMigrationInfo(MigrationInfo)}
-	 */
-	private MigrationInfo migrationInfo = null;
 
 	/**
 	 * The format in which data should be written to the file/pipe/output
@@ -76,7 +75,7 @@ public class LoadSciDB implements Load {
 
 	public LoadSciDB(SciDBConnectionInfo connectionTo, SciDBArrays arrays,
 			String scidbFilePath) {
-		this.connectionTo = connectionTo;
+		this.migrationInfo = MigrationInfo.forConnectionTo(connectionTo);
 		this.arrays = arrays;
 		this.scidbFilePath = scidbFilePath;
 		/* declare the default file format - native scidb format. */
@@ -90,7 +89,7 @@ public class LoadSciDB implements Load {
 	 */
 	public LoadSciDB(SciDBConnectionInfo connectionTo, SciDBArrays arrays,
 			String scidbFilePath, String binaryFormat) {
-		this.connectionTo = connectionTo;
+		this.migrationInfo = MigrationInfo.forConnectionTo(connectionTo);
 		this.arrays = arrays;
 		this.scidbFilePath = scidbFilePath;
 		this.binaryFormatString = binaryFormat;
@@ -99,7 +98,11 @@ public class LoadSciDB implements Load {
 		}
 	}
 
-	/** Get the Csv format String for CSV loading to SciDB. */
+	/**
+	 * Get the Csv format String for CSV loading to SciDB.
+	 * 
+	 * http://www.paradigm4.com/HTMLmanual/14.12/scidb_ug/re30.html
+	 */
 	public static String getSciDBCsvString() {
 		StringBuilder csvString = new StringBuilder();
 		csvString.append("'");
@@ -177,10 +180,11 @@ public class LoadSciDB implements Load {
 	 */
 	public Object call() throws Exception {
 		/*
-		 * we have to create a flat array and redimension it to the final result
+		 * we have to create a flat array and re-dimension it to the final
+		 * result
 		 */
 		/*
-		 * AFL% store(redimension(load(test_waveform_flat,'/home/adam/data/
+		 * AFL% store(re-dimension(load(test_waveform_flat,'/home/adam/data/
 		 * waveform_test.scidb'),test_waveform_),test_waveform_);
 		 */
 
@@ -192,7 +196,9 @@ public class LoadSciDB implements Load {
 		// String resultString = IOUtils.toString(resultInStream,
 		// Constants.ENCODING);
 		// log.debug("Load data to SciDB: " + resultString);
-		SciDBHandler handler = new SciDBHandler(connectionTo);
+		SciDBHandler handler = new SciDBHandler(
+				migrationInfo.getConnectionTo());
+		// arrays = prepareFlatTargetArrays();
 		StringBuilder loadCommand = new StringBuilder(
 				"load(" + arrays.getFlat() + ", '" + scidbFilePath + "'");
 		if (this.fileFormat != FileFormat.SCIDB_TEXT_FORMAT) {

@@ -8,7 +8,7 @@ package istc.bigdawg.postgresql;
  * 
  *         2016 Jan 13, 2016 2:23:23 PM
  */
-public class PostgreSQLColumnMetaData {
+public class AttributeMetaData {
 
 	private String name;
 	private int position;
@@ -18,7 +18,7 @@ public class PostgreSQLColumnMetaData {
 	private int numericPrecision;
 	private int numericScale;
 
-	public PostgreSQLColumnMetaData(String name, int position,
+	public AttributeMetaData(String name, int position,
 			boolean isNullable, String dataType, int characterMaximumLength,
 			int numericPrecision, int numericScale) {
 		this.name = name;
@@ -62,7 +62,7 @@ public class PostgreSQLColumnMetaData {
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		PostgreSQLColumnMetaData other = (PostgreSQLColumnMetaData) obj;
+		AttributeMetaData other = (AttributeMetaData) obj;
 		if (characterMaximumLength != other.characterMaximumLength)
 			return false;
 		if (dataType == null) {

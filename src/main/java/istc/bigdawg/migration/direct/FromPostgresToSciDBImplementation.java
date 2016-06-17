@@ -31,9 +31,9 @@ import istc.bigdawg.migration.PostgreSQLSciDBMigrationUtils;
 import istc.bigdawg.migration.SciDBArrays;
 import istc.bigdawg.migration.TransformBinExecutor;
 import istc.bigdawg.migration.TransformFromCsvToSciDBExecutor;
-import istc.bigdawg.migration.datatypes.DataTypesFromPostgreSQLToSciDB;
+import istc.bigdawg.migration.datatypes.FromSQLTypesToSciDB;
 import istc.bigdawg.monitoring.Monitor;
-import istc.bigdawg.postgresql.PostgreSQLColumnMetaData;
+import istc.bigdawg.postgresql.AttributeMetaData;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.postgresql.PostgreSQLTableMetaData;
@@ -395,13 +395,13 @@ public class FromPostgresToSciDBImplementation
 			throws SQLException, UnsupportedTypeException, MigrationException {
 		StringBuilder createArrayStringBuf = new StringBuilder();
 		createArrayStringBuf.append("create array " + arrayName + " <");
-		List<PostgreSQLColumnMetaData> postgresColumnsOrdered = postgresqlTableMetaData
+		List<AttributeMetaData> postgresColumnsOrdered = postgresqlTableMetaData
 				.getColumnsOrdered();
-		for (PostgreSQLColumnMetaData postgresColumnMetaData : postgresColumnsOrdered) {
+		for (AttributeMetaData postgresColumnMetaData : postgresColumnsOrdered) {
 			String attributeName = postgresColumnMetaData.getName();
 			String postgresColumnType = postgresColumnMetaData.getDataType();
-			String attributeType = DataTypesFromPostgreSQLToSciDB
-					.getSciDBTypeFromPostgreSQLType(postgresColumnType);
+			String attributeType = FromSQLTypesToSciDB
+					.getSciDBTypeFromSQLType(postgresColumnType);
 			String attributeNULL = "";
 			if (postgresColumnMetaData.isNullable()) {
 				attributeNULL = " NULL";
@@ -460,16 +460,16 @@ public class FromPostgresToSciDBImplementation
 		/*
 		 * check if every column from Postgres is mapped to a column/attribute
 		 * in SciDB's arrays (the attributes from the flat array can change to
-		 * dimesions in the mulit dimensional array, thus we cannot verify the
-		 * match of columns in postgres and dimensions/attributes in scidb)
+		 * dimensions in the multi-dimensional array, thus we cannot verify the
+		 * match of columns in PostgreSQL and dimensions/attributes in scidb)
 		 */
 		Map<String, SciDBColumnMetaData> dimensionsMap = arrayMetaData
 				.getDimensionsMap();
 		Map<String, SciDBColumnMetaData> attributesMap = arrayMetaData
 				.getAttributesMap();
-		List<PostgreSQLColumnMetaData> postgresColumnsOrdered = postgresqlTableMetaData
+		List<AttributeMetaData> postgresColumnsOrdered = postgresqlTableMetaData
 				.getColumnsOrdered();
-		for (PostgreSQLColumnMetaData postgresColumnMetaData : postgresColumnsOrdered) {
+		for (AttributeMetaData postgresColumnMetaData : postgresColumnsOrdered) {
 			String postgresColumnName = postgresColumnMetaData.getName();
 			if (!dimensionsMap.containsKey(postgresColumnName)
 					&& !attributesMap.containsKey(postgresColumnName)) {

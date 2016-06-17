@@ -65,6 +65,65 @@ public class FromDatabaseToDatabase implements MigrationNetworkRequest {
 	 */
 	private static final long serialVersionUID = 1L;
 
+	/** Implicit constructor. */
+	protected FromDatabaseToDatabase() {
+	}
+
+	/**
+	 * Create instance with exporter and loader.
+	 * 
+	 * @param exporter
+	 * @param loader
+	 */
+	protected FromDatabaseToDatabase(Export exporter, Load loader) {
+		this.exporter = exporter;
+		this.loader = loader;
+	}
+
+	/**
+	 * Create the instance of the FromDatabaseToDatabase (accessible only within
+	 * the package).
+	 * 
+	 * @param exporter
+	 *            Handler to export the data.
+	 * @param loader
+	 *            Handler to load the data.
+	 * @param migrationInfo
+	 *            information about the migration (connections, objects, etc.).
+	 */
+	FromDatabaseToDatabase(Export exporter, Load loader,
+			MigrationInfo migrationInfo) {
+		/** Check if compatible export, migration request and load. */
+		checkSupportExportLoad(exporter, loader, migrationInfo);
+
+		/**
+		 * if compatible exporter, loader, migration info, then set the fields
+		 * of the instance.
+		 */
+		this.migrationInfo = migrationInfo;
+		this.exporter = exporter;
+		this.loader = loader;
+		this.exporter.setMigrationInfo(migrationInfo);
+		this.loader.setMigrationInfo(migrationInfo);
+
+	}
+
+	/** Register migrator: Export and Load executors. */
+	public static FromDatabaseToDatabase register(Export exporter,
+			Load loader) {
+		return new FromDatabaseToDatabase(exporter, loader);
+	}
+
+	/** From where to migrate the data (which node/machine). */
+	public ConnectionInfo getConnectionFrom() {
+		return migrationInfo.getConnectionFrom();
+	}
+
+	/* To where to migrate the data (to which node/machine). */
+	public ConnectionInfo getConnectionTo() {
+		return migrationInfo.getConnectionTo();
+	}
+
 	/**
 	 * General method (interface) for other modules to call the migration
 	 * process.
@@ -98,9 +157,41 @@ public class FromDatabaseToDatabase implements MigrationNetworkRequest {
 	}
 
 	/**
+	 * Check if migration is compatible between migrationInfo (info about
+	 * connections and objects to be moved), exporter, and loader.
+	 * 
+	 * Throws no exception if the exporter supports export from the database
+	 * indicated by migrationInfo (connectionFrom) and loader supports data
+	 * loading to the database indicated by migrationInfo (connectionTo), throw
+	 * the IllegalStateException otherwise.
+	 * 
+	 * @param migrationInfo
+	 *            information about the migration (connections, objects, etc.).
+	 */
+	private static void checkSupportExportLoad(Export exporter, Load loader,
+			MigrationInfo migrationInfo) {
+		if (!exporter.isSupportedConnector(migrationInfo.getConnectionFrom())) {
+			throw new IllegalStateException("Exporter: "
+					+ exporter.getClass().getCanonicalName()
+					+ " does not support export from the database "
+					+ "represented by the following connection: "
+					+ migrationInfo.getConnectionFrom().toSimpleString());
+		}
+		if (!loader.isSupportedConnector(migrationInfo.getConnectionTo())) {
+			throw new IllegalStateException(
+					"Loader: " + loader.getClass().getCanonicalName()
+							+ " does not support data loading to the database "
+							+ "represented by the following connection: "
+							+ migrationInfo.getConnectionTo().toSimpleString());
+		}
+		return;
+	}
+
+	/**
 	 * see: {@link #migrate(ConnectionInfo, String, ConnectionInfo, String) }
 	 * 
 	 * @param migrationInfo
+	 *            information about the migration (connections, objects, etc.).
 	 * @return {@link MigrationResult} Information about the results of the
 	 *         migration process: number of elements (e.g. rows, items) which
 	 *         were migrated, migration time and other statistics.
@@ -108,21 +199,24 @@ public class FromDatabaseToDatabase implements MigrationNetworkRequest {
 	 */
 	public MigrationResult migrate(MigrationInfo migrationInfo)
 			throws MigrationException {
-		if (exporter.isSupportedConnector(migrationInfo.getConnectionFrom())
-				&& loader.isSupportedConnector(
-						migrationInfo.getConnectionTo())) {
-			exporter.setMigrationInfo(migrationInfo);
-			loader.setMigrationInfo(migrationInfo);
-			return this.dispatch();
+		try {
+			checkSupportExportLoad(exporter, loader, migrationInfo);
+		} catch (IllegalStateException e) {
+			/**
+			 * null denotes that this instance of FromDatabaseToDatabase class
+			 * cannot serve the migration between the specified databases.
+			 */
+			return null;
 		}
-		/**
-		 * null denotes that this instance of FromDatabaseToDatabase class
-		 * cannot serve the migration between the specified databases.
-		 */
-		return null;
+		exporter.setMigrationInfo(migrationInfo);
+		loader.setMigrationInfo(migrationInfo);
+		return this.dispatch();
 	}
 
-	/** The method which implements the execution of data migration */
+	/**
+	 * The method which implements the execution of data migration from this
+	 * local machine to a remote machine.
+	 */
 	public MigrationResult executeMigrationLocalRemote()
 			throws MigrationException {
 		// TODO: migration via network
@@ -147,21 +241,23 @@ public class FromDatabaseToDatabase implements MigrationNetworkRequest {
 							+ migrationInfo.getObjectTo());
 			exporter.setExportTo(pipe);
 			loader.setLoadFrom(pipe);
-			ExecutorService executor = Executors.newFixedThreadPool(2);
 			List<Callable<Object>> tasks = new ArrayList<>();
 			tasks.add(exporter);
 			tasks.add(loader);
-			executor = Executors.newFixedThreadPool(tasks.size());
+			ExecutorService executor = Executors
+					.newFixedThreadPool(tasks.size());
 			long startTimeMigration = System.currentTimeMillis();
 			List<Future<Object>> results = TaskExecutor.execute(executor,
 					tasks);
 			long countExtractedElements = (Long) results.get(0).get();
-			long countLoadedElements = (Long) results.get(0).get();
+			long countLoadedElements = (Long) results.get(1).get();
 			long endTimeMigration = System.currentTimeMillis();
 			long durationMsec = endTimeMigration - startTimeMigration;
-			return summary(new MigrationResult(countExtractedElements,
-					countLoadedElements, durationMsec, startTimeMigration,
-					endTimeMigration));
+			MigrationResult migrationResult = new MigrationResult(
+					countExtractedElements, countLoadedElements, durationMsec,
+					startTimeMigration, endTimeMigration);
+			String message = "Migration was executed correctly.";
+			return summary(migrationResult, migrationInfo, message);
 		} catch (IOException | InterruptedException | RunShellException
 				| ExecutionException | SQLException e) {
 			String msg = e.getMessage();
@@ -178,8 +274,8 @@ public class FromDatabaseToDatabase implements MigrationNetworkRequest {
 	 * @return {@link MigrationResult}
 	 * @throws SQLException
 	 */
-	public MigrationResult summary(MigrationResult migrationResult)
-			throws SQLException {
+	public static MigrationResult summary(MigrationResult migrationResult,
+			MigrationInfo migrationInfo, String message) throws SQLException {
 		log.debug("migration duration time msec: "
 				+ migrationResult.getDurationMsec());
 		MigrationStatistics stats = new MigrationStatistics(
@@ -189,8 +285,7 @@ public class FromDatabaseToDatabase implements MigrationNetworkRequest {
 				migrationResult.getStartTimeMigration(),
 				migrationResult.getEndTimeMigration(),
 				migrationResult.getCountExtractedElements(),
-				migrationResult.getCountLoadedElements(),
-				this.getClass().getName());
+				migrationResult.getCountLoadedElements(), message);
 		Monitor.addMigrationStats(stats);
 		log.debug("Migration result,connectionFrom,"
 				+ migrationInfo.getConnectionFrom().toSimpleString()
@@ -339,37 +434,6 @@ public class FromDatabaseToDatabase implements MigrationNetworkRequest {
 				}
 			}
 		}
-	}
-
-	/** From where to migrate the data (which node/machine). */
-	public ConnectionInfo getConnectionFrom() {
-		return migrationInfo.getConnectionFrom();
-	}
-
-	/* To where to migrate the data (to which node/machine). */
-	public ConnectionInfo getConnectionTo() {
-		return migrationInfo.getConnectionTo();
-	}
-
-	/** Implicit constructor. */
-	protected FromDatabaseToDatabase() {
-	}
-
-	/**
-	 * Create instance with exporter and loader.
-	 * 
-	 * @param exporter
-	 * @param loader
-	 */
-	protected FromDatabaseToDatabase(Export exporter, Load loader) {
-		this.exporter = exporter;
-		this.loader = loader;
-	}
-
-	/** Register migrator: Export and Load executors. */
-	public static FromDatabaseToDatabase register(Export exporter,
-			Load loader) {
-		return new FromDatabaseToDatabase(exporter, loader);
 	}
 
 }

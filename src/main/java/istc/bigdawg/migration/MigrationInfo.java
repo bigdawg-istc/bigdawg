@@ -6,12 +6,13 @@ package istc.bigdawg.migration;
 import istc.bigdawg.query.ConnectionInfo;
 
 /**
- * @author Adam Dziedzic
  * 
- *         Information about the migration: meta data (connection,
- *         objects/tables/arrays from/to which migrate the data, etc.)
+ * Information about the migration: meta data (connection, objects/tables/arrays
+ * from/to which migrate the data, etc.)
  *
- *         This class is accessible only from within this package.
+ * This class is accessible only from within this package.
+ * 
+ * @author Adam Dziedzic
  */
 class MigrationInfo {
 
@@ -43,6 +44,17 @@ class MigrationInfo {
 		this.objectFrom = objectFrom;
 		this.connectionTo = connectionTo;
 		this.objectTo = objectTo;
+	}
+
+	/**
+	 * Factory for the migration info only with information about the connection
+	 * to the database to which we will load the data.
+	 * 
+	 * @param connectionTo
+	 * @return the instance of the MigrationInfo class
+	 */
+	public static MigrationInfo forConnectionTo(ConnectionInfo connectionTo) {
+		return new MigrationInfo(null, null, connectionTo, null);
 	}
 
 	/**

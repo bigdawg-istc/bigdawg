@@ -5,14 +5,20 @@ package istc.bigdawg.scidb;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.sql.*;
-import java.util.*;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 import javax.ws.rs.core.Response;
 
-import istc.bigdawg.executor.ExecutorEngine;
-import istc.bigdawg.executor.QueryResult;
-import istc.bigdawg.executor.JdbcQueryResult;
 import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
 import org.scidb.jdbc.IStatementWrapper;
@@ -23,8 +29,12 @@ import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.exceptions.NoTargetArrayException;
 import istc.bigdawg.exceptions.SciDBException;
-import istc.bigdawg.postgresql.PostgreSQLColumnMetaData;
+import istc.bigdawg.executor.ExecutorEngine;
+import istc.bigdawg.executor.JdbcQueryResult;
+import istc.bigdawg.executor.QueryResult;
+import istc.bigdawg.postgresql.AttributeMetaData;
 import istc.bigdawg.postgresql.PostgreSQLTableMetaData;
+import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.query.DBHandler;
 import istc.bigdawg.query.QueryResponseTupleList;
 import istc.bigdawg.utils.Constants;
@@ -63,17 +73,19 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 		try {
 			this.connection = getConnection(conInfo);
 		} catch (Exception e) {
-			log.debug("getConnection throws Exception from default SciDBHandler(); this is not supposed to happen. Check properties file.");
+			log.debug(
+					"getConnection throws Exception from default SciDBHandler(); this is not supposed to happen. Check properties file.");
 			e.printStackTrace();
 		}
 	}
-	
+
 	public SciDBHandler(int dbid) {
 		try {
 			this.conInfo = CatalogViewer.getSciDBConnectionInfo(dbid);
 			this.connection = getConnection(conInfo);
 		} catch (Exception e) {
-			log.debug("getConnection throws Exception from default SciDBHandler(); this is not supposed to happen. Check properties file.");
+			log.debug(
+					"getConnection throws Exception from default SciDBHandler(); this is not supposed to happen. Check properties file.");
 			e.printStackTrace();
 		}
 	}
@@ -121,6 +133,18 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 	public SciDBHandler(SciDBConnectionInfo conInfo) throws SQLException {
 		this.conInfo = conInfo;
 		this.connection = getConnection(conInfo);
+	}
+
+	/**
+	 * see:
+	 */
+	public SciDBHandler(ConnectionInfo conInfo) throws SQLException {
+		if (!(conInfo instanceof SciDBConnectionInfo)) {
+			throw new IllegalArgumentException("The conInfo has to be of type: "
+					+ SciDBConnectionInfo.class.getCanonicalName());
+		}
+		this.conInfo = (SciDBConnectionInfo) conInfo;
+		this.connection = getConnection(this.conInfo);
 	}
 
 	/**
@@ -235,7 +259,7 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 			return Response.status(200).entity(messageSciDB).build();
 		}
 	}
-	
+
 	/**
 	 * NEW FUNCTION: this is written specifically for generating XML query
 	 * plans, which is used to construct Operator tree, which will be used for
@@ -248,31 +272,30 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 	public String generateSciDBLogicalPlan(String query) {
 		Connection conn;
 		try {
-			
+
 			Class.forName("org.scidb.jdbc.Driver");
-			
+
 			System.out.printf("---> connection info: %s\n", this.conInfo);
-			
-			
-			conn = DriverManager.getConnection("jdbc:scidb://"+this.conInfo.getHost()+":"+this.conInfo.getPort()+"/");
+
+			conn = DriverManager
+					.getConnection("jdbc:scidb://" + this.conInfo.getHost()
+							+ ":" + this.conInfo.getPort() + "/");
 			Statement st = conn.createStatement();
-			
-			
+
 			// this unwraps to afl
 			IStatementWrapper stWrapper = st.unwrap(IStatementWrapper.class);
 			stWrapper.setAfl(true);
-			
-			ResultSet res = st.executeQuery("explain_logical('"+query.replace("'", "\\'")+"', 'afl')");
+
+			ResultSet res = st.executeQuery("explain_logical('"
+					+ query.replace("'", "\\'") + "', 'afl')");
 			return res.getString("logical_plan");
-			
-			
+
 		} catch (Exception e) {
 			e.printStackTrace();
 			return null;
 		}
-		
+
 	}
-	
 
 	/*
 	 * (non-Javadoc)
@@ -284,9 +307,11 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 		return BDConstants.Shim.PSQLARRAY;
 	}
 
-	public Optional<QueryResult> execute(String query) throws LocalQueryExecutionException {
+	public Optional<QueryResult> execute(String query)
+			throws LocalQueryExecutionException {
 		try (Statement st = connection.createStatement()) {
-			IStatementWrapper statementWrapper = st.unwrap(IStatementWrapper.class);
+			IStatementWrapper statementWrapper = st
+					.unwrap(IStatementWrapper.class);
 			statementWrapper.setAfl(true);
 
 			log.debug("query: " + LogUtils.replace(query) + "");
@@ -300,7 +325,8 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 				return Optional.empty();
 			}
 		} catch (SQLException ex) {
-			log.error(ex.getMessage() + "; query: " + LogUtils.replace(query), ex);
+			log.error(ex.getMessage() + "; query: " + LogUtils.replace(query),
+					ex);
 			throw new LocalQueryExecutionException(ex);
 		}
 	}
@@ -323,12 +349,14 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 				+ (System.nanoTime() - lStartTime) / 1000000 + ",");
 
 		lStartTime = System.nanoTime();
-		Tuple2<List<String>, List<List<String>>> parsedData = ParseSciDBResponse.parse(resultString);
+		Tuple2<List<String>, List<List<String>>> parsedData = ParseSciDBResponse
+				.parse(resultString);
 		List<String> colNames = parsedData.getT1();
 		List<List<String>> tuples = parsedData.getT2();
 
 		QueryResponseTupleList resp = new QueryResponseTupleList("OK", 200,
-				tuples, 1, 1, colNames, new ArrayList<String>(), new Timestamp(0));
+				tuples, 1, 1, colNames, new ArrayList<String>(),
+				new Timestamp(0));
 
 		log.info("Parsing data time milliseconds: "
 				+ (System.nanoTime() - lStartTime) / 1000000);
@@ -356,9 +384,10 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 	 * @throws SciDBException
 	 */
 	private String getDataFromSciDB(final String queryString)
-					throws IOException, InterruptedException, SciDBException {
-		InputStream resultInStream = RunShell.runSciDBAFLquery(conInfo.getHost(),
-				conInfo.getPort(), conInfo.getBinPath(), queryString);
+			throws IOException, InterruptedException, SciDBException {
+		InputStream resultInStream = RunShell.runSciDBAFLquery(
+				conInfo.getHost(), conInfo.getPort(), conInfo.getBinPath(),
+				queryString);
 		String resultString = IOUtils.toString(resultInStream,
 				Constants.ENCODING);
 		return resultString;
@@ -388,8 +417,7 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 			while (!resultSetDimensions.isAfterLast()) {
 				SciDBColumnMetaData columnMetaData = new SciDBColumnMetaData(
 						resultSetDimensions.getString(2),
-						resultSetDimensions.getString(9),
-						false);
+						resultSetDimensions.getString(9), false);
 				dimensionsMap.put(resultSetDimensions.getString(2),
 						columnMetaData);
 				dimensionsOrdered.add(columnMetaData);
@@ -407,8 +435,8 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 				attributesOrdered.add(columnMetaData);
 				resultSetAttributes.next();
 			}
-			return new SciDBArrayMetaData(arrayName, dimensionsMap, dimensionsOrdered,
-					attributesMap, attributesOrdered);
+			return new SciDBArrayMetaData(arrayName, dimensionsMap,
+					dimensionsOrdered, attributesMap, attributesOrdered);
 		} catch (SQLException ex) {
 			if (ex.getMessage()
 					.contains("Array '" + arrayName + "' does not exist.")) {
@@ -478,10 +506,12 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 	 * @return a string of characters from the set: NnSsCc
 	 * 
 	 */
-	public static String getTypePatternFromPostgresTypes(final PostgreSQLTableMetaData postgresTableMetaData ) {
-		final List<PostgreSQLColumnMetaData> columnsMetaData = postgresTableMetaData.getColumnsOrdered();
+	public static String getTypePatternFromPostgresTypes(
+			final PostgreSQLTableMetaData postgresTableMetaData) {
+		final List<AttributeMetaData> columnsMetaData = postgresTableMetaData
+				.getColumnsOrdered();
 		char[] scidbTypesPattern = new char[columnsMetaData.size()];
-		for (PostgreSQLColumnMetaData columnMetaData : columnsMetaData) {
+		for (AttributeMetaData columnMetaData : columnsMetaData) {
 			// check the character type
 			char newType = 'N'; // N - numeric by default
 			if ((columnMetaData.getDataType().equals("character")
@@ -511,8 +541,8 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 	 * 
 	 * @throws SQLException
 	 */
-	public static void dropArrayIfExists(SciDBConnectionInfo conTo, String array)
-			throws SQLException {
+	public static void dropArrayIfExists(SciDBConnectionInfo conTo,
+			String array) throws SQLException {
 		Connection con = null;
 		Statement statement = null;
 		try {

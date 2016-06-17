@@ -12,8 +12,8 @@ import org.apache.log4j.Logger;
 
 import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.exceptions.UnsupportedTypeException;
-import istc.bigdawg.migration.datatypes.DataTypesFromPostgreSQLToSciDB;
-import istc.bigdawg.postgresql.PostgreSQLColumnMetaData;
+import istc.bigdawg.migration.datatypes.FromSQLTypesToSciDB;
+import istc.bigdawg.postgresql.AttributeMetaData;
 import istc.bigdawg.postgresql.PostgreSQLTableMetaData;
 import istc.bigdawg.scidb.SciDBArrayMetaData;
 import istc.bigdawg.scidb.SciDBColumnMetaData;
@@ -77,7 +77,7 @@ public class PostgreSQLSciDBMigrationUtils {
 					throws MigrationException {
 		List<SciDBColumnMetaData> scidbAttributesOrdered = scidbArrayMetaData
 				.getAttributesOrdered();
-		List<PostgreSQLColumnMetaData> postgresColumnsOrdered = postgresqlTableMetaData
+		List<AttributeMetaData> postgresColumnsOrdered = postgresqlTableMetaData
 				.getColumnsOrdered();
 		return areSciDBColumnsSameAsPostgresColumns(scidbArrayMetaData,
 				postgresqlTableMetaData, scidbAttributesOrdered,
@@ -101,7 +101,7 @@ public class PostgreSQLSciDBMigrationUtils {
 		List<SciDBColumnMetaData> scidbColumnsOrdered = new ArrayList<SciDBColumnMetaData>();
 		scidbColumnsOrdered.addAll(scidbArrayMetaData.getDimensionsOrdered());
 		scidbColumnsOrdered.addAll(scidbArrayMetaData.getAttributesOrdered());
-		List<PostgreSQLColumnMetaData> postgresColumnsOrdered = postgresqlTableMetaData
+		List<AttributeMetaData> postgresColumnsOrdered = postgresqlTableMetaData
 				.getColumnsOrdered();
 		return areSciDBColumnsSameAsPostgresColumns(scidbArrayMetaData,
 				postgresqlTableMetaData, scidbColumnsOrdered,
@@ -121,7 +121,7 @@ public class PostgreSQLSciDBMigrationUtils {
 			SciDBArrayMetaData scidbArrayMetaData,
 			PostgreSQLTableMetaData postgresqlTableMetaData,
 			List<SciDBColumnMetaData> scidbColumnsOrdered,
-			List<PostgreSQLColumnMetaData> postgresColumnsOrdered)
+			List<AttributeMetaData> postgresColumnsOrdered)
 					throws MigrationException {
 		if (scidbColumnsOrdered.size() == postgresColumnsOrdered.size()) {
 			/*
@@ -165,12 +165,12 @@ public class PostgreSQLSciDBMigrationUtils {
 			PostgreSQLTableMetaData postgresqlTableMetaData)
 					throws UnsupportedTypeException {
 		StringBuilder binFormatBuffer = new StringBuilder();
-		List<PostgreSQLColumnMetaData> postgresColumnsOrdered = postgresqlTableMetaData
+		List<AttributeMetaData> postgresColumnsOrdered = postgresqlTableMetaData
 				.getColumnsOrdered();
-		for (PostgreSQLColumnMetaData postgresColumnMetaData : postgresColumnsOrdered) {
+		for (AttributeMetaData postgresColumnMetaData : postgresColumnsOrdered) {
 			String postgresColumnType = postgresColumnMetaData.getDataType();
-			String attributeType = DataTypesFromPostgreSQLToSciDB
-					.getSciDBTypeFromPostgreSQLType(postgresColumnType);
+			String attributeType = FromSQLTypesToSciDB
+					.getSciDBTypeFromSQLType(postgresColumnType);
 			String attributeNULL = "";
 			if (postgresColumnMetaData.isNullable()) {
 				attributeNULL = " null";

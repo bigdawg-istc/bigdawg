@@ -42,6 +42,10 @@ public class AtomicMigrationTest {
 	private PostgreSQLHandler handlerFrom;
 	private PostgreSQLHandler handlerTo;
 
+	private static final String VALUES = "1,155190,7706,1,17,21168.23,0.04,0.02,"
+			+ "'N','O','1996-03-13','1996-02-12','1996-03-22',"
+			+ "'IN PERSON','TRUCK','egular courts above the'";
+
 	@Before
 	public void setUp() {
 		LoggerSetup.setLogging();
@@ -114,8 +118,8 @@ public class AtomicMigrationTest {
 			try {
 				for (counter = 0; counter < 10000; ++counter) {
 					try {
-						handlerFrom.execute("insert into " + table
-								+ " values (1,155190,7706,1,17,21168.23,0.04,0.02,'N','O','1996-03-13','1996-02-12','1996-03-22','IN PERSON','TRUCK','egular courts above the')");
+						handlerFrom.execute("insert into " + table + " values ("
+								+ VALUES + ")");
 					} catch (LocalQueryExecutionException e) {
 						e.printStackTrace();
 						return counter;

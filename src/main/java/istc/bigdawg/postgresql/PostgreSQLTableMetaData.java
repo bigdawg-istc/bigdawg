@@ -15,13 +15,14 @@ import java.util.Map;
  */
 public class PostgreSQLTableMetaData {
 
+	/** Name of the schema (by default public) and name of the table. */
 	private PostgreSQLSchemaTableName schemaTable;
-	private Map<String, PostgreSQLColumnMetaData> columnsMap;
-	private List<PostgreSQLColumnMetaData> columnsOrdered;
+	private Map<String, AttributeMetaData> columnsMap;
+	private List<AttributeMetaData> columnsOrdered;
 
 	public PostgreSQLTableMetaData(PostgreSQLSchemaTableName schemaTable,
-			Map<String, PostgreSQLColumnMetaData> columnsMap,
-			List<PostgreSQLColumnMetaData> columnsOrdered) {
+			Map<String, AttributeMetaData> columnsMap,
+			List<AttributeMetaData> columnsOrdered) {
 		this.schemaTable = schemaTable;
 		this.columnsMap = columnsMap;
 		this.columnsOrdered = columnsOrdered;
@@ -34,11 +35,11 @@ public class PostgreSQLTableMetaData {
 		return schemaTable;
 	}
 
-	public Map<String, PostgreSQLColumnMetaData> getColumnsMap() {
+	public Map<String, AttributeMetaData> getColumnsMap() {
 		return columnsMap;
 	}
 
-	public List<PostgreSQLColumnMetaData> getColumnsOrdered() {
+	public List<AttributeMetaData> getColumnsOrdered() {
 		return columnsOrdered;
 	}
 }
