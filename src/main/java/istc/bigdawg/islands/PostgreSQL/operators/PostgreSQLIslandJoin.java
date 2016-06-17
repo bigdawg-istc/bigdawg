@@ -1,7 +1,6 @@
 package istc.bigdawg.islands.PostgreSQL.operators;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -9,12 +8,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import istc.bigdawg.islands.CommonOutItem;
 import istc.bigdawg.islands.OperatorVisitor;
 import istc.bigdawg.islands.PostgreSQL.SQLOutItem;
 import istc.bigdawg.islands.PostgreSQL.SQLTableExpression;
 import istc.bigdawg.islands.PostgreSQL.utils.SQLExpressionUtils;
-import istc.bigdawg.islands.SciDB.SciDBArray;
 import istc.bigdawg.islands.operators.Join;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.schema.DataObjectAttribute;
@@ -79,6 +76,7 @@ public class PostgreSQLIslandJoin extends PostgreSQLIslandOperator implements Jo
 				
 		}
 		
+		
 		// process join predicates and join filters
 		// if hash join "Hash-Cond", merge join "Merge-Cond"
 		for(String p : parameters.keySet()) 
@@ -111,47 +109,47 @@ public class PostgreSQLIslandJoin extends PostgreSQLIslandOperator implements Jo
 			}
 		}
 		
-		
+		System.out.printf("\n\n\n--> Join constructor: output %s;\n outSchema %s;\n jp: %s;\n jf: %s\n\n", output, outSchema, joinPredicate, joinFilter);
 //		System.out.printf("---> jp: %s\njf: %s\n\n", joinPredicate, joinFilter);
 	}
     
 	
-	// for AFL
-	public PostgreSQLIslandJoin(Map<String, String> parameters, SciDBArray output, PostgreSQLIslandOperator lhs, PostgreSQLIslandOperator rhs) throws Exception  {
-		super(parameters, output, lhs, rhs);
-
-		maxJoinSerial++;
-		this.setJoinID(maxJoinSerial);
-		
-		isBlocking = false;
-		
-		joinPredicate = parameters.get("Join-Predicate"); System.out.printf("--> Join AFL Constructor, Join Predicate: %s\n", joinPredicate);
-		setAliases(Arrays.asList(parameters.get("Children-Aliases").split(" ")));
-
-		srcSchema = new LinkedHashMap<String, DataObjectAttribute>(lhs.outSchema);
-		srcSchema.putAll(rhs.outSchema);
-		
-		// attributes
-		for (String expr : output.getAttributes().keySet()) {
-			
-			CommonOutItem out = new CommonOutItem(expr, output.getAttributes().get(expr), false, srcSchema);
-			DataObjectAttribute attr = out.getAttribute();
-			String attrName = attr.getFullyQualifiedName();		
-			outSchema.put(attrName, attr);
-				
-		}
-		
-		// dimensions
-		for (String expr : output.getDimensions().keySet()) {
-			
-			CommonOutItem out = new CommonOutItem(expr, "Dimension", true, srcSchema);
-			DataObjectAttribute attr = out.getAttribute();
-			String attrName = attr.getFullyQualifiedName();		
-			outSchema.put(attrName, attr);
-				
-		}
-//		inferJoinParameters();
-	}
+//	// for AFL
+//	public PostgreSQLIslandJoin(Map<String, String> parameters, SciDBArray output, PostgreSQLIslandOperator lhs, PostgreSQLIslandOperator rhs) throws Exception  {
+//		super(parameters, output, lhs, rhs);
+//
+//		maxJoinSerial++;
+//		this.setJoinID(maxJoinSerial);
+//		
+//		isBlocking = false;
+//		
+//		joinPredicate = parameters.get("Join-Predicate"); System.out.printf("--> Join AFL Constructor, Join Predicate: %s\n", joinPredicate);
+//		setAliases(Arrays.asList(parameters.get("Children-Aliases").split(" ")));
+//
+//		srcSchema = new LinkedHashMap<String, DataObjectAttribute>(lhs.outSchema);
+//		srcSchema.putAll(rhs.outSchema);
+//		
+//		// attributes
+//		for (String expr : output.getAttributes().keySet()) {
+//			
+//			CommonOutItem out = new CommonOutItem(expr, output.getAttributes().get(expr), false, srcSchema);
+//			DataObjectAttribute attr = out.getAttribute();
+//			String attrName = attr.getFullyQualifiedName();		
+//			outSchema.put(attrName, attr);
+//				
+//		}
+//		
+//		// dimensions
+//		for (String expr : output.getDimensions().keySet()) {
+//			
+//			CommonOutItem out = new CommonOutItem(expr, "Dimension", true, srcSchema);
+//			DataObjectAttribute attr = out.getAttribute();
+//			String attrName = attr.getFullyQualifiedName();		
+//			outSchema.put(attrName, attr);
+//				
+//		}
+////		inferJoinParameters();
+//	}
 	
 	// combine join ON clause with WHEREs that combine two tables
  	// if a predicate references data that is not public, move it to the filter
@@ -201,7 +199,7 @@ public class PostgreSQLIslandJoin extends PostgreSQLIslandOperator implements Jo
 		}
 	}
 	
-	public PostgreSQLIslandJoin(PostgreSQLIslandOperator child0, PostgreSQLIslandOperator child1, JoinType jt, String joinPred, boolean isFilter) throws JSQLParserException {
+	public PostgreSQLIslandJoin(Operator child0, Operator child1, JoinType jt, String joinPred, boolean isFilter) throws JSQLParserException {
 		this.isCTERoot = false; // TODO VERIFY
 		this.isBlocking = false; 
 		this.isPruned = false;
@@ -225,11 +223,11 @@ public class PostgreSQLIslandJoin extends PostgreSQLIslandOperator implements Jo
 		this.dataObjects = new HashSet<>();
 //		this.joinReservedObjects = new HashSet<>();
 		
-		this.srcSchema = new LinkedHashMap<String, DataObjectAttribute>(child0.outSchema);
-		srcSchema.putAll(child1.outSchema);
+		this.srcSchema = new LinkedHashMap<String, DataObjectAttribute>(((PostgreSQLIslandOperator) child0).outSchema);
+		srcSchema.putAll(((PostgreSQLIslandOperator)child1).outSchema);
 		
-		this.outSchema = new LinkedHashMap<String, DataObjectAttribute>(child0.outSchema);
-		outSchema.putAll(child1.outSchema);
+		this.outSchema = new LinkedHashMap<String, DataObjectAttribute>(((PostgreSQLIslandOperator) child0).outSchema);
+		outSchema.putAll(((PostgreSQLIslandOperator) child1).outSchema);
 		
 		
 		this.children = new ArrayList<>();
@@ -245,7 +243,10 @@ public class PostgreSQLIslandJoin extends PostgreSQLIslandOperator implements Jo
 	
 	public PostgreSQLIslandJoin() {
 		super();
+		
+		this.isCTERoot = false; // TODO VERIFY
 		this.isBlocking = false;
+		this.isPruned = false;
 		this.setAliases(new ArrayList<>());
 		srcSchema = new LinkedHashMap<String, DataObjectAttribute>();
 		
@@ -255,7 +256,38 @@ public class PostgreSQLIslandJoin extends PostgreSQLIslandOperator implements Jo
 
 	@Override
 	public Join construct(Operator child0, Operator child1, JoinType jt, String joinPred, boolean isFilter) throws Exception {
-		throw new Exception("Unimplemented function construct(); class: "+this.getClass().getName());
+//		throw new Exception("Unimplemented function construct(); class: "+this.getClass().getName());
+		
+		this.isCopy = true; 
+		
+		if (jt != null) this.joinType = jt;
+		
+		if (joinPred != null) {
+			if (isFilter) this.joinFilter = new String(joinPred);
+			else this.joinPredicate = new String(joinPred);
+		}
+		
+		this.isQueryRoot = true;
+		
+		this.dataObjects = new HashSet<>();
+//		this.joinReservedObjects = new HashSet<>();
+		
+		this.srcSchema = new LinkedHashMap<String, DataObjectAttribute>(((PostgreSQLIslandOperator) child0).outSchema);
+		srcSchema.putAll(((PostgreSQLIslandOperator)child1).outSchema);
+		
+		this.outSchema = new LinkedHashMap<String, DataObjectAttribute>(((PostgreSQLIslandOperator) child0).outSchema);
+		outSchema.putAll(((PostgreSQLIslandOperator) child1).outSchema);
+		
+		this.children.add(child0);
+		this.children.add(child1);
+		
+		if (child0.isCopy()) child0.setParent(this);
+		if (child1.isCopy()) child1.setParent(this);
+		
+		child0.setQueryRoot(false);
+		child1.setQueryRoot(false);
+		
+		return this;
 	};
 	
     @Override

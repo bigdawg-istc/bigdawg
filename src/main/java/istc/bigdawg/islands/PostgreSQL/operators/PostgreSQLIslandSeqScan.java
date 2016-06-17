@@ -78,55 +78,6 @@ public class PostgreSQLIslandSeqScan extends PostgreSQLIslandScan implements Seq
 		
 	}
 	
-//	// for AFL
-//	public PostgreSQLIslandSeqScan (Map<String, String> parameters, SciDBArray output, PostgreSQLIslandOperator child) throws Exception  {
-//		super(parameters, output, child);
-//		
-//		setOperatorName(parameters.get("OperatorName"));
-//		
-//		Map<String, String> applyAttributes = new HashMap<>();
-//		if (parameters.get("Apply-Attributes") != null) {
-//			List<String> applyAttributesList = Arrays.asList(parameters.get("Apply-Attributes").split("@@@@"));
-//			for (String s : applyAttributesList) {
-//				String[] sSplit = s.split(" @AS@ ");
-//				applyAttributes.put(sSplit[1], sSplit[0]);
-//			}
-//		}
-//		
-//		// attributes
-//		for (String expr : output.getAttributes().keySet()) {
-//			
-//			CommonOutItem out = new CommonOutItem(expr, output.getAttributes().get(expr), false, null);
-//			
-//			DataObjectAttribute attr = out.getAttribute();
-//			String alias = attr.getName();
-//			if (!applyAttributes.isEmpty() && applyAttributes.get(expr) != null) attr.setExpression(applyAttributes.get(expr));
-//			else attr.setExpression(expr);
-//			
-//			outSchema.put(alias, attr);
-//			
-//		}
-//		
-//		// dimensions
-//		for (String expr : output.getDimensions().keySet()) {
-//			
-//			CommonOutItem out = new CommonOutItem(expr, output.getDimensions().get(expr), true, null);
-//			
-//			DataObjectAttribute dim = out.getAttribute();
-//			String attrName = dim.getFullyQualifiedName();		
-//			
-//
-//			Column e = (Column) CCJSqlParserUtil.parseExpression(expr);
-//			String arrayName = output.getDimensionMembership().get(expr);
-//			if (arrayName != null) {
-//				e.setTable(new Table(Arrays.asList(arrayName.split(", ")).get(0)));
-//			}
-//			
-//			outSchema.put(attrName, dim);
-//		}
-//		
-//	}
-		
 	public PostgreSQLIslandSeqScan(PostgreSQLIslandOperator o, boolean addChild) throws Exception {
 		super(o, addChild);
 		this.setOperatorName(((PostgreSQLIslandSeqScan)o).getOperatorName());

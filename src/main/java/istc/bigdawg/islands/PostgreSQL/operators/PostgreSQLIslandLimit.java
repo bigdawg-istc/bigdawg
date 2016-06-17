@@ -45,7 +45,7 @@ public class PostgreSQLIslandLimit extends PostgreSQLIslandOperator implements L
 	public PostgreSQLIslandLimit(PostgreSQLIslandOperator o, boolean addChild) throws Exception {
 		super(o, addChild);
 		PostgreSQLIslandLimit lim = (PostgreSQLIslandLimit) o;
-		
+		this.blockerID = o.blockerID;
 		this.setLimitAll(lim.isLimitAll());
 		this.setLimitNull(lim.isLimitNull());
 		this.setHasOffSet(lim.isHasOffSet());
@@ -59,7 +59,10 @@ public class PostgreSQLIslandLimit extends PostgreSQLIslandOperator implements L
 	
 	
 	public PostgreSQLIslandLimit() {
+		super();
 		isBlocking = true;
+		blockerCount++;
+		this.blockerID = blockerCount;
 	}
 
 	

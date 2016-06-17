@@ -166,7 +166,8 @@ public class ExecutionNodeFactory {
 	 * @return
 	 * @throws Exception
 	 */
-	private static BinaryJoinExecutionNode createJoinNode(String broadcastQuery, ConnectionInfo engine, String joinDestinationTable, Join joinOp, Scope island) throws Exception {
+//	private static BinaryJoinExecutionNode createJoinNode(String broadcastQuery, ConnectionInfo engine, String joinDestinationTable, Join joinOp, Scope island) throws Exception {
+	private static ExecutionNode createJoinNode(String broadcastQuery, ConnectionInfo engine, String joinDestinationTable, Join joinOp, Scope island) throws Exception {
 //		Operator left = joinOp.getChildren().get(0);
 //		Operator right = joinOp.getChildren().get(1);
 
@@ -181,7 +182,8 @@ public class ExecutionNodeFactory {
 		List<String> predicateObjects = gen.getJoinPredicateObjectsForBinaryExecutionNode(joinOp);
 
 		if (predicateObjects.isEmpty()) {
-			throw new RuntimeException("No predicates for join!");
+//			throw new RuntimeException("No predicates for join!");
+			return new LocalQueryExecutionNode(broadcastQuery, engine, joinDestinationTable);
 		}
 
 //		String comparator = predicateObjects.get(0);

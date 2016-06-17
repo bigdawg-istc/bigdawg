@@ -10,10 +10,8 @@ import istc.bigdawg.islands.OperatorVisitor;
 import istc.bigdawg.islands.PostgreSQL.SQLOutItem;
 import istc.bigdawg.islands.PostgreSQL.SQLTableExpression;
 import istc.bigdawg.islands.PostgreSQL.utils.SQLExpressionUtils;
-import istc.bigdawg.islands.SciDB.SciDBArray;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.operators.Sort;
-import istc.bigdawg.schema.DataObjectAttribute;
 import istc.bigdawg.schema.SQLAttribute;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Parenthesis;
@@ -103,25 +101,25 @@ public class PostgreSQLIslandSort extends PostgreSQLIslandOperator implements So
 		}
 	}
 	
-	// for AFL
-	public PostgreSQLIslandSort(Map<String, String> parameters, SciDBArray output,  List<String> keys, PostgreSQLIslandOperator child) throws Exception  {
-		super(parameters, output, child);
-
-		isBlocking = true;
-		blockerCount++;
-		this.blockerID = blockerCount;
-
-		// two order bys might exist in a supplement:
-		// 1) within an OVER () clause for windowed aggregate
-		// 2) as an ORDER BY clause
-		// instantiate iterator to get the right one
-		// iterate from first OVER --> ORDER BY
-
-		setSortKeys(keys);
-		
-		outSchema = new LinkedHashMap<String, DataObjectAttribute>(child.outSchema);
-		
-	}
+//	// for AFL
+//	public PostgreSQLIslandSort(Map<String, String> parameters, SciDBArray output,  List<String> keys, PostgreSQLIslandOperator child) throws Exception  {
+//		super(parameters, output, child);
+//
+//		isBlocking = true;
+//		blockerCount++;
+//		this.blockerID = blockerCount;
+//
+//		// two order bys might exist in a supplement:
+//		// 1) within an OVER () clause for windowed aggregate
+//		// 2) as an ORDER BY clause
+//		// instantiate iterator to get the right one
+//		// iterate from first OVER --> ORDER BY
+//
+//		setSortKeys(keys);
+//		
+//		outSchema = new LinkedHashMap<String, DataObjectAttribute>(child.outSchema);
+//		
+//	}
 	
 	public PostgreSQLIslandSort(PostgreSQLIslandOperator o, boolean addChild) throws Exception {
 		super(o, addChild);

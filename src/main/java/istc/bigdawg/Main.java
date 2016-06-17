@@ -12,7 +12,6 @@ import istc.bigdawg.catalog.CatalogInstance;
 import istc.bigdawg.migration.MigratorTask;
 import istc.bigdawg.monitoring.MonitoringTask;
 import istc.bigdawg.properties.BigDawgConfigProperties;
-import istc.bigdawg.utils.IslandsAndCast;
 
 /**
  * Main class.

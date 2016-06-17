@@ -9,7 +9,6 @@ import java.util.Set;
 import istc.bigdawg.islands.OperatorVisitor;
 import istc.bigdawg.islands.PostgreSQL.SQLTableExpression;
 import istc.bigdawg.islands.PostgreSQL.utils.SQLExpressionUtils;
-import istc.bigdawg.islands.SciDB.SciDBArray;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.operators.Scan;
 import net.sf.jsqlparser.expression.Alias;
@@ -94,35 +93,35 @@ public class PostgreSQLIslandScan extends PostgreSQLIslandOperator implements Sc
 		}
 	}
 	
-	// for AFL
-	public PostgreSQLIslandScan(Map<String, String> parameters, SciDBArray output, PostgreSQLIslandOperator child) throws Exception {
-		super(parameters, output, child);
-
-		isBlocking = false;
-
-		setSrcTable(parameters.get("Relation-Name"));
-		
-		if(getSrcTable() == null) { // it's a cte scan
-			setSrcTable(parameters.get("CTE-Name"));
-		}
-		setTableAlias(parameters.get("Alias"));
-		
-		if(parameters.get("Filter") != null) {
-			
-			setFilterExpression(CCJSqlParserUtil.parseCondExpression(parameters.get("Filter")));
-			setHasFunctionInFilterExpression(SQLExpressionUtils.isFunctionPresentInCondExpression(filterExpression));
-		}
-		
-		table = new Table(getSrcTable()); // new one to accommodate aliasing
-		if (parameters.get("Schema") != null && (!parameters.get("Schema").equals("public"))) 
-			table.setSchemaName(parameters.get("Schema"));
-
-		if(getTableAlias() != null && !getTableAlias().equalsIgnoreCase(getSrcTable())) {
-			table.setAlias(new Alias(getTableAlias()));
-		}
-
-		
-	}
+//	// for AFL
+//	public PostgreSQLIslandScan(Map<String, String> parameters, SciDBArray output, PostgreSQLIslandOperator child) throws Exception {
+//		super(parameters, output, child);
+//
+//		isBlocking = false;
+//
+//		setSrcTable(parameters.get("Relation-Name"));
+//		
+//		if(getSrcTable() == null) { // it's a cte scan
+//			setSrcTable(parameters.get("CTE-Name"));
+//		}
+//		setTableAlias(parameters.get("Alias"));
+//		
+//		if(parameters.get("Filter") != null) {
+//			
+//			setFilterExpression(CCJSqlParserUtil.parseCondExpression(parameters.get("Filter")));
+//			setHasFunctionInFilterExpression(SQLExpressionUtils.isFunctionPresentInCondExpression(filterExpression));
+//		}
+//		
+//		table = new Table(getSrcTable()); // new one to accommodate aliasing
+//		if (parameters.get("Schema") != null && (!parameters.get("Schema").equals("public"))) 
+//			table.setSchemaName(parameters.get("Schema"));
+//
+//		if(getTableAlias() != null && !getTableAlias().equalsIgnoreCase(getSrcTable())) {
+//			table.setAlias(new Alias(getTableAlias()));
+//		}
+//
+//		
+//	}
 	
 	public PostgreSQLIslandScan(PostgreSQLIslandOperator o, boolean addChild) throws Exception {
 		super(o, addChild);

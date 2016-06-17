@@ -12,7 +12,6 @@ import java.util.Set;
 import istc.bigdawg.islands.OperatorVisitor;
 import istc.bigdawg.islands.PostgreSQL.SQLTableExpression;
 import istc.bigdawg.islands.PostgreSQL.utils.SQLExpressionUtils;
-import istc.bigdawg.islands.SciDB.SciDBArray;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.operators.OperatorInterface;
 import istc.bigdawg.schema.DataObjectAttribute;
@@ -102,38 +101,8 @@ public class PostgreSQLIslandOperator implements Operator, OperatorInterface {
 			populateComplexOutItem(true);
 		}
 		
-		
-		
-		// if it is a subplan, add it to the ctes list -- moved out to planparser
-		/* if(parameters.containsKey("Subplan-Name")) {
-			String planName = parameters.get("Subplan-Name");
-			planName = planName.substring(planName.indexOf(" "));
-			plan.addCommonSQLTableExpression(planName, this);
-		} */
-		
 	}
 
-	// for AFL
-	public PostgreSQLIslandOperator(Map<String, String> parameters, SciDBArray output,  
-			PostgreSQLIslandOperator child) {
-
-		
-		
-		// order preserving
-		this();
-//		outSchema = new LinkedHashMap<String, DataObjectAttribute>();
-//		setComplexOutItemFromProgeny(new HashMap<>());
-//		children  = new ArrayList<Operator>();
-//		dataObjects = new HashSet<>();
-		
-		if(child != null) { // check for leaf nodes
-			children.add(child);
-			child.setParent(this);
-			
-		}
-		
-	}
-	
 	
 	// SQL, join
 	public PostgreSQLIslandOperator(Map<String, String> parameters, List<String> output, 
@@ -154,34 +123,7 @@ public class PostgreSQLIslandOperator implements Operator, OperatorInterface {
 		
 		populateComplexOutItem(true);
 		
-
-		// if it is a subplan, add it to the ctes list -- moved out to plan parser
-		/* if(parameters.containsKey("Subplan-Name")) {
-			String planName = parameters.get("Subplan-Name");
-			planName = planName.substring(planName.indexOf(" "));
-			plan.addCommonSQLTableExpression(planName, this);
-		}*/
-		
-
 	}
-	
-	// for AFL
-	public PostgreSQLIslandOperator(Map<String, String> parameters, SciDBArray output, 
-			PostgreSQLIslandOperator lhs, PostgreSQLIslandOperator rhs) {
-		
-		outSchema = new LinkedHashMap<String, DataObjectAttribute>();
-		children  = new ArrayList<Operator>();
-		dataObjects = new HashSet<>();
-//		joinReservedObjects = new HashSet<>();
-		
-		children.add(lhs);
-		children.add(rhs);
-
-		lhs.setParent(this);
-		rhs.setParent(this);
-
-	}
-	
 	
 	// SQL, UNION
 	public PostgreSQLIslandOperator(Map<String, String> parameters, List<String> output,  
@@ -198,33 +140,8 @@ public class PostgreSQLIslandOperator implements Operator, OperatorInterface {
 		for (PostgreSQLIslandOperator c : childs) c.setParent(this);
 		populateComplexOutItem(true);
 		
-		
-		// if it is a subplan, add it to the ctes list -- moved out to planparser
-		/* if(parameters.containsKey("Subplan-Name")) {
-			String planName = parameters.get("Subplan-Name");
-			planName = planName.substring(planName.indexOf(" "));
-			plan.addCommonSQLTableExpression(planName, this);
-		} */
-		
 	}
 	
-	// for AFL UNION
-	public PostgreSQLIslandOperator(Map<String, String> parameters, SciDBArray output,  
-			List<PostgreSQLIslandOperator> childs) {
-
-		// order preserving
-		outSchema = new LinkedHashMap<String, DataObjectAttribute>();
-		setComplexOutItemFromProgeny(new HashMap<>());
-		children  = new ArrayList<Operator>();
-		dataObjects = new HashSet<>();
-		
-		for (PostgreSQLIslandOperator o : childs) { // check for leaf nodes
-			children.add(o);
-			o.setParent(this);
-			
-		}
-		
-	}
 	
 	public PostgreSQLIslandOperator() {
 		outSchema = new LinkedHashMap<String, DataObjectAttribute>();
@@ -343,33 +260,12 @@ public class PostgreSQLIslandOperator implements Operator, OperatorInterface {
 	public void addChilds(Collection<Operator> childs) {
 		children.addAll(childs);
 	}
-		
-//	public String generateAFLStoreStringForExecutionTree(String into) throws Exception {
-//		
-//		String dstString = this.generateAFLString(1); // this gets rid of "scan" if there is one
-//		
-//		if (into != null) {
-//			dstString = "store(" + dstString + ", " + into + ")";
-//		}
-//		
-//		return dstString;
-//	}
-	
 	
 	public boolean isAnyProgenyPruned() {
 		if (this.isPruned) return true;
 		else if (children.isEmpty()) return false;
 		else return ((PostgreSQLIslandOperator)children.get(0)).isAnyProgenyPruned();
 	}
-	
-	// recurse through plan and print it in nested form
-	// each op adds its part
-	// produces an plan similar to SciDB's AFL syntax
-//	public String generateAFLString(int recursionLevel) throws Exception {
-//		return new String();
-//	}
-	
-	
 	
 	public Map<String, DataObjectAttribute>  getOutSchema() {
 		return outSchema;
@@ -407,9 +303,8 @@ public class PostgreSQLIslandOperator implements Operator, OperatorInterface {
 	}
 	
 	public String getPruneToken() throws Exception {
-		if (!isPruned) 
-			throw new Exception("\n\n\n----> unpruned token: "+this.outSchema+"\n\n");
-		return "BIGDAWGPRUNED_"+this.pruneID;
+		if (!isPruned) return null;
+		return BigDAWGPruneToken + this.pruneID;
 	}
 	
 	public boolean isSubTree() {
@@ -429,11 +324,11 @@ public class PostgreSQLIslandOperator implements Operator, OperatorInterface {
 		if (!isSubTree && !(this instanceof PostgreSQLIslandJoin)) return null;
 		if (this instanceof PostgreSQLIslandJoin) return ((PostgreSQLIslandJoin)this).getJoinToken(); 
 		else if (this instanceof PostgreSQLIslandAggregate && ((PostgreSQLIslandAggregate)this).getAggregateID() != null) return ((PostgreSQLIslandAggregate)this).getAggregateToken();
-		else return "BIGDAWGSUBTREE_"+this.subTreeID;
+		else return BigDAWGSubtreeToken + this.subTreeID;
 	}
 	
-	public void setQueryRoot() {
-		this.isQueryRoot = true;
+	public void setQueryRoot(boolean isRoot) {
+		this.isQueryRoot = isRoot;
 	}
 	
 	public boolean isQueryRoot() {
@@ -760,8 +655,8 @@ public class PostgreSQLIslandOperator implements Operator, OperatorInterface {
 	}
 
 	@Override
-	public void setQueryRoot(boolean isQueryRoot) {
-		// TODO Auto-generated method stub
-		
+	public Integer getPruneID() {
+		if (isPruned) return pruneID;
+		else return null;
 	}
 }

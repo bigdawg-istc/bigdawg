@@ -750,4 +750,11 @@ public class SciDBIslandOperator implements OperatorInterface, Operator {
 		
 		return extraction;
 	}
+
+
+	@Override
+	public Integer getPruneID() {
+		if (isPruned) return pruneID;
+		else return null;
+	}
 }

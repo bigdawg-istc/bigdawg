@@ -25,6 +25,8 @@ import istc.bigdawg.islands.PostgreSQL.SQLPlanParser;
 import istc.bigdawg.islands.PostgreSQL.SQLQueryGenerator;
 import istc.bigdawg.islands.PostgreSQL.SQLQueryPlan;
 import istc.bigdawg.islands.PostgreSQL.operators.PostgreSQLIslandJoin;
+import istc.bigdawg.islands.PostgreSQL.operators.PostgreSQLIslandOperator;
+import istc.bigdawg.islands.PostgreSQL.operators.PostgreSQLIslandScan;
 import istc.bigdawg.islands.PostgreSQL.utils.SQLExpressionUtils;
 import istc.bigdawg.islands.SciDB.AFLPlanParser;
 import istc.bigdawg.islands.SciDB.AFLQueryGenerator;
@@ -33,13 +35,13 @@ import istc.bigdawg.islands.SciDB.operators.SciDBIslandJoin;
 import istc.bigdawg.islands.operators.Aggregate;
 import istc.bigdawg.islands.operators.Distinct;
 import istc.bigdawg.islands.operators.Join;
+import istc.bigdawg.islands.operators.Join.JoinType;
 import istc.bigdawg.islands.operators.Limit;
 import istc.bigdawg.islands.operators.Merge;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.operators.Scan;
 import istc.bigdawg.islands.operators.SeqScan;
 import istc.bigdawg.islands.operators.Sort;
-import istc.bigdawg.islands.operators.Join.JoinType;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.properties.BigDawgConfigProperties;
@@ -76,13 +78,13 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 	private Set<String> joinPredicates;
 	private Set<String> joinFilters;
 //	private Set<String> scansWithIndexCond;
-	List<Set<String>> predicateConnections;
+	private List<Set<String>> predicateConnections;
+//	private Map<Set<Integer>, Object> outSchemaByPrunes; // populated during traverse(), used when constructing
 	
 	private static final int  psqlSchemaHandlerDBID = BigDawgConfigProperties.INSTANCE.getPostgresSchemaServerDBID();
 	private static final int  scidbSchemaHandlerDBID = BigDawgConfigProperties.INSTANCE.getSciDBSchemaServerDBID();
 	private static final String tokenOfIndecision = "-1";
 	
-//	public CrossIslandQueryNode (IslandsAndCast.Scope scope, String islandQuery, String name, Map<String, Operator> rootsForSchemas) throws Exception {
 	public CrossIslandQueryNode (IslandsAndCast.Scope scope, String islandQuery, String name, Map<String, String> transitionSchemas) throws Exception {
 		super(scope, islandQuery, name);
 		
@@ -92,6 +94,7 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 		joinPredicates = new HashSet<>();
 		joinFilters = new HashSet<>();
 		originalJoinPredicates = new HashSet<>();
+//		outSchemaByPrunes = new HashMap<>();
 		
 //		// collect the cross island children
 		children = getCrossIslandChildrenReferences(transitionSchemas);
@@ -251,12 +254,14 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 		originalJoinPredicates.addAll(getOriginalJoinPredicates(root));
 		originalMap = CatalogViewer.getDBMappingByObj(objs, getSourceScope());
 		
-		System.out.printf("----> printing original map from Populate: %s; objs: %s; scope: %s\n", originalMap, objs, getSourceScope().toString());
+//		System.out.printf("----> printing original map from Populate: %s; objs: %s; scope: %s\n", originalMap, objs, getSourceScope().toString());
 		
 		// traverse add remainder
-//		Map<String, DataObjectAttribute> rootOutSchema = root.getOutSchema(); // TODO REIMPLEMENT
+		
 		remainderLoc = traverse(root, transitionSchemas); // this populated everything
-
+		
+		System.out.printf("----> resulting remainder loc: %s\n", remainderLoc);
+		
 		Map<Pair<String, String>, String> jp = processJoinPredicates(joinPredicates);
 		Map<Pair<String, String>, String> jf = processJoinPredicates(joinFilters);
 		
@@ -264,15 +269,18 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 		
 		
 		if (remainderLoc == null && root.getDataObjectAliasesOrNames().size() > 1) {
-			
+			Map<String, DataObjectAttribute> rootOutSchema = ((PostgreSQLIslandOperator) root).getOutSchema();
 			List<Operator> permResult = getPermutatedOperatorsWithBlock(scope, root, jp, jf);
-			
 			// if root is join then the constructed out schema might get messed up
-//			for (Operator o : permResult) {
-//				if (o.getOutSchema().size() != rootOutSchema.size()) {
-//					o.updateOutSchema(rootOutSchema);
-//				}
-//			}
+			if (root instanceof PostgreSQLIslandOperator) {
+				
+				for (Operator op : permResult) {
+					PostgreSQLIslandOperator o = (PostgreSQLIslandOperator) op;
+					if (o.getOutSchema().size() != rootOutSchema.size()) {
+						o.updateOutSchema(rootOutSchema);
+					}
+				}
+			}
 			
 			// debug
 			System.out.println("\n\n\nResult of Permutation: ");
@@ -301,6 +309,9 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 //			remainderPermutations.add(root);
 			
 		} // if remainderLoc is not null, then THERE IS NO NEED FOR PERMUTATIONS 
+		else {
+			remainderPermutations.add(root);
+		}
 		
 	}
 
@@ -827,7 +838,7 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 	
 	private Join constructJoin (Scope scope, Operator o1, Operator o2, JoinType jt, String joinPred, boolean isFilter) throws Exception {
 		if (scope.equals(Scope.RELATIONAL))
-			return new PostgreSQLIslandJoin().construct(o1, o2, jt, joinPred, isFilter);
+			return new PostgreSQLIslandJoin(o1, o2, jt, joinPred, isFilter);
 		else if (scope.equals(Scope.ARRAY))
 			return new SciDBIslandJoin().construct(o1, o2, jt, joinPred, isFilter);
 		else 
@@ -905,9 +916,9 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 				List<String> result = traverse(node.getChildren().get(0), transitionSchemas);
 				if (result != null) ret = new ArrayList<String>(result); 
 			} else {
-//				if (((SeqScan)node).getIndexCond() != null) {
-//					scansWithIndexCond.add(((Scan)node).getIndexCond().toString());
-//				}
+				if (node instanceof PostgreSQLIslandScan && ((PostgreSQLIslandScan)node).getIndexCond() != null) {
+					joinPredicates.add(((PostgreSQLIslandScan)node).getIndexCond().toString());
+				}
 				
 				System.out.printf("--->> printing qualified name: %s; originalMap: %s; \n", ((SeqScan) node).getFullyQualifiedName(), originalMap);
 				

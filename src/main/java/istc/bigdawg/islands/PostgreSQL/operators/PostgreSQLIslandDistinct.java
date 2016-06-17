@@ -40,6 +40,8 @@ public class PostgreSQLIslandDistinct extends PostgreSQLIslandOperator implement
 	
 	public PostgreSQLIslandDistinct(PostgreSQLIslandOperator o, boolean addChild) throws Exception {
 		super(o, addChild);
+		
+		this.blockerID = o.blockerID;
 	}
 
 

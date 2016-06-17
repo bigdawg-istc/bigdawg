@@ -1,8 +1,12 @@
 package istc.bigdawg.plan;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
+import java.util.Set;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -30,16 +34,18 @@ public class TrialsAndErrors {
 	private static boolean runRegex = false;
 	private static boolean runWalker = false;
 	private static boolean runPlanner = false;
+	private static boolean runMapTrial = false;
 
 	@Before
 	public void setUp() throws Exception {
 		CatalogInstance.INSTANCE.getCatalog();
 		
 //		setupQueryExplainer();
-		setupQueryBuilder();
+//		setupQueryBuilder();
 //		setupRegexTester();
 //		setupTreeWalker();
 //		setupPlannerTester();
+		setupMapTrial();
 	}
 	
 	public void setupQueryExplainer() {
@@ -60,6 +66,10 @@ public class TrialsAndErrors {
 	
 	public void setupPlannerTester() {
 		runPlanner = true;
+	}
+	
+	public void setupMapTrial() {
+		runMapTrial = true;
 	}
 	
 
@@ -207,6 +217,26 @@ public class TrialsAndErrors {
 			e.printStackTrace();
 			throw e;
 		}
+	}
+	
+	@Test
+	public void testMap() throws Exception {
+		if ( !runMapTrial ) return;
+		
+		Set<Integer> s1 = new HashSet<>();
+		s1.add(2); s1.add(4); s1.add(6);  
+		
+		Map<Set<Integer>, String> m = new HashMap<>();
+		m.put(s1, "246");
+		
+		Set<Integer> s2 = new HashSet<>();
+		s2.add(2); s2.add(4); s2.add(6);
+		
+		Set<Integer> s3 = new HashSet<>();
+		s3.add(2); s3.add(4);
+		
+		System.out.printf("get String with s1: %s; s2: %s; s3: %s\n", m.get(s1), m.get(s2), m.get(s3));
+		
 	}
 	
 //	private void printIndentation(int recLevel) {

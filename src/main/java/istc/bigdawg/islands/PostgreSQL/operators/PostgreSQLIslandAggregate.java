@@ -9,18 +9,14 @@ import java.util.Set;
 
 import org.apache.jcp.xml.dsig.internal.dom.Utils;
 
-import istc.bigdawg.islands.CommonOutItem;
 import istc.bigdawg.islands.OperatorVisitor;
 import istc.bigdawg.islands.PostgreSQL.SQLOutItem;
 import istc.bigdawg.islands.PostgreSQL.SQLTableExpression;
 import istc.bigdawg.islands.PostgreSQL.utils.SQLExpressionUtils;
-import istc.bigdawg.islands.SciDB.SciDBArray;
 import istc.bigdawg.islands.operators.Aggregate;
 import istc.bigdawg.islands.operators.Operator;
-import istc.bigdawg.schema.DataObjectAttribute;
 import istc.bigdawg.schema.SQLAttribute;
 import net.sf.jsqlparser.expression.Expression;
-import net.sf.jsqlparser.expression.Function;
 import net.sf.jsqlparser.expression.Parenthesis;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
@@ -157,6 +153,9 @@ public class PostgreSQLIslandAggregate extends PostgreSQLIslandOperator implemen
 	
 	public PostgreSQLIslandAggregate(PostgreSQLIslandOperator o, boolean addChild) throws Exception {
 		super(o, addChild);
+		
+		this.blockerID = o.blockerID;
+		
 		PostgreSQLIslandAggregate a = (PostgreSQLIslandAggregate) o;
 		
 		this.setAggregateID(a.getAggregateID());
@@ -194,88 +193,6 @@ public class PostgreSQLIslandAggregate extends PostgreSQLIslandOperator implemen
 	}
 	
 	
-	// for AFL
-	PostgreSQLIslandAggregate(Map<String, String> parameters, SciDBArray output, PostgreSQLIslandOperator child) throws Exception  {
-		super(parameters, output, child);
-
-		
-		isBlocking = true;
-		blockerCount++;
-		this.blockerID = blockerCount;
-		
-		List<String> aggregateExpressions = Arrays.asList(parameters.get("Aggregate-Functions").split(", ")); 
-		aggregateAliases = new ArrayList<String>();
-		parsedGroupBys = new ArrayList<>();
-		setAggregateFilter(parameters.get("Filter"));
-		
-		
-		Map<String, String> aggFuns = new HashMap<>();
-		for (String s : aggregateExpressions) {
-			String alias = null;
-			
-			try {
-				Expression f = CCJSqlParserUtil.parseExpression(s);
-				
-				if (f instanceof Function) {
-					List<String> exprAndAlias = Arrays.asList(s.split(" AS "));
-					if (exprAndAlias.size() > 1) alias = exprAndAlias.get(1);
-					else alias = ((Function)f).getParameters().getExpressions().get(0).toString()+"_"+((Function)f).getName();
-					
-				} else if (f instanceof Column) {
-					alias = ((Column)f).getColumnName();
-//					System.out.printf("----> f alias: %s\n", alias);
-				}
-				aggFuns.put(alias, f.toString());
-			} catch (Exception e) {
-				String[] segs = s.split("[-\\(\\)\\.,\\*\\/\\+\\s]+");
-				aggFuns.put(segs[1]+"_"+segs[0], s);
-			}
-			
-			
-		}
-		
-		
-		// iterate over outschema and 
-		// classify each term as aggregate func or group by
-		for (String expr : output.getAttributes().keySet()) {
-			
-//			System.out.printf("aggreagte output expression: %s, type: %s\n", expr, output.getAttributes().get(expr));
-			
-			CommonOutItem out = new CommonOutItem(expr, output.getAttributes().get(expr), false, null); // TODO CHECK THIS TODO
-			DataObjectAttribute attr = out.getAttribute();
-			
-			if (aggFuns.get(expr) != null) attr.setExpression(aggFuns.get(expr));
-			else attr.setExpression(expr);
-			
-			String attrName = attr.getName();
-			
-			outSchema.put(attrName, attr);
-			
-		}
-		
-		// dimensions
-		for (String expr : output.getDimensions().keySet()) {
-			
-			CommonOutItem out = new CommonOutItem(expr, "Dimension", true, null);
-			DataObjectAttribute dim = out.getAttribute();
-			
-			Column e = (Column) CCJSqlParserUtil.parseExpression(expr);
-			String arrayName = output.getDimensionMembership().get(expr);
-			if (arrayName != null) {
-				e.setTable(new Table(Arrays.asList(arrayName.split(", ")).get(0)));
-			}
-			
-			parsedGroupBys.add(e);
-			dim.setExpression(e);
-			
-			String dimName = dim.getFullyQualifiedName();		
-			outSchema.put(dimName, dim);
-				
-		}
-		
-//		System.out.printf("parsedGroupBys in Aggregate: %s\n", parsedGroupBys);
-
-	}
 	
 	
 //	void processFunction(Function f, String alias) throws Exception  {

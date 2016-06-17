@@ -37,6 +37,7 @@ public interface Operator {
 	
 	public boolean isPruned();
 	public void prune(boolean p);
+	public Integer getPruneID();
 	public String getPruneToken() throws Exception;
 	
 	public boolean isSubTree();
