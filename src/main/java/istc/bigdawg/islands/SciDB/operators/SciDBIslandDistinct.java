@@ -3,11 +3,11 @@ package istc.bigdawg.islands.SciDB.operators;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import istc.bigdawg.islands.DataObjectAttribute;
 import istc.bigdawg.islands.OperatorVisitor;
 import istc.bigdawg.islands.SciDB.SciDBArray;
 import istc.bigdawg.islands.operators.Distinct;
 import istc.bigdawg.islands.operators.Operator;
-import istc.bigdawg.schema.DataObjectAttribute;
 
 public class SciDBIslandDistinct extends SciDBIslandOperator implements Distinct {
 

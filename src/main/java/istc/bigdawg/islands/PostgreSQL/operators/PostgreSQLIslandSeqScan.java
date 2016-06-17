@@ -5,15 +5,15 @@ import java.util.List;
 import java.util.Map;
 
 import istc.bigdawg.catalog.CatalogViewer;
+import istc.bigdawg.islands.DataObject;
 import istc.bigdawg.islands.OperatorVisitor;
 import istc.bigdawg.islands.PostgreSQL.SQLOutItem;
 import istc.bigdawg.islands.PostgreSQL.SQLTableExpression;
+import istc.bigdawg.islands.PostgreSQL.utils.SQLAttribute;
 import istc.bigdawg.islands.operators.SeqScan;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.properties.BigDawgConfigProperties;
-import istc.bigdawg.schema.DataObject;
-import istc.bigdawg.schema.SQLAttribute;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.create.table.CreateTable;
 
@@ -90,7 +90,7 @@ public class PostgreSQLIslandSeqScan extends PostgreSQLIslandScan implements Seq
 	
 	
 	public String toString() {
-		return "SeqScan " + getSrcTable() + " subject to (" + getFilterExpression()+")";
+		return "(SeqScan " + getSrcTable() + ", " + getFilterExpression()+")";
 	}
 	
 	

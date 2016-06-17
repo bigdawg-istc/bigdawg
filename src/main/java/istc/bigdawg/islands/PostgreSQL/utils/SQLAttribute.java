@@ -1,7 +1,9 @@
-package istc.bigdawg.schema;
+package istc.bigdawg.islands.PostgreSQL.utils;
 
 
 
+import istc.bigdawg.islands.DataObject;
+import istc.bigdawg.islands.DataObjectAttribute;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
@@ -26,7 +28,7 @@ public class SQLAttribute extends DataObjectAttribute {
 			typeString = type.getDataType();
 		}
 		
-		SQLAttribute(ColumnDefinition a, String table) throws Exception {
+		public SQLAttribute(ColumnDefinition a, String table) throws Exception {
 			super(new DataObject(table), a.getColumnName());
 			
 			type = a.getColDataType();
@@ -57,15 +59,9 @@ public class SQLAttribute extends DataObjectAttribute {
 		}
 		
 		public String toString() {
-			
-			String ret = new String(this.getFullyQualifiedName() + ": ");
-			
-			if(type != null) {
-				ret += "type: " +  type.getDataType();
-			}
-			
+			String ret = new String(this.getFullyQualifiedName());
+			if(type != null) ret += ":"+ type.getDataType();
 			return ret;
-			
 		}
 		
 		

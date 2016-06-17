@@ -1,4 +1,4 @@
-package istc.bigdawg.schema;
+package istc.bigdawg.islands;
 
 import java.util.HashSet;
 import java.util.Set;

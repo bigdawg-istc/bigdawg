@@ -3,8 +3,6 @@ package istc.bigdawg.islands;
 import java.util.List;
 import java.util.Map;
 
-import istc.bigdawg.schema.DataObjectAttribute;
-
 public class CommonOutItem {
 
 	// takes in the content of a <Item> field in EXPLAIN xml 

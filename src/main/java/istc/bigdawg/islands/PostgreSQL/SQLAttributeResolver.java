@@ -4,9 +4,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import istc.bigdawg.schema.SQLReferencedAttribute;
-import istc.bigdawg.schema.SQLReferencedSchema;
-import istc.bigdawg.schema.SQLStoredAttribute;
+import istc.bigdawg.islands.PostgreSQL.utils.SQLReferencedAttribute;
+import istc.bigdawg.islands.PostgreSQL.utils.SQLReferencedSchema;
+import istc.bigdawg.islands.PostgreSQL.utils.SQLStoredAttribute;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.AnalyticExpression;
 import net.sf.jsqlparser.expression.Expression;

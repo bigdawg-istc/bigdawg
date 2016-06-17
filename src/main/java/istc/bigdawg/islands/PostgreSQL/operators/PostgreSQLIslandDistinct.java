@@ -7,8 +7,8 @@ import java.util.Map;
 import istc.bigdawg.islands.OperatorVisitor;
 import istc.bigdawg.islands.PostgreSQL.SQLOutItem;
 import istc.bigdawg.islands.PostgreSQL.SQLTableExpression;
+import istc.bigdawg.islands.PostgreSQL.utils.SQLAttribute;
 import istc.bigdawg.islands.operators.Distinct;
-import istc.bigdawg.schema.SQLAttribute;
 
 public class PostgreSQLIslandDistinct extends PostgreSQLIslandOperator implements Distinct {
 

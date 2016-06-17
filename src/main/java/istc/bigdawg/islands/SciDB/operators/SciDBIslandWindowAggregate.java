@@ -5,11 +5,11 @@ import java.util.List;
 import java.util.Map;
 
 import istc.bigdawg.islands.CommonOutItem;
+import istc.bigdawg.islands.DataObjectAttribute;
 import istc.bigdawg.islands.OperatorVisitor;
 import istc.bigdawg.islands.SciDB.SciDBArray;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.operators.WindowAggregate;
-import istc.bigdawg.schema.DataObjectAttribute;
 import net.sf.jsqlparser.expression.AnalyticExpression;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 import net.sf.jsqlparser.statement.select.OrderByElement;

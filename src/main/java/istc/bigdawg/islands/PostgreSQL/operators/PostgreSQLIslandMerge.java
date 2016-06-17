@@ -8,9 +8,9 @@ import java.util.Set;
 import istc.bigdawg.islands.OperatorVisitor;
 import istc.bigdawg.islands.PostgreSQL.SQLOutItem;
 import istc.bigdawg.islands.PostgreSQL.SQLTableExpression;
+import istc.bigdawg.islands.PostgreSQL.utils.SQLAttribute;
 import istc.bigdawg.islands.operators.Merge;
 import istc.bigdawg.islands.operators.Operator;
-import istc.bigdawg.schema.SQLAttribute;
 
 public class PostgreSQLIslandMerge extends PostgreSQLIslandOperator implements Merge {
 

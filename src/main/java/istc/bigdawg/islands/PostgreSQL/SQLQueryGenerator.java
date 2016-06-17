@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import istc.bigdawg.islands.DataObjectAttribute;
 import istc.bigdawg.islands.OperatorVisitor;
 import istc.bigdawg.islands.PostgreSQL.operators.PostgreSQLIslandAggregate;
 import istc.bigdawg.islands.PostgreSQL.operators.PostgreSQLIslandCommonTableExpressionScan;
@@ -17,6 +18,7 @@ import istc.bigdawg.islands.PostgreSQL.operators.PostgreSQLIslandLimit;
 import istc.bigdawg.islands.PostgreSQL.operators.PostgreSQLIslandOperator;
 import istc.bigdawg.islands.PostgreSQL.operators.PostgreSQLIslandScan;
 import istc.bigdawg.islands.PostgreSQL.operators.PostgreSQLIslandSort;
+import istc.bigdawg.islands.PostgreSQL.utils.SQLAttribute;
 import istc.bigdawg.islands.PostgreSQL.utils.SQLExpressionUtils;
 import istc.bigdawg.islands.operators.Aggregate;
 import istc.bigdawg.islands.operators.CommonTableExpressionScan;
@@ -29,8 +31,6 @@ import istc.bigdawg.islands.operators.Scan;
 import istc.bigdawg.islands.operators.SeqScan;
 import istc.bigdawg.islands.operators.Sort;
 import istc.bigdawg.islands.operators.WindowAggregate;
-import istc.bigdawg.schema.DataObjectAttribute;
-import istc.bigdawg.schema.SQLAttribute;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Alias;
 import net.sf.jsqlparser.expression.BinaryExpression;
@@ -1002,7 +1002,6 @@ public class SQLQueryGenerator implements OperatorVisitor {
 				}
 			}
 			
-//			System.out.printf("\n\n\n---> childAlias&Names: %s\n\n\n", childAliasesAndNames);
 			String token;
 			if (child.isPruned()) token = child.getPruneToken();
     		else token = ((Join)child).getJoinToken();
@@ -1015,17 +1014,11 @@ public class SQLQueryGenerator implements OperatorVisitor {
 			operator.setSubTree(true);
 			if (!isSelect) addSelectIntoToken(outputSelect, operator.getSubTreeToken());
 			
+			if (operator instanceof PostgreSQLIslandOperator && dstStatement != null) {
+				postprocessSQLStatement((PostgreSQLIslandOperator)operator);
+			}
+			
 			sb.append(outputSelect);
-//		} else if (!(operator instanceof Join) && !(child instanceof Join)) {
-//			operator.accept(this);
-//			outputSelect = dstStatement; //operator.generateSQLStringDestOnly(null, true, true, operator.getDataObjectAliasesOrNames().keySet());
-//			
-//			operator.setSubTree(true);
-//			if (!isSelect) addSelectIntoToken(outputSelect, operator.getSubTreeToken());
-//			
-//			throw new Exception ("---->> shouldn't be here: "+outputSelect);
-//			
-//			sb.append(outputSelect);
 		} 
 		
 		dstStatement = originalDst;
@@ -1067,24 +1060,24 @@ public class SQLQueryGenerator implements OperatorVisitor {
 //		operator.prune(originalPruneStatus);
 		
 		// iterate over out schema and add it to select clause
-		Map<String, SelectItem> selects = new HashMap<String, SelectItem>();
+//		Map<String, SelectItem> selects = new HashMap<String, SelectItem>();
 
 		operator.updateObjectAliases();
 		
-		if (srcStatement != null)
-			changeAttributesForSelectItems(operator, srcStatement.getSelectBody(), dstStatement.getSelectBody(), selects, stopAtJoin);
-		else {
+//		if (srcStatement != null)
+//			changeAttributesForSelectItems(operator, srcStatement.getSelectBody(), dstStatement.getSelectBody(), selects, stopAtJoin);
+//		else {
 			
-			PlainSelect ps = (PlainSelect)dstStatement.getSelectBody();
-			List<SelectItem> lsi = new ArrayList<>();
-			
-			for (String s : ((PostgreSQLIslandOperator) operator).getOutSchema().keySet()) {
-				SelectExpressionItem sei = new SelectExpressionItem();
-				sei.setExpression(CCJSqlParserUtil.parseExpression(((PostgreSQLIslandOperator) operator).getOutSchema().get(s).getExpressionString()));
-				lsi.add(sei);
-			}
-			ps.setSelectItems(lsi);
+		PlainSelect pls = (PlainSelect)dstStatement.getSelectBody();
+		List<SelectItem> lsi = new ArrayList<>();
+		
+		for (String s : ((PostgreSQLIslandOperator) operator).getOutSchema().keySet()) {
+			SelectExpressionItem sei = new SelectExpressionItem();
+			sei.setExpression(CCJSqlParserUtil.parseExpression(((PostgreSQLIslandOperator) operator).getOutSchema().get(s).getExpressionString()));
+			lsi.add(sei);
 		}
+		pls.setSelectItems(lsi);
+//		}
 		
 		if (operator.isAnyProgenyPruned()) {
 			
@@ -1160,6 +1153,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	 * @param stopAtJoin
 	 * @throws Exception
 	 */
+	@SuppressWarnings("unused")
 	private void changeAttributesForSelectItems(PostgreSQLIslandOperator o, SelectBody ss, SelectBody ps, Map<String, SelectItem> selects, boolean stopAtJoin) throws Exception {
 		
 		if (ps instanceof SetOperationList) {

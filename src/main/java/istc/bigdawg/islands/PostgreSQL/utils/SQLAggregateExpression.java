@@ -2,8 +2,6 @@ package istc.bigdawg.islands.PostgreSQL.utils;
 
 import java.util.Map;
 
-import istc.bigdawg.schema.SQLAttribute;
-
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Function;

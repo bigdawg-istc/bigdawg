@@ -47,7 +47,6 @@ import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.query.DBHandler;
-import istc.bigdawg.schema.DataObjectAttribute;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
 import istc.bigdawg.scidb.SciDBHandler;
 import istc.bigdawg.signature.Signature;
@@ -258,6 +257,8 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 		
 		// traverse add remainder
 		
+		System.out.printf("\n\n\n--> Root schema before traverse: %s;\n", ((PostgreSQLIslandOperator)root).getOutSchema());
+		
 		remainderLoc = traverse(root, transitionSchemas); // this populated everything
 		
 		System.out.printf("----> resulting remainder loc: %s\n", remainderLoc);
@@ -272,12 +273,15 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 			Map<String, DataObjectAttribute> rootOutSchema = ((PostgreSQLIslandOperator) root).getOutSchema();
 			List<Operator> permResult = getPermutatedOperatorsWithBlock(scope, root, jp, jf);
 			// if root is join then the constructed out schema might get messed up
+			System.out.printf("--> Root schema before if: %s;\n", ((PostgreSQLIslandOperator)root).getOutSchema());
 			if (root instanceof PostgreSQLIslandOperator) {
 				
 				for (Operator op : permResult) {
 					PostgreSQLIslandOperator o = (PostgreSQLIslandOperator) op;
 					if (o.getOutSchema().size() != rootOutSchema.size()) {
+						System.out.printf("--> o schema before: %s;\n", o.getOutSchema());
 						o.updateOutSchema(rootOutSchema);
+						System.out.printf("--> o schema after update: %s;\n\n", o.getOutSchema());
 					}
 				}
 			}
@@ -294,8 +298,9 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 				} else gen = null;
 				gen.configure(true, false);
 				o.accept(gen);
-				System.out.printf("%d.  first formulation: %s\n\n", i, gen.generateStatementString());
-				System.out.printf("%d. second formulation: %s\n\n", i, gen.generateStatementString()); // duplicate command to test modification of underlying structure
+				System.out.printf("%d.  first formulation: %s\n", i, gen.generateStatementString());
+				System.out.printf("%d. second formulation: %s\n", i, gen.generateStatementString()); // duplicate command to test modification of underlying structure
+				System.out.printf("--> o schema after gens: %s;\n\n", ((PostgreSQLIslandOperator) o).getOutSchema());
 				i++;
 			}
 			System.out.println("\n");
@@ -776,7 +781,7 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 		
 		o1ns.retainAll(Sets.union(jp.keySet(), jf.keySet()));
 		
-		System.out.printf("\n--->>>>> makeJoin: \n\tjp: %s; \n\tjf: %s;\n\to1ns: %s;\n\to2ns: %s\n\n", jp, jf, o1ns, o2ns);
+//		System.out.printf("\n--->>>>> makeJoin: \n\tjp: %s; \n\tjf: %s;\n\to1ns: %s;\n\to2ns: %s\n\n", jp, jf, o1ns, o2ns);
 		
 		Operator o1Temp = o1;
 		Operator o2Temp = o2;
@@ -802,7 +807,7 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 				
 				if (jp.get(s) != null && jp.get(key) != null && jp.get(s).get(key) != null) {
 					pred.add(jp.get(s).get(key));
-					System.out.printf("---------> jp: %s, s: %s, key: %s; pred: %s; used: %s\n", jp, s, key, pred, used);
+//					System.out.printf("---------> jp: %s, s: %s, key: %s; pred: %s; used: %s\n", jp, s, key, pred, used);
 					jp.get(s).remove(key);
 					jp.get(key).remove(s);
 				} else if (jf.get(s) != null && jf.get(key) != null && jf.get(s).get(key) != null) {
@@ -829,7 +834,7 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 		if (isTablesConnectedViaPredicates(o1Temp, o2Temp)) {
 			return null;
 		} else {
-			System.out.printf("\n\nCross island query node: raw cross join:  no1 class: %s; o1Temp tree: %s;\no1 class: %s, o2Temp tree: %s\n\n\n\n"
+			System.out.printf("\nCross island query node: raw cross join:\n  o1 class: %s; o1Temp tree: %s;\no  2 class: %s, o2Temp tree: %s\n\n\n"
 					, o1Temp.getClass().getSimpleName(), o1Temp.getTreeRepresentation(true)
 					, o2Temp.getClass().getSimpleName(), o2Temp.getTreeRepresentation(true));
 			return constructJoin(scope, o1Temp, o2Temp, jt, null, false);

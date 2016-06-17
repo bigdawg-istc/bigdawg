@@ -8,13 +8,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import istc.bigdawg.islands.DataObjectAttribute;
 import istc.bigdawg.islands.OperatorVisitor;
 import istc.bigdawg.islands.PostgreSQL.SQLOutItem;
 import istc.bigdawg.islands.PostgreSQL.SQLTableExpression;
 import istc.bigdawg.islands.PostgreSQL.utils.SQLExpressionUtils;
 import istc.bigdawg.islands.operators.Join;
 import istc.bigdawg.islands.operators.Operator;
-import istc.bigdawg.schema.DataObjectAttribute;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Parenthesis;
@@ -109,7 +109,7 @@ public class PostgreSQLIslandJoin extends PostgreSQLIslandOperator implements Jo
 			}
 		}
 		
-		System.out.printf("\n\n\n--> Join constructor: output %s;\n outSchema %s;\n jp: %s;\n jf: %s\n\n", output, outSchema, joinPredicate, joinFilter);
+//		System.out.printf("\n\n\n--> Join constructor: output %s;\n outSchema %s;\n jp: %s;\n jf: %s\n\n", output, outSchema, joinPredicate, joinFilter);
 //		System.out.printf("---> jp: %s\njf: %s\n\n", joinPredicate, joinFilter);
 	}
     
@@ -355,8 +355,8 @@ public class PostgreSQLIslandJoin extends PostgreSQLIslandOperator implements Jo
     
     
     public String toString() {
-    		return "Joining " + children.get(0).toString() + " x " + children.get(1).toString() 
-    				+ " type " + joinType + " predicates " + joinPredicate + " filters " + joinFilter;
+    		return "(Join " + children.get(0).toString() + ", " + children.get(1).toString() 
+    				+ ", " + joinType + ", " + joinPredicate + ", " + joinFilter + ")";
     }
     
 //	@Override

@@ -1,4 +1,4 @@
-package istc.bigdawg.schema;
+package istc.bigdawg.islands.PostgreSQL.utils;
 
 import java.util.ArrayList;
 import java.util.HashMap;

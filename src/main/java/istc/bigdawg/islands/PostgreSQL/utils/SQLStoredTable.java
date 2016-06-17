@@ -1,4 +1,4 @@
-package istc.bigdawg.schema;
+package istc.bigdawg.islands.PostgreSQL.utils;
 
 import java.io.IOException;
 import java.util.Iterator;

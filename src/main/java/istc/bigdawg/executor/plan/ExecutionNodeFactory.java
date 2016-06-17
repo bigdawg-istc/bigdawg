@@ -233,7 +233,7 @@ public class ExecutionNodeFactory {
 		Operator joinOp = gen.generateStatementForPresentNonMigratingSegment(op, sb, isSelect);
 		final String sqlStatementForPresentNonJoinSegment = sb.toString();
 
-		System.out.printf("joinOp: %s; statement: %s\n", joinOp, sqlStatementForPresentNonJoinSegment);
+		System.out.printf("\njoinOp: %s; statement: %s\n", joinOp, sqlStatementForPresentNonJoinSegment.length() > 0 ? sqlStatementForPresentNonJoinSegment : "(no content)");
 		
 		ExecutionNodeSubgraph result = new ExecutionNodeSubgraph();
 
@@ -326,7 +326,7 @@ public class ExecutionNodeFactory {
 		remainder.accept(gen);
 		remainderSelectIntoString = gen.generateStatementString();
 		
-		System.out.printf("<><><> Remainder class: %s; QEP: %s; children count: %s; query string: %s\n"
+		System.out.printf("\n\n<><><> Remainder class: %s; QEP: %s; children count: %s; query string: %s\n"
 				, remainder.getClass().getSimpleName()
 				, qep.getSerializedName()
 				, remainder.getChildren().size()
@@ -351,6 +351,7 @@ public class ExecutionNodeFactory {
 
 			containerNodes.put(table, localQueryNode);
 		}
+		System.out.println();
 
 		remainder.setSubTree(true);
 		String remainderInto = remainder.getSubTreeToken();
