@@ -9,7 +9,9 @@ sudo apt-get install -y libreadline-dev zlib1g-dev
 initial_dir=$(pwd)
 
 # use this for vagrant
-ln -s ~/Downloads Downloads
+rm -rf Downloads
+mkdir ~/Downloads
+ln -s ~/Downloads ./Downloads
 
 # OR use this for a non-vagrant setup
 # mkdir Downloads
