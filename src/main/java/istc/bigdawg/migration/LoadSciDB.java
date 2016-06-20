@@ -172,11 +172,8 @@ public class LoadSciDB implements Load {
 	 * Load the data to SciDB (identified by connectionTo): to a given array
 	 * from a given file.
 	 * 
-	 * @param connectionTo
-	 * @param arrays
-	 * @param scidbFilePath
-	 * @return
-	 * @throws SQLException
+	 * @return Information about the process.
+	 * @throws Exception
 	 */
 	public Object call() throws Exception {
 		/*

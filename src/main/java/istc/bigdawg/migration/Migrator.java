@@ -58,29 +58,57 @@ public class Migrator {
 	}
 
 	/**
+	 * see:
+	 * {@link #migrate(ConnectionInfo, String, ConnectionInfo, String, MigrationParams)}
+	 * 
+	 * @param connectionFrom
+	 * @param objectFrom
+	 * @param connectionTo
+	 * @param objectTo
+	 * @return {@link MigrationResult} the result and information about the
+	 *         executed migration
+	 * @throws MigrationException
+	 */
+	public static MigrationResult migrate(ConnectionInfo connectionFrom,
+			String objectFrom, ConnectionInfo connectionTo, String objectTo)
+					throws MigrationException {
+		return Migrator.migrate(connectionFrom, objectFrom, connectionTo,
+				objectTo, null);
+	}
+
+	/**
 	 * Migrate data between databases.
 	 * 
 	 * @param connectionFrom
-	 *            the connection to the database from which we migrate the data.
+	 *            the connection to the database from which we migrate the data
 	 * @param objectFrom
 	 *            the array/table from which we migrate the data
 	 * @param connectionTo
 	 *            the connection to the database to which we migrate the data
 	 * @param objectTo
 	 *            the array/table to which we migrate the data
-	 * @return the result and information about the executed migration
+	 * @param migrationParams
+	 *            additional parameters for the migrator, for example, the
+	 *            "create statement" (a statement to create an object:
+	 *            table/array) which should be executed in the database
+	 *            identified by connectionTo; data should be loaded to this new
+	 *            object, the name of the target object in the create statement
+	 *            has to be the same as the migrate method parameter: objectTo
+	 * @return {@link MigrationResult} the result and information about the
+	 *         executed migration
 	 * 
 	 * @throws MigrationException
 	 *             information why the migration failed (e.g. no access to one
 	 *             of the database, schemas are not compatible
 	 */
 	public static MigrationResult migrate(ConnectionInfo connectionFrom,
-			String objectFrom, ConnectionInfo connectionTo, String objectTo)
-					throws MigrationException {
+			String objectFrom, ConnectionInfo connectionTo, String objectTo,
+			MigrationParams migrationParams) throws MigrationException {
 		logger.debug("Migrator - main facade.");
 		for (FromDatabaseToDatabase migrator : registeredMigrators) {
-			MigrationResult result = migrator.migrate(new MigrationInfo(
-					connectionFrom, objectFrom, connectionTo, objectTo));
+			MigrationResult result = migrator
+					.migrate(new MigrationInfo(connectionFrom, objectFrom,
+							connectionTo, objectTo, migrationParams));
 			if (result != null) {
 				return result;
 			}

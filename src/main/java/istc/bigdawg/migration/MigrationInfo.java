@@ -29,21 +29,31 @@ class MigrationInfo {
 	private String objectTo;
 
 	/**
+	 * Additional parameters for the migration process. {@link MigrationParams }
+	 */
+	private MigrationParams migrationParams;
+
+	/**
 	 * @param connectionFrom
 	 *            the connection to the database from which we migrate the data.
 	 * @param objectFrom
 	 *            the array/table from which we migrate the data
 	 * @param connectionTo
 	 *            the connection to the database to which we migrate the data
+	 * @param migrationParams
+	 *            additional parameters for the migration process
+	 *            {@link MigrationParams }
 	 * @param objectTo
 	 *            the array/table to which we migrate the data
 	 */
 	public MigrationInfo(ConnectionInfo connectionFrom, String objectFrom,
-			ConnectionInfo connectionTo, String objectTo) {
+			ConnectionInfo connectionTo, String objectTo,
+			MigrationParams migrationParams) {
 		this.connectionFrom = connectionFrom;
 		this.objectFrom = objectFrom;
 		this.connectionTo = connectionTo;
 		this.objectTo = objectTo;
+		this.migrationParams = migrationParams;
 	}
 
 	/**
@@ -54,7 +64,7 @@ class MigrationInfo {
 	 * @return the instance of the MigrationInfo class
 	 */
 	public static MigrationInfo forConnectionTo(ConnectionInfo connectionTo) {
-		return new MigrationInfo(null, null, connectionTo, null);
+		return new MigrationInfo(null, null, connectionTo, null, null);
 	}
 
 	/**
@@ -79,10 +89,21 @@ class MigrationInfo {
 	}
 
 	/**
-	 * @return the objectTo
+	 * @return the objectTo the array/table from which we migrate the data; see:
+	 *         {@link #MigrationInfo(ConnectionInfo, String, ConnectionInfo, String, MigrationParams)}
 	 */
 	public String getObjectTo() {
 		return objectTo;
+	}
+
+	/**
+	 * 
+	 * @return Additional parameters for the migration process.
+	 *         {@link MigrationParams } see:
+	 *         {@link #MigrationInfo(ConnectionInfo, String, ConnectionInfo, String, MigrationParams)}
+	 */
+	public MigrationParams getMigrationParams() {
+		return migrationParams;
 	}
 
 }
