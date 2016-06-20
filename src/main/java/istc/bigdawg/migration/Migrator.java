@@ -48,7 +48,7 @@ public class Migrator {
 	}
 
 	/**
-	 * register the migrators
+	 * Register the migrators.
 	 */
 	static {
 		registeredMigrators = new ArrayList<FromDatabaseToDatabase>();
@@ -116,7 +116,7 @@ public class Migrator {
 		throw new MigrationException("Unsupported migration from "
 				+ connectionFrom.getHost() + ":" + connectionFrom.getPort()
 				+ " to " + connectionTo.getHost() + ":" + connectionTo.getPort()
-				+ "!\n" + "Detail info:\n" + "From:\n"
+				+ "!\n" + "Details:\n" + "From:\n"
 				+ connectionFrom.toString() + "\n To:\n"
 				+ connectionTo.toString());
 	}

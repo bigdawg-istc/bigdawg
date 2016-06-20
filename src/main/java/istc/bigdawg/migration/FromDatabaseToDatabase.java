@@ -114,14 +114,36 @@ public class FromDatabaseToDatabase implements MigrationNetworkRequest {
 		return new FromDatabaseToDatabase(exporter, loader);
 	}
 
-	/** From where to migrate the data (which node/machine). */
+	/**
+	 * 
+	 * @return From where to migrate the data (which node/machine).
+	 * 
+	 */
 	public ConnectionInfo getConnectionFrom() {
 		return migrationInfo.getConnectionFrom();
 	}
 
-	/* To where to migrate the data (to which node/machine). */
+	/**
+	 * 
+	 * @return the name of the object from which we should export the data
+	 */
+	public String getObjectFrom() {
+		return migrationInfo.getObjectFrom();
+	}
+
+	/**
+	 * @return To where to migrate the data (to which node/machine).
+	 */
 	public ConnectionInfo getConnectionTo() {
 		return migrationInfo.getConnectionTo();
+	}
+
+	/**
+	 * 
+	 * @return the name of the object to which we should load the data
+	 */
+	public String getObjectTo() {
+		return migrationInfo.getObjectTo();
 	}
 
 	/**

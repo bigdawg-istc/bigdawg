@@ -10,29 +10,53 @@ import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.SQLException;
 
+import org.apache.log4j.Logger;
 import org.postgresql.copy.CopyManager;
 import org.postgresql.core.BaseConnection;
 
-import istc.bigdawg.LoggerSetup;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
+import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
 import istc.bigdawg.utils.Utils;
 
 /**
- * @author Adam Dziedzic
+ * Utilities to be used for testing migration (e.g. pre-load some data, check
+ * number of elements in arrays/tables).
  * 
- *
+ * @author Adam Dziedzic
  */
 public class TestMigrationUtils {
+
+	/* log */
+	private static Logger log = Logger.getLogger(TestMigrationUtils.class);
+
+	/** Number of rows in the region table. */
+	private final static int REGION_ROWS_NUMBER = 5;
+
+	/** Number of rows in the waveform table. */
+	private final static int WAVEFORM_ROWS_NUMBER = 10;
 
 	/** Name for the table in TPCH. */
 	private static final String REGION_TPCH_TABLE = "region";
 
+	/** Name for the table from mimi2 - waveform. */
+	private static final String WAVEFORM_MIMIC_TABLE = "waveform";
+
+	/**
+	 * Load region TPC-H data to PostgreSQL.
+	 * 
+	 * @param conFrom
+	 *            connection to PostgreSQL
+	 * @param fromTable
+	 *            the table to load the data to in PostgreSQL
+	 * 
+	 * @return number of loaded rows
+	 * 
+	 */
 	public static long loadDataToPostgresRegionTPCH(
 			PostgreSQLConnectionInfo conFrom, String fromTable)
 					throws SQLException, IOException {
-		LoggerSetup.setLogging();
 		PostgreSQLHandler handler = new PostgreSQLHandler(conFrom);
 		handler.dropTableIfExists(fromTable);
 		handler.createTable("CREATE TABLE " + fromTable
@@ -57,7 +81,47 @@ public class TestMigrationUtils {
 				input);
 		con.commit();
 		con.close();
-		assertEquals(5, numberOfRowsPostgres);
+		assertEquals(REGION_ROWS_NUMBER, numberOfRowsPostgres);
+		return numberOfRowsPostgres;
+	}
+
+	/**
+	 * Load waveform data to PostgreSQL.
+	 * 
+	 * @param conFrom
+	 *            connection to PostgreSQL
+	 * @param fromTable
+	 *            the table to load the data to
+	 * @return number of loaded rows
+	 * @throws SQLException
+	 * @throws IOException
+	 */
+	public static long loadDataToPostgresWaveform(ConnectionInfo conFrom,
+			String fromTable) throws SQLException, IOException {
+		log.info("Preparing the PostgreSQL source table.");
+		PostgreSQLHandler handler = new PostgreSQLHandler(conFrom);
+		handler.dropTableIfExists(fromTable);
+		handler.createTable("CREATE TABLE " + fromTable
+				+ " (id bigint not null," + "time bigint not null,"
+				+ "value double precision not null)");
+		Connection con = PostgreSQLHandler.getConnection(conFrom);
+		con.setAutoCommit(false);
+		CopyManager cpTo = new CopyManager((BaseConnection) con);
+		InputStream input = FromPostgresToSciDBTest.class.getClassLoader()
+				.getResourceAsStream(WAVEFORM_MIMIC_TABLE + ".csv");
+		// CHECK IF THE INPUT STREAM CONTAINS THE REQUIRED DATA
+		// int size = 384;
+		// byte[] buffer = new byte[size];
+		// input.read(buffer, 0, size);
+		// String in = new String(buffer, StandardCharsets.UTF_8);
+		// System.out.println(in);
+		long numberOfRowsPostgres = cpTo.copyIn(
+				"Copy " + fromTable
+						+ " from STDIN with (format csv, delimiter ',')",
+				input);
+		con.commit();
+		con.close();
+		assertEquals(WAVEFORM_ROWS_NUMBER, numberOfRowsPostgres);
 		return numberOfRowsPostgres;
 	}
 

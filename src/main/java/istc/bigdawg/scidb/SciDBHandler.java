@@ -91,6 +91,24 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 	}
 
 	/**
+	 * see: {@link #getConnection(SciDBConnectionInfo)}
+	 * 
+	 * @param conInfo
+	 *            Information on the conection (host,port,etc.).
+	 * @return the JDBC connection to SciDB
+	 * @throws SQLException
+	 */
+	public static Connection getConnection(ConnectionInfo conInfo)
+			throws SQLException {
+		if (conInfo instanceof SciDBConnectionInfo) {
+			return getConnection((SciDBConnectionInfo) conInfo);
+		}
+		throw new IllegalArgumentException(
+				"The conInfo parameter should represent a connection to SciDB and be of type: "
+						+ SciDBConnectionInfo.class.getCanonicalName());
+	}
+
+	/**
 	 * Create a JDBC connectin to SciDB based on the conInfo (host,port,etc.).
 	 * 
 	 * @param conInfo
@@ -285,10 +303,13 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 			// this unwraps to afl
 			IStatementWrapper stWrapper = st.unwrap(IStatementWrapper.class);
 			stWrapper.setAfl(true);
-			
-//			System.out.printf("---> query before: %s\n---> query after : %s", query, query.replaceAll("'", "\\\\'").replaceAll(";", ""));
-			
-			ResultSet res = st.executeQuery("explain_logical('"+query.replaceAll("'", "\\\\'").replaceAll(";", "")+"', 'afl')");
+
+			// System.out.printf("---> query before: %s\n---> query after : %s",
+			// query, query.replaceAll("'", "\\\\'").replaceAll(";", ""));
+
+			ResultSet res = st.executeQuery("explain_logical('"
+					+ query.replaceAll("'", "\\\\'").replaceAll(";", "")
+					+ "', 'afl')");
 			return res.getString("logical_plan");
 
 		} catch (Exception e) {
@@ -413,8 +434,12 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 		ResultSet resultSetDimensions = null;
 		ResultSet resultSetAttributes = null;
 		try {
-			resultSetDimensions = statement.executeQuery(
-					"select * from dimensions(" + arrayName + ")");
+			/*
+			 * query which fetches dimensions of the array with name arrayName
+			 */
+			String getDimsQuery = "select * from dimensions(" + arrayName + ")";
+			log.debug("Get dimensions query to SciDB: " + getDimsQuery);
+			resultSetDimensions = statement.executeQuery(getDimsQuery);
 			while (!resultSetDimensions.isAfterLast()) {
 				SciDBColumnMetaData columnMetaData = new SciDBColumnMetaData(
 						resultSetDimensions.getString(2),
@@ -424,8 +449,9 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 				dimensionsOrdered.add(columnMetaData);
 				resultSetDimensions.next();
 			}
-			resultSetAttributes = statement.executeQuery(
-					"select * from attributes(" + arrayName + ")");
+			String getAttrQuery = "select * from attributes(" + arrayName + ")";
+			log.debug(getAttrQuery);
+			resultSetAttributes = statement.executeQuery(getAttrQuery);
 			while (!resultSetAttributes.isAfterLast()) {
 				SciDBColumnMetaData columnMetaData = new SciDBColumnMetaData(
 						resultSetAttributes.getString(2),
@@ -542,8 +568,8 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 	 * 
 	 * @throws SQLException
 	 */
-	public static void dropArrayIfExists(SciDBConnectionInfo conTo,
-			String array) throws SQLException {
+	public static void dropArrayIfExists(ConnectionInfo conTo, String array)
+			throws SQLException {
 		Connection con = null;
 		Statement statement = null;
 		try {

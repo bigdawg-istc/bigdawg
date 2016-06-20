@@ -15,6 +15,7 @@ import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.exceptions.UnsupportedTypeException;
 import istc.bigdawg.migration.datatypes.FromSQLTypesToSciDB;
 import istc.bigdawg.postgresql.PostgreSQLTableMetaData;
+import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.scidb.SciDBArrayMetaData;
 import istc.bigdawg.scidb.SciDBColumnMetaData;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
@@ -189,7 +190,7 @@ public class PostgreSQLSciDBMigrationUtils {
 	 * @param arrayName
 	 * @throws SQLException
 	 */
-	public static void removeArray(SciDBConnectionInfo connectionTo,
+	public static void removeArray(ConnectionInfo connectionTo,
 			String arrayName) throws SQLException {
 		SciDBHandler handler = new SciDBHandler(connectionTo);
 		handler.executeStatement("drop array " + arrayName);
@@ -206,7 +207,7 @@ public class PostgreSQLSciDBMigrationUtils {
 	 *            information about this special action)
 	 * @throws MigrationException
 	 */
-	public static void removeArrays(SciDBConnectionInfo connection, String msg,
+	public static void removeArrays(ConnectionInfo connection, String msg,
 			Set<String> arrays) throws MigrationException {
 		/* remove the arrays */
 		for (String array : arrays) {

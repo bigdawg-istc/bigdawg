@@ -57,6 +57,21 @@ public class MigrationInfo {
 	}
 
 	/**
+	 * Similar to:
+	 * {@link #MigrationInfo(ConnectionInfo, String, ConnectionInfo, String, MigrationParams)}
+	 * but no additional parameters for the migration.
+	 * 
+	 * @param connectionFrom
+	 * @param objectFrom
+	 * @param connectionTo
+	 * @param objectTo
+	 */
+	public MigrationInfo(ConnectionInfo connectionFrom, String objectFrom,
+			ConnectionInfo connectionTo, String objectTo) {
+		this(connectionFrom, objectFrom, connectionTo, objectTo, null);
+	}
+
+	/**
 	 * Factory for the migration info only with information about the connection
 	 * to the database to which we will load the data.
 	 * 

@@ -101,7 +101,7 @@ public class ExportPostgres implements Export {
 		this.cpFrom = new CopyManager((BaseConnection) connectionFrom);
 	}
 
-	public ExportPostgres(PostgreSQLConnectionInfo connectionPostgreSQL,
+	public ExportPostgres(ConnectionInfo connectionPostgreSQL,
 			final String copyFromString, final String outputFile)
 					throws SQLException {
 		connectionFrom = PostgreSQLHandler.getConnection(connectionPostgreSQL);

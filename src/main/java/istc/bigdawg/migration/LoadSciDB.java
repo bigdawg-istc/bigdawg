@@ -73,8 +73,9 @@ public class LoadSciDB implements Load {
 		return new LoadSciDB(fileFormat);
 	}
 
-	public LoadSciDB(SciDBConnectionInfo connectionTo, SciDBArrays arrays,
+	public LoadSciDB(ConnectionInfo connectionTo, SciDBArrays arrays,
 			String scidbFilePath) {
+		
 		this.migrationInfo = MigrationInfo.forConnectionTo(connectionTo);
 		this.arrays = arrays;
 		this.scidbFilePath = scidbFilePath;
@@ -87,8 +88,9 @@ public class LoadSciDB implements Load {
 	 * @param arrays
 	 * @param scidbFilePath
 	 */
-	public LoadSciDB(SciDBConnectionInfo connectionTo, SciDBArrays arrays,
+	public LoadSciDB(ConnectionInfo connectionTo, SciDBArrays arrays,
 			String scidbFilePath, String binaryFormat) {
+		
 		this.migrationInfo = MigrationInfo.forConnectionTo(connectionTo);
 		this.arrays = arrays;
 		this.scidbFilePath = scidbFilePath;
@@ -220,12 +222,12 @@ public class LoadSciDB implements Load {
 			loadCommand.append(getSciDBCsvString());
 		}
 		loadCommand.append(")");
-		if (arrays.getMultiDimensional() != null) {
-			loadCommand.append("store(redimension(" + loadCommand + ","
-					+ arrays.getMultiDimensional() + "),"
-					+ arrays.getMultiDimensional() + ")");
-		}
 		String finalLoadCommand = loadCommand.toString();
+		if (arrays.getMultiDimensional() != null) {
+			finalLoadCommand = "store(redimension(" + finalLoadCommand + ","
+					+ arrays.getMultiDimensional() + "),"
+					+ arrays.getMultiDimensional() + ")";
+		}
 		log.debug("load command: " + finalLoadCommand);
 		handler.executeStatementAFL(finalLoadCommand);
 		handler.commit();

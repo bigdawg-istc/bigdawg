@@ -6,6 +6,7 @@ package istc.bigdawg.migration;
 import java.io.IOException;
 import java.sql.SQLException;
 
+import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -23,10 +24,14 @@ import istc.bigdawg.scidb.SciDBHandler;
  * Test the migration from PostgreSQL to SciDB.
  * 
  * @author Adam Dziedzic
- * 
- *         Feb 18, 2016 10:26:20 AM
  */
 public class FromPostgresToSciDBTest {
+
+	/*
+	 * log
+	 */
+	private static Logger logger = Logger
+			.getLogger(FromPostgresToPostgresTest.class);
 
 	private FromPostgresToSciDB migrator = new FromPostgresToSciDB();
 	private PostgreSQLConnectionInfo conFrom = new PostgreSQLConnectionInfoTest();
@@ -37,7 +42,7 @@ public class FromPostgresToSciDBTest {
 	// "/opt/scidb/14.12/bin/");
 	// private String toArray =
 	// "bigdawg_region_test_from_13241_FromPostgresToSciDBTest";
-	private String toArray = "region_test_from_13241";
+	private String toArray = "region_test_to_13241";
 	private long numberOfRowsPostgres = 0;
 
 	@Before
@@ -47,9 +52,22 @@ public class FromPostgresToSciDBTest {
 	 * @throws SQLException
 	 * @throws IOException
 	 */
-	public void loadDataToPostgres() throws SQLException, IOException {
+	public void beforeLoadDataToPostgres() throws SQLException, IOException {
 		this.numberOfRowsPostgres = TestMigrationUtils
 				.loadDataToPostgresRegionTPCH(conFrom, fromTable);
+	}
+
+	/**
+	 * 
+	 * @return create array statement for SciDB (this array is "equivalent" to
+	 *         the region table from the TPC-H benchmark
+	 */
+	private String getCreateArray() {
+		String createArray = "create array " + toArray
+				+ " <r_regionkey:int64,r_name:string,r_comment:string>"
+				+ " [i=0:*,1000000,0]";
+		logger.debug("create array statement: " + createArray);
+		return createArray;
 	}
 
 	@Test
@@ -65,17 +83,32 @@ public class FromPostgresToSciDBTest {
 		// prepare the target array
 		SciDBHandler.dropArrayIfExists(conTo, toArray);
 		SciDBHandler handler = new SciDBHandler(conTo);
-		handler.executeStatement("create array " + toArray
-				+ " <r_regionkey:int64,r_name:string,r_comment:string> [i=0:*,1000000,0]");
+		handler.executeStatement(getCreateArray());
 		handler.commit();
 		handler.close();
 		/*
 		 * test of the main method
 		 */
-		migrator.migrate(conFrom, fromTable, conTo, toArray);
+		migrator.migrate(new MigrationInfo(conFrom, fromTable, conTo, toArray));
 		TestMigrationUtils.checkNumberOfElements(conTo, toArray,
 				numberOfRowsPostgres);
 		// clean: remove the target array
+		SciDBHandler.dropArrayIfExists(conTo, toArray);
+	}
+
+	@Test
+	public void testGeneralMigrationWithParams() throws Exception {
+		logger.debug("General migration from Postgres to Postgres "
+				+ "with a given parameter: craete target table");
+
+		MigrationParams migrationParams = new MigrationParams(getCreateArray());
+		/* drop the array if exists before the test */
+		SciDBHandler.dropArrayIfExists(conTo, toArray);
+
+		Migrator.migrate(conFrom, fromTable, conTo, toArray, migrationParams);
+		TestMigrationUtils.checkNumberOfElements(conTo, toArray,
+				numberOfRowsPostgres);
+		/* drop the created array */
 		SciDBHandler.dropArrayIfExists(conTo, toArray);
 	}
 
@@ -91,7 +124,7 @@ public class FromPostgresToSciDBTest {
 			throws MigrationException, SQLException {
 		// make sure that the target array does not exist
 		SciDBHandler.dropArrayIfExists(conTo, toArray);
-		migrator.migrate(conFrom, fromTable, conTo, toArray);
+		migrator.migrate(new MigrationInfo(conFrom, fromTable, conTo, toArray));
 		TestMigrationUtils.checkNumberOfElements(conTo, toArray,
 				numberOfRowsPostgres);
 		// drop the created array
@@ -118,7 +151,7 @@ public class FromPostgresToSciDBTest {
 		/*
 		 * test of the main method
 		 */
-		migrator.migrate(conFrom, fromTable, conTo, toArray);
+		migrator.migrate(new MigrationInfo(conFrom, fromTable, conTo, toArray));
 		TestMigrationUtils.checkNumberOfElements(conTo, toArray,
 				numberOfRowsPostgres);
 		// clean: remove the target array
@@ -131,7 +164,7 @@ public class FromPostgresToSciDBTest {
 	 * 
 	 * @throws SQLException
 	 */
-	public void removePostgreSQLTestTable() throws SQLException {
+	public void afterRemovePostgreSQLTestTable() throws SQLException {
 		PostgreSQLHandler handler = new PostgreSQLHandler(conFrom);
 		handler.dropTableIfExists(fromTable);
 	}
