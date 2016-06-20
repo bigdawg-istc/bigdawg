@@ -27,11 +27,11 @@ import istc.bigdawg.utils.Utils;
  * 
  * @author Adam Dziedzic
  */
-public class FromPostgresToSciDBWaveformTest {
+public class FromPostgresToSciDBWaveformDataTest {
 
 	/* log */
 	private static Logger log = Logger
-			.getLogger(FromPostgresToSciDBWaveformTest.class);
+			.getLogger(FromPostgresToSciDBWaveformDataTest.class);
 
 	private ConnectionInfo conFrom = new PostgreSQLConnectionInfoTest();
 	private String fromTable = "waveform";

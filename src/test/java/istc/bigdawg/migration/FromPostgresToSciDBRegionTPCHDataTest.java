@@ -25,7 +25,7 @@ import istc.bigdawg.scidb.SciDBHandler;
  * 
  * @author Adam Dziedzic
  */
-public class FromPostgresToSciDBTest {
+public class FromPostgresToSciDBRegionTPCHDataTest {
 
 	/*
 	 * log

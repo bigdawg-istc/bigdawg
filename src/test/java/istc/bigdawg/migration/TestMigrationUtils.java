@@ -65,7 +65,7 @@ public class TestMigrationUtils {
 		Connection con = PostgreSQLHandler.getConnection(conFrom);
 		con.setAutoCommit(false);
 		CopyManager cpTo = new CopyManager((BaseConnection) con);
-		InputStream input = FromPostgresToSciDBTest.class.getClassLoader()
+		InputStream input = FromPostgresToSciDBRegionTPCHDataTest.class.getClassLoader()
 				.getResourceAsStream(REGION_TPCH_TABLE + ".csv");
 		// FileInputStream input = new FileInputStream(new
 		// File("./region.csv"));
@@ -107,7 +107,7 @@ public class TestMigrationUtils {
 		Connection con = PostgreSQLHandler.getConnection(conFrom);
 		con.setAutoCommit(false);
 		CopyManager cpTo = new CopyManager((BaseConnection) con);
-		InputStream input = FromPostgresToSciDBTest.class.getClassLoader()
+		InputStream input = FromPostgresToSciDBRegionTPCHDataTest.class.getClassLoader()
 				.getResourceAsStream(WAVEFORM_MIMIC_TABLE + ".csv");
 		// CHECK IF THE INPUT STREAM CONTAINS THE REQUIRED DATA
 		// int size = 384;
