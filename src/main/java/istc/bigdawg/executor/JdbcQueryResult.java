@@ -1,6 +1,7 @@
 package istc.bigdawg.executor;
 
 import istc.bigdawg.query.ConnectionInfo;
+import istc.bigdawg.scidb.SciDBConnectionInfo;
 import istc.bigdawg.utils.JdbcUtils;
 
 import java.sql.ResultSet;
@@ -17,9 +18,16 @@ public class JdbcQueryResult implements QueryResult {
     private final List<String> colNames;
     private final List<String> colTypes;
 
+    /**
+     * Temporary special treatment to SciDB: getObject always return null. Attributable to implementation of the JDBC. 
+     * @param resultSet
+     * @param conn
+     * @throws SQLException
+     */
     public JdbcQueryResult(ResultSet resultSet, ConnectionInfo conn) throws SQLException {
         this.results = resultSet;
-        this.rows = JdbcUtils.getRows(resultSet);
+        if (conn instanceof SciDBConnectionInfo) this.rows = JdbcUtils.getRowsSciDB(resultSet);
+        else this.rows = JdbcUtils.getRows(resultSet);
         this.colNames = JdbcUtils.getColumnNames(resultSet.getMetaData());
         this.colTypes = JdbcUtils.getColumnTypeNames(resultSet.getMetaData());
         this.connectionInfo = conn;

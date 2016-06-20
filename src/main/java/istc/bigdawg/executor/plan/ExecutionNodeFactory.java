@@ -8,19 +8,18 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 import org.jgrapht.Graphs;
 
 import istc.bigdawg.catalog.CatalogViewer;
-import istc.bigdawg.packages.QueryContainerForCommonDatabase;
-import istc.bigdawg.plan.generators.AFLQueryGenerator;
-import istc.bigdawg.plan.generators.OperatorVisitor;
-import istc.bigdawg.plan.generators.SQLQueryGenerator;
-import istc.bigdawg.plan.operators.CommonSQLTableExpressionScan;
-import istc.bigdawg.plan.operators.Join;
-import istc.bigdawg.plan.operators.Merge;
-import istc.bigdawg.plan.operators.Operator;
+import istc.bigdawg.islands.OperatorVisitor;
+import istc.bigdawg.islands.QueryContainerForCommonDatabase;
+import istc.bigdawg.islands.PostgreSQL.SQLQueryGenerator;
+import istc.bigdawg.islands.SciDB.AFLQueryGenerator;
+import istc.bigdawg.islands.operators.CommonTableExpressionScan;
+import istc.bigdawg.islands.operators.Join;
+import istc.bigdawg.islands.operators.Merge;
+import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.query.ConnectionInfoParser;
 import istc.bigdawg.utils.IslandsAndCast.Scope;
@@ -144,9 +143,9 @@ public class ExecutionNodeFactory {
 			for (Operator c : treeWalker) {
 
 				nextGeneration.addAll(c.getChildren());
-				if (c instanceof CommonSQLTableExpressionScan) {
-					CommonSQLTableExpressionScan co = ((CommonSQLTableExpressionScan) c);
-					String name = co.getTable().getName();
+				if (c instanceof CommonTableExpressionScan) {
+					CommonTableExpressionScan co = ((CommonTableExpressionScan) c);
+					String name = co.getSourceTableName();//.getTable().getName();
 					result.put(name, co);//co.generateSelectForExecutionTree(queryPlan.getStatement(), name));
 					nextGeneration.add(co.getSourceStatement());
 				}
@@ -156,9 +155,21 @@ public class ExecutionNodeFactory {
 		return result;
 	}
 
-	private static BinaryJoinExecutionNode createJoinNode(String broadcastQuery, ConnectionInfo engine, String joinDestinationTable, Join joinOp, Scope island) throws Exception {
-		Operator left = joinOp.getChildren().get(0);
-		Operator right = joinOp.getChildren().get(1);
+	/**
+	 * Creating a binary join execution node, assume joining along one and only one dimension
+	 * 
+	 * @param broadcastQuery
+	 * @param engine
+	 * @param joinDestinationTable
+	 * @param joinOp
+	 * @param island
+	 * @return
+	 * @throws Exception
+	 */
+//	private static BinaryJoinExecutionNode createJoinNode(String broadcastQuery, ConnectionInfo engine, String joinDestinationTable, Join joinOp, Scope island) throws Exception {
+	private static ExecutionNode createJoinNode(String broadcastQuery, ConnectionInfo engine, String joinDestinationTable, Join joinOp, Scope island) throws Exception {
+//		Operator left = joinOp.getChildren().get(0);
+//		Operator right = joinOp.getChildren().get(1);
 
 		OperatorVisitor gen = null;
 		if (island.equals(Scope.RELATIONAL)) gen = new SQLQueryGenerator();
@@ -166,17 +177,26 @@ public class ExecutionNodeFactory {
 		else throw new Exception("Unsupported Island from buildOperatorSubgraph: " + island.toString());
 
 		// Break apart Join Predicate Objects into usable Strings
+		// It used to be just 3 items list: comparator string, table-column string for left, table-column string for right
+		// currently, we employ a 5 item list, breaking the tables and columns apart. 
 		List<String> predicateObjects = gen.getJoinPredicateObjectsForBinaryExecutionNode(joinOp);
 
 		if (predicateObjects.isEmpty()) {
-			throw new RuntimeException("No predicates for join!");
+//			throw new RuntimeException("No predicates for join!");
+			return new LocalQueryExecutionNode(broadcastQuery, engine, joinDestinationTable);
 		}
 
+//		String comparator = predicateObjects.get(0);
+//		String leftTable = StringUtils.substringBetween(predicateObjects.get(1), "{", ",");
+//		String leftAttribute = StringUtils.substringBetween(predicateObjects.get(1), " ", "}");
+//		String rightTable = StringUtils.substringBetween(predicateObjects.get(2), "{", ",");
+//		String rightAttribute = StringUtils.substringBetween(predicateObjects.get(2), " ", "}");
+		
 		String comparator = predicateObjects.get(0);
-		String leftTable = StringUtils.substringBetween(predicateObjects.get(1), "{", ",");
-		String leftAttribute = StringUtils.substringBetween(predicateObjects.get(1), " ", "}");
-		String rightTable = StringUtils.substringBetween(predicateObjects.get(2), "{", ",");
-		String rightAttribute = StringUtils.substringBetween(predicateObjects.get(2), " ", "}");
+		String leftTable = predicateObjects.get(1);
+		String leftAttribute = predicateObjects.get(2);
+		String rightTable = predicateObjects.get(3);
+		String rightAttribute = predicateObjects.get(4);
 
 		joinOp.accept(gen);
 		String shuffleLeftJoinQuery = gen.generateSelectIntoStatementForExecutionTree(joinDestinationTable + "_LEFTRESULTS")
@@ -190,6 +210,18 @@ public class ExecutionNodeFactory {
 		return new BinaryJoinExecutionNode(broadcastQuery, engine, joinDestinationTable, leftOp, rightOp, comparator);
 	}
 
+	/**
+	 * Creating a execution plan sub-graph base on an operator. 
+	 * This will break any join nodes that require shuffle-join etc. into sub plans, and then merge everything.  
+	 * @param op
+	 * @param engine
+	 * @param dest
+	 * @param containerNodes
+	 * @param isSelect
+	 * @param island
+	 * @return
+	 * @throws Exception
+	 */
 	private static ExecutionNodeSubgraph buildOperatorSubgraph(Operator op, ConnectionInfo engine, String dest, Map<String, LocalQueryExecutionNode> containerNodes, boolean isSelect, Scope island) throws Exception {
 		StringBuilder sb = new StringBuilder();
 
@@ -198,14 +230,22 @@ public class ExecutionNodeFactory {
 		else if (island.equals(Scope.ARRAY)) gen = new AFLQueryGenerator();
 		else throw new Exception("Unsupported Island from buildOperatorSubgraph: " + island.toString());
 
-//		Join joinOp = gen.generateStatementForPresentNonJoinSegment(op, sb, isSelect);
+//<<<<<<< HEAD
+////		Join joinOp = gen.generateStatementForPresentNonJoinSegment(op, sb, isSelect);
+//		Operator joinOp = gen.generateStatementForPresentNonMigratingSegment(op, sb, isSelect);
+//		final String sqlStatementForPresentNonJoinSegment = sb.toString();
+//
+//		System.out.printf("joinOp: %s; statement: %s\n", joinOp, sqlStatementForPresentNonJoinSegment);
+//		
+//		// TODO CHANGE NAME OF JOIN'S CHILDREN
+//
+//=======
 		Operator joinOp = gen.generateStatementForPresentNonMigratingSegment(op, sb, isSelect);
 		final String sqlStatementForPresentNonJoinSegment = sb.toString();
 
-		System.out.printf("joinOp: %s; statement: %s\n", joinOp, sqlStatementForPresentNonJoinSegment);
+		System.out.printf("\njoinOp: %s; statement: %s\n", joinOp, sqlStatementForPresentNonJoinSegment.length() > 0 ? sqlStatementForPresentNonJoinSegment : "(no content)");
 		
-		// TODO CHANGE NAME OF JOIN'S CHILDREN
-
+//>>>>>>> islands
 		ExecutionNodeSubgraph result = new ExecutionNodeSubgraph();
 
 		LocalQueryExecutionNode lqn = null;
@@ -221,12 +261,10 @@ public class ExecutionNodeFactory {
 
 			String broadcastQuery;
 			if (sqlStatementForPresentNonJoinSegment.length() == 0 && isSelect) {
-//				broadcastQuery = joinOp.generateSQLString(null);
-					gen.configure(true, false);
-					joinOp.accept(gen);
+				gen.configure(true, false);
+				joinOp.accept(gen);
 				broadcastQuery = gen.generateStatementString();
 			} else {
-//				broadcastQuery = joinOp.generateSQLSelectIntoStringForExecutionTree(joinDestinationTable, true);
 				gen.configure(true, true);
 				joinOp.accept(gen);
 				broadcastQuery = gen.generateSelectIntoStatementForExecutionTree(joinDestinationTable);
@@ -235,7 +273,8 @@ public class ExecutionNodeFactory {
 			ExecutionNode joinNode = null;
 			
 			if (joinOp instanceof Join) joinNode = ExecutionNodeFactory.createJoinNode(broadcastQuery, engine, joinDestinationTable, (Join)joinOp, island);
-			else if (joinOp instanceof Merge)joinNode = new LocalQueryExecutionNode(broadcastQuery, engine, joinDestinationTable);
+			else if (joinOp instanceof Merge) joinNode = new LocalQueryExecutionNode(broadcastQuery, engine, joinDestinationTable);
+
 //			BinaryJoinExecutionNode joinNode = ExecutionNodeFactory.createJoinNode(broadcastQuery, engine, joinDestinationTable, joinOp, island);
 //			LocalQueryExecutionNode joinNode = new LocalQueryExecutionNode(broadcastQuery, engine, joinDestinationTable);
 
@@ -264,6 +303,16 @@ public class ExecutionNodeFactory {
 		return result;
 	}
 
+	/**
+	 * Given a remainder operator tree, populate the query execution plan with the tree that starts from the tree.
+	 * 
+	 * @param qep
+	 * @param remainder
+	 * @param remainderLoc
+	 * @param containers
+	 * @param isSelect
+	 * @throws Exception
+	 */
 	public static void addNodesAndEdges(QueryExecutionPlan qep, Operator remainder, List<String> remainderLoc, Map<String,
 			QueryContainerForCommonDatabase> containers, boolean isSelect) throws Exception {
 		log.debug(String.format("Creating QEP %s...", qep.getSerializedName()));
@@ -276,13 +325,11 @@ public class ExecutionNodeFactory {
 		}
 
 		String remainderSelectIntoString;
-		ConnectionInfo remainderCI;
+		ConnectionInfo remainderCI = CatalogViewer.getConnectionInfo(remainderDBID);
 		OperatorVisitor gen = null;
 		if (qep.getIsland().equals(Scope.RELATIONAL)) {
-			remainderCI = CatalogViewer.getPSQLConnectionInfo(remainderDBID);
 			gen = new SQLQueryGenerator();
 		} else if (qep.getIsland().equals(Scope.ARRAY)) {
-			remainderCI = CatalogViewer.getSciDBConnectionInfo(remainderDBID);
 			gen = new AFLQueryGenerator();
 		} else {
 			throw new Exception("Unsupported island code: " + qep.getIsland().toString());
@@ -291,7 +338,7 @@ public class ExecutionNodeFactory {
 		remainder.accept(gen);
 		remainderSelectIntoString = gen.generateStatementString();
 		
-		System.out.printf("<><><> Remainder class: %s; QEP: %s; children count: %s; query string: %s\n"
+		System.out.printf("\n\n<><><> Remainder class: %s; QEP: %s; children count: %s; query string: %s\n"
 				, remainder.getClass().getSimpleName()
 				, qep.getSerializedName()
 				, remainder.getChildren().size()
@@ -316,6 +363,7 @@ public class ExecutionNodeFactory {
 
 			containerNodes.put(table, localQueryNode);
 		}
+		System.out.println();
 
 		remainder.setSubTree(true);
 		String remainderInto = remainder.getSubTreeToken();
