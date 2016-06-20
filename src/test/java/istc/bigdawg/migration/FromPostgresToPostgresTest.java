@@ -57,6 +57,9 @@ public class FromPostgresToPostgresTest {
 	/** The name of the target table in PostgreSQL. */
 	private String tableNameTo = "test1_from_postgres_to_postgres_table_to";
 
+	/** Additional parameters for the migration process. */
+	private MigrationParams migrationParams = null;
+
 	/** Dummy data for migration. */
 	private int intValue = 14;
 	private double doubleValue = 1.2;
@@ -82,7 +85,8 @@ public class FromPostgresToPostgresTest {
 
 	/**
 	 * 
-	 * @param tableName The name of the table where the data should be inserted.
+	 * @param tableName
+	 *            The name of the table where the data should be inserted.
 	 * @return SQL insert into statement for the test table.
 	 */
 	private String getInsertInto(String tableName) {
@@ -104,8 +108,9 @@ public class FromPostgresToPostgresTest {
 
 			postgres1.executeStatementPostgreSQL(getInsertInto(tableNameFrom));
 
-			MigrationResult result = migrator.migrate(conInfoFrom,
-					tableNameFrom, conInfoTo, tableNameTo);
+			MigrationResult result = migrator
+					.migrate(new MigrationInfo(conInfoFrom, tableNameFrom,
+							conInfoTo, tableNameTo, migrationParams));
 
 			assertEquals(Long.valueOf(1L), result.getCountExtractedElements());
 			assertEquals(Long.valueOf(1L), result.getCountLoadedElements());
@@ -146,6 +151,18 @@ public class FromPostgresToPostgresTest {
 				"localhost", "5431", "mimic2", "pguser", localPassword);
 		PostgreSQLConnectionInfo conInfoTo = new PostgreSQLConnectionInfo(
 				"localhost", "5430", "mimic2_copy", "pguser", localPassword);
+		migrateTest(conInfoFrom, conInfoTo);
+	}
+
+	@Test
+	public void testGeneralMigrationWithParams() throws Exception {
+		logger.debug("General migration from Postgres to Postgres "
+				+ "with a given parameter: craete target table");
+		PostgreSQLConnectionInfo conInfoFrom = new PostgreSQLConnectionInfo(
+				"localhost", "5431", "test", "pguser", localPassword);
+		PostgreSQLConnectionInfo conInfoTo = new PostgreSQLConnectionInfo(
+				"localhost", "5430", "test", "pguser", localPassword);
+		migrationParams = new MigrationParams(getCreateTableTest(tableNameTo));
 		migrateTest(conInfoFrom, conInfoTo);
 	}
 

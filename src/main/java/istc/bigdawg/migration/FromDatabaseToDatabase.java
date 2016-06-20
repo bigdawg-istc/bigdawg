@@ -56,9 +56,9 @@ public class FromDatabaseToDatabase implements MigrationNetworkRequest {
 
 	/**
 	 * Information about the migration process: from/to connection, from/to
-	 * table, etc.
+	 * table, additional parameters for the migration process.
 	 */
-	private MigrationInfo migrationInfo;
+	protected MigrationInfo migrationInfo;
 
 	/**
 	 * For serialization.
@@ -122,6 +122,14 @@ public class FromDatabaseToDatabase implements MigrationNetworkRequest {
 	/* To where to migrate the data (to which node/machine). */
 	public ConnectionInfo getConnectionTo() {
 		return migrationInfo.getConnectionTo();
+	}
+
+	/**
+	 * 
+	 * @return
+	 */
+	public MigrationInfo getMigrationInfo() {
+		return migrationInfo;
 	}
 
 	/**
@@ -192,6 +200,7 @@ public class FromDatabaseToDatabase implements MigrationNetworkRequest {
 	 * 
 	 * @param migrationInfo
 	 *            information about the migration (connections, objects, etc.).
+	 *            {@link MigrationInfo}
 	 * @return {@link MigrationResult} Information about the results of the
 	 *         migration process: number of elements (e.g. rows, items) which
 	 *         were migrated, migration time and other statistics.
@@ -208,6 +217,7 @@ public class FromDatabaseToDatabase implements MigrationNetworkRequest {
 			 */
 			return null;
 		}
+		this.migrationInfo = migrationInfo;
 		exporter.setMigrationInfo(migrationInfo);
 		loader.setMigrationInfo(migrationInfo);
 		return this.dispatch();

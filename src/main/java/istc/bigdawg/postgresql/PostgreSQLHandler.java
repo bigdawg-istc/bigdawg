@@ -49,12 +49,10 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 	private PreparedStatement preparedSt = null;
 	private ResultSet rs = null;
 
-	
-
 	public PostgreSQLHandler(PostgreSQLConnectionInfo conInfo) {
 		this.conInfo = conInfo;
 	}
-	
+
 	@Deprecated
 	public PostgreSQLHandler(int dbId) throws Exception {
 		try {
@@ -70,7 +68,8 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 	}
 
 	public PostgreSQLHandler() {
-		String msg = "Default handler. PostgreSQL parameters are taken from the BigDAWG configuration file.";
+		String msg = "Default handler. PostgreSQL parameters are "
+				+ "taken from the BigDAWG configuration file.";
 		log.info(msg);
 	}
 
@@ -99,6 +98,26 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 		return con;
 	}
 
+	/**
+	 * Get the JDBC connection to the database. see:
+	 * {@link #getConnection(PostgreSQLConnectionInfo)}
+	 */
+	public static Connection getConnection(ConnectionInfo conInfo)
+			throws SQLException {
+		if (conInfo instanceof PostgreSQLConnectionInfo) {
+			return getConnection((PostgreSQLConnectionInfo) conInfo);
+		}
+		throw new IllegalArgumentException("The conInfo parameter has to be of "
+				+ "type: PostgreSQLConnectionInfo.");
+	}
+
+	/**
+	 * Get the JDBC connection to the database.
+	 * 
+	 * @param conInfo
+	 *            connection information (host, port, database name, etc.)
+	 * @return the JDBC connection to the database
+	 */
 	public static Connection getConnection(PostgreSQLConnectionInfo conInfo)
 			throws SQLException {
 		Connection con;
@@ -508,7 +527,8 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 			Statement st = con.createStatement();
 
 			ResultSet rs = st.executeQuery(
-					"SELECT attrelid, attname, format_type(atttypid, atttypmod) AS type, atttypid, atttypmod "
+					"SELECT attrelid, attname, format_type(atttypid, atttypmod) "
+							+ "AS type, atttypid, atttypmod "
 							+ "FROM pg_catalog.pg_attribute "
 							+ "WHERE NOT attisdropped AND attrelid = '"
 							+ fromTable
@@ -574,7 +594,8 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 	 * @throws Exception
 	 */
 	@Deprecated
-	public static ConnectionInfo generateConnectionInfo(int dbid) throws Exception {
+	public static ConnectionInfo generateConnectionInfo(int dbid)
+			throws Exception {
 		return CatalogViewer.getConnectionInfo(dbid);
 	}
 
@@ -596,16 +617,18 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 					tableNameInitial);
 			try {
 				preparedSt = con.prepareStatement(
-						"SELECT column_name, ordinal_position, is_nullable, data_type, character_maximum_length, numeric_precision, numeric_scale "
+						"SELECT column_name, ordinal_position, is_nullable, "
+								+ "data_type, character_maximum_length, "
+								+ "numeric_precision, numeric_scale "
 								+ "FROM information_schema.columns "
 								+ "WHERE table_schema=? and table_name=?"
 								+ " order by ordinal_position;");
 				preparedSt.setString(1, schemaTable.getSchemaName());
 				preparedSt.setString(2, schemaTable.getTableName());
 				// postgresql logger cannot accept single quotes
-				log.debug(
-						"replace double quotes (\") with signle quotes in the query to log it in PostgreSQL: "
-								+ preparedSt.toString().replace("'", "\""));
+				log.debug("replace double quotes (\") with signle quotes "
+						+ "in the query to log it in PostgreSQL: "
+						+ preparedSt.toString().replace("'", "\""));
 			} catch (SQLException e) {
 				e.printStackTrace();
 				log.error("PostgreSQLHandler, the query preparation failed. "

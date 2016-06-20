@@ -3,6 +3,8 @@
  */
 package istc.bigdawg.migration;
 
+import java.util.Optional;
+
 /**
  * 
  * Additional parameters for data migration.
@@ -29,10 +31,10 @@ public class MigrationParams {
 	 * 
 	 * @return the createStatement: the create statement that should be executed
 	 *         in the target engine (it can create a target array/table, etc.)
-	 *         and to which the data should be loaded.
+	 *         The data should be loaded to the target object.
 	 */
-	public String getCreateStatement() {
-		return createStatement;
+	public Optional<String> getCreateStatement() {
+		return Optional.ofNullable(createStatement);
 	}
 
 	/*

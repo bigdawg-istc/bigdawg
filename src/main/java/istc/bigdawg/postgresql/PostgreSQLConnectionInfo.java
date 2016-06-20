@@ -50,6 +50,11 @@ public class PostgreSQLConnectionInfo implements ConnectionInfo {
 				+ getDatabase();
 	}
 
+	public static String getUrl(String host, String port, String database) {
+		return "jdbc:postgresql://" + host + ":" + port + "/"
+				+ database;
+	}
+
 	public void setHost(String host) {
 		this.host = host;
 	}

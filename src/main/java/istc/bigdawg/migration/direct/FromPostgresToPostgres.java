@@ -22,6 +22,7 @@ import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.migration.ExportPostgres;
 import istc.bigdawg.migration.FromDatabaseToDatabase;
 import istc.bigdawg.migration.LoadPostgres;
+import istc.bigdawg.migration.MigrationInfo;
 import istc.bigdawg.migration.MigrationResult;
 import istc.bigdawg.migration.MigrationStatistics;
 import istc.bigdawg.monitoring.Monitor;
@@ -51,38 +52,37 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 	 */
 	private static final long serialVersionUID = 1L;
 
-	private PostgreSQLConnectionInfo connectionFrom;
-	private String fromTable;
-	private PostgreSQLConnectionInfo connectionTo;
-	private String toTable;
-
-	public FromPostgresToPostgres() {
-		super();
-	}
+	/**
+	 * Create table statement - to be executed in the target database.
+	 */
+	private String createTableStatement = null;
 
 	public FromPostgresToPostgres(PostgreSQLConnectionInfo connectionFrom,
 			String fromTable, PostgreSQLConnectionInfo connectionTo,
 			String toTable) {
-		this.connectionFrom = connectionFrom;
-		this.fromTable = fromTable;
-		this.connectionTo = connectionTo;
-		this.toTable = toTable;
+		this.migrationInfo = new MigrationInfo(connectionFrom, fromTable,
+				connectionTo, toTable, null);
+	}
+
+	/**
+	 * Create default instance of the class.
+	 */
+	public FromPostgresToPostgres() {
+		super();
 	}
 
 	/**
 	 * Migrate data between instances of PostgreSQL.
 	 */
-	public MigrationResult migrate(ConnectionInfo connectionFrom,
-			String fromTable, ConnectionInfo connectionTo, String toTable)
-					throws MigrationException {
+	public MigrationResult migrate(MigrationInfo migrationInfo)
+			throws MigrationException {
 		logger.debug("General data migration: " + this.getClass().getName());
-		if (connectionFrom instanceof PostgreSQLConnectionInfo
-				&& connectionTo instanceof PostgreSQLConnectionInfo) {
-			this.connectionFrom = (PostgreSQLConnectionInfo) connectionFrom;
-			this.fromTable = fromTable;
-			this.connectionTo = (PostgreSQLConnectionInfo) connectionTo;
-			this.toTable = toTable;
+		if (migrationInfo
+				.getConnectionFrom() instanceof PostgreSQLConnectionInfo
+				&& migrationInfo
+						.getConnectionTo() instanceof PostgreSQLConnectionInfo) {
 			try {
+				this.migrationInfo = migrationInfo;
 				return this.dispatch();
 			} catch (Exception e) {
 				logger.error(StackTrace.getFullStackTrace(e));
@@ -108,20 +108,34 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 	 * @throws SQLException
 	 */
 	private PostgreSQLSchemaTableName createTargetTableSchema(
-			Connection connectionFrom, String fromTable,
-			Connection connectionTo, String toTable) throws SQLException {
+			Connection connectionFrom, Connection connectionTo)
+					throws SQLException {
 		/* separate schema name from the table name */
 		PostgreSQLSchemaTableName schemaTable = new PostgreSQLSchemaTableName(
-				toTable);
+				migrationInfo.getObjectTo());
 		/* create the target schema if it is not already there */
 		PostgreSQLHandler.executeStatement(connectionTo,
 				"create schema if not exists " + schemaTable.getSchemaName());
+
+		/*
+		 * Get the create table statement from the parameters to the migration.
+		 */
+		migrationInfo.getMigrationParams()
+				.ifPresent(migrationParams -> migrationParams
+						.getCreateStatement().ifPresent(statement -> {
+							createTableStatement = statement;
+						}));
 		/*
 		 * get the create table statement for the source table from the source
 		 * database
 		 */
-		String createTableStatement = PostgreSQLHandler
-				.getCreateTable(connectionFrom, fromTable, toTable);
+		if (createTableStatement == null) {
+			logger.debug(
+					"Get the create statement for target table from the source database.");
+			createTableStatement = PostgreSQLHandler.getCreateTable(
+					connectionFrom, migrationInfo.getObjectFrom(),
+					migrationInfo.getObjectTo());
+		}
 		PostgreSQLHandler.executeStatement(connectionTo, createTableStatement);
 		return schemaTable;
 	}
@@ -141,6 +155,12 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 		TimeStamp startTimeStamp = TimeStamp.getCurrentTime();
 		logger.debug("start migration: " + startTimeStamp.toDateString());
 
+		/* Bring the most used attributes to the namespace of this method. */
+		ConnectionInfo connectionFrom = migrationInfo.getConnectionFrom();
+		String fromTable = migrationInfo.getObjectFrom();
+		ConnectionInfo connectionTo = migrationInfo.getConnectionTo();
+		String toTable = migrationInfo.getObjectTo();
+
 		long startTimeMigration = System.currentTimeMillis();
 		String copyFromCommand = PostgreSQLHandler
 				.getExportBinCommand(fromTable);
@@ -156,7 +176,7 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 			conFrom.setReadOnly(true);
 			conFrom.setAutoCommit(false);
 			conTo.setAutoCommit(false);
-			createTargetTableSchema(conFrom, fromTable, conTo, toTable);
+			createTargetTableSchema(conFrom, conTo);
 
 			final PipedOutputStream output = new PipedOutputStream();
 			final PipedInputStream input = new PipedInputStream(output);
@@ -183,7 +203,7 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 					+ connectionFrom.toSimpleString() + ",connectionTo,"
 					+ connectionTo.toSimpleString() + ",fromTable," + fromTable
 					+ ",toTable," + toTable + ",startTimeMigration,"
-					+ startTimeMigration + ",endTi	meMigration,"
+					+ startTimeMigration + ",endTimeMigration,"
 					+ endTimeMigration + ",countExtractedElements,"
 					+ countExtractedElements + ",countLoadedElements,"
 					+ countLoadedElements + ",durationMsec," + durationMsec);
@@ -260,26 +280,6 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 				executor.shutdownNow();
 			}
 		}
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see istc.bigdawg.migration.FromDatabaseToDatabase#getConnectionFrom()
-	 */
-	@Override
-	public ConnectionInfo getConnectionFrom() {
-		return connectionFrom;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see istc.bigdawg.migration.FromDatabaseToDatabase#getConnecitonTo()
-	 */
-	@Override
-	public ConnectionInfo getConnectionTo() {
-		return connectionTo;
 	}
 
 	/**

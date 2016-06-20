@@ -3,18 +3,18 @@
  */
 package istc.bigdawg.migration;
 
+import java.util.Optional;
+
 import istc.bigdawg.query.ConnectionInfo;
 
 /**
  * 
  * Information about the migration: meta data (connection, objects/tables/arrays
  * from/to which migrate the data, etc.)
- *
- * This class is accessible only from within this package.
  * 
  * @author Adam Dziedzic
  */
-class MigrationInfo {
+public class MigrationInfo {
 
 	/** The connection to the database from which we migrate the data. */
 	private ConnectionInfo connectionFrom;
@@ -35,7 +35,7 @@ class MigrationInfo {
 
 	/**
 	 * @param connectionFrom
-	 *            the connection to the database from which we migrate the data.
+	 *            the connection to the database from which we migrate the data
 	 * @param objectFrom
 	 *            the array/table from which we migrate the data
 	 * @param connectionTo
@@ -68,21 +68,23 @@ class MigrationInfo {
 	}
 
 	/**
-	 * @return the connectionFrom
+	 * @return the connectionFrom the connection to the database from which we
+	 *         migrate the data
 	 */
 	public ConnectionInfo getConnectionFrom() {
 		return connectionFrom;
 	}
 
 	/**
-	 * @return the objectFrom
+	 * @return the objectFrom the array/table from which we migrate the data
 	 */
 	public String getObjectFrom() {
 		return objectFrom;
 	}
 
 	/**
-	 * @return the connectionTo
+	 * @return the connectionTo the connection to the database to which we
+	 *         migrate the data
 	 */
 	public ConnectionInfo getConnectionTo() {
 		return connectionTo;
@@ -102,8 +104,8 @@ class MigrationInfo {
 	 *         {@link MigrationParams } see:
 	 *         {@link #MigrationInfo(ConnectionInfo, String, ConnectionInfo, String, MigrationParams)}
 	 */
-	public MigrationParams getMigrationParams() {
-		return migrationParams;
+	public Optional<MigrationParams> getMigrationParams() {
+		return Optional.ofNullable(migrationParams);
 	}
 
 }

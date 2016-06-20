@@ -42,7 +42,7 @@ public class FromDatabaseToDatabaseTest {
 	public void testExecuteMigrationLocally()
 			throws MigrationException, SQLException, IOException {
 		MigrationInfo migrationInfo = new MigrationInfo(conFrom, fromTable,
-				conTo, toArray);
+				conTo, toArray, null);
 		FromDatabaseToDatabase migrator = new FromDatabaseToDatabase(
 				ExportPostgres.ofFormat(FileFormat.CSV),
 				LoadSciDB.ofFormat(FileFormat.CSV), migrationInfo);
