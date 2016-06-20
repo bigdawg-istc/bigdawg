@@ -2,9 +2,15 @@
 # Adam Dziedzic
 # logs=# select * from logs where logger like '%FromSciDBToPostgresImplementation%' and message like 'Migration result,%Bin%FULL' order by time desc;
 
-# install updates
+# install updates and required packages, including java8
+sudo apt-add-repository ppa:webupd8team/java -y
 sudo apt-get update
 sudo apt-get install -y libreadline-dev zlib1g-dev
+
+# java8 needs to be installed. It does require a prompt to be answered.
+# Sorry - I haven't found a workaround for this yet. -ARC 2016-06-20
+sudo apt-get install oracle-java8-installer -y
+sudo apt-get install maven -y
 
 initial_dir=$(pwd)
 
@@ -18,6 +24,10 @@ ln -s ~/Downloads ./Downloads
 
 cd Downloads
 downloads_dir=$(pwd)
+
+# Download and mimic2 data and move it to data
+wget https://bitbucket.org/adam-dziedzic/mimic2-pgd/raw/6ade22253695bfeb33074e82929e83b52cb121f1/mimic2.pgd
+mv mimic2.pgd ../data
 
 # Download and extract postgres
 wget https://ftp.postgresql.org/pub/source/v9.4.5/postgresql-9.4.5.tar.gz
@@ -191,8 +201,19 @@ function load_tpch {
     load_tables ${postgres2_bin} ${port_2} TABLES_TPCH_POSTGRES2[*]
 }
 
+function run_bigdawg {
+    # Runs the bigdawg system. Assumes that this is being run in a vagrant machine
+    # where the project root is /vagrant
+    echo "======================"
+    echo "Running BigDAWG System"
+    echo "======================"
+    cd /vagrant
+    mvn exec:java -P dev
+}
+
 # main exeuction path: the function with label main are meant to be exeucted in the main path, you can comment the functions that you don't want to be executed
 install_postgres
 prepare_postgres1
 prepare_postgres2
 #load_tpch
+run_bigdawg
