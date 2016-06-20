@@ -1,9 +1,15 @@
 /**
  * 
  */
-package istc.bigdawg.postgresql;
+package istc.bigdawg.database;
 
 /**
+ * Meta data about an attribute/column/cell in a table/array or another object
+ * in a database.
+ * 
+ * The meta data contain information such as: name of the attribute, type, if the
+ * attribute can be null, etc.
+ * 
  * @author Adam Dziedzic
  * 
  *         2016 Jan 13, 2016 2:23:23 PM
@@ -18,9 +24,9 @@ public class AttributeMetaData {
 	private int numericPrecision;
 	private int numericScale;
 
-	public AttributeMetaData(String name, int position,
-			boolean isNullable, String dataType, int characterMaximumLength,
-			int numericPrecision, int numericScale) {
+	public AttributeMetaData(String name, int position, boolean isNullable,
+			String dataType, int characterMaximumLength, int numericPrecision,
+			int numericScale) {
 		this.name = name;
 		this.position = position;
 		this.isNullable = isNullable;

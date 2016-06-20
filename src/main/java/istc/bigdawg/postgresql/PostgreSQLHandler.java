@@ -27,6 +27,7 @@ import org.apache.log4j.Logger;
 
 import istc.bigdawg.BDConstants.Shim;
 import istc.bigdawg.catalog.CatalogViewer;
+import istc.bigdawg.database.AttributeMetaData;
 import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.query.DBHandler;
@@ -649,7 +650,7 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 	public List<String> getColumnNames(String table) throws SQLException {
 		List<String> columnNames = new ArrayList<>();
 		for (AttributeMetaData meta : getColumnsMetaData(table)
-				.getColumnsOrdered()) {
+				.getAttributesOrdered()) {
 			columnNames.add(meta.getName());
 		}
 		return columnNames;

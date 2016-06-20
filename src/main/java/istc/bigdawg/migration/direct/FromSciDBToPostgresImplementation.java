@@ -18,6 +18,7 @@ import java.util.concurrent.FutureTask;
 import org.apache.log4j.Logger;
 
 import istc.bigdawg.LoggerSetup;
+import istc.bigdawg.database.AttributeMetaData;
 import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.exceptions.NoTargetArrayException;
 import istc.bigdawg.exceptions.RunShellException;
@@ -32,7 +33,6 @@ import istc.bigdawg.migration.SciDBArrays;
 import istc.bigdawg.migration.TransformBinExecutor;
 import istc.bigdawg.migration.datatypes.FromSciDBToSQLTypes;
 import istc.bigdawg.monitoring.Monitor;
-import istc.bigdawg.postgresql.AttributeMetaData;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.postgresql.PostgreSQLSchemaTableName;
@@ -272,7 +272,7 @@ public class FromSciDBToPostgresImplementation
 				List<SciDBColumnMetaData> scidbColumnsOrdered = scidbArrayMetaData
 						.getAttributesOrdered();
 				List<AttributeMetaData> postgresColumnsOrdered = tableMetaData
-						.getColumnsOrdered();
+						.getAttributesOrdered();
 				if (postgresColumnsOrdered.size() == scidbColumnsOrdered.size()
 						&& PostgreSQLSciDBMigrationUtils
 								.areAttributesSameAsColumns(scidbArrayMetaData,

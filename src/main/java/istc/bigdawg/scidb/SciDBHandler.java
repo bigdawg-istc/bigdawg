@@ -26,13 +26,13 @@ import org.scidb.jdbc.IStatementWrapper;
 import istc.bigdawg.BDConstants;
 import istc.bigdawg.BDConstants.Shim;
 import istc.bigdawg.catalog.CatalogViewer;
+import istc.bigdawg.database.AttributeMetaData;
 import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.exceptions.NoTargetArrayException;
 import istc.bigdawg.exceptions.SciDBException;
 import istc.bigdawg.executor.ExecutorEngine;
 import istc.bigdawg.executor.JdbcQueryResult;
 import istc.bigdawg.executor.QueryResult;
-import istc.bigdawg.postgresql.AttributeMetaData;
 import istc.bigdawg.postgresql.PostgreSQLTableMetaData;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.query.DBHandler;
@@ -509,7 +509,7 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 	public static String getTypePatternFromPostgresTypes(
 			final PostgreSQLTableMetaData postgresTableMetaData) {
 		final List<AttributeMetaData> columnsMetaData = postgresTableMetaData
-				.getColumnsOrdered();
+				.getAttributesOrdered();
 		char[] scidbTypesPattern = new char[columnsMetaData.size()];
 		for (AttributeMetaData columnMetaData : columnsMetaData) {
 			// check the character type

@@ -14,8 +14,9 @@ public class SciDBColumnMetaData {
 	private String columnName;
 	private String columnType;
 	private boolean isNullable;
-	
-	public SciDBColumnMetaData(String columnName, String columnType, boolean isNullable) {
+
+	public SciDBColumnMetaData(String columnName, String columnType,
+			boolean isNullable) {
 		this.columnName = columnName;
 		this.columnType = columnType;
 		this.isNullable = isNullable;
@@ -28,22 +29,25 @@ public class SciDBColumnMetaData {
 	public String getColumnType() {
 		return columnType;
 	}
-	
+
 	public boolean isNullable() {
 		return isNullable;
 	}
 
 	@Override
 	public String toString() {
-		return "SciDBColumnMetaData [columnName=" + columnName + ", columnType=" + columnType + "]";
+		return "SciDBColumnMetaData [columnName=" + columnName + ", columnType="
+				+ columnType + "]";
 	}
 
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + ((columnName == null) ? 0 : columnName.hashCode());
-		result = prime * result + ((columnType == null) ? 0 : columnType.hashCode());
+		result = prime * result
+				+ ((columnName == null) ? 0 : columnName.hashCode());
+		result = prime * result
+				+ ((columnType == null) ? 0 : columnType.hashCode());
 		return result;
 	}
 
@@ -68,6 +72,5 @@ public class SciDBColumnMetaData {
 			return false;
 		return true;
 	}
-
 
 }

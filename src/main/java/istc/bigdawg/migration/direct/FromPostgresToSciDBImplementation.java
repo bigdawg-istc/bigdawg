@@ -17,6 +17,7 @@ import java.util.concurrent.FutureTask;
 
 import org.apache.log4j.Logger;
 
+import istc.bigdawg.database.AttributeMetaData;
 import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.exceptions.NoTargetArrayException;
 import istc.bigdawg.exceptions.RunShellException;
@@ -33,7 +34,6 @@ import istc.bigdawg.migration.TransformBinExecutor;
 import istc.bigdawg.migration.TransformFromCsvToSciDBExecutor;
 import istc.bigdawg.migration.datatypes.FromSQLTypesToSciDB;
 import istc.bigdawg.monitoring.Monitor;
-import istc.bigdawg.postgresql.AttributeMetaData;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.postgresql.PostgreSQLTableMetaData;
@@ -221,7 +221,7 @@ public class FromPostgresToSciDBImplementation
 				| ExecutionException | IOException
 				| RunShellException exception) {
 			MigrationException migrationException = handleException(exception,
-					"Migration in binary Format failed. ");
+					"Migration in binary format failed. ");
 			throw migrationException;
 		} finally {
 			cleanResources();
@@ -396,7 +396,7 @@ public class FromPostgresToSciDBImplementation
 		StringBuilder createArrayStringBuf = new StringBuilder();
 		createArrayStringBuf.append("create array " + arrayName + " <");
 		List<AttributeMetaData> postgresColumnsOrdered = postgresqlTableMetaData
-				.getColumnsOrdered();
+				.getAttributesOrdered();
 		for (AttributeMetaData postgresColumnMetaData : postgresColumnsOrdered) {
 			String attributeName = postgresColumnMetaData.getName();
 			String postgresColumnType = postgresColumnMetaData.getDataType();
@@ -468,7 +468,7 @@ public class FromPostgresToSciDBImplementation
 		Map<String, SciDBColumnMetaData> attributesMap = arrayMetaData
 				.getAttributesMap();
 		List<AttributeMetaData> postgresColumnsOrdered = postgresqlTableMetaData
-				.getColumnsOrdered();
+				.getAttributesOrdered();
 		for (AttributeMetaData postgresColumnMetaData : postgresColumnsOrdered) {
 			String postgresColumnName = postgresColumnMetaData.getName();
 			if (!dimensionsMap.containsKey(postgresColumnName)

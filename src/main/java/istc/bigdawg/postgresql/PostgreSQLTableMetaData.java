@@ -6,6 +6,9 @@ package istc.bigdawg.postgresql;
 import java.util.List;
 import java.util.Map;
 
+import istc.bigdawg.database.AttributeMetaData;
+import istc.bigdawg.database.ObjectMetaData;
+
 /**
  * Meta data about a table in PostgreSQL.
  * 
@@ -13,7 +16,7 @@ import java.util.Map;
  * 
  *
  */
-public class PostgreSQLTableMetaData {
+public class PostgreSQLTableMetaData implements ObjectMetaData {
 
 	/** Name of the schema (by default public) and name of the table. */
 	private PostgreSQLSchemaTableName schemaTable;
@@ -39,7 +42,7 @@ public class PostgreSQLTableMetaData {
 		return columnsMap;
 	}
 
-	public List<AttributeMetaData> getColumnsOrdered() {
+	public List<AttributeMetaData> getAttributesOrdered() {
 		return columnsOrdered;
 	}
 }
