@@ -1,0 +1,622 @@
+package istc.bigdawg.islands.PostgreSQL.operators;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import istc.bigdawg.islands.DataObjectAttribute;
+import istc.bigdawg.islands.OperatorVisitor;
+import istc.bigdawg.islands.PostgreSQL.SQLOutItem;
+import istc.bigdawg.islands.PostgreSQL.SQLTableExpression;
+import istc.bigdawg.islands.PostgreSQL.utils.SQLExpressionUtils;
+import istc.bigdawg.islands.operators.Join;
+import istc.bigdawg.islands.operators.Operator;
+import net.sf.jsqlparser.JSQLParserException;
+import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.expression.Parenthesis;
+import net.sf.jsqlparser.parser.CCJSqlParserUtil;
+import net.sf.jsqlparser.schema.Column;
+
+
+public class PostgreSQLIslandJoin extends PostgreSQLIslandOperator implements Join {
+
+//	public enum JoinType  {Left, Natural, Right};
+//	
+	private JoinType joinType = null;
+	private String joinPredicate = null;
+	private String joinFilter = null; 
+	private List<String> aliases;
+//	private String joinPredicateOriginal = null; // TODO determine if this is useful for constructing new remainders 
+//	private String joinFilterOriginal = null; 
+	
+	protected Map<String, DataObjectAttribute> srcSchema;
+//	protected boolean joinPredicateUpdated = false;
+	
+	
+	protected static int maxJoinSerial = 0;
+	protected Integer joinID = null;
+	
+	// for SQL
+	public PostgreSQLIslandJoin (Map<String, String> parameters, List<String> output, PostgreSQLIslandOperator lhs, PostgreSQLIslandOperator rhs, SQLTableExpression supplement) throws Exception  {
+		super(parameters, output, lhs, rhs, supplement);
+
+		// mending non-canoncial ordering
+		if (children.get(0) instanceof PostgreSQLIslandScan && !(children.get(1) instanceof PostgreSQLIslandScan)) {
+			PostgreSQLIslandOperator child0 = (PostgreSQLIslandOperator) children.get(1);
+			PostgreSQLIslandOperator child1 = (PostgreSQLIslandOperator) children.get(0);
+			children.clear();
+			children.add(child0);
+			children.add(child1);
+		}
+		
+		this.isBlocking = false;
+		this.setAliases(new ArrayList<>());
+		
+		maxJoinSerial++;
+		this.setJoinID(maxJoinSerial);
+	
+		srcSchema = new LinkedHashMap<String, DataObjectAttribute>(lhs.outSchema);
+		srcSchema.putAll(rhs.outSchema);
+		
+		for(int i = 0; i < output.size(); ++i) {
+			String expr = output.get(i);
+			
+			SQLOutItem out = new SQLOutItem(expr, srcSchema, supplement);
+
+			DataObjectAttribute attr = out.getAttribute();
+			
+//			attr.setExpression(rewriteComplextOutItem(attr.getExpressionString()));
+			
+			String attrName = attr.getFullyQualifiedName();		
+			outSchema.put(attrName, attr);
+				
+		}
+		
+		
+		// process join predicates and join filters
+		// if hash join "Hash-Cond", merge join "Merge-Cond"
+		for(String p : parameters.keySet()) 
+			if(p.endsWith("Cond")) 
+				joinPredicate = parameters.get(p);
+		joinFilter = parameters.get("Join-Filter");
+		if (joinFilter != null)  joinFilter = SQLExpressionUtils.removeExpressionDataTypeArtifactAndConvertLike(joinFilter);
+		if (joinPredicate != null) joinPredicate = SQLExpressionUtils.removeExpressionDataTypeArtifactAndConvertLike(joinPredicate);
+	
+		if(joinFilter != null && joinPredicate != null && joinFilter.contains(joinPredicate)) { // remove duplicate
+			String joinClause = "(" + joinPredicate + ") AND"; // canonical form
+			if(joinFilter.contains(joinClause)) 			
+				joinFilter = joinFilter.replace(joinClause, "");
+			else {
+				joinClause = " AND (" + joinPredicate + ")";
+				joinFilter = joinFilter.replace(joinClause, "");			
+			}
+		} 
+		
+		inferJoinParameters();
+		
+//		if (joinPredicate != null)
+//			joinPredicateOriginal 	= new String (joinPredicate);
+//		if (joinFilter != null)
+//			joinFilterOriginal 		= new String (joinFilter);
+		
+		for (Operator o : children) {
+			if (o instanceof PostgreSQLIslandAggregate) {
+				((PostgreSQLIslandAggregate)o).setSingledOutAggregate();
+			}
+		}
+		
+//		System.out.printf("\n\n\n--> Join constructor: output %s;\n outSchema %s;\n jp: %s;\n jf: %s\n\n", output, outSchema, joinPredicate, joinFilter);
+//		System.out.printf("---> jp: %s\njf: %s\n\n", joinPredicate, joinFilter);
+	}
+    
+	
+//	// for AFL
+//	public PostgreSQLIslandJoin(Map<String, String> parameters, SciDBArray output, PostgreSQLIslandOperator lhs, PostgreSQLIslandOperator rhs) throws Exception  {
+//		super(parameters, output, lhs, rhs);
+//
+//		maxJoinSerial++;
+//		this.setJoinID(maxJoinSerial);
+//		
+//		isBlocking = false;
+//		
+//		joinPredicate = parameters.get("Join-Predicate"); System.out.printf("--> Join AFL Constructor, Join Predicate: %s\n", joinPredicate);
+//		setAliases(Arrays.asList(parameters.get("Children-Aliases").split(" ")));
+//
+//		srcSchema = new LinkedHashMap<String, DataObjectAttribute>(lhs.outSchema);
+//		srcSchema.putAll(rhs.outSchema);
+//		
+//		// attributes
+//		for (String expr : output.getAttributes().keySet()) {
+//			
+//			CommonOutItem out = new CommonOutItem(expr, output.getAttributes().get(expr), false, srcSchema);
+//			DataObjectAttribute attr = out.getAttribute();
+//			String attrName = attr.getFullyQualifiedName();		
+//			outSchema.put(attrName, attr);
+//				
+//		}
+//		
+//		// dimensions
+//		for (String expr : output.getDimensions().keySet()) {
+//			
+//			CommonOutItem out = new CommonOutItem(expr, "Dimension", true, srcSchema);
+//			DataObjectAttribute attr = out.getAttribute();
+//			String attrName = attr.getFullyQualifiedName();		
+//			outSchema.put(attrName, attr);
+//				
+//		}
+////		inferJoinParameters();
+//	}
+	
+	// combine join ON clause with WHEREs that combine two tables
+ 	// if a predicate references data that is not public, move it to the filter
+ 	// collect equality predicates over public attributes in joinPredicate
+ 	// only supports AND in predicates, not OR or NOT
+ 	private void inferJoinParameters() throws Exception {
+ 		
+ 		if(joinFilter == null && joinPredicate == null) return;
+ 		if (joinPredicate != null && joinPredicate.length() > 0) { 
+ 			Expression jp = CCJSqlParserUtil.parseCondExpression(joinPredicate);
+ 			SQLExpressionUtils.removeExcessiveParentheses(jp);
+ 			joinPredicate = jp.toString(); 
+ 		}
+ 		if (joinFilter != null && joinFilter.length() > 0) {
+ 			Expression jf = CCJSqlParserUtil.parseCondExpression(joinFilter);
+ 			SQLExpressionUtils.removeExcessiveParentheses(jf);
+ 			joinFilter = jf.toString(); 
+ 		}
+ 	}
+    
+ 	public PostgreSQLIslandJoin (PostgreSQLIslandOperator o, boolean addChild) throws Exception {
+		super(o, addChild);
+		PostgreSQLIslandJoin j = (PostgreSQLIslandJoin) o;
+		
+		this.setJoinID(j.getJoinID());
+		
+		this.joinType = j.joinType;
+		this.isCopy = j.isCopy;
+		
+		if (j.joinPredicate == null) this.joinPredicate = j.joinPredicate;
+		else this.joinPredicate = new String(j.joinPredicate);
+		
+		if (j.joinFilter == null) this.joinFilter = j.joinFilter;
+		else this.joinFilter = new String(j.joinFilter);
+
+		this.srcSchema = new HashMap<>();
+		for (String s : j.srcSchema.keySet()) {
+			if (j.srcSchema.get(s) != null) 
+				this.srcSchema.put(new String(s), new DataObjectAttribute(j.srcSchema.get(s)));
+		}
+		
+		this.setAliases(new ArrayList<>());
+		if (j.getAliases() != null) {
+			for (String a : j.getAliases()) {
+				this.getAliases().add(new String(a));
+			}
+		}
+	}
+	
+	public PostgreSQLIslandJoin(Operator child0, Operator child1, JoinType jt, String joinPred, boolean isFilter) throws JSQLParserException {
+		this.isCTERoot = false; // TODO VERIFY
+		this.isBlocking = false; 
+		this.isPruned = false;
+		this.isCopy = true;
+		this.setAliases(new ArrayList<>());
+		this.setComplexOutItemFromProgeny(new LinkedHashMap<>());
+		
+		maxJoinSerial++;
+		this.setJoinID(maxJoinSerial);
+		 
+		
+		if (jt != null) this.joinType = jt;
+		
+		if (joinPred != null) {
+			if (isFilter) this.joinFilter = new String(joinPred);
+			else this.joinPredicate = new String(joinPred);
+		}
+		
+		this.isQueryRoot = true;
+		
+		this.dataObjects = new HashSet<>();
+//		this.joinReservedObjects = new HashSet<>();
+		
+		this.srcSchema = new LinkedHashMap<String, DataObjectAttribute>(((PostgreSQLIslandOperator) child0).outSchema);
+		srcSchema.putAll(((PostgreSQLIslandOperator)child1).outSchema);
+		
+		this.outSchema = new LinkedHashMap<String, DataObjectAttribute>(((PostgreSQLIslandOperator) child0).outSchema);
+		outSchema.putAll(((PostgreSQLIslandOperator) child1).outSchema);
+		
+		
+		this.children = new ArrayList<>();
+		this.children.add(child0);
+		this.children.add(child1);
+		
+		if (child0.isCopy()) child0.setParent(this);
+		if (child1.isCopy()) child1.setParent(this);
+		
+		child0.setQueryRoot(false);
+		child1.setQueryRoot(false);
+	}
+	
+	public PostgreSQLIslandJoin() {
+		super();
+		
+		this.isCTERoot = false; // TODO VERIFY
+		this.isBlocking = false;
+		this.isPruned = false;
+		this.setAliases(new ArrayList<>());
+		srcSchema = new LinkedHashMap<String, DataObjectAttribute>();
+		
+		maxJoinSerial++;
+		this.setJoinID(maxJoinSerial);
+	}
+
+	@Override
+	public Join construct(Operator child0, Operator child1, JoinType jt, String joinPred, boolean isFilter) throws Exception {
+//		throw new Exception("Unimplemented function construct(); class: "+this.getClass().getName());
+		
+		this.isCopy = true; 
+		
+		if (jt != null) this.joinType = jt;
+		
+		if (joinPred != null) {
+			if (isFilter) this.joinFilter = new String(joinPred);
+			else this.joinPredicate = new String(joinPred);
+		}
+		
+		this.isQueryRoot = true;
+		
+		this.dataObjects = new HashSet<>();
+//		this.joinReservedObjects = new HashSet<>();
+		
+		this.srcSchema = new LinkedHashMap<String, DataObjectAttribute>(((PostgreSQLIslandOperator) child0).outSchema);
+		srcSchema.putAll(((PostgreSQLIslandOperator)child1).outSchema);
+		
+		this.outSchema = new LinkedHashMap<String, DataObjectAttribute>(((PostgreSQLIslandOperator) child0).outSchema);
+		outSchema.putAll(((PostgreSQLIslandOperator) child1).outSchema);
+		
+		this.children.add(child0);
+		this.children.add(child1);
+		
+		if (child0.isCopy()) child0.setParent(this);
+		if (child1.isCopy()) child1.setParent(this);
+		
+		child0.setQueryRoot(false);
+		child1.setQueryRoot(false);
+		
+		return this;
+	};
+	
+    @Override
+	public void accept(OperatorVisitor operatorVisitor) throws Exception {
+		operatorVisitor.visit(this);
+	}
+    
+//    private boolean replaceTableNameWithPruneName(Operator child, Expression e, Table t, List<String> itemsSet) throws Exception {
+//		if (child.isPruned()) {
+//			// does child have any of those names? 
+//			Set<String> names = new HashSet<>(child.getDataObjectAliasesOrNames().keySet());
+//			if (child.getObjectAliases() == null) child.updateObjectAliases();
+//			names.addAll(child.getObjectAliases());
+//			names.retainAll(itemsSet);
+//			if (names.size() > 0) {
+//				SQLExpressionUtils.renameAttributes(e, names, null, child.getPruneToken());
+//				t.setName(child.getPruneToken());
+//				return true;
+//			} else 
+//				return false;
+//		} else if (child instanceof Aggregate && ((Aggregate)child).getAggregateID() != null) {
+//			// does child have any of those names? 
+//			Set<String> names = new HashSet<>(child.getDataObjectAliasesOrNames().keySet());
+////			names.addAll(child.objectAliases);
+//			
+//			names.retainAll(itemsSet);
+//			if (names.size() > 0) {
+//				SQLExpressionUtils.renameAttributes(e, names, null, ((Aggregate)child).getAggregateToken());
+//				t.setName(((Aggregate)child).getAggregateToken());
+//				return true;
+//			} else 
+//				return false;
+//		}else {
+//			boolean ret = false;
+//			for (Operator o : child.getChildren()) {
+//				ret = ret || replaceTableNameWithPruneName(o, e, t, itemsSet);
+//			}
+//			return ret;
+//		}
+//	}
+//    
+//    private boolean findAndGetTableName(Operator child, Table t, List<String> itemsSet) throws Exception {
+//    	
+//		Set<String> names = new HashSet<>(child.getDataObjectAliasesOrNames().keySet());
+//		child.updateObjectAliases();
+//		names.addAll(child.getObjectAliases());
+//		names.retainAll(itemsSet);
+//		if (names.size() > 0) {
+//			if (child instanceof Scan) {
+//				t.setName(((Scan)child).getTable().toString());
+//			} else if (child.getChildren().size() > 0) {
+//				return findAndGetTableName(child.getChildren().get(0), t, itemsSet);
+//			}
+//			return false;
+//		} else {
+//			boolean ret = false;
+//			for (Operator o : child.getChildren()) {
+//				ret = ret || findAndGetTableName(o, t, itemsSet);
+//			}
+//			return ret;
+//		}    	
+//    }
+    
+   
+    
+    
+    public String toString() {
+    		return "(Join " + children.get(0).toString() + ", " + children.get(1).toString() 
+    				+ ", " + joinType + ", " + joinPredicate + ", " + joinFilter + ")";
+    }
+    
+//	@Override
+//	public String generateAFLString(int recursionLevel) throws Exception {
+//		StringBuilder sb = new StringBuilder();
+//		sb.append("cross_join(");
+//		
+//		if (children.get(0).isPruned())
+//			sb.append(children.get(0).getPruneToken());
+//		else 
+//			sb.append(children.get(0).generateAFLString(recursionLevel+1));
+//		
+//		if (!this.getAliases().isEmpty()) 
+//			sb.append(" as ").append(getAliases().get(0));
+//		sb.append(", ");
+//		
+//		if (children.get(1).isPruned())
+//			sb.append(children.get(1).getPruneToken());
+//		else 
+//			sb.append(children.get(1).generateAFLString(recursionLevel+1));
+//		
+//		if (!this.getAliases().isEmpty()) sb.append(" as ").append(getAliases().get(1));
+//		
+//		if (joinPredicate != null) {
+//			sb.append(", ");
+//			sb.append(joinPredicate.replaceAll("( AND )|( = )", ", ").replaceAll("[<>= ()]+", " ").replace("\\s+", ", "));
+//		}
+//		
+//		sb.append(')');
+//		return sb.toString();
+//	}
+	
+	
+//	private void addJSQLParserJoin(Select dstStatement, Table t) {
+//		net.sf.jsqlparser.statement.select.Join newJ = new net.sf.jsqlparser.statement.select.Join();
+//    	newJ.setRightItem(t);
+//    	newJ.setSimple(true);
+//    	if (((PlainSelect) dstStatement.getSelectBody()).getJoins() == null)
+//    		((PlainSelect) dstStatement.getSelectBody()).setJoins(new ArrayList<>());
+//    	((PlainSelect) dstStatement.getSelectBody()).getJoins().add(newJ);
+//	}
+//	
+//	public String getJoinPredicate(){
+//		return joinPredicate;
+//	};
+	
+	@Override
+	public String getTreeRepresentation(boolean isRoot) throws Exception{
+		if (isPruned() && (!isRoot)) return "{PRUNED}";
+		else {
+			StringBuilder sb = new StringBuilder();
+			sb.append("{join").append(children.get(0).getTreeRepresentation(false)).append(children.get(1).getTreeRepresentation(false));
+
+//			if (joinFilter != null && !joinFilter.isEmpty()) {
+//				Expression e = CCJSqlParserUtil.parseCondExpression(joinFilter);
+//				SQLExpressionUtils.removeExcessiveParentheses(e);
+//				sb.append(SQLExpressionUtils.parseCondForTree(e));
+//			}
+//			
+//			List<Operator> treeWalker = this.getChildren();
+//			while (!treeWalker.isEmpty()) {
+//				List<Operator> nextgen = new ArrayList<>();
+//				for (Operator o : treeWalker) {
+//					if (o instanceof Join) continue;
+//					if (o instanceof Scan && ((Scan) o).indexCond != null) {
+//						sb.append(SQLExpressionUtils.parseCondForTree(((Scan)o).indexCond));
+//					} else {
+//						nextgen.addAll(o.getChildren());
+//					}
+//				}
+//				treeWalker = nextgen;
+//			}
+			sb.append('}');
+			return sb.toString();
+		}
+	}
+	
+	
+	public String getJoinToken() {
+		
+		if (getJoinID() == null) {
+			maxJoinSerial ++;
+			setJoinID(maxJoinSerial);
+		}
+		
+		return "BIGDAWGJOINTOKEN_"+getJoinID();
+	}
+	
+	
+	
+	@Override
+	public Map<String, Set<String>> getObjectToExpressionMappingForSignature() throws Exception{
+		
+		Operator parent = this;
+		while (!parent.isBlocking() && parent.getParent() != null ) parent = parent.getParent();
+		Map<String, String> aliasMapping = this.getDataObjectAliasesOrNames();
+		
+		Map<String, Set<String>> out = children.get(0).getObjectToExpressionMappingForSignature();
+		Map<String, Set<String>> temp = children.get(1).getObjectToExpressionMappingForSignature();
+		
+		for (String s : temp.keySet()) {
+			if (out.containsKey(s)) 
+				out.get(s).addAll(temp.get(s));
+			else 
+				out.put(s, temp.get(s));
+		}
+
+		// joinFilter
+		Expression e;
+		if (joinFilter != null) { 
+			e = CCJSqlParserUtil.parseCondExpression(joinFilter);
+			if (!SQLExpressionUtils.containsArtificiallyConstructedTables(e))
+				addToOut(e, out, aliasMapping);
+		}
+		
+		// joinPredicate
+		if (joinPredicate != null) { 
+			e = CCJSqlParserUtil.parseCondExpression(joinPredicate);
+			if (!SQLExpressionUtils.containsArtificiallyConstructedTables(e))
+				addToOut(e, out, aliasMapping);
+		}
+		
+		return out;
+	}
+	
+	@Override
+	public Map<String, Expression> getChildrenPredicates() throws Exception {
+		Map<String, Expression> left = ((PostgreSQLIslandOperator) this.getChildren().get(0)).getChildrenPredicates();
+		Map<String, Expression> right = ((PostgreSQLIslandOperator) this.getChildren().get(1)).getChildrenPredicates();
+		
+		boolean found = false; 
+		for (String s : left.keySet()) {
+			if (left.get(s) == null ) continue;
+			List<Column> ls = SQLExpressionUtils.getAttributes(left.get(s));
+			for (Column c : ls) {
+				String s2 = c.getTable().getName();
+				if (right.containsKey(s2)) {
+					left.replace(s, null);
+					found = true;
+					break;
+				}
+			}
+			if (found) break;
+		}
+		
+		found = false; 
+		for (String s : right.keySet()) {
+			if (right.get(s) == null ) continue;
+			List<Column> ls = SQLExpressionUtils.getAttributes(right.get(s));
+			for (Column c : ls) {
+				String s2 = c.getTable().getName();
+				if (left.containsKey(s2)) {
+					right.replace(s, null);
+					found = true;
+					break;
+				}
+			}
+			if (found) break;
+		}
+		
+		left.putAll(right);
+		
+//		if (this.joinID != null && joinPredicate != null) {
+//			Expression e = CCJSqlParserUtil.parseCondExpression(joinPredicate);
+//			System.out.printf("\n--><><><> expression: %s; \n", e);
+//			String out = SQLExpressionUtils.getRelevantFilterSections(e, getChildren().get(0).getDataObjectAliasesOrNames().keySet(), getChildren().get(1).getDataObjectAliasesOrNames().keySet());
+//			System.out.printf("--><><><> out: %s; \n", out);
+//			if (out.length() > 0)
+//				left.put(this.getJoinToken(), CCJSqlParserUtil.parseCondExpression(out));
+//		}
+//		if (this.joinID != null && joinFilter != null) {
+//			left.put(this.getJoinToken(), CCJSqlParserUtil.parseCondExpression(SQLExpressionUtils.getRelevantFilterSections(CCJSqlParserUtil.parseCondExpression(joinFilter), left.keySet(), right.keySet())));
+//		}
+		return left;
+	}
+	
+	@Override
+	public Expression resolveAggregatesInFilter(String e, boolean goParent, PostgreSQLIslandOperator lastHopOp, Set<String> names, StringBuilder sb) throws Exception {
+		
+		Expression exp = null;
+		if (parent != null && lastHopOp != parent && (exp = ((PostgreSQLIslandOperator) parent).resolveAggregatesInFilter(e, true, this, names, sb)) != null) 
+			return exp;
+		for (Operator o : children) {
+			if (goParent && o == lastHopOp) continue;
+			if ((exp = ((PostgreSQLIslandOperator) o).resolveAggregatesInFilter(e, false, this, names, sb)) != null) return exp;
+		}
+		return exp;
+		
+	} 
+	
+	@Override
+	public void seekScanAndProcessAggregateInFilter() throws Exception {
+		
+		if (joinFilter != null) {
+			joinFilter = processFilterForAggregateEntry(joinFilter);
+		}
+		
+		if (joinPredicate != null) {
+			joinPredicate = processFilterForAggregateEntry(joinPredicate);
+		}
+		
+		super.seekScanAndProcessAggregateInFilter();
+	}
+	
+	private String processFilterForAggregateEntry(String s) throws Exception {
+		
+		
+		
+		Expression e = CCJSqlParserUtil.parseCondExpression(s);
+		
+		if (!SQLExpressionUtils.isFunctionPresentInCondExpression(e)) return s;
+		
+		Expression left = SQLExpressionUtils.getOneSideOfBinaryCondExpression(e, true);
+		while (left instanceof Parenthesis) left = ((Parenthesis) left).getExpression();
+		
+		StringBuilder sb = new StringBuilder();
+		Set<String> names = new HashSet<>();
+		Expression result = resolveAggregatesInFilter(left.toString(), true, this, names, sb);
+		if (result != null) {
+			SQLExpressionUtils.setOneSideOfBinaryCondExpression(result, e, true);
+		}
+		
+		Expression right = SQLExpressionUtils.getOneSideOfBinaryCondExpression(e, false);
+		while (right instanceof Parenthesis) right = ((Parenthesis) right).getExpression();
+		result = resolveAggregatesInFilter(right.toString(), true, this, names, sb);
+		if (result != null) {
+			SQLExpressionUtils.setOneSideOfBinaryCondExpression(result, e, false);
+		}
+		
+		return e.toString();
+	}
+
+
+	public Integer getJoinID() {
+		return joinID;
+	}
+
+
+	public void setJoinID(Integer joinID) {
+		this.joinID = joinID;
+	}
+
+
+	public List<String> getAliases() {
+		return aliases;
+	}
+
+
+	public void setAliases(List<String> aliases) {
+		this.aliases = aliases;
+	}
+
+
+	@Override
+	public String generateJoinPredicate() throws Exception {
+		return joinPredicate != null ? new String(joinPredicate) : null;
+	}
+
+	@Override
+	public String generateJoinFilter() throws Exception {
+		return joinFilter != null ? new String(joinFilter): null;
+	}
+};

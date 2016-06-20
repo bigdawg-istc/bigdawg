@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import istc.bigdawg.extract.logical.SQLTableExpression;
+import istc.bigdawg.islands.PostgreSQL.SQLTableExpression;
 import istc.bigdawg.schema.SQLReferencedAttribute;
 import istc.bigdawg.schema.SQLReferencedSchema;
 import istc.bigdawg.schema.SQLStoredAttribute;

@@ -285,9 +285,10 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 			// this unwraps to afl
 			IStatementWrapper stWrapper = st.unwrap(IStatementWrapper.class);
 			stWrapper.setAfl(true);
-
-			ResultSet res = st.executeQuery("explain_logical('"
-					+ query.replace("'", "\\'") + "', 'afl')");
+			
+//			System.out.printf("---> query before: %s\n---> query after : %s", query, query.replaceAll("'", "\\\\'").replaceAll(";", ""));
+			
+			ResultSet res = st.executeQuery("explain_logical('"+query.replaceAll("'", "\\\\'").replaceAll(";", "")+"', 'afl')");
 			return res.getString("logical_plan");
 
 		} catch (Exception e) {

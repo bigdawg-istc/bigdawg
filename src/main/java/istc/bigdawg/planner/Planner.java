@@ -1,21 +1,36 @@
 package istc.bigdawg.planner;
 
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.ws.rs.core.Response;
 
 import org.apache.log4j.Logger;
 import org.mortbay.log.Log;
 
+import istc.bigdawg.catalog.CatalogModifier;
+import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.executor.Executor;
 import istc.bigdawg.executor.QueryResult;
 import istc.bigdawg.executor.plan.QueryExecutionPlan;
+import istc.bigdawg.islands.CrossIslandCastNode;
+import istc.bigdawg.islands.CrossIslandPlanNode;
+import istc.bigdawg.islands.CrossIslandQueryNode;
+import istc.bigdawg.islands.CrossIslandQueryPlan;
+import istc.bigdawg.migration.Migrator;
 import istc.bigdawg.monitoring.Monitor;
-import istc.bigdawg.packages.CrossIslandQueryNode;
-import istc.bigdawg.packages.CrossIslandQueryPlan;
-import istc.bigdawg.parsers.UserQueryParser;
+import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
+import istc.bigdawg.postgresql.PostgreSQLHandler;
+import istc.bigdawg.query.ConnectionInfo;
+import istc.bigdawg.query.DBHandler;
+import istc.bigdawg.scidb.SciDBConnectionInfo;
+import istc.bigdawg.scidb.SciDBHandler;
 import istc.bigdawg.signature.Signature;
+import istc.bigdawg.utils.IslandsAndCast.Scope;
 
 public class Planner {
 
@@ -27,61 +42,201 @@ public class Planner {
 
 	public static Response processQuery(String userinput, boolean isTrainingMode) throws Exception {
 		
+		String input = userinput.replaceAll("([/\n/]|[ /\t/][ /\t/])", "");
+		
 		// UNROLLING
-		logger.debug("User query received. Parsing... " + userinput);
-		Map<String, String> crossIslandQuery = UserQueryParser.getUnwrappedQueriesByIslands(userinput);
+		logger.debug("User query received. Parsing... " + input.replaceAll("[\"']", "*"));
 		
-		CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(crossIslandQuery);
+		// NEW CODE 1
+		if (input.startsWith("bdcatalog(")) {
+			// process catalog query
+			throw new Exception("bdcatalog function not implemented");
+		}
+		// NEW CODE 1 END
+		
+		CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(input);
+		if (ciqp.getTerminalNode() == null) throw new Exception("Ill formed input: "+input);
+		
+		// NEW CODE 2
+		// use a walker
+		Set<CrossIslandPlanNode> nodeWalker = new HashSet<>(ciqp.getEntryNodes());
+		Set<CrossIslandPlanNode> nextGeneration;
+		Map<CrossIslandPlanNode, QueryResult> nodeToResult = new HashMap<>();
+		
+		Set<Integer> catalogSOD = new HashSet<>();
+		Map<ConnectionInfo, Collection<String>> tempTableSOD = new HashMap<>();
+		
+		while (!nodeWalker.isEmpty()) {
+			nextGeneration = new HashSet<>();
+			for (CrossIslandPlanNode node : nodeWalker) {
 
-//		ConcurrentLinkedDeque<QueryResult> cfriendlyQR = new ConcurrentLinkedDeque<QueryResult>();
-		
-		for (CrossIslandQueryNode k : ciqp.vertexSet()) {
-			
-			if (k.equals(CrossIslandQueryPlan.getOutputToken())) {
-				// this is the root; save for later. 
-				continue;
+				// this is the terminalNode; save for later.
+				if (node == ciqp.getTerminalNode()) {
+					continue;
+				}
+				
+				if (node instanceof CrossIslandCastNode) {
+					
+					// we make the assumption that there is no chain CASTing
+					// we also assume that the user does not directly cast an object 
+//					throw new Exception("Unimplemented feature: CAST");
+
+					CrossIslandQueryNode source = (CrossIslandQueryNode)((CrossIslandCastNode)node).getSourceVertex(ciqp);
+					CrossIslandQueryNode target = (CrossIslandQueryNode)((CrossIslandCastNode)node).getTargetVertex(ciqp);
+
+					int sourceLoc = 0;
+					int targetLoc = 0;
+					
+					// get the target, and pick destination -- default location
+					if (target.getRemainderLoc() != null) {
+						targetLoc = Integer.parseInt(target.getRemainderLoc().get(0));
+					} else {
+						targetLoc = Integer.parseInt(target.getQueryContainer().entrySet().iterator().next().getValue().getDBID());
+					}
+					
+					// get the source, and get the engine 
+					ConnectionInfo ci = CatalogViewer.getConnectionInfo(targetLoc);
+					logger.debug(String.format("Interisland Migration from %s at %s (%s) to %s at %s (%s)"
+							, source.getName(), nodeToResult.get(source).getConnectionInfo().getHost()+":"+nodeToResult.get(source).getConnectionInfo().getPort(), nodeToResult.get(source).getConnectionInfo().getClass().getSimpleName()
+							, node.getName(), ci.getHost()+":"+ci.getPort(), ci.getClass().getSimpleName()));
+
+					// Create schema before migration 
+					remoteSchemaCreation((CrossIslandCastNode)node, ci);
+
+					// migrate
+					Migrator.migrate(nodeToResult.get(source).getConnectionInfo(), source.getName(), ci, node.getName());
+					
+					
+					// add to Table set of destruction
+					if (!tempTableSOD.containsKey(ci)) tempTableSOD.put(ci, new HashSet<>());
+					tempTableSOD.get(ci).add(node.getName());
+					
+					// add catalog entry of the temp table, add to catalog set of destruction
+					// unsafe use of ""
+					catalogSOD.add(CatalogModifier.addObject(node.getName(), "", sourceLoc, targetLoc));
+					
+					// add target to the next gen
+					nextGeneration.add(target);
+					
+					// remove source from nodeToResult
+					nodeToResult.remove(source);
+					
+				} else {
+					// business as usual
+					
+					CrossIslandQueryNode ciqn = (CrossIslandQueryNode)node;
+					int choice = getGetPerformanceAndPickTheBest(ciqn, isTrainingMode);
+					
+					
+					// currently there should be just one island, therefore one child, root.
+					QueryExecutionPlan qep = ((CrossIslandQueryNode)node).getQEP(choice, true);
+					
+					
+					// EXECUTE THE RESULT SUB RESULT
+					logger.debug("Executing query cross-island subquery "+node+"...");
+					nodeToResult.put(node, Executor.executePlan(qep, ciqn.getSignature(), choice));
+					
+				}
+				// add the child node to nextGen
+				nextGeneration.add(node.getTargetVertex(ciqp));
 			}
+			nodeWalker = nextGeneration;
+		}
+		
+		
+		// we assume there is no lone CAST
+		// pass this to monitor, and pick your favorite
+		
+		
+		CrossIslandPlanNode cipn = ciqp.getTerminalNode();
+		if (cipn instanceof CrossIslandCastNode) {
 			
+			// save for later
+			throw new Exception("Unimplemented feature: CASTing output");
 			
-			CrossIslandQueryNode ciqn = k;
+		} else {
+			// business as usual
+			
+			CrossIslandQueryNode ciqn = (CrossIslandQueryNode)cipn;
 			int choice = getGetPerformanceAndPickTheBest(ciqn, isTrainingMode);
 			
 			
 			// currently there should be just one island, therefore one child, root.
-			QueryExecutionPlan qep = k.getQEP(choice, true);
+			QueryExecutionPlan qep = ((CrossIslandQueryNode)ciqp.getTerminalNode()).getQEP(choice, true);
 			
 			
-			// EXECUTE THE RESULT SUB RESULT
-			logger.debug("Executing query cross-island subquery "+k+"...");
-			Executor.executePlan(qep, ciqn.getSignature(), choice);
+			// EXECUTE THE RESULT
+			logger.debug("Executing query execution tree...");
+			Response responseHolder = compileResults(ciqp.getSerial(), Executor.executePlan(qep, ciqn.getSignature(), choice));
 			
-			// collocate the intermediate results TODO
-//			Set<DefaultEdge> edges =  ciqp.edgesOf(k);
-//			for (DefaultEdge e : edges) {
-//				CrossIslandQueryNode d = ciqp.getEdgeTarget(e);
-////				Migrator mig = new Migrator(d.getQueryContainer().entrySet().iterator().next().getValue().getDBID()
-////						, k.getQueryContainer().entrySet().iterator().next().getValue().getDBID());
-//				
-//				// add temp entry in catalog
-//				// don't forget to patch ciqn to have a dbid mapping -- or have ciqn directly points to hte resulting query container/remainder??
-//			}
+			// destruct
+			for (Integer i : catalogSOD) {
+				CatalogModifier.deleteObject(i);
+			}
+			for (ConnectionInfo c : tempTableSOD.keySet()) {
+	            final Collection<String> tables = tempTableSOD.get(c);
+	            Collection<String> cs = c.getCleanupQuery(tables);
+	            try {
+	            	for (String s : cs)
+	            		c.getLocalQueryExecutor().execute(s);
+	            } catch (ConnectionInfo.LocalQueryExecutorLookupException e) {
+	                e.printStackTrace();
+	            }
+			}
+			
+			return responseHolder;
+			
 		}
 		
+		// NEW CODE 2 END
 		
-		// pass this to monitor, and pick your favorite
-		CrossIslandQueryNode ciqn = ciqp.getTerminalNode();
-		int choice = getGetPerformanceAndPickTheBest(ciqn, isTrainingMode);
-		
-		
-		// currently there should be just one island, therefore one child, root.
-		QueryExecutionPlan qep = ciqp.getTerminalNode().getQEP(choice, true);
-		
-		
-		// EXECUTE THE RESULT
-		logger.debug("Executing query execution tree...");
-		return compileResults(ciqp.getSerial(), Executor.executePlan(qep, ciqn.getSignature(), choice));
+//		for (CrossIslandPlanNode k : ciqp.vertexSet()) {
+//			
+//			if (k.equals(CrossIslandQueryPlan.getOutputToken())) {
+//				// this is the root; save for later. 
+//				continue;
+//			}
+//			
+//			CrossIslandQueryNode ciqn = (CrossIslandQueryNode)k;
+//			int choice = getGetPerformanceAndPickTheBest(ciqn, isTrainingMode);
+//			
+//			
+//			// currently there should be just one island, therefore one child, root.
+//			QueryExecutionPlan qep = ((CrossIslandQueryNode)k).getQEP(choice, true);
+//			
+//			
+//			// EXECUTE THE RESULT SUB RESULT
+//			logger.debug("Executing query cross-island subquery "+k+"...");
+//			Executor.executePlan(qep, ciqn.getSignature(), choice);
+//			
+//		}
+//		
+//		CrossIslandQueryNode ciqn = (CrossIslandQueryNode)ciqp.getTerminalNode(); 
+//		int choice = getGetPerformanceAndPickTheBest(ciqn, isTrainingMode);
+//		
+//		
+//		// currently there should be just one island, therefore one child, root.
+//		QueryExecutionPlan qep = ((CrossIslandQueryNode)ciqp.getTerminalNode()).getQEP(choice, true);
+//		
+//		
+//		// EXECUTE THE RESULT
+//		logger.debug("Executing query execution tree...");
+//		return compileResults(ciqp.getSerial(), Executor.executePlan(qep, ciqn.getSignature(), choice));
 	}
 
+	
+	private static void remoteSchemaCreation(CrossIslandCastNode node, ConnectionInfo targetCI) throws Exception {
+		System.out.printf("--->>> Executing: %s;\n", node.getQueryString());
+		DBHandler handler = null;
+		if (node.getDestinationScope().equals(Scope.ARRAY)) {
+			handler = new SciDBHandler((SciDBConnectionInfo)targetCI);
+			((SciDBHandler)handler).executeStatement(node.getQueryString());
+		} else if (node.getDestinationScope().equals(Scope.RELATIONAL)) {
+			handler = new PostgreSQLHandler((PostgreSQLConnectionInfo)targetCI);
+			((PostgreSQLHandler)handler).executeQuery(node.getQueryString());
+		}
+		System.out.printf("--->>> done executing: %s;\n", node.getQueryString());
+	}
 	
 	/**
 	 * CALL MONITOR: Parses the userinput, generate alternative join plans, and

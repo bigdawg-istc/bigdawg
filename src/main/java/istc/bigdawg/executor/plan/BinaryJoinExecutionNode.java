@@ -7,7 +7,8 @@ import java.util.regex.Pattern;
 
 import com.google.common.base.Objects;
 import com.google.common.collect.Sets;
-import istc.bigdawg.plan.operators.Join;
+
+import istc.bigdawg.islands.operators.Join;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.query.ConnectionInfoParser;
 

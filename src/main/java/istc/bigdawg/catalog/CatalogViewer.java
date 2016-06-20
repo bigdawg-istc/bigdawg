@@ -11,10 +11,13 @@ import java.util.List;
 import org.apache.log4j.Logger;
 
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
+import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
 import istc.bigdawg.utils.IslandsAndCast;
 
 public class CatalogViewer {
+	
+	static enum Engine {PostgreSQL, SciDB};
 
 	private static Logger logger = Logger.getLogger(CatalogViewer.class.getName());
 
@@ -26,30 +29,82 @@ public class CatalogViewer {
 	 * @return
 	 * @throws Exception
 	 */
-	public static PostgreSQLConnectionInfo getPSQLConnectionInfo(int db_id) throws Exception {
+	public static ConnectionInfo getConnectionInfo(int db_id) throws Exception {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
 		CatalogUtilities.checkConnection(cc);
 
-		PostgreSQLConnectionInfo extraction = null;
+		ConnectionInfo extraction = null;
 
-		ResultSet rs = cc.execRet(
-				"select dbid, eid, host, port, db.name as dbname, userid, password "
-				+ "from catalog.databases db join catalog.engines e on db.engine_id = e.eid where dbid = "+db_id);
-		if (rs.next()) {
-			extraction = new PostgreSQLConnectionInfo(rs.getString("host"), rs.getString("port"), 
-					rs.getString("dbname"), rs.getString("userid"), rs.getString("password"));
+		// NEW ADDITION
+		ResultSet rs1 = cc.execRet("select connection_properties from catalog.databases db join catalog.engines e on db.engine_id = e.eid where dbid = "+db_id);
+		
+		Engine e = null;
+		
+		if (rs1.next()) {
+			String engineString = rs1.getString("connection_properties");
+			if (engineString.startsWith("PostgreSQL"))
+				e = Engine.PostgreSQL;
+			else if (engineString.startsWith("SciDB"))
+				e = Engine.SciDB;
+			else {
+				rs1.close();
+				throw new Exception("Unsupported engine: "+ engineString);
+			}
 		} else {
-			rs.close();
-			throw new Exception("Postgres Connection Info Not Found: "+db_id);
+			rs1.close();
+			throw new Exception("Connection Info Not Found: "+db_id);
+		}
+		rs1.close();
+		
+		
+		ResultSet rs2;
+		if (e.equals(Engine.PostgreSQL)) {
+			
+			rs2 = cc.execRet("select dbid, eid, host, port, db.name as dbname, userid, password from catalog.databases db join catalog.engines e on db.engine_id = e.eid where dbid = "+db_id);
+			if (rs2.next())
+				extraction = new PostgreSQLConnectionInfo(rs2.getString("host"), rs2.getString("port"),rs2.getString("dbname"), rs2.getString("userid"), rs2.getString("password"));
+		} else if (e.equals(Engine.SciDB)) {
+			rs2 = cc.execRet("select dbid, db.engine_id, host, port, bin_path, userid, password "
+							+ "from catalog.databases db "
+							+ "join catalog.engines e on db.engine_id = e.eid "
+							+ "join catalog.scidbbinpaths sp on db.engine_id = sp.eid where dbid = "+db_id);
+			if (rs2.next())
+				extraction = new SciDBConnectionInfo(rs2.getString("host"), rs2.getString("port"), rs2.getString("userid"), rs2.getString("password"), rs2.getString("bin_path"));
+		} else 
+			throw new Exception("This is not supposed to happen");
+		
+		if (extraction == null) {
+			rs2.close();
+			throw new Exception("Connection Info Cannot Be Formulated: "+db_id);
 		}
 			
-		if (rs.next()) {
+		if (rs2.next()) {
 			throw new Exception("Non-unique DBID: "+db_id);
 		}
-		rs.close();
+		rs2.close();
 
 		return extraction;
+		// NEW ADDITION END
+		
+		
+//		rs = cc.execRet(
+//				"select dbid, eid, host, port, db.name as dbname, userid, password "
+//				+ "from catalog.databases db join catalog.engines e on db.engine_id = e.eid where dbid = "+db_id);
+//		if (rs.next()) {
+//			extraction = new PostgreSQLConnectionInfo(rs.getString("host"), rs.getString("port"), 
+//					rs.getString("dbname"), rs.getString("userid"), rs.getString("password"));
+//		} else {
+//			rs.close();
+//			throw new Exception("Postgres Connection Info Not Found: "+db_id);
+//		}
+//			
+//		if (rs.next()) {
+//			throw new Exception("Non-unique DBID: "+db_id);
+//		}
+//		rs.close();
+//
+//		return extraction;
 	}
 	
 	/**
@@ -60,6 +115,7 @@ public class CatalogViewer {
 	 * @return
 	 * @throws Exception
 	 */
+	@Deprecated
 	public static SciDBConnectionInfo getSciDBConnectionInfo(int db_id) throws Exception {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
@@ -137,10 +193,11 @@ public class CatalogViewer {
 		int len = inputs.size();
 		HashMap<String, List<String>> extraction = new HashMap<>();
 		
-		String wherePred = new String(" lower(o.name) = lower(\'"+ inputs.get(0) + "\') ");
+		String wherePred = new String(" (lower(o.name) = lower(\'"+ inputs.get(0) + "\') ");
 		for (int i = 1; i < len; i++) {
 			wherePred = wherePred + "or lower(o.name) = lower(\'" + inputs.get(i) + "\') ";
 		}
+		wherePred += ")";
 		
 		String islandName; 
 		if (scope == null) islandName = "";
@@ -855,6 +912,7 @@ public class CatalogViewer {
 	 * 
 	 * Get connection to a database based on engineId and dbId.
 	 * 
+	 * Deprecation notice: use getConnectionInfo(int) instead.
 	 * 
 	 * @param cc
 	 *            catalog with the connection to catalog to PostgreSQL
@@ -867,6 +925,7 @@ public class CatalogViewer {
 	 *             problem with the connection to the catalog or no data for the
 	 *             arguments in the catalog
 	 */
+	@Deprecated
 	public static PostgreSQLConnectionInfo getConnection(int dbId) throws Exception {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// TODO add cache for the connections (done by Adam)

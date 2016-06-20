@@ -80,7 +80,7 @@ class PlanExecutor {
         Logger.debug(this, "Ordered queries: \n %s",
                 StreamSupport.stream(plan.spliterator(), false)
                     .map(ExecutionNode::getQueryString)
-                    .filter(Optional::isPresent).map(Optional::get)
+                    .filter(Optional::isPresent).map(Optional::get).map(s -> s.replaceAll("[\"']", "*"))
                     .collect(Collectors.joining(" \n ---- then ---- \n ")));
         
         // initialize countdown latches to the proper counts

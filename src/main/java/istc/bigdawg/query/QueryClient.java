@@ -88,7 +88,7 @@ public class QueryClient {
 //	@Produces(MediaType.APPLICATION_JSON)
 	public Response query(String istream) {
 //		// System.out.println(istream);
-		log.info("istream: " + istream.replaceAll("[\"]", "*"));
+		log.info("istream: " + istream.replaceAll("[\"']", "*"));
 //		QueryRequest st;
 //		try {
 //			st = ObjectMapperResource.INSTANCE.getObjectMapper().readValue(

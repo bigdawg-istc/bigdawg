@@ -7,7 +7,6 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
@@ -18,16 +17,15 @@ import java.util.Optional;
 
 import javax.ws.rs.core.Response;
 
-import istc.bigdawg.executor.ExecutorEngine;
-import istc.bigdawg.executor.JdbcQueryResult;
-import istc.bigdawg.executor.QueryResult;
-import istc.bigdawg.utils.JdbcUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
 import istc.bigdawg.BDConstants.Shim;
 import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.database.AttributeMetaData;
+import istc.bigdawg.executor.ExecutorEngine;
+import istc.bigdawg.executor.JdbcQueryResult;
+import istc.bigdawg.executor.QueryResult;
 import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.query.DBHandler;
@@ -51,6 +49,13 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 	private PreparedStatement preparedSt = null;
 	private ResultSet rs = null;
 
+	
+
+	public PostgreSQLHandler(PostgreSQLConnectionInfo conInfo) {
+		this.conInfo = conInfo;
+	}
+	
+	@Deprecated
 	public PostgreSQLHandler(int dbId) throws Exception {
 		try {
 			this.conInfo = CatalogViewer.getConnection(dbId);
@@ -62,10 +67,6 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 			e.printStackTrace();
 			throw e;
 		}
-	}
-
-	public PostgreSQLHandler(PostgreSQLConnectionInfo conInfo) {
-		this.conInfo = conInfo;
 	}
 
 	public PostgreSQLHandler() {
@@ -572,9 +573,9 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 	 * @return connection info associated with the DBID
 	 * @throws Exception
 	 */
-	public static ConnectionInfo generateConnectionInfo(int dbid)
-			throws Exception {
-		return CatalogViewer.getPSQLConnectionInfo(dbid);
+	@Deprecated
+	public static ConnectionInfo generateConnectionInfo(int dbid) throws Exception {
+		return CatalogViewer.getConnectionInfo(dbid);
 	}
 
 	/**
