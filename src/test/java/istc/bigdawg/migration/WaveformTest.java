@@ -1,7 +1,7 @@
 /**
  * 
  */
-package istc.bigdawg.benchmark;
+package istc.bigdawg.migration;
 
 import java.io.IOException;
 import java.sql.SQLException;
@@ -16,13 +16,6 @@ import org.junit.Test;
 
 import istc.bigdawg.LoggerSetup;
 import istc.bigdawg.exceptions.MigrationException;
-import istc.bigdawg.migration.ExportPostgres;
-import istc.bigdawg.migration.LoadSciDB;
-import istc.bigdawg.migration.SciDBArrays;
-import istc.bigdawg.migration.TransformBinExecutor;
-import istc.bigdawg.migration.direct.FromPostgresToPostgres;
-import istc.bigdawg.migration.direct.FromPostgresToSciDBImplementation;
-import istc.bigdawg.migration.direct.FromSciDBToPostgresImplementation;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfoTest;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
@@ -52,32 +45,32 @@ public class WaveformTest {
 	@Test
 	public void testFromSciDBToPostgresBin()
 			throws MigrationException, SQLException {
-		FromSciDBToPostgresImplementation migrator = new FromSciDBToPostgresImplementation(
-				conSciDB, array, conPostgres, table);
+		FromSciDBToPostgres migrator = new FromSciDBToPostgres(
+				new MigrationInfo(conSciDB, array, conPostgres, table));
 		migrator.migrateBin();
 	}
 
 	@Test
 	public void testFromSciDBToPostgresCsv()
 			throws MigrationException, SQLException {
-		FromSciDBToPostgresImplementation migrator = new FromSciDBToPostgresImplementation(
-				conSciDB, array, conPostgres, table);
+		FromSciDBToPostgres migrator = new FromSciDBToPostgres(
+				new MigrationInfo(conSciDB, array, conPostgres, table));
 		migrator.migrateSingleThreadCSV();
 	}
 
 	@Test
 	public void testFromPostgresToSciDBBin()
 			throws MigrationException, SQLException {
-		FromPostgresToSciDBImplementation migrator = new FromPostgresToSciDBImplementation(
-				conPostgres, table, conSciDB, array);
+		FromPostgresToSciDB migrator = new FromPostgresToSciDB(
+				new MigrationInfo(conPostgres, table, conSciDB, array));
 		migrator.migrateBin();
 	}
 
 	@Test
 	public void testFromPostgresToSciDBCsv()
 			throws MigrationException, SQLException {
-		FromPostgresToSciDBImplementation migrator = new FromPostgresToSciDBImplementation(
-				conPostgres, table, conSciDB, array);
+		FromPostgresToSciDB migrator = new FromPostgresToSciDB(
+				new MigrationInfo(conPostgres, table, conSciDB, array));
 		migrator.migrateSingleThreadCSV();
 	}
 

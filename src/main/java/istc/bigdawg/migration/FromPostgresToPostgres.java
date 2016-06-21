@@ -1,7 +1,7 @@
 /**
  * 
  */
-package istc.bigdawg.migration.direct;
+package istc.bigdawg.migration;
 
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
@@ -19,13 +19,6 @@ import org.apache.log4j.Logger;
 
 import istc.bigdawg.LoggerSetup;
 import istc.bigdawg.exceptions.MigrationException;
-import istc.bigdawg.migration.ExportPostgres;
-import istc.bigdawg.migration.FromDatabaseToDatabase;
-import istc.bigdawg.migration.LoadPostgres;
-import istc.bigdawg.migration.MigrationInfo;
-import istc.bigdawg.migration.MigrationResult;
-import istc.bigdawg.migration.MigrationStatistics;
-import istc.bigdawg.monitoring.Monitor;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.postgresql.PostgreSQLSchemaTableName;
@@ -35,6 +28,12 @@ import istc.bigdawg.utils.TaskExecutor;
 
 /**
  * Data migration between instances of PostgreSQL.
+ * 
+ * 
+ * log table query: copy (select time,message from logs where message like
+ * 'Migration result,%' order by time desc) to '/tmp/migration_log.csv' with
+ * (format csv);
+ * 
  * 
  * @author Adam Dziedzic
  * 
@@ -119,6 +118,7 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 
 		/*
 		 * Get the create table statement from the parameters to the migration.
+		 * (the create statement was passed directly by a user).
 		 */
 		migrationInfo.getMigrationParams()
 				.ifPresent(migrationParams -> migrationParams
@@ -155,23 +155,17 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 		TimeStamp startTimeStamp = TimeStamp.getCurrentTime();
 		logger.debug("start migration: " + startTimeStamp.toDateString());
 
-		/* Bring the most used attributes to the namespace of this method. */
-		ConnectionInfo connectionFrom = migrationInfo.getConnectionFrom();
-		String fromTable = migrationInfo.getObjectFrom();
-		ConnectionInfo connectionTo = migrationInfo.getConnectionTo();
-		String toTable = migrationInfo.getObjectTo();
-
 		long startTimeMigration = System.currentTimeMillis();
 		String copyFromCommand = PostgreSQLHandler
-				.getExportBinCommand(fromTable);
-		String copyToCommand = PostgreSQLHandler.getLoadBinCommand(toTable);
-
+				.getExportBinCommand(getObjectFrom());
+		String copyToCommand = PostgreSQLHandler
+				.getLoadBinCommand(getObjectTo());
 		Connection conFrom = null;
 		Connection conTo = null;
 		ExecutorService executor = null;
 		try {
-			conFrom = PostgreSQLHandler.getConnection(connectionFrom);
-			conTo = PostgreSQLHandler.getConnection(connectionTo);
+			conFrom = PostgreSQLHandler.getConnection(getConnectionFrom());
+			conTo = PostgreSQLHandler.getConnection(getConnectionTo());
 
 			conFrom.setReadOnly(true);
 			conFrom.setAutoCommit(false);
@@ -187,33 +181,16 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 			executor = Executors.newFixedThreadPool(tasks.size());
 			List<Future<Object>> results = TaskExecutor.execute(executor,
 					tasks);
-
 			long countExtractedElements = (Long) results.get(0).get();
 			long countLoadedElements = (Long) results.get(0).get();
-
 			long endTimeMigration = System.currentTimeMillis();
 			long durationMsec = endTimeMigration - startTimeMigration;
 			logger.debug("migration duration time msec: " + durationMsec);
-			MigrationStatistics stats = new MigrationStatistics(connectionFrom,
-					connectionTo, fromTable, toTable, startTimeMigration,
-					endTimeMigration, countExtractedElements,
-					countLoadedElements, this.getClass().getName());
-			Monitor.addMigrationStats(stats);
-			logger.debug("Migration result,connectionFrom,"
-					+ connectionFrom.toSimpleString() + ",connectionTo,"
-					+ connectionTo.toSimpleString() + ",fromTable," + fromTable
-					+ ",toTable," + toTable + ",startTimeMigration,"
-					+ startTimeMigration + ",endTimeMigration,"
-					+ endTimeMigration + ",countExtractedElements,"
-					+ countExtractedElements + ",countLoadedElements,"
-					+ countLoadedElements + ",durationMsec," + durationMsec);
-			/**
-			 * log table query: copy (select time,message from logs where
-			 * message like 'Migration result,%' order by time desc) to
-			 * '/tmp/migration_log.csv' with (format csv);
-			 */
-			return new MigrationResult(countExtractedElements,
-					countLoadedElements);
+			MigrationResult migrationResult = new MigrationResult(
+					countExtractedElements, countLoadedElements, durationMsec,
+					startTimeMigration, endTimeMigration);
+			String message = "Migration was executed correctly.";
+			return summary(migrationResult, migrationInfo, message);
 		} catch (Exception e) {
 			String message = e.getMessage()
 					+ " Migration failed. Task did not finish correctly. ";

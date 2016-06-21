@@ -9,12 +9,12 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 
-import istc.bigdawg.executor.JdbcQueryResult;
 import org.scidb.jdbc.IResultSetWrapper;
 
+import istc.bigdawg.executor.JdbcQueryResult;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
-import istc.bigdawg.scidb.SciDBConnectionInfo;
+import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.scidb.SciDBHandler;
 
 /**
@@ -44,7 +44,7 @@ public class Utils {
 		}
 	}
 
-	public static long getNumberOfCellsSciDB(SciDBConnectionInfo conTo,
+	public static long getNumberOfCellsSciDB(ConnectionInfo conTo,
 			String array) throws SQLException {
 		Connection con = SciDBHandler.getConnection(conTo);
 		Statement query = con.createStatement();

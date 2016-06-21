@@ -49,8 +49,25 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 	private PreparedStatement preparedSt = null;
 	private ResultSet rs = null;
 
+	/**
+	 * Initialize the PostgreSQL handler with only the connection information.
+	 * 
+	 * @param conInfo
+	 *            information about connection to an instance of PostgreSQL
+	 *            database
+	 */
 	public PostgreSQLHandler(PostgreSQLConnectionInfo conInfo) {
 		this.conInfo = conInfo;
+	}
+
+	public PostgreSQLHandler(ConnectionInfo conInfo) {
+		if (conInfo instanceof PostgreSQLConnectionInfo) {
+			this.conInfo = (PostgreSQLConnectionInfo) conInfo;
+		} else {
+			throw new IllegalArgumentException(
+					"The conInfo parameter has to be of "
+							+ "type: PostgreSQLConnectionInfo.");
+		}
 	}
 
 	@Deprecated

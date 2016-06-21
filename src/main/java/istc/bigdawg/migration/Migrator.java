@@ -11,9 +11,6 @@ import org.apache.log4j.Logger;
 
 import istc.bigdawg.LoggerSetup;
 import istc.bigdawg.exceptions.MigrationException;
-import istc.bigdawg.migration.direct.FromPostgresToPostgres;
-import istc.bigdawg.migration.direct.FromPostgresToSciDB;
-import istc.bigdawg.migration.direct.FromSciDBToPostgres;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.query.ConnectionInfo;
 
@@ -48,7 +45,7 @@ public class Migrator {
 	}
 
 	/**
-	 * register the migrators
+	 * Register the migrators.
 	 */
 	static {
 		registeredMigrators = new ArrayList<FromDatabaseToDatabase>();
@@ -116,7 +113,7 @@ public class Migrator {
 		throw new MigrationException("Unsupported migration from "
 				+ connectionFrom.getHost() + ":" + connectionFrom.getPort()
 				+ " to " + connectionTo.getHost() + ":" + connectionTo.getPort()
-				+ "!\n" + "Detail info:\n" + "From:\n"
+				+ "!\n" + "Details:\n" + "From:\n"
 				+ connectionFrom.toString() + "\n To:\n"
 				+ connectionTo.toString());
 	}

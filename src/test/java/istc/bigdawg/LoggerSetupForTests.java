@@ -24,12 +24,13 @@ public class LoggerSetupForTests {
 		logger = Logger.getLogger(LoggerSetup.class);
 		String log4JPropertyFile = "test-log4j.properties";
 		Properties prop = new Properties();
-		InputStream inputStream = LoggerSetup.class.getClassLoader().getResourceAsStream(log4JPropertyFile);
+		InputStream inputStream = LoggerSetup.class.getClassLoader()
+				.getResourceAsStream(log4JPropertyFile);
 		if (inputStream != null) {
 			prop.load(inputStream);
 		} else {
-			throw new FileNotFoundException(
-					"log4j property file '" + log4JPropertyFile + "' not found in the classpath");
+			throw new FileNotFoundException("log4j property file '"
+					+ log4JPropertyFile + "' not found in the classpath");
 		}
 		PropertyConfigurator.configure(prop);
 		logger.info("Starting application. Logging was configured!");

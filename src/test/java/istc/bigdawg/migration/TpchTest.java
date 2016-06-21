@@ -1,7 +1,7 @@
 /**
  * 
  */
-package istc.bigdawg.benchmark;
+package istc.bigdawg.migration;
 
 import java.io.IOException;
 import java.sql.SQLException;
@@ -14,7 +14,8 @@ import org.junit.Test;
 
 import istc.bigdawg.LoggerSetup;
 import istc.bigdawg.exceptions.MigrationException;
-import istc.bigdawg.migration.direct.FromPostgresToSciDBImplementation;
+import istc.bigdawg.migration.FromPostgresToSciDB;
+import istc.bigdawg.migration.MigrationInfo;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfoTest;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
@@ -37,8 +38,9 @@ public class TpchTest {
 
 	private PostgreSQLConnectionInfo conPostgres = new PostgreSQLConnectionInfoTest();
 	private SciDBConnectionInfo conSciDB = new SciDBConnectionInfoTest();
-//	private List<String> tables = Arrays.asList("region", "nation", "supplier",
-//			"customer", "part", "partsupp", "orders", "lineitem");
+	// private List<String> tables = Arrays.asList("region", "nation",
+	// "supplier",
+	// "customer", "part", "partsupp", "orders", "lineitem");
 	private List<String> tables = Arrays.asList("orders", "lineitem");
 
 	@Before
@@ -62,9 +64,9 @@ public class TpchTest {
 			SciDBHandler.dropArrayIfExists(conSciDB, table);
 		}
 		for (String table : tables) {
-			FromPostgresToSciDBImplementation migrator = new FromPostgresToSciDBImplementation(
-					conPostgres, table, conSciDB, table);
-			//migrator.migrateBin();
+			FromPostgresToSciDB migrator = new FromPostgresToSciDB(
+					new MigrationInfo(conPostgres, table, conSciDB, table));
+			// migrator.migrateBin();
 			migrator.migrateSingleThreadCSV();
 		}
 	}
