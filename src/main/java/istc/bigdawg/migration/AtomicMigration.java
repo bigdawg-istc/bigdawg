@@ -15,7 +15,6 @@ import org.apache.log4j.Logger;
 import istc.bigdawg.LoggerSetup;
 import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.executor.ExecutorEngine.LocalQueryExecutionException;
-import istc.bigdawg.migration.direct.FromPostgresToPostgres;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 

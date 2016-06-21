@@ -8,7 +8,7 @@ import java.util.concurrent.Callable;
 
 import org.apache.log4j.Logger;
 
-import istc.bigdawg.scidb.SciDBConnectionInfo;
+import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.scidb.SciDBHandler;
 import istc.bigdawg.utils.LogUtils;
 
@@ -23,15 +23,14 @@ public class ExportSciDB implements Callable<String> {
 	private static Logger log = Logger.getLogger(LoadSciDB.class);
 
 	/* SciDB connection info */
-	private SciDBConnectionInfo connection;
+	private ConnectionInfo connection;
 	private final SciDBArrays arrays;
 	private final String scidbFilePath;
 	private final String format;
 	private boolean isBinary;
 
-	public ExportSciDB(SciDBConnectionInfo connection,
-			SciDBArrays arrays, String scidbFilePath, String format,
-			boolean isBinary) {
+	public ExportSciDB(ConnectionInfo connection, SciDBArrays arrays,
+			String scidbFilePath, String format, boolean isBinary) {
 		this.connection = connection;
 		this.arrays = arrays;
 		this.scidbFilePath = scidbFilePath;

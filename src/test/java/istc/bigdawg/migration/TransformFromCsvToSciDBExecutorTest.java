@@ -21,8 +21,9 @@ import istc.bigdawg.scidb.SciDBConnectionInfo;
  */
 public class TransformFromCsvToSciDBExecutorTest {
 
-	static Logger log = Logger.getLogger(TransformFromCsvToSciDBExecutorTest.class);
-	
+	static Logger log = Logger
+			.getLogger(TransformFromCsvToSciDBExecutorTest.class);
+
 	@Test
 	public void testTransformation() throws MigrationException, IOException {
 		SciDBConnectionInfo connectionInfo = new SciDBConnectionInfo();
@@ -31,8 +32,9 @@ public class TransformFromCsvToSciDBExecutorTest {
 		String csvFilePath = "src/test/resources/region.csv";
 		String scidbFilePath = "src/test/resources/region_test.scidb";
 		String delimiter = "|";
-		TransformFromCsvToSciDBExecutor executor = new TransformFromCsvToSciDBExecutor(typesPattern, csvFilePath,
-				delimiter, scidbFilePath, scidbBinPath);
+		TransformFromCsvToSciDBExecutor executor = new TransformFromCsvToSciDBExecutor(
+				typesPattern, csvFilePath, delimiter, scidbFilePath,
+				scidbBinPath);
 		int result = executor.call();
 		assertEquals(0, result);
 	}

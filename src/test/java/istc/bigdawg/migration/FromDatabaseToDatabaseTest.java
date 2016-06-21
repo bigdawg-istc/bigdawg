@@ -59,7 +59,7 @@ public class FromDatabaseToDatabaseTest {
 		MigrationResult result = migrator.executeMigrationLocally();
 		logger.debug("Result of data migration: " + result.toString());
 
-		TestMigrationUtils.checkNumberOfElements(conTo, toArray,
+		TestMigrationUtils.checkNumberOfElementsSciDB(conTo, toArray,
 				numberOfRowsPostgres);
 		// drop the created array
 		SciDBHandler.dropArrayIfExists(conTo, toArray);

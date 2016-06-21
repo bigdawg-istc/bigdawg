@@ -17,11 +17,9 @@ import org.junit.Test;
 import istc.bigdawg.exceptions.NoTargetArrayException;
 
 /**
- * Test the operation executed in SciDB.
+ * Test the operations executed in SciDB.
  * 
  * @author Adam Dziedzic
- * 
- *
  */
 public class SciDBHandlerTest {
 

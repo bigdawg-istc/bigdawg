@@ -1,7 +1,7 @@
 /**
  * 
  */
-package istc.bigdawg.benchmark;
+package istc.bigdawg.migration;
 
 import java.io.IOException;
 import java.sql.SQLException;
@@ -14,8 +14,8 @@ import org.junit.Test;
 
 import istc.bigdawg.LoggerSetup;
 import istc.bigdawg.exceptions.MigrationException;
+import istc.bigdawg.migration.FromPostgresToSciDB;
 import istc.bigdawg.migration.MigrationInfo;
-import istc.bigdawg.migration.direct.FromPostgresToSciDB;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfoTest;
 import istc.bigdawg.scidb.SciDBConnectionInfo;

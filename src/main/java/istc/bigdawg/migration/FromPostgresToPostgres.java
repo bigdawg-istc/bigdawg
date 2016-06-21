@@ -1,7 +1,7 @@
 /**
  * 
  */
-package istc.bigdawg.migration.direct;
+package istc.bigdawg.migration;
 
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
@@ -19,11 +19,6 @@ import org.apache.log4j.Logger;
 
 import istc.bigdawg.LoggerSetup;
 import istc.bigdawg.exceptions.MigrationException;
-import istc.bigdawg.migration.ExportPostgres;
-import istc.bigdawg.migration.FromDatabaseToDatabase;
-import istc.bigdawg.migration.LoadPostgres;
-import istc.bigdawg.migration.MigrationInfo;
-import istc.bigdawg.migration.MigrationResult;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.postgresql.PostgreSQLSchemaTableName;

@@ -1,7 +1,7 @@
 /**
  * 
  */
-package istc.bigdawg;
+package istc.bigdawg.migration;
 
 import java.util.Map.Entry;
 

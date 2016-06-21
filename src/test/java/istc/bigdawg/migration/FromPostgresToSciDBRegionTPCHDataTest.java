@@ -12,7 +12,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import istc.bigdawg.exceptions.MigrationException;
-import istc.bigdawg.migration.direct.FromPostgresToSciDB;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfoTest;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
@@ -59,14 +58,26 @@ public class FromPostgresToSciDBRegionTPCHDataTest {
 
 	/**
 	 * 
-	 * @return create array statement for SciDB (this array is "equivalent" to
-	 *         the region table from the TPC-H benchmark
+	 * @return create flat array statement for SciDB (this array is for data
+	 *         from the region table from the TPC-H benchmark).
 	 */
-	private String getCreateArray() {
+	private String getCreateFlatArray() {
 		String createArray = "create array " + toArray
 				+ " <r_regionkey:int64,r_name:string,r_comment:string>"
 				+ " [i=0:*,1000000,0]";
-		logger.debug("create array statement: " + createArray);
+		logger.debug("create flat array statement: " + createArray);
+		return createArray;
+	}
+
+	/**
+	 * 
+	 * @return create multi-dimensional array statement for SciDB (this array is
+	 *         for data from the region table from the TPC-H benchmark).
+	 */
+	private String getCreateMultiDimensionalArray() {
+		String createArray = "create array " + toArray
+				+ " <r_name:string,r_comment:string> [r_regionkey=0:*,1000000,0]";
+		logger.debug("creat multi-dimensional array statement: " + createArray);
 		return createArray;
 	}
 
@@ -83,14 +94,14 @@ public class FromPostgresToSciDBRegionTPCHDataTest {
 		// prepare the target array
 		SciDBHandler.dropArrayIfExists(conTo, toArray);
 		SciDBHandler handler = new SciDBHandler(conTo);
-		handler.executeStatement(getCreateArray());
+		handler.executeStatement(getCreateFlatArray());
 		handler.commit();
 		handler.close();
 		/*
 		 * test of the main method
 		 */
 		migrator.migrate(new MigrationInfo(conFrom, fromTable, conTo, toArray));
-		TestMigrationUtils.checkNumberOfElements(conTo, toArray,
+		TestMigrationUtils.checkNumberOfElementsSciDB(conTo, toArray,
 				numberOfRowsPostgres);
 		// clean: remove the target array
 		SciDBHandler.dropArrayIfExists(conTo, toArray);
@@ -101,12 +112,13 @@ public class FromPostgresToSciDBRegionTPCHDataTest {
 		logger.debug("General migration from Postgres to Postgres "
 				+ "with a given parameter: craete target table");
 
-		MigrationParams migrationParams = new MigrationParams(getCreateArray());
+		MigrationParams migrationParams = new MigrationParams(
+				getCreateFlatArray());
 		/* drop the array if exists before the test */
 		SciDBHandler.dropArrayIfExists(conTo, toArray);
 
 		Migrator.migrate(conFrom, fromTable, conTo, toArray, migrationParams);
-		TestMigrationUtils.checkNumberOfElements(conTo, toArray,
+		TestMigrationUtils.checkNumberOfElementsSciDB(conTo, toArray,
 				numberOfRowsPostgres);
 		/* drop the created array */
 		SciDBHandler.dropArrayIfExists(conTo, toArray);
@@ -125,7 +137,7 @@ public class FromPostgresToSciDBRegionTPCHDataTest {
 		// make sure that the target array does not exist
 		SciDBHandler.dropArrayIfExists(conTo, toArray);
 		migrator.migrate(new MigrationInfo(conFrom, fromTable, conTo, toArray));
-		TestMigrationUtils.checkNumberOfElements(conTo, toArray,
+		TestMigrationUtils.checkNumberOfElementsSciDB(conTo, toArray,
 				numberOfRowsPostgres);
 		// drop the created array
 		SciDBHandler.dropArrayIfExists(conTo, toArray);
@@ -144,15 +156,14 @@ public class FromPostgresToSciDBRegionTPCHDataTest {
 		// prepare the target array
 		SciDBHandler.dropArrayIfExists(conTo, toArray);
 		SciDBHandler handler = new SciDBHandler(conTo);
-		handler.executeStatement("create array " + toArray
-				+ " <r_name:string,r_comment:string> [r_regionkey=0:*,1000000,0]");
+		handler.executeStatement(getCreateMultiDimensionalArray());
 		handler.commit();
 		handler.close();
 		/*
 		 * test of the main method
 		 */
 		migrator.migrate(new MigrationInfo(conFrom, fromTable, conTo, toArray));
-		TestMigrationUtils.checkNumberOfElements(conTo, toArray,
+		TestMigrationUtils.checkNumberOfElementsSciDB(conTo, toArray,
 				numberOfRowsPostgres);
 		// clean: remove the target array
 		SciDBHandler.dropArrayIfExists(conTo, toArray);

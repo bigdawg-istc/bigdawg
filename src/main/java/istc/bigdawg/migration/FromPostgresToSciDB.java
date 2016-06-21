@@ -1,7 +1,7 @@
 /**
  * 
  */
-package istc.bigdawg.migration.direct;
+package istc.bigdawg.migration;
 
 import java.io.IOException;
 import java.sql.SQLException;
@@ -23,17 +23,6 @@ import istc.bigdawg.exceptions.NoTargetArrayException;
 import istc.bigdawg.exceptions.RunShellException;
 import istc.bigdawg.exceptions.UnsupportedTypeException;
 import istc.bigdawg.executor.ExecutorEngine.LocalQueryExecutionException;
-import istc.bigdawg.migration.ExportPostgres;
-import istc.bigdawg.migration.FileFormat;
-import istc.bigdawg.migration.FromDatabaseToDatabase;
-import istc.bigdawg.migration.LoadSciDB;
-import istc.bigdawg.migration.MigrationImplementation;
-import istc.bigdawg.migration.MigrationInfo;
-import istc.bigdawg.migration.MigrationResult;
-import istc.bigdawg.migration.PostgreSQLSciDBMigrationUtils;
-import istc.bigdawg.migration.SciDBArrays;
-import istc.bigdawg.migration.TransformBinExecutor;
-import istc.bigdawg.migration.TransformFromCsvToSciDBExecutor;
 import istc.bigdawg.migration.datatypes.FromSQLTypesToSciDB;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
@@ -53,7 +42,7 @@ import istc.bigdawg.utils.StackTrace;
  * @author Adam Dziedzic
  *
  */
-public class FromPostgresToSciDB extends FromDatabaseToDatabase
+class FromPostgresToSciDB extends FromDatabaseToDatabase
 		implements MigrationImplementation {
 
 	/* log */
@@ -107,7 +96,7 @@ public class FromPostgresToSciDB extends FromDatabaseToDatabase
 	 * @throws MigrationException
 	 * 
 	 */
-	public FromPostgresToSciDB(MigrationInfo migrationInfo)
+	FromPostgresToSciDB(MigrationInfo migrationInfo)
 			throws MigrationException {
 		this.migrationInfo = migrationInfo;
 		setPostgreSQLMetaData();

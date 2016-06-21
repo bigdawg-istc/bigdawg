@@ -1,7 +1,7 @@
 /**
  * 
  */
-package istc.bigdawg.migration.direct;
+package istc.bigdawg.migration;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
@@ -32,6 +32,7 @@ import org.apache.log4j.Logger;
 
 import istc.bigdawg.accumulo.AccumuloInstance;
 import istc.bigdawg.exceptions.AccumuloBigDawgException;
+import istc.bigdawg.migration.TestTpchPostgresAccumulo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.postgresql.PostgreSQLInstance;
 
