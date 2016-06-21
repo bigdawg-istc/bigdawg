@@ -548,7 +548,7 @@ class FromPostgresToSciDB extends FromDatabaseToDatabase
 		/*
 		 * The CSV migration is used for debugging and development, if you want
 		 * to go faster then change it to migrateBin() but then the C++ migrator
-		 * has to be compiled on each machine where bigdawg is running.
+		 * has to be compiled on each machine where BigDAWG is running.
 		 */
 		return migrateSingleThreadCSV();
 	}

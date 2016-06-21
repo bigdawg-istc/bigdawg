@@ -49,7 +49,8 @@ import istc.bigdawg.utils.ListConncatenator;
  */
 public class FromAccumuloToPostgres {
 
-	private static Logger lgr = Logger.getLogger(FromAccumuloToPostgres.class);
+	private static Logger logger = Logger
+			.getLogger(FromAccumuloToPostgres.class);
 
 	private Connection con = null;
 	private PreparedStatement st = null;
@@ -126,7 +127,7 @@ public class FromAccumuloToPostgres {
 				String message = "No results were fetched for the table: "
 						+ postgresTable;
 				// System.out.println(message);
-				lgr.log(Level.INFO, message);
+				logger.log(Level.INFO, message);
 				return;
 			}
 			ResultSetMetaData rsmd = rs.getMetaData();
@@ -164,7 +165,7 @@ public class FromAccumuloToPostgres {
 				int thisColNum = Integer.valueOf(colq.toString());
 				String value = e.getValue().toString();
 				// System.out.println(value);
-				// list is numbered from 0 (columns in postgresql are numbered
+				// list is numbered from 0 (columns in PostgreSQL numbered
 				// from 1)
 				row[thisColNum - 1] = value;
 			}
