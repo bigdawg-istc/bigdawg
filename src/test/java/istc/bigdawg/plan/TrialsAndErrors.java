@@ -35,6 +35,7 @@ public class TrialsAndErrors {
 	private static boolean runWalker = false;
 	private static boolean runPlanner = false;
 	private static boolean runMapTrial = false;
+	private static boolean runSchemaGen = false;
 
 	@Before
 	public void setUp() throws Exception {
@@ -45,7 +46,8 @@ public class TrialsAndErrors {
 //		setupRegexTester();
 //		setupTreeWalker();
 //		setupPlannerTester();
-		setupMapTrial();
+//		setupMapTrial();
+		setupSchemaGenerator();
 	}
 	
 	public void setupQueryExplainer() {
@@ -70,6 +72,10 @@ public class TrialsAndErrors {
 	
 	public void setupMapTrial() {
 		runMapTrial = true;
+	}
+	
+	public void setupSchemaGenerator() {
+		runSchemaGen = true;
 	}
 	
 
@@ -236,6 +242,27 @@ public class TrialsAndErrors {
 		s3.add(2); s3.add(4);
 		
 		System.out.printf("get String with s1: %s; s2: %s; s3: %s\n", m.get(s1), m.get(s2), m.get(s3));
+		
+	}
+	
+	@Test
+	public void testSchemaGeneration() throws Exception {
+		if ( !runSchemaGen ) return;
+		PostgreSQLHandler psqlh = new PostgreSQLHandler(1);
+		
+		Scanner scanner = new Scanner(System.in);
+		String query = scanner.nextLine();
+
+		while (!query.toLowerCase().equals("quit")) {
+			
+			System.out.println(psqlh.getCreateTable(query));
+			
+			
+//			break;
+			query = scanner.nextLine();
+			
+		}
+		scanner.close();
 		
 	}
 	
