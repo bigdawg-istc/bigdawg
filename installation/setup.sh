@@ -27,7 +27,7 @@ downloads_dir=$(pwd)
 
 # Download and mimic2 data and move it to data
 wget https://bitbucket.org/adam-dziedzic/mimic2-pgd/raw/6ade22253695bfeb33074e82929e83b52cb121f1/mimic2.pgd
-mv mimic2.pgd ../data
+mv mimic2.pgd /vagrant/installation/data/mimic2.pgd
 
 # Download and extract postgres
 wget https://ftp.postgresql.org/pub/source/v9.4.5/postgresql-9.4.5.tar.gz
