@@ -12,5 +12,6 @@ for f in /vagrant/provisions/docker/*.sh; do
 done
 source ~/.profile
 
-bd-build-images
-bd-create-dev-containers
+bd-download-test-data
+# bd-build-images
+# bd-create-dev-containers
