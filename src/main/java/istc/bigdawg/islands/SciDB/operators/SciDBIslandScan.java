@@ -3,6 +3,7 @@ package istc.bigdawg.islands.SciDB.operators;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import istc.bigdawg.islands.OperatorVisitor;
 import istc.bigdawg.islands.PostgreSQL.utils.SQLExpressionUtils;
@@ -253,27 +254,24 @@ public class SciDBIslandScan extends SciDBIslandOperator implements Scan {
 //	}
 //	
 //	
-//	@Override
-//	public Map<String, Set<String>> getObjectToExpressionMappingForSignature() throws Exception{
-//		
-//		Operator parent = this;
-//		while (!parent.isBlocking() && parent.getParent() != null ) parent = parent.getParent();
-//		Map<String, String> aliasMapping = parent.getDataObjectAliasesOrNames();
-//		
-//		Map<String, Set<String>> out = new HashMap<>();
-//		
-//		// filter
-//		if (getFilterExpression() != null && !SQLExpressionUtils.containsArtificiallyConstructedTables(getFilterExpression())) {
-//			addToOut(CCJSqlParserUtil.parseCondExpression(getFilterExpression().toString()), out, aliasMapping);
-//		}
-//		
-//		// join condition
-//		if (getIndexCond() != null && !SQLExpressionUtils.containsArtificiallyConstructedTables(getIndexCond())) {
-//			addToOut(CCJSqlParserUtil.parseCondExpression(getIndexCond().toString()), out, aliasMapping);
-//		}
-//		
-//		return out;
-//	}
+	@Override
+	public Map<String, Set<String>> getObjectToExpressionMappingForSignature() throws Exception{
+		
+		if (! children.isEmpty()) return super.getObjectToExpressionMappingForSignature();
+		
+		Operator parent = this;
+		while (!parent.isBlocking() && parent.getParent() != null ) parent = parent.getParent();
+		Map<String, String> aliasMapping = parent.getDataObjectAliasesOrNames();
+		
+		Map<String, Set<String>> out = new HashMap<>();
+		
+		// filter
+		if (getFilterExpression() != null && !SQLExpressionUtils.containsArtificiallyConstructedTables(getFilterExpression())) {
+			addToOut(CCJSqlParserUtil.parseCondExpression(getFilterExpression().toString()), out, aliasMapping);
+		}
+		
+		return out;
+	}
 	
 	
 	

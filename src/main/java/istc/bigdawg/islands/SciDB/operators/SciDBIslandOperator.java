@@ -631,6 +631,7 @@ public class SciDBIslandOperator implements OperatorInterface, Operator {
 	
 	// half will be overriden
 	public Map<String, Set<String>> getObjectToExpressionMappingForSignature() throws Exception{
+		System.out.printf("SciDBIslandOperator calling default getObjectToExpressionMappingForSignature; class: %s;\n", this.getClass().getSimpleName());
 		return children.get(0).getObjectToExpressionMappingForSignature();
 	}
 	
