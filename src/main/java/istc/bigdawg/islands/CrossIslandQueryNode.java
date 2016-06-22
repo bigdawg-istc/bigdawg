@@ -255,7 +255,7 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 //		System.out.printf("----> printing original map from Populate: %s; objs: %s; scope: %s\n", originalMap, objs, getSourceScope().toString());
 		
 		// traverse add remainder
-		System.out.printf("\n\n\n--> Root schema before traverse: %s;\n", ((PostgreSQLIslandOperator)root).getOutSchema());
+		if (root instanceof PostgreSQLIslandOperator) System.out.printf("\n\n\n--> Root schema before traverse: %s;\n", ((PostgreSQLIslandOperator)root).getOutSchema());
 		
 		remainderLoc = traverse(root, transitionSchemas); // this populated everything
 		

@@ -118,13 +118,16 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 		Pattern mark							= Pattern.compile("(?i)(bdrel\\(|bdarray\\(|bdtext\\(|bdgraph\\(|bdstream\\(|bdcast\\(|\\(|\\))");
 		Matcher matcher							= mark.matcher(userinput);
 		
-	    Stack<String> stkwrite					= new Stack<String>();
-	    Stack<Integer> stkparen					= new Stack<Integer>();
+	    Stack<String> stkwrite					= new Stack<>();
+	    Stack<Integer> stkparen					= new Stack<>();
+	    Stack<Scope> lastScopes					= new Stack<>();
 //	    Set<Integer> catalogSOD					= new HashSet<>();
 	    
 	    // nodes in the last level
 	    List<CrossIslandPlanNode> lp			= new ArrayList<>();
 	    int lastLevel							= 0; 
+	    Scope thisScope							= null;
+	    Scope innerScope						= null;
 	    
 	    int extractionCounter 					= 0;
 	    int parenLevel							= 0;
@@ -140,6 +143,10 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 	    		lastStop = matcher.end(); 
 	    		stkwrite.push(userinput.substring(matcher.start(), lastStop));
 	    		
+	    		lastScopes.push(IslandsAndCast.convertFunctionScope(userinput.substring(matcher.start(), matcher.end())));
+	    		innerScope = null;
+//	    		System.out.printf("Last scope: %s\n", lastScopes.peek());
+	    		
 	    		// add parse level
 	    		parenLevel += 1;
 	    		stkparen.push(parenLevel);
@@ -149,8 +156,10 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 	    		if (parenLevel != stkparen.peek()) {
 	    			parenLevel -= 1;
 	    		} else {
-		    		// finish and extract this entry, add new variable for the prior
+		    		// Pop current scope, because it's no longer useful.
+	    			thisScope = lastScopes.pop();
 	    			
+	    			// finish and extract this entry, add new variable for the prior
 	    			String name = null;
 	    			
 		    		if (parenLevel == 1)
@@ -159,7 +168,11 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 		    			name = extractTitle + extractionCounter;
 		    		
 		    		// NEW
-		    		CrossIslandPlanNode newNode = createVertex(name, stkwrite.pop() + userinput.substring(lastStop, matcher.end()));
+		    		Scope outterScope = lastScopes.isEmpty() ? null : lastScopes.peek();
+//		    		System.out.printf("This Scope: %s; Outter Scope: %s\n", thisScope, outterScope);
+		    		CrossIslandPlanNode newNode = createVertex(name, stkwrite.pop() + userinput.substring(lastStop, matcher.end()), thisScope, innerScope, outterScope);
+		    		
+		    		innerScope = thisScope;
 		    		
 		    		// if lastLevel is this level + 1, then connect everything and clear
 		    		// otherwise if lastLevel is the same, then add this one
@@ -225,7 +238,7 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 //		}
 	}
 	
-	private CrossIslandPlanNode createVertex(String name, String rawQueryString) throws Exception{
+	private CrossIslandPlanNode createVertex(String name, String rawQueryString, Scope thisScope, Scope innerScope, Scope outterScope) throws Exception{
 		
 		// IDENTIFY ISLAND AND STRIP
 		Matcher islandMatcher	= IslandsAndCast.ScopeStartPattern.matcher(rawQueryString);
@@ -235,12 +248,12 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 		
 		if (islandMatcher.find() && queryEndMatcher.find()) {
 			
-			Scope scope = IslandsAndCast.convertFunctionScope(rawQueryString.substring(islandMatcher.start(), islandMatcher.end()));
+//			Scope scope = IslandsAndCast.convertFunctionScope(rawQueryString.substring(islandMatcher.start(), islandMatcher.end()));
 			
 			String islandQuery = rawQueryString.substring(islandMatcher.end(), queryEndMatcher.start());
 
 			// check scope and direct traffic
-			if (scope.equals(Scope.CAST)) {
+			if (thisScope.equals(Scope.CAST)) {
 
 				Matcher castSchemaMatcher = IslandsAndCast.CastSchemaPattern.matcher(islandQuery);
 				if (castSchemaMatcher.find()) {
@@ -249,7 +262,7 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 					if (!castNameMatcher.find()) throw new Exception("Cannot find name for cast result: "+ islandQuery);
 					
 					// dummy scopes; source need to be changed below or when Edges happen
-					newNode = new CrossIslandCastNode(Scope.CAST, Scope.CAST, 
+					newNode = new CrossIslandCastNode(innerScope, outterScope, 
 							islandQuery.substring(castSchemaMatcher.start(), castSchemaMatcher.end()), 
 							islandQuery.substring(castNameMatcher.start(), castNameMatcher.end()));
 				} else 
@@ -261,10 +274,10 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 					((CrossIslandCastNode)newNode).setDestinationScope(IslandsAndCast.convertDestinationScope(islandQuery.substring(castSourceScopeMatcher.start(), castSourceScopeMatcher.end())));
 				} 
 				
-				transitionSchemas.put(newNode.getName(), IslandsAndCast.getCreationQuery(scope, newNode.getName(), islandQuery.substring(castSchemaMatcher.start(), castSchemaMatcher.end())));
+				transitionSchemas.put(newNode.getName(), IslandsAndCast.getCreationQuery(outterScope, newNode.getName(), islandQuery.substring(castSchemaMatcher.start(), castSchemaMatcher.end())));
 				
 			} else {
-				newNode = new CrossIslandQueryNode(scope, islandQuery, name, transitionSchemas);
+				newNode = new CrossIslandQueryNode(thisScope, islandQuery, name, transitionSchemas);
 //				terminalOperatorsForSchemas.put(name, ((CrossIslandQueryNode)newNode).getRemainder(0)); 
 			}
 			

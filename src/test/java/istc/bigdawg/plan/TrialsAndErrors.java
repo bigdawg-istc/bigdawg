@@ -45,9 +45,9 @@ public class TrialsAndErrors {
 //		setupQueryBuilder();
 //		setupRegexTester();
 //		setupTreeWalker();
-//		setupPlannerTester();
+		setupPlannerTester();
 //		setupMapTrial();
-		setupSchemaGenerator();
+//		setupSchemaGenerator();
 	}
 	
 	public void setupQueryExplainer() {
@@ -216,7 +216,7 @@ public class TrialsAndErrors {
 		
 //		String userinput = "bdrel(SELECT lineitem.l_orderkey, sum(lineitem.l_extendedprice * (1 - lineitem.l_discount)) AS revenue, orders.o_orderdate, orders.o_shippriority FROM orders, customer, lineitem WHERE (orders.o_custkey = customer.c_custkey) AND (orders.o_orderdate < '1996-01-02') AND (customer.c_mktsegment = 'AUTOMOBILE') AND (lineitem.l_shipdate > '1996-01-02') AND (lineitem.l_orderkey = orders.o_orderkey) GROUP BY lineitem.l_orderkey, orders.o_orderdate, orders.o_shippriority ORDER BY revenue DESC, orders.o_orderdate);";
 //		String userinput = "bdrel(select c_custkey, c_name from customer where c_custkey = 1 union select c_custkey as ckey, c_name from customer where c_custkey = 3 union all select c_custkey, c_name from customer where c_custkey = 5);";
-		String userinput = "bdrel(select c_custkey, c_name from bdcast(bdarray(filter(customer, c_custkey = 1)), relational));";
+		String userinput = "bdarray(filter(bdcast(bdrel(select o_orderkey, o_custkey from orders where o_custkey < 3), ord, '<o_custkey:int64>[o_orderkey=0:10,10,0]', array) , o_custkey = 2));";
 		try {
 		Planner.processQuery(userinput, false);
 		} catch (Exception e) {
