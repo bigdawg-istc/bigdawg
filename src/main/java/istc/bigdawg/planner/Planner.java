@@ -21,14 +21,10 @@ import istc.bigdawg.islands.CrossIslandCastNode;
 import istc.bigdawg.islands.CrossIslandPlanNode;
 import istc.bigdawg.islands.CrossIslandQueryNode;
 import istc.bigdawg.islands.CrossIslandQueryPlan;
+import istc.bigdawg.migration.MigrationParams;
 import istc.bigdawg.migration.Migrator;
 import istc.bigdawg.monitoring.Monitor;
-import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
-import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.query.ConnectionInfo;
-import istc.bigdawg.query.DBHandler;
-import istc.bigdawg.scidb.SciDBConnectionInfo;
-import istc.bigdawg.scidb.SciDBHandler;
 import istc.bigdawg.signature.Signature;
 import istc.bigdawg.utils.IslandsAndCast.Scope;
 
@@ -96,24 +92,27 @@ public class Planner {
 					
 					// get the source, and get the engine 
 					ConnectionInfo ci = CatalogViewer.getConnectionInfo(targetLoc);
+					String remoteName = processRemoteName(((CrossIslandCastNode)node).getSourceScope(), ((CrossIslandCastNode)node).getDestinationScope(), node.getName());
+					
 					logger.debug(String.format("Interisland Migration from %s at %s (%s) to %s at %s (%s)"
 							, source.getName(), nodeToResult.get(source).getConnectionInfo().getHost()+":"+nodeToResult.get(source).getConnectionInfo().getPort(), nodeToResult.get(source).getConnectionInfo().getClass().getSimpleName()
-							, node.getName(), ci.getHost()+":"+ci.getPort(), ci.getClass().getSimpleName()));
+							, remoteName, ci.getHost()+":"+ci.getPort(), ci.getClass().getSimpleName()));
 
 					// Create schema before migration 
-					remoteSchemaCreation((CrossIslandCastNode)node, ci);
-
+//					remoteSchemaCreation((CrossIslandCastNode)node, ci);
+					logger.debug(String.format("CAST query string: %s", node.getQueryString()));
+					
 					// migrate
-					Migrator.migrate(nodeToResult.get(source).getConnectionInfo(), source.getName(), ci, node.getName());
+					Migrator.migrate(nodeToResult.get(source).getConnectionInfo(), source.getName(), ci, remoteName, new MigrationParams(node.getQueryString()));
 					
 					
 					// add to Table set of destruction
 					if (!tempTableSOD.containsKey(ci)) tempTableSOD.put(ci, new HashSet<>());
-					tempTableSOD.get(ci).add(node.getName());
+					tempTableSOD.get(ci).add(remoteName);
 					
 					// add catalog entry of the temp table, add to catalog set of destruction
 					// unsafe use of ""
-					catalogSOD.add(CatalogModifier.addObject(node.getName(), "", sourceLoc, targetLoc));
+					catalogSOD.add(CatalogModifier.addObject(remoteName, "", sourceLoc, targetLoc));
 					
 					// add target to the next gen
 					nextGeneration.add(target);
@@ -224,20 +223,31 @@ public class Planner {
 //		return compileResults(ciqp.getSerial(), Executor.executePlan(qep, ciqn.getSignature(), choice));
 	}
 
-	
-	private static void remoteSchemaCreation(CrossIslandCastNode node, ConnectionInfo targetCI) throws Exception {
-		System.out.printf("--->>> Executing: %s;\n", node.getQueryString());
-		DBHandler handler = null;
-		if (node.getDestinationScope().equals(Scope.ARRAY)) {
-			handler = new SciDBHandler((SciDBConnectionInfo)targetCI);
-			((SciDBHandler)handler).executeStatement(node.getQueryString());
-		} else if (node.getDestinationScope().equals(Scope.RELATIONAL)) {
-			handler = new PostgreSQLHandler((PostgreSQLConnectionInfo)targetCI);
-			((PostgreSQLHandler)handler).executeQuery(node.getQueryString());
-		}
-		System.out.printf("--->>> done executing: %s;\n", node.getQueryString());
+	private static String processRemoteName(Scope sourceScope, Scope destinationScope, String originalString) {
+		
+		if (sourceScope.equals(destinationScope)) 
+			return originalString;
+		if (sourceScope.equals(Scope.ARRAY)) 
+			return originalString.replaceAll("___", ".");
+		if (destinationScope.equals(Scope.ARRAY))
+			return originalString.replaceAll("[.]", "___");
+		
+		return originalString;
 	}
 	
+//	private static void remoteSchemaCreation(CrossIslandCastNode node, ConnectionInfo targetCI) throws Exception {
+//		System.out.printf("--->>> Executing: %s;\n", node.getQueryString());
+//		DBHandler handler = null;
+//		if (node.getDestinationScope().equals(Scope.ARRAY)) {
+//			handler = new SciDBHandler((SciDBConnectionInfo)targetCI);
+//			((SciDBHandler)handler).executeStatement(node.getQueryString());
+//		} else if (node.getDestinationScope().equals(Scope.RELATIONAL)) {
+//			handler = new PostgreSQLHandler((PostgreSQLConnectionInfo)targetCI);
+//			((PostgreSQLHandler)handler).executeQuery(node.getQueryString());
+//		}
+//		System.out.printf("--->>> done executing: %s;\n", node.getQueryString());
+//	}
+//	
 	/**
 	 * CALL MONITOR: Parses the userinput, generate alternative join plans, and
 	 * GIVE IT TO MONITOR Note: this generates the result

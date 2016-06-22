@@ -13,8 +13,6 @@ import java.util.regex.Pattern;
 import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
 import org.jgrapht.graph.DefaultEdge;
 
-import istc.bigdawg.catalog.CatalogModifier;
-import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.utils.IslandsAndCast;
 import istc.bigdawg.utils.IslandsAndCast.Scope;
 

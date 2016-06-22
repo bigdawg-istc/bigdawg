@@ -8,9 +8,12 @@ public class CrossIslandCastNode extends CrossIslandPlanNode {
 	
 	protected Scope destinationScope;
 	
-	public CrossIslandCastNode(Scope sourceScope, Scope destinationScope, String schemaCreationQuery, String name) {
+	public CrossIslandCastNode(Scope sourceScope, Scope destinationScope, String schemaCreationQuery, String name) throws Exception {
 		super(sourceScope, schemaCreationQuery, name);
 		this.destinationScope = destinationScope;
+		if (destinationScope.equals(Scope.ARRAY)) setQueryString(String.format("CREATE ARRAY %s %s", name, schemaCreationQuery));
+		else if (destinationScope.equals(Scope.RELATIONAL)) setQueryString(String.format("CREATE TABLE %s %s", name, schemaCreationQuery));
+		else throw new Exception ("Unsupported destination island in cast creation: "+destinationScope.name());
 	}
 
 	public Scope getDestinationScope() {
