@@ -32,7 +32,6 @@ import org.apache.log4j.Logger;
 
 import istc.bigdawg.accumulo.AccumuloInstance;
 import istc.bigdawg.exceptions.AccumuloBigDawgException;
-import istc.bigdawg.migration.TestTpchPostgresAccumulo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.postgresql.PostgreSQLInstance;
 

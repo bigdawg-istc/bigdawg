@@ -39,7 +39,6 @@ import istc.bigdawg.accumulo.AccumuloInstance;
  */
 
 import istc.bigdawg.exceptions.AccumuloBigDawgException;
-import istc.bigdawg.migration.TestTpchPostgresAccumulo;
 import istc.bigdawg.postgresql.PostgreSQLInstance;
 import istc.bigdawg.utils.ListConncatenator;
 
