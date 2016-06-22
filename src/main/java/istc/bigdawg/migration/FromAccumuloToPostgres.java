@@ -31,6 +31,9 @@ import org.postgresql.copy.CopyManager;
 import org.postgresql.core.BaseConnection;
 
 import istc.bigdawg.accumulo.AccumuloInstance;
+import istc.bigdawg.exceptions.AccumuloBigDawgException;
+import istc.bigdawg.postgresql.PostgreSQLInstance;
+import istc.bigdawg.utils.ListConncatenator;
 
 /**
  * @author Adam Dziedzic
@@ -38,10 +41,10 @@ import istc.bigdawg.accumulo.AccumuloInstance;
  *
  */
 
-import istc.bigdawg.exceptions.AccumuloBigDawgException;
-import istc.bigdawg.migration.TestTpchPostgresAccumulo;
-import istc.bigdawg.postgresql.PostgreSQLInstance;
-import istc.bigdawg.utils.ListConncatenator;
+//import istc.bigdawg.exceptions.AccumuloBigDawgException;
+//import istc.bigdawg.migration.TestTpchPostgresAccumulo;
+//import istc.bigdawg.postgresql.PostgreSQLInstance;
+//import istc.bigdawg.utils.ListConncatenator;
 
 /**
  * @author Adam Dziedzic
