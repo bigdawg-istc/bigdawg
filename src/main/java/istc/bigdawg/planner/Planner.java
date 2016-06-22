@@ -21,12 +21,12 @@ import istc.bigdawg.islands.CrossIslandCastNode;
 import istc.bigdawg.islands.CrossIslandPlanNode;
 import istc.bigdawg.islands.CrossIslandQueryNode;
 import istc.bigdawg.islands.CrossIslandQueryPlan;
+import istc.bigdawg.islands.IslandsAndCast.Scope;
 import istc.bigdawg.migration.MigrationParams;
 import istc.bigdawg.migration.Migrator;
 import istc.bigdawg.monitoring.Monitor;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.signature.Signature;
-import istc.bigdawg.utils.IslandsAndCast.Scope;
 
 public class Planner {
 

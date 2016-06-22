@@ -12,11 +12,11 @@ import org.apache.log4j.Logger;
 
 import convenience.RTED;
 import istc.bigdawg.islands.QueryContainerForCommonDatabase;
+import istc.bigdawg.islands.IslandsAndCast.Scope;
 import istc.bigdawg.islands.PostgreSQL.utils.SQLExpressionUtils;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.signature.builder.ArraySignatureBuilder;
 import istc.bigdawg.signature.builder.RelationalSignatureBuilder;
-import istc.bigdawg.utils.IslandsAndCast.Scope;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Parenthesis;

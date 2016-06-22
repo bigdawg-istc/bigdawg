@@ -6,7 +6,7 @@ import java.util.Set;
 
 import org.jgrapht.graph.DefaultEdge;
 
-import istc.bigdawg.utils.IslandsAndCast.Scope;
+import istc.bigdawg.islands.IslandsAndCast.Scope;
 
 public class CrossIslandPlanNode {
 

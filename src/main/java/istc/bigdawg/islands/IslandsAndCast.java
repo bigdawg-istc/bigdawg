@@ -1,4 +1,4 @@
-package istc.bigdawg.utils;
+package istc.bigdawg.islands;
 
 import java.util.regex.Pattern;
 
@@ -12,6 +12,12 @@ public class IslandsAndCast {
 	public static Pattern CastScopePattern	= Pattern.compile("(?i)(relational|array|graph|document|stream)\\) *;? *$");
 	public static Pattern CastSchemaPattern	= Pattern.compile("(?<=([_a-z0-9, ]+')).*(?=(' *, *(relational|array|keyvalue|text|graph|document|stream)))");
 	public static Pattern CastNamePattern	= Pattern.compile("(?<=(, ))([_@0-9a-zA-Z]+)(?=, *')");
+	
+	public static String getCreationQuery(Scope scope, String name, String schemaCreationQuery) throws Exception {
+		if (scope.equals(Scope.ARRAY)) return String.format("CREATE ARRAY %s %s", name, schemaCreationQuery);
+		else if (scope.equals(Scope.RELATIONAL)) return String.format("CREATE TABLE %s %s", name, schemaCreationQuery);
+		else throw new Exception ("Unsupported destination island in cast creation: "+scope.name());
+	}
 	
 	public static Scope convertFunctionScope (String prefix) throws Exception {
 		switch (prefix) {
@@ -66,4 +72,5 @@ public class IslandsAndCast {
 		}
 		
 	}
+	
 }

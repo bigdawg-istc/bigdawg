@@ -10,10 +10,10 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 
+import istc.bigdawg.islands.IslandsAndCast;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
-import istc.bigdawg.utils.IslandsAndCast;
 
 public class CatalogViewer {
 	

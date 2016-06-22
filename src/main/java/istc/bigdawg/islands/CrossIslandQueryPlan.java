@@ -13,8 +13,7 @@ import java.util.regex.Pattern;
 import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
 import org.jgrapht.graph.DefaultEdge;
 
-import istc.bigdawg.utils.IslandsAndCast;
-import istc.bigdawg.utils.IslandsAndCast.Scope;
+import istc.bigdawg.islands.IslandsAndCast.Scope;
 
 public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNode, DefaultEdge> 
 	implements Iterable<CrossIslandPlanNode> {
@@ -262,7 +261,7 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 					((CrossIslandCastNode)newNode).setDestinationScope(IslandsAndCast.convertDestinationScope(islandQuery.substring(castSourceScopeMatcher.start(), castSourceScopeMatcher.end())));
 				} 
 				
-				transitionSchemas.put(newNode.getName(), islandQuery.substring(castSchemaMatcher.start(), castSchemaMatcher.end()));
+				transitionSchemas.put(newNode.getName(), IslandsAndCast.getCreationQuery(scope, newNode.getName(), islandQuery.substring(castSchemaMatcher.start(), castSchemaMatcher.end())));
 				
 			} else {
 				newNode = new CrossIslandQueryNode(scope, islandQuery, name, transitionSchemas);

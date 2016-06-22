@@ -14,6 +14,7 @@ import org.jgrapht.Graphs;
 import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.islands.OperatorVisitor;
 import istc.bigdawg.islands.QueryContainerForCommonDatabase;
+import istc.bigdawg.islands.IslandsAndCast.Scope;
 import istc.bigdawg.islands.PostgreSQL.SQLQueryGenerator;
 import istc.bigdawg.islands.SciDB.AFLQueryGenerator;
 import istc.bigdawg.islands.operators.CommonTableExpressionScan;
@@ -22,7 +23,6 @@ import istc.bigdawg.islands.operators.Merge;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.query.ConnectionInfoParser;
-import istc.bigdawg.utils.IslandsAndCast.Scope;
 
 public class ExecutionNodeFactory {
 	static final Logger log = Logger.getLogger(ExecutionNodeFactory.class.getName());
