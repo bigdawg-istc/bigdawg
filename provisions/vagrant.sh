@@ -7,7 +7,10 @@ apt-get update
 apt-get install -y docker-engine
 
 # # Make scripts available in shell as bd-* commands
-# for f in /vagrant/provisions/*.sh; do
-#     ln -s $f /usr/local/sbin/bd-$(basename $f .sh);
-# done
-# source ~/.profile
+for f in /vagrant/provisions/docker/*.sh; do
+    ln -s $f /usr/local/sbin/bd-$(basename $f .sh);
+done
+source ~/.profile
+
+bd-build-images
+bd-create-dev-containers
