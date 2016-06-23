@@ -67,7 +67,7 @@ public class Main {
 		logger.info("Starting application ...");
 		CatalogInstance.INSTANCE.getCatalog();
 		final HttpServer server = startServer();
-		ZooKeeperUtils.registerNodeInZooKeeper();
+		//ZooKeeperUtils.registerNodeInZooKeeper();
 		MonitoringTask relationalTask = new MonitoringTask();
 		relationalTask.run();
 		MigratorTask migratorTask = new MigratorTask();
@@ -79,7 +79,7 @@ public class Main {
 		System.in.read();
 		CatalogInstance.INSTANCE.closeCatalog();
 		migratorTask.close();
-		ZooKeeperUtils.unregisterNodeInZooKeeper();
+		//ZooKeeperUtils.unregisterNodeInZooKeeper();
 		server.shutdownNow();
 	}
 }

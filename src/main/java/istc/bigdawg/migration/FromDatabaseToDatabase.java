@@ -461,11 +461,11 @@ public class FromDatabaseToDatabase implements MigrationNetworkRequest {
 				String thisHostname = BigDawgConfigProperties.INSTANCE
 						.getGrizzlyIpAddress();
 				/** Acquire the ZooKeeper locks for the migration. */
-				if (zooKeeperLocks == null) {
-					byte[] data = debugMessage.getBytes();
-					zooKeeperLocks = ZooKeeperUtils.acquireMigrationLocks(
-							Arrays.asList(thisHostname, hostnameTo), data);
-				}
+//				if (zooKeeperLocks == null) {
+//					byte[] data = debugMessage.getBytes();
+//					zooKeeperLocks = ZooKeeperUtils.acquireMigrationLocks(
+//							Arrays.asList(thisHostname, hostnameTo), data);
+//				}
 				if (!isThisMyIpAddress(InetAddress.getByName(hostnameTo))) {
 					log.debug("Migration from a local: " + thisHostname
 							+ " to remote database: " + hostnameTo);
