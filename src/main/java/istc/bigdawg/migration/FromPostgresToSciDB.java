@@ -29,7 +29,6 @@ import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.postgresql.PostgreSQLTableMetaData;
 import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.scidb.SciDBArrayMetaData;
-import istc.bigdawg.scidb.SciDBColumnMetaData;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
 import istc.bigdawg.scidb.SciDBHandler;
 import istc.bigdawg.utils.Pipe;
@@ -96,8 +95,7 @@ class FromPostgresToSciDB extends FromDatabaseToDatabase
 	 * @throws MigrationException
 	 * 
 	 */
-	FromPostgresToSciDB(MigrationInfo migrationInfo)
-			throws MigrationException {
+	FromPostgresToSciDB(MigrationInfo migrationInfo) throws MigrationException {
 		this.migrationInfo = migrationInfo;
 		setPostgreSQLMetaData();
 	}
@@ -208,16 +206,15 @@ class FromPostgresToSciDB extends FromDatabaseToDatabase
 
 			TransformBinExecutor transformExecutor = new TransformBinExecutor(
 					postgresPipe, scidbPipe,
-					PostgreSQLSciDBMigrationUtils
-							.getSciDBBinFormat(postgresqlTableMetaData),
+					MigrationUtils.getSciDBBinFormat(postgresqlTableMetaData),
 					TransformBinExecutor.TYPE.FromPostgresToSciDB);
 			FutureTask<Long> transformTask = new FutureTask<Long>(
 					transformExecutor);
 			executor.submit(transformTask);
 
 			LoadSciDB loadExecutor = new LoadSciDB(getConnectionTo(), arrays,
-					scidbPipe, PostgreSQLSciDBMigrationUtils
-							.getSciDBBinFormat(postgresqlTableMetaData));
+					scidbPipe,
+					MigrationUtils.getSciDBBinFormat(postgresqlTableMetaData));
 			FutureTask<Object> loadTask = new FutureTask<Object>(loadExecutor);
 			executor.submit(loadTask);
 
@@ -241,7 +238,7 @@ class FromPostgresToSciDB extends FromDatabaseToDatabase
 			 * the migration was successful so only clear the intermediate
 			 * arrays
 			 */
-			PostgreSQLSciDBMigrationUtils.removeArrays(getConnectionTo(),
+			MigrationUtils.removeArrays(getConnectionTo(),
 					"clean the intermediate arrays", intermediateArrays);
 			createdArrays.removeAll(intermediateArrays);
 
@@ -318,7 +315,7 @@ class FromPostgresToSciDB extends FromDatabaseToDatabase
 			 * the migration was successful so only clear the intermediate
 			 * arrays
 			 */
-			PostgreSQLSciDBMigrationUtils.removeArrays(getConnectionTo(),
+			MigrationUtils.removeArrays(getConnectionTo(),
 					"clean the intermediate arrays", intermediateArrays);
 			createdArrays.removeAll(intermediateArrays);
 
@@ -391,8 +388,7 @@ class FromPostgresToSciDB extends FromDatabaseToDatabase
 			 * there was an exception so the migration failed and the created
 			 * arrays should be removed
 			 */
-			PostgreSQLSciDBMigrationUtils.removeArrays(getConnectionTo(), msg,
-					createdArrays);
+			MigrationUtils.removeArrays(getConnectionTo(), msg, createdArrays);
 		} catch (MigrationException ex) {
 			return ex;
 		}
@@ -499,8 +495,7 @@ class FromPostgresToSciDB extends FromDatabaseToDatabase
 			return new SciDBArrays(toArray, null);
 		}
 		handler.close();
-		if (PostgreSQLSciDBMigrationUtils.isFlatArray(arrayMetaData,
-				postgresqlTableMetaData)) {
+		if (MigrationUtils.isFlatArray(arrayMetaData)) {
 			return new SciDBArrays(toArray, null);
 		}
 		/*
@@ -513,9 +508,9 @@ class FromPostgresToSciDB extends FromDatabaseToDatabase
 		 * dimensions in the multi-dimensional array, thus we cannot verify the
 		 * match of columns in PostgreSQL and dimensions/attributes in SciDB)
 		 */
-		Map<String, SciDBColumnMetaData> dimensionsMap = arrayMetaData
+		Map<String, AttributeMetaData> dimensionsMap = arrayMetaData
 				.getDimensionsMap();
-		Map<String, SciDBColumnMetaData> attributesMap = arrayMetaData
+		Map<String, AttributeMetaData> attributesMap = arrayMetaData
 				.getAttributesMap();
 		List<AttributeMetaData> postgresColumnsOrdered = postgresqlTableMetaData
 				.getAttributesOrdered();

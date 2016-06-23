@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.sql.SQLException;
 
 import org.apache.log4j.Logger;
+import org.junit.Before;
 import org.junit.Test;
 
 import istc.bigdawg.LoggerSetup;
@@ -38,6 +39,11 @@ public class FromDatabaseToDatabaseTest {
 	private String toArray = "region";
 	private long numberOfRowsPostgres;
 
+	@Before
+	public void beforeTests() {
+		LoggerSetup.setLogging();
+	}
+
 	@Test
 	public void testExecuteMigrationLocally()
 			throws MigrationException, SQLException, IOException {
@@ -55,6 +61,7 @@ public class FromDatabaseToDatabaseTest {
 		this.numberOfRowsPostgres = TestMigrationUtils
 				.loadDataToPostgresRegionTPCH(conFrom, fromTable);
 		SciDBHandler.dropArrayIfExists(conTo, toArray);
+		TestMigrationUtils.prepareFlatTargetArray(conTo, toArray);
 
 		MigrationResult result = migrator.executeMigrationLocally();
 		logger.debug("Result of data migration: " + result.toString());

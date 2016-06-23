@@ -30,7 +30,6 @@ import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.postgresql.PostgreSQLSchemaTableName;
 import istc.bigdawg.postgresql.PostgreSQLTableMetaData;
 import istc.bigdawg.scidb.SciDBArrayMetaData;
-import istc.bigdawg.scidb.SciDBColumnMetaData;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
 import istc.bigdawg.scidb.SciDBHandler;
 import istc.bigdawg.utils.LogUtils;
@@ -193,17 +192,17 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 	private String getCreatePostgreSQLTableStatementFromSciDBAttributes()
 			throws NoTargetArrayException, SQLException,
 			UnsupportedTypeException {
-		List<SciDBColumnMetaData> attributes = scidbArrayMetaData
+		List<AttributeMetaData> attributes = scidbArrayMetaData
 				.getAttributesOrdered();
-		List<SciDBColumnMetaData> columns = new ArrayList<>();
+		List<AttributeMetaData> columns = new ArrayList<>();
 		columns.addAll(attributes);
 		StringBuilder createTableStringBuf = new StringBuilder();
 		String toTable = getObjectTo();
 		createTableStringBuf
 				.append("create table if not exists " + toTable + " (");
-		for (SciDBColumnMetaData column : columns) {
-			String colName = column.getColumnName();
-			String scidbType = column.getColumnType();
+		for (AttributeMetaData column : columns) {
+			String colName = column.getName();
+			String scidbType = column.getDataType();
 			String postgresType = FromSciDBToSQLTypes
 					.getSQLTypeFromSciDBType(scidbType);
 			createTableStringBuf.append(colName + " " + postgresType + ",");
@@ -230,20 +229,20 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 	private String getCreatePostgreSQLTableStatementFromSciDBAttributesAndDimensions()
 			throws NoTargetArrayException, SQLException,
 			UnsupportedTypeException {
-		List<SciDBColumnMetaData> dimensions = scidbArrayMetaData
+		List<AttributeMetaData> dimensions = scidbArrayMetaData
 				.getDimensionsOrdered();
-		List<SciDBColumnMetaData> attributes = scidbArrayMetaData
+		List<AttributeMetaData> attributes = scidbArrayMetaData
 				.getAttributesOrdered();
-		List<SciDBColumnMetaData> columns = new ArrayList<>();
+		List<AttributeMetaData> columns = new ArrayList<>();
 		columns.addAll(dimensions);
 		columns.addAll(attributes);
 		StringBuilder createTableStringBuf = new StringBuilder();
 		String toTable = getObjectTo();
 		createTableStringBuf
 				.append("create table if not exists " + toTable + " (");
-		for (SciDBColumnMetaData column : columns) {
-			String colName = column.getColumnName();
-			String scidbType = column.getColumnType();
+		for (AttributeMetaData column : columns) {
+			String colName = column.getName();
+			String scidbType = column.getDataType();
 			String postgresType = FromSciDBToSQLTypes
 					.getSQLTypeFromSciDBType(scidbType);
 			createTableStringBuf.append(colName + " " + postgresType + ",");
@@ -292,11 +291,11 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 		SciDBHandler handler = new SciDBHandler(getConnectionFrom());
 		SciDBArrayMetaData arrayMetaData = handler.getArrayMetaData(array);
 		handler.close();
-		List<SciDBColumnMetaData> attributes = arrayMetaData
+		List<AttributeMetaData> attributes = arrayMetaData
 				.getAttributesOrdered();
 		StringBuilder binBuf = new StringBuilder();
-		for (SciDBColumnMetaData attribute : attributes) {
-			binBuf.append(attribute.getColumnType());
+		for (AttributeMetaData attribute : attributes) {
+			binBuf.append(attribute.getDataType());
 			if (attribute.isNullable()) {
 				binBuf.append(" null");
 			}
@@ -324,14 +323,13 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 				PostgreSQLTableMetaData tableMetaData = postgresHandler
 						.getColumnsMetaData(toTable);
 				// can we migrate only the attributes from the SciDB array
-				List<SciDBColumnMetaData> scidbColumnsOrdered = scidbArrayMetaData
+				List<AttributeMetaData> scidbColumnsOrdered = scidbArrayMetaData
 						.getAttributesOrdered();
 				List<AttributeMetaData> postgresColumnsOrdered = tableMetaData
 						.getAttributesOrdered();
 				if (postgresColumnsOrdered.size() == scidbColumnsOrdered.size()
-						&& PostgreSQLSciDBMigrationUtils
-								.areAttributesSameAsColumns(scidbArrayMetaData,
-										tableMetaData)) {
+						&& MigrationUtils.areAttributesTheSame(
+								scidbArrayMetaData, tableMetaData)) {
 					migrationType = MigrationType.FLAT;
 				} /*
 					 * check if the dimensions and the attributes in the array
@@ -342,9 +340,8 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 					 * verify the dimensions and attributes in the array with
 					 * the columns in the table
 					 */
-					PostgreSQLSciDBMigrationUtils
-							.areDimensionsAndAttributesSameAsColumns(
-									scidbArrayMetaData, tableMetaData);
+					MigrationUtils.areDimensionsAndAttributesSameAsColumns(
+							scidbArrayMetaData, tableMetaData);
 					migrationType = MigrationType.FULL;
 				}
 			} else {
@@ -435,7 +432,7 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 
 			String transformationMessage = transformationResult == 0 ? "correct"
 					: "incorrect";
-			PostgreSQLSciDBMigrationUtils.removeArrays(getConnectionFrom(),
+			MigrationUtils.removeArrays(getConnectionFrom(),
 					"clean the intermediate arrays", intermediateArrays);
 			long endTimeMigration = System.currentTimeMillis();
 			long durationMsec = endTimeMigration - startTimeMigration;
@@ -522,7 +519,7 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 				+ getObjectTo();
 		log.error(msg);
 		try {
-			PostgreSQLSciDBMigrationUtils.removeArrays(getConnectionFrom(), msg,
+			MigrationUtils.removeArrays(getConnectionFrom(), msg,
 					intermediateArrays);
 		} catch (MigrationException ex) {
 			return ex;
@@ -581,7 +578,7 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 			executor.submit(loadTask);
 
 			String exportMessage = exportTask.get();
-			Long countLoadedElements = (long) loadTask.get();
+			Long countLoadedElements = (Long) loadTask.get();
 
 			long endTimeMigration = System.currentTimeMillis();
 			long durationMsec = endTimeMigration - startTimeMigration;
@@ -646,12 +643,12 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 			throws SQLException, UnsupportedTypeException, MigrationException {
 		StringBuilder createArrayStringBuf = new StringBuilder();
 		createArrayStringBuf.append("create array " + flatArrayName + " <");
-		List<SciDBColumnMetaData> scidbColumnsOrdered = new ArrayList<SciDBColumnMetaData>();
+		List<AttributeMetaData> scidbColumnsOrdered = new ArrayList<AttributeMetaData>();
 		scidbColumnsOrdered.addAll(scidbArrayMetaData.getDimensionsOrdered());
 		scidbColumnsOrdered.addAll(scidbArrayMetaData.getAttributesOrdered());
-		for (SciDBColumnMetaData column : scidbColumnsOrdered) {
-			String attributeName = column.getColumnName();
-			String attributeType = column.getColumnType();
+		for (AttributeMetaData column : scidbColumnsOrdered) {
+			String attributeName = column.getName();
+			String attributeType = column.getDataType();
 			String attributeNULL = "";
 			if (column.isNullable()) {
 				attributeNULL = " NULL";

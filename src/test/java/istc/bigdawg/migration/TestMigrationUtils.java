@@ -72,12 +72,63 @@ public class TestMigrationUtils {
 	 *            the statement to create the flat array
 	 * @return
 	 */
-	static String getFlatArrayForRegion(String flatArrayName) {
+	static String getCreateFlatArrayForRegion(String flatArrayName) {
 		String flatArray = "create array " + flatArrayName
 				+ "<r_regionkey:int64,r_name:string,r_comment:string> "
 				+ "[i=0:*,1000000,0]";
 		log.debug("Create flat array statement: " + flatArray);
 		return flatArray;
+	}
+
+	/**
+	 * Get AFL/AQL statement for creation of a multidimensional array.
+	 * 
+	 * @param toArray
+	 *            array name
+	 * 
+	 * @return create multi-dimensional array statement for SciDB (this array is
+	 *         for data from the region table from the TPC-H benchmark).
+	 */
+	static String getCreateMultiDimensionalArrayForRegion(String toArray) {
+		String createArray = "create array " + toArray
+				+ " <r_name:string,r_comment:string> [r_regionkey=0:*,1000000,0]";
+		log.debug("creat multi-dimensional array statement: " + createArray);
+		return createArray;
+	}
+
+	/**
+	 * Prepare a flat target array.
+	 * 
+	 * @param conTo
+	 * @param toArray
+	 * @throws SQLException
+	 */
+	static void prepareFlatTargetArray(ConnectionInfo conTo, String toArray)
+			throws SQLException {
+		// prepare the target array
+		SciDBHandler.dropArrayIfExists(conTo, toArray);
+		SciDBHandler handler = new SciDBHandler(conTo);
+		handler.executeStatement(getCreateFlatArrayForRegion(toArray));
+		handler.commit();
+		handler.close();
+	}
+
+	/**
+	 * Prepare a multi-dimensional target array.
+	 * 
+	 * @param conTo
+	 * @param toArray
+	 * @throws SQLException
+	 */
+	static void prepareMultiDimensionalTargetArray(ConnectionInfo conTo,
+			String toArray) throws SQLException {
+		// prepare the target array
+		SciDBHandler.dropArrayIfExists(conTo, toArray);
+		SciDBHandler handler = new SciDBHandler(conTo);
+		handler.executeStatement(
+				getCreateMultiDimensionalArrayForRegion(toArray));
+		handler.commit();
+		handler.close();
 	}
 
 	/**
@@ -180,7 +231,7 @@ public class TestMigrationUtils {
 		SciDBHandler.dropArrayIfExists(conFrom, flatArray);
 		SciDBHandler.dropArrayIfExists(conFrom, multiDimArray);
 
-		handler.executeStatementAFL(getFlatArrayForRegion(flatArray));
+		handler.executeStatementAFL(getCreateFlatArrayForRegion(flatArray));
 		handler.close();
 
 		handler = new SciDBHandler(conFrom);

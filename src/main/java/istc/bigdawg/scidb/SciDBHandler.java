@@ -416,20 +416,21 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 	}
 
 	/**
-	 * Returns the meta data of the array for each column/attribute in the array
+	 * Returns the meta data of the array for each column/attribute in the
+	 * array.
 	 * 
 	 * @param arrayName
-	 *            the arrayName string
-	 * @return map columm/attribute name to its metadata
+	 *            The arrayName string.
+	 * @return Mapping column/attribute name to its meta-data.
 	 * @throws SQLException
 	 * @throws NoTargetArrayException
 	 */
 	public SciDBArrayMetaData getArrayMetaData(String arrayName)
 			throws SQLException, NoTargetArrayException {
-		Map<String, SciDBColumnMetaData> dimensionsMap = new HashMap<>();
-		List<SciDBColumnMetaData> dimensionsOrdered = new ArrayList<>();
-		Map<String, SciDBColumnMetaData> attributesMap = new HashMap<>();
-		List<SciDBColumnMetaData> attributesOrdered = new ArrayList<>();
+		Map<String, AttributeMetaData> dimensionsMap = new HashMap<>();
+		List<AttributeMetaData> dimensionsOrdered = new ArrayList<>();
+		Map<String, AttributeMetaData> attributesMap = new HashMap<>();
+		List<AttributeMetaData> attributesOrdered = new ArrayList<>();
 		Statement statement = connection.createStatement();
 		ResultSet resultSetDimensions = null;
 		ResultSet resultSetAttributes = null;
@@ -441,7 +442,7 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 			log.debug("Get dimensions query to SciDB: " + getDimsQuery);
 			resultSetDimensions = statement.executeQuery(getDimsQuery);
 			while (!resultSetDimensions.isAfterLast()) {
-				SciDBColumnMetaData columnMetaData = new SciDBColumnMetaData(
+				AttributeMetaData columnMetaData = new AttributeMetaData(
 						resultSetDimensions.getString(2),
 						resultSetDimensions.getString(9), false);
 				dimensionsMap.put(resultSetDimensions.getString(2),
@@ -453,7 +454,7 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 			log.debug(getAttrQuery);
 			resultSetAttributes = statement.executeQuery(getAttrQuery);
 			while (!resultSetAttributes.isAfterLast()) {
-				SciDBColumnMetaData columnMetaData = new SciDBColumnMetaData(
+				AttributeMetaData columnMetaData = new AttributeMetaData(
 						resultSetAttributes.getString(2),
 						resultSetAttributes.getString(3),
 						resultSetAttributes.getBoolean(4));
