@@ -13,13 +13,14 @@ import istc.bigdawg.query.ConnectionInfo;
  */
 public interface ConnectorChecker {
 	/**
-	 * Connection contains information from which database we should export the
-	 * data from. If the connection inidcates the database from which we export
-	 * data then return true.
+	 * Connection contains information from which (or to which) database we
+	 * should export the data from (or load the data to). If the connection
+	 * indicates the database from which the exporter can export the data (or
+	 * loader can load the data to) then return true.
 	 * 
 	 * @param connection
 	 *            A connection to a database.
-	 * @return true if the exported uses this type of the connection to connect
+	 * @return true if the exporter uses this type of the connection to connect
 	 *         to the database.
 	 */
 	public boolean isSupportedConnector(ConnectionInfo connection);

@@ -124,6 +124,9 @@ public class ExportPostgres implements Export {
 			connectionFrom = PostgreSQLHandler
 					.getConnection((PostgreSQLConnectionInfo) migrationInfo
 							.getConnectionFrom());
+			connectionFrom.setAutoCommit(false);
+			connectionFrom.setReadOnly(true);
+			this.cpFrom = new CopyManager((BaseConnection) connectionFrom);
 		}
 		if (output == null) {
 			try {

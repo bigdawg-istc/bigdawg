@@ -10,15 +10,14 @@ import java.util.concurrent.Callable;
  * 
  *         Load interface - load data to a database.
  */
-public interface Load
-		extends Callable<Object>, ConnectorChecker, SetMigrationInfo {
+public interface Load extends Callable<Object>, DataPump {
 
 	/**
 	 * Load data to the database.
 	 * 
 	 * @return Number of rows loaded to a database.
 	 */
-	Object call() throws Exception;
+	public Object call() throws Exception;
 
 	/**
 	 * 

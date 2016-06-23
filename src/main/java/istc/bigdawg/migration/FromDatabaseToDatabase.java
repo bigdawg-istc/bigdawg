@@ -54,6 +54,12 @@ public class FromDatabaseToDatabase implements MigrationNetworkRequest {
 	 */
 	private List<String> zooKeeperLocks = null;
 
+	/** Pipes to be removed after the execution of the migration. */
+	private List<String> pipes = new ArrayList<>();
+
+	/** Executor used to run many tasks for the migration process. */
+	private ExecutorService executorService;
+
 	/**
 	 * Information about the migration process: from/to connection, from/to
 	 * table, additional parameters for the migration process.
@@ -94,7 +100,7 @@ public class FromDatabaseToDatabase implements MigrationNetworkRequest {
 	FromDatabaseToDatabase(Export exporter, Load loader,
 			MigrationInfo migrationInfo) {
 		/** Check if compatible export, migration request and load. */
-		checkSupportExportLoad(exporter, loader, migrationInfo);
+		checkSupportForExportLoad(exporter, loader, migrationInfo);
 
 		/**
 		 * if compatible exporter, loader, migration info, then set the fields
@@ -198,7 +204,7 @@ public class FromDatabaseToDatabase implements MigrationNetworkRequest {
 	 * @param migrationInfo
 	 *            information about the migration (connections, objects, etc.).
 	 */
-	private static void checkSupportExportLoad(Export exporter, Load loader,
+	private static void checkSupportForExportLoad(Export exporter, Load loader,
 			MigrationInfo migrationInfo) {
 		if (!exporter.isSupportedConnector(migrationInfo.getConnectionFrom())) {
 			throw new IllegalStateException("Exporter: "
@@ -231,7 +237,7 @@ public class FromDatabaseToDatabase implements MigrationNetworkRequest {
 	public MigrationResult migrate(MigrationInfo migrationInfo)
 			throws MigrationException {
 		try {
-			checkSupportExportLoad(exporter, loader, migrationInfo);
+			checkSupportForExportLoad(exporter, loader, migrationInfo);
 		} catch (IllegalStateException e) {
 			/**
 			 * null denotes that this instance of FromDatabaseToDatabase class
@@ -271,18 +277,25 @@ public class FromDatabaseToDatabase implements MigrationNetworkRequest {
 					.createAndGetFullName(this.getClass().getName() + "_from_"
 							+ migrationInfo.getObjectFrom() + "_to_"
 							+ migrationInfo.getObjectTo());
+			/* add the pipe to be removed when cleaning the resources */
+			pipes.add(pipe);
+
+			/* set output for exporter and input for importer */
 			exporter.setExportTo(pipe);
 			loader.setLoadFrom(pipe);
+			/* set migration information for exporter and loader */
+			exporter.setMigrationInfo(migrationInfo);
+			loader.setMigrationInfo(migrationInfo);
+			/* activate the tasks */
 			List<Callable<Object>> tasks = new ArrayList<>();
 			tasks.add(exporter);
 			tasks.add(loader);
-			ExecutorService executor = Executors
-					.newFixedThreadPool(tasks.size());
+			executorService = Executors.newFixedThreadPool(tasks.size());
 			long startTimeMigration = System.currentTimeMillis();
-			List<Future<Object>> results = TaskExecutor.execute(executor,
+			List<Future<Object>> results = TaskExecutor.execute(executorService,
 					tasks);
-			long countExtractedElements = (Long) results.get(0).get();
-			long countLoadedElements = (Long) results.get(1).get();
+			Long countExtractedElements = (Long) results.get(0).get();
+			Long countLoadedElements = (Long) results.get(1).get();
 			long endTimeMigration = System.currentTimeMillis();
 			long durationMsec = endTimeMigration - startTimeMigration;
 			MigrationResult migrationResult = new MigrationResult(
@@ -290,11 +303,30 @@ public class FromDatabaseToDatabase implements MigrationNetworkRequest {
 					startTimeMigration, endTimeMigration);
 			String message = "Migration was executed correctly.";
 			return summary(migrationResult, migrationInfo, message);
-		} catch (IOException | InterruptedException | RunShellException
-				| ExecutionException | SQLException e) {
+		} catch (InterruptedException | ExecutionException | SQLException
+				| RunShellException | IOException e) {
 			String msg = e.getMessage();
 			log.error(msg + " " + StackTrace.getFullStackTrace(e), e);
 			throw new MigrationException(msg, e);
+		} finally {
+			cleanResources();
+		}
+	}
+
+	/**
+	 * Clean the resources that were allocated for the migration process.
+	 */
+	private void cleanResources() {
+		for (String pipe : pipes) {
+			try {
+				Pipe.INSTANCE.deletePipeIfExists(pipe);
+			} catch (IOException e) {
+				log.error("Problem when removing the pipe/file: " + pipe + " "
+						+ e.getMessage() + StackTrace.getFullStackTrace(e), e);
+			}
+		}
+		if (executorService != null && !executorService.isShutdown()) {
+			executorService.shutdownNow();
 		}
 	}
 
