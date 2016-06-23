@@ -75,7 +75,7 @@ public class LoadSciDB implements Load {
 
 	public LoadSciDB(ConnectionInfo connectionTo, SciDBArrays arrays,
 			String scidbFilePath) {
-		
+
 		this.migrationInfo = MigrationInfo.forConnectionTo(connectionTo);
 		this.arrays = arrays;
 		this.scidbFilePath = scidbFilePath;
@@ -90,7 +90,7 @@ public class LoadSciDB implements Load {
 	 */
 	public LoadSciDB(ConnectionInfo connectionTo, SciDBArrays arrays,
 			String scidbFilePath, String binaryFormat) {
-		
+
 		this.migrationInfo = MigrationInfo.forConnectionTo(connectionTo);
 		this.arrays = arrays;
 		this.scidbFilePath = scidbFilePath;
@@ -197,33 +197,38 @@ public class LoadSciDB implements Load {
 		// log.debug("Load data to SciDB: " + resultString);
 		SciDBHandler handler = new SciDBHandler(
 				migrationInfo.getConnectionTo());
-		// arrays = prepareFlatTargetArrays();
-		StringBuilder loadCommand = new StringBuilder(
-				"load(" + arrays.getFlat() + ", '" + scidbFilePath + "'");
+		/*
+		 * arrays = prepareFlatTargetArrays(); StringBuilder loadCommand = new
+		 * StringBuilder( "load(" + arrays.getFlat() + ", '" + scidbFilePath +
+		 * "'");
+		 */
+		StringBuilder loadCommand = new StringBuilder("load("
+				+ migrationInfo.getObjectTo() + ", '" + scidbFilePath + "'");
 		if (this.fileFormat != FileFormat.SCIDB_TEXT_FORMAT) {
 			/*
 			 * -2: Load all data using the coordinator instance of the query.
 			 * This is the default.
 			 */
 			loadCommand.append(",-2,");
-		} else if (this.fileFormat == FileFormat.BIN_SCIDB) {
-			if (binaryFormatString == null) {
-				/*
-				 * We have to construct the binary format string for SciDB.
-				 */
-				binaryFormatString = getBinaryFormatString();
-			} else {
-				throw new IllegalStateException(
-						"Could not creat the binary format string for SciDB. "
-								+ "Check the supported data types and data formats.");
+			if (this.fileFormat == FileFormat.BIN_SCIDB) {
+				if (binaryFormatString == null) {
+					/*
+					 * We have to construct the binary format string for SciDB.
+					 */
+					binaryFormatString = getBinaryFormatString();
+				} else {
+					throw new IllegalStateException(
+							"Could not create the binary format string for SciDB. "
+									+ "Check the supported data types and data formats.");
+				}
+				loadCommand.append("'(" + binaryFormatString + ")'");
+			} else if (this.fileFormat == FileFormat.CSV) {
+				loadCommand.append(getSciDBCsvString());
 			}
-			loadCommand.append("'(" + binaryFormatString + ")'");
-		} else if (this.fileFormat == FileFormat.CSV) {
-			loadCommand.append(getSciDBCsvString());
 		}
 		loadCommand.append(")");
 		String finalLoadCommand = loadCommand.toString();
-		if (arrays.getMultiDimensional() != null) {
+		if (arrays != null && arrays.getMultiDimensional() != null) {
 			finalLoadCommand = "store(redimension(" + finalLoadCommand + ","
 					+ arrays.getMultiDimensional() + "),"
 					+ arrays.getMultiDimensional() + ")";
@@ -232,7 +237,12 @@ public class LoadSciDB implements Load {
 		handler.executeStatementAFL(finalLoadCommand);
 		handler.commit();
 		handler.close();
-		return "Data successfuly loaded to SciDB";
+		/*
+		 * SciDB does not provide us with the number of loaded elements (or
+		 * cells/rows) and doing count on a big amount of data can take long
+		 * time.
+		 */
+		return null;
 	}
 
 	/*

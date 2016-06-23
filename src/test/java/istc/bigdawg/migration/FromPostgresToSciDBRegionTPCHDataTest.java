@@ -56,31 +56,6 @@ public class FromPostgresToSciDBRegionTPCHDataTest {
 				.loadDataToPostgresRegionTPCH(conFrom, fromTable);
 	}
 
-	/**
-	 * 
-	 * @return create flat array statement for SciDB (this array is for data
-	 *         from the region table from the TPC-H benchmark).
-	 */
-	private String getCreateFlatArray() {
-		String createArray = "create array " + toArray
-				+ " <r_regionkey:int64,r_name:string,r_comment:string>"
-				+ " [i=0:*,1000000,0]";
-		logger.debug("create flat array statement: " + createArray);
-		return createArray;
-	}
-
-	/**
-	 * 
-	 * @return create multi-dimensional array statement for SciDB (this array is
-	 *         for data from the region table from the TPC-H benchmark).
-	 */
-	private String getCreateMultiDimensionalArray() {
-		String createArray = "create array " + toArray
-				+ " <r_name:string,r_comment:string> [r_regionkey=0:*,1000000,0]";
-		logger.debug("creat multi-dimensional array statement: " + createArray);
-		return createArray;
-	}
-
 	@Test
 	/**
 	 * If the test fails, first check if the target array is already in the
@@ -91,12 +66,7 @@ public class FromPostgresToSciDBRegionTPCHDataTest {
 	 */
 	public void testFromPostgresToSciDBPreparedArray()
 			throws SQLException, MigrationException {
-		// prepare the target array
-		SciDBHandler.dropArrayIfExists(conTo, toArray);
-		SciDBHandler handler = new SciDBHandler(conTo);
-		handler.executeStatement(getCreateFlatArray());
-		handler.commit();
-		handler.close();
+		TestMigrationUtils.prepareFlatTargetArray(conTo, toArray);
 		/*
 		 * test of the main method
 		 */
@@ -113,7 +83,7 @@ public class FromPostgresToSciDBRegionTPCHDataTest {
 				+ "with a given parameter: craete target table");
 
 		MigrationParams migrationParams = new MigrationParams(
-				getCreateFlatArray());
+				TestMigrationUtils.getCreateFlatArrayForRegion(toArray));
 		/* drop the array if exists before the test */
 		SciDBHandler.dropArrayIfExists(conTo, toArray);
 
@@ -156,7 +126,8 @@ public class FromPostgresToSciDBRegionTPCHDataTest {
 		// prepare the target array
 		SciDBHandler.dropArrayIfExists(conTo, toArray);
 		SciDBHandler handler = new SciDBHandler(conTo);
-		handler.executeStatement(getCreateMultiDimensionalArray());
+		handler.executeStatement(TestMigrationUtils
+				.getCreateMultiDimensionalArrayForRegion(toArray));
 		handler.commit();
 		handler.close();
 		/*
