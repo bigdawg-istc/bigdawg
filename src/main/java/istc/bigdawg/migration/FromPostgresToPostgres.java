@@ -181,8 +181,8 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 			executor = Executors.newFixedThreadPool(tasks.size());
 			List<Future<Object>> results = TaskExecutor.execute(executor,
 					tasks);
-			long countExtractedElements = (Long) results.get(0).get();
-			long countLoadedElements = (Long) results.get(0).get();
+			Long countExtractedElements = (Long) results.get(0).get();
+			Long countLoadedElements = (Long) results.get(0).get();
 			long endTimeMigration = System.currentTimeMillis();
 			long durationMsec = endTimeMigration - startTimeMigration;
 			logger.debug("migration duration time msec: " + durationMsec);

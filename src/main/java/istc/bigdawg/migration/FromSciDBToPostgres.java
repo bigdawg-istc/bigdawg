@@ -578,7 +578,7 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 			executor.submit(loadTask);
 
 			String exportMessage = exportTask.get();
-			Long countLoadedElements = (long) loadTask.get();
+			Long countLoadedElements = (Long) loadTask.get();
 
 			long endTimeMigration = System.currentTimeMillis();
 			long durationMsec = endTimeMigration - startTimeMigration;

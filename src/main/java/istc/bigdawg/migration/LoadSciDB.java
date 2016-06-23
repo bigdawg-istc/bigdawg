@@ -198,12 +198,12 @@ public class LoadSciDB implements Load {
 		SciDBHandler handler = new SciDBHandler(
 				migrationInfo.getConnectionTo());
 
-		//arrays = prepareFlatTargetArrays();
-		// StringBuilder loadCommand = new StringBuilder(
-		// "load(" + arrays.getFlat() + ", '" + scidbFilePath + "'");
+		// arrays = prepareFlatTargetArrays();
+		StringBuilder loadCommand = new StringBuilder(
+				"load(" + arrays.getFlat() + ", '" + scidbFilePath + "'");
 
-		StringBuilder loadCommand = new StringBuilder("load("
-				+ migrationInfo.getObjectTo() + ", '" + scidbFilePath + "'");
+		// StringBuilder loadCommand = new StringBuilder("load("
+		// + migrationInfo.getObjectTo() + ", '" + scidbFilePath + "'");
 		if (this.fileFormat != FileFormat.SCIDB_TEXT_FORMAT) {
 			/*
 			 * -2: Load all data using the coordinator instance of the query.
