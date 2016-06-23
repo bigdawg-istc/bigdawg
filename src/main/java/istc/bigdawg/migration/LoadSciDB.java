@@ -79,7 +79,7 @@ public class LoadSciDB implements Load {
 		this.migrationInfo = MigrationInfo.forConnectionTo(connectionTo);
 		this.arrays = arrays;
 		this.scidbFilePath = scidbFilePath;
-		/* declare the default file format - native scidb format. */
+		/* declare the default file format - native SciDB format. */
 		this.fileFormat = FileFormat.SCIDB_TEXT_FORMAT;
 	}
 
@@ -158,7 +158,7 @@ public class LoadSciDB implements Load {
 		String binaryFormatString = null;
 		if (migrationInfo
 				.getConnectionFrom() instanceof PostgreSQLConnectionInfo) {
-			binaryFormatString = PostgreSQLSciDBMigrationUtils
+			binaryFormatString = MigrationUtils
 					.getSciDBBinFormat(new PostgreSQLHandler(
 							(PostgreSQLConnectionInfo) migrationInfo
 									.getConnectionFrom()).getColumnsMetaData(
@@ -197,11 +197,11 @@ public class LoadSciDB implements Load {
 		// log.debug("Load data to SciDB: " + resultString);
 		SciDBHandler handler = new SciDBHandler(
 				migrationInfo.getConnectionTo());
-		/*
-		 * arrays = prepareFlatTargetArrays(); StringBuilder loadCommand = new
-		 * StringBuilder( "load(" + arrays.getFlat() + ", '" + scidbFilePath +
-		 * "'");
-		 */
+
+		//arrays = prepareFlatTargetArrays();
+		// StringBuilder loadCommand = new StringBuilder(
+		// "load(" + arrays.getFlat() + ", '" + scidbFilePath + "'");
+
 		StringBuilder loadCommand = new StringBuilder("load("
 				+ migrationInfo.getObjectTo() + ", '" + scidbFilePath + "'");
 		if (this.fileFormat != FileFormat.SCIDB_TEXT_FORMAT) {

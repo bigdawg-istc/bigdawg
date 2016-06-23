@@ -42,6 +42,12 @@ public class PostgreSQLTableMetaData implements ObjectMetaData {
 		return columnsMap;
 	}
 
+	@Override
+	public String getName() {
+		return getSchemaTable().getFullName();
+	}
+
+	@Override
 	public List<AttributeMetaData> getAttributesOrdered() {
 		return columnsOrdered;
 	}

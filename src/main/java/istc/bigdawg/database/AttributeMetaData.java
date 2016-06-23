@@ -7,8 +7,8 @@ package istc.bigdawg.database;
  * Meta data about an attribute/column/cell in a table/array or another object
  * in a database.
  * 
- * The meta data contain information such as: name of the attribute, type, if the
- * attribute can be null, etc.
+ * The meta data contain information such as: name of the attribute, type, if
+ * the attribute can be null, etc.
  * 
  * @author Adam Dziedzic
  * 
@@ -16,7 +16,10 @@ package istc.bigdawg.database;
  */
 public class AttributeMetaData {
 
+	/** The name of the attribute. */
 	private String name;
+	
+	
 	private int position;
 	private boolean isNullable;
 	private String dataType;
@@ -34,6 +37,13 @@ public class AttributeMetaData {
 		this.characterMaximumLength = characterMaximumLength;
 		this.numericPrecision = numericPrecision;
 		this.numericScale = numericScale;
+	}
+
+	public AttributeMetaData(String name, String dataType,
+			boolean isNullable) {
+		this.name = name;
+		this.dataType = dataType;
+		this.isNullable = isNullable;
 	}
 
 	@Override
@@ -80,12 +90,12 @@ public class AttributeMetaData {
 			return false;
 		if (name == null) {
 			if (other.name != null)
-				return false;
-		} else if (!name.equals(other.name))
-			return false;
-		if (numericPrecision != other.numericPrecision)
-			return false;
-		if (numericScale != other.numericScale)
+				return false;	
+		} else if (!name.equals(other.name))	
+			return false;	
+		if (numericPrecision != other.numericPrecision)	
+			return false;	
+		if (numericScale != other.numericScale)	
 			return false;
 		if (position != other.position)
 			return false;
