@@ -17,7 +17,7 @@ import istc.bigdawg.utils.LogUtils;
  * 
  *         Feb 26, 2016 4:39:08 PM
  */
-public class ExportSciDB implements Callable<String> {
+public class ExportSciDB implements Callable<Object> {
 
 	/* log */
 	private static Logger log = Logger.getLogger(LoadSciDB.class);
@@ -84,7 +84,8 @@ public class ExportSciDB implements Callable<String> {
 		handler.executeStatementAFL(saveCommandFinal);
 		handler.commit();
 		handler.close();
-		return "Data successfuly exported from SciDB";
+		log.debug("Data successfuly exported from SciDB");
+		return null;
 	}
 
 }

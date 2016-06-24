@@ -10,9 +10,11 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 
 import org.apache.log4j.Logger;
@@ -36,6 +38,7 @@ import istc.bigdawg.utils.LogUtils;
 import istc.bigdawg.utils.Pipe;
 import istc.bigdawg.utils.SessionIdentifierGenerator;
 import istc.bigdawg.utils.StackTrace;
+import istc.bigdawg.utils.TaskExecutor;
 
 /**
  * Migrate data from SciDB to PostgreSQL.
@@ -88,6 +91,16 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 	 * itself takes care of cleaning the created but not loaded tables.
 	 */
 	private Set<String> intermediateArrays = new HashSet<>();
+
+	/**
+	 * Always put extractor as the first task to be executed.
+	 */
+	private static final int EXPORT_INDEX = 0;
+
+	/**
+	 * Always put loader as the second task to be executed.
+	 */
+	private static final int LOAD_INDEX = 1;
 
 	/**
 	 * This constructor is required if we provide other constructors with
@@ -405,7 +418,7 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 			executor = Executors.newFixedThreadPool(3);
 			ExportSciDB exportExecutor = new ExportSciDB(getConnectionFrom(),
 					arrays, scidbPipe, format, true);
-			FutureTask<String> exportTask = new FutureTask<String>(
+			FutureTask<Object> exportTask = new FutureTask<Object>(
 					exportExecutor);
 			executor.submit(exportTask);
 
@@ -426,7 +439,7 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 			FutureTask<Object> loadTask = new FutureTask<Object>(loadExecutor);
 			executor.submit(loadTask);
 
-			String exportMessage = exportTask.get();
+			String exportMessage = (String) exportTask.get();
 			long transformationResult = transformTask.get();
 			long countLoadedElements = (long) loadTask.get();
 
@@ -562,45 +575,33 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 					this.getClass().getName() + "_fromSciDB_" + fromArray);
 
 			String defultCsvFormat = "csv+";
-			ExportSciDB exportExecutor = new ExportSciDB(getConnectionFrom(),
-					arrays, scidbPipe, defultCsvFormat, false);
-			FutureTask<String> exportTask = new FutureTask<String>(
-					exportExecutor);
-			executor.submit(exportTask);
 
 			connectionPostgres = PostgreSQLHandler
 					.getConnection(getConnectionTo());
 			connectionPostgres.setAutoCommit(false);
 			createTargetTableSchema(connectionPostgres, createTableStatement);
-			LoadPostgres loadExecutor = new LoadPostgres(connectionPostgres,
-					getCopyToPostgreSQLCsvCommand(toTable), scidbPipe);
-			FutureTask<Object> loadTask = new FutureTask<Object>(loadExecutor);
-			executor.submit(loadTask);
 
-			String exportMessage = exportTask.get();
-			Long countLoadedElements = (Long) loadTask.get();
+			List<Callable<Object>> tasks = new ArrayList<>();
+			tasks.add(new ExportSciDB(getConnectionFrom(), arrays, scidbPipe,
+					defultCsvFormat, false));
+			tasks.add(new LoadPostgres(connectionPostgres,
+					getCopyToPostgreSQLCsvCommand(toTable), scidbPipe));
+			executor = Executors.newFixedThreadPool(tasks.size());
+			List<Future<Object>> results = TaskExecutor.execute(executor,
+					tasks);
+
+			Long countExtractedElements = (Long) results.get(EXPORT_INDEX)
+					.get();
+			Long countLoadedElements = (Long) results.get(LOAD_INDEX).get();
 
 			long endTimeMigration = System.currentTimeMillis();
 			long durationMsec = endTimeMigration - startTimeMigration;
-			MigrationStatistics stats = new MigrationStatistics(
-					getConnectionFrom(), getConnectionTo(), fromArray, toTable,
-					startTimeMigration, endTimeMigration, null,
-					countLoadedElements, this.getClass().getName());
-			Monitor.addMigrationStats(stats);
-			log.debug("Migration result,connectionFrom,"
-					+ getConnectionFrom().toSimpleString() + ",connectionTo,"
-					+ getConnectionTo().toSimpleString() + ",fromArray,"
-					+ fromArray + ",toTable," + toTable + ",startTimeMigration,"
-					+ startTimeMigration + ",endTimeMigration,"
-					+ endTimeMigration + ",countExtractedElements," + "N/A"
-					+ ",countLoadedElements," + countLoadedElements
-					+ ",durationMsec," + durationMsec + ","
-					+ Thread.currentThread().getStackTrace()[1].getMethodName()
-					+ "," + migrationType.toString());
-			return new MigrationResult(null, countLoadedElements,
-					exportMessage
-							+ " No information about the number of extracted items from SciDB.",
-					false);
+			log.debug("migration duration time msec: " + durationMsec);
+			MigrationResult migrationResult = new MigrationResult(
+					countExtractedElements, countLoadedElements, durationMsec,
+					startTimeMigration, endTimeMigration);
+			String message = "Migration was executed correctly.";
+			return summary(migrationResult, migrationInfo, message);
 		} catch (SQLException | NoTargetArrayException
 				| UnsupportedTypeException | InterruptedException
 				| ExecutionException | RunShellException | IOException ex) {

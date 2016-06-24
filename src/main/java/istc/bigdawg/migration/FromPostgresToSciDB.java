@@ -329,8 +329,20 @@ class FromPostgresToSciDB extends FromDatabaseToDatabase
 					.get(TRANSFORMATION_INDEX).get();
 			Long countLoadedElements = (Long) results.get(LOAD_INDEX).get();
 
-			assert shellScriptReturnCode == 0L;
-			assert countLoadedElements == null;
+			log.debug("Extracted elements from PostgreSQL: "
+					+ countExtractedElements);
+			if (shellScriptReturnCode != 0L) {
+				throw new MigrationException(
+						"Error while transforming data from CSV format to"
+								+ " scidb dense format.");
+			}
+			if (countLoadedElements != null) {
+				throw new MigrationException(
+						"SciDB does not return any information about "
+								+ "loading / "
+								+ "export but there was an unkown data "
+								+ "returned.");
+			}
 
 			/**
 			 * the migration was successful so only clear the intermediate
