@@ -56,6 +56,18 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 	 */
 	private String createTableStatement = null;
 
+	/**
+	 * Always put extractor as the first task to be executed (while migrating
+	 * data from PostgreSQL to PostgreSQL).
+	 */
+	private static final int EXPORT_INDEX = 0;
+
+	/**
+	 * Always put loader as the second task to be executed (while migrating data
+	 * from PostgreSQL to PostgreSQL)
+	 */
+	private static final int LOAD_INDEX = 1;
+
 	public FromPostgresToPostgres(PostgreSQLConnectionInfo connectionFrom,
 			String fromTable, PostgreSQLConnectionInfo connectionTo,
 			String toTable) {
@@ -182,8 +194,9 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 			executor = Executors.newFixedThreadPool(tasks.size());
 			List<Future<Object>> results = TaskExecutor.execute(executor,
 					tasks);
-			Long countExtractedElements = (Long) results.get(0).get();
-			Long countLoadedElements = (Long) results.get(0).get();
+			Long countExtractedElements = (Long) results.get(EXPORT_INDEX)
+					.get();
+			Long countLoadedElements = (Long) results.get(LOAD_INDEX).get();
 			long endTimeMigration = System.currentTimeMillis();
 			long durationMsec = endTimeMigration - startTimeMigration;
 			logger.debug("migration duration time msec: " + durationMsec);

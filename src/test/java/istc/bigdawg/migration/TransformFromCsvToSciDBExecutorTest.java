@@ -4,9 +4,12 @@
 package istc.bigdawg.migration;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
+import java.io.File;
 import java.io.IOException;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Logger;
 import org.junit.Test;
 
@@ -31,12 +34,16 @@ public class TransformFromCsvToSciDBExecutorTest {
 		String typesPattern = "NSS";
 		String csvFilePath = "src/test/resources/region.csv";
 		String scidbFilePath = "src/test/resources/region_test.scidb";
+		String scidbFileExemplarPath = "src/test/resources/region.scidb";
 		String delimiter = "|";
 		TransformFromCsvToSciDBExecutor executor = new TransformFromCsvToSciDBExecutor(
 				typesPattern, csvFilePath, delimiter, scidbFilePath,
 				scidbBinPath);
-		int result = executor.call();
-		assertEquals(0, result);
+		long result = executor.call();
+		assertEquals(0L, result);
+		File scidbFile = new File(scidbFilePath);
+		File scidbFileExemplar = new File(scidbFileExemplarPath);
+		assertTrue(FileUtils.contentEquals(scidbFile, scidbFileExemplar));
 	}
 
 }

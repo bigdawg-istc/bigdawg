@@ -5,13 +5,16 @@ package istc.bigdawg.migration;
 
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 
 import org.apache.log4j.Logger;
@@ -34,6 +37,7 @@ import istc.bigdawg.scidb.SciDBHandler;
 import istc.bigdawg.utils.Pipe;
 import istc.bigdawg.utils.SessionIdentifierGenerator;
 import istc.bigdawg.utils.StackTrace;
+import istc.bigdawg.utils.TaskExecutor;
 
 /**
  * Migrate data from PostgreSQL to SciDB.
@@ -83,6 +87,26 @@ class FromPostgresToSciDB extends FromDatabaseToDatabase
 	private String postgresPipe = null;
 	private String scidbPipe = null;
 	private ExecutorService executor = null;
+
+	/* constants or static variables */
+
+	/**
+	 * Always put extractor as the first task to be executed (while migrating
+	 * data from PostgreSQL to SciDB).
+	 */
+	private static final int EXPORT_INDEX = 0;
+
+	/**
+	 * Always put transformation as the second task be executed (while migrating
+	 * data from PostgreSQL to SciDB)
+	 */
+	private static final int TRANSFORMATION_INDEX = 1;
+
+	/**
+	 * Always put loader as the third task to be executed (while migrating data
+	 * from PostgreSQL to SciDB)
+	 */
+	private static final int LOAD_INDEX = 2;
 
 	public FromPostgresToSciDB() {
 	}
@@ -281,35 +305,32 @@ class FromPostgresToSciDB extends FromDatabaseToDatabase
 							+ "_fromPostgres_" + getObjectFrom());
 			scidbPipe = Pipe.INSTANCE.createAndGetFullName(
 					this.getClass().getName() + "_toSciDB_" + getObjectTo());
-			executor = Executors.newFixedThreadPool(3);
-
-			ExportPostgres exportExecutor = new ExportPostgres(
-					getConnectionFrom(), PostgreSQLHandler.getExportCsvCommand(
-							getObjectFrom(), delimiter),
-					postgresPipe);
-			FutureTask<Object> exportTask = new FutureTask<Object>(
-					exportExecutor);
-			executor.submit(exportTask);
 
 			String typesPattern = SciDBHandler
 					.getTypePatternFromPostgresTypes(postgresqlTableMetaData);
-			TransformFromCsvToSciDBExecutor csvSciDBExecutor = new TransformFromCsvToSciDBExecutor(
-					typesPattern, postgresPipe, delimiter, scidbPipe,
-					BigDawgConfigProperties.INSTANCE.getScidbBinPath());
-			FutureTask<Integer> csvSciDBTask = new FutureTask<Integer>(
-					csvSciDBExecutor);
-			executor.submit(csvSciDBTask);
 
 			SciDBArrays arrays = prepareFlatTargetArrays();
-			LoadSciDB loadExecutor = new LoadSciDB(getConnectionTo(), arrays,
-					scidbPipe);
-			FutureTask<Object> loadTask = new FutureTask<Object>(loadExecutor);
-			executor.submit(loadTask);
 
-			long countExtractedElements = (long) exportTask.get();
-			csvSciDBTask.get();
-			String loadMessage = (String) loadTask.get();
-			log.debug("load message: " + loadMessage);
+			List<Callable<Object>> tasks = new ArrayList<>();
+			tasks.add(new ExportPostgres(getConnectionFrom(), PostgreSQLHandler
+					.getExportCsvCommand(getObjectFrom(), delimiter),
+					postgresPipe));
+			tasks.add(new TransformFromCsvToSciDBExecutor(typesPattern,
+					postgresPipe, delimiter, scidbPipe,
+					BigDawgConfigProperties.INSTANCE.getScidbBinPath()));
+			tasks.add(new LoadSciDB(getConnectionTo(), arrays, scidbPipe));
+			executor = Executors.newFixedThreadPool(tasks.size());
+			List<Future<Object>> results = TaskExecutor.execute(executor,
+					tasks);
+
+			Long countExtractedElements = (Long) results.get(EXPORT_INDEX)
+					.get();
+			Long shellScriptReturnCode = (Long) results
+					.get(TRANSFORMATION_INDEX).get();
+			Long countLoadedElements = (Long) results.get(LOAD_INDEX).get();
+
+			assert shellScriptReturnCode == 0L;
+			assert countLoadedElements == null;
 
 			/**
 			 * the migration was successful so only clear the intermediate
