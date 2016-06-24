@@ -406,7 +406,7 @@ class FromPostgresToSciDB extends FromDatabaseToDatabase
 	private void createFlatArray(String arrayName)
 			throws SQLException, UnsupportedTypeException, MigrationException {
 		StringBuilder createArrayStringBuf = new StringBuilder();
-		createArrayStringBuf.append("create array " + arrayName + " <");
+		createArrayStringBuf.append("create array ").append(arrayName).append(" <");
 		List<AttributeMetaData> postgresColumnsOrdered = postgresqlTableMetaData
 				.getAttributesOrdered();
 		for (AttributeMetaData postgresColumnMetaData : postgresColumnsOrdered) {
@@ -421,6 +421,8 @@ class FromPostgresToSciDB extends FromDatabaseToDatabase
 			createArrayStringBuf.append(
 					attributeName + ":" + attributeType + attributeNULL + ",");
 		}
+		
+//		if (createArrayStringBuf.length() > 0) throw new MigrationException(String.format("-->| %s |<--", postgresColumnsOrdered));
 		/* delete the last comma "," */
 		createArrayStringBuf.deleteCharAt(createArrayStringBuf.length() - 1);
 		/* " r_regionkey:int64,r_name:string,r_comment:string> );" */

@@ -1,5 +1,6 @@
 package istc.bigdawg.executor;
 
+import java.io.IOException;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.Collections;
@@ -118,7 +119,14 @@ class PlanExecutor {
         } catch (ExecutionException e) {
             Logger.error(this, "Error retrieving results of final query node %s: %[exception]s", plan.getSerializedName(), e);
         }
-
+        
+//        try {
+//        	System.out.print("--- System pausing! enter anything to continue --\n");
+//			System.in.read();
+//		} catch (IOException e1) {
+//			// TODO Auto-generated catch block
+//			e1.printStackTrace();
+//		}
         dropTemporaryTables();
 
         final long end = System.currentTimeMillis();

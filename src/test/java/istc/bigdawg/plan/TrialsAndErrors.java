@@ -12,6 +12,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import istc.bigdawg.catalog.CatalogInstance;
+import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.islands.OperatorVisitor;
 import istc.bigdawg.islands.PostgreSQL.SQLPlanParser;
 import istc.bigdawg.islands.PostgreSQL.SQLQueryGenerator;
@@ -22,8 +23,11 @@ import istc.bigdawg.islands.SciDB.AFLQueryGenerator;
 import istc.bigdawg.islands.SciDB.AFLQueryPlan;
 import istc.bigdawg.islands.operators.Join;
 import istc.bigdawg.islands.operators.Operator;
+import istc.bigdawg.migration.MigrationParams;
+import istc.bigdawg.migration.Migrator;
 import istc.bigdawg.planner.Planner;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
+import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.scidb.SciDBHandler;
 import istc.bigdawg.signature.Signature;
 
@@ -36,6 +40,7 @@ public class TrialsAndErrors {
 	private static boolean runPlanner = false;
 	private static boolean runMapTrial = false;
 	private static boolean runSchemaGen = false;
+	private static boolean runMigration = false;
 
 	@Before
 	public void setUp() throws Exception {
@@ -45,9 +50,10 @@ public class TrialsAndErrors {
 //		setupQueryBuilder();
 //		setupRegexTester();
 //		setupTreeWalker();
-		setupPlannerTester();
+//		setupPlannerTester();
 //		setupMapTrial();
 //		setupSchemaGenerator();
+		setupMigrationTest();
 	}
 	
 	public void setupQueryExplainer() {
@@ -76,6 +82,10 @@ public class TrialsAndErrors {
 	
 	public void setupSchemaGenerator() {
 		runSchemaGen = true;
+	}
+	
+	public void setupMigrationTest() {
+		runMigration = true;
 	}
 	
 
@@ -265,6 +275,18 @@ public class TrialsAndErrors {
 		scanner.close();
 		
 	}
+	
+	@Test
+	public void testMigration() throws Exception {
+		if ( !runMigration ) return;
+		
+		ConnectionInfo ci1 = CatalogViewer.getConnectionInfo(4);
+		ConnectionInfo ci2 = CatalogViewer.getConnectionInfo(6);
+		
+		Migrator.migrate(ci1, "orders", ci2, "ord", new MigrationParams("CREATE ARRAY ORD <o_custkey:int64>[o_orderkey=0:10,10,0]"));
+		
+	}
+	
 	
 //	private void printIndentation(int recLevel) {
 //		String token = "--";

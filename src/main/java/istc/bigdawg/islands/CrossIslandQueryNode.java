@@ -215,6 +215,8 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 		
 		List<QueryExecutionPlan> qepl = new ArrayList<>();
 		
+		System.out.printf("RemainderPermuations, from getAllQEPs: %s\n", remainderPermutations);
+		
 		for (int i = 0; i < remainderPermutations.size(); i++ ){
 			QueryExecutionPlan qep = new QueryExecutionPlan(getSourceScope()); 
 			ExecutionNodeFactory.addNodesAndEdges(qep, remainderPermutations.get(i), remainderLoc, queryContainer, isSelect);
@@ -304,8 +306,7 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 			System.out.println("\n");
 			// end of debug
 			
-			
-			remainderPermutations.clear();
+//			remainderPermutations.clear();
 			remainderPermutations.addAll(permResult);
 			
 //			// debug
@@ -443,38 +444,102 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 			// DEBUG OUTPUT END
 			
 			
-			List<Operator> ninos = new ArrayList<>();
-			for (Operator o : root.getChildren()) {
+			boolean hasPermutation = false;
+			List<List<Operator>> combos = new ArrayList<>();	// holder of operators
+			for (Operator next : root.getChildren()) {
 				
-				Operator next = o;
+				List<Operator> ninos = new ArrayList<>();				
 				while (!(next instanceof Join) && !(next instanceof Merge) && next.getChildren().size() > 0) next = next.getChildren().get(0);
 				ninos.addAll(getPermutatedOperatorsWithBlock(scope, next, joinPredConnections, joinFilterConnections));
 				
+				if (ninos.isEmpty())  {
+					hasPermutation = true;
+					ninos.add(next);
+				}
+				
+				combos.add(ninos);
 			}
 			
-			if (ninos.isEmpty()) {
+			if (!hasPermutation) {
 				extraction.add(root);
 				return extraction;
 			}
 			
-			for (Operator o: ninos) {
-				
-				Operator t = root.duplicate(true); // FULL REPLICATION
+			
+			int[] positions = new int[4]; // counters for all children
+			int totalCount = 1;
+			for (int i = 0; i < combos.size() ; i++) totalCount *= combos.get(i).size(); // initialize
 
-				extraction.add(t);
+			int counter = 0;
+			while (counter < totalCount) {
 				
-				for (Operator op : t.getChildren()) op.setParent(t);
+				// add a new instance
+				Operator newAddition = root.duplicate(true); 
+				extraction.add(newAddition);
 				
-				while (!(t instanceof Join) && !(t instanceof Merge)) {
-					t = t.getChildren().get(0);
-					t.getChildren().get(0).setParent(t);
+				// modify each child individually
+				for (int j = 0; j < combos.size() ; j ++) {
+					
+					Operator t = newAddition.getChildren().get(j); 
+					
+					// traverse to the nino location
+					boolean usedAtLeastOnce = false;
+					while (!(t instanceof Join) && !(t instanceof Merge) && t.getChildren().size() > 0) {
+						t.getChildren().get(0).setParent(t);
+						t = t.getChildren().get(0);
+						usedAtLeastOnce = true;
+					}
+					Operator op = combos.get(j).get(positions[j]).duplicate(true);
+					if (usedAtLeastOnce) {
+						t = t.getParent();
+						t.getChildren().clear();
+						t.addChild(op);
+						op.setParent(t);
+					} else {
+						newAddition.getChildren().set(j, op);
+						op.setParent(newAddition);
+					}
+					
 				}
-//				if (t.getParent() == null) continue;
-				t = t.getParent();
-				t.getChildren().clear();
-				t.addChild(o);
 				
+				// advance the counter
+				for (int j = 0; j < combos.size(); j++) 
+					if (positions[j] >= combos.get(j).size()) {
+						positions[j] = 0;
+						if (j < combos.size() - 1) positions[j + 1] = positions[j + 1] + 1;
+					}
+				
+				counter++;
 			}
+					
+					
+//				}
+//				// advance counters for all children 
+//				positions.set(comboCount, positions.get(comboCount) + 1);
+//				for (int i = combos.size() - 1; i >= 0 ; i--) 
+//					if (positions.get(i) >= combos.get(i).size()) {
+//						positions.set(i, 0);
+//						if (i > 0) positions.set(i - 1, positions.get(i - 1) + 1);
+//					}
+//			}
+//			
+//			for (Operator o: ninos) {
+//				
+//				Operator t = root.duplicate(true); // FULL REPLICATION
+//
+//				extraction.add(t);
+//				
+//				for (Operator op : t.getChildren()) op.setParent(t);
+//				
+//				while (!(t instanceof Join) && !(t instanceof Merge)) {
+//					t = t.getChildren().get(0);
+//					t.getChildren().get(0).setParent(t);
+//				}
+////				if (t.getParent() == null) continue;
+//				t = t.getParent();
+//				t.getChildren().clear();
+//				t.addChild(o);
+//			}
 			
 		} else {
 			
@@ -1042,9 +1107,9 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 		}
 		
 		
-		if (node.isQueryRoot()) {
-			remainderPermutations.add(node);
-		}
+//		if (node.isQueryRoot()) {
+//			remainderPermutations.add(node);
+//		}
 		
 		return ret;
 	}
