@@ -9,5 +9,8 @@ cd /vagrant &> /dev/null
 
 # Build the project's Docker images if you don't want to pull the prebuilt ones from Docker Hub
 echo "Building Docker images..."
-echo "Building postgres1 (1/4)"
+echo "Building postgres1 (1/2)"
 docker build -t postgres1 provisions/postgres1/
+
+echo "Building postgres2 (2/2)"
+docker build -t postgres2 provisions/postgres2/

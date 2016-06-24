@@ -13,5 +13,6 @@ done
 source ~/.profile
 
 bd-download-test-data
-# bd-build-images
-# bd-create-dev-containers
+bd-build-images
+bd-create-dev-containers
+bd-start-containers

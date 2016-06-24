@@ -9,8 +9,8 @@ docker create --name postgres1 \
     --net=bigdawg \
     -p 5431:5432 \
     postgres1
-# echo "(n/m) Creating \"postgres2\" - Postgres server. Exposed on port 5430"
-# docker create --name postgres2 \
-#     --net=bigdawg \
-#     -p 5430:5432 \
-#     bigdawg/postgres
+echo "(n/m) Creating \"postgres2\" - Postgres server. Exposed on port 5430"
+docker create --name postgres2 \
+    --net=bigdawg \
+    -p 5430:5432 \
+    postgres2
