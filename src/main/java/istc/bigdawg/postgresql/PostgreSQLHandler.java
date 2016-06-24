@@ -656,6 +656,15 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 			ResultSet resultSet = preparedSt.executeQuery();
 			Map<String, AttributeMetaData> columnsMap = new HashMap<>();
 			List<AttributeMetaData> columnsOrdered = new ArrayList<>();
+			/*
+			 * resultSet.isBeforeFirst() returns false if the cursor is not
+			 * before the first record or if there are no rows in the result set
+			 */
+			if (!resultSet.isBeforeFirst()) {
+				throw new IllegalArgumentException(
+						"No results were found for the table: "
+								+ schemaTable.getFullName());
+			}
 			while (resultSet.next()) {
 				AttributeMetaData columnMetaData = new AttributeMetaData(
 						resultSet.getString(1), resultSet.getInt(2),
