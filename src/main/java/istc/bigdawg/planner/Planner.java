@@ -124,11 +124,12 @@ public class Planner {
 					// business as usual
 					
 					CrossIslandQueryNode ciqn = (CrossIslandQueryNode)node;
-					int choice = getGetPerformanceAndPickTheBest(ciqn, isTrainingMode);
 					
+//					int choice = getGetPerformanceAndPickTheBest(ciqn, isTrainingMode);
+					int choice = 0;
 					
 					// currently there should be just one island, therefore one child, root.
-					QueryExecutionPlan qep = ((CrossIslandQueryNode)node).getQEP(choice, true);
+					QueryExecutionPlan qep = ((CrossIslandQueryNode)node).getQEP(choice, false);
 					
 					
 					// EXECUTE THE RESULT SUB RESULT

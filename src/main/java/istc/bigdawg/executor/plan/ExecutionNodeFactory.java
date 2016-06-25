@@ -314,7 +314,7 @@ public class ExecutionNodeFactory {
 	 * @throws Exception
 	 */
 	public static void addNodesAndEdges(QueryExecutionPlan qep, Operator remainder, List<String> remainderLoc, Map<String,
-			QueryContainerForCommonDatabase> containers, boolean isSelect) throws Exception {
+			QueryContainerForCommonDatabase> containers, boolean isSelect, String destinationName) throws Exception {
 		log.debug(String.format("Creating QEP %s...", qep.getSerializedName()));
 
 		int remainderDBID;
@@ -335,15 +335,6 @@ public class ExecutionNodeFactory {
 			throw new Exception("Unsupported island code: " + qep.getIsland().toString());
 		}
 		
-		remainder.accept(gen);
-		remainderSelectIntoString = gen.generateStatementString();
-		
-		System.out.printf("\n\n<><><> Remainder class: %s; QEP: %s; children count: %s; query string: %s\n"
-				, remainder.getClass().getSimpleName()
-				, qep.getSerializedName()
-				, remainder.getChildren().size()
-				, remainderSelectIntoString);
-
 		Map<String, LocalQueryExecutionNode> containerNodes = new HashMap<>();
 		for (Map.Entry<String, QueryContainerForCommonDatabase> entry : containers.entrySet()) {
 			String table = entry.getKey();
@@ -366,17 +357,29 @@ public class ExecutionNodeFactory {
 		System.out.println();
 
 		remainder.setSubTree(true);
-		String remainderInto = remainder.getSubTreeToken();
-		qep.setTerminalTableName(remainderInto);
+//		String remainderInto = remainder.getSubTreeToken();
+		qep.setTerminalTableName(destinationName);
 
+		remainder.accept(gen);
+		if (isSelect) remainderSelectIntoString = gen.generateStatementString();
+		else remainderSelectIntoString = gen.generateSelectIntoStatementForExecutionTree(destinationName);
+		
+		System.out.printf("\n\n<><><> Remainder class: %s; QEP: %s; children count: %s; query string: %s\n"
+				, remainder.getClass().getSimpleName()
+				, qep.getSerializedName()
+				, remainder.getChildren().size()
+				, remainderSelectIntoString);
+		
 		if (remainderLoc != null) {
-			LocalQueryExecutionNode lqn = new LocalQueryExecutionNode(remainderSelectIntoString, remainderCI, remainderInto);
+			LocalQueryExecutionNode lqn = new LocalQueryExecutionNode(remainderSelectIntoString, remainderCI, destinationName);
 			qep.addNode(lqn);
 			qep.setTerminalTableNode(lqn);
+			System.out.printf("\n\n<><><><><> Loc non null QEP terminal: %s; isSelect?: %s; remainder into: %s <><><><><><><> \n\n\n", qep.getTerminalTableNode().getQueryString(), isSelect, destinationName);
 		} else {
-			ExecutionNodeSubgraph subgraph = buildOperatorSubgraph(remainder, remainderCI, remainderInto, containerNodes, isSelect, qep.getIsland());
+			ExecutionNodeSubgraph subgraph = buildOperatorSubgraph(remainder, remainderCI, destinationName, containerNodes, isSelect, qep.getIsland());
 			Graphs.addGraph(qep, subgraph);
 			qep.setTerminalTableNode(subgraph.exitPoint);
+			System.out.printf("\n\n<><><><><><><> Loc null QEP terminal: %s; isSelect?: %s; remainder into: %s <><><><><><><> \n\n\n", qep.getTerminalTableNode().getQueryString(), isSelect, destinationName);
 		}
 
 		log.debug(String.format("Finished creating QEP %s.", qep.getSerializedName()));

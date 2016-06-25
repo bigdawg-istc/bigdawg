@@ -205,7 +205,7 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 		if (perm >= remainderPermutations.size()) throw new Exception ("Permutation reference index out of bound");
 		
 		QueryExecutionPlan qep = new QueryExecutionPlan(sourceScope); 
-		ExecutionNodeFactory.addNodesAndEdges(qep, remainderPermutations.get(perm), remainderLoc, queryContainer, isSelect);
+		ExecutionNodeFactory.addNodesAndEdges(qep, remainderPermutations.get(perm), remainderLoc, queryContainer, isSelect, name);
 //		ExecutionNodeFactory.addNodesAndEdgesNaive( qep, remainderPermutations.get(perm), remainderLoc, queryContainer);
 		
 		return qep;
@@ -219,7 +219,7 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 		
 		for (int i = 0; i < remainderPermutations.size(); i++ ){
 			QueryExecutionPlan qep = new QueryExecutionPlan(getSourceScope()); 
-			ExecutionNodeFactory.addNodesAndEdges(qep, remainderPermutations.get(i), remainderLoc, queryContainer, isSelect);
+			ExecutionNodeFactory.addNodesAndEdges(qep, remainderPermutations.get(i), remainderLoc, queryContainer, isSelect, name);
 			qepl.add(qep);
 		}
 		
@@ -389,46 +389,6 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 
 		
 		if (root.isBlocking() ) { //&& !(root instanceof Merge)) {
-//			
-//			// then it must have only one child, because join does not block
-//			// root spear-heads the rest of the subtree
-//			
-//			// DEBUG ONLY
-//			OperatorVisitor gen = null;
-//			if (scope.equals(Scope.RELATIONAL)) {
-//				gen = new SQLQueryGenerator();
-//				((SQLQueryGenerator)gen).setSrcStatement(select);
-//			}
-//			gen.configure(true, false);
-//			root.accept(gen);
-//			
-//			System.out.println("--> blocking root; class: "+root.getClass().getSimpleName()+"; ");
-//			System.out.println("--> tree rep: "+root.getTreeRepresentation(true)+"; ");
-//			System.out.println("--> SQL: "+gen.generateStatementString()+"; \n");
-//			// DEBUG OUTPUT END
-//			
-//			Operator next = root.getChildren().get(0);
-//			while (!(next instanceof Join) && !(next instanceof Merge) && next.getChildren().size() > 0) next = next.getChildren().get(0);
-//			
-//			List<Operator> ninos = getPermutatedOperatorsWithBlock(next, joinPredConnections, joinFilterConnections);
-//			
-//			for (Operator o: ninos) {
-//				
-//				Operator t = root.duplicate(true); // FULL REPLICATION
-//
-//				extraction.add(t);
-//				
-//				t.getChildren().get(0).setParent(t);
-//				while (!(t instanceof Join) && !(t instanceof Merge)) {
-//					t = t.getChildren().get(0);
-//					t.getChildren().get(0).setParent(t);
-//				}
-//				t = t.getParent();
-//				t.getChildren().clear();
-//				t.addChild(o);
-//				
-//			}
-//		} else if (root instanceof Merge) {
 			// DEBUG ONLY
 			OperatorVisitor gen = null;
 			if (getSourceScope().equals(Scope.RELATIONAL)) {

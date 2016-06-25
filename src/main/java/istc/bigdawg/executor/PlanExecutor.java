@@ -124,7 +124,6 @@ class PlanExecutor {
 //        	System.out.print("--- System pausing! enter anything to continue --\n");
 //			System.in.read();
 //		} catch (IOException e1) {
-//			// TODO Auto-generated catch block
 //			e1.printStackTrace();
 //		}
         dropTemporaryTables();
