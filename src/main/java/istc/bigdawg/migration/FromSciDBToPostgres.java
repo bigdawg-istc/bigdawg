@@ -334,7 +334,7 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 			if (postgresHandler
 					.existsTable(new PostgreSQLSchemaTableName(toTable))) {
 				PostgreSQLTableMetaData tableMetaData = postgresHandler
-						.getColumnsMetaData(toTable);
+						.getObjectMetaData(toTable);
 				// can we migrate only the attributes from the SciDB array
 				List<AttributeMetaData> scidbColumnsOrdered = scidbArrayMetaData
 						.getAttributesOrdered();
@@ -394,7 +394,9 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 								.nextRandom26CharString();
 				createFlatArray(newFlatIntermediateArray);
 				intermediateArrays.add(newFlatIntermediateArray);
-				arrays = new SciDBArrays(newFlatIntermediateArray, fromArray);
+				arrays = new SciDBArrays(
+						new SciDBArray(newFlatIntermediateArray, true, true),
+						new SciDBArray(fromArray, false, false));
 				format = getSciDBBinFormat(newFlatIntermediateArray);
 				if (createTableStatement == null) {
 					createTableStatement = getCreatePostgreSQLTableStatementFromSciDBAttributesAndDimensions();
@@ -403,7 +405,8 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 				/*
 				 * this is a flat array so we have to export only the attributes
 				 */
-				arrays = new SciDBArrays(fromArray, null);
+				arrays = new SciDBArrays(
+						new SciDBArray(fromArray, false, false), null);
 				format = getSciDBBinFormat(fromArray);
 				if (createTableStatement == null) {
 					createTableStatement = getCreatePostgreSQLTableStatementFromSciDBAttributes();
@@ -558,12 +561,14 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 
 			setCreateTableStatementIfGiven();
 			if (migrationType == MigrationType.FLAT) {
-				arrays = new SciDBArrays(fromArray, null);
+				arrays = new SciDBArrays(
+						new SciDBArray(fromArray, false, false), null);
 				if (createTableStatement == null) {
 					createTableStatement = getCreatePostgreSQLTableStatementFromSciDBAttributes();
 				}
 			} else { /* multidimensional array - MigrationType.FULL */
-				arrays = new SciDBArrays(null, fromArray);
+				arrays = new SciDBArrays(null,
+						new SciDBArray(fromArray, false, false));
 				if (createTableStatement == null) {
 					createTableStatement = getCreatePostgreSQLTableStatementFromSciDBAttributesAndDimensions();
 				}

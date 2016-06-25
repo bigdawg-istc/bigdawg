@@ -615,18 +615,28 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 			throws Exception {
 		return CatalogViewer.getConnectionInfo(dbid);
 	}
+	
+	/**
+	 * see: {@link #getObjectMetaData(String)}
+	 * @param tableNameInitial
+	 * @return
+	 * @throws SQLException
+	 */
+	public PostgreSQLTableMetaData getTableMetaData(String tableNameInitial)
+			throws SQLException {
+		return getObjectMetaData(tableNameInitial);
+	}
 
 	/**
 	 * Get metadata about columns (column name, position, data type, etc) for a
 	 * table in PostgreSQL.
 	 * 
-	 * @param conInfo
-	 * @param tableName
+	 * @param tableName the name of the table
 	 * @return map column name to column meta data
 	 * @throws SQLException
 	 *             if the data extraction from PostgreSQL failed
 	 */
-	public PostgreSQLTableMetaData getColumnsMetaData(String tableNameInitial)
+	public PostgreSQLTableMetaData getObjectMetaData(String tableNameInitial)
 			throws SQLException {
 		try {
 			this.getConnection();
@@ -699,7 +709,7 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 	 */
 	public List<String> getColumnNames(String table) throws SQLException {
 		List<String> columnNames = new ArrayList<>();
-		for (AttributeMetaData meta : getColumnsMetaData(table)
+		for (AttributeMetaData meta : getObjectMetaData(table)
 				.getAttributesOrdered()) {
 			columnNames.add(meta.getName());
 		}

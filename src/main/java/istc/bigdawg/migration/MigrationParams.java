@@ -6,7 +6,6 @@ package istc.bigdawg.migration;
 import java.util.Optional;
 
 /**
- * 
  * Additional parameters for data migration.
  * 
  * see: {@link #getCreateStatement()}
@@ -28,6 +27,8 @@ public class MigrationParams {
 	}
 
 	/**
+	 * The create statement (for array/table/object) which was passed directly
+	 * by a user.
 	 * 
 	 * @return the createStatement: the create statement that should be executed
 	 *         in the target engine (it can create a target array/table, etc.)

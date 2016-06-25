@@ -3,23 +3,22 @@
  */
 package istc.bigdawg.migration;
 
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+
 /**
- * Names of flat and destination arrays used during the migration process.
+ * Flat and destination arrays used during the migration process.
  * 
  * @author Adam Dziedzic
  * 
- *         Feb 24, 2016 11:03:35 AM
  */
 public class SciDBArrays {
 
-	private String flat;
-	private String multiDimensional;
+	private SciDBArray flat;
+	private SciDBArray multiDimensional;
 
-	/**
-	 * @param flat
-	 * @param multiDimensional
-	 */
-	public SciDBArrays(String flat, String multiDimensional) {
+	public SciDBArrays(SciDBArray flat, SciDBArray multiDimensional) {
 		this.flat = flat;
 		this.multiDimensional = multiDimensional;
 	}
@@ -27,15 +26,43 @@ public class SciDBArrays {
 	/**
 	 * @return the flat
 	 */
-	public String getFlat() {
+	public SciDBArray getFlat() {
 		return flat;
 	}
 
 	/**
 	 * @return the multiDimensional
 	 */
-	public String getMultiDimensional() {
+	public SciDBArray getMultiDimensional() {
 		return multiDimensional;
+	}
+
+	/**
+	 * 
+	 * @return Names of all the arrays which were created during the migration.
+	 */
+	public Set<String> getCreatedArrays() {
+		Set<String> createdArrays = new HashSet<>();
+		for (SciDBArray array : Arrays.asList(flat, multiDimensional)) {
+			if (array != null && array.wasCreated()) {
+				createdArrays.add(array.getName());
+			}
+		}
+		return createdArrays;
+	}
+
+	/**
+	 * 
+	 * @return Names of all intermediate (flat) arrays.
+	 */
+	public Set<String> getIntermediateArrays() {
+		Set<String> intermediateArrays = new HashSet<>();
+		for (SciDBArray array : Arrays.asList(flat, multiDimensional)) {
+			if (array != null && array.isItermediate()) {
+				intermediateArrays.add(array.getName());
+			}
+		}
+		return intermediateArrays;
 	}
 
 }

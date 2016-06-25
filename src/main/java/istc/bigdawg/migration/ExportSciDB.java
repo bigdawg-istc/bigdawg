@@ -54,25 +54,28 @@ public class ExportSciDB implements Callable<Object> {
 		String saveCommandFinal = null;
 		if (!isBinary) {
 			String csvFormat = "csv+";
-			String array = arrays.getMultiDimensional();
+			String array = null;
+			if (arrays.getMultiDimensional() != null) {
+				array = arrays.getMultiDimensional().getName();
+			}
 			/* this is only a flat array so export only the attributes */
 			if (arrays.getFlat() != null) {
 				/* for flat array we export only the attributes */
 				csvFormat = "csv";
-				array = arrays.getFlat();
+				array = arrays.getFlat().getName();
 			}
 			saveCommandFinal = "save(" + array + ",'" + scidbFilePath + "',-2,'"
 					+ csvFormat + "')";
 		} else { /* this is the binary migration */
 			String array = null;
 			if (arrays.getMultiDimensional() != null) {
-				String multiDimArray = arrays.getMultiDimensional();
-				String flatArray = arrays.getFlat();
+				String multiDimArray = arrays.getMultiDimensional().getName();
+				String flatArray = arrays.getFlat().getName();
 				array = "store(redimension(" + multiDimArray + "," + flatArray
 						+ ")," + flatArray + ")";
 			} else {
 				/* only the flat array */
-				array = arrays.getFlat();
+				array = arrays.getFlat().getName();
 			}
 			saveCommand.append("save(" + array + ", '" + scidbFilePath + "'");
 			saveCommand.append(",-2,'");

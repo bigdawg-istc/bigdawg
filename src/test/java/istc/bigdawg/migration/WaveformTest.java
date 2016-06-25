@@ -88,8 +88,8 @@ public class WaveformTest {
 		long startTimeMigration = System.currentTimeMillis();
 		ExecutorService executor = Executors.newFixedThreadPool(1);
 		LoadSciDB loadExecutor = new LoadSciDB(conSciDB,
-				new SciDBArrays(array, null), "/tmp/scidb.bin",
-				"int64,int64,double");
+				new SciDBArrays(new SciDBArray(array, true, false), null),
+				"/tmp/scidb.bin", "int64,int64,double");
 		FutureTask<Object> loadTask = new FutureTask<Object>(loadExecutor);
 		executor.submit(loadTask);
 		String loadMessage = (String) loadTask.get();

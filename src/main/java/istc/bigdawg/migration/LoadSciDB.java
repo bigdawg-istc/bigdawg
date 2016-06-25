@@ -7,6 +7,7 @@ import java.sql.SQLException;
 
 import org.apache.log4j.Logger;
 
+import istc.bigdawg.database.ObjectMetaData;
 import istc.bigdawg.exceptions.UnsupportedTypeException;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
@@ -75,7 +76,6 @@ public class LoadSciDB implements Load {
 
 	public LoadSciDB(ConnectionInfo connectionTo, SciDBArrays arrays,
 			String scidbFilePath) {
-
 		this.migrationInfo = MigrationInfo.forConnectionTo(connectionTo);
 		this.arrays = arrays;
 		this.scidbFilePath = scidbFilePath;
@@ -161,7 +161,7 @@ public class LoadSciDB implements Load {
 			binaryFormatString = MigrationUtils
 					.getSciDBBinFormat(new PostgreSQLHandler(
 							(PostgreSQLConnectionInfo) migrationInfo
-									.getConnectionFrom()).getColumnsMetaData(
+									.getConnectionFrom()).getObjectMetaData(
 											migrationInfo.getObjectFrom()));
 			return binaryFormatString;
 		} else {
@@ -198,7 +198,12 @@ public class LoadSciDB implements Load {
 		SciDBHandler handler = new SciDBHandler(
 				migrationInfo.getConnectionTo());
 
-		// arrays = prepareFlatTargetArrays();
+		ObjectMetaData fromObjectMetaData = new PostgreSQLHandler(
+				migrationInfo.getConnectionFrom())
+						.getObjectMetaData(migrationInfo.getObjectFrom());
+
+		arrays = MigrationUtils.prepareFlatTargetArrays(migrationInfo,
+				fromObjectMetaData);
 		StringBuilder loadCommand = new StringBuilder(
 				"load(" + arrays.getFlat() + ", '" + scidbFilePath + "'");
 
