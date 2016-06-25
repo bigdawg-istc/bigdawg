@@ -57,7 +57,7 @@ public class Planner {
 		// use a walker
 		Set<CrossIslandPlanNode> nodeWalker = new HashSet<>(ciqp.getEntryNodes());
 		Set<CrossIslandPlanNode> nextGeneration;
-		Map<CrossIslandPlanNode, QueryResult> nodeToResult = new HashMap<>();
+		Map<CrossIslandPlanNode, ConnectionInfo> nodeToResult = new HashMap<>();
 		
 		Set<Integer> catalogSOD = new HashSet<>();
 		Map<ConnectionInfo, Collection<String>> tempTableSOD = new HashMap<>();
@@ -91,19 +91,27 @@ public class Planner {
 					}
 					
 					// get the source, and get the engine 
-					ConnectionInfo ci = CatalogViewer.getConnectionInfo(targetLoc);
+					ConnectionInfo ci = null;
+					if (targetLoc > 0) ci = CatalogViewer.getConnectionInfo(targetLoc);
+					else throw new Exception(String.format("\n\nNegative target loc: %s; requires resolution.\n\n", targetLoc));
 					String remoteName = processRemoteName(((CrossIslandCastNode)node).getSourceScope(), ((CrossIslandCastNode)node).getDestinationScope(), node.getName());
 					
+					logger.debug(String.format("\n\nnodeToResult: %s; source: %s\n\n", nodeToResult, source));
+					
 					logger.debug(String.format("Interisland Migration from %s at %s (%s) to %s at %s (%s)"
-							, source.getName(), nodeToResult.get(source).getConnectionInfo().getHost()+":"+nodeToResult.get(source).getConnectionInfo().getPort(), nodeToResult.get(source).getConnectionInfo().getClass().getSimpleName()
-							, remoteName, ci.getHost()+":"+ci.getPort(), ci.getClass().getSimpleName()));
+							, source.getName()
+							, nodeToResult.get(source).getHost()+":"+nodeToResult.get(source).getPort()
+							, nodeToResult.get(source).getClass().getSimpleName()
+							, remoteName
+							, ci.getHost()+":"+ci.getPort()
+							, ci.getClass().getSimpleName()));
 
 					// Create schema before migration 
 //					remoteSchemaCreation((CrossIslandCastNode)node, ci);
 					logger.debug(String.format("CAST query string: %s", node.getQueryString()));
 					
 					// migrate
-					Migrator.migrate(nodeToResult.get(source).getConnectionInfo(), source.getName(), ci, remoteName, new MigrationParams(node.getQueryString()));
+					Migrator.migrate(nodeToResult.get(source), source.getName(), ci, remoteName, new MigrationParams(node.getQueryString()));
 					
 					
 					// add to Table set of destruction
@@ -112,7 +120,7 @@ public class Planner {
 					
 					// add catalog entry of the temp table, add to catalog set of destruction
 					// unsafe use of ""
-					catalogSOD.add(CatalogModifier.addObject(remoteName, "", sourceLoc, targetLoc));
+					catalogSOD.add(CatalogModifier.addObject(remoteName, "", sourceLoc, targetLoc)); //TODO find the correct DBID for source
 					
 					// add target to the next gen
 					nextGeneration.add(target);
@@ -134,7 +142,7 @@ public class Planner {
 					
 					// EXECUTE THE RESULT SUB RESULT
 					logger.debug("Executing query cross-island subquery "+node+"...");
-					nodeToResult.put(node, Executor.executePlan(qep, ciqn.getSignature(), choice));
+					nodeToResult.put(node, Executor.executePlan(qep, ciqn.getSignature(), choice).getConnectionInfo());
 					
 				}
 				// add the child node to nextGen

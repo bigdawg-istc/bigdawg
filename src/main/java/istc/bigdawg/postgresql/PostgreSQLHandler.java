@@ -24,6 +24,7 @@ import istc.bigdawg.BDConstants.Shim;
 import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.database.AttributeMetaData;
 import istc.bigdawg.executor.ExecutorEngine;
+import istc.bigdawg.executor.IslandQueryResult;
 import istc.bigdawg.executor.JdbcQueryResult;
 import istc.bigdawg.executor.QueryResult;
 import istc.bigdawg.properties.BigDawgConfigProperties;
@@ -321,7 +322,7 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 				rs = st.getResultSet();
 				return Optional.of(new JdbcQueryResult(rs, this.conInfo));
 			} else {
-				return Optional.empty();
+				return Optional.of(new IslandQueryResult(this.conInfo));
 			}
 		} catch (SQLException ex) {
 			Logger lgr = Logger.getLogger(QueryClient.class.getName());
@@ -661,9 +662,9 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 			 * before the first record or if there are no rows in the result set
 			 */
 			if (!resultSet.isBeforeFirst()) {
-				throw new IllegalArgumentException(
-						"No results were found for the table: "
-								+ schemaTable.getFullName());
+				throw new IllegalArgumentException(String.format(
+						"No results were found for the table: %s; connection: %s",
+								schemaTable.getFullName(), this.getConnection().getMetaData()));
 			}
 			while (resultSet.next()) {
 				AttributeMetaData columnMetaData = new AttributeMetaData(
