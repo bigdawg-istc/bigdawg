@@ -37,8 +37,8 @@ public class FromSStoreToPostgres
         }
         FromSStoreToPostgresImplementation migrator = new FromSStoreToPostgresImplementation(
         		connectionFrom, fromTable, connectionTo, toTable);
-        return migrator.migrate();
-//        return migrator.migrateBin();
+//        return migrator.migrate();
+        return migrator.migrateBin();
     }
 
     @Override

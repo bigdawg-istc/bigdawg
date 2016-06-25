@@ -18,7 +18,6 @@ import javax.ws.rs.core.Response;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.voltdb.VoltTable;
 
 import istc.bigdawg.BDConstants.Shim;
 import istc.bigdawg.catalog.CatalogViewer;
@@ -422,7 +421,10 @@ public class SStoreSQLHandler implements DBHandler {
 		statement.setString(2, tableName);
 		statement.setString(3, trim);
 		statement.setString(4, outputFile);
-		statement.executeQuery();
+		ResultSet rs = statement.executeQuery();
+		rs.next();
+		countExtractedRows = rs.getLong(1);
+		rs.close();
 		statement.close();
 	} catch (SQLException ex) {
 		ex.printStackTrace();
@@ -436,13 +438,6 @@ public class SStoreSQLHandler implements DBHandler {
 			statement.close();
 		}
 	}
-	// Currently the VoltDBEngine does not return the number of rows extracted,
-	// so we do a workaround here.
-	Statement st = connection.createStatement();
-	ResultSet rs = st.executeQuery("SELECT count(*) AS rowcount FROM " + tableName);
-	rs.next();
-	countExtractedRows = rs.getLong("rowcount");
-	rs.close();
 	return countExtractedRows;
     }
     
