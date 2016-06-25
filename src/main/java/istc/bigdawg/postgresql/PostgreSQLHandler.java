@@ -639,7 +639,7 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 								+ "data_type, character_maximum_length, "
 								+ "numeric_precision, numeric_scale "
 								+ "FROM information_schema.columns "
-								+ "WHERE table_schema=? and table_name=?"
+								+ "WHERE table_schema=? and table_name ilike ?"
 								+ " order by ordinal_position;");
 				preparedSt.setString(1, schemaTable.getSchemaName());
 				preparedSt.setString(2, schemaTable.getTableName());
@@ -664,7 +664,7 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 			if (!resultSet.isBeforeFirst()) {
 				throw new IllegalArgumentException(String.format(
 						"No results were found for the table: %s; connection: %s",
-								schemaTable.getFullName(), this.getConnection().getMetaData()));
+								schemaTable.getFullName(), this.conInfo));
 			}
 			while (resultSet.next()) {
 				AttributeMetaData columnMetaData = new AttributeMetaData(
