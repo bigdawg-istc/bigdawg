@@ -116,7 +116,10 @@ public class Planner {
 					
 					// add to Table set of destruction
 					if (!tempTableSOD.containsKey(ci)) tempTableSOD.put(ci, new HashSet<>());
+					if (!tempTableSOD.containsKey(nodeToResult.get(source))) tempTableSOD.put(nodeToResult.get(source), new HashSet<>());
+					tempTableSOD.get(nodeToResult.get(source)).add(source.getName());
 					tempTableSOD.get(ci).add(remoteName);
+					
 					
 					// add catalog entry of the temp table, add to catalog set of destruction
 					// unsafe use of ""
