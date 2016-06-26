@@ -185,7 +185,8 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 		    		
 		    		List<CrossIslandPlanNode> temp = nodeStack.pop();
 		    		if (lastLevel <= parenLevel) {
-		    			nodeStack.peek().add(newNode);
+		    			if (!nodeStack.isEmpty()) 
+		    				nodeStack.peek().add(newNode);
 		    		} else if (lastLevel > parenLevel ) {//+ 1) {
 		    			for (CrossIslandPlanNode p : temp) {
 	    					// create new edge
