@@ -22,7 +22,7 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 	 */
 	private static final long serialVersionUID = -3609729432970736589L;
 //	private Map<String, Operator> terminalOperatorsForSchemas;
-	private Map<String, String> transitionSchemas;
+	private Stack<Map<String, String>> transitionSchemas;
 	private Set<CrossIslandPlanNode> entryNode;
 	private CrossIslandPlanNode terminalNode;
 	private static final String outputToken  = "A_OUTPUT";
@@ -108,7 +108,7 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 	public CrossIslandQueryPlan(String userinput) throws Exception {
 		this();
 //		terminalOperatorsForSchemas = new HashMap<>();
-		transitionSchemas = new HashMap<>();
+		transitionSchemas = new Stack<>();
 		entryNode = new HashSet<>();
 		addNodes(userinput);
 	};
@@ -150,6 +150,7 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 	    		// add parse level
 	    		parenLevel += 1;
 	    		stkparen.push(parenLevel);
+	    		transitionSchemas.push(new HashMap<>());
 	    	} else if (userinput.charAt(matcher.start()) == '(') {
 	    		parenLevel += 1;
 	    	} else {
@@ -274,11 +275,11 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 					((CrossIslandCastNode)newNode).setDestinationScope(IslandsAndCast.convertDestinationScope(islandQuery.substring(castSourceScopeMatcher.start(), castSourceScopeMatcher.end())));
 				} 
 				
-				transitionSchemas.put(newNode.getName(), IslandsAndCast.getCreationQuery(outterScope, newNode.getName(), islandQuery.substring(castSchemaMatcher.start(), castSchemaMatcher.end())));
+				transitionSchemas.pop();
+				transitionSchemas.peek().put(newNode.getName(), IslandsAndCast.getCreationQuery(outterScope, newNode.getName(), islandQuery.substring(castSchemaMatcher.start(), castSchemaMatcher.end())));
 				
 			} else {
-				newNode = new CrossIslandQueryNode(thisScope, islandQuery, name, transitionSchemas);
-//				terminalOperatorsForSchemas.put(name, ((CrossIslandQueryNode)newNode).getRemainder(0)); 
+				newNode = new CrossIslandQueryNode(thisScope, islandQuery, name, transitionSchemas.pop());
 			}
 			
 		} else 
@@ -298,7 +299,7 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 //		return terminalOperatorsForSchemas;
 //	}
 	
-	public Map<String, String> getTransitionSchemas() {
+	public Stack<Map<String, String>> getTransitionSchemas() {
 		return transitionSchemas;
 	}
 	

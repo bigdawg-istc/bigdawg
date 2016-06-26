@@ -1149,7 +1149,7 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 	
 	@Override
 	public String toString() {
-		return String.format("(CIQN %s (children %s) ", name, children);
+		return String.format("(CIQN %s (children %s)) ", name, children);
 	}
 	
 	private void populatePredicateConnectionSets(Map<Pair<String, String>, String> jp, Map<Pair<String, String>, String> jf) {
