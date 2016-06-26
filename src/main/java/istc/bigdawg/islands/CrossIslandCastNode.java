@@ -29,4 +29,8 @@ public class CrossIslandCastNode extends CrossIslandPlanNode {
 		else return source.get(0);
 	}
 	
+	@Override
+	public String toString() {
+		return String.format("(CICN %s to %s)", sourceScope.name(), destinationScope.name());
+	}
 }

@@ -21,7 +21,6 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 	 * 
 	 */
 	private static final long serialVersionUID = -3609729432970736589L;
-//	private Map<String, Operator> terminalOperatorsForSchemas;
 	private Stack<Map<String, String>> transitionSchemas;
 	private Set<CrossIslandPlanNode> entryNode;
 	private CrossIslandPlanNode terminalNode;
@@ -115,23 +114,22 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 	
 	public void addNodes(String userinput) throws Exception {
 
-		Pattern mark							= Pattern.compile("(?i)(bdrel\\(|bdarray\\(|bdtext\\(|bdgraph\\(|bdstream\\(|bdcast\\(|\\(|\\))");
-		Matcher matcher							= mark.matcher(userinput);
+		Pattern mark								= Pattern.compile("(?i)(bdrel\\(|bdarray\\(|bdtext\\(|bdgraph\\(|bdstream\\(|bdcast\\(|\\(|\\))");
+		Matcher matcher								= mark.matcher(userinput);
 		
-	    Stack<String> stkwrite					= new Stack<>();
-	    Stack<Integer> stkparen					= new Stack<>();
-	    Stack<Scope> lastScopes					= new Stack<>();
-//	    Set<Integer> catalogSOD					= new HashSet<>();
+	    Stack<String> stkwrite						= new Stack<>();
+	    Stack<Integer> stkparen						= new Stack<>();
+	    Stack<Scope> lastScopes						= new Stack<>();
 	    
 	    // nodes in the last level
-	    List<CrossIslandPlanNode> lp			= new ArrayList<>();
-	    int lastLevel							= 0; 
-	    Scope thisScope							= null;
-	    Scope innerScope						= null;
+	    Stack<List<CrossIslandPlanNode>> nodeStack	= new Stack<>();
+	    int lastLevel								= 0; 
+	    Scope thisScope								= null;
+	    Scope innerScope							= null;
 	    
-	    int extractionCounter 					= 0;
-	    int parenLevel							= 0;
-	    int lastStop							= 0;	// location of the place where it stopped last iteration
+	    int extractionCounter 						= 0;
+	    int parenLevel								= 0;
+	    int lastStop								= 0;	// location of the place where it stopped last iteration
 	    
 	    stkwrite.push("");
 	    stkparen.push(parenLevel);						// records level of parenthesis
@@ -151,6 +149,7 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 	    		parenLevel += 1;
 	    		stkparen.push(parenLevel);
 	    		transitionSchemas.push(new HashMap<>());
+	    		nodeStack.push(new ArrayList<>());
 	    	} else if (userinput.charAt(matcher.start()) == '(') {
 	    		parenLevel += 1;
 	    	} else {
@@ -179,42 +178,22 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 		    		// otherwise if lastLevel is the same, then add this one
 		    		// otherwise complain
 		    		this.addVertex(newNode);
-		    		if (lp.isEmpty()) 
+		    		if (nodeStack.peek().isEmpty()) 
 		    			entryNode.add(newNode);
 		    		if (name.equals(getOutputToken()))
 		    			terminalNode = newNode;
 		    		
+		    		List<CrossIslandPlanNode> temp = nodeStack.pop();
 		    		if (lastLevel <= parenLevel) {
-		    			lp.add(newNode);
+		    			nodeStack.peek().add(newNode);
 		    		} else if (lastLevel > parenLevel ) {//+ 1) {
-		    			for (CrossIslandPlanNode p : lp) 
-		    				try {
-		    					// create new edge
-								this.addDagEdge(p, newNode);
-								
-								// dealing with source scope of cast, 
-								if (newNode instanceof CrossIslandCastNode && ((CrossIslandCastNode)newNode).sourceScope.equals(Scope.CAST)) {
-									newNode.setSourceScope(p.getSourceScope());
-								} 	
-								
-								// we assume that chaining CAST does not happen
-								if (p instanceof CrossIslandCastNode && ((CrossIslandCastNode)p).destinationScope.equals(Scope.CAST)) {
-									((CrossIslandCastNode)p).setDestinationScope(newNode.getSourceScope());
-								}
-								
-							} catch (CycleFoundException e) {
-								e.printStackTrace();
-							}
-		    			lp.clear();
-		    			lp.add(newNode);
+		    			for (CrossIslandPlanNode p : temp) {
+	    					// create new edge
+							this.addDagEdge(p, newNode);
+		    			}
+		    			if (!nodeStack.isEmpty()) 
+		    				nodeStack.peek().add(newNode);
 		    		} 
-//		    		else { // lastLevel > parenLevel, not supposed to happen 
-//		    			
-//		    			System.out.printf("<>   <>   Complain: %s| %s| %s| %s| %s;\n", newNode, parenLevel, lastLevel, stkparen, lp.size());
-//		    			for (CrossIslandPlanNode c : lp) {
-//		    				System.out.printf("--> %s, %s\n", c.name, c.queryString);
-//		    			}
-//		    		}
 		    		
 		    		lastLevel = parenLevel;
 		    		// NEW END
@@ -232,11 +211,6 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 	    	}
 	    }
 		
-	    
-	    // clean up
-//	    for (Integer i : catalogSOD) {
-//			CatalogModifier.deleteObject(i);
-//		}
 	}
 	
 	private CrossIslandPlanNode createVertex(String name, String rawQueryString, Scope thisScope, Scope innerScope, Scope outterScope) throws Exception{
@@ -313,6 +287,29 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 	
 	public static String getOutputToken () {
 		return new String (outputToken);
+	}
+	
+	@Override
+	public String toString() {
+		
+		StringBuilder sb = new StringBuilder();
+		
+		Set<CrossIslandPlanNode> nodeList = new HashSet<>();
+		nodeList.addAll(this.getEntryNodes());
+		while (!nodeList.isEmpty()) {
+			Set<CrossIslandPlanNode> nextGen = new HashSet<>();
+			
+			for (CrossIslandPlanNode n : nodeList) {
+				for (DefaultEdge e : this.edgesOf(n)) {
+					if (this.getEdgeTarget(e) == n)  continue;
+					sb.append('(').append(this.getEdgeSource(e)).append(" -> ").append(this.getEdgeTarget(e)).append(")\n");
+					nextGen.add(this.getEdgeTarget(e));
+				}
+			}
+			
+			nodeList = nextGen; 
+		}
+		return sb.toString();
 	}
 	
 }

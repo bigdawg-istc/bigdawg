@@ -113,11 +113,8 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 		
 	}
 	
-//	private void createTableForPlanning(Map<String, Operator> rootsForSchemas) throws Exception {
 	private void createTableForPlanning(Map<String, String> transitionSchemas) throws Exception {
 
-		// NEW METHOD
-		
 		if (sourceScope.equals(Scope.RELATIONAL)) {
 			dbSchemaHandler = new PostgreSQLHandler((PostgreSQLConnectionInfo)CatalogViewer.getConnectionInfo(psqlSchemaHandlerDBID));
 			for (String key : transitionSchemas.keySet()) 
@@ -133,32 +130,7 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 				}
 		} else
 			throw new Exception("Unsupported island code : "+sourceScope.toString());
-		// NEW METHOD END
 		
-//		OperatorVisitor gen = null;
-//		
-//		// create new tables or arrays for planning use
-//		if (sourceScope.equals(Scope.RELATIONAL)) {
-//			this.select = (Select) CCJSqlParserUtil.parse(queryString);
-//			dbSchemaHandler = new PostgreSQLHandler(psqlSchemaHandlerDBID);
-//			gen = new SQLQueryGenerator();
-//			for (String key : transitionSchemas.keySet()) {
-//				if (children.contains(key)) {
-//					System.out.println("key: "+key+"; query: "+gen.generateCreateStatementLocally(transitionSchemas.get(key), key)+"\n\n");
-//					((PostgreSQLHandler)dbSchemaHandler).executeStatementPostgreSQL(gen.generateCreateStatementLocally(transitionSchemas.get(key), key));
-//				}
-//			}
-//		} else if (sourceScope.equals(Scope.ARRAY)) {
-//			dbSchemaHandler = new SciDBHandler(scidbSchemaHandlerDBID);
-//			gen = new AFLQueryGenerator();
-//			for (String key : transitionSchemas.keySet()) {
-//				if (children.contains(key)) {
-//					System.out.println("key: "+key+"; query: "+gen.generateCreateStatementLocally(transitionSchemas.get(key), key)+"\n\n");
-//					((SciDBHandler)dbSchemaHandler).executeStatement(gen.generateCreateStatementLocally(transitionSchemas.get(key), key));
-//				}
-//			}
-//		} else
-//			throw new Exception("Unsupported island code : "+sourceScope.toString());
 	}
 	
 //	private void removeTemporaryTableCreatedForPlanning(Map<String, Operator> rootsForSchemas) throws Exception {
@@ -185,28 +157,15 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 		return offsprings;
 		// NEW METHOD END
 		
-//		// aka find children
-//		
-//		tagMatcher = Pattern.compile("\\bBIGDAWGTAG_[0-9]+\\b").matcher(queryString);
-//		Set<String> offsprings = new HashSet<>();
-//		
-//		while (tagMatcher.find()) {
-//			offsprings.add(queryString.substring(tagMatcher.start(), tagMatcher.end()));
-//		}
-//		
-//		return offsprings;
 	}
 	
 	public QueryExecutionPlan getQEP(int perm, boolean isSelect) throws Exception {
-		
-		
 		
 		// use perm to pick a specific permutation
 		if (perm >= remainderPermutations.size()) throw new Exception ("Permutation reference index out of bound");
 		
 		QueryExecutionPlan qep = new QueryExecutionPlan(sourceScope); 
 		ExecutionNodeFactory.addNodesAndEdges(qep, remainderPermutations.get(perm), remainderLoc, queryContainer, isSelect, name);
-//		ExecutionNodeFactory.addNodesAndEdgesNaive( qep, remainderPermutations.get(perm), remainderLoc, queryContainer);
 		
 		return qep;
 	}
@@ -236,18 +195,18 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 		// SUPPORT OTHER ISLANDS && ISLAND CHECK 
 		
 		Operator root = null;
-		List<String> objs = null;
+		List<String> objs = new ArrayList<>();
 		
-		System.out.println("Original query to be parsed: \n"+queryString);
+//		System.out.println("Original query to be parsed: \n"+queryString);
 		
 		if (getSourceScope().equals(Scope.RELATIONAL)) {
 			SQLQueryPlan queryPlan = SQLPlanParser.extractDirect((PostgreSQLHandler)dbSchemaHandler, queryString);
 			root = queryPlan.getRootNode();
-			objs = new ArrayList<>(RelationalSignatureBuilder.sig2(queryString));
+			objs.addAll(RelationalSignatureBuilder.sig2(queryString));
 		} else if (getSourceScope().equals(Scope.ARRAY)) {
 			AFLQueryPlan queryPlan = AFLPlanParser.extractDirect((SciDBHandler)dbSchemaHandler, queryString);
 			root = queryPlan.getRootNode();
-			objs = new ArrayList<>(ArraySignatureBuilder.sig2(queryString));
+			objs.addAll(ArraySignatureBuilder.sig2(queryString));
 		} else 
 			throw new Exception("Unsupported island code: "+getSourceScope().toString());
 
@@ -931,7 +890,7 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 			
 			if ( transitionSchemas.containsKey(((SeqScan) node).getFullyQualifiedName())){
 				
-				System.out.print("--> transitionSchema marked\n");
+				System.out.printf("--> transitionSchema marked: %s\n", ((SeqScan) node).getFullyQualifiedName());
 				
 				ret = new ArrayList<String>();
 				if (getSourceScope().equals(Scope.RELATIONAL))
@@ -1149,7 +1108,7 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 	
 	@Override
 	public String toString() {
-		return String.format("(CIQN %s (children %s)) ", name, children);
+		return String.format("(CIQN %s (children %s))", name, children);
 	}
 	
 	private void populatePredicateConnectionSets(Map<Pair<String, String>, String> jp, Map<Pair<String, String>, String> jf) {
