@@ -574,8 +574,10 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 		try {
 			con = SciDBHandler.getConnection(this.conInfo);
 			statement = con.createStatement();
-			for (String array: tables) statement.execute("drop array " + array);
-			con.commit();
+			for (String array: tables) {
+				statement.execute("drop array " + array);
+				con.commit();
+			}
 		} catch (SQLException ex) {
 			/*
 			 * it can be thrown when the target array did not exists which

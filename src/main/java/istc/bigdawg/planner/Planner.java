@@ -183,17 +183,21 @@ public class Planner {
 			Response responseHolder = compileResults(ciqp.getSerial(), Executor.executePlan(qep, ciqn.getSignature(), choice));
 			
 			Log.debug("Garbage collection starts; Next up: catalog entries");
+			Long time = System.currentTimeMillis();
 			// destruct
 			CatalogModifier.deleteMultipleObjects(catalogSOD);
+			Log.debug(String.format("Catalog entries cleaned, time passed: %s; Next up: tempTables", System.currentTimeMillis() - time));
 			for (ConnectionInfo c : tempTableSOD.keySet()) {
 	            final Collection<String> tables = tempTableSOD.get(c);
 //	            Collection<String> cs = c.getCleanupQuery(tables);
+	            Log.debug(String.format("removing %s on %s...", tables, c.getDatabase()));
 	            try {
 	            	c.getLocalQueryExecutor().cleanUp(tables);
 	            } catch (ConnectionInfo.LocalQueryExecutorLookupException e) {
 	                e.printStackTrace();
 	            }
 			}
+			Log.debug(String.format("Temp tables cleaned, time passed: %; clean up finished", System.currentTimeMillis() - time));
 			
 			return responseHolder;
 			
