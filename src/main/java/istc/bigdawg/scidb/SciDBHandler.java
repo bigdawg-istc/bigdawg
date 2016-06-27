@@ -569,35 +569,8 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 	 */
 	@Override
 	public void cleanUp(Collection<String> tables) throws Exception {
-		Connection con = null;
-		Statement statement = null;
-		try {
-			con = SciDBHandler.getConnection(this.conInfo);
-			statement = con.createStatement();
-			for (String array: tables) {
-				executeStatementSciDB(String.format("remove(%s)",array), Lang.AFL);
-				con.commit();
-			}
-		} catch (SQLException ex) {
-			/*
-			 * it can be thrown when the target array did not exists which
-			 * should be a default behavior';
-			 */
-			if (ex.getMessage()
-					.contains("Some of the arrays '" + tables + "' do not exist.")) {
-				/* the array did not exist in the SciDB database */
-				return;
-			} else {
-				throw ex;
-			}
-		} finally {
-			if (statement != null) {
-				statement.close();
-			}
-			if (con != null) {
-				con.close();
-			}
-		}
+		for (String array: tables) execute("remove("+array+")");
+		commit();
 	};
 
 	/**

@@ -303,7 +303,13 @@ public class TrialsAndErrors {
 		s.add("newOrd");
 		
 		SciDBHandler h = new SciDBHandler(ci);
-		h.cleanUp(s);
+		Long time = System.currentTimeMillis();
+		h.executeStatementAFL("remove(ord)");
+		h.executeStatementAFL("remove(newOrd)");
+		h.commit();
+		
+//		h.cleanUp(s);
+		System.out.printf("Time it took: %s\n", System.currentTimeMillis() - time);
 	}
 	
 	
