@@ -197,7 +197,7 @@ public class Planner {
 	                e.printStackTrace();
 	            }
 			}
-			Log.debug(String.format("Temp tables cleaned, time passed: %; clean up finished", System.currentTimeMillis() - time));
+			Log.debug(String.format("Temp tables cleaned, time passed: %s; clean up finished", System.currentTimeMillis() - time));
 			
 			return responseHolder;
 			
