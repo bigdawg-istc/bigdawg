@@ -6,10 +6,14 @@ import istc.bigdawg.islands.IslandsAndCast.Scope;
 
 public class CrossIslandCastNode extends CrossIslandPlanNode {
 	
+	protected static int maxSerial = 0;
+	protected int serial; 
 	protected Scope destinationScope;
 	
 	public CrossIslandCastNode(Scope sourceScope, Scope destinationScope, String schemaFilling, String name) throws Exception {
 		super(sourceScope, schemaFilling, name);
+		maxSerial++;
+		serial = maxSerial;
 		this.destinationScope = destinationScope;
 		setQueryString(IslandsAndCast.getCreationQuery(destinationScope, name, schemaFilling));
 	}
@@ -31,6 +35,6 @@ public class CrossIslandCastNode extends CrossIslandPlanNode {
 	
 	@Override
 	public String toString() {
-		return String.format("(CICN %s to %s)", sourceScope.name(), destinationScope.name());
+		return String.format("(CICN_%s %s to %s)", serial, sourceScope.name(), destinationScope.name());
 	}
 }

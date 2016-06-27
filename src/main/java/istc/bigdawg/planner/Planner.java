@@ -188,10 +188,9 @@ public class Planner {
 			}
 			for (ConnectionInfo c : tempTableSOD.keySet()) {
 	            final Collection<String> tables = tempTableSOD.get(c);
-	            Collection<String> cs = c.getCleanupQuery(tables);
+//	            Collection<String> cs = c.getCleanupQuery(tables);
 	            try {
-	            	for (String s : cs)
-	            		c.getLocalQueryExecutor().execute(s);
+	            	c.getLocalQueryExecutor().cleanUp(tables);
 	            } catch (ConnectionInfo.LocalQueryExecutorLookupException e) {
 	                e.printStackTrace();
 	            }
@@ -201,40 +200,6 @@ public class Planner {
 			
 		}
 		
-		// NEW CODE 2 END
-		
-//		for (CrossIslandPlanNode k : ciqp.vertexSet()) {
-//			
-//			if (k.equals(CrossIslandQueryPlan.getOutputToken())) {
-//				// this is the root; save for later. 
-//				continue;
-//			}
-//			
-//			CrossIslandQueryNode ciqn = (CrossIslandQueryNode)k;
-//			int choice = getGetPerformanceAndPickTheBest(ciqn, isTrainingMode);
-//			
-//			
-//			// currently there should be just one island, therefore one child, root.
-//			QueryExecutionPlan qep = ((CrossIslandQueryNode)k).getQEP(choice, true);
-//			
-//			
-//			// EXECUTE THE RESULT SUB RESULT
-//			logger.debug("Executing query cross-island subquery "+k+"...");
-//			Executor.executePlan(qep, ciqn.getSignature(), choice);
-//			
-//		}
-//		
-//		CrossIslandQueryNode ciqn = (CrossIslandQueryNode)ciqp.getTerminalNode(); 
-//		int choice = getGetPerformanceAndPickTheBest(ciqn, isTrainingMode);
-//		
-//		
-//		// currently there should be just one island, therefore one child, root.
-//		QueryExecutionPlan qep = ((CrossIslandQueryNode)ciqp.getTerminalNode()).getQEP(choice, true);
-//		
-//		
-//		// EXECUTE THE RESULT
-//		logger.debug("Executing query execution tree...");
-//		return compileResults(ciqp.getSerial(), Executor.executePlan(qep, ciqn.getSignature(), choice));
 	}
 
 	private static String processRemoteName(Scope sourceScope, Scope destinationScope, String originalString) {

@@ -108,43 +108,6 @@ public class CatalogViewer {
 	}
 	
 	/**
-	 * takes a integer DBID, returns a 5-field ArrayList<String> that tells host, port, dbname, userid and password
-	 * 
-	 * @param cc
-	 * @param db_id
-	 * @return
-	 * @throws Exception
-	 */
-	@Deprecated
-	public static SciDBConnectionInfo getSciDBConnectionInfo(int db_id) throws Exception {
-		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
-		// input check
-		CatalogUtilities.checkConnection(cc);
-
-		SciDBConnectionInfo extraction = null;
-
-		ResultSet rs = cc.execRet(
-				"select dbid, db.engine_id, host, port, bin_path, userid, password "
-				+ "from catalog.databases db "
-				+ "join catalog.engines e on db.engine_id = e.eid "
-				+ "join catalog.scidbbinpaths sp on db.engine_id = sp.eid where dbid = "+db_id);
-		if (rs.next()) // String host, String port, String user, String password, String binPath
-			extraction = new SciDBConnectionInfo(rs.getString("host"), rs.getString("port"), 
-					rs.getString("userid"), rs.getString("password"), rs.getString("bin_path"));
-		else {
-			rs.close();
-			throw new Exception("SciDB Connection Info Not Found: "+db_id);
-		}
-			
-		if (rs.next()) {
-			throw new Exception("Non-unique DBID: "+db_id);
-		}
-		rs.close();
-
-		return extraction;
-	}
-	
-	/**
 	 * For each dbid, provide a CSV String of names of objects that reside on the database. 
 	 * @param cc
 	 * @param inputs
@@ -907,57 +870,6 @@ public class CatalogViewer {
 		return extraction;
 	}
 
-	/**
-	 * author: Adam Dziedzic
-	 * 
-	 * Get connection to a database based on engineId and dbId.
-	 * 
-	 * Deprecation notice: use getConnectionInfo(int) instead.
-	 * 
-	 * @param cc
-	 *            catalog with the connection to catalog to PostgreSQL
-	 * @param engineId
-	 *            - id of the database engine
-	 * @param dbId
-	 *            - id of a database in the engine
-	 * @return connection information
-	 * @throws Exception
-	 *             problem with the connection to the catalog or no data for the
-	 *             arguments in the catalog
-	 */
-	@Deprecated
-	public static PostgreSQLConnectionInfo getConnection(int dbId) throws Exception {
-		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
-		// TODO add cache for the connections (done by Adam)
-		CatalogUtilities.checkConnection(cc);
-		PreparedStatement stmt = cc.connection
-				.prepareStatement("SELECT host,port,databases.name as name,userid,password "
-						+ "FROM catalog.engines engines, catalog.databases databases "
-						+ "WHERE engines.eid=databases.engine_id and databases.dbid=?");
-		stmt.setInt(1, dbId);
-		ResultSet rs = null;
-		try {
-			rs = stmt.executeQuery();
-		} catch (SQLException e) {
-			String msg = "database access error; this method is called on a closed PreparedStatement or"
-					+ " the SQL statement does not return a ResultSet object";
-			logger.error(msg);
-			e.printStackTrace();
-			throw e;
-		}
-		if (rs.next() == false) {
-			String msg = "No results for the given dbId: " + dbId;
-			System.err.println(msg);
-			logger.error(msg);
-			throw new Exception(msg);
-		}
-		PostgreSQLConnectionInfo conInfo = new PostgreSQLConnectionInfo(rs.getString("host"), rs.getString("port"), rs.getString("name"),
-				rs.getString("userid"), rs.getString("password"));
-		return conInfo;
-	}
-
-	
-	
 	
 	/**
 	 * Used for updating catalog entries.

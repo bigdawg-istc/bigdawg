@@ -18,7 +18,6 @@ import istc.bigdawg.islands.PostgreSQL.utils.SQLPrepareQuery;
 import istc.bigdawg.islands.PostgreSQL.utils.SQLUtilities;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
-import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.Select;
 import net.sf.jsqlparser.statement.select.WithItem;
@@ -185,9 +184,9 @@ public class SQLQueryPerformance {
 
 		
 
-		Operator op;
+//		Operator op;
 		if(nodeType.equals("Sort") && skipSort) { // skip sort associated with GroupAggregate
-			op = childOps.get(0);
+//			op = childOps.get(0);
 			--skipSortCount;
 		}
 		else {
@@ -272,46 +271,5 @@ public class SQLQueryPerformance {
 		
 	}
 	
-	public static void main(String[] args) {
-
-		try {
-			String query = "select p.id as PID, genes.id as GeneID, avg(expr_value)/3 as weighted_expr_value from geo join go_matrix on geo.geneid = go_matrix.geneid join genes on geo.geneid = genes.id join patients p on p.id = geo.patientid where (p.id <= 10 or p.id >= 30) and genes.id < 10 and goid < 3 group by p.id, genes.id order by p.id, genes.id;";
-//			String query = "SELECT * FROM patients JOIN GEO on patients.id = GEO.patientid where id <= 10;";
-//			BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
-//			
-//			while (!query.toLowerCase().equals("exit")){
-				
-				System.out.println(query);
-				
-				Select select = (Select) CCJSqlParserUtil.parse(query);
-				
-				
-				PostgreSQLHandler psqlh = new PostgreSQLHandler(7); // genbase
-				
-				String XML = getXMLStringWithPerformance(psqlh, query);
-				
-				System.out.println("XML: "+XML+"\n");
-				
-				SQLQueryPerformance p = new SQLQueryPerformance(select);
-				p.parseXMLString(XML);
-				
-				System.out.println();
-				
-				for (String s1 : p.performanceInfos.keySet()) {
-					System.out.println(s1+": ");
-					for (String s2 : p.performanceInfos.get(s1).keySet()) {
-						System.out.println(" - "+s2+": "+p.performanceInfos.get(s1).get(s2));
-						
-					}
-				}
-				
-//				System.out.print("\nNext query: ");
-//				query = in.readLine();
-//				System.out.println();
-//			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		} 
-	}
 
 }

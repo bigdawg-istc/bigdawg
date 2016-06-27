@@ -10,10 +10,12 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import javax.ws.rs.core.Response;
 
@@ -71,10 +73,9 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 		}
 	}
 
-	@Deprecated
 	public PostgreSQLHandler(int dbId) throws Exception {
 		try {
-			this.conInfo = CatalogViewer.getConnection(dbId);
+			this.conInfo = (PostgreSQLConnectionInfo) CatalogViewer.getConnectionInfo(dbId);
 		} catch (Exception e) {
 			String msg = "Catalog chosen connection: " + conInfo.getHost() + " "
 					+ conInfo.getPort() + " " + conInfo.getDatabase() + " "
@@ -400,8 +401,7 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 			throws Exception {
 		try {
 			// this.getConnection();
-			con = getConnection(
-					CatalogViewer.getConnection(defaultSchemaServerDBID));
+			con = getConnection((PostgreSQLConnectionInfo) CatalogViewer.getConnectionInfo(defaultSchemaServerDBID));
 			st = con.createStatement();
 			// st.executeUpdate("set search_path to schemas; ");
 			ResultSet rs = st.executeQuery(query);
@@ -780,6 +780,12 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 		executeStatementPostgreSQL("drop schema if exists " + schemaName);
 	}
 
+	@Override
+	public void cleanUp(Collection<String> tables) throws Exception {
+		executeStatementPostgreSQL(String.join(" ", 
+				tables.stream().map(name -> String.format("drop table if exists %s;", name)).collect(Collectors.toSet())));
+	};
+	
 	/**
 	 * Drop a table.
 	 * 

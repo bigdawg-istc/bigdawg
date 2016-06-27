@@ -12,6 +12,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -81,7 +82,7 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 
 	public SciDBHandler(int dbid) {
 		try {
-			this.conInfo = CatalogViewer.getSciDBConnectionInfo(dbid);
+			this.conInfo = (SciDBConnectionInfo) CatalogViewer.getConnectionInfo(dbid);
 			this.connection = getConnection(conInfo);
 		} catch (Exception e) {
 			log.debug(
@@ -562,6 +563,40 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 		}
 		return String.copyValueOf(scidbTypesPattern);
 	}
+	
+	/**
+	 * This needs to be merged with the function below TODO
+	 */
+	@Override
+	public void cleanUp(Collection<String> tables) throws Exception {
+		Connection con = null;
+		Statement statement = null;
+		try {
+			con = SciDBHandler.getConnection(this.conInfo);
+			statement = con.createStatement();
+			for (String array: tables) statement.execute("drop array " + array);
+			con.commit();
+		} catch (SQLException ex) {
+			/*
+			 * it can be thrown when the target array did not exists which
+			 * should be a default behavior';
+			 */
+			if (ex.getMessage()
+					.contains("Some of the arrays '" + tables + "' do not exist.")) {
+				/* the array did not exist in the SciDB database */
+				return;
+			} else {
+				throw ex;
+			}
+		} finally {
+			if (statement != null) {
+				statement.close();
+			}
+			if (con != null) {
+				con.close();
+			}
+		}
+	};
 
 	/**
 	 * This is similar to dropArrayIfExists. The array is removed if it exists.
