@@ -299,16 +299,16 @@ public class TrialsAndErrors {
 		
 		ConnectionInfo ci = CatalogViewer.getConnectionInfo(6);
 		Set<String> s = new HashSet<>();
-		s.add("ord");
-		s.add("newOrd");
+		s.add("reg");
+		s.add("nat");
 		
 		SciDBHandler h = new SciDBHandler(ci);
 		Long time = System.currentTimeMillis();
-		h.executeStatementAFL("remove(ord)");
-		h.executeStatementAFL("remove(newOrd)");
-		h.commit();
+//		h.executeStatementAFL("remove(reg)");
+//		h.executeStatementAFL("remove(nat)");
+//		h.commit();
 		
-//		h.cleanUp(s);
+		h.cleanUp(s);
 		System.out.printf("Time it took: %s\n", System.currentTimeMillis() - time);
 	}
 	

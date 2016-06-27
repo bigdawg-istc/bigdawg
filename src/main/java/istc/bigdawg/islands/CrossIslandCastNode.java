@@ -15,7 +15,7 @@ public class CrossIslandCastNode extends CrossIslandPlanNode {
 		maxSerial++;
 		serial = maxSerial;
 		this.destinationScope = destinationScope;
-		setQueryString(IslandsAndCast.getCreationQuery(destinationScope, name, schemaFilling));
+		setQueryString(TheObjectThatResolvesAllDifferencesAmongTheIslands.getCreationQueryForCast(destinationScope, name, schemaFilling));
 	}
 
 	public Scope getDestinationScope() {

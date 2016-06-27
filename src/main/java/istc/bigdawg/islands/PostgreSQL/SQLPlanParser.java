@@ -104,7 +104,7 @@ public class SQLPlanParser {
 	}
 	
 	
-	public static SQLQueryPlan extractDirect(PostgreSQLHandler psqlh, String query) throws Exception {
+	public static SQLQueryPlan extractDirect(PostgreSQLHandler psqlh, String query) throws Exception  {
 
 		String explainQuery = SQLPrepareQuery.generateExplainQueryString(query);
 		

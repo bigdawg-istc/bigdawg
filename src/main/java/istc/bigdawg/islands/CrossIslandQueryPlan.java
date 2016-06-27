@@ -251,7 +251,7 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 				} 
 				
 				transitionSchemas.pop();
-				transitionSchemas.peek().put(newNode.getName(), IslandsAndCast.getCreationQuery(outterScope, newNode.getName(), islandQuery.substring(castSchemaMatcher.start(), castSchemaMatcher.end())));
+				transitionSchemas.peek().put(newNode.getName(), TheObjectThatResolvesAllDifferencesAmongTheIslands.getCreationQueryForCast(outterScope, newNode.getName(), islandQuery.substring(castSchemaMatcher.start(), castSchemaMatcher.end())));
 				
 			} else {
 				newNode = new CrossIslandQueryNode(thisScope, islandQuery, name, transitionSchemas.pop());

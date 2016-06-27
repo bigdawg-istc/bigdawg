@@ -11,12 +11,13 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import convenience.RTED;
-import istc.bigdawg.islands.QueryContainerForCommonDatabase;
+import istc.bigdawg.exceptions.BigDawgException;
+import istc.bigdawg.exceptions.UnsupportedIslandException;
 import istc.bigdawg.islands.IslandsAndCast.Scope;
+import istc.bigdawg.islands.QueryContainerForCommonDatabase;
+import istc.bigdawg.islands.TheObjectThatResolvesAllDifferencesAmongTheIslands;
 import istc.bigdawg.islands.PostgreSQL.utils.SQLExpressionUtils;
 import istc.bigdawg.islands.operators.Operator;
-import istc.bigdawg.signature.builder.ArraySignatureBuilder;
-import istc.bigdawg.signature.builder.RelationalSignatureBuilder;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Parenthesis;
@@ -52,15 +53,7 @@ public class Signature {
 	 */
 	public Signature(String query, Scope island, Operator root, Map<String, QueryContainerForCommonDatabase> container, Set<String> joinPredicates) throws Exception {
 
-		if (island.equals(Scope.RELATIONAL)){
-			//setSig2(RelationalSignatureBuilder.sig2(query));
-			setSig3(RelationalSignatureBuilder.sig3(query));
-		} else if (island.equals(Scope.ARRAY)) {
-			//setSig2(ArraySignatureBuilder.sig2(query));
-			setSig3(ArraySignatureBuilder.sig3(query));
-		} else {
-			throw new Exception("Invalid Signature island input: "+island);
-		}
+		setSig3(TheObjectThatResolvesAllDifferencesAmongTheIslands.getLiteralsAndConstantsSignature(island, query));
 		
 		objectExpressionMapping = new ArrayList<>();
 		if (container.isEmpty() ) {
@@ -86,11 +79,11 @@ public class Signature {
 	}
 	
 	
-	public Signature(String s) throws Exception{
+	public Signature(String s) throws BigDawgException {
 
 		List<String> parsed = Arrays.asList(s.split(fieldSeparatorRest));
 		if (parsed.size() != 5 && parsed.size() != 6) {
-			throw new Exception("Ill-formed input string; cannot recover signature; String: "+s);
+			throw new BigDawgException("Ill-formed input string; cannot recover signature; String: "+s);
 		}
 		try {
 			this.island = Scope.valueOf(parsed.get(0));
@@ -104,7 +97,7 @@ public class Signature {
 				this.sig4k = Arrays.asList(parsed.get(5).split(elementSeparatorRest));
 		} catch (Exception e) {
 			e.printStackTrace();
-			throw new Exception("Ill-formed input string; cannot recover signature; String: "+s);
+			throw new BigDawgException("Ill-formed input string; cannot recover signature; String: "+s);
 		}
 	}
 	
@@ -154,15 +147,8 @@ public class Signature {
 		this.sig3 = sig3;
 	}
 
-	public String getQuery() {
-		if (this.getIsland() == Scope.RELATIONAL){
-			return String.format("bdrel(%s);", query);
-		} else if (this.getIsland() == Scope.ARRAY){
-			return String.format("bdarray(%s);", query);
-		} else {
-			// TODO make a clause for each type of query
-			return query;
-		}
+	public String getQuery() throws UnsupportedIslandException {
+		return TheObjectThatResolvesAllDifferencesAmongTheIslands.getIslandStyleQuery(this.getIsland(), query);
 	}
 
 	public void setQuery(String query) {

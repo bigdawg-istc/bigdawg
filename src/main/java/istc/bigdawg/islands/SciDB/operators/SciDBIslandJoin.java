@@ -246,8 +246,8 @@ public class SciDBIslandJoin extends SciDBIslandOperator implements Join {
 	}
 	
 	@Override
-	public Join construct(Operator child0, Operator child1, JoinType jt, String joinPred, boolean isFilter) throws Exception {
-		throw new Exception("Unimplemented function construct(); class: "+this.getClass().getName());
+	public Join construct(Operator child0, Operator child1, JoinType jt, String joinPred, boolean isFilter) throws JSQLParserException {
+		return new SciDBIslandJoin((SciDBIslandOperator) child0, (SciDBIslandOperator) child1, jt, joinPred, isFilter);
 	};
 	
 

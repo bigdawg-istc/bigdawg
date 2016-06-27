@@ -1,6 +1,5 @@
 package istc.bigdawg.catalog;
 
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -8,9 +7,10 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
-import org.apache.log4j.Logger;
-
+import istc.bigdawg.exceptions.BigDawgCatalogException;
+import istc.bigdawg.exceptions.UnsupportedIslandException;
 import istc.bigdawg.islands.IslandsAndCast;
+import istc.bigdawg.islands.TheObjectThatResolvesAllDifferencesAmongTheIslands;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
@@ -19,7 +19,7 @@ public class CatalogViewer {
 	
 	static enum Engine {PostgreSQL, SciDB};
 
-	private static Logger logger = Logger.getLogger(CatalogViewer.class.getName());
+//	private static Logger logger = Logger.getLogger(CatalogViewer.class.getName());
 
 	/**
 	 * takes a integer DBID, returns a 5-field ArrayList<String> that tells host, port, dbname, userid and password
@@ -27,9 +27,10 @@ public class CatalogViewer {
 	 * @param cc
 	 * @param db_id
 	 * @return
+	 * @throws SQLException 
 	 * @throws Exception
 	 */
-	public static ConnectionInfo getConnectionInfo(int db_id) throws Exception {
+	public static ConnectionInfo getConnectionInfo(int db_id) throws BigDawgCatalogException, SQLException {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
 		CatalogUtilities.checkConnection(cc);
@@ -49,11 +50,11 @@ public class CatalogViewer {
 				e = Engine.SciDB;
 			else {
 				rs1.close();
-				throw new Exception("Unsupported engine: "+ engineString);
+				throw new BigDawgCatalogException("Unsupported engine: "+ engineString);
 			}
 		} else {
 			rs1.close();
-			throw new Exception("Connection Info Not Found: "+db_id);
+			throw new BigDawgCatalogException("Connection Info Not Found: "+db_id);
 		}
 		rs1.close();
 		
@@ -72,15 +73,15 @@ public class CatalogViewer {
 			if (rs2.next())
 				extraction = new SciDBConnectionInfo(rs2.getString("host"), rs2.getString("port"), rs2.getString("userid"), rs2.getString("password"), rs2.getString("bin_path"));
 		} else 
-			throw new Exception("This is not supposed to happen");
+			throw new BigDawgCatalogException("This is not supposed to happen");
 		
 		if (extraction == null) {
 			rs2.close();
-			throw new Exception("Connection Info Cannot Be Formulated: "+db_id);
+			throw new BigDawgCatalogException("Connection Info Cannot Be Formulated: "+db_id);
 		}
 			
 		if (rs2.next()) {
-			throw new Exception("Non-unique DBID: "+db_id);
+			throw new BigDawgCatalogException("Non-unique DBID: "+db_id);
 		}
 		rs2.close();
 
@@ -114,10 +115,10 @@ public class CatalogViewer {
 	 * @return HashMap<Integer, ArrayList<String>>
 	 * @throws Exception
 	 */
-	public static HashMap<Integer, List<String>> getDBMappingByDB (List<String> inputs) throws Exception {
+	public static HashMap<Integer, List<String>> getDBMappingByDB (List<String> inputs) throws BigDawgCatalogException, SQLException {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		CatalogUtilities.checkConnection(cc);
-		if (inputs.size() == 0) throw new Exception("Empty inputs from getDBMapping");
+		if (inputs.size() == 0) throw new BigDawgCatalogException("Empty inputs from getDBMapping");
 		
 		int len = inputs.size();
 		HashMap<Integer, List<String>> extraction = new HashMap<>();
@@ -145,28 +146,25 @@ public class CatalogViewer {
 	 * @param cc
 	 * @param inputs
 	 * @return HashMap<String,ArrayList<String>>
-	 * @throws Exception
+	 * @throws UnsupportedIslandException 
+	 * @throws SQLException 
 	 */
-	public static HashMap<String,List<String>> getDBMappingByObj (List<String> inputs, IslandsAndCast.Scope scope) throws Exception {
+	public static HashMap<String,List<String>> getDBMappingByObj (List<String> inputs, IslandsAndCast.Scope scope) throws BigDawgCatalogException, UnsupportedIslandException, SQLException {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		
 		CatalogUtilities.checkConnection(cc);
-		if (inputs.size() == 0) throw new Exception("Empty inputs from getDBMapping");
+		if (inputs.size() == 0) throw new BigDawgCatalogException("Empty inputs from getDBMapping");
 		
 		int len = inputs.size();
 		HashMap<String, List<String>> extraction = new HashMap<>();
 		
 		String wherePred = new String(" (lower(o.name) = lower(\'"+ inputs.get(0) + "\') ");
 		for (int i = 1; i < len; i++) {
-			wherePred = wherePred + "or lower(o.name) = lower(\'" + inputs.get(i) + "\') ";
+			wherePred = wherePred + " or lower(o.name) = lower(\'" + inputs.get(i) + "\') ";
 		}
 		wherePred += ")";
 		
-		String islandName; 
-		if (scope == null) islandName = "";
-		else if (scope.equals(IslandsAndCast.Scope.RELATIONAL)) islandName = " AND scope_name = \'RELATIONAL\' ";
-		else if (scope.equals(IslandsAndCast.Scope.ARRAY)) islandName = " AND scope_name = \'ARRAY\' ";
-		else throw new Exception("Catalog: invalid scope from getDBMappingByObj: "+scope);
+		String islandName = TheObjectThatResolvesAllDifferencesAmongTheIslands.getCatalogIslandSelectionPredicate(scope); 
 		
 		ResultSet rs = cc.execRet("select o.name obj, string_agg(cast(physical_db as varchar), ',') db, count(o.name) c, scope_name island "
 								+ "from catalog.objects o "
@@ -194,9 +192,9 @@ public class CatalogViewer {
 	 * @param cc
 	 * @param csvstr
 	 * @return String of TSV String of object names (obj)
-	 * @throws Exception
+	 * @throws SQLException 
 	 */
-	public static String getObjectsFromList(String csvstr) throws Exception {
+	public static String getObjectsFromList(String csvstr) throws BigDawgCatalogException, SQLException {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		
 		// input check
@@ -231,9 +229,10 @@ public class CatalogViewer {
 	 * @param cc
 	 * @return ArrayList of TSV String of shim_id, island name, engine name and
 	 *         shim access_method
+	 * @throws SQLException 
 	 * @throws Exception
 	 */
-	public static List<String> getAllShims() throws Exception {
+	public static List<String> getAllShims() throws BigDawgCatalogException, SQLException {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
 		CatalogUtilities.checkConnection(cc);

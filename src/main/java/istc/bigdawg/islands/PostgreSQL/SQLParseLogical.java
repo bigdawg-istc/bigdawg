@@ -3,6 +3,7 @@ package istc.bigdawg.islands.PostgreSQL;
 import java.util.Iterator;
 import java.util.List;
 
+import istc.bigdawg.exceptions.BigDawgException;
 import istc.bigdawg.islands.PostgreSQL.utils.SQLPrepareQuery;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.select.PlainSelect;
@@ -39,7 +40,7 @@ public class SQLParseLogical {
 		else if (select.getSelectBody() instanceof SetOperationList)
 			supplement.setSelect((PlainSelect)(((SetOperationList)select.getSelectBody()).getSelects().get(0)));
 		else 
-			throw new Exception("Unsupported selectBody type: "+select.getSelectBody().getClass().getSimpleName());
+			throw new BigDawgException("Unsupported selectBody type: "+select.getSelectBody().getClass().getSimpleName());
 			
 		
 		SQLHandler deparser = new SQLHandler(expressionSupplement, buffer, supplement);
