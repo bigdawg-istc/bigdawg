@@ -2,6 +2,7 @@ package istc.bigdawg.catalog;
 
 import java.sql.ResultSet;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * 
@@ -242,6 +243,24 @@ public class CatalogModifier {
 		CatalogUtilities.checkConnection(cc);
 		
     	cc.execNoRet("DELETE FROM catalog.objects WHERE oid = "+oid);
+
+        // commit
+		cc.commit();
+	}
+	
+	public static void deleteMultipleObjects(Set<Integer> oids) throws Exception {
+		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
+		
+		// check if cc is connected and length are correct 
+		CatalogUtilities.checkConnection(cc);
+		
+		StringBuilder sb = new StringBuilder();
+		sb.append("DELETE FROM catalog.objects WHERE oid in (");
+		for (Integer i : oids) sb.append(i).append(',');
+		cc.execNoRet(sb.deleteCharAt(sb.length()).append(')').toString());
+		
+//    	cc.execNoRet(String.format("DELETE FROM catalog.objects WHERE oid in (%s)"
+//    			, String.join(", ", oids.stream().map(i -> {return String.valueOf(i);}).collect(Collectors.toSet()))));
 
         // commit
 		cc.commit();

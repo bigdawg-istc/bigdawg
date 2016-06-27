@@ -182,10 +182,9 @@ public class Planner {
 			logger.debug("Executing query execution tree...");
 			Response responseHolder = compileResults(ciqp.getSerial(), Executor.executePlan(qep, ciqn.getSignature(), choice));
 			
+			Log.debug("Garbage collection starts; Next up: catalog entries");
 			// destruct
-			for (Integer i : catalogSOD) {
-				CatalogModifier.deleteObject(i);
-			}
+			CatalogModifier.deleteMultipleObjects(catalogSOD);
 			for (ConnectionInfo c : tempTableSOD.keySet()) {
 	            final Collection<String> tables = tempTableSOD.get(c);
 //	            Collection<String> cs = c.getCleanupQuery(tables);
