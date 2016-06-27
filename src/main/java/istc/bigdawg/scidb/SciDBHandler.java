@@ -575,7 +575,7 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 			con = SciDBHandler.getConnection(this.conInfo);
 			statement = con.createStatement();
 			for (String array: tables) {
-				statement.execute("drop array " + array);
+				executeStatementSciDB(String.format("remove(%s)",array), Lang.AFL);
 				con.commit();
 			}
 		} catch (SQLException ex) {

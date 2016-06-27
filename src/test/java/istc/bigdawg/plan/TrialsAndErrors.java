@@ -41,6 +41,7 @@ public class TrialsAndErrors {
 	private static boolean runMapTrial = false;
 	private static boolean runSchemaGen = false;
 	private static boolean runMigration = false;
+	private static boolean runSciDBExecution = false;
 
 	@Before
 	public void setUp() throws Exception {
@@ -50,10 +51,11 @@ public class TrialsAndErrors {
 //		setupQueryBuilder();
 //		setupRegexTester();
 //		setupTreeWalker();
-		setupPlannerTester();
+//		setupPlannerTester();
 //		setupMapTrial();
 //		setupSchemaGenerator();
 //		setupMigrationTest();
+		setupSciDBExecution();
 	}
 	
 	public void setupQueryExplainer() {
@@ -86,6 +88,10 @@ public class TrialsAndErrors {
 	
 	public void setupMigrationTest() {
 		runMigration = true;
+	}
+	
+	public void setupSciDBExecution() {
+		runSciDBExecution = true;
 	}
 	
 
@@ -285,6 +291,19 @@ public class TrialsAndErrors {
 		
 		Migrator.migrate(ci1, "orders", ci2, "ord", new MigrationParams("CREATE ARRAY ORD <o_custkey:int64>[o_orderkey=0:10,10,0]"));
 		
+	}
+	
+	@Test
+	public void testSciDBExecution() throws Exception {
+		if ( !runSciDBExecution ) return;
+		
+		ConnectionInfo ci = CatalogViewer.getConnectionInfo(6);
+		Set<String> s = new HashSet<>();
+		s.add("ord");
+		s.add("newOrd");
+		
+		SciDBHandler h = new SciDBHandler(ci);
+		h.cleanUp(s);
 	}
 	
 	
