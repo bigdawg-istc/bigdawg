@@ -257,7 +257,7 @@ public class CatalogModifier {
 		StringBuilder sb = new StringBuilder();
 		sb.append("DELETE FROM catalog.objects WHERE oid in (");
 		for (Integer i : oids) sb.append(i).append(',');
-		cc.execNoRet(sb.deleteCharAt(sb.length()).append(')').toString());
+		cc.execNoRet(sb.deleteCharAt(sb.length() - 1).append(')').toString());
 		
 //    	cc.execNoRet(String.format("DELETE FROM catalog.objects WHERE oid in (%s)"
 //    			, String.join(", ", oids.stream().map(i -> {return String.valueOf(i);}).collect(Collectors.toSet()))));
