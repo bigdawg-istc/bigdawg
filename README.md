@@ -77,7 +77,7 @@ The main question is how we can handle many database instances. The idea is to s
 - go to bigdawgmiddle/installation (there are the scripts that we will use)
 - mkdir data
 - cd data
-- download mimic2.pgd to the data directory from [https://app.box.com/s/8by2c36m8bwxl9654bwf3mttdt25uu4k](Link URL)
+- download mimic2.pgd to the data directory from [BitBucket](https://bitbucket.org/adam-dziedzic/bigdawgdata/raw/6ade22253695bfeb33074e82929e83b52cb121f1/mimic2.pgd) or [box.com](https://app.box.com/s/8by2c36m8bwxl9654bwf3mttdt25uu4k).
 - run script: **bash setup.sh** (this script should be executed only once)
 - to stop the PostgreSQL instances run: bash stop_postgres.sh
 - to start the PostgreSQL instances run: bash start_postgres.sh
