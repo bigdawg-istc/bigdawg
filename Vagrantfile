@@ -7,13 +7,7 @@ VAGRANTFILE_API_VERSION = "2"
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.box = "ubuntu/trusty64"
 
-  # port forwarding so that the VM is accessible the local machine
-  config.vm.network "forwarded_port", guest: 8080, host: 8080
-
-  # postgres1 & postgres 2
-  config.vm.network "forwarded_port", guest: 5431, host: 5431
-  config.vm.network "forwarded_port", guest: 5430, host: 5430
-
+  config.vm.network "private_network", ip: "192.168.50.18"
   config.vm.hostname = "bigdawg-local.mit.edu"
   config.vm.provision "shell", path: "provisions/vagrant.sh"
 
