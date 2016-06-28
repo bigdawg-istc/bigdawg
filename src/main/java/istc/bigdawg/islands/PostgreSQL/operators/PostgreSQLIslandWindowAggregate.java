@@ -6,7 +6,7 @@ import java.util.Map;
 
 import istc.bigdawg.islands.DataObjectAttribute;
 import istc.bigdawg.islands.OperatorVisitor;
-import istc.bigdawg.islands.PostgreSQL.SQLOutItem;
+import istc.bigdawg.islands.PostgreSQL.SQLOutItemResolver;
 import istc.bigdawg.islands.PostgreSQL.SQLTableExpression;
 import istc.bigdawg.islands.operators.WindowAggregate;
 import net.sf.jsqlparser.expression.AnalyticExpression;
@@ -41,7 +41,7 @@ public class PostgreSQLIslandWindowAggregate extends PostgreSQLIslandOperator im
 		for(int i = 0; i < output.size(); ++i) {
 			String expr = output.get(i);
 				
-			SQLOutItem out = new SQLOutItem(expr, child.outSchema, supplement);
+			SQLOutItemResolver out = new SQLOutItemResolver(expr, child.outSchema, supplement);
 			DataObjectAttribute attr = out.getAttribute();
 			String alias = attr.getName();
 			

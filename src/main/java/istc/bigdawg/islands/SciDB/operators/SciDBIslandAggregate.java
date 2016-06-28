@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import istc.bigdawg.islands.CommonOutItem;
+import istc.bigdawg.islands.CommonOutItemResolver;
 import istc.bigdawg.islands.DataObjectAttribute;
 import istc.bigdawg.islands.OperatorVisitor;
 import istc.bigdawg.islands.PostgreSQL.utils.SQLExpressionUtils;
@@ -236,7 +236,7 @@ public class SciDBIslandAggregate extends SciDBIslandOperator implements Aggrega
 			
 //			System.out.printf("aggreagte output expression: %s, type: %s\n", expr, output.getAttributes().get(expr));
 			
-			CommonOutItem out = new CommonOutItem(expr, output.getAttributes().get(expr), false, null); // TODO CHECK THIS TODO
+			CommonOutItemResolver out = new CommonOutItemResolver(expr, output.getAttributes().get(expr), false, null); // TODO CHECK THIS TODO
 			DataObjectAttribute attr = out.getAttribute();
 			
 			if (aggFuns.get(expr) != null) attr.setExpression(aggFuns.get(expr));
@@ -251,7 +251,7 @@ public class SciDBIslandAggregate extends SciDBIslandOperator implements Aggrega
 		// dimensions
 		for (String expr : output.getDimensions().keySet()) {
 			
-			CommonOutItem out = new CommonOutItem(expr, "Dimension", true, null);
+			CommonOutItemResolver out = new CommonOutItemResolver(expr, "Dimension", true, null);
 			DataObjectAttribute dim = out.getAttribute();
 			
 			Column e = (Column) CCJSqlParserUtil.parseExpression(expr);

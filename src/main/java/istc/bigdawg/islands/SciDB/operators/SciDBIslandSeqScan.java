@@ -5,7 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import istc.bigdawg.islands.CommonOutItem;
+import istc.bigdawg.islands.CommonOutItemResolver;
 import istc.bigdawg.islands.DataObjectAttribute;
 import istc.bigdawg.islands.OperatorVisitor;
 import istc.bigdawg.islands.SciDB.SciDBArray;
@@ -95,7 +95,7 @@ public class SciDBIslandSeqScan extends SciDBIslandScan implements SeqScan {
 		// attributes
 		for (String expr : output.getAttributes().keySet()) {
 			
-			CommonOutItem out = new CommonOutItem(expr, output.getAttributes().get(expr), false, null);
+			CommonOutItemResolver out = new CommonOutItemResolver(expr, output.getAttributes().get(expr), false, null);
 			
 			DataObjectAttribute attr = out.getAttribute();
 			String alias = attr.getName();
@@ -109,7 +109,7 @@ public class SciDBIslandSeqScan extends SciDBIslandScan implements SeqScan {
 		// dimensions
 		for (String expr : output.getDimensions().keySet()) {
 			
-			CommonOutItem out = new CommonOutItem(expr, output.getDimensions().get(expr), true, null);
+			CommonOutItemResolver out = new CommonOutItemResolver(expr, output.getDimensions().get(expr), true, null);
 			
 			DataObjectAttribute dim = out.getAttribute();
 			String attrName = dim.getFullyQualifiedName();		

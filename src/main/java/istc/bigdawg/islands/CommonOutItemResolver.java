@@ -3,7 +3,7 @@ package istc.bigdawg.islands;
 import java.util.List;
 import java.util.Map;
 
-public class CommonOutItem {
+public class CommonOutItemResolver {
 
 	// takes in the content of a <Item> field in EXPLAIN xml 
 	// keeps track of fields referenced in expression for security level 
@@ -23,7 +23,7 @@ public class CommonOutItem {
 	protected DataObjectAttribute outAttribute;
 	
 	
-	public CommonOutItem(String alias, String type, boolean hidden, Map<String, DataObjectAttribute> srcSchema) throws Exception {
+	public CommonOutItemResolver(String alias, String type, boolean hidden, Map<String, DataObjectAttribute> srcSchema) throws Exception {
 		
 		outAttribute = new DataObjectAttribute();
 		
@@ -59,7 +59,7 @@ public class CommonOutItem {
 		
 	}
 	
-	public CommonOutItem() {
+	public CommonOutItemResolver() {
 		
 	}
 	

@@ -10,7 +10,7 @@ import java.util.Set;
 import org.apache.jcp.xml.dsig.internal.dom.Utils;
 
 import istc.bigdawg.islands.OperatorVisitor;
-import istc.bigdawg.islands.PostgreSQL.SQLOutItem;
+import istc.bigdawg.islands.PostgreSQL.SQLOutItemResolver;
 import istc.bigdawg.islands.PostgreSQL.SQLTableExpression;
 import istc.bigdawg.islands.PostgreSQL.utils.SQLAttribute;
 import istc.bigdawg.islands.PostgreSQL.utils.SQLExpressionUtils;
@@ -77,7 +77,7 @@ public class PostgreSQLIslandAggregate extends PostgreSQLIslandOperator implemen
 		for(int i = 0; i < output.size(); ++i) {
 			String expr = output.get(i);
 
-			SQLOutItem out = new SQLOutItem(expr, child.outSchema, supplement); // TODO CHECK THIS TODO
+			SQLOutItemResolver out = new SQLOutItemResolver(expr, child.outSchema, supplement); // TODO CHECK THIS TODO
 			SQLAttribute attr = out.getAttribute();
 //			attr.setExpression(rewriteComplextOutItem(attr.getExpressionString()));
 			String attrName = attr.getName();

@@ -10,7 +10,7 @@ import java.util.Set;
 
 import istc.bigdawg.islands.DataObjectAttribute;
 import istc.bigdawg.islands.OperatorVisitor;
-import istc.bigdawg.islands.PostgreSQL.SQLOutItem;
+import istc.bigdawg.islands.PostgreSQL.SQLOutItemResolver;
 import istc.bigdawg.islands.PostgreSQL.SQLTableExpression;
 import istc.bigdawg.islands.PostgreSQL.utils.SQLExpressionUtils;
 import istc.bigdawg.islands.operators.Join;
@@ -65,7 +65,7 @@ public class PostgreSQLIslandJoin extends PostgreSQLIslandOperator implements Jo
 		for(int i = 0; i < output.size(); ++i) {
 			String expr = output.get(i);
 			
-			SQLOutItem out = new SQLOutItem(expr, srcSchema, supplement);
+			SQLOutItemResolver out = new SQLOutItemResolver(expr, srcSchema, supplement);
 
 			DataObjectAttribute attr = out.getAttribute();
 			

@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
-import istc.bigdawg.islands.CommonOutItem;
+import istc.bigdawg.islands.CommonOutItemResolver;
 import istc.bigdawg.islands.DataObjectAttribute;
 import istc.bigdawg.islands.PostgreSQL.utils.SQLAttribute;
 import istc.bigdawg.islands.PostgreSQL.utils.SQLExpressionUtils;
@@ -20,7 +20,7 @@ import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.create.table.ColDataType;
 import net.sf.jsqlparser.util.deparser.ExpressionDeParser;
 
-public class SQLOutItem extends CommonOutItem{
+public class SQLOutItemResolver extends CommonOutItemResolver {
 
 	// takes in the content of a <Item> field in EXPLAIN xml 
 	// keeps track of fields referenced in expression for security level 
@@ -37,7 +37,7 @@ public class SQLOutItem extends CommonOutItem{
 	private List<Function> aggregates;
 	private List<AnalyticExpression> windowedAggregates;
 	
-	public SQLOutItem(String expr,  Map<String, DataObjectAttribute> srcSchema, 
+	public SQLOutItemResolver(String expr,  Map<String, DataObjectAttribute> srcSchema, 
 			SQLTableExpression supplement) throws Exception {
 		super();
 		

@@ -10,7 +10,7 @@ import java.util.Set;
 
 import istc.bigdawg.islands.DataObjectAttribute;
 import istc.bigdawg.islands.OperatorVisitor;
-import istc.bigdawg.islands.PostgreSQL.SQLOutItem;
+import istc.bigdawg.islands.PostgreSQL.SQLOutItemResolver;
 import istc.bigdawg.islands.PostgreSQL.SQLQueryPlan;
 import istc.bigdawg.islands.PostgreSQL.SQLTableExpression;
 import istc.bigdawg.islands.PostgreSQL.utils.SQLAttribute;
@@ -59,7 +59,7 @@ public class PostgreSQLIslandCommonTableExpressionScan extends PostgreSQLIslandS
 			
 			String expr = output.get(i); // fully qualified name
 			
-			SQLOutItem out = new SQLOutItem(expr, cteSchema, supplement);
+			SQLOutItemResolver out = new SQLOutItemResolver(expr, cteSchema, supplement);
 			SQLAttribute sa =  out.getAttribute();
 			String alias = sa.getName(); // attr alias
 			

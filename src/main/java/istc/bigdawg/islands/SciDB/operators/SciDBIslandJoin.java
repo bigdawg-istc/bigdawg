@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import istc.bigdawg.islands.CommonOutItem;
+import istc.bigdawg.islands.CommonOutItemResolver;
 import istc.bigdawg.islands.DataObjectAttribute;
 import istc.bigdawg.islands.OperatorVisitor;
 import istc.bigdawg.islands.PostgreSQL.utils.SQLExpressionUtils;
@@ -132,7 +132,7 @@ public class SciDBIslandJoin extends SciDBIslandOperator implements Join {
 		// attributes
 		for (String expr : output.getAttributes().keySet()) {
 			
-			CommonOutItem out = new CommonOutItem(expr, output.getAttributes().get(expr), false, srcSchema);
+			CommonOutItemResolver out = new CommonOutItemResolver(expr, output.getAttributes().get(expr), false, srcSchema);
 			DataObjectAttribute attr = out.getAttribute();
 			String attrName = attr.getFullyQualifiedName();		
 			outSchema.put(attrName, attr);
@@ -142,7 +142,7 @@ public class SciDBIslandJoin extends SciDBIslandOperator implements Join {
 		// dimensions
 		for (String expr : output.getDimensions().keySet()) {
 			
-			CommonOutItem out = new CommonOutItem(expr, "Dimension", true, srcSchema);
+			CommonOutItemResolver out = new CommonOutItemResolver(expr, "Dimension", true, srcSchema);
 			DataObjectAttribute attr = out.getAttribute();
 			String attrName = attr.getFullyQualifiedName();		
 			outSchema.put(attrName, attr);

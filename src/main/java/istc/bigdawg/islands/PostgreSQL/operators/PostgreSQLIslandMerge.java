@@ -6,7 +6,7 @@ import java.util.Map;
 import java.util.Set;
 
 import istc.bigdawg.islands.OperatorVisitor;
-import istc.bigdawg.islands.PostgreSQL.SQLOutItem;
+import istc.bigdawg.islands.PostgreSQL.SQLOutItemResolver;
 import istc.bigdawg.islands.PostgreSQL.SQLTableExpression;
 import istc.bigdawg.islands.PostgreSQL.utils.SQLAttribute;
 import istc.bigdawg.islands.operators.Merge;
@@ -33,7 +33,7 @@ public class PostgreSQLIslandMerge extends PostgreSQLIslandOperator implements M
 			outSchema = new LinkedHashMap<>();
 			for(int i = 0; i < output.size(); ++i) {
 				String expr = output.get(i);
-				SQLOutItem out = new SQLOutItem(expr, childs.get(0).outSchema, supplement); // TODO CHECK THIS TODO
+				SQLOutItemResolver out = new SQLOutItemResolver(expr, childs.get(0).outSchema, supplement); // TODO CHECK THIS TODO
 				SQLAttribute attr = out.getAttribute();
 				String attrName = attr.getName();
 				outSchema.put(attrName, attr);

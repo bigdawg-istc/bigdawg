@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import istc.bigdawg.islands.CommonOutItem;
+import istc.bigdawg.islands.CommonOutItemResolver;
 import istc.bigdawg.islands.DataObjectAttribute;
 import istc.bigdawg.islands.OperatorVisitor;
 import istc.bigdawg.islands.SciDB.SciDBArray;
@@ -104,7 +104,7 @@ public class SciDBIslandWindowAggregate extends SciDBIslandOperator implements W
 		
 		
 		for (String expr : output.getAttributes().keySet()) {
-			CommonOutItem out = new CommonOutItem(expr, output.getAttributes().get(expr), false, null);
+			CommonOutItemResolver out = new CommonOutItemResolver(expr, output.getAttributes().get(expr), false, null);
 			DataObjectAttribute attr = out.getAttribute();
 			String alias = attr.getName();
 			
@@ -134,7 +134,7 @@ public class SciDBIslandWindowAggregate extends SciDBIslandOperator implements W
 		// dimensions
 		for (String expr : output.getDimensions().keySet()) {
 			
-			CommonOutItem out = new CommonOutItem(expr, "Dimension", true, null);
+			CommonOutItemResolver out = new CommonOutItemResolver(expr, "Dimension", true, null);
 			DataObjectAttribute attr = out.getAttribute();
 			String attrName = attr.getFullyQualifiedName();		
 			outSchema.put(attrName, attr);
