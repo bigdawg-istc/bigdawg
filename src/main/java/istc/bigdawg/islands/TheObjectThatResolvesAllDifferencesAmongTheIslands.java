@@ -37,17 +37,25 @@ import istc.bigdawg.signature.builder.ArraySignatureBuilder;
 import istc.bigdawg.signature.builder.RelationalSignatureBuilder;
 import net.sf.jsqlparser.JSQLParserException;
 
+/**
+ * @author Jack
+ * 
+ * This class should contain only static objects and functions. 
+ * It is intended to contain all functions that do different things when the island context is different.
+ * Island writers should go through each of these functions to add supports for their islands
+ *
+ */
 public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	
 	public static final int  psqlSchemaHandlerDBID = BigDawgConfigProperties.INSTANCE.getPostgresSchemaServerDBID();
 	public static final int  scidbSchemaHandlerDBID = BigDawgConfigProperties.INSTANCE.getSciDBSchemaServerDBID();
 	
-	private static Pattern predicatePattern = Pattern.compile("(?<=\\()([^\\(^\\)]+)(?=\\))");
+	private static final Pattern predicatePattern = Pattern.compile("(?<=\\()([^\\(^\\)]+)(?=\\))");
 	
 	/**
-	 * For Executor
+	 * For Executor.
 	 * @param scope
-	 * @return
+	 * @return Instance of a query generator
 	 * @throws UnsupportedIslandException
 	 */
 	public static OperatorVisitor getQueryGenerator(Scope scope) throws UnsupportedIslandException {
@@ -57,9 +65,9 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	}
 	
 	/**
-	 * For Executor
+	 * For Catalog
 	 * @param scope
-	 * @return
+	 * @return A string in the form of " AND scope_name = 'RELATIONAL' ", where RELATIONAL is replaced by the island reference in the Catalog 
 	 * @throws UnsupportedIslandException
 	 */
 	public static String getCatalogIslandSelectionPredicate(Scope scope) throws UnsupportedIslandException {
