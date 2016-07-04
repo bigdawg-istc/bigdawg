@@ -1,4 +1,4 @@
-package istc.bigdawg.islands.PostgreSQL;
+package istc.bigdawg.islands.relational;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -9,16 +9,6 @@ import java.util.stream.Collectors;
 
 import istc.bigdawg.islands.DataObjectAttribute;
 import istc.bigdawg.islands.OperatorVisitor;
-import istc.bigdawg.islands.PostgreSQL.operators.PostgreSQLIslandAggregate;
-import istc.bigdawg.islands.PostgreSQL.operators.PostgreSQLIslandCommonTableExpressionScan;
-import istc.bigdawg.islands.PostgreSQL.operators.PostgreSQLIslandDistinct;
-import istc.bigdawg.islands.PostgreSQL.operators.PostgreSQLIslandJoin;
-import istc.bigdawg.islands.PostgreSQL.operators.PostgreSQLIslandLimit;
-import istc.bigdawg.islands.PostgreSQL.operators.PostgreSQLIslandOperator;
-import istc.bigdawg.islands.PostgreSQL.operators.PostgreSQLIslandScan;
-import istc.bigdawg.islands.PostgreSQL.operators.PostgreSQLIslandSort;
-import istc.bigdawg.islands.PostgreSQL.utils.SQLAttribute;
-import istc.bigdawg.islands.PostgreSQL.utils.SQLExpressionUtils;
 import istc.bigdawg.islands.operators.Aggregate;
 import istc.bigdawg.islands.operators.CommonTableExpressionScan;
 import istc.bigdawg.islands.operators.Distinct;
@@ -30,6 +20,16 @@ import istc.bigdawg.islands.operators.Scan;
 import istc.bigdawg.islands.operators.SeqScan;
 import istc.bigdawg.islands.operators.Sort;
 import istc.bigdawg.islands.operators.WindowAggregate;
+import istc.bigdawg.islands.relational.operators.SQLIslandAggregate;
+import istc.bigdawg.islands.relational.operators.SQLIslandCommonTableExpressionScan;
+import istc.bigdawg.islands.relational.operators.SQLIslandDistinct;
+import istc.bigdawg.islands.relational.operators.SQLIslandJoin;
+import istc.bigdawg.islands.relational.operators.SQLIslandLimit;
+import istc.bigdawg.islands.relational.operators.SQLIslandOperator;
+import istc.bigdawg.islands.relational.operators.SQLIslandScan;
+import istc.bigdawg.islands.relational.operators.SQLIslandSort;
+import istc.bigdawg.islands.relational.utils.SQLAttribute;
+import istc.bigdawg.islands.relational.utils.SQLExpressionUtils;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Alias;
 import net.sf.jsqlparser.expression.BinaryExpression;
@@ -105,7 +105,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 
 	@Override
 	public String generateStatementString() throws Exception {
-		postprocessSQLStatement((PostgreSQLIslandOperator)root);
+		postprocessSQLStatement((SQLIslandOperator)root);
 		return dstStatement.toString();
 	}
 	
@@ -120,7 +120,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	@Override
 	public void visit(Join joinOp) throws Exception {
 		
-		PostgreSQLIslandJoin join = (PostgreSQLIslandJoin) joinOp;
+		SQLIslandJoin join = (SQLIslandJoin) joinOp;
 		
 //		if (root == null) root = join; 
 		if (!isRoot && join.isPruned()) {
@@ -144,7 +144,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 		StringBuilder jf = new StringBuilder();
 		
     	if (join.generateJoinPredicate() != null) {
-    		jf.append(updateOnExpression(join.generateJoinPredicate(), (PostgreSQLIslandOperator) child0, (PostgreSQLIslandOperator) child1, t0, t1, true));
+    		jf.append(updateOnExpression(join.generateJoinPredicate(), (SQLIslandOperator) child0, (SQLIslandOperator) child1, t0, t1, true));
     	} else {
         	Map<String, String> child0ObjectMap = child0.getDataObjectAliasesOrNames();
         	Map<String, String> child1ObjectMap = child1.getDataObjectAliasesOrNames();
@@ -207,7 +207,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
             		} catch (Exception e) {
             			e.printStackTrace();
             			throw new Exception(String.format("Ses from Join gen dest only doesn't find match: %s; %s; %s;\n"
-            					, ((PostgreSQLIslandOperator)child0).getChildrenPredicates(), ((PostgreSQLIslandOperator) child1).getChildrenPredicates(), join.generateJoinFilter()));
+            					, ((SQLIslandOperator)child0).getChildrenPredicates(), ((SQLIslandOperator) child1).getChildrenPredicates(), join.generateJoinFilter()));
             		}
         		}
         	}
@@ -250,7 +250,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
     	} else if (child0 instanceof Aggregate && stopAtJoin) {
     		dstStatement = SelectUtils.buildSelectFromTable(new Table(((Aggregate)child0).getAggregateToken()));
     		List<SelectItem> sil = new ArrayList<>();
-    		for (String s : ((PostgreSQLIslandOperator) child0).getOutSchema().keySet()){
+    		for (String s : ((SQLIslandOperator) child0).getOutSchema().keySet()){
     			sil.add(new SelectExpressionItem(new Column(new Table(((Aggregate)child0).getAggregateToken()), s)));
     		};
     		((PlainSelect)dstStatement.getSelectBody()).setSelectItems(sil);
@@ -264,7 +264,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
     	
     	if (child1 instanceof Aggregate && stopAtJoin) {
     		List<SelectItem> sil = new ArrayList<>();
-    		for (String s : ((PostgreSQLIslandOperator) child0).getOutSchema().keySet()){
+    		for (String s : ((SQLIslandOperator) child0).getOutSchema().keySet()){
     			sil.add(new SelectExpressionItem(new Column(t1, s)));
     		};
     		PlainSelect  ps = ((PlainSelect)dstStatement.getSelectBody());
@@ -279,8 +279,8 @@ public class SQLQueryGenerator implements OperatorVisitor {
 				nextGen = new ArrayList<>();
 				for (Operator o : treeWalker) {
 					if (o instanceof Scan) {
-						Expression f = ((PostgreSQLIslandScan) o).getFilterExpression();
-						if (f != null && ((PostgreSQLIslandScan) o).isHasFunctionInFilterExpression()) {
+						Expression f = ((SQLIslandScan) o).getFilterExpression();
+						if (f != null && ((SQLIslandScan) o).isHasFunctionInFilterExpression()) {
 							populateComplexOutItem(join, false);
 							Expression e = CCJSqlParserUtil.parseCondExpression(rewriteComplextOutItem(join, f));
 							Set<String> aliases = child1.getDataObjectAliasesOrNames().keySet();
@@ -357,7 +357,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 				nextGen = new ArrayList<>();
 				for (Operator o : treeWalker) {
 					if (o.isPruned()) {
-						Set<String> aliasesAndNames = new HashSet<>(((PostgreSQLIslandOperator)o).getObjectAliases());
+						Set<String> aliasesAndNames = new HashSet<>(((SQLIslandOperator)o).getObjectAliases());
 						aliasesAndNames.addAll(o.getDataObjectAliasesOrNames().keySet());
 						Set<String> duplicate = new HashSet<>(aliasesAndNames);
 						if (aliasesAndNames.removeAll(filterRelatedTables)) 
@@ -378,7 +378,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 //	@Override
 //	public void visit(Join joinOp) throws Exception {
 //		
-//		PostgreSQLIslandJoin join = (PostgreSQLIslandJoin) joinOp;
+//		SQLIslandJoin join = (SQLIslandJoin) joinOp;
 //		
 //		if (root == null) root = join; 
 //		if (!isRoot && join.isPruned()) {
@@ -390,8 +390,8 @@ public class SQLQueryGenerator implements OperatorVisitor {
 //			return ;
 //		}
 //		saveRoot(join);
-//		PostgreSQLIslandOperator child0 = (PostgreSQLIslandOperator)join.getChildren().get(0);
-//		PostgreSQLIslandOperator child1 = (PostgreSQLIslandOperator)join.getChildren().get(1);
+//		SQLIslandOperator child0 = (SQLIslandOperator)join.getChildren().get(0);
+//		SQLIslandOperator child1 = (SQLIslandOperator)join.getChildren().get(1);
 //    	
 //    	// constructing the ON expression
 //    	
@@ -473,7 +473,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 ////        	System.out.printf("--->> join, discoveredJoinPredicate: %s; joinPredicate: %s;\n"
 ////        			, discoveredJoinPredicate, join.generateJoinPredicate());
 //        	
-//        	boolean anyPruned = ((PostgreSQLIslandJoin)join).isAnyProgenyPruned();
+//        	boolean anyPruned = ((SQLIslandJoin)join).isAnyProgenyPruned();
 //        	
 //        	if (child0.isPruned()) {
 //        		t0.setName(child0.getPruneToken());
@@ -508,7 +508,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 //    	} else if (child0 instanceof Aggregate && stopAtJoin) {
 //    		dstStatement = SelectUtils.buildSelectFromTable(new Table(((Aggregate)child0).getAggregateToken()));
 //    		List<SelectItem> sil = new ArrayList<>();
-//    		for (String s : ((PostgreSQLIslandOperator)child0).getOutSchema().keySet()){
+//    		for (String s : ((SQLIslandOperator)child0).getOutSchema().keySet()){
 //    			sil.add(new SelectExpressionItem(new Column(new Table(((Aggregate)child0).getAggregateToken()), s)));
 //    		};
 //    		((PlainSelect)dstStatement.getSelectBody()).setSelectItems(sil);
@@ -537,8 +537,8 @@ public class SQLQueryGenerator implements OperatorVisitor {
 //				nextGen = new ArrayList<>();
 //				for (Operator o : treeWalker) {
 //					if (o instanceof Scan) {
-//						Expression f = ((PostgreSQLIslandScan) o).getFilterExpression();
-//						if (f != null && ((PostgreSQLIslandScan)o).isHasFunctionInFilterExpression()) {
+//						Expression f = ((SQLIslandScan) o).getFilterExpression();
+//						if (f != null && ((SQLIslandScan)o).isHasFunctionInFilterExpression()) {
 //							populateComplexOutItem(join, false);
 //							Expression e = CCJSqlParserUtil.parseCondExpression(rewriteComplextOutItem(join, f));
 //							Set<String> aliases = child1.getDataObjectAliasesOrNames().keySet();
@@ -609,13 +609,13 @@ public class SQLQueryGenerator implements OperatorVisitor {
 //			List<Operator> treeWalker = new ArrayList<>(join.getChildren());
 //			List<Operator> nextGen;
 //
-//			((PostgreSQLIslandJoin)join).updateObjectAliases();
+//			((SQLIslandJoin)join).updateObjectAliases();
 //			
 //			while (!treeWalker.isEmpty()) {
 //				nextGen = new ArrayList<>();
 //				for (Operator o : treeWalker) {
 //					if (o.isPruned()) {
-//						Set<String> aliasesAndNames = new HashSet<>(((PostgreSQLIslandOperator)o).getObjectAliases());
+//						Set<String> aliasesAndNames = new HashSet<>(((SQLIslandOperator)o).getObjectAliases());
 //						aliasesAndNames.addAll(o.getDataObjectAliasesOrNames().keySet());
 //						Set<String> duplicate = new HashSet<>(aliasesAndNames);
 //						if (aliasesAndNames.removeAll(filterRelatedTables)) 
@@ -635,12 +635,12 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	@Override
 	public void visit(Sort sort) throws Exception{
 		
-		PostgreSQLIslandSort sortOp = (PostgreSQLIslandSort)sort;
+		SQLIslandSort sortOp = (SQLIslandSort)sort;
 		
 		saveRoot(sortOp);
 		sortOp.getChildren().get(0).accept(this);
 
-		if (sortOp.getChildren().get(0) instanceof PostgreSQLIslandJoin) {
+		if (sortOp.getChildren().get(0) instanceof SQLIslandJoin) {
 			PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
 			ps.getSelectItems().clear();
 			for (String alias: sortOp.getOutSchema().keySet()) {
@@ -665,7 +665,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	@Override
 	public void visit(Distinct distinct) throws Exception {
 		
-		PostgreSQLIslandDistinct distinctOp = (PostgreSQLIslandDistinct)distinct;
+		SQLIslandDistinct distinctOp = (SQLIslandDistinct)distinct;
 		
 		saveRoot(distinctOp);
 		distinctOp.getChildren().get(0).accept(this);
@@ -689,7 +689,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	@Override
 	public void visit(Scan scan) throws Exception {
 		
-		PostgreSQLIslandScan scanOp = (PostgreSQLIslandScan) scan;
+		SQLIslandScan scanOp = (SQLIslandScan) scan;
 		
 		boolean rootStatus = isRoot;
 		saveRoot(scanOp);
@@ -775,7 +775,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 			if(dstStatement.getWithItemsList() != null && !(dstStatement.getWithItemsList().isEmpty())) {
 				dstWiths.addAll(dstStatement.getWithItemsList());
 			}
-			dstWiths.add(((PostgreSQLIslandCommonTableExpressionScan)cte).getWith());
+			dstWiths.add(((SQLIslandCommonTableExpressionScan)cte).getWith());
 
 			
 			dstStatement.setWithItemsList(dstWiths);
@@ -813,7 +813,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	@Override
 	public void visit(Aggregate aggregate) throws Exception {
 		
-		PostgreSQLIslandAggregate aggregateOp = (PostgreSQLIslandAggregate)aggregate;
+		SQLIslandAggregate aggregateOp = (SQLIslandAggregate)aggregate;
 		
 		saveRoot(aggregateOp);
 		
@@ -914,7 +914,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	@Override
 	public void visit(Limit limit) throws Exception {
 		
-		PostgreSQLIslandLimit limitOp = (PostgreSQLIslandLimit) limit;
+		SQLIslandLimit limitOp = (SQLIslandLimit) limit;
 		
 		saveRoot(limitOp);
 		limitOp.getChildren().get(0).accept(this);
@@ -990,14 +990,14 @@ public class SQLQueryGenerator implements OperatorVisitor {
 			Set<String> childAliasesAndNames	= new HashSet<>(ane.values());
 			for (String s : ane.values()) childAliasesAndNames.add(s);
 			
-			populateComplexOutItem((PostgreSQLIslandOperator)operator, false);
+			populateComplexOutItem((SQLIslandOperator)operator, false);
 			
 			PlainSelect ps = ((PlainSelect)outputSelect.getSelectBody());
 			List<SelectItem> sil = ps.getSelectItems();
 			for (int i = 0 ; i < sil.size(); i ++) {
 				if (sil.get(i) instanceof SelectExpressionItem) {
 					SelectExpressionItem sei = (SelectExpressionItem)sil.get(i);
-					sei.setExpression(CCJSqlParserUtil.parseExpression(rewriteComplextOutItem((PostgreSQLIslandOperator)operator, sei.getExpression())));
+					sei.setExpression(CCJSqlParserUtil.parseExpression(rewriteComplextOutItem((SQLIslandOperator)operator, sei.getExpression())));
 				}
 			}
 			
@@ -1013,8 +1013,8 @@ public class SQLQueryGenerator implements OperatorVisitor {
 			operator.setSubTree(true);
 			if (!isSelect) addSelectIntoToken(outputSelect, operator.getSubTreeToken());
 			
-			if (operator instanceof PostgreSQLIslandOperator && dstStatement != null) {
-				postprocessSQLStatement((PostgreSQLIslandOperator)operator);
+			if (operator instanceof SQLIslandOperator && dstStatement != null) {
+				postprocessSQLStatement((SQLIslandOperator)operator);
 			}
 			
 			sb.append(outputSelect);
@@ -1038,7 +1038,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	@Override
 	public String generateSelectIntoStatementForExecutionTree(String into) throws Exception {
 		if (root == null) throw new Exception("SQLQueryGenerator, selectinto: root is null");
-		postprocessSQLStatement((PostgreSQLIslandOperator) root);
+		postprocessSQLStatement((SQLIslandOperator) root);
 		String output = addSelectIntoToken(dstStatement, into);
 		return output;
 	}
@@ -1048,7 +1048,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	 * @param operator
 	 * @throws Exception
 	 */
-	private void postprocessSQLStatement(PostgreSQLIslandOperator operator) throws Exception {
+	private void postprocessSQLStatement(SQLIslandOperator operator) throws Exception {
 
 //		boolean originalPruneStatus = operator.isPruned();
 //		operator.prune(false);
@@ -1070,9 +1070,9 @@ public class SQLQueryGenerator implements OperatorVisitor {
 		PlainSelect pls = (PlainSelect)dstStatement.getSelectBody();
 		List<SelectItem> lsi = new ArrayList<>();
 		
-		for (String s : ((PostgreSQLIslandOperator) operator).getOutSchema().keySet()) {
+		for (String s : ((SQLIslandOperator) operator).getOutSchema().keySet()) {
 			SelectExpressionItem sei = new SelectExpressionItem();
-			sei.setExpression(CCJSqlParserUtil.parseExpression(((PostgreSQLIslandOperator) operator).getOutSchema().get(s).getExpressionString()));
+			sei.setExpression(CCJSqlParserUtil.parseExpression(((SQLIslandOperator) operator).getOutSchema().get(s).getExpressionString()));
 			lsi.add(sei);
 		}
 		pls.setSelectItems(lsi);
@@ -1153,7 +1153,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	 * @throws Exception
 	 */
 	@SuppressWarnings("unused")
-	private void changeAttributesForSelectItems(PostgreSQLIslandOperator o, SelectBody ss, SelectBody ps, Map<String, SelectItem> selects, boolean stopAtJoin) throws Exception {
+	private void changeAttributesForSelectItems(SQLIslandOperator o, SelectBody ss, SelectBody ps, Map<String, SelectItem> selects, boolean stopAtJoin) throws Exception {
 		
 		if (ps instanceof SetOperationList) {
 			
@@ -1161,7 +1161,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 			
 			for (int i = 0; i < o.getChildren().size(); ++i) {
 				
-				PostgreSQLIslandOperator c = (PostgreSQLIslandOperator) o.getChildren().get(i);
+				SQLIslandOperator c = (SQLIslandOperator) o.getChildren().get(i);
 				PlainSelect p = ((PlainSelect)((SetOperationList)ps).getSelects().get(i));
 				
 				changeAttributesForSelectItems(c, null, p, selects, stopAtJoin); // TODO SS?????
@@ -1201,7 +1201,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	 * @return
 	 * @throws Exception
 	 */
-	private boolean changeAttributeName(PostgreSQLIslandOperator operator, SQLAttribute attr, boolean stopAtJoin) throws Exception {
+	private boolean changeAttributeName(SQLIslandOperator operator, SQLAttribute attr, boolean stopAtJoin) throws Exception {
 		// if no children, then do nothing 
 		// for each children, 
 		// check if the child is pruned, 
@@ -1218,7 +1218,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 		
 		if (operator.getChildren().size() > 0) {
 			for (Operator op : operator.getChildren()) {
-				PostgreSQLIslandOperator o = (PostgreSQLIslandOperator) op;
+				SQLIslandOperator o = (SQLIslandOperator) op;
 				if (o.isPruned()) {
 					
 					if (o.getOutSchema().containsKey(attr.getName())) {
@@ -1499,15 +1499,15 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	private Select generateSelectWithToken(Operator o, String token) throws Exception {
     	Select outStatement = null;
     	if (token != null) outStatement = SelectUtils.buildSelectFromTable(new Table(token));
-    	else if (o instanceof PostgreSQLIslandScan) outStatement = SelectUtils.buildSelectFromTable(((PostgreSQLIslandScan)o).getTable());
+    	else if (o instanceof SQLIslandScan) outStatement = SelectUtils.buildSelectFromTable(((SQLIslandScan)o).getTable());
     	else throw new Exception("Unhandled token name in generateSelectWithToken; operator: "+o.getClass().getSimpleName()+"; "+o.toString());
 		
     	PlainSelect ps = (PlainSelect)outStatement.getSelectBody();
 		List<SelectItem> lsi = new ArrayList<>();
 		
-		for (String s : ((PostgreSQLIslandOperator) o).getOutSchema().keySet()) {
+		for (String s : ((SQLIslandOperator) o).getOutSchema().keySet()) {
 			SelectExpressionItem sei = new SelectExpressionItem();
-			Expression e = CCJSqlParserUtil.parseExpression(((PostgreSQLIslandOperator) o).getOutSchema().get(s).getExpressionString());
+			Expression e = CCJSqlParserUtil.parseExpression(((SQLIslandOperator) o).getOutSchema().get(s).getExpressionString());
 			if (token != null)
 				SQLExpressionUtils.renameAttributes(e, null, null, token);
 			sei.setExpression(e);
@@ -1523,10 +1523,10 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	 * @param o
 	 * @param first
 	 */
-	private void populateComplexOutItem(PostgreSQLIslandOperator o, boolean first) {
+	private void populateComplexOutItem(SQLIslandOperator o, boolean first) {
 		// populate complexOutItemFromProgeny
 		for (Operator c : o.getChildren()){
-			PostgreSQLIslandOperator child = (PostgreSQLIslandOperator) c;
+			SQLIslandOperator child = (SQLIslandOperator) c;
 			if ((!first) && child.getComplexOutItemFromProgeny().isEmpty()) populateComplexOutItem(child, first);
 			for (String s: child.getOutSchema().keySet()) {
 				Expression e = child.getOutSchema().get(s).getSQLExpression();
@@ -1562,7 +1562,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	 * @return
 	 * @throws Exception
 	 */
-	private String rewriteComplextOutItem(PostgreSQLIslandOperator o, Expression e) throws Exception {
+	private String rewriteComplextOutItem(SQLIslandOperator o, Expression e) throws Exception {
 		// simplify
 		String expr = e.toString();
 		for (String alias : o.getComplexOutItemFromProgeny().keySet()) {
@@ -1582,7 +1582,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	 * @return
 	 * @throws Exception
 	 */
-	private String updateOnExpression(String joinPred, PostgreSQLIslandOperator child0, PostgreSQLIslandOperator child1, Table t0, Table t1, boolean update) throws Exception {
+	private String updateOnExpression(String joinPred, SQLIslandOperator child0, SQLIslandOperator child1, Table t0, Table t1, boolean update) throws Exception {
     	
     	Expression expr = CCJSqlParserUtil.parseCondExpression(joinPred);
 		List<String> itemsSet = SQLExpressionUtils.getColumnTableNamesInAllForms(expr);
@@ -1604,7 +1604,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	 * @return
 	 * @throws Exception
 	 */
-	private boolean replaceTableNameWithPruneName(PostgreSQLIslandOperator child, Expression e, Table t, List<String> itemsSet) throws Exception {
+	private boolean replaceTableNameWithPruneName(SQLIslandOperator child, Expression e, Table t, List<String> itemsSet) throws Exception {
 		if (child.isPruned()) {
 			// does child have any of those names? 
 			Set<String> names = new HashSet<>(child.getDataObjectAliasesOrNames().keySet());
@@ -1631,7 +1631,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 		}else {
 			boolean ret = false;
 			for (Operator o : child.getChildren()) {
-				ret = ret || replaceTableNameWithPruneName(((PostgreSQLIslandOperator)o), e, t, itemsSet);
+				ret = ret || replaceTableNameWithPruneName(((SQLIslandOperator)o), e, t, itemsSet);
 			}
 			return ret;
 		}
@@ -1645,7 +1645,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	 * @return
 	 * @throws Exception
 	 */
-	private boolean findAndGetTableName(PostgreSQLIslandOperator child, Table t, List<String> itemsSet) throws Exception {
+	private boolean findAndGetTableName(SQLIslandOperator child, Table t, List<String> itemsSet) throws Exception {
 	    	
 		Set<String> names = new HashSet<>(child.getDataObjectAliasesOrNames().keySet());
 		child.updateObjectAliases();
@@ -1653,15 +1653,15 @@ public class SQLQueryGenerator implements OperatorVisitor {
 		names.retainAll(itemsSet);
 		if (names.size() > 0) {
 			if (child instanceof Scan) {
-				t.setName(((PostgreSQLIslandScan)child).getTable().toString());
+				t.setName(((SQLIslandScan)child).getTable().toString());
 			} else if (child.getChildren().size() > 0) {
-				return findAndGetTableName((PostgreSQLIslandOperator)child.getChildren().get(0), t, itemsSet);
+				return findAndGetTableName((SQLIslandOperator)child.getChildren().get(0), t, itemsSet);
 			}
 			return false;
 		} else {
 			boolean ret = false;
 			for (Operator o : child.getChildren()) {
-				ret = ret || findAndGetTableName((PostgreSQLIslandOperator)o, t, itemsSet);
+				ret = ret || findAndGetTableName((SQLIslandOperator)o, t, itemsSet);
 			}
 			return ret;
 		}    	
@@ -1675,17 +1675,17 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	 * @return
 	 * @throws Exception
 	 */
-	private List<String> processLeftAndRightWithIndexCond(PostgreSQLIslandOperator o, boolean zeroFirst, List<String> foundExpression) throws Exception {
+	private List<String> processLeftAndRightWithIndexCond(SQLIslandOperator o, boolean zeroFirst, List<String> foundExpression) throws Exception {
     	
     	Map<String, Expression> child0Cond;
     	Map<String, Expression> child1Cond;
 
     	if (zeroFirst) {
-    		child0Cond = ((PostgreSQLIslandOperator)o.getChildren().get(0)).getChildrenPredicates();
-    		child1Cond = ((PostgreSQLIslandOperator)o.getChildren().get(1)).getChildrenPredicates();
+    		child0Cond = ((SQLIslandOperator)o.getChildren().get(0)).getChildrenPredicates();
+    		child1Cond = ((SQLIslandOperator)o.getChildren().get(1)).getChildrenPredicates();
     	} else {
-    		child0Cond = ((PostgreSQLIslandOperator)o.getChildren().get(1)).getChildrenPredicates();
-    		child1Cond = ((PostgreSQLIslandOperator)o.getChildren().get(0)).getChildrenPredicates();
+    		child0Cond = ((SQLIslandOperator)o.getChildren().get(1)).getChildrenPredicates();
+    		child1Cond = ((SQLIslandOperator)o.getChildren().get(0)).getChildrenPredicates();
     	}
     	
 		for (String s : child0Cond.keySet()) {
@@ -1742,14 +1742,14 @@ public class SQLQueryGenerator implements OperatorVisitor {
 	 * @param dstStatement
 	 * @return
 	 */
-	private SubSelect makeNewSubSelectUpdateDST(PostgreSQLIslandAggregate agg, Select dstStatement) {
+	private SubSelect makeNewSubSelectUpdateDST(SQLIslandAggregate agg, Select dstStatement) {
 		SubSelect ss = new SubSelect();
 		ss.setAlias(new Alias(agg.getAggregateToken()));
 		ss.setSelectBody(dstStatement.getSelectBody());
 		return ss;
 	}
 
-	private String updatePruneTokensForOnExpression(PostgreSQLIslandJoin j, String joinPred) throws Exception {
+	private String updatePruneTokensForOnExpression(SQLIslandJoin j, String joinPred) throws Exception {
     	
     	if (!j.isAnyProgenyPruned()) return new String(joinPred);
     	
@@ -1785,7 +1785,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 		
 		boolean started = false;
 		
-		for (DataObjectAttribute doa : ((PostgreSQLIslandOperator)op).getOutSchema().values()) {
+		for (DataObjectAttribute doa : ((SQLIslandOperator)op).getOutSchema().values()) {
 			if (started == true) sb.append(',');
 			else started = true;
 			
@@ -1843,18 +1843,18 @@ public class SQLQueryGenerator implements OperatorVisitor {
 			Column rightColumn = null;
 			
 			
-			List<String> ses = processLeftAndRightWithIndexCond((PostgreSQLIslandJoin) join, true, null);
+			List<String> ses = processLeftAndRightWithIndexCond((SQLIslandJoin) join, true, null);
 			String s, s2; 
 			if (ses != null) {
 				s = ses.get(0);
 				s2 = ses.get(1);
-				extraction = ((PostgreSQLIslandOperator)join.getChildren().get(0)).getChildrenPredicates().get(s);
+				extraction = ((SQLIslandOperator)join.getChildren().get(0)).getChildrenPredicates().get(s);
 			} else {
-				ses = processLeftAndRightWithIndexCond((PostgreSQLIslandJoin) join, false, null);
+				ses = processLeftAndRightWithIndexCond((SQLIslandJoin) join, false, null);
 				if (ses == null) return ret;
 				s = ses.get(1);
 				s2 = ses.get(0);
-				extraction = ((PostgreSQLIslandOperator)join.getChildren().get(1)).getChildrenPredicates().get(s2);
+				extraction = ((SQLIslandOperator)join.getChildren().get(1)).getChildrenPredicates().get(s2);
 			}
 			
 			List<Expression> exprs = SQLExpressionUtils.getFlatExpressions(extraction);

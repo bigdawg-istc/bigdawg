@@ -5,8 +5,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import istc.bigdawg.islands.PostgreSQL.utils.SQLAttribute;
 import istc.bigdawg.islands.SciDB.SciDBArray;
+import istc.bigdawg.islands.relational.utils.SQLAttribute;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.statement.create.table.ColumnDefinition;
 import net.sf.jsqlparser.statement.create.table.CreateTable;

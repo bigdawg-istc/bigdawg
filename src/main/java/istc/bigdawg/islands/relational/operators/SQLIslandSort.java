@@ -1,4 +1,4 @@
-package istc.bigdawg.islands.PostgreSQL.operators;
+package istc.bigdawg.islands.relational.operators;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -7,12 +7,12 @@ import java.util.List;
 import java.util.Map;
 
 import istc.bigdawg.islands.OperatorVisitor;
-import istc.bigdawg.islands.PostgreSQL.SQLOutItemResolver;
-import istc.bigdawg.islands.PostgreSQL.SQLTableExpression;
-import istc.bigdawg.islands.PostgreSQL.utils.SQLAttribute;
-import istc.bigdawg.islands.PostgreSQL.utils.SQLExpressionUtils;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.operators.Sort;
+import istc.bigdawg.islands.relational.SQLOutItemResolver;
+import istc.bigdawg.islands.relational.SQLTableExpression;
+import istc.bigdawg.islands.relational.utils.SQLAttribute;
+import istc.bigdawg.islands.relational.utils.SQLExpressionUtils;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Parenthesis;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
@@ -20,7 +20,7 @@ import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.OrderByElement;
 
-public class PostgreSQLIslandSort extends PostgreSQLIslandOperator implements Sort {
+public class SQLIslandSort extends SQLIslandOperator implements Sort {
 
 	
 	private List<String> sortKeys;
@@ -34,7 +34,7 @@ public class PostgreSQLIslandSort extends PostgreSQLIslandOperator implements So
 	
 	private boolean isWinAgg = false; // is it part of a windowed aggregate or an ORDER BY clause?
 	
-	public PostgreSQLIslandSort(Map<String, String> parameters, List<String> output,  List<String> keys, PostgreSQLIslandOperator child, SQLTableExpression supplement) throws Exception  {
+	public SQLIslandSort(Map<String, String> parameters, List<String> output,  List<String> keys, SQLIslandOperator child, SQLTableExpression supplement) throws Exception  {
 		super(parameters, output, child, supplement);
 
 		isBlocking = true;
@@ -50,7 +50,7 @@ public class PostgreSQLIslandSort extends PostgreSQLIslandOperator implements So
 		sortOrder = supplement.getSortOrder(keys, parameters.get("sectionName"));
 		setSortKeys(keys);
 
-		if (children.get(0) instanceof PostgreSQLIslandJoin) {
+		if (children.get(0) instanceof SQLIslandJoin) {
 			outSchema = new LinkedHashMap<>();
 			for(int i = 0; i < output.size(); ++i) {
 				String expr = output.get(i);
@@ -102,7 +102,7 @@ public class PostgreSQLIslandSort extends PostgreSQLIslandOperator implements So
 	}
 	
 //	// for AFL
-//	public PostgreSQLIslandSort(Map<String, String> parameters, SciDBArray output,  List<String> keys, PostgreSQLIslandOperator child) throws Exception  {
+//	public SQLIslandSort(Map<String, String> parameters, SciDBArray output,  List<String> keys, SQLIslandOperator child) throws Exception  {
 //		super(parameters, output, child);
 //
 //		isBlocking = true;
@@ -121,9 +121,9 @@ public class PostgreSQLIslandSort extends PostgreSQLIslandOperator implements So
 //		
 //	}
 	
-	public PostgreSQLIslandSort(PostgreSQLIslandOperator o, boolean addChild) throws Exception {
+	public SQLIslandSort(SQLIslandOperator o, boolean addChild) throws Exception {
 		super(o, addChild);
-		PostgreSQLIslandSort s = (PostgreSQLIslandSort) o;
+		SQLIslandSort s = (SQLIslandSort) o;
 		
 		this.blockerID = s.blockerID;
 
@@ -167,7 +167,7 @@ public class PostgreSQLIslandSort extends PostgreSQLIslandOperator implements So
 						
 						Column c = (Column)obe.getExpression();
 						
-						if (((PostgreSQLIslandOperator) o).getOutSchema().containsKey(c.getFullyQualifiedName())) {
+						if (((SQLIslandOperator) o).getOutSchema().containsKey(c.getFullyQualifiedName())) {
 							OrderByElement newobe = new OrderByElement();
 							newobe.setExpression(new Column(new Table(o.getPruneToken()), c.getColumnName()));
 							ret.add(newobe);

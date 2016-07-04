@@ -1,17 +1,17 @@
-package istc.bigdawg.islands.PostgreSQL.operators;
+package istc.bigdawg.islands.relational.operators;
 
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 import istc.bigdawg.islands.OperatorVisitor;
-import istc.bigdawg.islands.PostgreSQL.SQLOutItemResolver;
-import istc.bigdawg.islands.PostgreSQL.SQLTableExpression;
-import istc.bigdawg.islands.PostgreSQL.utils.SQLAttribute;
 import istc.bigdawg.islands.operators.Limit;
+import istc.bigdawg.islands.relational.SQLOutItemResolver;
+import istc.bigdawg.islands.relational.SQLTableExpression;
+import istc.bigdawg.islands.relational.utils.SQLAttribute;
 
 
-public class PostgreSQLIslandLimit extends PostgreSQLIslandOperator implements Limit {
+public class SQLIslandLimit extends SQLIslandOperator implements Limit {
 
 	private boolean isLimitAll = false;
 	private boolean isLimitNull = false;
@@ -19,7 +19,7 @@ public class PostgreSQLIslandLimit extends PostgreSQLIslandOperator implements L
 	private long limitCount = 0;
 	private long limitOffset = 0;
 	
-	PostgreSQLIslandLimit(Map<String, String> parameters, List<String> output, PostgreSQLIslandOperator child, SQLTableExpression supplement) throws Exception  {
+	SQLIslandLimit(Map<String, String> parameters, List<String> output, SQLIslandOperator child, SQLTableExpression supplement) throws Exception  {
 		super(parameters, output, child, supplement);
 
 		
@@ -37,7 +37,7 @@ public class PostgreSQLIslandLimit extends PostgreSQLIslandOperator implements L
 			setLimitOffset(l.getOffset());
 		}
 		
-		if (children.get(0) instanceof PostgreSQLIslandJoin) {
+		if (children.get(0) instanceof SQLIslandJoin) {
 			outSchema = new LinkedHashMap<>();
 			for(int i = 0; i < output.size(); ++i) {
 				String expr = output.get(i);
@@ -53,9 +53,9 @@ public class PostgreSQLIslandLimit extends PostgreSQLIslandOperator implements L
 //		System.out.printf("\n\n\n--> Limit constructor: output %s;\n outSchema %s;\n\n", output, outSchema);
 	}
 	
-	public PostgreSQLIslandLimit(PostgreSQLIslandOperator o, boolean addChild) throws Exception {
+	public SQLIslandLimit(SQLIslandOperator o, boolean addChild) throws Exception {
 		super(o, addChild);
-		PostgreSQLIslandLimit lim = (PostgreSQLIslandLimit) o;
+		SQLIslandLimit lim = (SQLIslandLimit) o;
 		this.blockerID = o.blockerID;
 		this.setLimitAll(lim.isLimitAll());
 		this.setLimitNull(lim.isLimitNull());
@@ -69,7 +69,7 @@ public class PostgreSQLIslandLimit extends PostgreSQLIslandOperator implements L
 	// for AFL the constructor is undefined; because AFL doesn't support it
 	
 	
-	public PostgreSQLIslandLimit() {
+	public SQLIslandLimit() {
 		super();
 		isBlocking = true;
 		blockerCount++;

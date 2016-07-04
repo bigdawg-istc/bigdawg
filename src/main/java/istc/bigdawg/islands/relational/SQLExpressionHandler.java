@@ -1,5 +1,3 @@
-package istc.bigdawg.islands.PostgreSQL;
-
 /*
  * #%L
  * JSQLParser library
@@ -21,9 +19,7 @@ package istc.bigdawg.islands.PostgreSQL;
  * <http://www.gnu.org/licenses/lgpl-2.1.html>.
  * #L%
  */
-// based on
-//package net.sf.jsqlparser.util.deparser;
-// modified for ObliVM syntax
+package istc.bigdawg.islands.relational;
 
 import net.sf.jsqlparser.expression.*;
 import net.sf.jsqlparser.expression.operators.arithmetic.*;
@@ -33,28 +29,23 @@ import net.sf.jsqlparser.expression.operators.relational.*;
 import net.sf.jsqlparser.schema.*;
 import net.sf.jsqlparser.statement.select.SelectVisitor;
 import net.sf.jsqlparser.statement.select.SubSelect;
-import net.sf.jsqlparser.statement.select.PlainSelect;
 
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
 
 /**
  * A class to de-parse (that is, tranform from JSqlParser hierarchy into a
  * string) an {@link net.sf.jsqlparser.expression.Expression}
  */
-public class SQLExpressionParser implements ExpressionVisitor, ItemsListVisitor {
+public class SQLExpressionHandler implements ExpressionVisitor, ItemsListVisitor {
 
     private StringBuilder buffer;
     private SelectVisitor selectVisitor;
     private boolean useBracketsInExprList = true;
-    private String partitionByClause;
-    private String orderByClause;
-    private List<String> aggregateFunctions;
-    private List<String> aggregateFunctionExprs;
-    private String analyticFunction;
     
-    public SQLExpressionParser() {
+    private SQLTableExpression supplementVariables; // keep track of supplement variables
+
+    
+    public SQLExpressionHandler() {
     }
 
     /**
@@ -66,18 +57,17 @@ public class SQLExpressionParser implements ExpressionVisitor, ItemsListVisitor 
      * StringBuilder myBuf = new StringBuilder();
      * MySelectDeparser selectDeparser = new  MySelectDeparser();
      * selectDeparser.setBuffer(myBuf);
-     * ExpressionDeParser SQLExpressionParser = new ExpressionDeParser(selectDeparser, myBuf);
+     * ExpressionSupplement ExpressionSupplement = new ExpressionSupplement(selectDeparser, myBuf);
      * </code>
      * </pre>
      *
      * @param buffer the buffer that will be filled with the expression
      */
-    public SQLExpressionParser(SelectVisitor selectVisitor, StringBuilder buffer) {
+    public SQLExpressionHandler(SelectVisitor selectVisitor, StringBuilder buffer, SQLTableExpression tev) {
         this.selectVisitor = selectVisitor;
         this.buffer = buffer;
-        aggregateFunctions = new ArrayList<String>();
-        aggregateFunctionExprs = new ArrayList<String>();
-        
+        this.supplementVariables = tev;
+
     }
 
     public StringBuilder getBuffer() {
@@ -88,6 +78,11 @@ public class SQLExpressionParser implements ExpressionVisitor, ItemsListVisitor 
         this.buffer = buffer;
     }
 
+    // reset per SELECT / common table expression
+    public void setTableSupplement(SQLTableExpression tev) {
+    	this.supplementVariables = tev;
+    }
+    
     @Override
     public void visit(Addition addition) {
         visitBinaryExpression(addition, " + ");
@@ -95,7 +90,7 @@ public class SQLExpressionParser implements ExpressionVisitor, ItemsListVisitor 
 
     @Override
     public void visit(AndExpression andExpression) {
-        visitBinaryExpression(andExpression, " && ");
+        visitBinaryExpression(andExpression, " AND ");
     }
 
     @Override
@@ -169,7 +164,7 @@ public class SQLExpressionParser implements ExpressionVisitor, ItemsListVisitor 
             }
         }
         if (inExpression.isNot()) {
-            buffer.append(" !");
+            buffer.append(" NOT");
         }
         buffer.append(" IN ");
 
@@ -186,9 +181,9 @@ public class SQLExpressionParser implements ExpressionVisitor, ItemsListVisitor 
     public void visit(IsNullExpression isNullExpression) {
         isNullExpression.getLeftExpression().accept(this);
         if (isNullExpression.isNot()) {
-            buffer.append(" != NULL");
+            buffer.append(" IS NOT NULL");
         } else {
-            buffer.append(" == NULL");
+            buffer.append(" IS NULL");
         }
     }
 
@@ -258,14 +253,13 @@ public class SQLExpressionParser implements ExpressionVisitor, ItemsListVisitor 
 
     @Override
     public void visit(OrExpression orExpression) {
-        visitBinaryExpression(orExpression, " || ");
-
+        visitBinaryExpression(orExpression, " OR ");
     }
 
     @Override
     public void visit(Parenthesis parenthesis) {
         if (parenthesis.isNot()) {
-            buffer.append(" !");
+            buffer.append(" NOT ");
         }
 
         buffer.append("(");
@@ -286,9 +280,9 @@ public class SQLExpressionParser implements ExpressionVisitor, ItemsListVisitor 
 
     }
 
-    private void visitBinaryExpression(BinaryExpression binaryExpression, String operator) {
+    protected void visitBinaryExpression(BinaryExpression binaryExpression, String operator) {
         if (binaryExpression.isNot()) {
-            buffer.append(" ! ");
+            buffer.append(" NOT ");
         }
         binaryExpression.getLeftExpression().accept(this);
         buffer.append(operator);
@@ -327,48 +321,36 @@ public class SQLExpressionParser implements ExpressionVisitor, ItemsListVisitor 
             buffer.append("{fn ");
         }
 
-        aggregateFunctions.add(function.getName());
         buffer.append(function.getName());
         if (function.isAllColumns() && function.getParameters() == null) {
             buffer.append("(*)");
-            aggregateFunctionExprs.add("(*)");
         } else if (function.getParameters() == null) {
             buffer.append("()");
-            aggregateFunctionExprs.add("()");
-
         } else {
             boolean oldUseBracketsInExprList = useBracketsInExprList;
             if (function.isDistinct()) {
                 useBracketsInExprList = false;
                 buffer.append("(DISTINCT ");
-                aggregateFunctionExprs.add("(DISTINCT ");
-                
             } else if (function.isAllColumns()) {
                 useBracketsInExprList = false;
                 buffer.append("(ALL ");
-                aggregateFunctionExprs.add("(ALL ");
             }
             visit(function.getParameters());
             useBracketsInExprList = oldUseBracketsInExprList;
             if (function.isDistinct() || function.isAllColumns()) {
                 buffer.append(")");
-                aggregateFunctionExprs.add(")");
             }
         }
 
         if (function.getAttribute() != null) {
             buffer.append(".").append(function.getAttribute());
-            aggregateFunctionExprs.add("." + function.getAttribute());
         }
         if (function.getKeep() != null) {
             buffer.append(" ").append(function.getKeep());
-            // JMD consider adding this
         }
 
         if (function.isEscaped()) {
             buffer.append("}");
-            // JMD consider adding this
-
         }
     }
 
@@ -504,13 +486,7 @@ public class SQLExpressionParser implements ExpressionVisitor, ItemsListVisitor 
     @Override
     public void visit(AnalyticExpression aexpr) {
         buffer.append(aexpr.toString());
-        
-        if(aexpr.getPartitionExpressionList() != null) {
-        	partitionByClause = PlainSelect.getStringList(aexpr.getPartitionExpressionList().getExpressions(), true, false);
-        }
-        
-        orderByClause = aexpr.getOrderByElements().toString();
-        
+        supplementVariables.addAnalyticExpression(aexpr);
     }
 
     @Override

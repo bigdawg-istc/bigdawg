@@ -1,4 +1,4 @@
-package istc.bigdawg.islands.PostgreSQL.utils;
+package istc.bigdawg.islands.relational.utils;
 
 import java.util.Map;
 

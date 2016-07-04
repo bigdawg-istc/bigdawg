@@ -1,12 +1,12 @@
-package istc.bigdawg.islands.PostgreSQL;
+package istc.bigdawg.islands.relational;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import istc.bigdawg.islands.PostgreSQL.operators.PostgreSQLIslandSort;
 import istc.bigdawg.islands.operators.Sort.SortOrder;
+import istc.bigdawg.islands.relational.operators.SQLIslandSort;
 import net.sf.jsqlparser.expression.Alias;
 import net.sf.jsqlparser.expression.AnalyticExpression;
 import net.sf.jsqlparser.expression.Expression;
@@ -195,7 +195,7 @@ public class SQLTableExpression {
     
     // have a sort from the query execution plan
     // need to resolve it to OrderByElement to get ASC or DESC clause
-    public PostgreSQLIslandSort.SortOrder getSortOrder(List<String> sortKeys, String sectionName) throws Exception {
+    public SQLIslandSort.SortOrder getSortOrder(List<String> sortKeys, String sectionName) throws Exception {
     	
     	if(sortList == null) {
     		createSortList(sectionName);

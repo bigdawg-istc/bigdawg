@@ -1,4 +1,4 @@
-package istc.bigdawg.islands.PostgreSQL.operators;
+package istc.bigdawg.islands.relational.operators;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -10,12 +10,12 @@ import java.util.Set;
 import org.apache.jcp.xml.dsig.internal.dom.Utils;
 
 import istc.bigdawg.islands.OperatorVisitor;
-import istc.bigdawg.islands.PostgreSQL.SQLOutItemResolver;
-import istc.bigdawg.islands.PostgreSQL.SQLTableExpression;
-import istc.bigdawg.islands.PostgreSQL.utils.SQLAttribute;
-import istc.bigdawg.islands.PostgreSQL.utils.SQLExpressionUtils;
 import istc.bigdawg.islands.operators.Aggregate;
 import istc.bigdawg.islands.operators.Operator;
+import istc.bigdawg.islands.relational.SQLOutItemResolver;
+import istc.bigdawg.islands.relational.SQLTableExpression;
+import istc.bigdawg.islands.relational.utils.SQLAttribute;
+import istc.bigdawg.islands.relational.utils.SQLExpressionUtils;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Parenthesis;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
@@ -25,7 +25,7 @@ import net.sf.jsqlparser.schema.Table;
 
 // TODO: expressions on aggregates - e.g., COUNT(*) / COUNT(v > 5)
 
-public class PostgreSQLIslandAggregate extends PostgreSQLIslandOperator implements Aggregate {
+public class SQLIslandAggregate extends SQLIslandOperator implements Aggregate {
 
 	// can address complex expressions by adding a step after aggregate
 	// create a list of aggregations to perform
@@ -48,7 +48,7 @@ public class PostgreSQLIslandAggregate extends PostgreSQLIslandOperator implemen
 	// maintain state once per aggregate added
 	// apply any expressions down the line in the final selection
 	
-	PostgreSQLIslandAggregate(Map<String, String> parameters, List<String> output, PostgreSQLIslandOperator child, SQLTableExpression supplement) throws Exception  {
+	SQLIslandAggregate(Map<String, String> parameters, List<String> output, SQLIslandOperator child, SQLTableExpression supplement) throws Exception  {
 		super(parameters, output, child, supplement);
 
 		
@@ -151,12 +151,12 @@ public class PostgreSQLIslandAggregate extends PostgreSQLIslandOperator implemen
 
 	}
 	
-	public PostgreSQLIslandAggregate(PostgreSQLIslandOperator o, boolean addChild) throws Exception {
+	public SQLIslandAggregate(SQLIslandOperator o, boolean addChild) throws Exception {
 		super(o, addChild);
 		
 		this.blockerID = o.blockerID;
 		
-		PostgreSQLIslandAggregate a = (PostgreSQLIslandAggregate) o;
+		SQLIslandAggregate a = (SQLIslandAggregate) o;
 		
 		this.setAggregateID(a.getAggregateID());
 //		this.groupBy = new ArrayList<DataObjectAttribute>();
@@ -244,7 +244,7 @@ public class PostgreSQLIslandAggregate extends PostgreSQLIslandOperator implemen
 //			
 //	}
 	
-	public PostgreSQLIslandAggregate() {
+	public SQLIslandAggregate() {
 		isBlocking = true;
 		
 //		aggregates = new ArrayList<AggregateType>();
@@ -292,17 +292,17 @@ public class PostgreSQLIslandAggregate extends PostgreSQLIslandOperator implemen
 					if (o.isPruned()) {
 						Column c = (Column)gb;
 						
-						if (((PostgreSQLIslandOperator)o).getOutSchema().containsKey(c.getFullyQualifiedName())) {
+						if (((SQLIslandOperator)o).getOutSchema().containsKey(c.getFullyQualifiedName())) {
 							ret.add(new Column(new Table(o.getPruneToken()), c.getColumnName()));
 							found = true;
 							break;
 						}
-					} else if (o instanceof PostgreSQLIslandJoin && stopAtJoin == true ) {
+					} else if (o instanceof SQLIslandJoin && stopAtJoin == true ) {
 						
 						Column c = (Column)gb;
 						
-						if (((PostgreSQLIslandOperator)o).getOutSchema().containsKey(c.getFullyQualifiedName())) {
-							ret.add(new Column(new Table(((PostgreSQLIslandJoin)o).getJoinToken()), c.getColumnName()));
+						if (((SQLIslandOperator)o).getOutSchema().containsKey(c.getFullyQualifiedName())) {
+							ret.add(new Column(new Table(((SQLIslandJoin)o).getJoinToken()), c.getColumnName()));
 							found = true;
 							break;
 						}
@@ -419,7 +419,7 @@ public class PostgreSQLIslandAggregate extends PostgreSQLIslandOperator implemen
 	}
 
 	@Override
-	public Expression resolveAggregatesInFilter(String e, boolean goParent, PostgreSQLIslandOperator lastHopOp, Set<String> names, StringBuilder sb) throws Exception {
+	public Expression resolveAggregatesInFilter(String e, boolean goParent, SQLIslandOperator lastHopOp, Set<String> names, StringBuilder sb) throws Exception {
 		
 		for (String s: outSchema.keySet()) {
 			Expression exp = outSchema.get(s).getSQLExpression();
@@ -441,7 +441,7 @@ public class PostgreSQLIslandAggregate extends PostgreSQLIslandOperator implemen
 	
 	@Override
 	public Map<String, Expression> getChildrenPredicates() throws Exception {
-		Map<String, Expression> ret = ((PostgreSQLIslandOperator) this.getChildren().get(0)).getChildrenPredicates();
+		Map<String, Expression> ret = ((SQLIslandOperator) this.getChildren().get(0)).getChildrenPredicates();
 		ret.put(getAggregateToken(), null);
 		return ret;
 	}

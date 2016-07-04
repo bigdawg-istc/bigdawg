@@ -1,20 +1,20 @@
-package istc.bigdawg.islands.PostgreSQL.operators;
+package istc.bigdawg.islands.relational.operators;
 
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 import istc.bigdawg.islands.OperatorVisitor;
-import istc.bigdawg.islands.PostgreSQL.SQLOutItemResolver;
-import istc.bigdawg.islands.PostgreSQL.SQLTableExpression;
-import istc.bigdawg.islands.PostgreSQL.utils.SQLAttribute;
 import istc.bigdawg.islands.operators.Distinct;
+import istc.bigdawg.islands.relational.SQLOutItemResolver;
+import istc.bigdawg.islands.relational.SQLTableExpression;
+import istc.bigdawg.islands.relational.utils.SQLAttribute;
 
-public class PostgreSQLIslandDistinct extends PostgreSQLIslandOperator implements Distinct {
+public class SQLIslandDistinct extends SQLIslandOperator implements Distinct {
 
 	
 	
-	PostgreSQLIslandDistinct(Map<String, String> parameters, List<String> output, PostgreSQLIslandOperator child, SQLTableExpression supplement) throws Exception  {
+	SQLIslandDistinct(Map<String, String> parameters, List<String> output, SQLIslandOperator child, SQLTableExpression supplement) throws Exception  {
 		super(parameters, output, child, supplement);
 		
 		
@@ -22,7 +22,7 @@ public class PostgreSQLIslandDistinct extends PostgreSQLIslandOperator implement
 		blockerCount++;
 		this.blockerID = blockerCount;
 
-		if (children.get(0) instanceof PostgreSQLIslandJoin) {
+		if (children.get(0) instanceof SQLIslandJoin) {
 			outSchema = new LinkedHashMap<>();
 			for(int i = 0; i < output.size(); ++i) {
 				String expr = output.get(i);
@@ -38,7 +38,7 @@ public class PostgreSQLIslandDistinct extends PostgreSQLIslandOperator implement
 	}
 
 	
-	public PostgreSQLIslandDistinct(PostgreSQLIslandOperator o, boolean addChild) throws Exception {
+	public SQLIslandDistinct(SQLIslandOperator o, boolean addChild) throws Exception {
 		super(o, addChild);
 		
 		this.blockerID = o.blockerID;

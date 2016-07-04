@@ -17,7 +17,7 @@ import istc.bigdawg.scidb.SciDBConnectionInfo;
 
 public class CatalogViewer {
 	
-	static enum Engine {PostgreSQL, SciDB};
+	public static enum Engine {PostgreSQL, SciDB};
 
 //	private static Logger logger = Logger.getLogger(CatalogViewer.class.getName());
 
@@ -505,7 +505,7 @@ public class CatalogViewer {
 		return extraction;
 	}
 	
-	public static List<Integer> getDbsOfObject(String objName, String dbname) throws Exception {
+	public static List<Integer> getDbsOfObject(String objName, String dbname) throws BigDawgCatalogException, SQLException  {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
 		CatalogUtilities.checkConnection(cc);

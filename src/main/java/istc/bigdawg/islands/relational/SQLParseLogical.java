@@ -1,10 +1,10 @@
-package istc.bigdawg.islands.PostgreSQL;
+package istc.bigdawg.islands.relational;
 
 import java.util.Iterator;
 import java.util.List;
 
 import istc.bigdawg.exceptions.BigDawgException;
-import istc.bigdawg.islands.PostgreSQL.utils.SQLPrepareQuery;
+import istc.bigdawg.islands.relational.utils.SQLPrepareQuery;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.Select;

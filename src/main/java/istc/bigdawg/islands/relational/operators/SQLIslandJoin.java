@@ -1,4 +1,4 @@
-package istc.bigdawg.islands.PostgreSQL.operators;
+package istc.bigdawg.islands.relational.operators;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -10,11 +10,11 @@ import java.util.Set;
 
 import istc.bigdawg.islands.DataObjectAttribute;
 import istc.bigdawg.islands.OperatorVisitor;
-import istc.bigdawg.islands.PostgreSQL.SQLOutItemResolver;
-import istc.bigdawg.islands.PostgreSQL.SQLTableExpression;
-import istc.bigdawg.islands.PostgreSQL.utils.SQLExpressionUtils;
 import istc.bigdawg.islands.operators.Join;
 import istc.bigdawg.islands.operators.Operator;
+import istc.bigdawg.islands.relational.SQLOutItemResolver;
+import istc.bigdawg.islands.relational.SQLTableExpression;
+import istc.bigdawg.islands.relational.utils.SQLExpressionUtils;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Parenthesis;
@@ -22,7 +22,7 @@ import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
 
 
-public class PostgreSQLIslandJoin extends PostgreSQLIslandOperator implements Join {
+public class SQLIslandJoin extends SQLIslandOperator implements Join {
 
 //	public enum JoinType  {Left, Natural, Right};
 //	
@@ -41,13 +41,13 @@ public class PostgreSQLIslandJoin extends PostgreSQLIslandOperator implements Jo
 	protected Integer joinID = null;
 	
 	// for SQL
-	public PostgreSQLIslandJoin (Map<String, String> parameters, List<String> output, PostgreSQLIslandOperator lhs, PostgreSQLIslandOperator rhs, SQLTableExpression supplement) throws Exception  {
+	public SQLIslandJoin (Map<String, String> parameters, List<String> output, SQLIslandOperator lhs, SQLIslandOperator rhs, SQLTableExpression supplement) throws Exception  {
 		super(parameters, output, lhs, rhs, supplement);
 
 		// mending non-canoncial ordering
-		if (children.get(0) instanceof PostgreSQLIslandScan && !(children.get(1) instanceof PostgreSQLIslandScan)) {
-			PostgreSQLIslandOperator child0 = (PostgreSQLIslandOperator) children.get(1);
-			PostgreSQLIslandOperator child1 = (PostgreSQLIslandOperator) children.get(0);
+		if (children.get(0) instanceof SQLIslandScan && !(children.get(1) instanceof SQLIslandScan)) {
+			SQLIslandOperator child0 = (SQLIslandOperator) children.get(1);
+			SQLIslandOperator child1 = (SQLIslandOperator) children.get(0);
 			children.clear();
 			children.add(child0);
 			children.add(child1);
@@ -104,8 +104,8 @@ public class PostgreSQLIslandJoin extends PostgreSQLIslandOperator implements Jo
 //			joinFilterOriginal 		= new String (joinFilter);
 		
 		for (Operator o : children) {
-			if (o instanceof PostgreSQLIslandAggregate) {
-				((PostgreSQLIslandAggregate)o).setSingledOutAggregate();
+			if (o instanceof SQLIslandAggregate) {
+				((SQLIslandAggregate)o).setSingledOutAggregate();
 			}
 		}
 		
@@ -115,7 +115,7 @@ public class PostgreSQLIslandJoin extends PostgreSQLIslandOperator implements Jo
     
 	
 //	// for AFL
-//	public PostgreSQLIslandJoin(Map<String, String> parameters, SciDBArray output, PostgreSQLIslandOperator lhs, PostgreSQLIslandOperator rhs) throws Exception  {
+//	public SQLIslandJoin(Map<String, String> parameters, SciDBArray output, SQLIslandOperator lhs, SQLIslandOperator rhs) throws Exception  {
 //		super(parameters, output, lhs, rhs);
 //
 //		maxJoinSerial++;
@@ -170,9 +170,9 @@ public class PostgreSQLIslandJoin extends PostgreSQLIslandOperator implements Jo
  		}
  	}
     
- 	public PostgreSQLIslandJoin (PostgreSQLIslandOperator o, boolean addChild) throws Exception {
+ 	public SQLIslandJoin (SQLIslandOperator o, boolean addChild) throws Exception {
 		super(o, addChild);
-		PostgreSQLIslandJoin j = (PostgreSQLIslandJoin) o;
+		SQLIslandJoin j = (SQLIslandJoin) o;
 		
 		this.setJoinID(j.getJoinID());
 		
@@ -199,7 +199,7 @@ public class PostgreSQLIslandJoin extends PostgreSQLIslandOperator implements Jo
 		}
 	}
 	
-	public PostgreSQLIslandJoin(Operator child0, Operator child1, JoinType jt, String joinPred, boolean isFilter) throws JSQLParserException {
+	public SQLIslandJoin(Operator child0, Operator child1, JoinType jt, String joinPred, boolean isFilter) throws JSQLParserException {
 		this.isCTERoot = false; // TODO VERIFY
 		this.isBlocking = false; 
 		this.isPruned = false;
@@ -223,11 +223,11 @@ public class PostgreSQLIslandJoin extends PostgreSQLIslandOperator implements Jo
 		this.dataObjects = new HashSet<>();
 //		this.joinReservedObjects = new HashSet<>();
 		
-		this.srcSchema = new LinkedHashMap<String, DataObjectAttribute>(((PostgreSQLIslandOperator) child0).outSchema);
-		srcSchema.putAll(((PostgreSQLIslandOperator)child1).outSchema);
+		this.srcSchema = new LinkedHashMap<String, DataObjectAttribute>(((SQLIslandOperator) child0).outSchema);
+		srcSchema.putAll(((SQLIslandOperator)child1).outSchema);
 		
-		this.outSchema = new LinkedHashMap<String, DataObjectAttribute>(((PostgreSQLIslandOperator) child0).outSchema);
-		outSchema.putAll(((PostgreSQLIslandOperator) child1).outSchema);
+		this.outSchema = new LinkedHashMap<String, DataObjectAttribute>(((SQLIslandOperator) child0).outSchema);
+		outSchema.putAll(((SQLIslandOperator) child1).outSchema);
 		
 		
 		this.children = new ArrayList<>();
@@ -241,7 +241,7 @@ public class PostgreSQLIslandJoin extends PostgreSQLIslandOperator implements Jo
 		child1.setQueryRoot(false);
 	}
 	
-	public PostgreSQLIslandJoin() {
+	public SQLIslandJoin() {
 		super();
 		
 		this.isCTERoot = false; // TODO VERIFY
@@ -272,11 +272,11 @@ public class PostgreSQLIslandJoin extends PostgreSQLIslandOperator implements Jo
 		this.dataObjects = new HashSet<>();
 //		this.joinReservedObjects = new HashSet<>();
 		
-		this.srcSchema = new LinkedHashMap<String, DataObjectAttribute>(((PostgreSQLIslandOperator) child0).outSchema);
-		srcSchema.putAll(((PostgreSQLIslandOperator)child1).outSchema);
+		this.srcSchema = new LinkedHashMap<String, DataObjectAttribute>(((SQLIslandOperator) child0).outSchema);
+		srcSchema.putAll(((SQLIslandOperator)child1).outSchema);
 		
-		this.outSchema = new LinkedHashMap<String, DataObjectAttribute>(((PostgreSQLIslandOperator) child0).outSchema);
-		outSchema.putAll(((PostgreSQLIslandOperator) child1).outSchema);
+		this.outSchema = new LinkedHashMap<String, DataObjectAttribute>(((SQLIslandOperator) child0).outSchema);
+		outSchema.putAll(((SQLIslandOperator) child1).outSchema);
 		
 		this.children.add(child0);
 		this.children.add(child1);
@@ -484,8 +484,8 @@ public class PostgreSQLIslandJoin extends PostgreSQLIslandOperator implements Jo
 	
 	@Override
 	public Map<String, Expression> getChildrenPredicates() throws Exception {
-		Map<String, Expression> left = ((PostgreSQLIslandOperator) this.getChildren().get(0)).getChildrenPredicates();
-		Map<String, Expression> right = ((PostgreSQLIslandOperator) this.getChildren().get(1)).getChildrenPredicates();
+		Map<String, Expression> left = ((SQLIslandOperator) this.getChildren().get(0)).getChildrenPredicates();
+		Map<String, Expression> right = ((SQLIslandOperator) this.getChildren().get(1)).getChildrenPredicates();
 		
 		boolean found = false; 
 		for (String s : left.keySet()) {
@@ -534,14 +534,14 @@ public class PostgreSQLIslandJoin extends PostgreSQLIslandOperator implements Jo
 	}
 	
 	@Override
-	public Expression resolveAggregatesInFilter(String e, boolean goParent, PostgreSQLIslandOperator lastHopOp, Set<String> names, StringBuilder sb) throws Exception {
+	public Expression resolveAggregatesInFilter(String e, boolean goParent, SQLIslandOperator lastHopOp, Set<String> names, StringBuilder sb) throws Exception {
 		
 		Expression exp = null;
-		if (parent != null && lastHopOp != parent && (exp = ((PostgreSQLIslandOperator) parent).resolveAggregatesInFilter(e, true, this, names, sb)) != null) 
+		if (parent != null && lastHopOp != parent && (exp = ((SQLIslandOperator) parent).resolveAggregatesInFilter(e, true, this, names, sb)) != null) 
 			return exp;
 		for (Operator o : children) {
 			if (goParent && o == lastHopOp) continue;
-			if ((exp = ((PostgreSQLIslandOperator) o).resolveAggregatesInFilter(e, false, this, names, sb)) != null) return exp;
+			if ((exp = ((SQLIslandOperator) o).resolveAggregatesInFilter(e, false, this, names, sb)) != null) return exp;
 		}
 		return exp;
 		

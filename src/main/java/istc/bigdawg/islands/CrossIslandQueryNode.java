@@ -20,13 +20,13 @@ import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.executor.plan.ExecutionNodeFactory;
 import istc.bigdawg.executor.plan.QueryExecutionPlan;
 import istc.bigdawg.islands.IslandsAndCast.Scope;
-import istc.bigdawg.islands.PostgreSQL.operators.PostgreSQLIslandOperator;
-import istc.bigdawg.islands.PostgreSQL.operators.PostgreSQLIslandScan;
-import istc.bigdawg.islands.PostgreSQL.utils.SQLExpressionUtils;
 import istc.bigdawg.islands.operators.Aggregate;
 import istc.bigdawg.islands.operators.Distinct;
 import istc.bigdawg.islands.operators.Join;
 import istc.bigdawg.islands.operators.Join.JoinType;
+import istc.bigdawg.islands.relational.operators.SQLIslandOperator;
+import istc.bigdawg.islands.relational.operators.SQLIslandScan;
+import istc.bigdawg.islands.relational.utils.SQLExpressionUtils;
 import istc.bigdawg.islands.operators.Limit;
 import istc.bigdawg.islands.operators.Merge;
 import istc.bigdawg.islands.operators.Operator;
@@ -142,8 +142,8 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 		
 		
 		// traverse add remainder
-		if (root instanceof PostgreSQLIslandOperator) 
-			logger.debug(String.format("Relational root schema before traverse: %s;", ((PostgreSQLIslandOperator)root).getOutSchema()));
+		if (root instanceof SQLIslandOperator) 
+			logger.debug(String.format("Relational root schema before traverse: %s;", ((SQLIslandOperator)root).getOutSchema()));
 		
 		remainderLoc = traverse(root, transitionSchemas); // this populated everything
 		
@@ -156,13 +156,13 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 		
 		
 		if (remainderLoc == null && root.getDataObjectAliasesOrNames().size() > 1) {
-			Map<String, DataObjectAttribute> rootOutSchema = ((PostgreSQLIslandOperator) root).getOutSchema();
+			Map<String, DataObjectAttribute> rootOutSchema = ((SQLIslandOperator) root).getOutSchema();
 			List<Operator> permResult = getPermutatedOperatorsWithBlock(scope, root, jp, jf);
 			
 			// if root is join then the constructed out schema might get messed up; adjust it here
-			if (root instanceof PostgreSQLIslandOperator) {
+			if (root instanceof SQLIslandOperator) {
 				for (Operator op : permResult) {
-					PostgreSQLIslandOperator o = (PostgreSQLIslandOperator) op;
+					SQLIslandOperator o = (SQLIslandOperator) op;
 					if (o.getOutSchema().size() != rootOutSchema.size()) {
 						o.updateOutSchema(rootOutSchema);
 					}
@@ -179,7 +179,7 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 //				o.accept(gen);
 //				System.out.printf("%d.  first formulation: %s\n", i, gen.generateStatementString());
 //				System.out.printf("%d. second formulation: %s\n", i, gen.generateStatementString()); // duplicate command to test modification of underlying structure
-//				System.out.printf("--> o schema after gens: %s;\n\n", ((PostgreSQLIslandOperator) o).getOutSchema());
+//				System.out.printf("--> o schema after gens: %s;\n\n", ((SQLIslandOperator) o).getOutSchema());
 //				i++;
 //			}
 //			System.out.println("\n");
@@ -748,8 +748,8 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 				List<String> result = traverse(node.getChildren().get(0), transitionSchemas);
 				if (result != null) ret = new ArrayList<String>(result); 
 			} else {
-				if (node instanceof PostgreSQLIslandScan && ((PostgreSQLIslandScan)node).getIndexCond() != null) {
-					joinPredicates.add(((PostgreSQLIslandScan)node).getIndexCond().toString());
+				if (node instanceof SQLIslandScan && ((SQLIslandScan)node).getIndexCond() != null) {
+					joinPredicates.add(((SQLIslandScan)node).getIndexCond().toString());
 				}
 				
 				System.out.printf("--->> printing qualified name: %s; originalMap: %s; \n", ((SeqScan) node).getFullyQualifiedName(), originalMap);

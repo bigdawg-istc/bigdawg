@@ -1,4 +1,4 @@
-package istc.bigdawg.islands.PostgreSQL.operators;
+package istc.bigdawg.islands.relational.operators;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -6,13 +6,13 @@ import java.util.Map;
 import java.util.Set;
 
 import istc.bigdawg.islands.OperatorVisitor;
-import istc.bigdawg.islands.PostgreSQL.SQLOutItemResolver;
-import istc.bigdawg.islands.PostgreSQL.SQLTableExpression;
-import istc.bigdawg.islands.PostgreSQL.utils.SQLAttribute;
 import istc.bigdawg.islands.operators.Merge;
 import istc.bigdawg.islands.operators.Operator;
+import istc.bigdawg.islands.relational.SQLOutItemResolver;
+import istc.bigdawg.islands.relational.SQLTableExpression;
+import istc.bigdawg.islands.relational.utils.SQLAttribute;
 
-public class PostgreSQLIslandMerge extends PostgreSQLIslandOperator implements Merge {
+public class SQLIslandMerge extends SQLIslandOperator implements Merge {
 
 	public enum MergeType {Intersect, Union};
 	
@@ -20,7 +20,7 @@ public class PostgreSQLIslandMerge extends PostgreSQLIslandOperator implements M
 	
 	
 	
-	public PostgreSQLIslandMerge(Map<String, String> parameters, List<String> output, List<PostgreSQLIslandOperator> childs, SQLTableExpression supplement) throws Exception  {
+	public SQLIslandMerge(Map<String, String> parameters, List<String> output, List<SQLIslandOperator> childs, SQLTableExpression supplement) throws Exception  {
 		super(parameters, output, childs, supplement);
 
 		isBlocking = true;
@@ -29,7 +29,7 @@ public class PostgreSQLIslandMerge extends PostgreSQLIslandOperator implements M
 
 		// Union ALL is set by the parent Aggregate or Unique
 		
-		if (children.get(0) instanceof PostgreSQLIslandJoin) {
+		if (children.get(0) instanceof SQLIslandJoin) {
 			outSchema = new LinkedHashMap<>();
 			for(int i = 0; i < output.size(); ++i) {
 				String expr = output.get(i);
@@ -45,7 +45,7 @@ public class PostgreSQLIslandMerge extends PostgreSQLIslandOperator implements M
 	}
 	
 //	// for AFL
-//	public PostgreSQLIslandMerge(Map<String, String> parameters, SciDBArray output, List<PostgreSQLIslandOperator> childs) throws Exception  {
+//	public SQLIslandMerge(Map<String, String> parameters, SciDBArray output, List<SQLIslandOperator> childs) throws Exception  {
 //		super(parameters, output, childs);
 //
 //		isBlocking = true;
@@ -55,15 +55,15 @@ public class PostgreSQLIslandMerge extends PostgreSQLIslandOperator implements M
 //		outSchema = new LinkedHashMap<String, DataObjectAttribute>(childs.get(0).outSchema);
 //	}
 	
-	public PostgreSQLIslandMerge(PostgreSQLIslandOperator o, boolean addChild) throws Exception {
+	public SQLIslandMerge(SQLIslandOperator o, boolean addChild) throws Exception {
 		super(o, addChild);
-		PostgreSQLIslandMerge s = (PostgreSQLIslandMerge) o;
+		SQLIslandMerge s = (SQLIslandMerge) o;
 		
 		this.isUnionAll = s.isUnionAll;
 		this.blockerID = s.blockerID;
 	}
 	
-	public PostgreSQLIslandMerge() {
+	public SQLIslandMerge() {
 		isBlocking = true;
 		blockerCount++;
 		this.blockerID = blockerCount;

@@ -1,4 +1,4 @@
-package istc.bigdawg.islands.PostgreSQL.utils;
+package istc.bigdawg.islands.relational.utils;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -12,7 +12,7 @@ import java.util.stream.Collectors;
 
 import com.beust.jcommander.internal.Lists;
 
-import istc.bigdawg.islands.PostgreSQL.SQLExpressionHandler;
+import istc.bigdawg.islands.relational.SQLExpressionHandler;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.AnalyticExpression;
 import net.sf.jsqlparser.expression.BinaryExpression;

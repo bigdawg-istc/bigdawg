@@ -1,4 +1,4 @@
-package istc.bigdawg.islands.PostgreSQL.operators;
+package istc.bigdawg.islands.relational.operators;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -11,11 +11,11 @@ import java.util.Set;
 
 import istc.bigdawg.islands.DataObjectAttribute;
 import istc.bigdawg.islands.OperatorVisitor;
-import istc.bigdawg.islands.PostgreSQL.SQLTableExpression;
-import istc.bigdawg.islands.PostgreSQL.utils.SQLAttribute;
-import istc.bigdawg.islands.PostgreSQL.utils.SQLExpressionUtils;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.operators.OperatorInterface;
+import istc.bigdawg.islands.relational.SQLTableExpression;
+import istc.bigdawg.islands.relational.utils.SQLAttribute;
+import istc.bigdawg.islands.relational.utils.SQLExpressionUtils;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Parenthesis;
@@ -28,7 +28,7 @@ import net.sf.jsqlparser.statement.select.SelectExpressionItem;
 import net.sf.jsqlparser.statement.select.SelectItem;
 import net.sf.jsqlparser.util.SelectUtils;
 
-public class PostgreSQLIslandOperator implements Operator, OperatorInterface {
+public class SQLIslandOperator implements Operator, OperatorInterface {
 
 	
 //	protected boolean isCTERoot = false;
@@ -82,8 +82,8 @@ public class PostgreSQLIslandOperator implements Operator, OperatorInterface {
 	
 	
 	// SQL, single non sort non union
-	public PostgreSQLIslandOperator(Map<String, String> parameters, List<String> output,  
-			PostgreSQLIslandOperator child, // this is changed to 
+	public SQLIslandOperator(Map<String, String> parameters, List<String> output,  
+			SQLIslandOperator child, // this is changed to 
 			SQLTableExpression supplement) {
 
 		
@@ -105,8 +105,8 @@ public class PostgreSQLIslandOperator implements Operator, OperatorInterface {
 
 	
 	// SQL, join
-	public PostgreSQLIslandOperator(Map<String, String> parameters, List<String> output, 
-			PostgreSQLIslandOperator lhs, PostgreSQLIslandOperator rhs,
+	public SQLIslandOperator(Map<String, String> parameters, List<String> output, 
+			SQLIslandOperator lhs, SQLIslandOperator rhs,
 			SQLTableExpression supplement) {
 		
 		this();
@@ -126,8 +126,8 @@ public class PostgreSQLIslandOperator implements Operator, OperatorInterface {
 	}
 	
 	// SQL, UNION
-	public PostgreSQLIslandOperator(Map<String, String> parameters, List<String> output,  
-			List<PostgreSQLIslandOperator> childs, SQLTableExpression supplement) {
+	public SQLIslandOperator(Map<String, String> parameters, List<String> output,  
+			List<SQLIslandOperator> childs, SQLTableExpression supplement) {
 
 		// order preserving
 		this();
@@ -137,20 +137,20 @@ public class PostgreSQLIslandOperator implements Operator, OperatorInterface {
 //		dataObjects = new HashSet<>();
 		
 		children.addAll(childs);
-		for (PostgreSQLIslandOperator c : childs) c.setParent(this);
+		for (SQLIslandOperator c : childs) c.setParent(this);
 		populateComplexOutItem(true);
 		
 	}
 	
 	
-	public PostgreSQLIslandOperator() {
+	public SQLIslandOperator() {
 		outSchema = new LinkedHashMap<String, DataObjectAttribute>();
 		setComplexOutItemFromProgeny(new LinkedHashMap<>());
 		children  = new ArrayList<Operator>();
 		dataObjects = new HashSet<>();
 	}
 	
-	public PostgreSQLIslandOperator(PostgreSQLIslandOperator o, boolean addChild) throws Exception {
+	public SQLIslandOperator(SQLIslandOperator o, boolean addChild) throws Exception {
 		
 		this.isCTERoot = o.isCTERoot;
 		this.isBlocking = o.isBlocking; 
@@ -184,7 +184,7 @@ public class PostgreSQLIslandOperator implements Operator, OperatorInterface {
 					continue;
 				}
 				
-				PostgreSQLIslandOperator op = (PostgreSQLIslandOperator)s.duplicate(addChild);
+				SQLIslandOperator op = (SQLIslandOperator)s.duplicate(addChild);
 				op.setParent(this);
 				this.children.add(op);
 				
@@ -195,7 +195,7 @@ public class PostgreSQLIslandOperator implements Operator, OperatorInterface {
 	protected void populateComplexOutItem(boolean first) {
 		// populate complexOutItemFromProgeny
 		for (Operator c : children){
-			PostgreSQLIslandOperator child = (PostgreSQLIslandOperator)c; 
+			SQLIslandOperator child = (SQLIslandOperator)c; 
 			if ((!first) && child.getComplexOutItemFromProgeny().isEmpty()) child.populateComplexOutItem(first);
 			for (String s: child.getOutSchema().keySet()) {
 				Expression e = child.getOutSchema().get(s).getSQLExpression();
@@ -205,8 +205,8 @@ public class PostgreSQLIslandOperator implements Operator, OperatorInterface {
 				getComplexOutItemFromProgeny().put(s, e.toString().replaceAll("[*]", "\\[\\*\\]").replaceAll("[.]", "\\[\\.\\]").replaceAll("[(]", "\\[\\(\\]").replaceAll("[)]", "\\[\\)\\]"));
 			}
 			if (first || (!child.isPruned()
-					|| (child instanceof PostgreSQLIslandJoin && ((PostgreSQLIslandJoin)child).getJoinID() == null)
-					|| (child instanceof PostgreSQLIslandAggregate && ((PostgreSQLIslandAggregate)child).getAggregateID() == null))) getComplexOutItemFromProgeny().putAll(child.getComplexOutItemFromProgeny());
+					|| (child instanceof SQLIslandJoin && ((SQLIslandJoin)child).getJoinID() == null)
+					|| (child instanceof SQLIslandAggregate && ((SQLIslandAggregate)child).getAggregateID() == null))) getComplexOutItemFromProgeny().putAll(child.getComplexOutItemFromProgeny());
 		}
 	}
 	
@@ -264,7 +264,7 @@ public class PostgreSQLIslandOperator implements Operator, OperatorInterface {
 	public boolean isAnyProgenyPruned() {
 		if (this.isPruned) return true;
 		else if (children.isEmpty()) return false;
-		else return ((PostgreSQLIslandOperator)children.get(0)).isAnyProgenyPruned();
+		else return ((SQLIslandOperator)children.get(0)).isAnyProgenyPruned();
 	}
 	
 	public Map<String, DataObjectAttribute>  getOutSchema() {
@@ -285,7 +285,7 @@ public class PostgreSQLIslandOperator implements Operator, OperatorInterface {
 	public Map<String, List<String>> getTableLocations(Map<String, List<String>> map) {
 		Map<String, List<String>> result = new HashMap<>();
 		for (Operator o : children) {
-			result.putAll(((PostgreSQLIslandOperator) o).getTableLocations(map));
+			result.putAll(((SQLIslandOperator) o).getTableLocations(map));
 		}
 		return result;
 	}
@@ -312,7 +312,7 @@ public class PostgreSQLIslandOperator implements Operator, OperatorInterface {
 	}
 	
 	public void setSubTree(boolean t) {
-		if (this instanceof PostgreSQLIslandJoin) return;
+		if (this instanceof SQLIslandJoin) return;
 		if (t && this.subTreeID == null) {
 			subTreeCount += 1;
 			this.subTreeID = subTreeCount;
@@ -321,9 +321,9 @@ public class PostgreSQLIslandOperator implements Operator, OperatorInterface {
 	}
 	
 	public String getSubTreeToken() throws Exception {
-		if (!isSubTree && !(this instanceof PostgreSQLIslandJoin)) return null;
-		if (this instanceof PostgreSQLIslandJoin) return ((PostgreSQLIslandJoin)this).getJoinToken(); 
-		else if (this instanceof PostgreSQLIslandAggregate && ((PostgreSQLIslandAggregate)this).getAggregateID() != null) return ((PostgreSQLIslandAggregate)this).getAggregateToken();
+		if (!isSubTree && !(this instanceof SQLIslandJoin)) return null;
+		if (this instanceof SQLIslandJoin) return ((SQLIslandJoin)this).getJoinToken(); 
+		else if (this instanceof SQLIslandAggregate && ((SQLIslandAggregate)this).getAggregateID() != null) return ((SQLIslandAggregate)this).getAggregateToken();
 		else return BigDAWGSubtreeToken + this.subTreeID;
 	}
 	
@@ -355,25 +355,25 @@ public class PostgreSQLIslandOperator implements Operator, OperatorInterface {
 			
 		}
 		
-		if (this instanceof PostgreSQLIslandJoin && ((PostgreSQLIslandJoin)this).joinID != null) {
-			replaceToken = ((PostgreSQLIslandJoin)this).getJoinToken();
+		if (this instanceof SQLIslandJoin && ((SQLIslandJoin)this).joinID != null) {
+			replaceToken = ((SQLIslandJoin)this).getJoinToken();
 			aliasOrString.put(replaceToken, replaceToken);
 			masked = true;
 		}
 		
-		if (this instanceof PostgreSQLIslandAggregate && ((PostgreSQLIslandAggregate)this).getAggregateID() != null) {
-			replaceToken = ((PostgreSQLIslandAggregate)this).getAggregateToken();
+		if (this instanceof SQLIslandAggregate && ((SQLIslandAggregate)this).getAggregateID() != null) {
+			replaceToken = ((SQLIslandAggregate)this).getAggregateToken();
 			aliasOrString.put(replaceToken, replaceToken);
 			masked = true;
 		}
 		
 		if (this.children.size() > 0 ) {
 			
-			if (this instanceof PostgreSQLIslandScan) {
-				if (((PostgreSQLIslandScan)this).getTableAlias() != null && !((PostgreSQLIslandScan)this).getTableAlias().isEmpty())
-					aliasOrString.put(((PostgreSQLIslandScan)this).getTableAlias(), ((PostgreSQLIslandScan)this).table.getFullyQualifiedName());
+			if (this instanceof SQLIslandScan) {
+				if (((SQLIslandScan)this).getTableAlias() != null && !((SQLIslandScan)this).getTableAlias().isEmpty())
+					aliasOrString.put(((SQLIslandScan)this).getTableAlias(), ((SQLIslandScan)this).table.getFullyQualifiedName());
 				else 
-					aliasOrString.put(((PostgreSQLIslandScan)this).getSrcTable(), ((PostgreSQLIslandScan)this).table.getFullyQualifiedName());
+					aliasOrString.put(((SQLIslandScan)this).getSrcTable(), ((SQLIslandScan)this).table.getFullyQualifiedName());
 			}
 			
 			for (Operator o : children) {
@@ -385,26 +385,26 @@ public class PostgreSQLIslandOperator implements Operator, OperatorInterface {
 				}
 			}
 		} else {
-			if (((PostgreSQLIslandScan)this).getTableAlias() != null && !((PostgreSQLIslandScan)this).getTableAlias().isEmpty())
-				aliasOrString.put(((PostgreSQLIslandScan)this).getTableAlias(), ((PostgreSQLIslandScan)this).table.getFullyQualifiedName());
+			if (((SQLIslandScan)this).getTableAlias() != null && !((SQLIslandScan)this).getTableAlias().isEmpty())
+				aliasOrString.put(((SQLIslandScan)this).getTableAlias(), ((SQLIslandScan)this).table.getFullyQualifiedName());
 			else 
-				aliasOrString.put(((PostgreSQLIslandScan)this).getSrcTable(), ((PostgreSQLIslandScan)this).table.getFullyQualifiedName());
+				aliasOrString.put(((SQLIslandScan)this).getSrcTable(), ((SQLIslandScan)this).table.getFullyQualifiedName());
 		}
 		
 		return aliasOrString;
 	}
 	
-	public List<PostgreSQLIslandOperator> getDataObjects() {
-		List<PostgreSQLIslandOperator> extraction = new ArrayList<>();
+	public List<SQLIslandOperator> getDataObjects() {
+		List<SQLIslandOperator> extraction = new ArrayList<>();
 		
 		if (isPruned) {
 			extraction.add(this);
 			return extraction;
 		}
 		
-		if (!(this instanceof PostgreSQLIslandScan )) {
+		if (!(this instanceof SQLIslandScan )) {
 			for (Operator o : children) {
-				extraction.addAll(((PostgreSQLIslandOperator) o).getDataObjects());
+				extraction.addAll(((SQLIslandOperator) o).getDataObjects());
 			}
 		} else {
 			extraction.add(this);
@@ -422,47 +422,47 @@ public class PostgreSQLIslandOperator implements Operator, OperatorInterface {
 	
 	public Integer getBlockerID() throws Exception {
 		if (!isBlocking)
-			throw new Exception("PostgreSQLIslandOperator Not blocking: "+this.toString());
+			throw new Exception("SQLIslandOperator Not blocking: "+this.toString());
 		return blockerID;
 	}
 	
 	@Override
 	public Operator duplicate(boolean addChild) throws Exception {
-		if (this instanceof PostgreSQLIslandJoin) {
-			return new PostgreSQLIslandJoin(this, addChild);
-		} else if (this instanceof PostgreSQLIslandSeqScan) {
-			return new PostgreSQLIslandSeqScan(this, addChild);
-		} else if (this instanceof PostgreSQLIslandCommonTableExpressionScan) {
-			return new PostgreSQLIslandCommonTableExpressionScan(this, addChild);
-		} else if (this instanceof PostgreSQLIslandSort) {
-			return new PostgreSQLIslandSort(this, addChild);
-		} else if (this instanceof PostgreSQLIslandAggregate) {
-			return new PostgreSQLIslandAggregate(this, addChild);
-		} else if (this instanceof PostgreSQLIslandLimit) {
-			return new PostgreSQLIslandLimit(this, addChild);
-		} else if (this instanceof PostgreSQLIslandDistinct) {
-			return new PostgreSQLIslandDistinct(this, addChild);
-		} else if (this instanceof PostgreSQLIslandMerge) {
-			return new PostgreSQLIslandMerge (this, addChild);
+		if (this instanceof SQLIslandJoin) {
+			return new SQLIslandJoin(this, addChild);
+		} else if (this instanceof SQLIslandSeqScan) {
+			return new SQLIslandSeqScan(this, addChild);
+		} else if (this instanceof SQLIslandCommonTableExpressionScan) {
+			return new SQLIslandCommonTableExpressionScan(this, addChild);
+		} else if (this instanceof SQLIslandSort) {
+			return new SQLIslandSort(this, addChild);
+		} else if (this instanceof SQLIslandAggregate) {
+			return new SQLIslandAggregate(this, addChild);
+		} else if (this instanceof SQLIslandLimit) {
+			return new SQLIslandLimit(this, addChild);
+		} else if (this instanceof SQLIslandDistinct) {
+			return new SQLIslandDistinct(this, addChild);
+		} else if (this instanceof SQLIslandMerge) {
+			return new SQLIslandMerge (this, addChild);
 		} else {
-			throw new Exception("Unsupported PostgreSQLIslandOperator Copy: "+this.getClass().toString());
+			throw new Exception("Unsupported SQLIslandOperator Copy: "+this.getClass().toString());
 		}
 	}
 	
 	public void updateObjectAliases() {
 		
 		setObjectAliases(new HashSet<String>());
-		if (this instanceof PostgreSQLIslandScan && ((PostgreSQLIslandScan)this).getTableAlias() != null) {
-			getObjectAliases().add(((PostgreSQLIslandScan)this).getTableAlias());
-		} else if (this instanceof PostgreSQLIslandJoin) {
+		if (this instanceof SQLIslandScan && ((SQLIslandScan)this).getTableAlias() != null) {
+			getObjectAliases().add(((SQLIslandScan)this).getTableAlias());
+		} else if (this instanceof SQLIslandJoin) {
 			
-			((PostgreSQLIslandOperator)children.get(1)).updateObjectAliases();
-			getObjectAliases().addAll(((PostgreSQLIslandOperator)children.get(1)).getObjectAliases());
+			((SQLIslandOperator)children.get(1)).updateObjectAliases();
+			getObjectAliases().addAll(((SQLIslandOperator)children.get(1)).getObjectAliases());
 		} 
 
 		if (children.size() != 0) {
-			((PostgreSQLIslandOperator)children.get(0)).updateObjectAliases();
-			getObjectAliases().addAll(((PostgreSQLIslandOperator)children.get(0)).getObjectAliases());
+			((SQLIslandOperator)children.get(0)).updateObjectAliases();
+			getObjectAliases().addAll(((SQLIslandOperator)children.get(0)).getObjectAliases());
 		}
 	}
 	
@@ -566,15 +566,15 @@ public class PostgreSQLIslandOperator implements Operator, OperatorInterface {
 		}
 	}
 	
-	public Expression resolveAggregatesInFilter(String e, boolean goParent, PostgreSQLIslandOperator lastHopOp, Set<String> names, StringBuilder sb) throws Exception {
+	public Expression resolveAggregatesInFilter(String e, boolean goParent, SQLIslandOperator lastHopOp, Set<String> names, StringBuilder sb) throws Exception {
 		
 		if (goParent && parent != null) 
-			return ((PostgreSQLIslandOperator)parent).resolveAggregatesInFilter(e, goParent, this, names, sb);
+			return ((SQLIslandOperator)parent).resolveAggregatesInFilter(e, goParent, this, names, sb);
 		else if (!goParent) {
 			Expression exp = null;
 			for (Operator o : children) {
 				if (o == lastHopOp) break;
-				if ((exp = ((PostgreSQLIslandOperator)o).resolveAggregatesInFilter(e, goParent, this, names, sb)) != null) return exp;
+				if ((exp = ((SQLIslandOperator)o).resolveAggregatesInFilter(e, goParent, this, names, sb)) != null) return exp;
 			}
 		} 
 		
@@ -583,11 +583,11 @@ public class PostgreSQLIslandOperator implements Operator, OperatorInterface {
 	
 	public void seekScanAndProcessAggregateInFilter() throws Exception {
 		for (Operator o : children) 
-			((PostgreSQLIslandOperator)o).seekScanAndProcessAggregateInFilter();
+			((SQLIslandOperator)o).seekScanAndProcessAggregateInFilter();
 	}
 	
 	public Map<String, Expression> getChildrenPredicates() throws Exception {
-		return ((PostgreSQLIslandOperator) this.getChildren().get(0)).getChildrenPredicates();
+		return ((SQLIslandOperator) this.getChildren().get(0)).getChildrenPredicates();
 	}
 	
 	protected Select generateSelectWithToken(String token) throws Exception {

@@ -1,4 +1,4 @@
-package istc.bigdawg.islands.PostgreSQL;
+package istc.bigdawg.islands.relational;
 
 import java.io.StringReader;
 import java.util.ArrayList;
@@ -14,10 +14,10 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
-import istc.bigdawg.islands.PostgreSQL.operators.PostgreSQLIslandOperatorFactory;
-import istc.bigdawg.islands.PostgreSQL.utils.SQLPrepareQuery;
-import istc.bigdawg.islands.PostgreSQL.utils.SQLUtilities;
 import istc.bigdawg.islands.operators.Operator;
+import istc.bigdawg.islands.relational.operators.SQLIslandOperatorFactory;
+import istc.bigdawg.islands.relational.utils.SQLPrepareQuery;
+import istc.bigdawg.islands.relational.utils.SQLUtilities;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.select.PlainSelect;
@@ -104,7 +104,7 @@ public class SQLPlanParser {
 	}
 	
 	
-	public static SQLQueryPlan extractDirect(PostgreSQLHandler psqlh, String query) throws Exception  {
+	public static SQLQueryPlan extractDirectFromPostgreSQL(PostgreSQLHandler psqlh, String query) throws Exception  {
 
 		String explainQuery = SQLPrepareQuery.generateExplainQueryString(query);
 		
@@ -220,7 +220,7 @@ public class SQLPlanParser {
 		}
 		else {
 			parameters.put("sectionName", planName);
-			op =  PostgreSQLIslandOperatorFactory.get(nodeType, parameters, outItems, sortKeys, childOps, queryPlan, supplement);
+			op =  SQLIslandOperatorFactory.get(nodeType, parameters, outItems, sortKeys, childOps, queryPlan, supplement);
 		}
 
 		

@@ -15,15 +15,14 @@ import istc.bigdawg.catalog.CatalogInstance;
 import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.islands.OperatorVisitor;
 import istc.bigdawg.islands.TheObjectThatResolvesAllDifferencesAmongTheIslands;
-import istc.bigdawg.islands.PostgreSQL.SQLPlanParser;
-import istc.bigdawg.islands.PostgreSQL.SQLQueryGenerator;
-import istc.bigdawg.islands.PostgreSQL.SQLQueryPlan;
-import istc.bigdawg.islands.PostgreSQL.utils.SQLPrepareQuery;
 import istc.bigdawg.islands.SciDB.AFLPlanParser;
 import istc.bigdawg.islands.SciDB.AFLQueryGenerator;
 import istc.bigdawg.islands.SciDB.AFLQueryPlan;
 import istc.bigdawg.islands.operators.Join;
 import istc.bigdawg.islands.operators.Operator;
+import istc.bigdawg.islands.relational.SQLPlanParser;
+import istc.bigdawg.islands.relational.SQLQueryGenerator;
+import istc.bigdawg.islands.relational.SQLQueryPlan;
 import istc.bigdawg.migration.MigrationParams;
 import istc.bigdawg.migration.Migrator;
 import istc.bigdawg.planner.Planner;
@@ -206,7 +205,7 @@ public class TrialsAndErrors {
 		String query = "SELECT supplier.s_acctbal, supplier.s_name, nation.n_name, part.p_partkey, part.p_mfgr, supplier.s_address, supplier.s_phone, supplier.s_comment FROM (SELECT partsupp_1.ps_partkey, min(partsupp_1.ps_supplycost) AS minsuppcost FROM nation AS nation_1, region AS region_1, supplier AS supplier_1, partsupp AS partsupp_1 WHERE (supplier_1.s_nationkey = nation_1.n_nationkey) AND (nation_1.n_regionkey = region_1.r_regionkey) AND (region_1.r_name = 'AMERICA') AND (partsupp_1.ps_suppkey = supplier_1.s_suppkey) GROUP BY partsupp_1.ps_partkey) AS BIGDAWGAGGREGATE_1, partsupp, part, supplier, nation, region WHERE ((BIGDAWGAGGREGATE_1.minsuppcost) = partsupp.ps_supplycost) AND (partsupp.ps_partkey = BIGDAWGAGGREGATE_1.ps_partkey) AND ((part.p_type LIKE '%BRASS') AND (part.p_size = 14)) AND (part.p_partkey = partsupp.ps_partkey) AND (part.p_partkey = partsupp.ps_partkey) AND (supplier.s_suppkey = partsupp.ps_suppkey) AND (nation.n_nationkey = supplier.s_nationkey) AND (region.r_name = 'AMERICA') AND (region.r_regionkey = nation.n_regionkey) AND (region.r_regionkey = nation.n_regionkey) ORDER BY supplier.s_acctbal DESC, nation.n_name, supplier.s_name, part.p_partkey;";
 
 		PostgreSQLHandler psqlh = new PostgreSQLHandler(3);
-		SQLQueryPlan queryPlan = SQLPlanParser.extractDirect(psqlh, query);
+		SQLQueryPlan queryPlan = SQLPlanParser.extractDirectFromPostgreSQL(psqlh, query);
 		SQLQueryGenerator gen = new SQLQueryGenerator();
 		
 		Operator root = queryPlan.getRootNode();

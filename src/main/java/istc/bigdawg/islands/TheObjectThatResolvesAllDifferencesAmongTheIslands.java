@@ -1,6 +1,7 @@
 package istc.bigdawg.islands;
 
 import java.io.IOException;
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -16,10 +17,6 @@ import istc.bigdawg.exceptions.BigDawgCatalogException;
 import istc.bigdawg.exceptions.BigDawgException;
 import istc.bigdawg.exceptions.UnsupportedIslandException;
 import istc.bigdawg.islands.IslandsAndCast.Scope;
-import istc.bigdawg.islands.PostgreSQL.SQLPlanParser;
-import istc.bigdawg.islands.PostgreSQL.SQLQueryGenerator;
-import istc.bigdawg.islands.PostgreSQL.SQLQueryPlan;
-import istc.bigdawg.islands.PostgreSQL.operators.PostgreSQLIslandJoin;
 import istc.bigdawg.islands.SciDB.AFLPlanParser;
 import istc.bigdawg.islands.SciDB.AFLQueryGenerator;
 import istc.bigdawg.islands.SciDB.AFLQueryPlan;
@@ -27,6 +24,10 @@ import istc.bigdawg.islands.SciDB.operators.SciDBIslandJoin;
 import istc.bigdawg.islands.operators.Join;
 import istc.bigdawg.islands.operators.Join.JoinType;
 import istc.bigdawg.islands.operators.Operator;
+import istc.bigdawg.islands.relational.SQLPlanParser;
+import istc.bigdawg.islands.relational.SQLQueryGenerator;
+import istc.bigdawg.islands.relational.SQLQueryPlan;
+import istc.bigdawg.islands.relational.operators.SQLIslandJoin;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.properties.BigDawgConfigProperties;
@@ -43,6 +44,8 @@ import net.sf.jsqlparser.JSQLParserException;
  * This class should contain only static objects and functions. 
  * It is intended to contain all functions that do different things when the island context is different.
  * Island writers should go through each of these functions to add supports for their islands
+ * 
+ * NOTE: all relational island queries are assumed to be base in PostgreSQL. 
  *
  */
 public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
@@ -284,8 +287,8 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case KEYVALUE:
 			break;
 		case RELATIONAL:
-			if (joinPred == null) return new PostgreSQLIslandJoin(o1, o2, jt, null, isFilter);
-			return new PostgreSQLIslandJoin(o1, o2, jt, String.join(" AND ", joinPred), isFilter);
+			if (joinPred == null) return new SQLIslandJoin(o1, o2, jt, null, isFilter);
+			return new SQLIslandJoin(o1, o2, jt, String.join(" AND ", joinPred), isFilter);
 		case STREAM:
 			break;
 		case TEXT:
@@ -324,7 +327,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case KEYVALUE:
 			break;
 		case RELATIONAL:
-			SQLQueryPlan relQueryPlan = SQLPlanParser.extractDirect((PostgreSQLHandler)dbSchemaHandler, queryString);
+			SQLQueryPlan relQueryPlan = SQLPlanParser.extractDirectFromPostgreSQL((PostgreSQLHandler)dbSchemaHandler, queryString);
 			root = relQueryPlan.getRootNode();
 			objs.addAll(RelationalSignatureBuilder.sig2(queryString));
 		case STREAM:
@@ -483,5 +486,26 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		}
 		
 		throw new UnsupportedIslandException(scope, "getCreationQuery");
+	}
+	
+	
+	//// island specific
+	
+	/**
+	 * For Relational Island only.
+	 * @param e
+	 * @param tableName
+	 * @return
+	 * @throws SQLException
+	 * @throws BigDawgException
+	 */
+	public static String getRelationalIslandCreateTableString(String tableName) throws SQLException, BigDawgException  {
+		int dbid;
+
+		if (tableName.toLowerCase().startsWith("bigdawgtag_")) dbid = psqlSchemaHandlerDBID;
+		else dbid = CatalogViewer.getDbsOfObject(tableName, "postgres").get(0);
+		
+		Connection con = PostgreSQLHandler.getConnection((PostgreSQLConnectionInfo)CatalogViewer.getConnectionInfo(dbid));
+		return PostgreSQLHandler.getCreateTable(con, tableName).replaceAll("\\scharacter[\\(]", " char(");
 	}
 }

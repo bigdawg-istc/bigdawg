@@ -17,66 +17,6 @@ import net.sf.jsqlparser.schema.Table;
 
 public class SciDBIslandSeqScan extends SciDBIslandScan implements SeqScan {
 
-//	private static int defaultSchemaServerDBID = BigDawgConfigProperties.INSTANCE.getPostgresSchemaServerDBID();
-	
-//	// this is another difference from regular sql processing where the inclination is to keep the rows whole until otherwise needed
-//	public SciDBIslandSeqScan (Map<String, String> parameters, List<String> output, SciDBIslandOperator child, SQLTableExpression supplement) throws Exception  {
-//		super(parameters, output, child, supplement);
-//		
-//		
-//		// match output to base relation
-//
-//		String schemaAndName = parameters.get("Schema");
-//		if (schemaAndName == null || schemaAndName.equals("public")) schemaAndName = super.getSrcTable();
-//		else schemaAndName = schemaAndName + "." + super.getSrcTable();
-//		
-//		this.dataObjects.add(schemaAndName);
-//		
-//		int dbid;
-//
-//		if (super.getSrcTable().toLowerCase().startsWith("bigdawgtag_")) {
-//			dbid = defaultSchemaServerDBID;
-//		} else 
-//			dbid = CatalogViewer.getDbsOfObject(schemaAndName, "postgres").get(0);
-//		
-//		
-////		Connection con = PostgreSQLHandler.getConnection(((PostgreSQLConnectionInfo)PostgreSQLHandler.generateConnectionInfo(dbid)));
-//		Connection con = PostgreSQLHandler.getConnection(CatalogViewer.getConnection(dbid));
-//		
-//		String createTableString = PostgreSQLHandler.getCreateTable(con, schemaAndName).replaceAll("\\scharacter[\\(]", " char(");
-//		CreateTable create = null;
-//		try {
-//		create = (CreateTable) CCJSqlParserUtil.parse(createTableString);
-//		} catch (Exception e) {
-//			e.printStackTrace();
-//			throw e;
-//		}
-//		
-//		
-//		DataObject baseTable = new DataObject(create); 
-//		
-//		for(int i = 0; i < output.size(); ++i) {
-//			
-//			String expr = output.get(i); // fully qualified name
-//			
-//			SQLOutItem out = new SQLOutItem(expr, baseTable.getAttributes(), supplement);
-//			
-//			SQLAttribute sa =  out.getAttribute();
-//			String alias = sa.getName();
-//			
-//			outSchema.put(alias, sa);
-//			
-//		}
-//		
-//		if (getFilterExpression() != null && (!getFilterExpression().equals("")))
-//			setOperatorName("filter");
-//		else if (children.size() != 0)
-//			setOperatorName("project");
-//		else 
-//			setOperatorName("scan");
-//		
-//	}
-	
 	// for AFL
 	public SciDBIslandSeqScan (Map<String, String> parameters, SciDBArray output, Operator child) throws Exception  {
 		super(parameters, output, child);

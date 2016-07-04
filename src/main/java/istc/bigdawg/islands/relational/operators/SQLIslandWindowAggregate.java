@@ -1,4 +1,4 @@
-package istc.bigdawg.islands.PostgreSQL.operators;
+package istc.bigdawg.islands.relational.operators;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -6,14 +6,14 @@ import java.util.Map;
 
 import istc.bigdawg.islands.DataObjectAttribute;
 import istc.bigdawg.islands.OperatorVisitor;
-import istc.bigdawg.islands.PostgreSQL.SQLOutItemResolver;
-import istc.bigdawg.islands.PostgreSQL.SQLTableExpression;
 import istc.bigdawg.islands.operators.WindowAggregate;
+import istc.bigdawg.islands.relational.SQLOutItemResolver;
+import istc.bigdawg.islands.relational.SQLTableExpression;
 import net.sf.jsqlparser.expression.AnalyticExpression;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 import net.sf.jsqlparser.statement.select.OrderByElement;
 
-public class PostgreSQLIslandWindowAggregate extends PostgreSQLIslandOperator implements WindowAggregate {
+public class SQLIslandWindowAggregate extends SQLIslandOperator implements WindowAggregate {
 
 	List<String> winaggs;
 	protected List<ExpressionList> partitionBy;
@@ -24,7 +24,7 @@ public class PostgreSQLIslandWindowAggregate extends PostgreSQLIslandOperator im
 	
 	List<AnalyticExpression> parsedAggregates;
 	
-	PostgreSQLIslandWindowAggregate(Map<String, String> parameters, List<String> output, PostgreSQLIslandOperator child, SQLTableExpression supplement) throws Exception  {
+	SQLIslandWindowAggregate(Map<String, String> parameters, List<String> output, SQLIslandOperator child, SQLTableExpression supplement) throws Exception  {
 		super(parameters, output, child, supplement);
 
 		isBlocking = true;
@@ -73,8 +73,8 @@ public class PostgreSQLIslandWindowAggregate extends PostgreSQLIslandOperator im
 		if(partitionBy.size() > 0) {
 			// if this is (PARTITION BY x ORDER BY y) push down slice key to sort
 			// want to slice as fine as possible to break up SMC groups
-			if(child instanceof PostgreSQLIslandSort && !orderBy.isEmpty()) {
-				PostgreSQLIslandSort c = (PostgreSQLIslandSort) child;
+			if(child instanceof SQLIslandSort && !orderBy.isEmpty()) {
+				SQLIslandSort c = (SQLIslandSort) child;
 				c.setWinAgg(true);
 			}
 		}
@@ -89,7 +89,7 @@ public class PostgreSQLIslandWindowAggregate extends PostgreSQLIslandOperator im
 	
 	
 //	// for AFL
-//	PostgreSQLIslandWindowAggregate(Map<String, String> parameters, SciDBArray output, PostgreSQLIslandOperator child) throws Exception  {
+//	SQLIslandWindowAggregate(Map<String, String> parameters, SciDBArray output, SQLIslandOperator child) throws Exception  {
 //		super(parameters, output, child);
 //
 //		isBlocking = true;
@@ -143,8 +143,8 @@ public class PostgreSQLIslandWindowAggregate extends PostgreSQLIslandOperator im
 //		if(partitionBy.size() > 0) {
 //			// if this is (PARTITION BY x ORDER BY y) push down slice key to sort
 //			// want to slice as fine as possible to break up SMC groups
-//			if(child instanceof PostgreSQLIslandSort && !orderBy.isEmpty()) {
-//				PostgreSQLIslandSort c = (PostgreSQLIslandSort) child;
+//			if(child instanceof SQLIslandSort && !orderBy.isEmpty()) {
+//				SQLIslandSort c = (SQLIslandSort) child;
 //				c.setWinAgg(true);
 //			}
 //		}

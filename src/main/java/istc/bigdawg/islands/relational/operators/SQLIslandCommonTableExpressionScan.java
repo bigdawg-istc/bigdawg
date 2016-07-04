@@ -1,4 +1,4 @@
-package istc.bigdawg.islands.PostgreSQL.operators;
+package istc.bigdawg.islands.relational.operators;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -10,23 +10,23 @@ import java.util.Set;
 
 import istc.bigdawg.islands.DataObjectAttribute;
 import istc.bigdawg.islands.OperatorVisitor;
-import istc.bigdawg.islands.PostgreSQL.SQLOutItemResolver;
-import istc.bigdawg.islands.PostgreSQL.SQLQueryPlan;
-import istc.bigdawg.islands.PostgreSQL.SQLTableExpression;
-import istc.bigdawg.islands.PostgreSQL.utils.SQLAttribute;
 import istc.bigdawg.islands.operators.CommonTableExpressionScan;
+import istc.bigdawg.islands.relational.SQLOutItemResolver;
+import istc.bigdawg.islands.relational.SQLQueryPlan;
+import istc.bigdawg.islands.relational.SQLTableExpression;
+import istc.bigdawg.islands.relational.utils.SQLAttribute;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.WithItem;
 
-public class PostgreSQLIslandCommonTableExpressionScan extends PostgreSQLIslandScan implements CommonTableExpressionScan {
+public class SQLIslandCommonTableExpressionScan extends SQLIslandScan implements CommonTableExpressionScan {
 
 	private String cteName;
 	private WithItem with;
-	private PostgreSQLIslandOperator sourceStatement;
+	private SQLIslandOperator sourceStatement;
 	
 	
-	PostgreSQLIslandCommonTableExpressionScan(Map<String, String> parameters, List<String> output, PostgreSQLIslandOperator child, SQLQueryPlan plan, SQLTableExpression supplement) throws Exception  {
+	SQLIslandCommonTableExpressionScan(Map<String, String> parameters, List<String> output, SQLIslandOperator child, SQLQueryPlan plan, SQLTableExpression supplement) throws Exception  {
 		super(parameters, output, child, supplement);
 		
 		setSourceTableName(parameters.get("CTE-Name"));
@@ -38,7 +38,7 @@ public class PostgreSQLIslandCommonTableExpressionScan extends PostgreSQLIslandS
 		Map<String, DataObjectAttribute> cteSchema = new HashMap<String, DataObjectAttribute>();
 		// insert cte alias for schema resolution
 		// delete everything before the first dot and replace it with the tableAlias
-		sourceStatement = (PostgreSQLIslandOperator) plan.getPlanRoot(getSourceTableName());
+		sourceStatement = (SQLIslandOperator) plan.getPlanRoot(getSourceTableName());
 		
 		Iterator<Map.Entry<String, DataObjectAttribute>  > schemaItr = sourceStatement.outSchema.entrySet().iterator();
 
@@ -71,25 +71,25 @@ public class PostgreSQLIslandCommonTableExpressionScan extends PostgreSQLIslandS
 	}
 
 	
-	public PostgreSQLIslandCommonTableExpressionScan(PostgreSQLIslandOperator o, boolean addChild) throws Exception {
+	public SQLIslandCommonTableExpressionScan(SQLIslandOperator o, boolean addChild) throws Exception {
 		super(o, addChild);
-		PostgreSQLIslandCommonTableExpressionScan c = (PostgreSQLIslandCommonTableExpressionScan) o;
+		SQLIslandCommonTableExpressionScan c = (SQLIslandCommonTableExpressionScan) o;
 		this.setSourceTableName(new String(c.getSourceTableName()));
 		
-		PostgreSQLIslandOperator s = (PostgreSQLIslandOperator) c.sourceStatement.duplicate(true);
+		SQLIslandOperator s = (SQLIslandOperator) c.sourceStatement.duplicate(true);
 		
-		if (s instanceof PostgreSQLIslandJoin) {
-			this.sourceStatement = new PostgreSQLIslandJoin(s, addChild);
-		} else if (s instanceof PostgreSQLIslandSeqScan) {
-			this.sourceStatement = new PostgreSQLIslandSeqScan(s, addChild);
-		} else if (s instanceof PostgreSQLIslandCommonTableExpressionScan) {
-			this.sourceStatement = new PostgreSQLIslandCommonTableExpressionScan(s, addChild);
-		} else if (s instanceof PostgreSQLIslandSort) {
-			this.sourceStatement = new PostgreSQLIslandSort(s, addChild);
+		if (s instanceof SQLIslandJoin) {
+			this.sourceStatement = new SQLIslandJoin(s, addChild);
+		} else if (s instanceof SQLIslandSeqScan) {
+			this.sourceStatement = new SQLIslandSeqScan(s, addChild);
+		} else if (s instanceof SQLIslandCommonTableExpressionScan) {
+			this.sourceStatement = new SQLIslandCommonTableExpressionScan(s, addChild);
+		} else if (s instanceof SQLIslandSort) {
+			this.sourceStatement = new SQLIslandSort(s, addChild);
 		} else {
-			if (s instanceof PostgreSQLIslandAggregate) {
-			} else if (s instanceof PostgreSQLIslandDistinct) {
-			} else if (s instanceof PostgreSQLIslandWindowAggregate) {
+			if (s instanceof SQLIslandAggregate) {
+			} else if (s instanceof SQLIslandDistinct) {
+			} else if (s instanceof SQLIslandWindowAggregate) {
 			} else {
 				throw new Exception("Unknown Operator from Operator Copy: "+s.getClass().toString());
 			}
@@ -120,7 +120,7 @@ public class PostgreSQLIslandCommonTableExpressionScan extends PostgreSQLIslandS
 		return "CTE scan over " + getSourceTableName() + " Filter: " + getFilterExpression();
 	}
 	
-	public PostgreSQLIslandOperator getSourceStatement() {
+	public SQLIslandOperator getSourceStatement() {
 		return sourceStatement;
 	}
 	
@@ -180,7 +180,7 @@ public class PostgreSQLIslandCommonTableExpressionScan extends PostgreSQLIslandS
 		
 		if (entry.containsKey(getSourceTableName()))
 			entry.remove(getSourceTableName());
-		((PostgreSQLIslandOperator) sourceStatement).removeCTEEntriesFromObjectToExpressionMapping(entry);
+		((SQLIslandOperator) sourceStatement).removeCTEEntriesFromObjectToExpressionMapping(entry);
 	}
 
 

@@ -1,30 +1,23 @@
-package istc.bigdawg.islands.PostgreSQL.operators;
+package istc.bigdawg.islands.relational.operators;
 
-import java.sql.Connection;
 import java.util.List;
 import java.util.Map;
 
-import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.islands.DataObject;
 import istc.bigdawg.islands.OperatorVisitor;
-import istc.bigdawg.islands.PostgreSQL.SQLOutItemResolver;
-import istc.bigdawg.islands.PostgreSQL.SQLTableExpression;
-import istc.bigdawg.islands.PostgreSQL.utils.SQLAttribute;
+import istc.bigdawg.islands.TheObjectThatResolvesAllDifferencesAmongTheIslands;
 import istc.bigdawg.islands.operators.SeqScan;
-import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
-import istc.bigdawg.postgresql.PostgreSQLHandler;
-import istc.bigdawg.properties.BigDawgConfigProperties;
+import istc.bigdawg.islands.relational.SQLOutItemResolver;
+import istc.bigdawg.islands.relational.SQLTableExpression;
+import istc.bigdawg.islands.relational.utils.SQLAttribute;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.create.table.CreateTable;
 
-public class PostgreSQLIslandSeqScan extends PostgreSQLIslandScan implements SeqScan {
+public class SQLIslandSeqScan extends SQLIslandScan implements SeqScan {
 
-	private static int defaultSchemaServerDBID = BigDawgConfigProperties.INSTANCE.getPostgresSchemaServerDBID();
-	
 	// this is another difference from regular sql processing where the inclination is to keep the rows whole until otherwise needed
-	public PostgreSQLIslandSeqScan (Map<String, String> parameters, List<String> output, PostgreSQLIslandOperator child, SQLTableExpression supplement) throws Exception  {
+	public SQLIslandSeqScan (Map<String, String> parameters, List<String> output, SQLIslandOperator child, SQLTableExpression supplement) throws Exception  {
 		super(parameters, output, child, supplement);
-		
 		
 		// match output to base relation
 
@@ -34,17 +27,8 @@ public class PostgreSQLIslandSeqScan extends PostgreSQLIslandScan implements Seq
 		
 		this.dataObjects.add(schemaAndName);
 		
-		int dbid;
-
-		if (super.getSrcTable().toLowerCase().startsWith("bigdawgtag_")) {
-			dbid = defaultSchemaServerDBID;
-		} else 
-			dbid = CatalogViewer.getDbsOfObject(schemaAndName, "postgres").get(0);
+		String createTableString = TheObjectThatResolvesAllDifferencesAmongTheIslands.getRelationalIslandCreateTableString(schemaAndName);
 		
-		
-		Connection con = PostgreSQLHandler.getConnection((PostgreSQLConnectionInfo)CatalogViewer.getConnectionInfo(dbid));
-		
-		String createTableString = PostgreSQLHandler.getCreateTable(con, schemaAndName).replaceAll("\\scharacter[\\(]", " char(");
 		CreateTable create = null;
 		try {
 		create = (CreateTable) CCJSqlParserUtil.parse(createTableString);
@@ -78,9 +62,9 @@ public class PostgreSQLIslandSeqScan extends PostgreSQLIslandScan implements Seq
 		
 	}
 	
-	public PostgreSQLIslandSeqScan(PostgreSQLIslandOperator o, boolean addChild) throws Exception {
+	public SQLIslandSeqScan(SQLIslandOperator o, boolean addChild) throws Exception {
 		super(o, addChild);
-		this.setOperatorName(((PostgreSQLIslandSeqScan)o).getOperatorName());
+		this.setOperatorName(((SQLIslandSeqScan)o).getOperatorName());
 	}
 
 	@Override

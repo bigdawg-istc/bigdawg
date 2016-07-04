@@ -1,4 +1,4 @@
-package istc.bigdawg.islands.PostgreSQL.operators;
+package istc.bigdawg.islands.relational.operators;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -7,17 +7,17 @@ import java.util.Map;
 import java.util.Set;
 
 import istc.bigdawg.islands.OperatorVisitor;
-import istc.bigdawg.islands.PostgreSQL.SQLTableExpression;
-import istc.bigdawg.islands.PostgreSQL.utils.SQLExpressionUtils;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.operators.Scan;
+import istc.bigdawg.islands.relational.SQLTableExpression;
+import istc.bigdawg.islands.relational.utils.SQLExpressionUtils;
 import net.sf.jsqlparser.expression.Alias;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Table;
 
-public class PostgreSQLIslandScan extends PostgreSQLIslandOperator implements Scan {
+public class SQLIslandScan extends SQLIslandOperator implements Scan {
 	
 	private Expression filterExpression = null;
 	private Expression indexCond = null;
@@ -28,7 +28,7 @@ public class PostgreSQLIslandScan extends PostgreSQLIslandOperator implements Sc
 	protected Table table;
 	private boolean hasFunctionInFilterExpression = false;
 
-	public PostgreSQLIslandScan(Map<String, String> parameters, List<String> output, PostgreSQLIslandOperator child, SQLTableExpression supplement) throws Exception {
+	public SQLIslandScan(Map<String, String> parameters, List<String> output, SQLIslandOperator child, SQLTableExpression supplement) throws Exception {
 		super(parameters, output, child, supplement);
 
 		isBlocking = false;
@@ -93,9 +93,9 @@ public class PostgreSQLIslandScan extends PostgreSQLIslandOperator implements Sc
 		}
 	}
 	
-	public PostgreSQLIslandScan(PostgreSQLIslandOperator o, boolean addChild) throws Exception {
+	public SQLIslandScan(SQLIslandOperator o, boolean addChild) throws Exception {
 		super(o, addChild);
-		PostgreSQLIslandScan sc = (PostgreSQLIslandScan) o;
+		SQLIslandScan sc = (SQLIslandScan) o;
 		
 		if (sc.getFilterExpression() != null) 
 			this.setFilterExpression(CCJSqlParserUtil.parseCondExpression(sc.getFilterExpression().toString()));
@@ -127,7 +127,7 @@ public class PostgreSQLIslandScan extends PostgreSQLIslandOperator implements Sc
 		Map<String, List<String>> result = new HashMap<>();
 		if (children != null) {
 			for (Operator o : children)
-				result.putAll(((PostgreSQLIslandOperator) o).getTableLocations(locations));
+				result.putAll(((SQLIslandOperator) o).getTableLocations(locations));
 		}
 		String schemaAndName = table.getName();
 		if (table.getSchemaName() != null) schemaAndName = table.getSchemaName() + "." +schemaAndName;
