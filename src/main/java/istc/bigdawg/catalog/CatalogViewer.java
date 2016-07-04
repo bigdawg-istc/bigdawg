@@ -54,7 +54,7 @@ public class CatalogViewer {
 			}
 		} else {
 			rs1.close();
-			throw new BigDawgCatalogException("Connection Info Not Found: "+db_id);
+			throw new BigDawgCatalogException(db_id);
 		}
 		rs1.close();
 		

@@ -1,6 +1,5 @@
 package istc.bigdawg.executor;
 
-import java.io.IOException;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.Collections;
@@ -310,8 +309,7 @@ class PlanExecutor {
             try {
                 final MigrationResult result = Migrator.migrate(dependency.getEngine(), table, dependant.getEngine(), table);
 
-                // THIS IS ADDED FOR APRIL 30 DEBUG
-                Logger.debug(PlanExecutor.this, "[][][][][][][] migrator has migrated for a single dependency");
+                Logger.debug(PlanExecutor.this, "Migration complete for "+table);
                 
                 if(result.isError()) {
                     throw new MigrationException(result.toString());

@@ -20,14 +20,18 @@ public class AFLPlanAttribute {
 		StringBuilder sb = new StringBuilder();
 		int l;
 		
-		for (int i = 0; i < indent; ++i) sb.append(' ');
-		sb.append(name);
+//		for (int i = 0; i < indent; ++i) sb.append(' ');
+		sb.append('(').append(name);
 		l = properties.size();
 		for (int i = 0; i < l; ++i) sb.append(' ').append(properties.get(i));
-		sb.append('\n');
+//		sb.append('\n');
 		l = subAttributes.size();
-		for (int i = 0; i < l; ++i) sb.append(subAttributes.get(i));
-		
-		return sb.toString();
+		if (l > 0) sb.append(' ').append('(');
+		for (int i = 0; i < l; ++i) {
+			if (i > 0) sb.append(' ');
+			sb.append(subAttributes.get(i));
+		}
+		if (l > 0) sb.append(')');
+		return sb.append(')').toString();
 	}
 }

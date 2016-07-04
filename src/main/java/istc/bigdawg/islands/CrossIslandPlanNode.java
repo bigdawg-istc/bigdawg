@@ -10,9 +10,9 @@ import istc.bigdawg.islands.IslandsAndCast.Scope;
 
 public class CrossIslandPlanNode {
 
-	protected Scope sourceScope;
-	protected String queryString;
-	protected String name;
+	protected Scope sourceScope = null;
+	protected String queryString = null;
+	protected String name = null;
 	
 	public CrossIslandPlanNode (Scope sourceScope, String islandQuery, String name) {
 		setSourceScope(sourceScope);

@@ -221,7 +221,7 @@ public class DataObjectAttribute {
 			ret += "type: " +  typeString;
 		}
 		
-		ret += "; Expression: " + expression.toString();
+		ret += "; Expression: " + ( expression == null ? null : expression.toString());
 		
 		return ret;
 		

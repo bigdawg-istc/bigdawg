@@ -14,6 +14,7 @@ import org.mortbay.log.Log;
 
 import istc.bigdawg.catalog.CatalogModifier;
 import istc.bigdawg.catalog.CatalogViewer;
+import istc.bigdawg.exceptions.UnsupportedIslandException;
 import istc.bigdawg.executor.Executor;
 import istc.bigdawg.executor.QueryResult;
 import istc.bigdawg.executor.plan.QueryExecutionPlan;
@@ -32,13 +33,11 @@ public class Planner {
 
 	private static final double SIGNATURE_DISTANCE = .05;
 
-	private static Logger logger = Logger.getLogger(Planner.class.getName());
-//	private static Integer maxSerial = 0;
-
+	private static Logger logger = Logger.getLogger(Planner.class);
 
 	public static Response processQuery(String userinput, boolean isTrainingMode) throws Exception {
 		
-		String input = userinput.replaceAll("([/\n/]|[ /\t/][ /\t/])", "");
+		String input = userinput.replaceAll("[/\n/]", "").replaceAll("[ /\t/]+", " ");
 		
 		// UNROLLING
 		logger.debug("User query received. Parsing... " + input.replaceAll("[\"']", "*"));
@@ -62,7 +61,7 @@ public class Planner {
 		Map<CrossIslandPlanNode, ConnectionInfo> nodeToResult = new HashMap<>();
 		
 		Set<Integer> catalogSOD = new HashSet<>();
-		Map<ConnectionInfo, Collection<String>> tempTableSOD = new HashMap<>();
+		Map<ConnectionInfo, Collection<String>> tempTableMOD = new HashMap<>();
 		
 		while (!nodeWalker.isEmpty()) {
 			nextGeneration = new HashSet<>();
@@ -117,10 +116,10 @@ public class Planner {
 					
 					
 					// add to Table set of destruction
-					if (!tempTableSOD.containsKey(ci)) tempTableSOD.put(ci, new HashSet<>());
-					if (!tempTableSOD.containsKey(nodeToResult.get(source))) tempTableSOD.put(nodeToResult.get(source), new HashSet<>());
-					tempTableSOD.get(nodeToResult.get(source)).add(source.getName());
-					tempTableSOD.get(ci).add(remoteName);
+					if (!tempTableMOD.containsKey(ci)) tempTableMOD.put(ci, new HashSet<>());
+					if (!tempTableMOD.containsKey(nodeToResult.get(source))) tempTableMOD.put(nodeToResult.get(source), new HashSet<>());
+					tempTableMOD.get(nodeToResult.get(source)).add(source.getName());
+					tempTableMOD.get(ci).add(remoteName);
 					
 					
 					// add catalog entry of the temp table, add to catalog set of destruction
@@ -133,7 +132,7 @@ public class Planner {
 					// remove source from nodeToResult
 					nodeToResult.remove(source);
 					
-				} else {
+				} else if (node instanceof CrossIslandQueryNode) {
 					// business as usual
 					
 					CrossIslandQueryNode ciqn = (CrossIslandQueryNode)node;
@@ -149,6 +148,9 @@ public class Planner {
 					logger.debug("Executing query cross-island subquery "+node+"...");
 					nodeToResult.put(node, Executor.executePlan(qep, ciqn.getSignature(), choice).getConnectionInfo());
 					
+				} else {
+					// dummy node
+					throw new UnsupportedIslandException(node.getSourceScope(), "Planner::processQuery");
 				}
 				// add the child node to nextGen
 				nextGeneration.add(node.getTargetVertex(ciqp));
@@ -163,7 +165,8 @@ public class Planner {
 		
 		CrossIslandPlanNode cipn = ciqp.getTerminalNode();
 		if (cipn instanceof CrossIslandCastNode) {
-			
+
+			// pick the first engine in the database and migrate everything over
 			// save for later
 			throw new Exception("Unimplemented feature: CASTing output");
 			
@@ -187,8 +190,8 @@ public class Planner {
 			// destruct
 			CatalogModifier.deleteMultipleObjects(catalogSOD);
 			Log.debug(String.format("Catalog entries cleaned, time passed: %s; Next up: tempTables", System.currentTimeMillis() - time));
-			for (ConnectionInfo c : tempTableSOD.keySet()) {
-	            final Collection<String> tables = tempTableSOD.get(c);
+			for (ConnectionInfo c : tempTableMOD.keySet()) {
+	            final Collection<String> tables = tempTableMOD.get(c);
 //	            Collection<String> cs = c.getCleanupQuery(tables);
 	            Log.debug(String.format("removing %s on %s...", tables, c.getDatabase()));
 	            try {
@@ -217,19 +220,6 @@ public class Planner {
 		return originalString;
 	}
 	
-//	private static void remoteSchemaCreation(CrossIslandCastNode node, ConnectionInfo targetCI) throws Exception {
-//		System.out.printf("--->>> Executing: %s;\n", node.getQueryString());
-//		DBHandler handler = null;
-//		if (node.getDestinationScope().equals(Scope.ARRAY)) {
-//			handler = new SciDBHandler((SciDBConnectionInfo)targetCI);
-//			((SciDBHandler)handler).executeStatement(node.getQueryString());
-//		} else if (node.getDestinationScope().equals(Scope.RELATIONAL)) {
-//			handler = new PostgreSQLHandler((PostgreSQLConnectionInfo)targetCI);
-//			((PostgreSQLHandler)handler).executeQuery(node.getQueryString());
-//		}
-//		System.out.printf("--->>> done executing: %s;\n", node.getQueryString());
-//	}
-//	
 	/**
 	 * CALL MONITOR: Parses the userinput, generate alternative join plans, and
 	 * GIVE IT TO MONITOR Note: this generates the result
@@ -308,9 +298,7 @@ public class Planner {
 	 * @return 0 if no error; otherwise incomplete
 	 */
 	public static Response compileResults(int querySerial, QueryResult result) {
-		logger.debug("[BigDAWG] PLANNER: Query "+querySerial+" is completed. Result:\n");
-		System.out.println(result.toPrettyString());
-
+		logger.debug("[BigDAWG] PLANNER: Query "+querySerial+" is completed. Result:\n"+result.toPrettyString());
 		return Response.status(200).entity(result.toPrettyString()).build();
 	}
 

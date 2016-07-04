@@ -8,4 +8,7 @@ public class BigDawgCatalogException extends BigDawgException {
 		super(msg);
 	}
 
+	public BigDawgCatalogException(Integer dbid) {
+		super(dbid == -1 ? "None of the referenced object were listed in catalog; source of reference unknown" : "Connection Info Not Found: "+dbid);
+	}
 }

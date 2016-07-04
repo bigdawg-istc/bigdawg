@@ -14,6 +14,7 @@ import org.junit.Test;
 import istc.bigdawg.catalog.CatalogInstance;
 import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.islands.OperatorVisitor;
+import istc.bigdawg.islands.TheObjectThatResolvesAllDifferencesAmongTheIslands;
 import istc.bigdawg.islands.PostgreSQL.SQLPlanParser;
 import istc.bigdawg.islands.PostgreSQL.SQLQueryGenerator;
 import istc.bigdawg.islands.PostgreSQL.SQLQueryPlan;
@@ -47,7 +48,7 @@ public class TrialsAndErrors {
 	public void setUp() throws Exception {
 		CatalogInstance.INSTANCE.getCatalog();
 		
-//		setupQueryExplainer();
+		setupQueryExplainer();
 //		setupQueryBuilder();
 //		setupRegexTester();
 //		setupTreeWalker();
@@ -55,7 +56,7 @@ public class TrialsAndErrors {
 //		setupMapTrial();
 //		setupSchemaGenerator();
 //		setupMigrationTest();
-		setupSciDBExecution();
+//		setupSciDBExecution();
 	}
 	
 	public void setupQueryExplainer() {
@@ -100,18 +101,27 @@ public class TrialsAndErrors {
 		
 		if ( !runExplainer ) return;
 			
-		PostgreSQLHandler psqlh = new PostgreSQLHandler(3);
-		System.out.println("Explainer -- Type query or \"quit\" to exit: ");
-		Scanner scanner = new Scanner(System.in);
-		String query = scanner.nextLine();
+		SciDBHandler psqlh = new SciDBHandler(TheObjectThatResolvesAllDifferencesAmongTheIslands.scidbSchemaHandlerDBID);
+//		System.out.println("Explainer -- Type query or \"quit\" to exit: ");
+//		Scanner scanner = new Scanner(System.in);
+//		String query = scanner.nextLine();
+		String query = "window(nation, 1, 0, 0, 0, count(n_name), count(*))";
+		boolean started = false;
 		while (!query.toLowerCase().equals("quit")) {
 			
-			String explainQuery = SQLPrepareQuery.generateExplainQueryString(query);
-			System.out.println(psqlh.generatePostgreSQLQueryXML(explainQuery) + "\n");
-			query = scanner.nextLine();
+			AFLQueryPlan aqp = AFLPlanParser.extractDirect(psqlh, query);
+			String explainQuery = aqp.getStatement();
+			System.out.println(explainQuery + "\n");
+			OperatorVisitor gen = new AFLQueryGenerator();
+			aqp.getRootNode().accept(gen);
+			System.out.println(gen.generateStatementString());
 			
+			if (!started) {
+				query = "window(nation, 1, 0, 0, 0, count(n_name) as q )";
+				started = true;
+			} else break;
 		}
-		scanner.close();
+//		scanner.close();
 	}
 
 	@Test
@@ -232,7 +242,8 @@ public class TrialsAndErrors {
 		
 //		String userinput = "bdrel(SELECT lineitem.l_orderkey, sum(lineitem.l_extendedprice * (1 - lineitem.l_discount)) AS revenue, orders.o_orderdate, orders.o_shippriority FROM orders, customer, lineitem WHERE (orders.o_custkey = customer.c_custkey) AND (orders.o_orderdate < '1996-01-02') AND (customer.c_mktsegment = 'AUTOMOBILE') AND (lineitem.l_shipdate > '1996-01-02') AND (lineitem.l_orderkey = orders.o_orderkey) GROUP BY lineitem.l_orderkey, orders.o_orderdate, orders.o_shippriority ORDER BY revenue DESC, orders.o_orderdate);";
 //		String userinput = "bdrel(select c_custkey, c_name from customer where c_custkey = 1 union select c_custkey as ckey, c_name from customer where c_custkey = 3 union all select c_custkey, c_name from customer where c_custkey = 5);";
-		String userinput = "bdarray(cross_join(bdcast(bdrel(select * from region), reg, '<r_name:string>[r_regionkey=0:10,10,0]', array), bdcast(bdrel(select * from nation), nat, '<n_name:string>[n_regionkey=0:10,10,0,n_nationkey=0:1000,1000,0]', array), reg.r_regionkey, nat.n_regionkey));";
+//		String userinput = "bdarray(cross_join(bdcast(bdrel(select * from region), reg, '<r_name:string>[r_regionkey=0:10,10,0]', array), bdcast(bdrel(select * from nation), nat, '<n_name:string>[n_regionkey=0:10,10,0,n_nationkey=0:1000,1000,0]', array), reg.r_regionkey, nat.n_regionkey));";
+		String userinput = "bdarray(window(nation, 1, 0, 0, 0, count(n_name)));";
 		try {
 		Planner.processQuery(userinput, false);
 		} catch (Exception e) {

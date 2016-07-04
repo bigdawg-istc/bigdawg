@@ -24,8 +24,9 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 	private Stack<Map<String, String>> transitionSchemas;
 	private Set<CrossIslandPlanNode> entryNode;
 	private CrossIslandPlanNode terminalNode;
-	private static final String outputToken  = "A_OUTPUT";
+	private static final String outputToken  = "BIGDAWG_OUTPUT";
 	private static final String extractTitle = "BIGDAWGTAG_";
+	private static final String castTitle = "BIGDAWGCAST_";
 	
 	private static int maxSerial = 0;
 	private int serial;
@@ -45,6 +46,7 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 		transitionSchemas = new Stack<>();
 		entryNode = new HashSet<>();
 		addNodes(userinput);
+		checkAndProcessUnionTerminalOperators();
 	};
 	
 	public void addNodes(String userinput) throws Exception {
@@ -99,8 +101,12 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 	    			
 		    		if (parenLevel == 1)
 		    			name = CrossIslandQueryPlan.getOutputToken();
-		    		else 
+		    		else if (!thisScope.equals(Scope.CAST)) {
+		    			extractionCounter += 1;
 		    			name = extractTitle + extractionCounter;
+		    		} else 
+		    			name = castTitle + parenLevel;
+		    			
 		    		
 		    		// NEW
 		    		Scope outterScope = lastScopes.isEmpty() ? null : lastScopes.peek();
@@ -136,7 +142,7 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 		    		stkwrite.push(stkwrite.pop() + newNode.getName()); //extractTitle + extractionCounter);
 		    		
 //		    		if (! (newNode instanceof CrossIslandCastNode))
-	    			extractionCounter += 1;
+//	    			extractionCounter += 1;
 		    		lastStop = matcher.end(); 
 		    		
 		    		// subtract one par level
@@ -149,6 +155,10 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 		
 	}
 	
+	private void checkAndProcessUnionTerminalOperators() {
+		// TODO check the last operator and process it
+	}
+	
 	private CrossIslandPlanNode createVertex(String name, String rawQueryString, Scope thisScope, Scope innerScope, Scope outterScope) throws Exception{
 		
 		// IDENTIFY ISLAND AND STRIP
@@ -158,8 +168,6 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 		CrossIslandPlanNode newNode;
 		
 		if (islandMatcher.find() && queryEndMatcher.find()) {
-			
-//			Scope scope = IslandsAndCast.convertFunctionScope(rawQueryString.substring(islandMatcher.start(), islandMatcher.end()));
 			
 			String islandQuery = rawQueryString.substring(islandMatcher.end(), queryEndMatcher.start());
 
@@ -188,8 +196,10 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 				transitionSchemas.pop();
 				transitionSchemas.peek().put(newNode.getName(), TheObjectThatResolvesAllDifferencesAmongTheIslands.getCreationQueryForCast(outterScope, newNode.getName(), islandQuery.substring(castSchemaMatcher.start(), castSchemaMatcher.end())));
 				
-			} else {
+			} else if (TheObjectThatResolvesAllDifferencesAmongTheIslands.isOperatorBasedIsland(thisScope)) {
 				newNode = new CrossIslandQueryNode(thisScope, islandQuery, name, transitionSchemas.pop());
+			} else {
+				newNode = new CrossIslandNonOperatorNode(thisScope, islandQuery, name, new ArrayList<>());
 			}
 			
 		} else 
@@ -204,10 +214,6 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 	public CrossIslandPlanNode getTerminalNode() {
 		return terminalNode;
 	};
-	
-//	public Map<String, Operator> getTerminalsForSchemas() {
-//		return terminalOperatorsForSchemas;
-//	}
 	
 	public Stack<Map<String, String>> getTransitionSchemas() {
 		return transitionSchemas;

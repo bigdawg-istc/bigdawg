@@ -25,8 +25,8 @@ import istc.bigdawg.islands.SciDB.AFLQueryGenerator;
 import istc.bigdawg.islands.SciDB.AFLQueryPlan;
 import istc.bigdawg.islands.SciDB.operators.SciDBIslandJoin;
 import istc.bigdawg.islands.operators.Join;
-import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.operators.Join.JoinType;
+import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.properties.BigDawgConfigProperties;
@@ -53,15 +53,55 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	private static final Pattern predicatePattern = Pattern.compile("(?<=\\()([^\\(^\\)]+)(?=\\))");
 	
 	/**
+	 * For CrossIslandQueryPlan
+	 * Determines whether an island is implemented
+	 * @param scope
+	 * @return
+	 */
+	public static boolean isOperatorBasedIsland(Scope scope) throws UnsupportedIslandException {
+		switch (scope) {
+		case ARRAY:
+		case RELATIONAL:
+			return true;
+		case DOCUMENT:
+		case GRAPH:
+		case KEYVALUE:
+		case STREAM:
+		case TEXT:
+			return false;
+		default:
+			throw new UnsupportedIslandException(scope, "isOperatorBasedIsland");
+		}
+	}
+	
+	/**
 	 * For Executor.
 	 * @param scope
 	 * @return Instance of a query generator
 	 * @throws UnsupportedIslandException
 	 */
 	public static OperatorVisitor getQueryGenerator(Scope scope) throws UnsupportedIslandException {
-		if (scope.equals(Scope.RELATIONAL)) return new SQLQueryGenerator();
-		else if (scope.equals(Scope.ARRAY)) return new AFLQueryGenerator();
-		else throw new UnsupportedIslandException(scope, "getQueryGenerator");
+		switch (scope) {
+		case ARRAY:
+			return new AFLQueryGenerator();
+		case CAST:
+			break;
+		case DOCUMENT:
+			break;
+		case GRAPH:
+			break;
+		case KEYVALUE:
+			break;
+		case RELATIONAL:
+			return new SQLQueryGenerator();
+		case STREAM:
+			break;
+		case TEXT:
+			break;
+		default:
+			break;
+		}
+		throw new UnsupportedIslandException(scope, "getQueryGenerator");
 	}
 	
 	/**
@@ -71,9 +111,27 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	 * @throws UnsupportedIslandException
 	 */
 	public static String getCatalogIslandSelectionPredicate(Scope scope) throws UnsupportedIslandException {
-		if (scope.equals(IslandsAndCast.Scope.RELATIONAL)) return " AND scope_name = \'RELATIONAL\' ";
-		else if (scope.equals(IslandsAndCast.Scope.ARRAY)) return " AND scope_name = \'ARRAY\' ";
-		else throw new UnsupportedIslandException(scope, "getCatalogIslandSelectionPredicate");
+		switch (scope) {
+		case ARRAY:
+			return " AND scope_name = \'ARRAY\' ";
+		case CAST:
+			break;
+		case DOCUMENT:
+			break;
+		case GRAPH:
+			break;
+		case KEYVALUE:
+			break;
+		case RELATIONAL:
+			return " AND scope_name = \'RELATIONAL\' ";
+		case STREAM:
+			break;
+		case TEXT:
+			break;
+		default:
+			break;
+		}
+		throw new UnsupportedIslandException(scope, "getCatalogIslandSelectionPredicate");
 	}
 	
 	/**
@@ -88,20 +146,37 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	 */
 	public static DBHandler createTableForPlanning(Scope sourceScope, Set<String> children, Map<String, String> transitionSchemas) throws UnsupportedIslandException, BigDawgCatalogException, SQLException {
 
-		DBHandler dbSchemaHandler;
-		if (sourceScope.equals(Scope.RELATIONAL)) {
-			dbSchemaHandler = new PostgreSQLHandler((PostgreSQLConnectionInfo)CatalogViewer.getConnectionInfo(psqlSchemaHandlerDBID));
-			for (String key : transitionSchemas.keySet()) 
-				if (children.contains(key)) ((PostgreSQLHandler)dbSchemaHandler).executeStatementPostgreSQL(transitionSchemas.get(key));
-		} else if (sourceScope.equals(Scope.ARRAY)) {
+		DBHandler dbSchemaHandler = null;
+		
+		switch (sourceScope) {
+		case ARRAY:
 			dbSchemaHandler = new SciDBHandler((SciDBConnectionInfo)CatalogViewer.getConnectionInfo(scidbSchemaHandlerDBID));
 			for (String key : transitionSchemas.keySet()) 
 				if (children.contains(key)) {
 					((SciDBHandler)dbSchemaHandler).executeStatement(transitionSchemas.get(key));
 					((SciDBHandler)dbSchemaHandler).commit();
 				}
-		} else throw new UnsupportedIslandException(sourceScope, "createTableForPlanning");
-		
+		case CAST:
+			break;
+		case DOCUMENT:
+			break;
+		case GRAPH:
+			break;
+		case KEYVALUE:
+			break;
+		case RELATIONAL:
+			dbSchemaHandler = new PostgreSQLHandler((PostgreSQLConnectionInfo)CatalogViewer.getConnectionInfo(psqlSchemaHandlerDBID));
+			for (String key : transitionSchemas.keySet()) 
+				if (children.contains(key)) ((PostgreSQLHandler)dbSchemaHandler).executeStatementPostgreSQL(transitionSchemas.get(key));
+			break;
+		case STREAM:
+			break;
+		case TEXT:
+			break;
+		default:
+			break;
+		}
+		if (dbSchemaHandler == null) throw new UnsupportedIslandException(sourceScope, "createTableForPlanning");
 		return dbSchemaHandler;
 	}
 	
@@ -116,17 +191,37 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	 * @throws UnsupportedIslandException
 	 */
 	public static void removeTemporaryTableCreatedForPlanning(Scope sourceScope, DBHandler dbSchemaHandler, Set<String> children, Map<String, String> transitionSchemas) throws BigDawgCatalogException, SQLException, UnsupportedIslandException {
-		if (sourceScope.equals(Scope.RELATIONAL)) {
-			for (String key : transitionSchemas.keySet()) 
-				if (children.contains(key)) 
-					((PostgreSQLHandler)dbSchemaHandler).executeStatementPostgreSQL("drop table "+key);
-		} else if (sourceScope.equals(Scope.ARRAY)) {
+		
+		switch (sourceScope) {
+		case ARRAY:
 			for (String key : transitionSchemas.keySet()) 
 				if (children.contains(key)) {
 					((SciDBHandler)dbSchemaHandler).executeStatementAFL("remove("+key+")");
 					((SciDBHandler)dbSchemaHandler).commit();
 				}
-		} else throw new UnsupportedIslandException(sourceScope, "removeTemporaryTableCreatedForPlanning");
+			return;
+		case CAST:
+			break;
+		case DOCUMENT:
+			break;
+		case GRAPH:
+			break;
+		case KEYVALUE:
+			break;
+		case RELATIONAL:
+			for (String key : transitionSchemas.keySet()) 
+				if (children.contains(key)) 
+					((PostgreSQLHandler)dbSchemaHandler).executeStatementPostgreSQL("drop table "+key);
+			return;
+		case STREAM:
+			break;
+		case TEXT:
+			break;
+		default:
+			break;
+		}
+		
+		throw new UnsupportedIslandException(sourceScope, "removeTemporaryTableCreatedForPlanning");
 	}
 	
 	/**
@@ -136,9 +231,29 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	 * @throws UnsupportedIslandException
 	 */
 	public static Integer getSchemaEngineDBID(Scope scope) throws UnsupportedIslandException {
-		if (scope.equals(Scope.RELATIONAL)) return psqlSchemaHandlerDBID;
-		else if (scope.equals(Scope.ARRAY)) return scidbSchemaHandlerDBID;
-		else throw new UnsupportedIslandException(scope, "getSchemaEngineDBID");
+		
+		switch (scope) {
+		case ARRAY:
+			return scidbSchemaHandlerDBID;
+		case CAST:
+			break;
+		case DOCUMENT:
+			break;
+		case GRAPH:
+			break;
+		case KEYVALUE:
+			break;
+		case RELATIONAL:
+			return psqlSchemaHandlerDBID;
+		case STREAM:
+			break;
+		case TEXT:
+			break;
+		default:
+			break;
+		}
+		
+		throw new UnsupportedIslandException(scope, "getSchemaEngineDBID");
 	}
 	
 	/**
@@ -155,14 +270,31 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	 * @throws Exception
 	 */
 	public static Join constructJoin (Scope scope, Operator o1, Operator o2, JoinType jt, List<String> joinPred, boolean isFilter) throws JSQLParserException, BigDawgException {
-		if (scope.equals(Scope.RELATIONAL)) {
-			if (joinPred == null) return new PostgreSQLIslandJoin(o1, o2, jt, null, isFilter);
-			return new PostgreSQLIslandJoin(o1, o2, jt, String.join(" AND ", joinPred), isFilter);
-		} else if (scope.equals(Scope.ARRAY)) {
+		
+		switch (scope) {
+		case ARRAY:
 			if (joinPred == null) return new SciDBIslandJoin().construct(o1, o2, jt, null, isFilter);
 			return new SciDBIslandJoin().construct(o1, o2, jt, String.join(", ", joinPred.stream().map(s -> s.replaceAll("[<>=]+", ", ")).collect(Collectors.toSet())), isFilter);
-		} else 
-			throw new UnsupportedIslandException(scope, "constructJoin");
+		case CAST:
+			break;
+		case DOCUMENT:
+			break;
+		case GRAPH:
+			break;
+		case KEYVALUE:
+			break;
+		case RELATIONAL:
+			if (joinPred == null) return new PostgreSQLIslandJoin(o1, o2, jt, null, isFilter);
+			return new PostgreSQLIslandJoin(o1, o2, jt, String.join(" AND ", joinPred), isFilter);
+		case STREAM:
+			break;
+		case TEXT:
+			break;
+		default:
+			break;
+		}
+		
+		throw new UnsupportedIslandException(scope, "constructJoin");
 	}
 	
 	/**
@@ -175,34 +307,71 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	 * @throws Exception
 	 */
 	public static Operator generateOperatorTreesAndAddDataSetObjectsSignature(Scope scope, DBHandler dbSchemaHandler, String queryString, List<String> objs) throws Exception {
-		Operator root;
-		if (scope.equals(Scope.RELATIONAL)) {
-			SQLQueryPlan queryPlan = SQLPlanParser.extractDirect((PostgreSQLHandler)dbSchemaHandler, queryString);
-			root = queryPlan.getRootNode();
-			objs.addAll(RelationalSignatureBuilder.sig2(queryString));
-		} else if (scope.equals(Scope.ARRAY)) {
-			AFLQueryPlan queryPlan = AFLPlanParser.extractDirect((SciDBHandler)dbSchemaHandler, queryString);
-			root = queryPlan.getRootNode();
+		
+		Operator root = null;
+		
+		switch (scope) {
+		case ARRAY:
+			AFLQueryPlan arrayQueryPlan = AFLPlanParser.extractDirect((SciDBHandler)dbSchemaHandler, queryString);
+			root = arrayQueryPlan.getRootNode();
 			objs.addAll(ArraySignatureBuilder.sig2(queryString));
-		} else 
-			throw new UnsupportedIslandException(scope, "generateOperatorTrees");
+		case CAST:
+			break;
+		case DOCUMENT:
+			break;
+		case GRAPH:
+			break;
+		case KEYVALUE:
+			break;
+		case RELATIONAL:
+			SQLQueryPlan relQueryPlan = SQLPlanParser.extractDirect((PostgreSQLHandler)dbSchemaHandler, queryString);
+			root = relQueryPlan.getRootNode();
+			objs.addAll(RelationalSignatureBuilder.sig2(queryString));
+		case STREAM:
+			break;
+		case TEXT:
+			break;
+		default:
+			break;
+		}
+		
+		if (root == null) throw new UnsupportedIslandException(scope, "generateOperatorTrees");
 		return root;
 	} 
 	
 	/**
 	 * For query planning, CrossIslandQueryNode
 	 * @return
+	 * @throws UnsupportedIslandException 
 	 */
-	public static Set<String> splitPredicates(Scope scope, String predicates) {
+	public static Set<String> splitPredicates(Scope scope, String predicates) throws UnsupportedIslandException {
 		Set<String> results = new HashSet<>();
 
-		String joinDelim = "";
-		if (scope.equals(Scope.RELATIONAL)){
-			joinDelim = "[=<>]+";
-		} else if (scope.equals(Scope.ARRAY)){
+		String joinDelim = null;
+		
+		switch (scope) {
+		case ARRAY:
 			// TODO ensure this is correct for SciDB
 			joinDelim = "[,]";
+		case CAST:
+			break;
+		case DOCUMENT:
+			break;
+		case GRAPH:
+			break;
+		case KEYVALUE:
+			break;
+		case RELATIONAL:
+			joinDelim = "[=<>]+";
+		case STREAM:
+			break;
+		case TEXT:
+			break;
+		default:
+			break;
 		}
+		
+		if (joinDelim == null) throw new UnsupportedIslandException(scope, "splitPredicates");
 
 		Matcher m = predicatePattern.matcher(predicates);
 		while (m.find()){
@@ -224,11 +393,29 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	 * @throws UnsupportedIslandException
 	 */
 	public static List<String> getLiteralsAndConstantsSignature(Scope scope, String query) throws IOException, UnsupportedIslandException {
-		if (scope.equals(Scope.RELATIONAL)){
-			return RelationalSignatureBuilder.sig3(query);
-		} else if (scope.equals(Scope.ARRAY)) {
+		
+		switch (scope) {
+		case ARRAY:
 			return ArraySignatureBuilder.sig3(query);
-		} else throw new UnsupportedIslandException(scope, "getDataSetObjectsSignature");
+		case CAST:
+			break;
+		case DOCUMENT:
+			break;
+		case GRAPH:
+			break;
+		case KEYVALUE:
+			break;
+		case RELATIONAL:
+			return RelationalSignatureBuilder.sig3(query);
+		case STREAM:
+			break;
+		case TEXT:
+			break;
+		default:
+			break;
+		}
+
+		throw new UnsupportedIslandException(scope, "getDataSetObjectsSignature");
 	}
 	
 	/**
@@ -239,11 +426,29 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	 * @throws UnsupportedIslandException
 	 */
 	public static String getIslandStyleQuery(Scope scope, String query) throws UnsupportedIslandException {
-		if (scope == Scope.RELATIONAL){
-			return String.format("bdrel(%s);", query);
-		} else if (scope == Scope.ARRAY){
+		
+		switch (scope) {
+		case ARRAY:
 			return String.format("bdarray(%s);", query);
-		} else throw new UnsupportedIslandException(scope, "getIslandStyleQuery");
+		case CAST:
+			break;
+		case DOCUMENT:
+			break;
+		case GRAPH:
+			break;
+		case KEYVALUE:
+			break;
+		case RELATIONAL:
+			return String.format("bdrel(%s);", query);
+		case STREAM:
+			break;
+		case TEXT:
+			break;
+		default:
+			break;
+		}
+			
+		throw new UnsupportedIslandException(scope, "getIslandStyleQuery");
 	}
 	
 	/**
@@ -255,8 +460,28 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	 * @throws UnsupportedIslandException
 	 */
 	public static String getCreationQueryForCast(Scope scope, String name, String schemaCreationQuery) throws UnsupportedIslandException {
-		if (scope.equals(Scope.ARRAY)) return String.format("CREATE ARRAY %s %s", name, schemaCreationQuery);
-		else if (scope.equals(Scope.RELATIONAL)) return String.format("CREATE TABLE %s %s", name, schemaCreationQuery);
-		else throw new UnsupportedIslandException(scope, "getCreationQuery");
+		
+		switch (scope) {
+		case ARRAY:
+			return String.format("CREATE ARRAY %s %s", name, schemaCreationQuery);
+		case CAST:
+			break;
+		case DOCUMENT:
+			break;
+		case GRAPH:
+			break;
+		case KEYVALUE:
+			break;
+		case RELATIONAL:
+			return String.format("CREATE TABLE %s %s", name, schemaCreationQuery);
+		case STREAM:
+			break;
+		case TEXT:
+			break;
+		default:
+			break;
+		}
+		
+		throw new UnsupportedIslandException(scope, "getCreationQuery");
 	}
 }

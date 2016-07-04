@@ -380,6 +380,57 @@ public class AFLPlanParser {
 			break;
 		case "window":
 			nodeType = "WindowAgg";
+			
+			List<String> dimensionBounds = new ArrayList<>();
+			Stack<StringBuilder> windowStk = new Stack<>();
+			List<String> windowAggFuns = new ArrayList<>();
+			List<AFLPlanAttribute> windowAttributes = node.attributes;
+			
+			
+			for (int k = 0; k < windowAttributes.size(); ++k) {
+				AFLPlanAttribute outExpr = windowAttributes.get(k);
+				if (outExpr.name.equals("opParamPlaceholder")) 
+					continue;
+				
+				if (outExpr.name.equals("paramLogicalExpression")) {
+					// get the constants
+					dimensionBounds.add(outExpr.subAttributes.get(0).properties.get(3));
+					continue;
+				}
+				
+				if (outExpr.name.equals("paramAggregateCall")) {
+					if (!windowStk.isEmpty()) {
+						windowAggFuns.add(windowStk.pop().toString());
+					}
+					windowStk.push(new StringBuilder(outExpr.properties.get(0) + "("));
+					
+					for (AFLPlanAttribute a : outExpr.subAttributes) {
+						if (windowStk.peek().charAt(windowStk.peek().length()-1) != '(') windowStk.peek().append(", ");
+						if (a.name.equals("paramAsterisk")) windowStk.peek().append(a.properties.get(0));
+						else windowStk.peek().append(a.properties.get(1));
+						
+						System.out.printf("window attr: %s\n", windowStk.peek());
+						
+					}
+					
+					windowStk.peek().append(')');
+					if (outExpr.properties.size() > 1) 
+						windowStk.peek().append(" AS ").append(outExpr.properties.get(1));
+					
+					continue;
+				} 
+
+				if (!outExpr.name.equals("paramDimensionReference")) {
+					System.out.printf("unhandled expression from aggregate parsing: %s", outExpr);
+				}
+			}
+			while (!windowStk.isEmpty()) {
+				windowAggFuns.add( windowStk.pop().toString());
+			}
+			
+			parameters.put("Window-Dimension-Parameters", String.join(", ", dimensionBounds));
+			parameters.put("Window-Aggregate-Functions", String.join(", ", windowAggFuns));
+			
 			break;
 		case "apply":
 			nodeType = "Seq Scan";

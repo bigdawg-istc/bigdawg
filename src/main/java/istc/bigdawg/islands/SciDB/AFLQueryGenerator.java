@@ -16,6 +16,7 @@ import istc.bigdawg.islands.SciDB.operators.SciDBIslandJoin;
 import istc.bigdawg.islands.SciDB.operators.SciDBIslandOperator;
 import istc.bigdawg.islands.SciDB.operators.SciDBIslandScan;
 import istc.bigdawg.islands.SciDB.operators.SciDBIslandSort;
+import istc.bigdawg.islands.SciDB.operators.SciDBIslandWindowAggregate;
 import istc.bigdawg.islands.operators.Aggregate;
 import istc.bigdawg.islands.operators.CommonTableExpressionScan;
 import istc.bigdawg.islands.operators.Distinct;
@@ -261,8 +262,40 @@ public class AFLQueryGenerator implements OperatorVisitor {
 
 	@Override
 	public void visit(WindowAggregate operator) throws Exception {
-		throw new Exception("Unsupported Operator AFL output: WindowAggregate");
+
+		SciDBIslandWindowAggregate window = (SciDBIslandWindowAggregate) operator;
 		
+		boolean isRootOriginal = isRoot;
+		saveRoot(window);
+		
+		List<SciDBExpression> expressions = new ArrayList<>();
+		window.getChildren().get(0).accept(this);
+		expressions.add(lastFunction.pop());
+		
+		for (Integer i : window.getDimensionBounds())
+			expressions.add(new SciDBConstant(i));
+		
+		for (String s : window.getOutSchema().keySet()) {
+			DataObjectAttribute doa = window.getOutSchema().get(s);
+			if (!doa.getName().equalsIgnoreCase(doa.getExpressionString()) && doa.getExpressionString().contains("(")) {
+				
+				System.out.printf("\ndoa expression string: %s; alias: %s\n\n", doa.getExpressionString(), doa.getName());
+				
+				// now we just assume that it's in the format of 'sum(a)'
+				String[] split = doa.getExpressionString().split("[\\(\\)\\s]+");
+				
+				System.out.printf("the split: %s\n", Arrays.asList(split));
+				
+				List<SciDBExpression> templ = new ArrayList<>();
+				templ.add(new SciDBColumn(split[1], null, null, false, null, null));
+				
+//				expressions.add(new SciDBAggregationFunction(split[0], split.length < 3 ? null : split[2], templ));
+				expressions.add(new SciDBAggregationFunction(split[0], doa.getName(), templ));
+			}
+		}
+		
+		lastFunction.push(new SciDBFunction("window", null, expressions, window.isPruned() ? window.getPruneToken() : null
+				, window.getSubTreeToken() == null ? null : window.getSubTreeToken(), isRootOriginal, new SciDBSchema(window.getOutSchema())));
 	}
 
 	@Override
@@ -652,8 +685,8 @@ public class AFLQueryGenerator implements OperatorVisitor {
 				sb.append(e.toString());
 			} 
 			sb.append(')');
-			if (alias != null) sb.append(" AS ").append(alias);
 			
+//			if (alias != null) sb.append(" AS ").append(alias);
 			return sb.toString();
 		}
 		

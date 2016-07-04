@@ -1,8 +1,10 @@
 package istc.bigdawg.islands.SciDB.operators;
 
-import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import istc.bigdawg.islands.CommonOutItemResolver;
 import istc.bigdawg.islands.DataObjectAttribute;
@@ -10,84 +12,32 @@ import istc.bigdawg.islands.OperatorVisitor;
 import istc.bigdawg.islands.SciDB.SciDBArray;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.operators.WindowAggregate;
-import net.sf.jsqlparser.expression.AnalyticExpression;
-import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
-import net.sf.jsqlparser.statement.select.OrderByElement;
+import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.expression.Function;
+import net.sf.jsqlparser.parser.CCJSqlParserUtil;
+import net.sf.jsqlparser.schema.Column;
+import net.sf.jsqlparser.schema.Table;
 
 public class SciDBIslandWindowAggregate extends SciDBIslandOperator implements WindowAggregate {
 
-	List<String> winaggs;
-	protected List<ExpressionList> partitionBy;
+	private List<Integer> dimensionBounds;
+	public List<Integer> getDimensionBounds() {
+		return dimensionBounds;
+	}
 
-	// order by is mostly ignored because psql plan 
-	// rewrites this as a sort nested below the WindowAgg
-	protected List<List<OrderByElement> > orderBy;
-	
-	List<AnalyticExpression> parsedAggregates;
-	
-//	SciDBIslandWindowAggregate(Map<String, String> parameters, List<String> output, SciDBIslandOperator child, SQLTableExpression supplement) throws Exception  {
-//		super(parameters, output, child, supplement);
-//
-//		isBlocking = true;
-//		blockerCount++;
-//		this.blockerID = blockerCount;
-//		
-//
-//		winaggs = new ArrayList<String>();
-//		
-//		partitionBy = new ArrayList<ExpressionList>();
-//		orderBy =  new ArrayList<List<OrderByElement> >();
-//		
-//		
-//		for(int i = 0; i < output.size(); ++i) {
-//			String expr = output.get(i);
-//				
-//			SQLOutItem out = new SQLOutItem(expr, child.outSchema, supplement);
-//			DataObjectAttribute attr = out.getAttribute();
-//			String alias = attr.getName();
-//			
-//			outSchema.put(alias, attr);
-//			
-//
-//			if(out.hasWindowedAggregates()) {
-//
-//				parsedAggregates = out.getWindowedAggregates();
-//				List<AnalyticExpression> ae = out.getWindowedAggregates();
-//				for(int j = 0; j < ae.size(); ++j) {
-//					AnalyticExpression e = ae.get(j);
-//
-//					winaggs.add(e.getName());
-//					
-//					assert(e.getName().equals("row_number()")); // others are not yet implemented
-//						
-//					partitionBy.add(e.getPartitionExpressionList());
-//					orderBy.add(e.getOrderByElements());
-//				}
-//			}
-//			
-//	
-//			
-//		}
-//		
-//			
-//		
-//		if(partitionBy.size() > 0) {
-//			// if this is (PARTITION BY x ORDER BY y) push down slice key to sort
-//			// want to slice as fine as possible to break up SMC groups
-//			if(child instanceof SciDBIslandSort && !orderBy.isEmpty()) {
-//				SciDBIslandSort c = (SciDBIslandSort) child;
-//				c.setWinAgg(true);
-//			}
-//		}
-//		
-////		secureCoordination = children.get(0).secureCoordination;
-//		
-//		// for simple WindowAggregate (i.e., row_number) no attributes accessed
-//		//if order by something protected|private, then update policy
-//		
-//
-//	}
-	
+	public void setDimensionBounds(List<Integer> dimensionBounds) {
+		this.dimensionBounds = dimensionBounds;
+	}
+
+	public List<String> getFunctions() {
+		return functions;
+	}
+
+	public void setFunctions(List<String> functions) {
+		this.functions = functions;
+	}
+
+	private List<String> functions;
 	
 	// for AFL
 	SciDBIslandWindowAggregate(Map<String, String> parameters, SciDBArray output, Operator child) throws Exception  {
@@ -96,38 +46,54 @@ public class SciDBIslandWindowAggregate extends SciDBIslandOperator implements W
 		isBlocking = true;
 		blockerCount++;
 		this.blockerID = blockerCount;
-
-		winaggs = new ArrayList<String>();
 		
-		partitionBy = new ArrayList<ExpressionList>();
-		orderBy =  new ArrayList<List<OrderByElement> >();
+		dimensionBounds = Arrays.asList(parameters.get("Window-Dimension-Parameters").split(", ")).stream().map(Integer::parseInt).collect(Collectors.toList());
+		functions = Arrays.asList(parameters.get("Window-Aggregate-Functions").split(", "));
+		
+		Map<String, String> aggFuns = new HashMap<>();
+		for (String s : functions) {
+			String alias = null;
+			
+			try {
+				Expression f = CCJSqlParserUtil.parseExpression(s);
+				
+				if (f instanceof Function) {
+					List<String> exprAndAlias = Arrays.asList(s.split(" AS "));
+					if (exprAndAlias.size() > 1) alias = exprAndAlias.get(1);
+					else if (((Function)f).isAllColumns()) alias = ((Function)f).getName();
+					else alias = ((Function)f).getParameters().getExpressions().get(0).toString()+"_"+((Function)f).getName();
+				} else if (f instanceof Column) {
+					alias = ((Column)f).getColumnName();
+//					System.out.printf("----> f alias: %s\n", alias);
+				}
+				aggFuns.put(alias, f.toString());
+			} catch (Exception e) {
+				
+				e.printStackTrace();
+				
+				String[] segs = s.split("[-\\(\\)\\.,\\*\\/\\+\\s]+");
+				aggFuns.put(segs[1]+"_"+segs[0], s);
+			}
+			
+			
+		}
 		
 		
+		// iterate over outschema and 
+		// classify each term as aggregate func or group by
 		for (String expr : output.getAttributes().keySet()) {
-			CommonOutItemResolver out = new CommonOutItemResolver(expr, output.getAttributes().get(expr), false, null);
+			
+//			System.out.printf("aggreagte output expression: %s, type: %s\n", expr, output.getAttributes().get(expr));
+			
+			CommonOutItemResolver out = new CommonOutItemResolver(expr, output.getAttributes().get(expr), false, null); // TODO CHECK THIS TODO
 			DataObjectAttribute attr = out.getAttribute();
-			String alias = attr.getName();
 			
-			outSchema.put(alias, attr);
+			if (aggFuns.get(expr) != null) attr.setExpression(aggFuns.get(expr));
+			else attr.setExpression(expr);
 			
-
-//			if(out.hasWindowedAggregates()) {
-//
-//				parsedAggregates = out.getWindowedAggregates();
-//				List<AnalyticExpression> ae = out.getWindowedAggregates();
-//				for(int j = 0; j < ae.size(); ++j) {
-//					AnalyticExpression e = ae.get(j);
-//
-//					winaggs.add(e.getName());
-//					
-//					assert(e.getName().equals("row_number()")); // others are not yet implemented
-//						
-//					partitionBy.add(e.getPartitionExpressionList());
-//					orderBy.add(e.getOrderByElements());
-//				}
-//			}
+			String attrName = attr.getName();
 			
-	
+			outSchema.put(attrName, attr);
 			
 		}
 		
@@ -135,22 +101,22 @@ public class SciDBIslandWindowAggregate extends SciDBIslandOperator implements W
 		for (String expr : output.getDimensions().keySet()) {
 			
 			CommonOutItemResolver out = new CommonOutItemResolver(expr, "Dimension", true, null);
-			DataObjectAttribute attr = out.getAttribute();
-			String attrName = attr.getFullyQualifiedName();		
-			outSchema.put(attrName, attr);
+			DataObjectAttribute dim = out.getAttribute();
+			
+			Column e = (Column) CCJSqlParserUtil.parseExpression(expr);
+			String arrayName = output.getDimensionMembership().get(expr);
+			if (arrayName != null) {
+				e.setTable(new Table(Arrays.asList(arrayName.split(", ")).get(0)));
+			}
+			
+//			parsedGroupBys.add(e);
+			dim.setExpression(e);
+			
+			String dimName = dim.getFullyQualifiedName();		
+			outSchema.put(dimName, dim);
 				
 		}
 		
-		if(partitionBy.size() > 0) {
-			// if this is (PARTITION BY x ORDER BY y) push down slice key to sort
-			// want to slice as fine as possible to break up SMC groups
-			if(child instanceof SciDBIslandSort && !orderBy.isEmpty()) {
-				SciDBIslandSort c = (SciDBIslandSort) child;
-				c.setWinAgg(true);
-			}
-		}
-		
-
 	}
 	
 	@Override
@@ -158,9 +124,16 @@ public class SciDBIslandWindowAggregate extends SciDBIslandOperator implements W
 		operatorVisitor.visit(this);
 	}
 	
-	
 	public String toString() {
-		return "WindowAgg over " + winaggs + " partition by " + partitionBy + " order by " + orderBy;
+		return "(window (" + children + ") " 
+				+ String.join(", ", dimensionBounds.stream().map(String::valueOf).collect(Collectors.toSet())) 
+				+ String.join(", ", functions)
+				+ ")";
+	}
+	
+	@Override
+	public String getTreeRepresentation(boolean isRoot) throws Exception{
+		return "{window"+children.get(0).getTreeRepresentation(false)+"}";
 	}
 	
 //	@Override
