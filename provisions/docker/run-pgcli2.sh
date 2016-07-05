@@ -5,7 +5,7 @@ if (( EUID != 0 )); then
    exit 126
 fi
 
-if `docker inspect -f {{.State.Running}} postgres1`; then
+if `docker inspect -f {{.State.Running}} postgres2`; then
     echo "Starting pgcli container for postgres2..."
     (set -x; docker run -ti --rm \
         --net=bigdawg \
