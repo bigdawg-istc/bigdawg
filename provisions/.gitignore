@@ -1,0 +1,5 @@
+postgres-base/mimic2.pgd
+postgres1/monitor
+postgres1/catalog
+postgres1/schemas
+postgres1/create_logs_table.sql

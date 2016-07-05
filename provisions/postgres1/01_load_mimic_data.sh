@@ -1,9 +1,5 @@
 #!/bin/bash
 
-echo "Downloading mimic2.pgd"
-gosu postgres wget -O /tmp/mimic2.pgd \
-    https://bitbucket.org/adam-dziedzic/bigdawgdata/raw/6ade22253695bfeb33074e82929e83b52cb121f1/mimic2.pgd
-
 pguser=pguser
 log_db=logs
 catalog_db=bigdawg_catalog
@@ -29,4 +25,9 @@ gosu postgres psql -f /tmp/create_logs_table.sql -d ${log_db}
 
 # tests
 gosu postgres psql -c "create database test owner ${pguser}"
+
+# schemas
+gosu postgres psql -c "create database bigdawg_schemas" -d template1
+gosu postgres psql -f /tmp/schemas/bigdawg_schemas_setup.sql -d bigdawg_schemas
+
 echo "All done."
