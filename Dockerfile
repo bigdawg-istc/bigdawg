@@ -6,4 +6,4 @@ COPY . /usr/src/app
 
 COPY . /usr/src/app
 
-RUN cd /usr/src/app; mvn install -P dev
+RUN cd /usr/src/app; mvn install -P dev -D skipTests
