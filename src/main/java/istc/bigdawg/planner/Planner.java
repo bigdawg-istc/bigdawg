@@ -14,15 +14,17 @@ import org.mortbay.log.Log;
 
 import istc.bigdawg.catalog.CatalogModifier;
 import istc.bigdawg.catalog.CatalogViewer;
-import istc.bigdawg.exceptions.UnsupportedIslandException;
+import istc.bigdawg.exceptions.BigDawgException;
 import istc.bigdawg.executor.Executor;
 import istc.bigdawg.executor.QueryResult;
 import istc.bigdawg.executor.plan.QueryExecutionPlan;
 import istc.bigdawg.islands.CrossIslandCastNode;
+import istc.bigdawg.islands.CrossIslandNonOperatorNode;
 import istc.bigdawg.islands.CrossIslandPlanNode;
 import istc.bigdawg.islands.CrossIslandQueryNode;
 import istc.bigdawg.islands.CrossIslandQueryPlan;
 import istc.bigdawg.islands.IslandsAndCast.Scope;
+import istc.bigdawg.islands.TheObjectThatResolvesAllDifferencesAmongTheIslands;
 import istc.bigdawg.migration.MigrationParams;
 import istc.bigdawg.migration.Migrator;
 import istc.bigdawg.monitoring.Monitor;
@@ -148,9 +150,10 @@ public class Planner {
 					logger.debug("Executing query cross-island subquery "+node+"...");
 					nodeToResult.put(node, Executor.executePlan(qep, ciqn.getSignature(), choice).getConnectionInfo());
 					
+				} else if (node instanceof CrossIslandNonOperatorNode) {
+					nodeToResult.put(node, TheObjectThatResolvesAllDifferencesAmongTheIslands.runOperatorFreeIslandQuery((CrossIslandNonOperatorNode)node).getConnectionInfo());
 				} else {
-					// dummy node
-					throw new UnsupportedIslandException(node.getSourceScope(), "Planner::processQuery");
+					throw new BigDawgException("Planner::processQuery has unimplemented Cross Island Plan Node: "+node.getClass().getSimpleName());
 				}
 				// add the child node to nextGen
 				nextGeneration.add(node.getTargetVertex(ciqp));
@@ -170,7 +173,7 @@ public class Planner {
 			// save for later
 			throw new Exception("Unimplemented feature: CASTing output");
 			
-		} else {
+		} else if (cipn instanceof CrossIslandQueryNode) {
 			// business as usual
 			
 			CrossIslandQueryNode ciqn = (CrossIslandQueryNode)cipn;
@@ -182,30 +185,44 @@ public class Planner {
 			
 			
 			// EXECUTE THE RESULT
-			logger.debug("Executing query execution tree...");
+			logger.debug("Executing query execution tree exit node...");
 			Response responseHolder = compileResults(ciqp.getSerial(), Executor.executePlan(qep, ciqn.getSignature(), choice));
 			
-			Log.debug("Garbage collection starts; Next up: catalog entries");
-			Long time = System.currentTimeMillis();
-			// destruct
-			CatalogModifier.deleteMultipleObjects(catalogSOD);
-			Log.debug(String.format("Catalog entries cleaned, time passed: %s; Next up: tempTables", System.currentTimeMillis() - time));
-			for (ConnectionInfo c : tempTableMOD.keySet()) {
-	            final Collection<String> tables = tempTableMOD.get(c);
-//	            Collection<String> cs = c.getCleanupQuery(tables);
-	            Log.debug(String.format("removing %s on %s...", tables, c.getDatabase()));
-	            try {
-	            	c.getLocalQueryExecutor().cleanUp(tables);
-	            } catch (ConnectionInfo.LocalQueryExecutorLookupException e) {
-	                e.printStackTrace();
-	            }
-			}
-			Log.debug(String.format("Temp tables cleaned, time passed: %s; clean up finished", System.currentTimeMillis() - time));
+			cleanUpTemporaryTables(catalogSOD, tempTableMOD);
 			
 			return responseHolder;
 			
+		} else if (cipn instanceof CrossIslandNonOperatorNode) {
+			// EXECUTE THE RESULT
+			logger.debug("Executing CrossIslandNonOperatorNode exit node...");
+			Response responseHolder = compileResults(ciqp.getSerial(), TheObjectThatResolvesAllDifferencesAmongTheIslands.runOperatorFreeIslandQuery((CrossIslandNonOperatorNode)cipn));
+			
+			cleanUpTemporaryTables(catalogSOD, tempTableMOD);
+			
+			return responseHolder;
+			
+		} else {
+			throw new BigDawgException("Planner::processQuery has unimplemented Cross Island Plan Node: "+cipn.getClass().getSimpleName());
 		}
 		
+	}
+	
+	private static void cleanUpTemporaryTables(Set<Integer> catalogSOD, Map<ConnectionInfo, Collection<String>> tempTableMOD) throws Exception{
+		
+		Log.debug("Garbage collection starts; Next up: catalog entries");
+		Long time = System.currentTimeMillis();
+		CatalogModifier.deleteMultipleObjects(catalogSOD);
+		Log.debug(String.format("Catalog entries cleaned, time passed: %s; Next up: tempTables", System.currentTimeMillis() - time));
+		for (ConnectionInfo c : tempTableMOD.keySet()) {
+            final Collection<String> tables = tempTableMOD.get(c);
+            Log.debug(String.format("removing %s on %s...", tables, c.getDatabase()));
+            try {
+            	c.getLocalQueryExecutor().cleanUp(tables);
+            } catch (ConnectionInfo.LocalQueryExecutorLookupException e) {
+                e.printStackTrace();
+            }
+		}
+		Log.debug(String.format("Temp tables cleaned, time passed: %s; clean up finished", System.currentTimeMillis() - time));
 	}
 
 	private static String processRemoteName(Scope sourceScope, Scope destinationScope, String originalString) {

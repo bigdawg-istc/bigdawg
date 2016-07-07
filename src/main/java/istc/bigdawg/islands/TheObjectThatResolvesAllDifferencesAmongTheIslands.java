@@ -16,6 +16,7 @@ import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.exceptions.BigDawgCatalogException;
 import istc.bigdawg.exceptions.BigDawgException;
 import istc.bigdawg.exceptions.UnsupportedIslandException;
+import istc.bigdawg.executor.QueryResult;
 import istc.bigdawg.islands.IslandsAndCast.Scope;
 import istc.bigdawg.islands.SciDB.AFLPlanParser;
 import istc.bigdawg.islands.SciDB.AFLQueryGenerator;
@@ -46,6 +47,7 @@ import net.sf.jsqlparser.JSQLParserException;
  * Island writers should go through each of these functions to add supports for their islands
  * 
  * NOTE: all relational island queries are assumed to be base in PostgreSQL. 
+ *       This assumption needs to change as new engines join Relational Island 
  *
  */
 public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
@@ -507,5 +509,27 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		
 		Connection con = PostgreSQLHandler.getConnection((PostgreSQLConnectionInfo)CatalogViewer.getConnectionInfo(dbid));
 		return PostgreSQLHandler.getCreateTable(con, tableName).replaceAll("\\scharacter[\\(]", " char(");
+	}
+	
+	//// Operator free options
+	
+	public static QueryResult runOperatorFreeIslandQuery(CrossIslandNonOperatorNode node) throws BigDawgException {
+		
+		switch (node.sourceScope) {
+		
+		case DOCUMENT:
+		case GRAPH:
+		case KEYVALUE:
+		case STREAM:
+		case TEXT:
+			throw new UnsupportedIslandException(node.sourceScope, "runOperatorFreeIslandQuery");
+//			break;
+		case RELATIONAL:
+		case ARRAY:
+		default:
+			throw new BigDawgException("Unapplicable island for runOperatorFreeIslandQuery: "+node.sourceScope.name());
+		
+		}
+		
 	}
 }

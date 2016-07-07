@@ -199,7 +199,7 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 			} else if (TheObjectThatResolvesAllDifferencesAmongTheIslands.isOperatorBasedIsland(thisScope)) {
 				newNode = new CrossIslandQueryNode(thisScope, islandQuery, name, transitionSchemas.pop());
 			} else {
-				newNode = new CrossIslandNonOperatorNode(thisScope, islandQuery, name, new ArrayList<>());
+				newNode = new CrossIslandNonOperatorNode(thisScope, islandQuery, name);
 			}
 			
 		} else 

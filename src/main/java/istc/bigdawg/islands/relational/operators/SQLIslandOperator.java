@@ -50,6 +50,8 @@ public class SQLIslandOperator implements Operator, OperatorInterface {
 //	protected static int subTreeCount = 0;
 //	protected Integer subTreeID = null;
 //	
+	static final String BigDAWGSQLPruneToken = "BIGDAWGSQLPRUNED_"; 
+	static final String BigDAWGSQLSubtreeToken = "BIGDAWGSQLSUBTREE_";
 	
 	protected boolean isBlocking = false; 
 	protected static int blockerCount = 0;
@@ -304,7 +306,7 @@ public class SQLIslandOperator implements Operator, OperatorInterface {
 	
 	public String getPruneToken() throws Exception {
 		if (!isPruned) return null;
-		return BigDAWGPruneToken + this.pruneID;
+		return BigDAWGSQLPruneToken + this.pruneID;
 	}
 	
 	public boolean isSubTree() {
@@ -324,7 +326,7 @@ public class SQLIslandOperator implements Operator, OperatorInterface {
 		if (!isSubTree && !(this instanceof SQLIslandJoin)) return null;
 		if (this instanceof SQLIslandJoin) return ((SQLIslandJoin)this).getJoinToken(); 
 		else if (this instanceof SQLIslandAggregate && ((SQLIslandAggregate)this).getAggregateID() != null) return ((SQLIslandAggregate)this).getAggregateToken();
-		else return BigDAWGSubtreeToken + this.subTreeID;
+		else return BigDAWGSQLSubtreeToken + this.subTreeID;
 	}
 	
 	public void setQueryRoot(boolean isRoot) {

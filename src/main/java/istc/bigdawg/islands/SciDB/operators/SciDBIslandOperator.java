@@ -29,6 +29,8 @@ import net.sf.jsqlparser.util.SelectUtils;
 
 public class SciDBIslandOperator implements OperatorInterface, Operator {
 
+	static final String BigDAWGSciDBPruneToken = "BIGDAWGSCIDBPRUNED_"; 
+	static final String BigDAWGSciDBSubtreeToken = "BIGDAWGSCIDBSUBTREE_";
 	
 	protected boolean isCTERoot = false;
 	// for use in getPlaintext
@@ -395,7 +397,7 @@ public class SciDBIslandOperator implements OperatorInterface, Operator {
 	public String getPruneToken() throws Exception {
 		if (!isPruned) 
 			throw new Exception("\n\n\n----> unpruned token: "+this.outSchema+"\n\n");
-		return BigDAWGPruneToken + this.pruneID;
+		return BigDAWGSciDBPruneToken + this.pruneID;
 	}
 	
 	@Override
@@ -418,7 +420,7 @@ public class SciDBIslandOperator implements OperatorInterface, Operator {
 		if (!isSubTree && !(this instanceof SciDBIslandJoin)) return null;
 		if (this instanceof SciDBIslandJoin) return ((SciDBIslandJoin)this).getJoinToken(); 
 		else if (this instanceof SciDBIslandAggregate && ((SciDBIslandAggregate)this).getAggregateID() != null) return ((SciDBIslandAggregate)this).getAggregateToken();
-		else return BigDAWGSubtreeToken + this.subTreeID;
+		else return BigDAWGSciDBSubtreeToken + this.subTreeID;
 	}
 	
 	@Override

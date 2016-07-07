@@ -9,8 +9,7 @@ import istc.bigdawg.islands.OperatorVisitor;
 
 public interface Operator {
 
-	static final String BigDAWGPruneToken = "BIGDAWGPRUNED_"; 
-	static final String BigDAWGSubtreeToken = "BIGDAWGSUBTREE_";
+	
 	
 	public abstract Operator duplicate(boolean addChild) throws Exception;
 	public boolean isCopy();
