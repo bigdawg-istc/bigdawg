@@ -18,6 +18,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.lang3.SystemUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.jgrapht.graph.DefaultEdge;
@@ -48,7 +49,15 @@ public class MonitoringTask implements Runnable {
         this.executor = Executors.newScheduledThreadPool(1);
         int cores = 1;
         try {
-            Process p = Runtime.getRuntime().exec("nproc");
+            String command = "";
+            if (SystemUtils.IS_OS_LINUX) {
+                command = "nproc";
+            } else if (SystemUtils.IS_OS_MAC) {
+                command = "sysctl -n hw.physicalcpu";
+            } else {
+                throw new RuntimeException("The current OS is not supported.");
+            }
+            Process p = Runtime.getRuntime().exec(command);
             p.waitFor();
             BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream()));
             StringBuilder sb = new StringBuilder();
