@@ -1,5 +1,5 @@
 FROM maven:3.3.9-jdk-8
 
-COPY . /usr/src/app
+VOLUME /bigdawg
 
-RUN cd /usr/src/app; mvn install -P dev -D skipTests
+CMD cd /bigdawg; mvn exec:java -P dev

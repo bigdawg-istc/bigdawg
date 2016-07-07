@@ -1,4 +1,4 @@
-1;2802;0c#!/bin/bash 
+1;2802;0c#!/bin/bash
 data_folder=/home/adam/data/
 file_from_postgres=${data_folder}from_postgres_waveform_.bin
 file_from_postgres_csv=${data_folder}from_postgres_waveform_.csv
@@ -22,8 +22,8 @@ postgresql_version=pgsql-9.4.5  #pgsql-9.3.9 # pgsql-9.3.9 pgsql4scidb
 pg_path=/home/adam/bigdawgmiddle/installation/Downloads/postgres1
 pg_bin=${pg_path}/bin/
 psql=${pg_bin}psql
-port=5431 # 5431 5432
-host=localhost
+port=5432 # 5431 5432
+host=postgres1
 #postgresql_data_location=/home/adam/data-database/PostgreSQL/${postgresql_version}/data
 postgresql_data_location=/home/adam/databases/PostgreSQL/dataPostgreSQL/${postgresql_version}/data
 BENCHMARK=mimic2
@@ -74,7 +74,7 @@ prepare_environment() {
 
 start_sar() {
     TIMESTAMP=$(date -d"$CURRENT +$MINUTES minutes" '+%F_%T.%N_%Z')
-    sar -b -d -q -n DEV -r -u -W -o /home/adam/data-loading/sar/2016-01-26/${1}_${BENCHMARK}_scale_factor_${size}_data_files_in_${DATA_STORE}_database_in_${STORE}_parallel_level_${parallel_level}_${TIMESTAMP}.sar 1 > /dev/null 2>&1 & 
+    sar -b -d -q -n DEV -r -u -W -o /home/adam/data-loading/sar/2016-01-26/${1}_${BENCHMARK}_scale_factor_${size}_data_files_in_${DATA_STORE}_database_in_${STORE}_parallel_level_${parallel_level}_${TIMESTAMP}.sar 1 > /dev/null 2>&1 &
     SAR_PID=$!
     sleep 3
 }

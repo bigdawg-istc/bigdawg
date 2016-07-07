@@ -9,17 +9,10 @@ echo "Starting postgres1..."
 docker start postgres1
 echo "Starting postgres2..."
 docker start postgres2
-# echo "Waiting 5 seconds for db to spin up..."
-# sleep 5
-# # Make sure the database is up to date (should move this to a docker entrypoint script)
-# echo "Running Django migrations..."
-# docker run \
-#     --rm \
-#     --env 'USER=vagrant' \
-#     --volumes-from app \
-#     --net=datahub_dev \
-#     datahuborg/datahub \
-#     /bin/bash -c "python src/manage.py migrate --noinput"
-# docker start app
-# docker start web
+echo "Waiting 5 seconds for db to spin up..."
+sleep 5
+echo "Starting maven..."
+docker start maven
+
+
 echo "Done."

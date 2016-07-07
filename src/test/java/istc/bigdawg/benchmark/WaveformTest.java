@@ -1,5 +1,5 @@
 /**
- * 
+ *
  */
 package istc.bigdawg.benchmark;
 
@@ -31,7 +31,7 @@ import istc.bigdawg.scidb.SciDBConnectionInfoTest;
 
 /**
  * Benchmarks for migrator.
- * 
+ *
  * @author Adam Dziedzic
  */
 public class WaveformTest {
@@ -79,8 +79,8 @@ public class WaveformTest {
 
 	@Test
 	public void testFromPostgresToPostgres() throws Exception {
-		PostgreSQLConnectionInfo conFrom = new PostgreSQLConnectionInfo("localhost", "5431", "test", "pguser", "test");
-		PostgreSQLConnectionInfo conTo = new PostgreSQLConnectionInfo("localhost", "5430", "test", "pguser", "test");
+		PostgreSQLConnectionInfo conFrom = new PostgreSQLConnectionInfo("postgres1", "5432", "test", "pguser", "test");
+		PostgreSQLConnectionInfo conTo = new PostgreSQLConnectionInfo("postgres2", "5432", "test", "pguser", "test");
 		new FromPostgresToPostgres().migrate(conFrom, table, conTo, table);
 	}
 
