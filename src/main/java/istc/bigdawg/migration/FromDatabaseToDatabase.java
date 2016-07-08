@@ -99,7 +99,7 @@ public class FromDatabaseToDatabase implements MigrationNetworkRequest {
 	 */
 	FromDatabaseToDatabase(Export exporter, Load loader,
 			MigrationInfo migrationInfo) {
-		/** Check if compatible export, migration request and load. */
+		/** Check if compatible export, migration request and loading. */
 		checkSupportForExportLoad(exporter, loader, migrationInfo);
 
 		/**
@@ -283,9 +283,14 @@ public class FromDatabaseToDatabase implements MigrationNetworkRequest {
 			/* set output for exporter and input for importer */
 			exporter.setExportTo(pipe);
 			loader.setLoadFrom(pipe);
+			
 			/* set migration information for exporter and loader */
 			exporter.setMigrationInfo(migrationInfo);
 			loader.setMigrationInfo(migrationInfo);
+			
+			/* set the handler from for the loader - this is to get meta information from the source table */
+			loader.setHandlerFrom(exporter.getHandler());
+			
 			/* activate the tasks */
 			List<Callable<Object>> tasks = new ArrayList<>();
 			tasks.add(exporter);
@@ -461,11 +466,11 @@ public class FromDatabaseToDatabase implements MigrationNetworkRequest {
 				String thisHostname = BigDawgConfigProperties.INSTANCE
 						.getGrizzlyIpAddress();
 				/** Acquire the ZooKeeper locks for the migration. */
-//				if (zooKeeperLocks == null) {
-//					byte[] data = debugMessage.getBytes();
-//					zooKeeperLocks = ZooKeeperUtils.acquireMigrationLocks(
-//							Arrays.asList(thisHostname, hostnameTo), data);
-//				}
+				// if (zooKeeperLocks == null) {
+				// byte[] data = debugMessage.getBytes();
+				// zooKeeperLocks = ZooKeeperUtils.acquireMigrationLocks(
+				// Arrays.asList(thisHostname, hostnameTo), data);
+				// }
 				if (!isThisMyIpAddress(InetAddress.getByName(hostnameTo))) {
 					log.debug("Migration from a local: " + thisHostname
 							+ " to remote database: " + hostnameTo);

@@ -435,7 +435,7 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 
 			executor = Executors.newFixedThreadPool(3);
 			ExportSciDB exportExecutor = new ExportSciDB(getConnectionFrom(),
-					arrays, scidbPipe, format, true);
+					arrays, scidbPipe, FileFormat.BIN_SCIDB, format);
 			FutureTask<Object> exportTask = new FutureTask<Object>(
 					exportExecutor);
 			executor.submit(exportTask);
@@ -594,8 +594,6 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 			scidbPipe = Pipe.INSTANCE.createAndGetFullName(
 					this.getClass().getName() + "_fromSciDB_" + fromArray);
 
-			String defultCsvFormat = "csv+";
-
 			connectionPostgres = PostgreSQLHandler
 					.getConnection(getConnectionTo());
 			connectionPostgres.setAutoCommit(false);
@@ -603,7 +601,7 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 
 			List<Callable<Object>> tasks = new ArrayList<>();
 			tasks.add(new ExportSciDB(getConnectionFrom(), arrays, scidbPipe,
-					defultCsvFormat, false));
+					FileFormat.CSV, null));
 			tasks.add(new LoadPostgres(connectionPostgres,
 					getCopyToPostgreSQLCsvCommand(toTable), scidbPipe));
 			executor = Executors.newFixedThreadPool(tasks.size());

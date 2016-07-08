@@ -6,6 +6,7 @@ package istc.bigdawg.migration;
 import org.apache.log4j.Logger;
 
 import istc.bigdawg.database.ObjectMetaData;
+import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.query.DBHandler;
@@ -224,6 +225,10 @@ public class LoadSciDB implements Load {
 					loadCommand.append("'(" + binaryFormatString + ")'");
 				} else if (this.fileFormat == FileFormat.CSV) {
 					loadCommand.append(getSciDBCsvString());
+				} else {
+					throw new MigrationException(
+							"Unrecognized format for data loader to SciDB: "
+									+ this.fileFormat);
 				}
 			}
 			loadCommand.append(")");

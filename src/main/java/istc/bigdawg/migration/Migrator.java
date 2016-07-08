@@ -50,7 +50,13 @@ public class Migrator {
 	static {
 		registeredMigrators = new ArrayList<FromDatabaseToDatabase>();
 		registeredMigrators.add(new FromPostgresToPostgres());
-		registeredMigrators.add(new FromPostgresToSciDB());
+		
+		/* migrator from PostgreSQL to SciDB */
+		registeredMigrators.add(new FromDatabaseToDatabase(
+				ExportPostgres.ofFormat(FileFormat.CSV),
+				LoadSciDB.ofFormat(FileFormat.CSV)));
+		/* registeredMigrators.add(new FromPostgresToSciDB()); */
+		
 		registeredMigrators.add(new FromSciDBToPostgres());
 	}
 
@@ -113,9 +119,8 @@ public class Migrator {
 		throw new MigrationException("Unsupported migration from "
 				+ connectionFrom.getHost() + ":" + connectionFrom.getPort()
 				+ " to " + connectionTo.getHost() + ":" + connectionTo.getPort()
-				+ "!\n" + "Details:\n" + "From:\n"
-				+ connectionFrom.toString() + "\n To:\n"
-				+ connectionTo.toString());
+				+ "!\n" + "Details:\n" + "From:\n" + connectionFrom.toString()
+				+ "\n To:\n" + connectionTo.toString());
 	}
 
 	public static void main(String[] args) {

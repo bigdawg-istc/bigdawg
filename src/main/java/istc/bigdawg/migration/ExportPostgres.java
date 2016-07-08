@@ -15,9 +15,11 @@ import org.apache.log4j.Logger;
 import org.postgresql.copy.CopyManager;
 import org.postgresql.core.BaseConnection;
 
+import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.query.ConnectionInfo;
+import istc.bigdawg.query.DBHandler;
 import istc.bigdawg.utils.StackTrace;
 
 /**
@@ -117,16 +119,23 @@ public class ExportPostgres implements Export {
 	 * 
 	 * @throws SQLException
 	 * @throws FileNotFoundException
+	 * @throws MigrationException
 	 */
-	private void lazyInitialization()
-			throws SQLException, FileNotFoundException {
+	private void lazyInitialization() throws MigrationException {
 		if (connectionFrom == null) {
-			connectionFrom = PostgreSQLHandler
-					.getConnection((PostgreSQLConnectionInfo) migrationInfo
-							.getConnectionFrom());
-			connectionFrom.setAutoCommit(false);
-			connectionFrom.setReadOnly(true);
-			this.cpFrom = new CopyManager((BaseConnection) connectionFrom);
+			try {
+				connectionFrom = PostgreSQLHandler
+						.getConnection((PostgreSQLConnectionInfo) migrationInfo
+								.getConnectionFrom());
+				connectionFrom.setAutoCommit(false);
+				connectionFrom.setReadOnly(true);
+				this.cpFrom = new CopyManager((BaseConnection) connectionFrom);
+			} catch (SQLException e) {
+				String msg = "Problem with connection to PostgreSQL. "
+						+ e.getMessage();
+				log.error(msg + " " + StackTrace.getFullStackTrace(e));
+				throw new MigrationException(msg, e);
+			}
 		}
 		if (output == null) {
 			try {
@@ -138,11 +147,12 @@ public class ExportPostgres implements Export {
 				output = new BufferedOutputStream(
 						new FileOutputStream(outputFile));
 			} catch (FileNotFoundException e) {
-				String msg = e.getMessage()
+				String msg = "File not found: " + outputFile + " "
+						+ e.getMessage()
 						+ " Problem with thread for PostgreSQL copy manager "
 						+ "while copying (extracting) data from PostgreSQL.";
 				log.error(msg + " " + StackTrace.getFullStackTrace(e), e);
-				throw e;
+				throw new MigrationException(msg, e);
 			}
 		}
 		if (copyFromString == null) {
@@ -167,7 +177,7 @@ public class ExportPostgres implements Export {
 	 * @return number of extracted rows
 	 * @throws Exception
 	 */
-	public Long call() throws Exception {
+	public Long call() throws MigrationException {
 		log.debug("start call: Copy from PostgreSQL (Executor)");
 		lazyInitialization();
 		Long countExtractedRows = 0L;
@@ -184,7 +194,7 @@ public class ExportPostgres implements Export {
 					+ " Problem with thread for PostgreSQL copy manager "
 					+ "while copying (extracting) data from PostgreSQL.";
 			log.error(msg + StackTrace.getFullStackTrace(e), e);
-			throw e;
+			throw new MigrationException(msg, e);
 		}
 		log.debug("Extracted rows: " + countExtractedRows);
 		return countExtractedRows;
@@ -231,6 +241,16 @@ public class ExportPostgres implements Export {
 	 */
 	@Override
 	public void setExportTo(String filePath) {
-		outputFile = filePath;
+		this.outputFile = filePath;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see istc.bigdawg.migration.Export#getHandler()
+	 */
+	@Override
+	public DBHandler getHandler() {
+		return new PostgreSQLHandler(migrationInfo.getConnectionFrom());
 	}
 }

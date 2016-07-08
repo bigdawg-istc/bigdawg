@@ -33,7 +33,7 @@ public class FromPostgresToSciDBRegionTPCHDataTest {
 	private static Logger logger = Logger
 			.getLogger(FromPostgresToPostgresTest.class);
 
-	private FromPostgresToSciDB migrator = new FromPostgresToSciDB();
+	private FromDatabaseToDatabase migrator;
 	private PostgreSQLConnectionInfo conFrom = new PostgreSQLConnectionInfoTest();
 	private String fromTable = "region_test_from_13241";
 	private SciDBConnectionInfo conTo = new SciDBConnectionInfoTest();
@@ -56,6 +56,10 @@ public class FromPostgresToSciDBRegionTPCHDataTest {
 		LoggerSetup.setLogging();
 		this.numberOfRowsPostgres = TestMigrationUtils
 				.loadDataToPostgresRegionTPCH(conFrom, fromTable);
+		/* this.migrator = = new FromPostgresToSciDB(); */
+		this.migrator = new FromDatabaseToDatabase(
+				ExportPostgres.ofFormat(FileFormat.CSV),
+				LoadSciDB.ofFormat(FileFormat.CSV));
 	}
 
 	@Test
