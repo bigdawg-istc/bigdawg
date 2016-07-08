@@ -141,6 +141,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	
 	/**
 	 * For query planning, CrossIslandQueryNode
+	 * This function is used to create temporary tables in schema engines, where the temporary tables represent intermediate results from other islands
 	 * @param sourceScope
 	 * @param children
 	 * @param transitionSchemas
@@ -187,6 +188,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	
 	/**
 	 * For query planning, CrossIslandQueryNode
+	 * This function is responsible for removing temporary tables created in the name of intermediate results from other islands. 
 	 * @param sourceScope
 	 * @param dbSchemaHandler
 	 * @param children
@@ -263,6 +265,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	
 	/**
 	 * For query planning, CrossIslandQueryNode 
+	 * Construct a join operator using limited information; used in creating permutations 
 	 * @param scope
 	 * @param o1, left operator
 	 * @param o2, right operator
@@ -304,6 +307,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	
 	/**
 	 * For query planning, CrossIslandQueryNode
+	 * Used in signature creation. Sig2 means all tables involved in a query.
 	 * @param scope
 	 * @param dbSchemaHandler
 	 * @param queryString
@@ -356,8 +360,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		
 		switch (scope) {
 		case ARRAY:
-			// TODO ensure this is correct for SciDB
-			joinDelim = "[,]";
+			joinDelim = "[,=]";
 		case CAST:
 			break;
 		case DOCUMENT:
@@ -391,6 +394,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	
 	/**
 	 * For monitoring, signature
+	 * Sig3 consist of constants and other literals used in the query.
 	 * @param scope
 	 * @param query
 	 * @return

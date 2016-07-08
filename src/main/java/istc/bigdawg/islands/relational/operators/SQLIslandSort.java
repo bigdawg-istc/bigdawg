@@ -101,26 +101,6 @@ public class SQLIslandSort extends SQLIslandOperator implements Sort {
 		}
 	}
 	
-//	// for AFL
-//	public SQLIslandSort(Map<String, String> parameters, SciDBArray output,  List<String> keys, SQLIslandOperator child) throws Exception  {
-//		super(parameters, output, child);
-//
-//		isBlocking = true;
-//		blockerCount++;
-//		this.blockerID = blockerCount;
-//
-//		// two order bys might exist in a supplement:
-//		// 1) within an OVER () clause for windowed aggregate
-//		// 2) as an ORDER BY clause
-//		// instantiate iterator to get the right one
-//		// iterate from first OVER --> ORDER BY
-//
-//		setSortKeys(keys);
-//		
-//		outSchema = new LinkedHashMap<String, DataObjectAttribute>(child.outSchema);
-//		
-//	}
-	
 	public SQLIslandSort(SQLIslandOperator o, boolean addChild) throws Exception {
 		super(o, addChild);
 		SQLIslandSort s = (SQLIslandSort) o;
@@ -192,25 +172,6 @@ public class SQLIslandSort extends SQLIslandOperator implements Sort {
 	public void accept(OperatorVisitor operatorVisitor) throws Exception {
 		operatorVisitor.visit(this);
 	}
-	
-//	@Override
-//	public String generateAFLString(int recursionLevel) throws Exception{
-//		StringBuilder sb = new StringBuilder();
-//		sb.append("sort(");
-//		sb.append(children.get(0).generateAFLString(recursionLevel+1));
-//		if (!getSortKeys().isEmpty()) {
-//
-//			updateOrderByElements();
-//			
-//			for (OrderByElement obe: getOrderByElements()) {
-//				sb.append(", ").append(obe.toString());
-//			}
-//			
-//		}
-//		sb.append(')');
-//		return sb.toString();
-//		
-//	}
 	
 	@Override
 	public String getTreeRepresentation(boolean isRoot) throws Exception{

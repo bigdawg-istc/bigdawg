@@ -12,7 +12,6 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -564,15 +563,6 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 		return String.copyValueOf(scidbTypesPattern);
 	}
 	
-	/**
-	 * This needs to be merged with the function below TODO
-	 */
-	@Override
-	public void cleanUp(Collection<String> tables) throws Exception {
-		for (String array: tables) execute("remove("+array+")");
-		commit();
-	};
-
 	/**
 	 * This is similar to dropArrayIfExists. The array is removed if it exists.
 	 * Otherwise, no exception is thrown.

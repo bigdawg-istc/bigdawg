@@ -58,7 +58,7 @@ public interface ConnectionInfo extends Serializable {
 	public Collection<String> getCleanupQuery(Collection<String> objects);
 
 	/**
-	 *
+	 * Used for executing shuffle joins.
 	 * @param object
 	 *            the table for which the histogram should be computed
 	 * @param attribute
@@ -77,6 +77,14 @@ public interface ConnectionInfo extends Serializable {
 			double start, double end, int numBuckets)
 					throws ExecutorEngine.LocalQueryExecutionException;
 
+	/**
+	 * Used for executing shuffle joins.
+	 * @param object
+	 * @param attribute
+	 * @return
+	 * @throws ExecutorEngine.LocalQueryExecutionException
+	 * @throws ParseException
+	 */
 	public Pair<Number, Number> getMinMax(String object, String attribute)
 			throws ExecutorEngine.LocalQueryExecutionException, ParseException;
 

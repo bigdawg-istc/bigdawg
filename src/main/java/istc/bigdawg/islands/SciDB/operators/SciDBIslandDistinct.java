@@ -19,28 +19,6 @@ public class SciDBIslandDistinct extends SciDBIslandOperator implements Distinct
 	 * @param child
 	 */
 	
-//	SciDBIslandDistinct(Map<String, String> parameters, List<String> output, SciDBIslandOperator child, SQLTableExpression supplement) throws Exception  {
-//		super(parameters, output, child, supplement);
-//		
-//		
-//		isBlocking = true;
-//		blockerCount++;
-//		this.blockerID = blockerCount;
-//
-//		if (children.get(0) instanceof SciDBIslandJoin) {
-//			outSchema = new LinkedHashMap<>();
-//			for(int i = 0; i < output.size(); ++i) {
-//				String expr = output.get(i);
-//				SQLOutItem out = new SQLOutItem(expr, child.outSchema, supplement); // TODO CHECK THIS TODO
-//				SQLAttribute attr = out.getAttribute();
-//				String attrName = attr.getName();
-//				outSchema.put(attrName, attr);
-//			}
-//		} else {
-//			outSchema = new LinkedHashMap<>(child.outSchema);
-//		}
-//		
-//	}
 	public SciDBIslandDistinct(Map<String, String> parameters, SciDBArray output, Operator child) {
 		super(parameters, output, child);
 		
@@ -64,14 +42,6 @@ public class SciDBIslandDistinct extends SciDBIslandOperator implements Distinct
 	public String toString() {
 		return "Distinct over " + outSchema;
 	}
-	
-//	@Override
-//	public String generateAFLString(int recursionLevel) throws Exception {
-//		String planStr =  "Distinct(";
-//		planStr += children.get(0).generateAFLString(recursionLevel + 1);
-//		planStr += ")";
-//		return planStr;
-//	}
 	
 	@Override
 	public String getTreeRepresentation(boolean isRoot) throws Exception{

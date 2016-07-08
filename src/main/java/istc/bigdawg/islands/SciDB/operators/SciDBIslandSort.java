@@ -22,76 +22,8 @@ public class SciDBIslandSort extends SciDBIslandOperator implements Sort {
 	private SortOrder sortOrder;
 	
 	private List<OrderByElement> orderByElements;
-//	private List<String> sortOrderStrings;
 	
 	private boolean isWinAgg = false; // is it part of a windowed aggregate or an ORDER BY clause?
-	
-//	public SciDBIslandSort(Map<String, String> parameters, List<String> output,  List<String> keys, SciDBIslandOperator child, SQLTableExpression supplement) throws Exception  {
-//		super(parameters, output, child, supplement);
-//
-//		isBlocking = true;
-//		blockerCount++;
-//		this.blockerID = blockerCount;
-//
-//		// two order bys might exist in a supplement:
-//		// 1) within an OVER () clause for windowed aggregate
-//		// 2) as an ORDER BY clause
-//		// instantiate iterator to get the right one
-//		// iterate from first OVER --> ORDER BY
-//		
-//		sortOrder = supplement.getSortOrder(keys, parameters.get("sectionName"));
-//		setSortKeys(keys);
-//
-//		if (children.get(0) instanceof SciDBIslandJoin) {
-//			outSchema = new LinkedHashMap<>();
-//			for(int i = 0; i < output.size(); ++i) {
-//				String expr = output.get(i);
-//				SQLOutItem out = new SQLOutItem(expr, child.outSchema, supplement); // TODO CHECK THIS TODO
-//				SQLAttribute attr = out.getAttribute();
-//				String attrName = attr.getName();
-//				outSchema.put(attrName, attr);
-//			}
-//		} else {
-//			outSchema = new LinkedHashMap<>(child.outSchema);
-//		}
-//		
-//		// match with previous schema to get any aliases to propagate
-//		for(int i = 0; i < getSortKeys().size(); ++i) {
-//			String a = supplement.getAlias(getSortKeys().get(i));
-//			if(a != null) 
-//				getSortKeys().set(i, a);
-//		}
-//		
-//		setOrderByElements(new ArrayList<>());
-//		
-//		// pick out the outitems that are not columns
-//		Map<String, String> outExps = new HashMap<>();
-//		for (String s : outSchema.keySet()) {
-//			if (!s.equals(outSchema.get(s).getExpressionString()))
-//				outExps.put(s, outSchema.get(s).getExpressionString());
-//		}
-//		
-//		for (String s : getSortKeys()) {
-//			Expression e = CCJSqlParserUtil.parseExpression(SQLExpressionUtils.removeExpressionDataTypeArtifactAndConvertLike(s));
-//			SQLExpressionUtils.removeExcessiveParentheses(e);
-//			while (e instanceof Parenthesis) e = ((Parenthesis) e).getExpression();
-//			
-//			String estr = e.toString();
-//			
-//			estr = rewriteComplextOutItem(estr);
-//			
-//			OrderByElement obe = new OrderByElement();
-//			obe.setExpression(CCJSqlParserUtil.parseExpression(estr));
-//			if (s.endsWith("DESC")) {
-//				obe.setAscDescPresent(true);
-//				obe.setAsc(false);
-//			} else if (s.endsWith("ASC")) {
-//				obe.setAscDescPresent(true);
-//				obe.setAsc(true);
-//			}
-//			getOrderByElements().add(obe);
-//		}
-//	}
 	
 	// for AFL
 	public SciDBIslandSort(Map<String, String> parameters, SciDBArray output,  List<String> keys, Operator child) throws Exception  {
@@ -184,25 +116,6 @@ public class SciDBIslandSort extends SciDBIslandOperator implements Sort {
 	public void accept(OperatorVisitor operatorVisitor) throws Exception {
 		operatorVisitor.visit(this);
 	}
-	
-//	@Override
-//	public String generateAFLString(int recursionLevel) throws Exception{
-//		StringBuilder sb = new StringBuilder();
-//		sb.append("sort(");
-//		sb.append(children.get(0).generateAFLString(recursionLevel+1));
-//		if (!getSortKeys().isEmpty()) {
-//
-//			updateOrderByElements();
-//			
-//			for (OrderByElement obe: getOrderByElements()) {
-//				sb.append(", ").append(obe.toString());
-//			}
-//			
-//		}
-//		sb.append(')');
-//		return sb.toString();
-//		
-//	}
 	
 	@Override
 	public String getTreeRepresentation(boolean isRoot) throws Exception{

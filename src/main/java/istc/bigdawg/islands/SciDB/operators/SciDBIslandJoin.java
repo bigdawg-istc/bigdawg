@@ -3,13 +3,11 @@ package istc.bigdawg.islands.SciDB.operators;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import istc.bigdawg.islands.CommonOutItemResolver;
 import istc.bigdawg.islands.DataObjectAttribute;
 import istc.bigdawg.islands.OperatorVisitor;
 import istc.bigdawg.islands.SciDB.SciDBArray;
@@ -18,9 +16,7 @@ import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.relational.utils.SQLExpressionUtils;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Expression;
-import net.sf.jsqlparser.expression.Parenthesis;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
-import net.sf.jsqlparser.schema.Column;
 
 public class SciDBIslandJoin extends SciDBIslandOperator implements Join {
 
@@ -28,91 +24,15 @@ public class SciDBIslandJoin extends SciDBIslandOperator implements Join {
 	
 	private JoinType joinType = null;
 	private String joinPredicate = null;
-	private String joinFilter = null; 
+//	private String joinFilter = null; 
 	private List<String> aliases;
-//	private String joinPredicateOriginal = null; // TODO determine if this is useful for constructing new remainders 
-//	private String joinFilterOriginal = null; 
 	
 	protected Map<String, DataObjectAttribute> srcSchema;
-//	protected boolean joinPredicateUpdated = false;
 	
-	
+	protected static final String BigDAWGSciDBJoinPrefix = "BIGDAWGSCIDBJOIN_";
 	protected static int maxJoinSerial = 0;
 	protected Integer joinID = null;
 	
-	
-//	// for SQL
-//	public SciDBIslandJoin (Map<String, String> parameters, List<String> output, SciDBIslandOperator lhs, SciDBIslandOperator rhs, SQLTableExpression supplement) throws Exception  {
-//		super(parameters, output, lhs, rhs, supplement);
-//
-//		// mending non-canoncial ordering
-//		if (children.get(0) instanceof SciDBIslandScan && !(children.get(1) instanceof SciDBIslandScan)) {
-//			SciDBIslandOperator child0 = children.get(1);
-//			SciDBIslandOperator child1 = children.get(0);
-//			children.clear();
-//			children.add(child0);
-//			children.add(child1);
-//		}
-//		
-//		this.isBlocking = false;
-//		this.setAliases(new ArrayList<>());
-//		
-//		maxJoinSerial++;
-//		this.setJoinID(maxJoinSerial);
-//	
-//		srcSchema = new LinkedHashMap<String, DataObjectAttribute>(lhs.outSchema);
-//		srcSchema.putAll(rhs.outSchema);
-//		
-//		for(int i = 0; i < output.size(); ++i) {
-//			String expr = output.get(i);
-//			
-//			SQLOutItem out = new SQLOutItem(expr, srcSchema, supplement);
-//
-//			DataObjectAttribute attr = out.getAttribute();
-//			
-////			attr.setExpression(rewriteComplextOutItem(attr.getExpressionString()));
-//			
-//			String attrName = attr.getFullyQualifiedName();		
-//			outSchema.put(attrName, attr);
-//				
-//		}
-//		
-//		// process join predicates and join filters
-//		// if hash join "Hash-Cond", merge join "Merge-Cond"
-//		for(String p : parameters.keySet()) 
-//			if(p.endsWith("Cond")) 
-//				joinPredicate = parameters.get(p);
-//		joinFilter = parameters.get("Join-Filter");
-//		if (joinFilter != null)  joinFilter = SQLExpressionUtils.removeExpressionDataTypeArtifactAndConvertLike(joinFilter);
-//		if (joinPredicate != null) joinPredicate = SQLExpressionUtils.removeExpressionDataTypeArtifactAndConvertLike(joinPredicate);
-//	
-//		if(joinFilter != null && joinPredicate != null && joinFilter.contains(joinPredicate)) { // remove duplicate
-//			String joinClause = "(" + joinPredicate + ") AND"; // canonical form
-//			if(joinFilter.contains(joinClause)) 			
-//				joinFilter = joinFilter.replace(joinClause, "");
-//			else {
-//				joinClause = " AND (" + joinPredicate + ")";
-//				joinFilter = joinFilter.replace(joinClause, "");			
-//			}
-//		} 
-//		
-//		inferJoinParameters();
-//		
-////		if (joinPredicate != null)
-////			joinPredicateOriginal 	= new String (joinPredicate);
-////		if (joinFilter != null)
-////			joinFilterOriginal 		= new String (joinFilter);
-//		
-//		for (SciDBIslandOperator o : children) {
-//			if (o instanceof SciDBIslandAggregate) {
-//				((SciDBIslandAggregate)o).setSingledOutAggregate();
-//			}
-//		}
-//		
-//		
-////		System.out.printf("---> jp: %s\njf: %s\n\n", joinPredicate, joinFilter);
-//	}
-    
 	
 	// for AFL
 	public SciDBIslandJoin(Map<String, String> parameters, SciDBArray output, Operator lhs, Operator rhs) throws Exception  {
@@ -132,44 +52,32 @@ public class SciDBIslandJoin extends SciDBIslandOperator implements Join {
 		// attributes
 		for (String expr : output.getAttributes().keySet()) {
 			
-			CommonOutItemResolver out = new CommonOutItemResolver(expr, output.getAttributes().get(expr), false, srcSchema);
-			DataObjectAttribute attr = out.getAttribute();
+			DataObjectAttribute attr = new DataObjectAttribute();
+			
+			attr.setName(expr);
+			attr.setTypeString(output.getAttributes().get(expr));
+			attr.setHidden(false);
+			
 			String attrName = attr.getFullyQualifiedName();		
 			outSchema.put(attrName, attr);
-				
 		}
 		
 		// dimensions
 		for (String expr : output.getDimensions().keySet()) {
 			
-			CommonOutItemResolver out = new CommonOutItemResolver(expr, "Dimension", true, srcSchema);
-			DataObjectAttribute attr = out.getAttribute();
-			String attrName = attr.getFullyQualifiedName();		
-			outSchema.put(attrName, attr);
+			DataObjectAttribute dim = new DataObjectAttribute(); // CommonOutItemResolver out = new CommonOutItemResolver(expr, "Dimension", true, srcSchema);
+			
+			dim.setName(expr);
+			dim.setTypeString(output.getAttributes().get(expr));
+			dim.setHidden(true);
+			
+			String attrName = dim.getFullyQualifiedName();		
+			
+			outSchema.put(attrName, dim);
 				
 		}
-//		inferJoinParameters();
 	}
 	
-	// combine join ON clause with WHEREs that combine two tables
- 	// if a predicate references data that is not public, move it to the filter
- 	// collect equality predicates over public attributes in joinPredicate
- 	// only supports AND in predicates, not OR or NOT
-// 	private void inferJoinParameters() throws Exception {
-// 		
-// 		if(joinFilter == null && joinPredicate == null) return;
-// 		if (joinPredicate != null && joinPredicate.length() > 0) { 
-// 			Expression jp = CCJSqlParserUtil.parseCondExpression(joinPredicate);
-// 			SQLExpressionUtils.removeExcessiveParentheses(jp);
-// 			joinPredicate = jp.toString(); 
-// 		}
-// 		if (joinFilter != null && joinFilter.length() > 0) {
-// 			Expression jf = CCJSqlParserUtil.parseCondExpression(joinFilter);
-// 			SQLExpressionUtils.removeExcessiveParentheses(jf);
-// 			joinFilter = jf.toString(); 
-// 		}
-// 	}
-    
  	public SciDBIslandJoin (SciDBIslandOperator o, boolean addChild) throws Exception {
 		super(o, addChild);
 		SciDBIslandJoin j = (SciDBIslandJoin) o;
@@ -182,8 +90,8 @@ public class SciDBIslandJoin extends SciDBIslandOperator implements Join {
 		if (j.joinPredicate == null) this.joinPredicate = j.joinPredicate;
 		else this.joinPredicate = new String(j.joinPredicate);
 		
-		if (j.joinFilter == null) this.joinFilter = j.joinFilter;
-		else this.joinFilter = new String(j.joinFilter);
+//		if (j.joinFilter == null) this.joinFilter = j.joinFilter;
+//		else this.joinFilter = new String(j.joinFilter);
 
 		this.srcSchema = new HashMap<>();
 		for (String s : j.srcSchema.keySet()) {
@@ -205,23 +113,15 @@ public class SciDBIslandJoin extends SciDBIslandOperator implements Join {
 		this.isPruned = false;
 		this.isCopy = true;
 		this.setAliases(new ArrayList<>());
-		this.setComplexOutItemFromProgeny(new LinkedHashMap<>());
 		
 		maxJoinSerial++;
 		this.setJoinID(maxJoinSerial);
 		 
-		
 		if (jt != null) this.joinType = jt;
 		
-		if (joinPred != null) {
-			if (isFilter) this.joinFilter = new String(joinPred);
-			else this.joinPredicate = new String(joinPred);
-		}
+		this.joinPredicate = new String(joinPred);
 		
 		this.isQueryRoot = true;
-		
-		this.dataObjects = new HashSet<>();
-//		this.joinReservedObjects = new HashSet<>();
 		
 		this.srcSchema = new LinkedHashMap<String, DataObjectAttribute>(child0.outSchema);
 		srcSchema.putAll(child1.outSchema);
@@ -256,119 +156,21 @@ public class SciDBIslandJoin extends SciDBIslandOperator implements Join {
 		operatorVisitor.visit(this);
 	}
     
-//    private boolean replaceTableNameWithPruneName(Operator child, Expression e, Table t, List<String> itemsSet) throws Exception {
-//		if (child.isPruned()) {
-//			// does child have any of those names? 
-//			Set<String> names = new HashSet<>(child.getDataObjectAliasesOrNames().keySet());
-//			if (child.getObjectAliases() == null) child.updateObjectAliases();
-//			names.addAll(child.getObjectAliases());
-//			names.retainAll(itemsSet);
-//			if (names.size() > 0) {
-//				SQLExpressionUtils.renameAttributes(e, names, null, child.getPruneToken());
-//				t.setName(child.getPruneToken());
-//				return true;
-//			} else 
-//				return false;
-//		} else if (child instanceof Aggregate && ((Aggregate)child).getAggregateID() != null) {
-//			// does child have any of those names? 
-//			Set<String> names = new HashSet<>(child.getDataObjectAliasesOrNames().keySet());
-////			names.addAll(child.objectAliases);
-//			
-//			names.retainAll(itemsSet);
-//			if (names.size() > 0) {
-//				SQLExpressionUtils.renameAttributes(e, names, null, ((Aggregate)child).getAggregateToken());
-//				t.setName(((Aggregate)child).getAggregateToken());
-//				return true;
-//			} else 
-//				return false;
-//		}else {
-//			boolean ret = false;
-//			for (Operator o : child.getChildren()) {
-//				ret = ret || replaceTableNameWithPruneName(o, e, t, itemsSet);
-//			}
-//			return ret;
-//		}
-//	}
-//    
-//    private boolean findAndGetTableName(Operator child, Table t, List<String> itemsSet) throws Exception {
-//    	
-//		Set<String> names = new HashSet<>(child.getDataObjectAliasesOrNames().keySet());
-//		child.updateObjectAliases();
-//		names.addAll(child.getObjectAliases());
-//		names.retainAll(itemsSet);
-//		if (names.size() > 0) {
-//			if (child instanceof Scan) {
-//				t.setName(((Scan)child).getTable().toString());
-//			} else if (child.getChildren().size() > 0) {
-//				return findAndGetTableName(child.getChildren().get(0), t, itemsSet);
-//			}
-//			return false;
-//		} else {
-//			boolean ret = false;
-//			for (Operator o : child.getChildren()) {
-//				ret = ret || findAndGetTableName(o, t, itemsSet);
-//			}
-//			return ret;
-//		}    	
-//    }
-    
-   
     
     
     public String toString() {
     		return "Joining " + children.get(0).toString() + " x " + children.get(1).toString() 
-    				+ " type " + joinType + " predicates " + joinPredicate + " filters " + joinFilter;
+    				+ " type " + joinType + " predicates " + joinPredicate;
     }
     
-//	@Override
-//	public String generateAFLString(int recursionLevel) throws Exception {
-//		StringBuilder sb = new StringBuilder();
-//		sb.append("cross_join(");
-//		
-//		if (children.get(0).isPruned())
-//			sb.append(children.get(0).getPruneToken());
-//		else 
-//			sb.append(children.get(0).generateAFLString(recursionLevel+1));
-//		
-//		if (!this.getAliases().isEmpty()) 
-//			sb.append(" as ").append(getAliases().get(0));
-//		sb.append(", ");
-//		
-//		if (children.get(1).isPruned())
-//			sb.append(children.get(1).getPruneToken());
-//		else 
-//			sb.append(children.get(1).generateAFLString(recursionLevel+1));
-//		
-//		if (!this.getAliases().isEmpty()) sb.append(" as ").append(getAliases().get(1));
-//		
-//		if (joinPredicate != null) {
-//			sb.append(", ");
-//			sb.append(joinPredicate.replaceAll("( AND )|( = )", ", ").replaceAll("[<>= ()]+", " ").replace("\\s+", ", "));
-//		}
-//		
-//		sb.append(')');
-//		return sb.toString();
-//	}
 	
 	public String getOriginalJoinPredicate() {
 		return joinPredicate != null ? new String(joinPredicate) : null;
 	}
-	public String getOriginalJoinFilter() {
-		return joinFilter != null ? new String(joinFilter): null;
-	}
 	
-//	private void addJSQLParserJoin(Select dstStatement, Table t) {
-//		net.sf.jsqlparser.statement.select.Join newJ = new net.sf.jsqlparser.statement.select.Join();
-//    	newJ.setRightItem(t);
-//    	newJ.setSimple(true);
-//    	if (((PlainSelect) dstStatement.getSelectBody()).getJoins() == null)
-//    		((PlainSelect) dstStatement.getSelectBody()).setJoins(new ArrayList<>());
-//    	((PlainSelect) dstStatement.getSelectBody()).getJoins().add(newJ);
-//	}
-//	
-//	public String getJoinPredicate(){
-//		return joinPredicate;
-//	};
+	public String getOriginalJoinFilter() {
+		return null;
+	}
 	
 	@Override
 	public String getTreeRepresentation(boolean isRoot) throws Exception{
@@ -377,25 +179,6 @@ public class SciDBIslandJoin extends SciDBIslandOperator implements Join {
 			StringBuilder sb = new StringBuilder();
 			sb.append("{join").append(children.get(0).getTreeRepresentation(false)).append(children.get(1).getTreeRepresentation(false));
 
-//			if (joinFilter != null && !joinFilter.isEmpty()) {
-//				Expression e = CCJSqlParserUtil.parseCondExpression(joinFilter);
-//				SQLExpressionUtils.removeExcessiveParentheses(e);
-//				sb.append(SQLExpressionUtils.parseCondForTree(e));
-//			}
-//			
-//			List<Operator> treeWalker = this.getChildren();
-//			while (!treeWalker.isEmpty()) {
-//				List<Operator> nextgen = new ArrayList<>();
-//				for (Operator o : treeWalker) {
-//					if (o instanceof Join) continue;
-//					if (o instanceof Scan && ((Scan) o).indexCond != null) {
-//						sb.append(SQLExpressionUtils.parseCondForTree(((Scan)o).indexCond));
-//					} else {
-//						nextgen.addAll(o.getChildren());
-//					}
-//				}
-//				treeWalker = nextgen;
-//			}
 			sb.append('}');
 			return sb.toString();
 		}
@@ -409,7 +192,7 @@ public class SciDBIslandJoin extends SciDBIslandOperator implements Join {
 			setJoinID(maxJoinSerial);
 		}
 		
-		return "BIGDAWGJOINTOKEN_"+getJoinID();
+		return BigDAWGSciDBJoinPrefix + getJoinID();
 	}
 	
 	
@@ -430,18 +213,9 @@ public class SciDBIslandJoin extends SciDBIslandOperator implements Join {
 			else 
 				out.put(s, temp.get(s));
 		}
-
-		// joinFilter
-		Expression e;
-		if (joinFilter != null) { 
-			e = CCJSqlParserUtil.parseCondExpression(joinFilter);
-			if (!SQLExpressionUtils.containsArtificiallyConstructedTables(e))
-				addToOut(e, out, aliasMapping);
-		}
-		
 		// joinPredicate
 		if (joinPredicate != null) { 
-			e = CCJSqlParserUtil.parseCondExpression(joinPredicate);
+			Expression e = CCJSqlParserUtil.parseCondExpression(joinPredicate);
 			if (!SQLExpressionUtils.containsArtificiallyConstructedTables(e))
 				addToOut(e, out, aliasMapping);
 		}
@@ -449,118 +223,7 @@ public class SciDBIslandJoin extends SciDBIslandOperator implements Join {
 		return out;
 	}
 	
-	@Override
-	public Map<String, Expression> getChildrenPredicates() throws Exception {
-		Map<String, Expression> left = ((SciDBIslandOperator)this.getChildren().get(0)).getChildrenPredicates();
-		Map<String, Expression> right = ((SciDBIslandOperator)this.getChildren().get(1)).getChildrenPredicates();
-		
-		boolean found = false; 
-		for (String s : left.keySet()) {
-			if (left.get(s) == null ) continue;
-			List<Column> ls = SQLExpressionUtils.getAttributes(left.get(s));
-			for (Column c : ls) {
-				String s2 = c.getTable().getName();
-				if (right.containsKey(s2)) {
-					left.replace(s, null);
-					found = true;
-					break;
-				}
-			}
-			if (found) break;
-		}
-		
-		found = false; 
-		for (String s : right.keySet()) {
-			if (right.get(s) == null ) continue;
-			List<Column> ls = SQLExpressionUtils.getAttributes(right.get(s));
-			for (Column c : ls) {
-				String s2 = c.getTable().getName();
-				if (left.containsKey(s2)) {
-					right.replace(s, null);
-					found = true;
-					break;
-				}
-			}
-			if (found) break;
-		}
-		
-		left.putAll(right);
-		
-//		if (this.joinID != null && joinPredicate != null) {
-//			Expression e = CCJSqlParserUtil.parseCondExpression(joinPredicate);
-//			System.out.printf("\n--><><><> expression: %s; \n", e);
-//			String out = SQLExpressionUtils.getRelevantFilterSections(e, getChildren().get(0).getDataObjectAliasesOrNames().keySet(), getChildren().get(1).getDataObjectAliasesOrNames().keySet());
-//			System.out.printf("--><><><> out: %s; \n", out);
-//			if (out.length() > 0)
-//				left.put(this.getJoinToken(), CCJSqlParserUtil.parseCondExpression(out));
-//		}
-//		if (this.joinID != null && joinFilter != null) {
-//			left.put(this.getJoinToken(), CCJSqlParserUtil.parseCondExpression(SQLExpressionUtils.getRelevantFilterSections(CCJSqlParserUtil.parseCondExpression(joinFilter), left.keySet(), right.keySet())));
-//		}
-		return left;
-	}
 	
-	@Override
-	public Expression resolveAggregatesInFilter(String e, boolean goParent, SciDBIslandOperator lastHopOp, Set<String> names, StringBuilder sb) throws Exception {
-		
-		Expression exp = null;
-		if (parent != null && lastHopOp != parent && (exp = ((SciDBIslandOperator)parent).resolveAggregatesInFilter(e, true, this, names, sb)) != null) 
-			return exp;
-		for (Operator o : children) {
-			if (goParent && o == lastHopOp) continue;
-			if ((exp = ((SciDBIslandOperator)o).resolveAggregatesInFilter(e, false, this, names, sb)) != null) return exp;
-		}
-		return exp;
-		
-	} 
-	
-	@Override
-	public void seekScanAndProcessAggregateInFilter() throws Exception {
-		
-		if (joinFilter != null) {
-			joinFilter = processFilterForAggregateEntry(joinFilter);
-		}
-		
-		if (joinPredicate != null) {
-			joinPredicate = processFilterForAggregateEntry(joinPredicate);
-		}
-		
-		super.seekScanAndProcessAggregateInFilter();
-	}
-	
-	private String processFilterForAggregateEntry(String s) throws Exception {
-		
-		
-		
-		Expression e = CCJSqlParserUtil.parseCondExpression(s);
-		
-		if (!SQLExpressionUtils.isFunctionPresentInCondExpression(e)) return s;
-		
-		Expression left = SQLExpressionUtils.getOneSideOfBinaryCondExpression(e, true);
-		while (left instanceof Parenthesis) left = ((Parenthesis) left).getExpression();
-		
-		StringBuilder sb = new StringBuilder();
-		Set<String> names = new HashSet<>();
-		Expression result = resolveAggregatesInFilter(left.toString(), true, this, names, sb);
-		if (result != null) {
-			SQLExpressionUtils.setOneSideOfBinaryCondExpression(result, e, true);
-		}
-		
-		Expression right = SQLExpressionUtils.getOneSideOfBinaryCondExpression(e, false);
-		while (right instanceof Parenthesis) right = ((Parenthesis) right).getExpression();
-		result = resolveAggregatesInFilter(right.toString(), true, this, names, sb);
-		if (result != null) {
-			SQLExpressionUtils.setOneSideOfBinaryCondExpression(result, e, false);
-		}
-		
-		return e.toString();
-	}
-
-
-//	public String getJoinFilter() {
-//		return joinFilter;
-//	}
-
 
 	public Integer getJoinID() {
 		return joinID;
@@ -583,13 +246,12 @@ public class SciDBIslandJoin extends SciDBIslandOperator implements Join {
 
 	@Override
 	public String generateJoinPredicate() throws Exception {
-		// TODO Auto-generated method stub
-		return null;
+		// TODO ensure correctness
+		return new String(joinPredicate);
 	}
 
 	@Override
 	public String generateJoinFilter() throws Exception {
-		// TODO Auto-generated method stub
 		return null;
 	}
 

@@ -48,10 +48,6 @@ public class SQLIslandScan extends SQLIslandOperator implements Scan {
 			SQLExpressionUtils.removeExcessiveParentheses(filterExpression);
 			
 			setHasFunctionInFilterExpression(SQLExpressionUtils.isFunctionPresentInCondExpression(filterExpression));
-//			System.out.println("---> filterExpression: "+filterExpression);
-//			
-//			filterSet = new HashSet<Expression>();
-//			filterSet.add(filterExpression);
 			
 		}
 		
@@ -78,10 +74,6 @@ public class SQLIslandScan extends SQLIslandOperator implements Scan {
 			}
 			indexCond = result;
 			
-//			System.out.println("---> indexCond: "+indexCond);
-			
-//			if (filterSet == null) filterSet = new HashSet<Expression>();
-//			filterSet.add(indexCond);
 		}
 		
 		table = new Table(getSrcTable()); // new one to accommodate aliasing

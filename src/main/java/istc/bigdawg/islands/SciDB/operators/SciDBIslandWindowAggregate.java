@@ -21,22 +21,6 @@ import net.sf.jsqlparser.schema.Table;
 public class SciDBIslandWindowAggregate extends SciDBIslandOperator implements WindowAggregate {
 
 	private List<Integer> dimensionBounds;
-	public List<Integer> getDimensionBounds() {
-		return dimensionBounds;
-	}
-
-	public void setDimensionBounds(List<Integer> dimensionBounds) {
-		this.dimensionBounds = dimensionBounds;
-	}
-
-	public List<String> getFunctions() {
-		return functions;
-	}
-
-	public void setFunctions(List<String> functions) {
-		this.functions = functions;
-	}
-
 	private List<String> functions;
 	
 	// for AFL
@@ -64,7 +48,6 @@ public class SciDBIslandWindowAggregate extends SciDBIslandOperator implements W
 					else alias = ((Function)f).getParameters().getExpressions().get(0).toString()+"_"+((Function)f).getName();
 				} else if (f instanceof Column) {
 					alias = ((Column)f).getColumnName();
-//					System.out.printf("----> f alias: %s\n", alias);
 				}
 				aggFuns.put(alias, f.toString());
 			} catch (Exception e) {
@@ -82,8 +65,6 @@ public class SciDBIslandWindowAggregate extends SciDBIslandOperator implements W
 		// iterate over outschema and 
 		// classify each term as aggregate func or group by
 		for (String expr : output.getAttributes().keySet()) {
-			
-//			System.out.printf("aggreagte output expression: %s, type: %s\n", expr, output.getAttributes().get(expr));
 			
 			CommonOutItemResolver out = new CommonOutItemResolver(expr, output.getAttributes().get(expr), false, null); // TODO CHECK THIS TODO
 			DataObjectAttribute attr = out.getAttribute();
@@ -109,7 +90,6 @@ public class SciDBIslandWindowAggregate extends SciDBIslandOperator implements W
 				e.setTable(new Table(Arrays.asList(arrayName.split(", ")).get(0)));
 			}
 			
-//			parsedGroupBys.add(e);
 			dim.setExpression(e);
 			
 			String dimName = dim.getFullyQualifiedName();		
@@ -136,11 +116,21 @@ public class SciDBIslandWindowAggregate extends SciDBIslandOperator implements W
 		return "{window"+children.get(0).getTreeRepresentation(false)+"}";
 	}
 	
-//	@Override
-//	public String generateAFLString(int recursionLevel) throws Exception{
-//		String planStr =  "WindowAgg(";
-//		planStr +=  children.get(0).generateAFLString(recursionLevel+1);
-//		planStr += winaggs + "," + partitionBy + "," + orderBy + ")";
-//		return planStr;
-//	}
+	public List<Integer> getDimensionBounds() {
+		return dimensionBounds;
+	}
+
+	public void setDimensionBounds(List<Integer> dimensionBounds) {
+		this.dimensionBounds = dimensionBounds;
+	}
+
+	public List<String> getFunctions() {
+		return functions;
+	}
+
+	public void setFunctions(List<String> functions) {
+		this.functions = functions;
+	}
+
+	
 };

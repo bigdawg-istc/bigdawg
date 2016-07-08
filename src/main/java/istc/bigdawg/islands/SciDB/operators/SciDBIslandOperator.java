@@ -13,24 +13,16 @@ import istc.bigdawg.islands.DataObjectAttribute;
 import istc.bigdawg.islands.OperatorVisitor;
 import istc.bigdawg.islands.SciDB.SciDBArray;
 import istc.bigdawg.islands.operators.Operator;
-import istc.bigdawg.islands.operators.OperatorInterface;
 import istc.bigdawg.islands.relational.utils.SQLAttribute;
 import istc.bigdawg.islands.relational.utils.SQLExpressionUtils;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Parenthesis;
-import net.sf.jsqlparser.parser.CCJSqlParserUtil;
-import net.sf.jsqlparser.schema.Table;
-import net.sf.jsqlparser.statement.select.PlainSelect;
-import net.sf.jsqlparser.statement.select.Select;
-import net.sf.jsqlparser.statement.select.SelectExpressionItem;
-import net.sf.jsqlparser.statement.select.SelectItem;
-import net.sf.jsqlparser.util.SelectUtils;
 
-public class SciDBIslandOperator implements OperatorInterface, Operator {
+public class SciDBIslandOperator implements Operator {
 
-	static final String BigDAWGSciDBPruneToken = "BIGDAWGSCIDBPRUNED_"; 
-	static final String BigDAWGSciDBSubtreeToken = "BIGDAWGSCIDBSUBTREE_";
+	static final String BigDAWGSciDBPrunePrefix = "BIGDAWGSCIDBPRUNED_"; 
+	static final String BigDAWGSciDBSubtreePrefix = "BIGDAWGSCIDBSUBTREE_";
 	
 	protected boolean isCTERoot = false;
 	// for use in getPlaintext
@@ -54,62 +46,23 @@ public class SciDBIslandOperator implements OperatorInterface, Operator {
 	
 	protected Map<String, DataObjectAttribute> outSchema;
 	
-	private Map<String, String> complexOutItemFromProgeny;
-	
-	
 	// direct descendants
 	protected List<Operator> children;
 	protected Operator parent = null;
 	
 	protected boolean isQueryRoot = false;
 	
-	
-	protected Set<String> dataObjects;
 	private Set<String> objectAliases = null;
 	protected boolean isCopy = false;  // used in building permutations; only remainder join operators could attain true, so far
 	
-//	
-//	// SQL, single non sort non union
-//	public SciDBIslandOperator(Map<String, String> parameters, List<String> output,  
-//			SciDBIslandOperator child, // this is changed to 
-//			SQLTableExpression supplement) {
-//
-//		
-//		// order preserving
-//		outSchema = new LinkedHashMap<String, DataObjectAttribute>();
-//		setComplexOutItemFromProgeny(new LinkedHashMap<>());
-//		children  = new ArrayList<Operator>();
-//		dataObjects = new HashSet<>();
-//		
-//		if(child != null) { // check for leaf nodes
-//			children.add(child);
-//			child.setParent(this);
-//			
-//			populateComplexOutItem(true);
-//		}
-//		
-//		
-//		
-//		// if it is a subplan, add it to the ctes list -- moved out to planparser
-//		/* if(parameters.containsKey("Subplan-Name")) {
-//			String planName = parameters.get("Subplan-Name");
-//			planName = planName.substring(planName.indexOf(" "));
-//			plan.addCommonSQLTableExpression(planName, this);
-//		} */
-//		
-//	}
 
 	// for AFL
 	public SciDBIslandOperator(Map<String, String> parameters, SciDBArray output,  
 			Operator child) {
 
-		
-		
 		// order preserving
 		outSchema = new LinkedHashMap<String, DataObjectAttribute>();
-		setComplexOutItemFromProgeny(new HashMap<>());
 		children  = new ArrayList<Operator>();
-		dataObjects = new HashSet<>();
 		
 		if(child != null) { // check for leaf nodes
 			children.add(child);
@@ -120,43 +73,12 @@ public class SciDBIslandOperator implements OperatorInterface, Operator {
 	}
 	
 	
-//	// SQL, join
-//	public SciDBIslandOperator(Map<String, String> parameters, List<String> output, 
-//			SciDBIslandOperator lhs, SciDBIslandOperator rhs,
-//			SQLTableExpression supplement) {
-//		
-//		outSchema = new LinkedHashMap<String, DataObjectAttribute>();
-//		setComplexOutItemFromProgeny(new LinkedHashMap<>());
-//		children  = new ArrayList<Operator>();
-//		dataObjects = new HashSet<>();
-//		
-//		children.add(lhs);
-//		children.add(rhs);
-//
-//		lhs.setParent(this);
-//		rhs.setParent(this);
-//		
-//		populateComplexOutItem(true);
-//		
-//
-//		// if it is a subplan, add it to the ctes list -- moved out to plan parser
-//		/* if(parameters.containsKey("Subplan-Name")) {
-//			String planName = parameters.get("Subplan-Name");
-//			planName = planName.substring(planName.indexOf(" "));
-//			plan.addCommonSQLTableExpression(planName, this);
-//		}*/
-//		
-//
-//	}
-	
 	// for AFL
 	public SciDBIslandOperator(Map<String, String> parameters, SciDBArray output, 
 			Operator lhs, Operator rhs) {
 		
 		outSchema = new LinkedHashMap<String, DataObjectAttribute>();
 		children  = new ArrayList<Operator>();
-		dataObjects = new HashSet<>();
-//		joinReservedObjects = new HashSet<>();
 		
 		children.add(lhs);
 		children.add(rhs);
@@ -166,40 +88,13 @@ public class SciDBIslandOperator implements OperatorInterface, Operator {
 
 	}
 	
-	
-//	// SQL, UNION
-//	public SciDBIslandOperator(Map<String, String> parameters, List<String> output,  
-//			List<SciDBIslandOperator> childs, SQLTableExpression supplement) {
-//
-//		// order preserving
-//		outSchema = new LinkedHashMap<String, DataObjectAttribute>();
-//		setComplexOutItemFromProgeny(new LinkedHashMap<>());
-//		children  = new ArrayList<Operator>();
-//		dataObjects = new HashSet<>();
-//		
-//		children.addAll(childs);
-//		for (SciDBIslandOperator c : childs) c.setParent(this);
-////		populateComplexOutItem(true);
-//		
-//		
-//		// if it is a subplan, add it to the ctes list -- moved out to planparser
-//		/* if(parameters.containsKey("Subplan-Name")) {
-//			String planName = parameters.get("Subplan-Name");
-//			planName = planName.substring(planName.indexOf(" "));
-//			plan.addCommonSQLTableExpression(planName, this);
-//		} */
-//		
-//	}
-	
 	// for AFL UNION
 	public SciDBIslandOperator(Map<String, String> parameters, SciDBArray output,  
 			List<Operator> childs) {
 
 		// order preserving
 		outSchema = new LinkedHashMap<String, DataObjectAttribute>();
-		setComplexOutItemFromProgeny(new HashMap<>());
 		children  = new ArrayList<Operator>();
-		dataObjects = new HashSet<>();
 		
 		for (Operator o : childs) { // check for leaf nodes
 			children.add(o);
@@ -221,9 +116,6 @@ public class SciDBIslandOperator implements OperatorInterface, Operator {
 		this.pruneID = o.pruneID;
 
 		this.isQueryRoot = o.isQueryRoot;
-		
-		this.dataObjects = new HashSet<>();
-		this.setComplexOutItemFromProgeny(new LinkedHashMap<>());
 		
 		this.outSchema = new LinkedHashMap<>();
 		for (String s : o.outSchema.keySet()) {
@@ -255,40 +147,6 @@ public class SciDBIslandOperator implements OperatorInterface, Operator {
 		}
 	}
 
-//	protected void populateComplexOutItem(boolean first) {
-//		// populate complexOutItemFromProgeny
-//		for (Operator child : children){
-//			if ((!first) && child.getComplexOutItemFromProgeny().isEmpty()) child.populateComplexOutItem(first);
-//			for (String s: child.getOutSchema().keySet()) {
-//				Expression e = child.getOutSchema().get(s).getSQLExpression();
-//				if (e == null) continue;
-//				while (e instanceof Parenthesis) e = ((Parenthesis)e).getExpression();
-//				if (e instanceof Column) continue;
-//				getComplexOutItemFromProgeny().put(s, e.toString().replaceAll("[*]", "\\[\\*\\]").replaceAll("[.]", "\\[\\.\\]").replaceAll("[(]", "\\[\\(\\]").replaceAll("[)]", "\\[\\)\\]"));
-//			}
-//			if (first || (!child.isPruned()
-//					|| (child instanceof SciDBIslandJoin && ((SciDBIslandJoin)child).getJoinID() == null)
-//					|| (child instanceof SciDBIslandAggregate && ((SciDBIslandAggregate)child).getAggregateID() == null))) getComplexOutItemFromProgeny().putAll(child.getComplexOutItemFromProgeny());
-//		}
-//	}
-	
-	protected String rewriteComplextOutItem(String expr) throws Exception {
-		// simplify
-		expr = CCJSqlParserUtil.parseExpression(expr).toString();
-		for (String alias : getComplexOutItemFromProgeny().keySet()) {
-			expr = expr.replaceAll("("+getComplexOutItemFromProgeny().get(alias)+")", alias);
-		}
-		return expr;
-	}
-	
-	protected String rewriteComplextOutItem(Expression e) throws Exception {
-		// simplify
-		String expr = e.toString();
-		for (String alias : getComplexOutItemFromProgeny().keySet()) {
-			expr = expr.replaceAll(getComplexOutItemFromProgeny().get(alias), alias);
-		}
-		return expr;
-	}
 	
 	@Override
 	public boolean isCTERoot() {
@@ -325,17 +183,6 @@ public class SciDBIslandOperator implements OperatorInterface, Operator {
 		children.addAll(childs);
 	}
 		
-//	public String generateAFLStoreStringForExecutionTree(String into) throws Exception {
-//		
-//		String dstString = this.generateAFLString(1); // this gets rid of "scan" if there is one
-//		
-//		if (into != null) {
-//			dstString = "store(" + dstString + ", " + into + ")";
-//		}
-//		
-//		return dstString;
-//	}
-	
 	
 	public boolean isAnyProgenyPruned() {
 		if (this.isPruned) return true;
@@ -343,15 +190,7 @@ public class SciDBIslandOperator implements OperatorInterface, Operator {
 		else return ((SciDBIslandOperator) children.get(0)).isAnyProgenyPruned();
 	}
 	
-	// recurse through plan and print it in nested form
-	// each op adds its part
-	// produces an plan similar to SciDB's AFL syntax
-//	public String generateAFLString(int recursionLevel) throws Exception {
-//		return new String();
-//	}
-	
-	
-	
+	@Override
 	public Map<String, DataObjectAttribute>  getOutSchema() {
 		return outSchema;
 	}
@@ -365,19 +204,6 @@ public class SciDBIslandOperator implements OperatorInterface, Operator {
 		return isBlocking;
 	}
 	
-	
-	/**
-	 * NOTE: MODIFY THIS SO IT UPDATES MAP WITH PRUNE INFORMATION
-	 * getLocation gets a list of result locations that are possible for this operator
-	 * @return List<String> of dbid
-	 */
-	public Map<String, List<String>> getTableLocations(Map<String, List<String>> map) {
-		Map<String, List<String>> result = new HashMap<>();
-		for (Operator o : children) {
-			result.putAll(((SciDBIslandOperator) o).getTableLocations(map));
-		}
-		return result;
-	}
 	
 	@Override
 	public boolean isPruned() {
@@ -397,7 +223,7 @@ public class SciDBIslandOperator implements OperatorInterface, Operator {
 	public String getPruneToken() throws Exception {
 		if (!isPruned) 
 			throw new Exception("\n\n\n----> unpruned token: "+this.outSchema+"\n\n");
-		return BigDAWGSciDBPruneToken + this.pruneID;
+		return BigDAWGSciDBPrunePrefix + this.pruneID;
 	}
 	
 	@Override
@@ -420,7 +246,7 @@ public class SciDBIslandOperator implements OperatorInterface, Operator {
 		if (!isSubTree && !(this instanceof SciDBIslandJoin)) return null;
 		if (this instanceof SciDBIslandJoin) return ((SciDBIslandJoin)this).getJoinToken(); 
 		else if (this instanceof SciDBIslandAggregate && ((SciDBIslandAggregate)this).getAggregateID() != null) return ((SciDBIslandAggregate)this).getAggregateToken();
-		else return BigDAWGSciDBSubtreeToken + this.subTreeID;
+		else return BigDAWGSciDBSubtreePrefix + this.subTreeID;
 	}
 	
 	@Override
@@ -469,10 +295,10 @@ public class SciDBIslandOperator implements OperatorInterface, Operator {
 		if (this.children.size() > 0 ) {
 			
 			if (this instanceof SciDBIslandScan) {
-				if (((SciDBIslandScan)this).getTableAlias() != null && !((SciDBIslandScan)this).getTableAlias().isEmpty())
-					aliasOrString.put(((SciDBIslandScan)this).getTableAlias(), ((SciDBIslandScan)this).table.getFullyQualifiedName());
+				if (((SciDBIslandScan)this).getArrayAlias() != null && !((SciDBIslandScan)this).getArrayAlias().isEmpty())
+					aliasOrString.put(((SciDBIslandScan)this).getArrayAlias(), ((SciDBIslandScan)this).getSourceTableName());
 				else 
-					aliasOrString.put(((SciDBIslandScan)this).getSourceTableName(), ((SciDBIslandScan)this).table.getFullyQualifiedName());
+					aliasOrString.put(((SciDBIslandScan)this).getSourceTableName(), ((SciDBIslandScan)this).getSourceTableName());
 			}
 			
 			for (Operator o : children) {
@@ -484,10 +310,10 @@ public class SciDBIslandOperator implements OperatorInterface, Operator {
 				}
 			}
 		} else {
-			if (((SciDBIslandScan)this).getTableAlias() != null && !((SciDBIslandScan)this).getTableAlias().isEmpty())
-				aliasOrString.put(((SciDBIslandScan)this).getTableAlias(), ((SciDBIslandScan)this).table.getFullyQualifiedName());
+			if (((SciDBIslandScan)this).getArrayAlias() != null && !((SciDBIslandScan)this).getArrayAlias().isEmpty())
+				aliasOrString.put(((SciDBIslandScan)this).getArrayAlias(), ((SciDBIslandScan)this).getSourceTableName());
 			else 
-				aliasOrString.put(((SciDBIslandScan)this).getSourceTableName(), ((SciDBIslandScan)this).table.getFullyQualifiedName());
+				aliasOrString.put(((SciDBIslandScan)this).getSourceTableName(), ((SciDBIslandScan)this).getSourceTableName());
 		}
 		
 		return aliasOrString;
@@ -551,8 +377,8 @@ public class SciDBIslandOperator implements OperatorInterface, Operator {
 	public void updateObjectAliases() {
 		
 		setObjectAliases(new HashSet<String>());
-		if (this instanceof SciDBIslandScan && ((SciDBIslandScan)this).getTableAlias() != null) {
-			getObjectAliases().add(((SciDBIslandScan)this).getTableAlias());
+		if (this instanceof SciDBIslandScan && ((SciDBIslandScan)this).getArrayAlias() != null) {
+			getObjectAliases().add(((SciDBIslandScan)this).getArrayAlias());
 		} else if (this instanceof SciDBIslandJoin) {
 			
 			((SciDBIslandOperator) children.get(1)).updateObjectAliases();
@@ -565,64 +391,6 @@ public class SciDBIslandOperator implements OperatorInterface, Operator {
 		}
 	}
 	
-	
-//	public String generateCreateStatementLocally(String name){
-//		StringBuilder sb = new StringBuilder();
-//		
-//		sb.append("CREATE TABLE ").append(name).append(' ').append('(');
-//		
-//		boolean started = false;
-//		
-//		for (DataObjectAttribute doa : outSchema.values()) {
-//			if (started == true) sb.append(',');
-//			else started = true;
-//			
-//			sb.append(doa.generateSQLTypedString());
-//		}
-//		
-//		sb.append(')');
-//		
-//		return sb.toString();
-//	} 
-	
-//	public String generateAFLCreateArrayStatementLocally(String name){
-//		StringBuilder sb = new StringBuilder();
-//		
-//		List<DataObjectAttribute> attribs = new ArrayList<>();
-//		List<DataObjectAttribute> dims = new ArrayList<>();
-//		
-//		for (DataObjectAttribute doa : outSchema.values()) {
-//			if (doa.isHidden()) dims.add(doa);
-//			else attribs.add(doa);
-//		}
-//		
-//		
-//		sb.append("CREATE ARRAY ").append(name).append(' ').append('<');
-//		
-//		boolean started = false;
-//		for (DataObjectAttribute doa : attribs) {
-//			if (started == true) sb.append(',');
-//			else started = true;
-//			
-//			sb.append(doa.generateAFLTypeString());
-//		}
-//		
-//		sb.append('>').append('[');
-//		if (dims.isEmpty()) {
-//			sb.append("i=0:*,10000000,0");
-//		} else {
-//			started = false;
-//			for (DataObjectAttribute doa : dims) {
-//				if (started == true) sb.append(',');
-//				else started = true;
-//				
-//				sb.append(doa.generateAFLTypeString());
-//			}
-//		}
-//		sb.append(']');
-//		
-//		return sb.toString();
-//	} 
 	
 	
 	// will likely get overridden
@@ -667,45 +435,6 @@ public class SciDBIslandOperator implements OperatorInterface, Operator {
 		}
 	}
 	
-	public Expression resolveAggregatesInFilter(String e, boolean goParent, SciDBIslandOperator lastHopOp, Set<String> names, StringBuilder sb) throws Exception {
-		
-		if (goParent && parent != null) 
-			return ((SciDBIslandOperator)parent).resolveAggregatesInFilter(e, goParent, this, names, sb);
-		else if (!goParent) {
-			Expression exp = null;
-			for (Operator o : children) {
-				if (o == lastHopOp) break;
-				if ((exp = ((SciDBIslandOperator) o).resolveAggregatesInFilter(e, goParent, this, names, sb)) != null) return exp;
-			}
-		} 
-		
-		return null;
-	} 
-	
-	public void seekScanAndProcessAggregateInFilter() throws Exception {
-		for (Operator o : children) 
-			((SciDBIslandOperator)o).seekScanAndProcessAggregateInFilter();
-	}
-	
-	public Map<String, Expression> getChildrenPredicates() throws Exception {
-		return ((SciDBIslandOperator) this.getChildren().get(0)).getChildrenPredicates();
-	}
-	
-	protected Select generateSelectWithToken(String token) throws Exception {
-    	Select dstStatement = SelectUtils.buildSelectFromTable(new Table(token));
-		PlainSelect ps = (PlainSelect)dstStatement.getSelectBody();
-		List<SelectItem> lsi = new ArrayList<>();
-		for (String s : outSchema.keySet()) {
-			SelectExpressionItem sei = new SelectExpressionItem();
-			Expression e = CCJSqlParserUtil.parseExpression(outSchema.get(s).getExpressionString());
-			SQLExpressionUtils.renameAttributes(e, null, null, token);
-			sei.setExpression(e);
-			lsi.add(sei);
-		}
-		ps.setSelectItems(lsi);
-		return dstStatement;
-    }
-	
 	public void updateOutSchema(Map<String, DataObjectAttribute> schema) throws JSQLParserException {
 		Map<String, DataObjectAttribute> update = new HashMap<>();
 		for (String s: schema.keySet()) {
@@ -728,14 +457,6 @@ public class SciDBIslandOperator implements OperatorInterface, Operator {
 		this.objectAliases = objectAliases;
 	}
 
-	public Map<String, String> getComplexOutItemFromProgeny() {
-		return complexOutItemFromProgeny;
-	}
-
-	public void setComplexOutItemFromProgeny(Map<String, String> complexOutItemFromProgeny) {
-		this.complexOutItemFromProgeny = complexOutItemFromProgeny;
-	}
-
 	@Override
 	public List<Operator> getAllBlockers(){
 		
@@ -749,7 +470,6 @@ public class SciDBIslandOperator implements OperatorInterface, Operator {
 		for (Operator c : children) {
 			extraction.addAll(c.getAllBlockers());
 		}
-		
 		
 		return extraction;
 	}

@@ -14,6 +14,7 @@ import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
 import org.jgrapht.graph.DefaultEdge;
 
 import istc.bigdawg.islands.IslandsAndCast.Scope;
+import istc.bigdawg.islands.operators.Merge;
 
 public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNode, DefaultEdge> 
 	implements Iterable<CrossIslandPlanNode> {
@@ -157,6 +158,12 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 	
 	private void checkAndProcessUnionTerminalOperators() {
 		// TODO check the last operator and process it
+		if (terminalNode instanceof CrossIslandQueryNode 
+				&& ((CrossIslandQueryNode)terminalNode).getRemainderLoc() == null
+				&& ((CrossIslandQueryNode)terminalNode).getRemainder(0) instanceof Merge) {
+//			CrossIslandQueryNode node = (CrossIslandQueryNode) terminalNode;
+			
+		}
 	}
 	
 	private CrossIslandPlanNode createVertex(String name, String rawQueryString, Scope thisScope, Scope innerScope, Scope outterScope) throws Exception{

@@ -314,11 +314,10 @@ public class TrialsAndErrors {
 		
 		SciDBHandler h = new SciDBHandler(ci);
 		Long time = System.currentTimeMillis();
-//		h.executeStatementAFL("remove(reg)");
-//		h.executeStatementAFL("remove(nat)");
+		h.executeStatementAFL("remove(reg)");
+		h.executeStatementAFL("remove(nat)");
 //		h.commit();
 		
-		h.cleanUp(s);
 		System.out.printf("Time it took: %s\n", System.currentTimeMillis() - time);
 	}
 	

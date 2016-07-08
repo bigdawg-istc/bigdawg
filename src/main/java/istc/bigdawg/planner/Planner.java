@@ -217,7 +217,9 @@ public class Planner {
             final Collection<String> tables = tempTableMOD.get(c);
             Log.debug(String.format("removing %s on %s...", tables, c.getDatabase()));
             try {
-            	c.getLocalQueryExecutor().cleanUp(tables);
+            	Collection<String> cs = c.getCleanupQuery(tables);
+            	for (String cleanupQuery : cs)
+            		c.getLocalQueryExecutor().execute(cleanupQuery);
             } catch (ConnectionInfo.LocalQueryExecutorLookupException e) {
                 e.printStackTrace();
             }

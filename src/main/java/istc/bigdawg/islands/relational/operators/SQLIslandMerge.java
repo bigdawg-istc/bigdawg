@@ -44,17 +44,6 @@ public class SQLIslandMerge extends SQLIslandOperator implements Merge {
 		
 	}
 	
-//	// for AFL
-//	public SQLIslandMerge(Map<String, String> parameters, SciDBArray output, List<SQLIslandOperator> childs) throws Exception  {
-//		super(parameters, output, childs);
-//
-//		isBlocking = true;
-//		blockerCount++;
-//		this.blockerID = blockerCount;
-//
-//		outSchema = new LinkedHashMap<String, DataObjectAttribute>(childs.get(0).outSchema);
-//	}
-	
 	public SQLIslandMerge(SQLIslandOperator o, boolean addChild) throws Exception {
 		super(o, addChild);
 		SQLIslandMerge s = (SQLIslandMerge) o;

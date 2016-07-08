@@ -207,7 +207,7 @@ public class AFLQueryGenerator implements OperatorVisitor {
 			break;
 		}
 		
-		lastFunction.push(new SciDBFunction(scan.getOperatorName(), scan.isPruned() ? null : scan.getTableAlias(), expressions, scan.isPruned() ? scan.getPruneToken() : null
+		lastFunction.push(new SciDBFunction(scan.getOperatorName(), scan.isPruned() ? null : scan.getArrayAlias(), expressions, scan.isPruned() ? scan.getPruneToken() : null
 				, scan.getSubTreeToken(), isRootOriginal, new SciDBSchema(scan.getOutSchema())));
 		
 

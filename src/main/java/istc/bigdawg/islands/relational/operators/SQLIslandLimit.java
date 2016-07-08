@@ -50,7 +50,6 @@ public class SQLIslandLimit extends SQLIslandOperator implements Limit {
 			outSchema = new LinkedHashMap<>(child.outSchema);
 		}
 
-//		System.out.printf("\n\n\n--> Limit constructor: output %s;\n outSchema %s;\n\n", output, outSchema);
 	}
 	
 	public SQLIslandLimit(SQLIslandOperator o, boolean addChild) throws Exception {
@@ -67,8 +66,6 @@ public class SQLIslandLimit extends SQLIslandOperator implements Limit {
 	
 	
 	// for AFL the constructor is undefined; because AFL doesn't support it
-	
-	
 	public SQLIslandLimit() {
 		super();
 		isBlocking = true;
@@ -99,14 +96,6 @@ public class SQLIslandLimit extends SQLIslandOperator implements Limit {
 		
 		return sb.append(")").toString();
 	}
-	
-//	@Override
-//	public String generateAFLString(int recursionLevel) throws Exception {
-//		
-//		// operator not applicable in AFL environement
-//		
-//		return children.get(0).generateAFLString(recursionLevel);
-//	}
 	
 	@Override
 	public String getTreeRepresentation(boolean isRoot) throws Exception{

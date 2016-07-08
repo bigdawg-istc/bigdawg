@@ -24,19 +24,14 @@ import net.sf.jsqlparser.schema.Column;
 
 public class SQLIslandJoin extends SQLIslandOperator implements Join {
 
-//	public enum JoinType  {Left, Natural, Right};
-//	
 	private JoinType joinType = null;
 	private String joinPredicate = null;
 	private String joinFilter = null; 
 	private List<String> aliases;
-//	private String joinPredicateOriginal = null; // TODO determine if this is useful for constructing new remainders 
-//	private String joinFilterOriginal = null; 
 	
 	protected Map<String, DataObjectAttribute> srcSchema;
-//	protected boolean joinPredicateUpdated = false;
-	
-	
+
+	protected static final String BigDAWGSQLJoinPrefix = "BIGDAWGSQLJOIN_";
 	protected static int maxJoinSerial = 0;
 	protected Integer joinID = null;
 	
@@ -69,8 +64,6 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
 
 			DataObjectAttribute attr = out.getAttribute();
 			
-//			attr.setExpression(rewriteComplextOutItem(attr.getExpressionString()));
-			
 			String attrName = attr.getFullyQualifiedName();		
 			outSchema.put(attrName, attr);
 				
@@ -98,58 +91,15 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
 		
 		inferJoinParameters();
 		
-//		if (joinPredicate != null)
-//			joinPredicateOriginal 	= new String (joinPredicate);
-//		if (joinFilter != null)
-//			joinFilterOriginal 		= new String (joinFilter);
-		
 		for (Operator o : children) {
 			if (o instanceof SQLIslandAggregate) {
 				((SQLIslandAggregate)o).setSingledOutAggregate();
 			}
 		}
 		
-//		System.out.printf("\n\n\n--> Join constructor: output %s;\n outSchema %s;\n jp: %s;\n jf: %s\n\n", output, outSchema, joinPredicate, joinFilter);
-//		System.out.printf("---> jp: %s\njf: %s\n\n", joinPredicate, joinFilter);
 	}
     
 	
-//	// for AFL
-//	public SQLIslandJoin(Map<String, String> parameters, SciDBArray output, SQLIslandOperator lhs, SQLIslandOperator rhs) throws Exception  {
-//		super(parameters, output, lhs, rhs);
-//
-//		maxJoinSerial++;
-//		this.setJoinID(maxJoinSerial);
-//		
-//		isBlocking = false;
-//		
-//		joinPredicate = parameters.get("Join-Predicate"); System.out.printf("--> Join AFL Constructor, Join Predicate: %s\n", joinPredicate);
-//		setAliases(Arrays.asList(parameters.get("Children-Aliases").split(" ")));
-//
-//		srcSchema = new LinkedHashMap<String, DataObjectAttribute>(lhs.outSchema);
-//		srcSchema.putAll(rhs.outSchema);
-//		
-//		// attributes
-//		for (String expr : output.getAttributes().keySet()) {
-//			
-//			CommonOutItem out = new CommonOutItem(expr, output.getAttributes().get(expr), false, srcSchema);
-//			DataObjectAttribute attr = out.getAttribute();
-//			String attrName = attr.getFullyQualifiedName();		
-//			outSchema.put(attrName, attr);
-//				
-//		}
-//		
-//		// dimensions
-//		for (String expr : output.getDimensions().keySet()) {
-//			
-//			CommonOutItem out = new CommonOutItem(expr, "Dimension", true, srcSchema);
-//			DataObjectAttribute attr = out.getAttribute();
-//			String attrName = attr.getFullyQualifiedName();		
-//			outSchema.put(attrName, attr);
-//				
-//		}
-////		inferJoinParameters();
-//	}
 	
 	// combine join ON clause with WHEREs that combine two tables
  	// if a predicate references data that is not public, move it to the filter
@@ -221,7 +171,6 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
 		this.isQueryRoot = true;
 		
 		this.dataObjects = new HashSet<>();
-//		this.joinReservedObjects = new HashSet<>();
 		
 		this.srcSchema = new LinkedHashMap<String, DataObjectAttribute>(((SQLIslandOperator) child0).outSchema);
 		srcSchema.putAll(((SQLIslandOperator)child1).outSchema);
@@ -256,7 +205,6 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
 
 	@Override
 	public Join construct(Operator child0, Operator child1, JoinType jt, String joinPred, boolean isFilter) throws Exception {
-//		throw new Exception("Unimplemented function construct(); class: "+this.getClass().getName());
 		
 		this.isCopy = true; 
 		
@@ -270,7 +218,6 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
 		this.isQueryRoot = true;
 		
 		this.dataObjects = new HashSet<>();
-//		this.joinReservedObjects = new HashSet<>();
 		
 		this.srcSchema = new LinkedHashMap<String, DataObjectAttribute>(((SQLIslandOperator) child0).outSchema);
 		srcSchema.putAll(((SQLIslandOperator)child1).outSchema);
@@ -295,63 +242,6 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
 		operatorVisitor.visit(this);
 	}
     
-//    private boolean replaceTableNameWithPruneName(Operator child, Expression e, Table t, List<String> itemsSet) throws Exception {
-//		if (child.isPruned()) {
-//			// does child have any of those names? 
-//			Set<String> names = new HashSet<>(child.getDataObjectAliasesOrNames().keySet());
-//			if (child.getObjectAliases() == null) child.updateObjectAliases();
-//			names.addAll(child.getObjectAliases());
-//			names.retainAll(itemsSet);
-//			if (names.size() > 0) {
-//				SQLExpressionUtils.renameAttributes(e, names, null, child.getPruneToken());
-//				t.setName(child.getPruneToken());
-//				return true;
-//			} else 
-//				return false;
-//		} else if (child instanceof Aggregate && ((Aggregate)child).getAggregateID() != null) {
-//			// does child have any of those names? 
-//			Set<String> names = new HashSet<>(child.getDataObjectAliasesOrNames().keySet());
-////			names.addAll(child.objectAliases);
-//			
-//			names.retainAll(itemsSet);
-//			if (names.size() > 0) {
-//				SQLExpressionUtils.renameAttributes(e, names, null, ((Aggregate)child).getAggregateToken());
-//				t.setName(((Aggregate)child).getAggregateToken());
-//				return true;
-//			} else 
-//				return false;
-//		}else {
-//			boolean ret = false;
-//			for (Operator o : child.getChildren()) {
-//				ret = ret || replaceTableNameWithPruneName(o, e, t, itemsSet);
-//			}
-//			return ret;
-//		}
-//	}
-//    
-//    private boolean findAndGetTableName(Operator child, Table t, List<String> itemsSet) throws Exception {
-//    	
-//		Set<String> names = new HashSet<>(child.getDataObjectAliasesOrNames().keySet());
-//		child.updateObjectAliases();
-//		names.addAll(child.getObjectAliases());
-//		names.retainAll(itemsSet);
-//		if (names.size() > 0) {
-//			if (child instanceof Scan) {
-//				t.setName(((Scan)child).getTable().toString());
-//			} else if (child.getChildren().size() > 0) {
-//				return findAndGetTableName(child.getChildren().get(0), t, itemsSet);
-//			}
-//			return false;
-//		} else {
-//			boolean ret = false;
-//			for (Operator o : child.getChildren()) {
-//				ret = ret || findAndGetTableName(o, t, itemsSet);
-//			}
-//			return ret;
-//		}    	
-//    }
-    
-   
     
     
     public String toString() {
@@ -359,49 +249,6 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
     				+ ", " + joinType + ", " + joinPredicate + ", " + joinFilter + ")";
     }
     
-//	@Override
-//	public String generateAFLString(int recursionLevel) throws Exception {
-//		StringBuilder sb = new StringBuilder();
-//		sb.append("cross_join(");
-//		
-//		if (children.get(0).isPruned())
-//			sb.append(children.get(0).getPruneToken());
-//		else 
-//			sb.append(children.get(0).generateAFLString(recursionLevel+1));
-//		
-//		if (!this.getAliases().isEmpty()) 
-//			sb.append(" as ").append(getAliases().get(0));
-//		sb.append(", ");
-//		
-//		if (children.get(1).isPruned())
-//			sb.append(children.get(1).getPruneToken());
-//		else 
-//			sb.append(children.get(1).generateAFLString(recursionLevel+1));
-//		
-//		if (!this.getAliases().isEmpty()) sb.append(" as ").append(getAliases().get(1));
-//		
-//		if (joinPredicate != null) {
-//			sb.append(", ");
-//			sb.append(joinPredicate.replaceAll("( AND )|( = )", ", ").replaceAll("[<>= ()]+", " ").replace("\\s+", ", "));
-//		}
-//		
-//		sb.append(')');
-//		return sb.toString();
-//	}
-	
-	
-//	private void addJSQLParserJoin(Select dstStatement, Table t) {
-//		net.sf.jsqlparser.statement.select.Join newJ = new net.sf.jsqlparser.statement.select.Join();
-//    	newJ.setRightItem(t);
-//    	newJ.setSimple(true);
-//    	if (((PlainSelect) dstStatement.getSelectBody()).getJoins() == null)
-//    		((PlainSelect) dstStatement.getSelectBody()).setJoins(new ArrayList<>());
-//    	((PlainSelect) dstStatement.getSelectBody()).getJoins().add(newJ);
-//	}
-//	
-//	public String getJoinPredicate(){
-//		return joinPredicate;
-//	};
 	
 	@Override
 	public String getTreeRepresentation(boolean isRoot) throws Exception{
@@ -410,25 +257,6 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
 			StringBuilder sb = new StringBuilder();
 			sb.append("{join").append(children.get(0).getTreeRepresentation(false)).append(children.get(1).getTreeRepresentation(false));
 
-//			if (joinFilter != null && !joinFilter.isEmpty()) {
-//				Expression e = CCJSqlParserUtil.parseCondExpression(joinFilter);
-//				SQLExpressionUtils.removeExcessiveParentheses(e);
-//				sb.append(SQLExpressionUtils.parseCondForTree(e));
-//			}
-//			
-//			List<Operator> treeWalker = this.getChildren();
-//			while (!treeWalker.isEmpty()) {
-//				List<Operator> nextgen = new ArrayList<>();
-//				for (Operator o : treeWalker) {
-//					if (o instanceof Join) continue;
-//					if (o instanceof Scan && ((Scan) o).indexCond != null) {
-//						sb.append(SQLExpressionUtils.parseCondForTree(((Scan)o).indexCond));
-//					} else {
-//						nextgen.addAll(o.getChildren());
-//					}
-//				}
-//				treeWalker = nextgen;
-//			}
 			sb.append('}');
 			return sb.toString();
 		}
@@ -442,7 +270,7 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
 			setJoinID(maxJoinSerial);
 		}
 		
-		return "BIGDAWGJOINTOKEN_"+getJoinID();
+		return BigDAWGSQLJoinPrefix + getJoinID();
 	}
 	
 	
@@ -519,17 +347,6 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
 		
 		left.putAll(right);
 		
-//		if (this.joinID != null && joinPredicate != null) {
-//			Expression e = CCJSqlParserUtil.parseCondExpression(joinPredicate);
-//			System.out.printf("\n--><><><> expression: %s; \n", e);
-//			String out = SQLExpressionUtils.getRelevantFilterSections(e, getChildren().get(0).getDataObjectAliasesOrNames().keySet(), getChildren().get(1).getDataObjectAliasesOrNames().keySet());
-//			System.out.printf("--><><><> out: %s; \n", out);
-//			if (out.length() > 0)
-//				left.put(this.getJoinToken(), CCJSqlParserUtil.parseCondExpression(out));
-//		}
-//		if (this.joinID != null && joinFilter != null) {
-//			left.put(this.getJoinToken(), CCJSqlParserUtil.parseCondExpression(SQLExpressionUtils.getRelevantFilterSections(CCJSqlParserUtil.parseCondExpression(joinFilter), left.keySet(), right.keySet())));
-//		}
 		return left;
 	}
 	

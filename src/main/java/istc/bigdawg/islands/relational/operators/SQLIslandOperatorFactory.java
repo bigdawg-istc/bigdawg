@@ -48,41 +48,9 @@ public class SQLIslandOperatorFactory {
 				childs.addAll(children.stream().map(c -> (SQLIslandOperator) c).collect(Collectors.toSet()));
 				return new SQLIslandMerge(parameters, output, childs, supplement);
 			default: // skip it, only designed for 1:1 io like hash and materialize
-//				System.out.println("---> opType from OperatorFactory: "+opType);
 				return children.get(0);
 		}
 		
 	}
 	
-//	public static Operator get(String opType, Map<String, String> parameters, SciDBArray output,  List<String> sortKeys, List<Operator> children, AFLQueryPlan plan) throws Exception {
-//		
-//		switch (opType) {
-//			case "Aggregate":
-////			case "HashAggregate":
-////			case "GroupAggregate":
-////				if(supplement.hasDistinct()) {
-////					return new Distinct(parameters, output, children.get(0), supplement);
-////				}
-//				return new Aggregate(parameters, output, children.get(0));
-////			case "CTE Scan":
-////				return new CommonSQLTableExpressionScan(parameters, output, null, plan, supplement);
-//			case "Cross Join":
-//				return new Join(parameters, output, children.get(0), children.get(1));
-//			case "Seq Scan":
-//				if (children.isEmpty())
-//					return new SeqScan(parameters, output, null);
-//				else 
-//					return new SeqScan(parameters, output, children.get(0));
-//			case "Sort":
-//				return new Sort(parameters, output, sortKeys, children.get(0));					
-//			case "WindowAgg":
-//				return new WindowAggregate(parameters, output, children.get(0));
-//				
-//			default: // skip it, only designed for 1:1 io like hash and materialize
-//				System.out.println("Factory default trigger: "+opType);
-//				return children.get(0);
-//		}
-//		
-//	}
-//	
 }

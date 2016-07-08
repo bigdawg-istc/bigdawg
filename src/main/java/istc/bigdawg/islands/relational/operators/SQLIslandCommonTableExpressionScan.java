@@ -105,9 +105,6 @@ public class SQLIslandCommonTableExpressionScan extends SQLIslandScan implements
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-//		private String cteName;
-//		private WithItem with;
-//		private Operator sourceStatement;
 	};
 
 	
@@ -123,18 +120,6 @@ public class SQLIslandCommonTableExpressionScan extends SQLIslandScan implements
 	public SQLIslandOperator getSourceStatement() {
 		return sourceStatement;
 	}
-	
-//	@Override
-//	public String generateAFLString(int recursionLevel) {
-//		String planStr =  "CTE_Scan(" + getCteName();
-//		if(getFilterExpression() != null) {
-//			planStr += ", " + getFilterExpression();
-//		}
-//		
-//		//planStr += children.get(0).printPlan(recursionLevel + 1);
-//		planStr += ")";
-//		return planStr;
-//	}
 	
 	@Override
 	public Map<String, List<String>> getTableLocations(Map<String, List<String>> locations) {
@@ -182,16 +167,6 @@ public class SQLIslandCommonTableExpressionScan extends SQLIslandScan implements
 			entry.remove(getSourceTableName());
 		((SQLIslandOperator) sourceStatement).removeCTEEntriesFromObjectToExpressionMapping(entry);
 	}
-
-
-//	public String getCteName() {
-//		return cteName;
-//	}
-//
-//
-//	public void setCteName(String cteName) {
-//		this.cteName = cteName;
-//	}
 
 
 	public WithItem getWith() {

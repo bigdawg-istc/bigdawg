@@ -96,7 +96,6 @@ public class SQLIslandSeqScan extends SQLIslandScan implements SeqScan {
 			// filter, project
 			sb.append(getOperatorName()).append(children.get(0).getTreeRepresentation(false));
 		}
-//		if (filterExpression != null) sb.append(SQLExpressionUtils.parseCondForTree(filterExpression));
 		sb.append('}');
 		
 		return sb.toString();

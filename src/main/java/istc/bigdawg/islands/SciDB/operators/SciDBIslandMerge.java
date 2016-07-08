@@ -13,35 +13,7 @@ import istc.bigdawg.islands.operators.Operator;
 
 public class SciDBIslandMerge extends SciDBIslandOperator implements Merge {
 
-//	public enum MergeType {Intersect, Union};
-	
 	private boolean isUnionAll = true; 
-	
-	
-	
-//	public SciDBIslandMerge(Map<String, String> parameters, List<String> output, List<SciDBIslandOperator> childs, SQLTableExpression supplement) throws Exception  {
-//		super(parameters, output, childs, supplement);
-//
-//		isBlocking = true;
-//		blockerCount++;
-//		this.blockerID = blockerCount;
-//
-//		// Union ALL is set by the parent Aggregate or Unique
-//		
-//		if (children.get(0) instanceof SciDBIslandJoin) {
-//			outSchema = new LinkedHashMap<>();
-//			for(int i = 0; i < output.size(); ++i) {
-//				String expr = output.get(i);
-//				SQLOutItem out = new SQLOutItem(expr, childs.get(0).outSchema, supplement); // TODO CHECK THIS TODO
-//				SQLAttribute attr = out.getAttribute();
-//				String attrName = attr.getName();
-//				outSchema.put(attrName, attr);
-//			}
-//		} else {
-//			outSchema = new LinkedHashMap<>(childs.get(0).outSchema);
-//		}
-//		
-//	}
 	
 	// for AFL
 	public SciDBIslandMerge(Map<String, String> parameters, SciDBArray output, List<Operator> childs) throws Exception  {

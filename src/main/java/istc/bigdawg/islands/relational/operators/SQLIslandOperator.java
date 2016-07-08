@@ -12,7 +12,6 @@ import java.util.Set;
 import istc.bigdawg.islands.DataObjectAttribute;
 import istc.bigdawg.islands.OperatorVisitor;
 import istc.bigdawg.islands.operators.Operator;
-import istc.bigdawg.islands.operators.OperatorInterface;
 import istc.bigdawg.islands.relational.SQLTableExpression;
 import istc.bigdawg.islands.relational.utils.SQLAttribute;
 import istc.bigdawg.islands.relational.utils.SQLExpressionUtils;
@@ -28,30 +27,11 @@ import net.sf.jsqlparser.statement.select.SelectExpressionItem;
 import net.sf.jsqlparser.statement.select.SelectItem;
 import net.sf.jsqlparser.util.SelectUtils;
 
-public class SQLIslandOperator implements Operator, OperatorInterface {
+public class SQLIslandOperator implements Operator {
 
 	
-//	protected boolean isCTERoot = false;
-//	// for use in getPlaintext
-//
-//	
-//	// does this op need access to all inputs before it can emit output?
-//	// e.g., max, min, sort
-//	// these block force sync points in our setup
-//	protected boolean isBlocking = false; 
-//	protected static int blockerCount = 0;
-//	protected Integer blockerID = null;
-//	
-//	protected boolean isPruned = false;
-//	protected static int pruneCount = 0;
-//	protected Integer pruneID = null;
-//	
-//	protected boolean isSubTree = false;
-//	protected static int subTreeCount = 0;
-//	protected Integer subTreeID = null;
-//	
-	static final String BigDAWGSQLPruneToken = "BIGDAWGSQLPRUNED_"; 
-	static final String BigDAWGSQLSubtreeToken = "BIGDAWGSQLSUBTREE_";
+	static final String BigDAWGSQLPrunePrefix = "BIGDAWGSQLPRUNED_"; 
+	static final String BigDAWGSQLSubtreePrefix = "BIGDAWGSQLSUBTREE_";
 	
 	protected boolean isBlocking = false; 
 	protected static int blockerCount = 0;
@@ -76,25 +56,16 @@ public class SQLIslandOperator implements Operator, OperatorInterface {
 	
 	private Map<String, String> complexOutItemFromProgeny;
 	
-	
-	
 	protected Set<String> dataObjects;
 	private Set<String> objectAliases = null;
-//	protected boolean isCopy = false;  // used in building permutations; only remainder join operators could attain true, so far
-	
 	
 	// SQL, single non sort non union
 	public SQLIslandOperator(Map<String, String> parameters, List<String> output,  
 			SQLIslandOperator child, // this is changed to 
 			SQLTableExpression supplement) {
 
-		
 		// order preserving
 		this();
-//		outSchema = new LinkedHashMap<String, DataObjectAttribute>();
-//		setComplexOutItemFromProgeny(new LinkedHashMap<>());
-//		children  = new ArrayList<Operator>();
-//		dataObjects = new HashSet<>();
 		
 		if(child != null) { // check for leaf nodes
 			children.add(child);
@@ -112,10 +83,6 @@ public class SQLIslandOperator implements Operator, OperatorInterface {
 			SQLTableExpression supplement) {
 		
 		this();
-//		outSchema = new LinkedHashMap<String, DataObjectAttribute>();
-//		setComplexOutItemFromProgeny(new LinkedHashMap<>());
-//		children  = new ArrayList<Operator>();
-//		dataObjects = new HashSet<>();
 		
 		children.add(lhs);
 		children.add(rhs);
@@ -133,10 +100,6 @@ public class SQLIslandOperator implements Operator, OperatorInterface {
 
 		// order preserving
 		this();
-//		outSchema = new LinkedHashMap<String, DataObjectAttribute>();
-//		setComplexOutItemFromProgeny(new LinkedHashMap<>());
-//		children  = new ArrayList<Operator>();
-//		dataObjects = new HashSet<>();
 		
 		children.addAll(childs);
 		for (SQLIslandOperator c : childs) c.setParent(this);
@@ -269,6 +232,7 @@ public class SQLIslandOperator implements Operator, OperatorInterface {
 		else return ((SQLIslandOperator)children.get(0)).isAnyProgenyPruned();
 	}
 	
+	@Override
 	public Map<String, DataObjectAttribute>  getOutSchema() {
 		return outSchema;
 	}
@@ -306,7 +270,7 @@ public class SQLIslandOperator implements Operator, OperatorInterface {
 	
 	public String getPruneToken() throws Exception {
 		if (!isPruned) return null;
-		return BigDAWGSQLPruneToken + this.pruneID;
+		return BigDAWGSQLPrunePrefix + this.pruneID;
 	}
 	
 	public boolean isSubTree() {
@@ -326,7 +290,7 @@ public class SQLIslandOperator implements Operator, OperatorInterface {
 		if (!isSubTree && !(this instanceof SQLIslandJoin)) return null;
 		if (this instanceof SQLIslandJoin) return ((SQLIslandJoin)this).getJoinToken(); 
 		else if (this instanceof SQLIslandAggregate && ((SQLIslandAggregate)this).getAggregateID() != null) return ((SQLIslandAggregate)this).getAggregateToken();
-		else return BigDAWGSQLSubtreeToken + this.subTreeID;
+		else return BigDAWGSQLSubtreePrefix + this.subTreeID;
 	}
 	
 	public void setQueryRoot(boolean isRoot) {
@@ -467,65 +431,6 @@ public class SQLIslandOperator implements Operator, OperatorInterface {
 			getObjectAliases().addAll(((SQLIslandOperator)children.get(0)).getObjectAliases());
 		}
 	}
-	
-	
-//	public String generateCreateStatementLocally(String name){
-//		StringBuilder sb = new StringBuilder();
-//		
-//		sb.append("CREATE TABLE ").append(name).append(' ').append('(');
-//		
-//		boolean started = false;
-//		
-//		for (DataObjectAttribute doa : outSchema.values()) {
-//			if (started == true) sb.append(',');
-//			else started = true;
-//			
-//			sb.append(doa.generateSQLTypedString());
-//		}
-//		
-//		sb.append(')');
-//		
-//		return sb.toString();
-//	} 
-	
-//	public String generateAFLCreateArrayStatementLocally(String name){
-//		StringBuilder sb = new StringBuilder();
-//		
-//		List<DataObjectAttribute> attribs = new ArrayList<>();
-//		List<DataObjectAttribute> dims = new ArrayList<>();
-//		
-//		for (DataObjectAttribute doa : outSchema.values()) {
-//			if (doa.isHidden()) dims.add(doa);
-//			else attribs.add(doa);
-//		}
-//		
-//		
-//		sb.append("CREATE ARRAY ").append(name).append(' ').append('<');
-//		
-//		boolean started = false;
-//		for (DataObjectAttribute doa : attribs) {
-//			if (started == true) sb.append(',');
-//			else started = true;
-//			
-//			sb.append(doa.generateAFLTypeString());
-//		}
-//		
-//		sb.append('>').append('[');
-//		if (dims.isEmpty()) {
-//			sb.append("i=0:*,10000000,0");
-//		} else {
-//			started = false;
-//			for (DataObjectAttribute doa : dims) {
-//				if (started == true) sb.append(',');
-//				else started = true;
-//				
-//				sb.append(doa.generateAFLTypeString());
-//			}
-//		}
-//		sb.append(']');
-//		
-//		return sb.toString();
-//	} 
 	
 	
 	// will likely get overridden

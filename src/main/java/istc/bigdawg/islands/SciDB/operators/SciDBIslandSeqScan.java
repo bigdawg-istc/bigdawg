@@ -5,15 +5,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import istc.bigdawg.islands.CommonOutItemResolver;
 import istc.bigdawg.islands.DataObjectAttribute;
 import istc.bigdawg.islands.OperatorVisitor;
 import istc.bigdawg.islands.SciDB.SciDBArray;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.operators.SeqScan;
-import net.sf.jsqlparser.parser.CCJSqlParserUtil;
-import net.sf.jsqlparser.schema.Column;
-import net.sf.jsqlparser.schema.Table;
 
 public class SciDBIslandSeqScan extends SciDBIslandScan implements SeqScan {
 
@@ -35,9 +31,12 @@ public class SciDBIslandSeqScan extends SciDBIslandScan implements SeqScan {
 		// attributes
 		for (String expr : output.getAttributes().keySet()) {
 			
-			CommonOutItemResolver out = new CommonOutItemResolver(expr, output.getAttributes().get(expr), false, null);
+			DataObjectAttribute attr = new DataObjectAttribute();
 			
-			DataObjectAttribute attr = out.getAttribute();
+			attr.setName(expr);
+			attr.setTypeString(output.getAttributes().get(expr));
+			attr.setHidden(false);
+			
 			String alias = attr.getName();
 			if (!applyAttributes.isEmpty() && applyAttributes.get(expr) != null) attr.setExpression(applyAttributes.get(expr));
 			else attr.setExpression(expr);
@@ -49,17 +48,13 @@ public class SciDBIslandSeqScan extends SciDBIslandScan implements SeqScan {
 		// dimensions
 		for (String expr : output.getDimensions().keySet()) {
 			
-			CommonOutItemResolver out = new CommonOutItemResolver(expr, output.getDimensions().get(expr), true, null);
+			DataObjectAttribute dim = new DataObjectAttribute();
 			
-			DataObjectAttribute dim = out.getAttribute();
+			dim.setName(expr);
+			dim.setTypeString(output.getAttributes().get(expr));
+			dim.setHidden(true);
+			
 			String attrName = dim.getFullyQualifiedName();		
-			
-
-			Column e = (Column) CCJSqlParserUtil.parseExpression(expr);
-			String arrayName = output.getDimensionMembership().get(expr);
-			if (arrayName != null) {
-				e.setTable(new Table(Arrays.asList(arrayName.split(", ")).get(0)));
-			}
 			
 			outSchema.put(attrName, dim);
 		}
@@ -100,7 +95,6 @@ public class SciDBIslandSeqScan extends SciDBIslandScan implements SeqScan {
 			// filter, project
 			sb.append(getOperatorName()).append(children.get(0).getTreeRepresentation(false));
 		}
-//		if (filterExpression != null) sb.append(SQLExpressionUtils.parseCondForTree(filterExpression));
 		sb.append('}');
 		
 		return sb.toString();
