@@ -13,11 +13,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
 import javax.ws.rs.core.Response;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.voltdb.jdbc.JDBC4Connection;
 
 import istc.bigdawg.BDConstants.Shim;
 import istc.bigdawg.catalog.CatalogViewer;
@@ -445,18 +447,22 @@ public class SStoreSQLHandler implements DBHandler {
 	return "{call @ExtractionRemote(?, ?, ?, ?)}";
     }
     
-    public static void executePreparedImportStatement(
+    public static Long executePreparedImportStatement(
     		Connection connection, String copyToString, 
-    		String tableName, InputStream inStream, String trim, String outputFile) throws SQLException {
-    	
+    		String tableName, InputStream inStream, String trim, String inputFile) throws SQLException {
+
     	PreparedStatement statement = null;
+    	Long countExtractedRows = 0L;
     	try {
     		statement = connection.prepareCall(copyToString);
-    		statement.setString(1, tableName);
-    		statement.setBinaryStream(2, inStream);
+    		statement.setInt(1, 0);
+    		statement.setString(2, tableName);
     		statement.setString(3, trim);
-    		statement.setString(4, outputFile);
-    		statement.executeQuery();
+    		statement.setString(4, inputFile);
+    		ResultSet rs = statement.executeQuery();
+    		rs.next();
+    		countExtractedRows = rs.getLong(1);
+    		rs.close();
     		statement.close();
     	} catch (SQLException ex) {
     		ex.printStackTrace();
@@ -470,10 +476,11 @@ public class SStoreSQLHandler implements DBHandler {
     			statement.close();
     		}
     	}
-        }
+    	return countExtractedRows;
+    }
         
    public static String getImportCommand() {
-    	return "{call @LoadMultipartitionTable(?, ?, ?, ?)}";
+    	return "{call @LoadTableFromFile(?, ?, ?, ?)}";
     }
 
 }

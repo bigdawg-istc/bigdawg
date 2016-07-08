@@ -9,6 +9,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -63,7 +64,10 @@ public class FromSStoreToPostgresImplementation implements MigrationImplementati
 	this.toTable = toTable;
 	try {
 	    SStoreSQLHandler handler = new SStoreSQLHandler(connectionFrom);
+	    connectionSStore = SStoreSQLHandler.getConnection(connectionFrom);
 	    this.sStoreSQLTableMetaData = handler.getColumnsMetaData(fromTable);
+	    connectionPostgres = PostgreSQLHandler.getConnection(connectionTo);
+	    connectionPostgres.setAutoCommit(false);
 	} catch (SQLException sStoreException) {
 //	     MigrationException migrateException = handleException(sStoreException, "Extraction of meta data on the array: " 
 //		     + fromTable + " in SciDB failed. ");
@@ -86,7 +90,7 @@ public class FromSStoreToPostgresImplementation implements MigrationImplementati
 	    executor = Executors.newFixedThreadPool(2);
 	    
 	    String copyFromString = SStoreSQLHandler.getExportCommand();
-	    CopyFromSStoreExecutor exportExecutor = new CopyFromSStoreExecutor(connectionFrom, copyFromString, fromTable, "csv",  sStorePipe);
+	    CopyFromSStoreExecutor exportExecutor = new CopyFromSStoreExecutor(connectionSStore, copyFromString, fromTable, "csv",  sStorePipe);
 	    FutureTask<Long> exportTask = new FutureTask<Long>(exportExecutor);
 	    executor.submit(exportTask);
 
@@ -137,11 +141,11 @@ public class FromSStoreToPostgresImplementation implements MigrationImplementati
 	    	connectionPostgres.rollback();
 	    	throw new MigrationException(errMessage + " " + "number of rows do not match");
 	    } else {
-	    	connectionPostgres.commit();
 	    	// Delete all tuples from S-Store
 	    	String rmTupleStatement = "DELETE FROM " + fromTable;
 	    	SStoreSQLHandler sstoreH = new SStoreSQLHandler(connectionFrom);
 	    	sstoreH.executeUpdateQuery(rmTupleStatement);
+	    	connectionPostgres.commit();
 	    }
 	}
     
@@ -155,12 +159,11 @@ public class FromSStoreToPostgresImplementation implements MigrationImplementati
 	    
 	    String copyFromString = SStoreSQLHandler.getExportCommand();
 //	    System.out.println("pipe path is " + sStorePipe);
-	    CopyFromSStoreExecutor exportExecutor = new CopyFromSStoreExecutor(connectionFrom, copyFromString, fromTable, "psql",  sStorePipe);
+	    CopyFromSStoreExecutor exportExecutor = new CopyFromSStoreExecutor(
+	    		connectionSStore, copyFromString, fromTable, "psql",  sStorePipe);
 	    FutureTask<Long> exportTask = new FutureTask<Long>(exportExecutor);
 	    executor.submit(exportTask);
 
-	    connectionPostgres = PostgreSQLHandler.getConnection(connectionTo);
-	    connectionPostgres.setAutoCommit(false);
 	    String createTableStatement = null;
 	    createTableStatement = getCreatePostgreSQLTableStatementFromSStoreTable();
 	    createTargetTableSchema(connectionPostgres, createTableStatement);

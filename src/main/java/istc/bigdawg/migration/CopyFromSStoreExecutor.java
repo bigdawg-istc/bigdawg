@@ -40,9 +40,9 @@ public class CopyFromSStoreExecutor implements Callable<Long> {
 //		this.cpFrom = new CopyManager((BaseConnection) connection);
 	}
 
-	public CopyFromSStoreExecutor(SStoreSQLConnectionInfo connectionSStoreSQL, final String copyFromString, 
+	public CopyFromSStoreExecutor(Connection connectionSStore, final String copyFromString, 
 			final String tableName,  final String trim, final String outputFile) throws SQLException {
-		connection = SStoreSQLHandler.getConnection(connectionSStoreSQL);
+		connection = connectionSStore;
 //		connection.setAutoCommit(false);	
 		this.copyFromString = copyFromString;
 		this.tableName = tableName;

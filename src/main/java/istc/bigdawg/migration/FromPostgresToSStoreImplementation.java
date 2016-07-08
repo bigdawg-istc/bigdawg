@@ -20,6 +20,7 @@ import java.util.concurrent.FutureTask;
 
 import org.apache.commons.net.ntp.TimeStamp;
 import org.apache.log4j.Logger;
+import org.voltdb.jdbc.JDBC4Connection;
 
 import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.exceptions.NoTargetArrayException;
@@ -43,7 +44,7 @@ public class FromPostgresToSStoreImplementation implements MigrationImplementati
     private static Logger log = Logger.getLogger(FromPostgresToSStoreImplementation.class.getName());
 
     /* General message about the action in the class. */
-    private String generalMessage = "Data migration from SStore to PostgreSQL";
+    private String generalMessage = "Data migration from PostgreSQL to S-Store";
 
     /* General error message when the migration fails in the class. */
     private String errMessage = generalMessage + " failed! ";
@@ -71,9 +72,100 @@ public class FromPostgresToSStoreImplementation implements MigrationImplementati
 
     @Override
     public MigrationResult migrate() throws MigrationException {
-    	// TODO: implement csv
-    	return null;
+    	return migrateSingleThreadCSV();
     }
+
+    private MigrationResult migrateSingleThreadCSV() throws MigrationException {
+	log.info(generalMessage + " Mode: migrateSingleThreadCSV");
+	long startTimeMigration = System.currentTimeMillis();
+	String copyFromCommand = PostgreSQLHandler
+			.getExportCsvCommand(fromTable, "|");
+	String copyToCommand = SStoreSQLHandler.getImportCommand();
+	
+	try {
+	    postgresPipe = Pipe.INSTANCE.createAndGetFullName("postgres.out");
+	    executor = Executors.newFixedThreadPool(2);
+	    
+	    SStoreSQLHandler sStoreSQLHandler = new SStoreSQLHandler(connectionTo);
+		connectionSStore = sStoreSQLHandler.getConnection(connectionTo);
+	    connectionPostgres = PostgreSQLHandler.getConnection(connectionFrom);
+	    connectionPostgres.setAutoCommit(false);
+		connectionPostgres.setReadOnly(true);
+
+		CopyFromPostgresExecutor copyFromExecutor = new CopyFromPostgresExecutor(
+				connectionFrom, copyFromCommand, postgresPipe);
+	    FutureTask<Long> exportTask = new FutureTask<Long>(copyFromExecutor);
+	    executor.submit(exportTask);
+
+	    CopyToSStoreExecutor loadExecutor = new CopyToSStoreExecutor(connectionTo,
+			copyToCommand, postgresPipe, toTable, "csv");
+	    FutureTask<Long> loadTask = new FutureTask<Long>(loadExecutor);
+	    executor.submit(loadTask);
+	    
+	    Long countexportElements = exportTask.get();
+	    Long countLoadedElements = loadTask.get();
+	    
+	    finishTransaction(countexportElements, countLoadedElements);
+
+	    long endTimeMigration = System.currentTimeMillis();
+	    long durationMsec = endTimeMigration - startTimeMigration;
+	    MigrationStatistics stats = new MigrationStatistics(connectionFrom, connectionTo, fromTable, toTable,
+		    startTimeMigration, endTimeMigration, countexportElements, countLoadedElements, this.getClass().getName());
+//	    Monitor.addMigrationStats(stats);
+	    log.debug("Migration result,connectionFrom," + connectionFrom.toSimpleString() + ",connectionTo,"
+		    + connectionTo.toString() + ",fromTable," + fromTable + ",toArray," + toTable
+		    + ",startTimeMigration," + startTimeMigration + ",endTimeMigration," + endTimeMigration
+		    + ",countExtractedElements," + countLoadedElements + ",countLoadedElements," + "N/A"
+		    + ",durationMsec," + durationMsec + ","
+		    + Thread.currentThread().getStackTrace()[1].getMethodName());
+	    return new MigrationResult(countLoadedElements, countexportElements, " No information about number of loaded rows.", false);
+//	    return null;
+	} catch (SQLException | InterruptedException
+		| ExecutionException | IOException | RunShellException exception) {
+//	     MigrationException migrationException =
+//	     handleException(exception, "Migration in CSV format failed. ");
+		try {
+			connectionSStore.rollback();
+			connectionPostgres.rollback();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	     throw new MigrationException(errMessage + " " + exception.getMessage());
+	} finally {
+		if (connectionPostgres != null) {
+			// calling closed on an already closed connection has no effect
+			try {
+				connectionPostgres.close();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+			connectionPostgres = null;
+		}
+		if (connectionSStore != null) {
+			try {
+				connectionSStore.close();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+			connectionSStore = null;
+		}
+	     cleanResources();
+	}
+
+    }
+
+	private void finishTransaction(Long countexportElements,
+			Long countLoadedElements) throws SQLException, MigrationException {
+		if (!countexportElements.equals(countLoadedElements)) { // failed
+	    	connectionPostgres.rollback();
+	    	throw new MigrationException(errMessage + " " + "number of rows do not match");
+	    } else {
+	    	// Drop table in Postgres
+	    	PostgreSQLHandler postgresH = new PostgreSQLHandler(connectionFrom);
+	    	postgresH.dropTableIfExists(fromTable);
+	    	connectionPostgres.commit();
+	    }
+	}
 
 	public MigrationResult migrateBin() throws MigrationException, Exception {
 		log.info(generalMessage + " Mode: migrate postgreSQL binary format");
@@ -249,30 +341,14 @@ public class FromPostgresToSStoreImplementation implements MigrationImplementati
 		
 		if (connectionSStore != null) {
 			try {
-			    	connectionSStore.close();
+			    connectionSStore.close();
 			} catch (SQLException e) {
 				e.printStackTrace();
-				String msg = "Could not close connection to PostgreSQL!" + e.getMessage() + " " + generalMessage;
+				String msg = "Could not close connection to SStoreSQL!" + e.getMessage() + " " + generalMessage;
 				log.error(msg);
 				throw new MigrationException(msg);
 			}
 		}
-	}
-    
-    /**
-	 * Get the copy to command to PostgreSQL.
-	 *
-	 *
-	 * @return the copy command
-	 */
-	private String getCopyToPostgreSQLCsvCommand(String table) {
-		StringBuilder copyTo = new StringBuilder("copy ");
-		copyTo.append(table);
-		copyTo.append(" from STDIN with ");
-		copyTo.append("(format csv, delimiter '|', header true, quote \"'\")");
-		String copyCommand = copyTo.toString();
-		log.debug(LogUtils.replace(copyCommand));
-		return copyCommand;
 	}
     
 

@@ -38,7 +38,7 @@ public class FromPostgresToSStore
         FromPostgresToSStoreImplementation migrator = new FromPostgresToSStoreImplementation(
         		connectionFrom, fromTable, connectionTo, toTable);
         try {
-			return migrator.migrateBin();
+			return migrator.migrate();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -85,10 +85,10 @@ public class FromPostgresToSStore
 		FromPostgresToSStore migrator = new FromPostgresToSStore();
 		PostgreSQLConnectionInfo conFrom = new PostgreSQLConnectionInfo(
 				"localhost", "5430", "test_db", "pguser", "");
-		String tableFrom = "CUSTOMER";
+		String tableFrom = "ORDERS1";
 		SStoreSQLConnectionInfo conTo = new SStoreSQLConnectionInfo("localhost",
 				"21212", "", "user", "password");
-		String tableTo = "CUSTOMER";
+		String tableTo = "ORDERS";
 		long startTime = System.currentTimeMillis();
 		MigrationResult result = migrator.migrate(conFrom, tableFrom, conTo, tableTo);
 		long endTime = System.currentTimeMillis();
