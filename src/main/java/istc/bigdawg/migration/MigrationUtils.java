@@ -5,9 +5,11 @@ package istc.bigdawg.migration;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.Handler;
 
 import org.apache.log4j.Logger;
 
@@ -35,21 +37,51 @@ public class MigrationUtils {
 	/* log */
 	private static Logger log = Logger.getLogger(MigrationUtils.class);
 
+	/*
+	 * the statement to be used in a database to create an object (table/array,
+	 * this is a temporal variable for consumer from a lambda function
+	 */
+	private static String createStatement;
+
 	/**
 	 * Check if this is a flat array in SciDB.
 	 * 
+	 * We check if the attributes: names, positions and types are equivalent.
+	 * This is current assumption and can be changed in future.
+	 * 
 	 * @param scidbArrayMetaData
+	 * @param object
+	 *            to meta data
 	 * @return true if there are any dimensions in the array.
 	 * @throws MigrationException
+	 * @throws UnsupportedTypeException
 	 */
-	public static boolean isFlatArray(SciDBArrayMetaData scidbArrayMetaData)
-			throws MigrationException {
-		List<AttributeMetaData> scidbDimensionsOrdered = scidbArrayMetaData
-				.getDimensionsOrdered();
-		if (scidbDimensionsOrdered.size() != 1) {
+	public static boolean isFlatArray(SciDBArrayMetaData scidbArrayMetaData,
+			ObjectMetaData objectToMetaData)
+					throws MigrationException, UnsupportedTypeException {
+		List<AttributeMetaData> fromAttributesOrdered = objectToMetaData
+				.getAttributesOrdered();
+		List<AttributeMetaData> toAttributesOrdered = scidbArrayMetaData
+				.getAttributesOrdered();
+		if (fromAttributesOrdered.size() != toAttributesOrdered.size()) {
 			return false;
 		}
-		return false;
+		Iterator<AttributeMetaData> fromIter = fromAttributesOrdered.iterator();
+		Iterator<AttributeMetaData> toIter = toAttributesOrdered.iterator();
+		while (fromIter.hasNext() && toIter.hasNext()) {
+			AttributeMetaData fromAttributeMetaData = fromIter.next();
+			AttributeMetaData toAttributeMetaData = toIter.next();
+			if (!fromAttributeMetaData.getName()
+					.equals(toAttributeMetaData.getName())
+					|| fromAttributeMetaData.isNullable() != toAttributeMetaData
+							.isNullable()
+					|| !toAttributeMetaData.getDataType()
+							.equals(FromSQLTypesToSciDB.getSciDBTypeFromSQLType(
+									fromAttributeMetaData.getDataType()))) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	/**
@@ -192,12 +224,15 @@ public class MigrationUtils {
 
 	public static void removeIntermediateArrays(SciDBArrays arrays,
 			MigrationInfo migrationInfo) throws MigrationException {
-		/**
-		 * the migration was successful so only clear the intermediate arrays
-		 */
-		MigrationUtils.removeArrays(migrationInfo.getConnectionTo(),
-				"clean the intermediate arrays",
-				arrays.getIntermediateArrays());
+		if (arrays != null) {
+			/**
+			 * the migration was successful so only clear the intermediate
+			 * arrays
+			 */
+			MigrationUtils.removeArrays(migrationInfo.getConnectionTo(),
+					"clean the intermediate arrays",
+					arrays.getIntermediateArrays());
+		}
 	}
 
 	/**
@@ -214,15 +249,15 @@ public class MigrationUtils {
 					MigrationException {
 		StringBuilder createArrayStringBuf = new StringBuilder();
 		createArrayStringBuf.append("create array " + arrayName + " <");
-		List<AttributeMetaData> postgresColumnsOrdered = objectToMetaData
+		List<AttributeMetaData> fromAttributesOrdered = objectToMetaData
 				.getAttributesOrdered();
-		for (AttributeMetaData postgresColumnMetaData : postgresColumnsOrdered) {
-			String attributeName = postgresColumnMetaData.getName();
-			String postgresColumnType = postgresColumnMetaData.getDataType();
+		for (AttributeMetaData fromattributeMetaData : fromAttributesOrdered) {
+			String attributeName = fromattributeMetaData.getName();
+			String postgresColumnType = fromattributeMetaData.getDataType();
 			String attributeType = FromSQLTypesToSciDB
 					.getSciDBTypeFromSQLType(postgresColumnType);
 			String attributeNULL = "";
-			if (postgresColumnMetaData.isNullable()) {
+			if (fromattributeMetaData.isNullable()) {
 				attributeNULL = " NULL";
 			}
 			createArrayStringBuf.append(
@@ -249,13 +284,12 @@ public class MigrationUtils {
 	 * @return String representing the create statement.
 	 */
 	public static String getUserCreateStatement(MigrationInfo migrationInfo) {
-		MigrationParams migrationParams = migrationInfo.getMigrationParams()
-				.get();
-		if (migrationParams != null) {
-			return migrationParams.getCreateStatement().get();
-		} else {
-			return null;
-		}
+		createStatement = null;
+		migrationInfo.getMigrationParams().ifPresent(
+				params -> params.getCreateStatement().ifPresent(statement -> {
+					createStatement = statement;
+				}));
+		return createStatement;
 	}
 
 	/**
@@ -294,19 +328,14 @@ public class MigrationUtils {
 	/**
 	 * Prepare flat and target arrays in SciDB to load the data.
 	 * 
-	 * @throws SQLException
-	 * @throws MigrationException
-	 * @throws UnsupportedTypeException
-	 * @throws LocalQueryExecutionException
+	 * @throws Exception
+	 * 
 	 * @throws NoTargetArrayException
 	 * 
 	 */
 	public static SciDBArrays prepareFlatTargetArrays(
 			MigrationInfo migrationInfo, ObjectMetaData fromObjectMetaData)
-					throws MigrationException, SQLException,
-					UnsupportedTypeException, LocalQueryExecutionException {
-		SciDBHandler handler = new SciDBHandler(
-				migrationInfo.getConnectionTo());
+					throws Exception {
 		String toArray = migrationInfo.getObjectTo();
 		SciDBArrayMetaData arrayMetaData = null;
 		SciDBArray flatArray;
@@ -316,8 +345,11 @@ public class MigrationUtils {
 		if (createdArrayName != null) {
 			SciDBArrayMetaData createdArrayMetaData = null;
 			try {
+				SciDBHandler handler = new SciDBHandler(
+						migrationInfo.getConnectionTo());
 				createdArrayMetaData = handler
-						.getArrayMetaData(createdArrayName);
+						.getObjectMetaData(createdArrayName);
+				handler.close();
 			} catch (NoTargetArrayException e) {
 				String message = "It should not happen - the migrator could not create "
 						+ "a target array using the statment provided by user. "
@@ -325,15 +357,18 @@ public class MigrationUtils {
 				log.error(message + " " + StackTrace.getFullStackTrace(e));
 				throw new MigrationException(message);
 			}
-			if (MigrationUtils.isFlatArray(createdArrayMetaData)) {
+			if (MigrationUtils.isFlatArray(createdArrayMetaData,
+					fromObjectMetaData)) {
 				flatArray = new SciDBArray(createdArrayName, true, false);
 				return new SciDBArrays(flatArray, null);
 			} else {
 				multiDimArray = new SciDBArray(createdArrayName, true, false);
 			}
 		}
+		SciDBHandler handler = null;
 		try {
-			arrayMetaData = handler.getArrayMetaData(toArray);
+			handler = new SciDBHandler(migrationInfo.getConnectionTo());
+			arrayMetaData = handler.getObjectMetaData(toArray);
 		} catch (NoTargetArrayException e) {
 			/*
 			 * When only a name of array in SciDB was given, but the array does
@@ -344,11 +379,15 @@ public class MigrationUtils {
 			flatArray = new SciDBArray(toArray, true, false);
 			/* the data should be loaded to the default flat array */
 			return new SciDBArrays(flatArray, null);
+		} finally {
+			if (handler != null) {
+				handler.close();
+			}
 		}
-		handler.close();
-		if (MigrationUtils.isFlatArray(arrayMetaData)) {
+		if (MigrationUtils.isFlatArray(arrayMetaData, fromObjectMetaData)) {
 			return new SciDBArrays(new SciDBArray(toArray, false, false), null);
 		}
+		multiDimArray = new SciDBArray(toArray, false, false);
 		/*
 		 * the target array is multidimensional so we have to build the
 		 * intermediate flat array
@@ -381,13 +420,6 @@ public class MigrationUtils {
 		createFlatArray(newFlatIntermediateArrayName, migrationInfo,
 				fromObjectMetaData);
 		flatArray = new SciDBArray(newFlatIntermediateArrayName, true, true);
-		/*
-		 * check if we already have the multiDimArray - then we have been
-		 * provided with the create statement by a user
-		 */
-		if (multiDimArray != null) {
-			multiDimArray = new SciDBArray(toArray, false, false);
-		}
 		return new SciDBArrays(flatArray, multiDimArray);
 	}
 

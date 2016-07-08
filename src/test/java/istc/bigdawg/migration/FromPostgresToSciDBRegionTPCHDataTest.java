@@ -11,6 +11,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import istc.bigdawg.LoggerSetup;
 import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfoTest;
@@ -52,6 +53,7 @@ public class FromPostgresToSciDBRegionTPCHDataTest {
 	 * @throws IOException
 	 */
 	public void beforeLoadDataToPostgres() throws SQLException, IOException {
+		LoggerSetup.setLogging();
 		this.numberOfRowsPostgres = TestMigrationUtils
 				.loadDataToPostgresRegionTPCH(conFrom, fromTable);
 	}

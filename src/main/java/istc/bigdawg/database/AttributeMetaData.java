@@ -48,7 +48,7 @@ public class AttributeMetaData {
 
 	@Override
 	public String toString() {
-		return "PostgreSQLColumnMetaData [name=" + name + ", position="
+		return "[name=" + name + ", position="
 				+ position + ", isNullable=" + isNullable + ", dataType="
 				+ dataType + ", characterMaximumLength="
 				+ characterMaximumLength + ", numericPrecision="

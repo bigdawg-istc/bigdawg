@@ -174,8 +174,8 @@ public class ExportPostgres implements Export {
 		log.debug(
 				"issue command to PostgreSQL: Copy from PostgreSQL (Executor)");
 		try {
+			log.debug("psql copy statement: " + copyFromString);
 			countExtractedRows = cpFrom.copyOut(copyFromString, output);
-			// log.debug("psql statement: " + copyFromString);
 			// PostgreSQLHandler.executeStatement(connection, copyFromString);
 			connectionFrom.commit();
 			output.close();
@@ -186,6 +186,7 @@ public class ExportPostgres implements Export {
 			log.error(msg + StackTrace.getFullStackTrace(e), e);
 			throw e;
 		}
+		log.debug("Extracted rows: " + countExtractedRows);
 		return countExtractedRows;
 	}
 

@@ -110,7 +110,7 @@ class FromPostgresToSciDB extends FromDatabaseToDatabase
 							.getObjectMetaData(migrationInfo.getObjectFrom());
 		} catch (SQLException postgresException) {
 			MigrationException migrateException = handleException(
-					postgresException, null,
+					postgresException,
 					"Extraction of meta data from the table: "
 							+ migrationInfo.getObjectFrom()
 							+ " in PostgreSQL failed. ");
@@ -189,8 +189,6 @@ class FromPostgresToSciDB extends FromDatabaseToDatabase
 			scidbPipe = Pipe.INSTANCE.createAndGetFullName(
 					this.getClass().getName() + "_toSciDB_" + getObjectTo());
 
-			arrays = MigrationUtils.prepareFlatTargetArrays(migrationInfo,
-					fromObjectMetaData);
 			executor = Executors.newFixedThreadPool(3/* 3 */);
 
 			String copyFromCommand = PostgreSQLHandler
@@ -211,9 +209,10 @@ class FromPostgresToSciDB extends FromDatabaseToDatabase
 					transformExecutor);
 			executor.submit(transformTask);
 
-			LoadSciDB loadExecutor = new LoadSciDB(getConnectionTo(), arrays,
-					scidbPipe,
-					MigrationUtils.getSciDBBinFormat(fromObjectMetaData));
+			LoadSciDB loadExecutor = new LoadSciDB(migrationInfo,
+					new PostgreSQLHandler(migrationInfo.getConnectionFrom()),
+					MigrationUtils.getSciDBBinFormat(fromObjectMetaData),
+					scidbPipe);
 			FutureTask<Object> loadTask = new FutureTask<Object>(loadExecutor);
 			executor.submit(loadTask);
 
@@ -243,10 +242,10 @@ class FromPostgresToSciDB extends FromDatabaseToDatabase
 			String message = "Migration was executed correctly.";
 			return summary(migrationResult, migrationInfo, message);
 		} catch (SQLException | UnsupportedTypeException | InterruptedException
-				| ExecutionException | IOException | RunShellException
-				| LocalQueryExecutionException exception) {
+				| ExecutionException | IOException
+				| RunShellException exception) {
 			MigrationException migrationException = handleException(exception,
-					arrays, "Migration in binary format failed. ");
+					"Migration in binary format failed. ");
 			throw migrationException;
 		} finally {
 			cleanResources();
@@ -268,7 +267,6 @@ class FromPostgresToSciDB extends FromDatabaseToDatabase
 		log.info(generalMessage + " Mode: migrateSingleThreadCSV");
 		long startTimeMigration = System.currentTimeMillis();
 		String delimiter = FileFormat.getCsvDelimiter();
-		SciDBArrays arrays = null;
 		try {
 			postgresPipe = Pipe.INSTANCE
 					.createAndGetFullName(this.getClass().getName()
@@ -279,9 +277,6 @@ class FromPostgresToSciDB extends FromDatabaseToDatabase
 			String typesPattern = SciDBHandler
 					.getTypePatternFromPostgresTypes(fromObjectMetaData);
 
-			arrays = MigrationUtils.prepareFlatTargetArrays(migrationInfo,
-					fromObjectMetaData);
-
 			List<Callable<Object>> tasks = new ArrayList<>();
 			tasks.add(new ExportPostgres(getConnectionFrom(), PostgreSQLHandler
 					.getExportCsvCommand(getObjectFrom(), delimiter),
@@ -289,7 +284,8 @@ class FromPostgresToSciDB extends FromDatabaseToDatabase
 			tasks.add(new TransformFromCsvToSciDBExecutor(typesPattern,
 					postgresPipe, delimiter, scidbPipe,
 					BigDawgConfigProperties.INSTANCE.getScidbBinPath()));
-			tasks.add(new LoadSciDB(getConnectionTo(), arrays, scidbPipe));
+			tasks.add(new LoadSciDB(migrationInfo, scidbPipe,
+					new PostgreSQLHandler(migrationInfo.getConnectionFrom())));
 			executor = Executors.newFixedThreadPool(tasks.size());
 			List<Future<Object>> results = TaskExecutor.execute(executor,
 					tasks);
@@ -314,7 +310,6 @@ class FromPostgresToSciDB extends FromDatabaseToDatabase
 								+ "export but there was an unkown data "
 								+ "returned.");
 			}
-			MigrationUtils.removeIntermediateArrays(arrays, migrationInfo);
 
 			long endTimeMigration = System.currentTimeMillis();
 			long durationMsec = endTimeMigration - startTimeMigration;
@@ -323,12 +318,10 @@ class FromPostgresToSciDB extends FromDatabaseToDatabase
 					startTimeMigration, endTimeMigration);
 			String message = "Migration was executed correctly.";
 			return summary(migrationResult, migrationInfo, message);
-		} catch (SQLException | UnsupportedTypeException | ExecutionException
-				| InterruptedException | MigrationException | IOException
-				| RunShellException | LocalQueryExecutionException exception) {
-			MigrationException migrationException = handleException(exception,
-					arrays, "Migration in CSV format failed. ");
-			throw migrationException;
+		} catch (SQLException | ExecutionException | InterruptedException
+				| MigrationException | IOException
+				| RunShellException exception) {
+			throw handleException(exception, "Migration failed.");
 		} finally {
 			cleanResources();
 		}
@@ -370,7 +363,7 @@ class FromPostgresToSciDB extends FromDatabaseToDatabase
 	 * @return the MigrationException
 	 */
 	private MigrationException handleException(Exception exception,
-			SciDBArrays arrays, String message) {
+			String message) {
 		/* this log with stack trace is for UnsupportedTypeException */
 		log.error(StackTrace.getFullStackTrace(exception));
 		String msg = message + errMessage + exception.getMessage()
@@ -380,18 +373,6 @@ class FromPostgresToSciDB extends FromDatabaseToDatabase
 				+ getConnectionTo().toSimpleString() + " to array:"
 				+ getObjectTo();
 		log.error(msg);
-		try {
-			if (arrays != null) {
-				/**
-				 * there was an exception so the migration failed and the
-				 * created arrays should be removed
-				 */
-				MigrationUtils.removeArrays(getConnectionTo(), msg,
-						arrays.getCreatedArrays());
-			}
-		} catch (MigrationException ex) {
-			return ex;
-		}
 		return new MigrationException(msg);
 	}
 

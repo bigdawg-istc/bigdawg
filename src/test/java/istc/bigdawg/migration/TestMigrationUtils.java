@@ -37,10 +37,10 @@ public class TestMigrationUtils {
 	private static Logger log = Logger.getLogger(TestMigrationUtils.class);
 
 	/** Number of rows in the region table. */
-	private final static long REGION_ROWS_NUMBER = 5L;
+	final static long REGION_ROWS_NUMBER = 5L;
 
 	/** Number of rows in the waveform table. */
-	private final static long WAVEFORM_ROWS_NUMBER = 10L;
+	final static long WAVEFORM_ROWS_NUMBER = 10L;
 
 	/** Name for the table in TPCH. */
 	private static final String REGION_TPCH_TABLE = "region";

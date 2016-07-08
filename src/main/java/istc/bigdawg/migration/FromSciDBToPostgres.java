@@ -166,12 +166,20 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 		String fromArray = getObjectFrom();
 		try {
 			SciDBHandler handler = new SciDBHandler(getConnectionFrom());
-			this.scidbArrayMetaData = handler.getArrayMetaData(fromArray);
-			handler.close();
-		} catch (SQLException | NoTargetArrayException scidbException) {
+			try {
+				this.scidbArrayMetaData = handler.getObjectMetaData(fromArray);
+			} catch (Exception e) {
+				String message = e.getMessage()
+						+ " Extraction of meta data on the array: " + fromArray
+						+ " in SciDB failed. ";
+				log.error(message + StackTrace.getFullStackTrace(e));
+				throw new MigrationException(message, e);
+			} finally {
+				handler.close();
+			}
+		} catch (SQLException scidbException) {
 			MigrationException migrateException = handleException(
-					scidbException, "Extraction of meta data on the array: "
-							+ fromArray + " in SciDB failed. ");
+					scidbException, " Could not connect to SciDB.");
 			throw migrateException;
 		}
 	}
@@ -298,12 +306,19 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 	 * @return the string representing a binary format for SciDB
 	 * @throws NoTargetArrayException
 	 * @throws SQLException
+	 * @throws MigrationException
 	 */
 	private String getSciDBBinFormat(String array)
-			throws NoTargetArrayException, SQLException {
+			throws NoTargetArrayException, SQLException, MigrationException {
 		SciDBHandler handler = new SciDBHandler(getConnectionFrom());
-		SciDBArrayMetaData arrayMetaData = handler.getArrayMetaData(array);
-		handler.close();
+		SciDBArrayMetaData arrayMetaData;
+		try {
+			arrayMetaData = handler.getObjectMetaData(array);
+		} catch (Exception e) {
+			throw new MigrationException(e.getMessage(), e);
+		} finally {
+			handler.close();
+		}
 		List<AttributeMetaData> attributes = arrayMetaData
 				.getAttributesOrdered();
 		StringBuilder binBuf = new StringBuilder();

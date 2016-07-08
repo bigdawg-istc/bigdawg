@@ -5,6 +5,7 @@ package istc.bigdawg.myria;
 
 import istc.bigdawg.BDConstants;
 import istc.bigdawg.BDConstants.Shim;
+import istc.bigdawg.database.ObjectMetaData;
 import istc.bigdawg.exceptions.MyriaException;
 import istc.bigdawg.query.DBHandler;
 import istc.bigdawg.query.QueryResponseTupleString;
@@ -72,6 +73,15 @@ public class MyriaHandler implements DBHandler {
 			log.error(message);
 			return message;
 		}
+	}
+
+	/* (non-Javadoc)
+	 * @see istc.bigdawg.query.DBHandler#getObjectMetaData(java.lang.String)
+	 */
+	@Override
+	public ObjectMetaData getObjectMetaData(String name) throws Exception {
+		// TODO Auto-generated method stub
+		throw new UnsupportedOperationException();
 	}
 
 }

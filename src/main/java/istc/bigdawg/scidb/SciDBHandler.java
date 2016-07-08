@@ -425,8 +425,8 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 	 * @throws SQLException
 	 * @throws NoTargetArrayException
 	 */
-	public SciDBArrayMetaData getArrayMetaData(String arrayName)
-			throws SQLException, NoTargetArrayException {
+	public SciDBArrayMetaData getObjectMetaData(String arrayName)
+			throws Exception {
 		Map<String, AttributeMetaData> dimensionsMap = new HashMap<>();
 		List<AttributeMetaData> dimensionsOrdered = new ArrayList<>();
 		Map<String, AttributeMetaData> attributesMap = new HashMap<>();
@@ -557,8 +557,11 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 			if (columnMetaData.isNullable()) {
 				newType = Character.toLowerCase(newType);
 			}
-			// column positions in Postgres start from 1
-			scidbTypesPattern[columnMetaData.getPosition() - 1] = newType;
+			/*
+			 * column positions in Postgres start from 1 but were changed to
+			 * start from 0
+			 */
+			scidbTypesPattern[columnMetaData.getPosition()] = newType;
 		}
 		return String.copyValueOf(scidbTypesPattern);
 	}
@@ -576,7 +579,9 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 		try {
 			con = SciDBHandler.getConnection(conTo);
 			statement = con.createStatement();
-			statement.execute("drop array " + array);
+			String statementString = "drop array " + array;
+			log.debug("Statement to be executed in SciDB: " + statementString);
+			statement.execute(statementString);
 			con.commit();
 		} catch (SQLException ex) {
 			/*

@@ -14,8 +14,12 @@ import java.util.Map;
 
 import org.junit.Test;
 
+import org.apache.log4j.Logger;
+
 import istc.bigdawg.database.AttributeMetaData;
+import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.exceptions.NoTargetArrayException;
+import istc.bigdawg.utils.StackTrace;
 
 /**
  * Test the operations executed in SciDB.
@@ -23,6 +27,8 @@ import istc.bigdawg.exceptions.NoTargetArrayException;
  * @author Adam Dziedzic
  */
 public class SciDBHandlerTest {
+
+	private static Logger log = Logger.getLogger(SciDBHandlerTest.class);
 
 	@Test
 	/**
@@ -116,7 +122,7 @@ public class SciDBHandlerTest {
 	 * @throws NoTargetArrayException
 	 */
 	public void testGetArrayMetaData()
-			throws SQLException, NoTargetArrayException {
+			throws SQLException, NoTargetArrayException, MigrationException {
 		String arrayName2 = "adam_test_scidb_011_2";
 		SciDBHandler handler = new SciDBHandler();
 		// create array
@@ -124,11 +130,17 @@ public class SciDBHandlerTest {
 				+ "<v:string,d:double> [i=0:10,1,0,j=0:100,1,0]");
 		handler.close();
 		handler = new SciDBHandler();
+		SciDBArrayMetaData meta = null;
+		try {
+			meta = handler.getObjectMetaData(arrayName2);
+		} catch (Exception e) {
+			log.error(e.getMessage() + StackTrace.getFullStackTrace(e), e);
+			throw new MigrationException(e.getMessage(), e);
+		} finally {
+			handler.close();
+		}
 
-		SciDBArrayMetaData meta = handler.getArrayMetaData(arrayName2);
-
-		List<AttributeMetaData> dimensionsOrdered = meta
-				.getDimensionsOrdered();
+		List<AttributeMetaData> dimensionsOrdered = meta.getDimensionsOrdered();
 		assertEquals(2, dimensionsOrdered.size());
 
 		AttributeMetaData firstDimension = dimensionsOrdered.get(0);
@@ -139,8 +151,7 @@ public class SciDBHandlerTest {
 		assertEquals("j", secondDimension.getName());
 		assertEquals("int64", secondDimension.getDataType());
 
-		Map<String, AttributeMetaData> dimensionsMap = meta
-				.getDimensionsMap();
+		Map<String, AttributeMetaData> dimensionsMap = meta.getDimensionsMap();
 		assertEquals(2, dimensionsMap.size());
 
 		AttributeMetaData firstDimensionMap = dimensionsMap.get("i");
@@ -151,8 +162,7 @@ public class SciDBHandlerTest {
 		assertEquals("j", secondDimensionMap.getName());
 		assertEquals("int64", secondDimensionMap.getDataType());
 
-		List<AttributeMetaData> attributesOrdered = meta
-				.getAttributesOrdered();
+		List<AttributeMetaData> attributesOrdered = meta.getAttributesOrdered();
 		assertEquals(2, attributesOrdered.size());
 
 		AttributeMetaData firstAttribute = attributesOrdered.get(0);
@@ -163,8 +173,7 @@ public class SciDBHandlerTest {
 		assertEquals("d", secondAttribute.getName());
 		assertEquals("double", secondAttribute.getDataType());
 
-		Map<String, AttributeMetaData> attributesMap = meta
-				.getAttributesMap();
+		Map<String, AttributeMetaData> attributesMap = meta.getAttributesMap();
 		assertEquals(2, attributesMap.size());
 
 		AttributeMetaData firstAttributeMap = attributesMap.get("v");

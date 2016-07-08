@@ -11,8 +11,10 @@ import java.io.IOException;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Logger;
+import org.junit.Before;
 import org.junit.Test;
 
+import istc.bigdawg.LoggerSetup;
 import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
 
@@ -26,6 +28,11 @@ public class TransformFromCsvToSciDBExecutorTest {
 
 	static Logger log = Logger
 			.getLogger(TransformFromCsvToSciDBExecutorTest.class);
+	
+	@Before
+	public void setUp() {
+		LoggerSetup.setLogging();
+	}
 
 	@Test
 	public void testTransformation() throws MigrationException, IOException {

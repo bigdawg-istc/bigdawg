@@ -3,6 +3,8 @@
  */
 package istc.bigdawg.migration;
 
+import static org.junit.Assert.assertEquals;
+
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.concurrent.ExecutionException;
@@ -21,6 +23,8 @@ import istc.bigdawg.postgresql.PostgreSQLConnectionInfoTest;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
 import istc.bigdawg.scidb.SciDBConnectionInfoTest;
+import istc.bigdawg.scidb.SciDBHandler;
+import istc.bigdawg.utils.Utils;
 
 /**
  * Benchmarks for migrator.
@@ -37,9 +41,10 @@ public class WaveformTest {
 	private SciDBConnectionInfo conSciDB = new SciDBConnectionInfoTest();
 
 	@Before
-	public void initTest() throws IOException {
+	public void initTest() throws IOException, SQLException {
 		LoggerSetup.setLogging();
 		log.debug("init Waveform benchmark");
+		TestMigrationUtils.loadDataToPostgresWaveform(conPostgres, table);
 	}
 
 	@Test
@@ -69,9 +74,17 @@ public class WaveformTest {
 	@Test
 	public void testFromPostgresToSciDBCsv()
 			throws MigrationException, SQLException {
+		SciDBHandler.dropArrayIfExists(conSciDB, array);
 		FromPostgresToSciDB migrator = new FromPostgresToSciDB(
 				new MigrationInfo(conPostgres, table, conSciDB, array));
 		migrator.migrateSingleThreadCSV();
+		long numberOfCellsSciDBFlat = Utils.getNumberOfCellsSciDB(conSciDB,
+				array);
+		log.debug("Final number of cells in SciDB: " + numberOfCellsSciDBFlat);
+		assertEquals(TestMigrationUtils.WAVEFORM_ROWS_NUMBER,
+				numberOfCellsSciDBFlat);
+		/* remove the destination array */
+		SciDBHandler.dropArrayIfExists(conSciDB, array);
 	}
 
 	@Test
@@ -80,16 +93,31 @@ public class WaveformTest {
 				"localhost", "5431", "test", "pguser", "test");
 		PostgreSQLConnectionInfo conTo = new PostgreSQLConnectionInfo(
 				"localhost", "5430", "test", "pguser", "test");
-		new FromPostgresToPostgres().migrate(conFrom, table, conTo, table);
+		PostgreSQLHandler handlerTo = new PostgreSQLHandler(conTo);
+		handlerTo.dropTableIfExists(table);
+		new FromPostgresToPostgres()
+				.migrate(new MigrationInfo(conFrom, table, conTo, table));
+
+		long numberOfRowsPostgresTo = Utils.getPostgreSQLCountTuples(conTo,
+				table);
+		/* check if all the rows were loaded to the destination table */
+		assertEquals(TestMigrationUtils.WAVEFORM_ROWS_NUMBER,
+				numberOfRowsPostgresTo);
+		/* remove the destination table */
+		handlerTo.dropTableIfExists(table);
+		/* remove the source table */
+		PostgreSQLHandler handlerFrom = new PostgreSQLHandler(conFrom);
+		handlerFrom.dropSchemaIfExists(table);
 	}
 
 	@Test
 	public void loadToSciDB() throws InterruptedException, ExecutionException {
 		long startTimeMigration = System.currentTimeMillis();
 		ExecutorService executor = Executors.newFixedThreadPool(1);
-		LoadSciDB loadExecutor = new LoadSciDB(conSciDB,
-				new SciDBArrays(new SciDBArray(array, true, false), null),
-				"/tmp/scidb.bin", "int64,int64,double");
+		MigrationInfo migrationInfo = MigrationInfo.forConnectionTo(conSciDB);
+		LoadSciDB loadExecutor = new LoadSciDB(migrationInfo,
+				new PostgreSQLHandler(conPostgres), "/tmp/scidb.bin",
+				"int64,int64,double");
 		FutureTask<Object> loadTask = new FutureTask<Object>(loadExecutor);
 		executor.submit(loadTask);
 		String loadMessage = (String) loadTask.get();

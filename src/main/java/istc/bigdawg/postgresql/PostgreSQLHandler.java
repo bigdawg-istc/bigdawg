@@ -66,9 +66,10 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 		if (conInfo instanceof PostgreSQLConnectionInfo) {
 			this.conInfo = (PostgreSQLConnectionInfo) conInfo;
 		} else {
-			throw new IllegalArgumentException(
+			Exception e = new IllegalArgumentException(
 					"The conInfo parameter has to be of "
 							+ "type: PostgreSQLConnectionInfo.");
+			log.error(e.getMessage() + " " + StackTrace.getFullStackTrace(e));
 		}
 	}
 
@@ -615,9 +616,10 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 			throws Exception {
 		return CatalogViewer.getConnectionInfo(dbid);
 	}
-	
+
 	/**
 	 * see: {@link #getObjectMetaData(String)}
+	 * 
 	 * @param tableNameInitial
 	 * @return
 	 * @throws SQLException
@@ -631,11 +633,13 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 	 * Get metadata about columns (column name, position, data type, etc) for a
 	 * table in PostgreSQL.
 	 * 
-	 * @param tableName the name of the table
+	 * @param tableName
+	 *            the name of the table
 	 * @return map column name to column meta data
 	 * @throws SQLException
 	 *             if the data extraction from PostgreSQL failed
 	 */
+	@Override
 	public PostgreSQLTableMetaData getObjectMetaData(String tableNameInitial)
 			throws SQLException {
 		try {
@@ -676,8 +680,12 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 								schemaTable.getFullName(), this.conInfo));
 			}
 			while (resultSet.next()) {
+				/**
+				 * ordinal position in PostgreSQL starts from 1 but we want it
+				 * to start from 0.
+				 */
 				AttributeMetaData columnMetaData = new AttributeMetaData(
-						resultSet.getString(1), resultSet.getInt(2),
+						resultSet.getString(1), resultSet.getInt(2) - 1,
 						resultSet.getBoolean(3), resultSet.getString(4),
 						resultSet.getInt(5), resultSet.getInt(6),
 						resultSet.getInt(7));
