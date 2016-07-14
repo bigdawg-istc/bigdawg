@@ -10,8 +10,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import com.beust.jcommander.internal.Lists;
-
 import istc.bigdawg.islands.relational.SQLExpressionHandler;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.AnalyticExpression;
@@ -923,9 +921,9 @@ public class SQLExpressionUtils {
 			@Override
 			public void visit(Column tableColumn) {
 				if (tableColumn.getTable() != null && tableColumn.getTable().getName() != null) {
-					if ( tableColumn.getTable().getName().startsWith("BIGDAWGAGGREGATE_"))
+					if ( tableColumn.getTable().getName().matches("^BIGDAWG.*AGGREGATE_"))
 						tableColumn.getTable().setName("BIGDAWGAGGREGATE");
-					else if ( tableColumn.getTable().getName().startsWith("BIGDAWGPRUNED_")) 
+					else if ( tableColumn.getTable().getName().matches("^BIGDAWG.*PRUNED_")) 
 						tableColumn.getTable().setName("BIGDAWGPRUNED");
 					else if (aliasMapping.get(tableColumn.getTable().getName()) != null)
 						tableColumn.getTable().setName(aliasMapping.get(tableColumn.getTable().getName()));
@@ -1016,11 +1014,7 @@ public class SQLExpressionUtils {
 			@Override
 			public void visit(Column tableColumn) {
 				if (tableColumn.getTable() != null && tableColumn.getTable().getName() != null) {
-					if ( tableColumn.getTable().getName().startsWith("BIGDAWGAGGREGATE_"))
-						ret.set(0, true);
-					else if ( tableColumn.getTable().getName().startsWith("BIGDAWGPRUNED_")) 
-						ret.set(0, true);
-					else if ( tableColumn.getTable().getName().startsWith("BIGDAWGJOINTOKEN_"))
+					if ( tableColumn.getTable().getName().startsWith("BIGDAWG"))
 						ret.set(0, true);
 				} 
 			}
