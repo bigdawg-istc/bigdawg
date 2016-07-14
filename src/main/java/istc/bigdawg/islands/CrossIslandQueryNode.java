@@ -156,7 +156,7 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 		
 		
 		if (remainderLoc == null && root.getDataObjectAliasesOrNames().size() > 1) {
-			Map<String, DataObjectAttribute> rootOutSchema = ((SQLIslandOperator) root).getOutSchema();
+			Map<String, DataObjectAttribute> rootOutSchema = root.getOutSchema();
 			List<Operator> permResult = getPermutatedOperatorsWithBlock(scope, root, jp, jf);
 			
 			// if root is join then the constructed out schema might get messed up; adjust it here
