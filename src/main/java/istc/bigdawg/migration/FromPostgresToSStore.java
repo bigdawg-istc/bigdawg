@@ -85,7 +85,7 @@ public class FromPostgresToSStore
 		FromPostgresToSStore migrator = new FromPostgresToSStore();
 		PostgreSQLConnectionInfo conFrom = new PostgreSQLConnectionInfo(
 				"localhost", "5430", "test_db", "pguser", "");
-		String tableFrom = "ORDERS1";
+		String tableFrom = "ORDERS";
 		SStoreSQLConnectionInfo conTo = new SStoreSQLConnectionInfo("localhost",
 				"21212", "", "user", "password");
 		String tableTo = "ORDERS";

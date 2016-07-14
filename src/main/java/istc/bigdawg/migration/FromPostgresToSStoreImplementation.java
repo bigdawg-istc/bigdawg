@@ -83,7 +83,8 @@ public class FromPostgresToSStoreImplementation implements MigrationImplementati
 	String copyToCommand = SStoreSQLHandler.getImportCommand();
 	
 	try {
-	    postgresPipe = Pipe.INSTANCE.createAndGetFullName("postgres.out");
+//		postgresPipe = Pipe.INSTANCE.createAndGetFullName("postgres.out");
+	    postgresPipe = "/tmp/postgres.out_1";
 	    executor = Executors.newFixedThreadPool(2);
 	    
 	    SStoreSQLHandler sStoreSQLHandler = new SStoreSQLHandler(connectionTo);
@@ -104,6 +105,7 @@ public class FromPostgresToSStoreImplementation implements MigrationImplementati
 	    
 	    Long countexportElements = exportTask.get();
 	    Long countLoadedElements = loadTask.get();
+//	    Long countLoadedElements = 1L;
 	    
 	    finishTransaction(countexportElements, countLoadedElements);
 
@@ -120,8 +122,10 @@ public class FromPostgresToSStoreImplementation implements MigrationImplementati
 		    + Thread.currentThread().getStackTrace()[1].getMethodName());
 	    return new MigrationResult(countLoadedElements, countexportElements, " No information about number of loaded rows.", false);
 //	    return null;
+//	} catch (SQLException | InterruptedException
+//		| ExecutionException | IOException | RunShellException exception) {
 	} catch (SQLException | InterruptedException
-		| ExecutionException | IOException | RunShellException exception) {
+			| ExecutionException exception) {
 //	     MigrationException migrationException =
 //	     handleException(exception, "Migration in CSV format failed. ");
 		try {

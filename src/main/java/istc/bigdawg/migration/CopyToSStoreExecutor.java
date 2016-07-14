@@ -45,7 +45,6 @@ public class CopyToSStoreExecutor implements Callable<Long> {
 		this.tableName = tableName;
 		this.trim = trim;
 		this.input = null;
-//		this.cpTo = new CopyManager((BaseConnection) connection);
 	}
 
 	public CopyToSStoreExecutor(SStoreSQLConnectionInfo connectionSStoreSQL,
@@ -56,7 +55,6 @@ public class CopyToSStoreExecutor implements Callable<Long> {
 		this.input = input;
 		this.tableName = tableName;
 		this.trim = trim;
-//		this.cpTo = new CopyManager((BaseConnection) connection);
 	}
 
 	/**
@@ -82,10 +80,7 @@ public class CopyToSStoreExecutor implements Callable<Long> {
 		try {
 			countLoadedRows = 
 					SStoreSQLHandler.executePreparedImportStatement(connection, copyToString, tableName, input, trim, inputFile);
-//			connection.commit();
-//			countLoadedRows = cpTo.copyIn(copyToString, input);
 			input.close();
-//			connection.commit();
 		} catch (IOException | SQLException e) {
 			String msg = e.getMessage()
 					+ " Problem with thread for S-Store copy manager "
