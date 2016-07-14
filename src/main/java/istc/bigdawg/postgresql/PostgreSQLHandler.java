@@ -936,4 +936,12 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 		}
 	}
 
+	/* (non-Javadoc)
+	 * @see istc.bigdawg.query.DBHandler#close()
+	 */
+	@Override
+	public void close() throws Exception {
+		cleanPostgreSQLResources();
+	}
+
 }

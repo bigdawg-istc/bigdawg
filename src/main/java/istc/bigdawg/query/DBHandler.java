@@ -39,4 +39,9 @@ public interface DBHandler {
 	 *         otherwise.
 	 */
 	public boolean existsObject(String name) throws Exception;
+
+	/**
+	 * Release all the resources hold by the handler.
+	 */
+	public void close() throws Exception;
 }

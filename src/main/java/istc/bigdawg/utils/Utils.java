@@ -9,6 +9,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+import org.apache.log4j.Logger;
 import org.scidb.jdbc.IResultSetWrapper;
 
 import istc.bigdawg.executor.JdbcQueryResult;
@@ -23,6 +24,9 @@ import istc.bigdawg.scidb.SciDBHandler;
  *         Feb 24, 2016 7:36:20 PM
  */
 public class Utils {
+
+	/* log */
+	private static Logger log = Logger.getLogger(Utils.class);
 
 	/**
 	 * Show meta data about the target array.
@@ -44,33 +48,73 @@ public class Utils {
 		}
 	}
 
-	public static long getNumberOfCellsSciDB(ConnectionInfo conTo,
-			String array) throws SQLException {
-		Connection con = SciDBHandler.getConnection(conTo);
-		Statement query = con.createStatement();
-		ResultSet resultSet = query.executeQuery("select * from " + array);
+	/**
+	 * Get number of cells for a given array in SciDB.
+	 * 
+	 * @param conTo
+	 *            information about the connection to SciDB
+	 * @param array
+	 *            the name of the array in SciDB
+	 * @return number of cells in the given array in SciDB.
+	 * @throws SQLException
+	 */
+	public static long getNumberOfCellsSciDB(ConnectionInfo conTo, String array)
+			throws SQLException {
+		Connection con = null;
+		Statement query = null;
+		ResultSet resultSet = null;
 
-		showMetaData(resultSet);
+		try {
+			con = SciDBHandler.getConnection(conTo);
+			query = con.createStatement();
+			resultSet = query.executeQuery("select * from " + array);
 
-		long numberOfCellsSciDB = 0;
-		while (!resultSet.isAfterLast()) {
-			// System.out.println(resultSet.getString(3));
-			// System.out.println(resultSet.getInt(1));
-			++numberOfCellsSciDB;
-			resultSet.next();
+			showMetaData(resultSet);
+			long numberOfCellsSciDB = 0;
+			while (!resultSet.isAfterLast()) {
+				// System.out.println(resultSet.getString(3));
+				// System.out.println(resultSet.getInt(1));
+				++numberOfCellsSciDB;
+				resultSet.next();
+			}
+			return numberOfCellsSciDB;
+		} catch (SQLException ex) {
+			log.error(ex.getMessage() + StackTrace.getFullStackTrace(ex));
+			throw ex;
+		} finally {
+			if (resultSet != null) {
+				try {
+					resultSet.close();
+				} catch (SQLException e) {
+					log.error(e.getMessage() + StackTrace.getFullStackTrace(e));
+				}
+			}
+			if (query != null) {
+				try {
+					query.close();
+				} catch (SQLException e) {
+					log.error(e.getMessage() + StackTrace.getFullStackTrace(e));
+				}
+			}
+			if (con != null) {
+				try {
+					con.close();
+				} catch (SQLException e) {
+					log.error(e.getMessage() + StackTrace.getFullStackTrace(e));
+				}
+			}
 		}
-		resultSet.close();
-		query.close();
-		con.close();
-		return numberOfCellsSciDB;
+
 	}
 
 	/**
 	 * Get number of tuples in the table in the PostgreSQL instance identified
 	 * by con.
 	 * 
-	 * @param con connection to PostgreSQL
-	 * @param table a table in PostgreSQL
+	 * @param con
+	 *            connection to PostgreSQL
+	 * @param table
+	 *            a table in PostgreSQL
 	 * @return number of tuples in the table
 	 * @throws SQLException
 	 */

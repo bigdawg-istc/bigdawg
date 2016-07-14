@@ -75,13 +75,34 @@ public class MyriaHandler implements DBHandler {
 		}
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see istc.bigdawg.query.DBHandler#getObjectMetaData(java.lang.String)
 	 */
 	@Override
 	public ObjectMetaData getObjectMetaData(String name) throws Exception {
-		// TODO Auto-generated method stub
+		// TODO
 		throw new UnsupportedOperationException();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see istc.bigdawg.query.DBHandler#existsObject(java.lang.String)
+	 */
+	@Override
+	public boolean existsObject(String name) throws Exception {
+		// TODO
+		throw new UnsupportedOperationException();
+	}
+
+	/* (non-Javadoc)
+	 * @see istc.bigdawg.query.DBHandler#close()
+	 */
+	@Override
+	public void close() throws Exception {
+		log.debug("No aciton for closing Myria.");
 	}
 
 }

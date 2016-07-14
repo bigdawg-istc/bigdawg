@@ -226,15 +226,14 @@ public class TestMigrationUtils {
 			String flatArray, String multiDimArray)
 					throws SQLException, IOException {
 		log.info("Load data to SciDB.");
-		SciDBHandler handler = new SciDBHandler(conFrom);
 
 		SciDBHandler.dropArrayIfExists(conFrom, flatArray);
 		SciDBHandler.dropArrayIfExists(conFrom, multiDimArray);
 
+		SciDBHandler handler = new SciDBHandler(conFrom);
 		handler.executeStatementAFL(getCreateFlatArrayForRegion(flatArray));
 		handler.close();
 
-		handler = new SciDBHandler(conFrom);
 		File source = new File("src/test/resources/region.scidb");
 		File target = new File("/tmp/region.scidb");
 		Files.copy(Paths.get(source.getAbsolutePath()),
@@ -248,6 +247,8 @@ public class TestMigrationUtils {
 		String loadCommand = "load(" + flatArray + ", '"
 				+ target.getAbsolutePath() + "')";
 		log.debug("Load to SciDB command: " + loadCommand);
+		
+		handler = new SciDBHandler(conFrom);
 		handler.executeStatementAFL(loadCommand);
 		handler.commit();
 		handler.close();
@@ -258,6 +259,7 @@ public class TestMigrationUtils {
 
 		// prepare the target array
 		SciDBHandler.dropArrayIfExists(conFrom, multiDimArray);
+		
 		handler = new SciDBHandler(conFrom);
 		handler.executeStatement("create array " + multiDimArray + " "
 				+ "<r_name:string,r_comment:string> "

@@ -345,9 +345,9 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 	 */
 	public static MigrationType getMigrationType(MigrationInfo migrationInfo,
 			DBHandler toHandler) throws MigrationException {
+		SciDBHandler fromHandler = null;
 		try {
-			SciDBHandler fromHandler = new SciDBHandler(
-					migrationInfo.getConnectionFrom());
+			fromHandler = new SciDBHandler(migrationInfo.getConnectionFrom());
 			SciDBArrayMetaData scidbArrayMetaData = fromHandler
 					.getObjectMetaData(migrationInfo.getObjectFrom());
 			String toObject = migrationInfo.getObjectTo();
@@ -399,6 +399,16 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 			String message = "Problem with checking meta data. "
 					+ ex.getMessage();
 			throw new MigrationException(message);
+		} finally {
+			if (fromHandler != null) {
+				try {
+					fromHandler.close();
+				} catch (SQLException e) {
+					log.error("Could not close the handler for SciDB. "
+							+ e.getMessage() + " "
+							+ StackTrace.getFullStackTrace(e), e);
+				}
+			}
 		}
 	}
 

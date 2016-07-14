@@ -173,4 +173,13 @@ public class AccumuloHandler implements DBHandler {
 		throw new UnsupportedOperationException();
 	}
 
+	/* (non-Javadoc)
+	 * @see istc.bigdawg.query.DBHandler#close()
+	 */
+	@Override
+	public void close() throws Exception {
+		// TODO
+		throw new UnsupportedOperationException();
+	}
+
 }

@@ -165,6 +165,7 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 		this.connection = getConnection(this.conInfo);
 	}
 
+	@Override
 	/**
 	 * You have to close the handler at the end to release the resources.
 	 * 
@@ -656,10 +657,22 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 			}
 		} finally {
 			if (statement != null) {
-				statement.close();
+				try {
+					statement.close();
+				} catch (SQLException ex) {
+					log.error("Could not close a statement for SciDB. "
+							+ ex.getMessage() + " "
+							+ StackTrace.getFullStackTrace(ex));
+				}
 			}
 			if (con != null) {
-				con.close();
+				try {
+					con.close();
+				} catch (SQLException ex) {
+					log.error("Could not close a connection for SciDB. "
+							+ ex.getMessage() + " "
+							+ StackTrace.getFullStackTrace(ex));
+				}
 			}
 		}
 	}
