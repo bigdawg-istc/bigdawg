@@ -122,13 +122,14 @@ public class SQLQueryGenerator implements OperatorVisitor {
 		
 		SQLIslandJoin join = (SQLIslandJoin) joinOp;
 		
-//		if (root == null) root = join; 
 		if (!isRoot && join.isPruned()) {
-			dstStatement = generateSelectWithToken(join, join.getPruneToken());
+			if (dstStatement == null)
+				dstStatement = generateSelectWithToken(join, join.getPruneToken());
 			return ;
 		}
 		if (!isRoot && stopAtJoin) {
-			dstStatement = generateSelectWithToken(join, join.getJoinToken());
+			if (dstStatement == null)
+				dstStatement = generateSelectWithToken(join, join.getJoinToken());
 			return ;
 		}
 		saveRoot(join);
@@ -258,9 +259,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 			child0.accept(this);
 		}
 		// Resolve pruning and add join
-    	if (child0.isPruned()) ((PlainSelect) dstStatement.getSelectBody()).setFromItem(t0);
     	addJSQLParserJoin(dstStatement, t1);
-		
     	
     	if (child1 instanceof Aggregate && stopAtJoin) {
     		List<SelectItem> sil = new ArrayList<>();

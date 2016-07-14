@@ -22,6 +22,23 @@ public class QueryContainerForCommonDatabase {
 		this.databaseConnectionInfo		= ci;
 		
 	}
+	
+	public String generateSelectIntoString(Scope scope) throws Exception {
+		OperatorVisitor gen = TheObjectThatResolvesAllDifferencesAmongTheIslands.getQueryGenerator(scope);
+		gen.configure(true, false);
+		rootOperator.accept(gen);
+		return gen.generateSelectIntoStatementForExecutionTree(pruneToken);
+	}
+	
+	public Map<String, Set<String>> generateObjectToExpressionMapping() throws Exception {
+		Map<String, Set<String>> mapping = rootOperator.getObjectToExpressionMappingForSignature();
+		rootOperator.removeCTEEntriesFromObjectToExpressionMapping(mapping);
+		return mapping;
+	}
+	
+	public String generateTreeExpression() throws Exception {
+		return rootOperator.getTreeRepresentation(true);
+	}
 
 	public String getDBID() throws Exception {
 		return dbid;
@@ -31,24 +48,12 @@ public class QueryContainerForCommonDatabase {
 		return databaseConnectionInfo;
 	}
 	
-	public String generateSelectIntoString(Scope scope) throws Exception {
-		OperatorVisitor gen = TheObjectThatResolvesAllDifferencesAmongTheIslands.getQueryGenerator(scope);
-		gen.configure(true, false);
-		rootOperator.accept(gen);
-		return gen.generateSelectIntoStatementForExecutionTree(pruneToken);
-	}
-	
-	public String generateTreeExpression() throws Exception {
-		return rootOperator.getTreeRepresentation(true);
-	}
-	
 	public String getName() {
 		return pruneToken;
 	}
 	
-	public Map<String, Set<String>> generateObjectToExpressionMapping() throws Exception {
-		Map<String, Set<String>> mapping = rootOperator.getObjectToExpressionMappingForSignature();
-		rootOperator.removeCTEEntriesFromObjectToExpressionMapping(mapping);
-		return mapping;
+	public Operator getRootOperator() {
+		return rootOperator;
 	}
+
 }

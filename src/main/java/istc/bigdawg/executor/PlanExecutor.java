@@ -73,9 +73,6 @@ class PlanExecutor {
         Logger.debug(this, "Nodes for plan %s: \n %s", plan.getSerializedName(), sb);
         
         if (plan.vertexSet().isEmpty()) System.out.printf("\n---> vertex set empty\n");
-        for (ExecutionNode ep : plan.vertexSet()) {
-        	System.out.printf("---> ordered query printf: name: %s; query: %s;\n", ep.getTableName(), ep.getQueryString());
-        }
         
         Logger.debug(this, "Ordered queries: \n %s",
                 StreamSupport.stream(plan.spliterator(), false)

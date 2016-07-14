@@ -94,6 +94,8 @@ public class SQLIslandLimit extends SQLIslandOperator implements Limit {
 		if (isHasOffSet())
 			sb.append(", offset ").append(getLimitOffset());
 		
+		sb.append(children.get(0));
+		
 		return sb.append(")").toString();
 	}
 	
