@@ -13,8 +13,6 @@ import istc.bigdawg.migration.MigratorTask;
 import istc.bigdawg.monitoring.MonitoringTask;
 import istc.bigdawg.properties.BigDawgConfigProperties;
 
-import istc.bigdawg.zookeeper.ZooKeeperUtils;
-
 /**
  * Main class.
  * 

@@ -137,6 +137,7 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 					migrationInfo.getObjectTo());
 		}
 		PostgreSQLHandler.executeStatement(connectionTo, createTableStatement);
+		createTableStatement = null;
 		return schemaTable;
 	}
 
