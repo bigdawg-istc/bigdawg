@@ -9,7 +9,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.logging.Handler;
 
 import org.apache.log4j.Logger;
 
@@ -22,6 +21,7 @@ import istc.bigdawg.executor.ExecutorEngine.LocalQueryExecutionException;
 import istc.bigdawg.migration.datatypes.FromSQLTypesToSciDB;
 import istc.bigdawg.postgresql.PostgreSQLTableMetaData;
 import istc.bigdawg.query.ConnectionInfo;
+import istc.bigdawg.scidb.SciDBArrayDimensionsAndAttributesMetaData;
 import istc.bigdawg.scidb.SciDBArrayMetaData;
 import istc.bigdawg.scidb.SciDBHandler;
 import istc.bigdawg.utils.SessionIdentifierGenerator;
@@ -131,12 +131,12 @@ public class MigrationUtils {
 	}
 
 	/**
-	 * Check if only the attributes (without dimensions) in the array in SciDB
-	 * are the same as the columns in PostgreSQL.
+	 * Check if dimensions and attributes in the array in SciDB are the same as
+	 * columns in PostgreSQL.
 	 * 
 	 * @param scidbArrayMetaData
 	 * @param postgresqlTableMetaData
-	 * @return true if attributes and dimensions in the array match exactly the
+	 * @return true if dimensions and attributes in the array match exactly the
 	 *         columns in the table
 	 * @throws MigrationException
 	 */
@@ -144,10 +144,16 @@ public class MigrationUtils {
 			SciDBArrayMetaData scidbArrayMetaData,
 			PostgreSQLTableMetaData postgresqlTableMetaData)
 					throws MigrationException {
-		List<AttributeMetaData> scidbColumnsOrdered = new ArrayList<AttributeMetaData>();
-		scidbColumnsOrdered.addAll(scidbArrayMetaData.getDimensionsOrdered());
-		scidbColumnsOrdered.addAll(scidbArrayMetaData.getAttributesOrdered());
-		return areAttributesTheSame(scidbArrayMetaData,
+		List<AttributeMetaData> scidbDimensionsAttributes = new ArrayList<AttributeMetaData>();
+		scidbDimensionsAttributes
+				.addAll(scidbArrayMetaData.getDimensionsOrdered());
+		scidbDimensionsAttributes
+				.addAll(scidbArrayMetaData.getAttributesOrdered());
+
+		return areAttributesTheSame(
+				new SciDBArrayDimensionsAndAttributesMetaData(
+						scidbArrayMetaData.getArrayName(),
+						scidbDimensionsAttributes),
 				postgresqlTableMetaData);
 	}
 
@@ -208,6 +214,9 @@ public class MigrationUtils {
 	 */
 	public static void removeArrays(ConnectionInfo connection, String msg,
 			Set<String> arrays) throws MigrationException {
+		if (arrays == null) {
+			return;
+		}
 		/* remove the arrays */
 		for (String array : arrays) {
 			try {

@@ -15,7 +15,16 @@ import java.util.Set;
  */
 public class SciDBArrays {
 
+	/**
+	 * A flat array in SciDB, it contains only an auxiliary dimension (e.g. i -
+	 * which is an index of a record)
+	 */
 	private SciDBArray flat;
+
+	/**
+	 * A multidimensional array contains specific dimensions, for example, an
+	 * multi-dim array representing a canvas contains two dimensions: x and y.
+	 */
 	private SciDBArray multiDimensional;
 
 	public SciDBArrays(SciDBArray flat, SciDBArray multiDimensional) {

@@ -241,6 +241,65 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 	}
 
 	/**
+	 * Check if the array with the given name exists in SciDB.
+	 * 
+	 * @param arrayName
+	 *            The name of the array.
+	 * @return True, if the array exists, false, otherwise.
+	 * @throws SQLException
+	 */
+	public static boolean existsArray(ConnectionInfo conTo, String arrayName)
+			throws SQLException {
+		Connection con = null;
+		Statement statement = null;
+		try {
+			con = SciDBHandler.getConnection(conTo);
+			statement = con.createStatement();
+			String statementString = "select name from list('arrays') where name = '"
+					+ arrayName + "'";
+			log.debug("Statement to be executed in SciDB: " + statementString);
+			ResultSet rs = statement.executeQuery(statementString);
+			if (rs == null || rs.isAfterLast()) {
+				return false;
+			}
+			return true;
+		} catch (ArrayIndexOutOfBoundsException ex) {
+			log.error(
+					"SciDB idiosyncrasy: it returns the array out of bound exception when the array does not exist!");
+			return false;
+		} catch (SQLException ex) {
+			String msg = " Problem with a connection or query to SciDB. "
+					+ ex.getMessage();
+			if (ex.getCause()
+					.getCause() instanceof ArrayIndexOutOfBoundsException) {
+				log.error(
+						"SciDB idiosyncrasy: it returns the array out of bound exception when the array does not exist!");
+				return false;
+			}
+			log.error(msg + StackTrace.getFullStackTrace(ex), ex);
+			throw ex;
+		} finally {
+			if (statement != null) {
+				try {
+					statement.close();
+				} catch (SQLException e) {
+					log.error("Unable to close statement for SciDB. "
+							+ e.getMessage() + StackTrace.getFullStackTrace(e));
+				}
+			}
+			if (con != null) {
+				try {
+					con.close();
+				} catch (SQLException e) {
+					log.error("Unable to close connection to SciDB. "
+							+ e.getMessage() + StackTrace.getFullStackTrace(e));
+				}
+			}
+		}
+
+	}
+
+	/**
 	 * Commit the transaction in SciDB.
 	 * 
 	 * @throws SQLException
@@ -293,7 +352,7 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 
 			Class.forName("org.scidb.jdbc.Driver");
 
-			System.out.printf("---> connection info: %s\n", this.conInfo);
+			log.debug("---> connection info: " + this.conInfo + "\n");
 
 			conn = DriverManager
 					.getConnection("jdbc:scidb://" + this.conInfo.getHost()
@@ -605,27 +664,41 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 		}
 	}
 
-	/**
-	 * @param args
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see istc.bigdawg.query.DBHandler#existsObject(java.lang.String)
 	 */
-	public static void main(String[] args) {
-		try {
-			// String resultSciDB = new
-			// new SciDBHandler().executeQueryScidb("list(^^arrays^^)");
-			// new SciDBHandler().executeStatement("drop array adam2");
-			SciDBHandler handler = new SciDBHandler();
-			handler.executeStatement(
-					"create array adam2<v:string> [i=0:10,1,0]");
-			handler.close();
-			// String resultSciDB = new
-			// SciDBHandler().executeQueryScidb("scan(waveform_test_1GB)");
-			// System.out.println(resultSciDB);
-			// } catch (IOException | InterruptedException | SciDBException e) {
-			// e.printStackTrace();
-		} catch (SQLException e) {
-			e.printStackTrace();
+	@Override
+	public boolean existsObject(String name) throws Exception {
+		if (this.conInfo == null) {
+			throw new IllegalArgumentException(
+					"SciDB Handler was not initialized with a connection information.");
 		}
-
+		return existsArray(conInfo, name);
 	}
+
+	// /**
+	// * @param args
+	// */
+	// public static void main(String[] args) {
+	// try {
+	// // String resultSciDB = new
+	// // new SciDBHandler().executeQueryScidb("list(^^arrays^^)");
+	// // new SciDBHandler().executeStatement("drop array adam2");
+	// SciDBHandler handler = new SciDBHandler();
+	//// handler.executeStatement(
+	//// "create array adam2<v:string> [i=0:10,1,0]");
+	// handler.close();
+	// // String resultSciDB = new
+	// // SciDBHandler().executeQueryScidb("scan(waveform_test_1GB)");
+	// // System.out.println(resultSciDB);
+	// // } catch (IOException | InterruptedException | SciDBException e) {
+	// // e.printStackTrace();
+	// } catch (SQLException e) {
+	// e.printStackTrace();
+	// }
+	//
+	// }
 
 }

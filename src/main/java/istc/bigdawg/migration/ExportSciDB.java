@@ -26,11 +26,11 @@ public class ExportSciDB implements Export {
 	private static Logger log = Logger.getLogger(LoadSciDB.class);
 
 	/*
-	 * define the
-	 * 
-	 * /* SciDB connection info
+	 * Define the SciDB connection info.
 	 */
 	private ConnectionInfo connection;
+	
+	
 	private final SciDBArrays arrays;
 
 	/**
@@ -92,10 +92,7 @@ public class ExportSciDB implements Export {
 			}
 			saveCommandFinal = "save(" + array + ",'" + outputFile + "',-2,'"
 					+ csvFormat + "')";
-		} else if (fileFormat == FileFormat.BIN_SCIDB) { /*
-															 * this is the
-															 * binary migration
-															 */
+		} else if (fileFormat == FileFormat.BIN_SCIDB) {
 			String array = null;
 			if (arrays.getMultiDimensional() != null) {
 				String multiDimArray = arrays.getMultiDimensional().getName();

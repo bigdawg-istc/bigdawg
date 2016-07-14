@@ -12,10 +12,11 @@ import java.sql.Statement;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.log4j.Logger;
+import org.junit.Before;
 import org.junit.Test;
 
-import org.apache.log4j.Logger;
-
+import istc.bigdawg.LoggerSetup;
 import istc.bigdawg.database.AttributeMetaData;
 import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.exceptions.NoTargetArrayException;
@@ -30,6 +31,13 @@ public class SciDBHandlerTest {
 
 	private static Logger log = Logger.getLogger(SciDBHandlerTest.class);
 
+	private SciDBConnectionInfo conTo = new SciDBConnectionInfoTest();
+
+	@Before
+	public void init() {
+		LoggerSetup.setLogging();	
+	}
+	
 	@Test
 	/**
 	 * Test execute statement based on create/delete an array in SciDB.
@@ -48,11 +56,31 @@ public class SciDBHandlerTest {
 			handler.executeStatement(
 					"create array " + arrayName + "<v:string> [i=0:10,1,0]");
 			handler.close();
-
 		} finally {
 			handler = new SciDBHandler();
 			handler.executeStatement("drop array " + arrayName);
 			handler.close();
+		}
+	}
+
+	@Test
+	public void testExistsArray() throws SQLException {
+		String arrayName = "adam_test_scidb_011_exists";
+		//String arrayName = "test";
+		SciDBHandler.dropArrayIfExists(conTo, arrayName);
+
+		boolean existsFalse = SciDBHandler.existsArray(conTo, arrayName);
+		assertEquals(false, existsFalse);
+		try {
+			SciDBHandler handler = new SciDBHandler();
+			handler.executeStatement(
+					"create array " + arrayName + "<v:string> [i=0:10,1,0]");
+			handler.close();
+
+			boolean existsTrue = SciDBHandler.existsArray(conTo, arrayName);
+			assertEquals(true, existsTrue);
+		} finally {
+			SciDBHandler.dropArrayIfExists(conTo, arrayName);
 		}
 	}
 

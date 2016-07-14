@@ -743,7 +743,7 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 			} catch (SQLException e) {
 				e.printStackTrace();
 				log.error(e.getMessage()
-						+ " PostgreSQLHandler, the query preparation for checking is a schema exists failed.");
+						+ " PostgreSQLHandler, the query preparation for checking if a schema exists failed.");
 				throw e;
 			}
 			try {
@@ -874,6 +874,16 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 
 	public static String getLoadBinCommand(String table) {
 		return getCopyBinCommand(table, DIRECTION.FROM, STDIO.STDIN);
+	}
+
+	/**
+	 * Check if the table with a given name exists in the PostgreSQL database.
+	 * 
+	 * @see istc.bigdawg.query.DBHandler#existsObject(java.lang.String)
+	 */
+	@Override
+	public boolean existsObject(String name) throws SQLException {
+		return existsTable(new PostgreSQLSchemaTableName(name));
 	}
 
 	/**

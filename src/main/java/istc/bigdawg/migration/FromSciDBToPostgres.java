@@ -21,6 +21,7 @@ import org.apache.log4j.Logger;
 
 import istc.bigdawg.LoggerSetup;
 import istc.bigdawg.database.AttributeMetaData;
+import istc.bigdawg.database.ObjectMetaData;
 import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.exceptions.NoTargetArrayException;
 import istc.bigdawg.exceptions.RunShellException;
@@ -30,7 +31,8 @@ import istc.bigdawg.monitoring.Monitor;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.postgresql.PostgreSQLSchemaTableName;
-import istc.bigdawg.postgresql.PostgreSQLTableMetaData;
+import istc.bigdawg.query.DBHandler;
+import istc.bigdawg.scidb.SciDBArrayDimensionsAndAttributesMetaData;
 import istc.bigdawg.scidb.SciDBArrayMetaData;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
 import istc.bigdawg.scidb.SciDBHandler;
@@ -60,8 +62,6 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 	private enum MigrationType {
 		FULL /* export dimensions and attributes from SciDB */, FLAT
 		/* export only the attributes from SciDB */}
-
-	private MigrationType migrationType;
 
 	/** General message about the action in the class. */
 	private String generalMessage = "Data migration from SciDB to PostgreSQL";
@@ -120,7 +120,7 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 	 */
 	FromSciDBToPostgres(MigrationInfo migrationInfo) throws MigrationException {
 		this.migrationInfo = migrationInfo;
-		setArrayMetaData();
+		this.scidbArrayMetaData = getArrayMetaData(migrationInfo);
 	}
 
 	@Override
@@ -134,7 +134,7 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 				&& migrationInfo
 						.getConnectionTo() instanceof PostgreSQLConnectionInfo) {
 			this.migrationInfo = migrationInfo;
-			setArrayMetaData();
+			this.scidbArrayMetaData = getArrayMetaData(migrationInfo);
 			try {
 				return this.dispatch();
 			} catch (Exception e) {
@@ -162,12 +162,14 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 	 * 
 	 * @throws MigrationException
 	 */
-	private void setArrayMetaData() throws MigrationException {
-		String fromArray = getObjectFrom();
+	private static SciDBArrayMetaData getArrayMetaData(
+			MigrationInfo migrationInfo) throws MigrationException {
+		String fromArray = migrationInfo.getObjectFrom();
 		try {
-			SciDBHandler handler = new SciDBHandler(getConnectionFrom());
+			SciDBHandler handler = new SciDBHandler(
+					migrationInfo.getConnectionFrom());
 			try {
-				this.scidbArrayMetaData = handler.getObjectMetaData(fromArray);
+				return handler.getObjectMetaData(fromArray);
 			} catch (Exception e) {
 				String message = e.getMessage()
 						+ " Extraction of meta data on the array: " + fromArray
@@ -178,8 +180,8 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 				handler.close();
 			}
 		} catch (SQLException scidbException) {
-			MigrationException migrateException = handleException(
-					scidbException, " Could not connect to SciDB.");
+			MigrationException migrateException = handleException(migrationInfo,
+					scidbException, " Could not connect to SciDB.", null);
 			throw migrateException;
 		}
 	}
@@ -192,7 +194,7 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 	 *
 	 * @return the copy command
 	 */
-	private String getCopyToPostgreSQLCsvCommand(String table) {
+	private static String getCopyToPostgreSQLCsvCommand(String table) {
 		StringBuilder copyTo = new StringBuilder("copy ");
 		copyTo.append(table);
 		copyTo.append(" from STDIN with ");
@@ -341,24 +343,26 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 	 * @throws MigrationException
 	 *             {@link MigrationException}
 	 */
-	private void establishMigrationType() throws MigrationException {
-		PostgreSQLHandler postgresHandler = new PostgreSQLHandler(
-				getConnectionTo());
+	public static MigrationType getMigrationType(MigrationInfo migrationInfo,
+			DBHandler toHandler) throws MigrationException {
 		try {
-			String toTable = getObjectTo();
-			if (postgresHandler
-					.existsTable(new PostgreSQLSchemaTableName(toTable))) {
-				PostgreSQLTableMetaData tableMetaData = postgresHandler
-						.getObjectMetaData(toTable);
+			SciDBHandler fromHandler = new SciDBHandler(
+					migrationInfo.getConnectionFrom());
+			SciDBArrayMetaData scidbArrayMetaData = fromHandler
+					.getObjectMetaData(migrationInfo.getObjectFrom());
+			String toObject = migrationInfo.getObjectTo();
+			if (toHandler.existsObject(toObject)) {
+				ObjectMetaData objectToMetaData = toHandler
+						.getObjectMetaData(migrationInfo.getObjectFrom());
 				// can we migrate only the attributes from the SciDB array
-				List<AttributeMetaData> scidbColumnsOrdered = scidbArrayMetaData
+				List<AttributeMetaData> scidbAttributesOrdered = scidbArrayMetaData
 						.getAttributesOrdered();
-				List<AttributeMetaData> postgresColumnsOrdered = tableMetaData
+				List<AttributeMetaData> toAttributesOrdered = objectToMetaData
 						.getAttributesOrdered();
-				if (postgresColumnsOrdered.size() == scidbColumnsOrdered.size()
+				if (toAttributesOrdered.size() == scidbAttributesOrdered.size()
 						&& MigrationUtils.areAttributesTheSame(
-								scidbArrayMetaData, tableMetaData)) {
-					migrationType = MigrationType.FLAT;
+								scidbArrayMetaData, objectToMetaData)) {
+					return MigrationType.FLAT;
 				} /*
 					 * check if the dimensions and the attributes in the array
 					 * match the columns in the table
@@ -368,15 +372,31 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 					 * verify the dimensions and attributes in the array with
 					 * the columns in the table
 					 */
-					MigrationUtils.areDimensionsAndAttributesSameAsColumns(
-							scidbArrayMetaData, tableMetaData);
-					migrationType = MigrationType.FULL;
+					List<AttributeMetaData> scidbDimensionsAttributes = new ArrayList<AttributeMetaData>();
+					scidbDimensionsAttributes
+							.addAll(scidbArrayMetaData.getDimensionsOrdered());
+					scidbDimensionsAttributes
+							.addAll(scidbArrayMetaData.getAttributesOrdered());
+
+					if (MigrationUtils.areAttributesTheSame(
+							new SciDBArrayDimensionsAndAttributesMetaData(
+									scidbArrayMetaData.getArrayName(),
+									scidbDimensionsAttributes),
+							objectToMetaData)) {
+						return MigrationType.FULL;
+					} else {
+						return MigrationType.FLAT;
+					}
 				}
 			} else {
-				migrationType = MigrationType.FULL;
+				return MigrationType.FULL;
 			}
 		} catch (SQLException ex) {
-			String message = "Problem with data extraction from PostgreSQL. "
+			String message = "Problem with connection to one of the databases. "
+					+ ex.getMessage();
+			throw new MigrationException(message);
+		} catch (Exception ex) {
+			String message = "Problem with checking meta data. "
 					+ ex.getMessage();
 			throw new MigrationException(message);
 		}
@@ -398,7 +418,8 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 		String fromArray = getObjectFrom();
 		String toTable = getObjectTo();
 		try {
-			establishMigrationType();
+			MigrationType migrationType = getMigrationType(migrationInfo,
+					new PostgreSQLHandler(migrationInfo.getConnectionTo()));
 			SciDBArrays arrays = null;
 			String format = null;
 			setCreateTableStatementIfGiven();
@@ -492,8 +513,9 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 		} catch (SQLException | UnsupportedTypeException | InterruptedException
 				| ExecutionException | IOException | NoTargetArrayException
 				| RunShellException exception) {
-			MigrationException migrationException = handleException(exception,
-					"Migration in binary format failed. ");
+			MigrationException migrationException = handleException(
+					migrationInfo, exception,
+					"Migration in binary format failed. ", null);
 			throw migrationException;
 		} finally {
 			cleanResources();
@@ -539,18 +561,22 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 	}
 
 	/** Handle the internal exception in the migrator */
-	private MigrationException handleException(Exception exception,
-			String message) {
+	private static MigrationException handleException(
+			MigrationInfo migrationInfo, Exception exception, String message,
+			Set<String> intermediateArrays) {
 		/* this log with stack trace is for UnsupportedTypeException */
 		log.error(StackTrace.getFullStackTrace(exception));
-		String msg = message + exception.getMessage() + " " + errMessage
-				+ " SciDB connection: " + getConnectionFrom().toSimpleString()
-				+ " from array: " + getObjectFrom() + " PostgreSQL Connection: "
-				+ getConnectionTo().toSimpleString() + " to table:"
-				+ getObjectTo();
+		String msg = message + exception.getMessage() + " " + message
+				+ " SciDB connection: "
+				+ migrationInfo.getConnectionFrom().toSimpleString()
+				+ " from array: " + migrationInfo.getObjectFrom()
+				+ " PostgreSQL Connection: "
+				+ migrationInfo.getConnectionTo().toSimpleString()
+				+ " to table:" + migrationInfo.getObjectTo();
 		log.error(msg);
 		try {
-			MigrationUtils.removeArrays(getConnectionFrom(), msg,
+			/** SciDB was the source database. */
+			MigrationUtils.removeArrays(migrationInfo.getConnectionFrom(), msg,
 					intermediateArrays);
 		} catch (MigrationException ex) {
 			return ex;
@@ -571,7 +597,10 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 			String fromArray = getObjectFrom();
 			String toTable = getObjectTo();
 
-			establishMigrationType();
+			PostgreSQLHandler postgresToHandler = new PostgreSQLHandler(
+					migrationInfo.getConnectionTo());
+			MigrationType migrationType = getMigrationType(migrationInfo,
+					postgresToHandler);
 			SciDBArrays arrays = null;
 
 			setCreateTableStatementIfGiven();

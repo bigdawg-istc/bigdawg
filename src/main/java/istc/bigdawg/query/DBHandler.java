@@ -30,4 +30,13 @@ public interface DBHandler {
 	 *             (probably a connection to the database failed).
 	 */
 	public ObjectMetaData getObjectMetaData(String name) throws Exception;
+
+	/**
+	 * 
+	 * @param name
+	 *            Name of the object (table/array etc.)
+	 * @return true if the object with the specified name exists, false
+	 *         otherwise.
+	 */
+	public boolean existsObject(String name) throws Exception;
 }

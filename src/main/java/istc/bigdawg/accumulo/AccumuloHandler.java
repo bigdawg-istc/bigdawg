@@ -96,6 +96,7 @@ public class AccumuloHandler implements DBHandler {
 		return BDConstants.Shim.ACCUMULOTEXT;
 	}
 
+	@SuppressWarnings("unused")
 	private String executeQueryAccumuloPure(String table)
 			throws TableNotFoundException, AccumuloException,
 			AccumuloSecurityException, IOException, AccumuloBigDawgException {
@@ -157,6 +158,17 @@ public class AccumuloHandler implements DBHandler {
 	 */
 	@Override
 	public ObjectMetaData getObjectMetaData(String name) throws Exception {
+		// TODO
+		throw new UnsupportedOperationException();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see istc.bigdawg.query.DBHandler#existsObject(java.lang.String)
+	 */
+	@Override
+	public boolean existsObject(String name) throws Exception {
 		// TODO
 		throw new UnsupportedOperationException();
 	}
