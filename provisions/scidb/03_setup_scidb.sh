@@ -10,4 +10,3 @@ echo "interact" >> setupscidb.exp
 chmod 750 setupscidb.exp
 ./setupscidb.exp
 yes | python /opt/scidb/14.12/bin/scidb.py -m scidb initall single_server
-python /opt/scidb/14.12/bin/scidb.py startall single_server

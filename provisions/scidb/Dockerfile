@@ -23,3 +23,7 @@ RUN service ssh start && \
     /etc/init.d/postgresql restart && \
     cd /home/scidb && \
     su scidb 03_setup_scidb.sh
+
+CMD service ssh start && \
+    /etc/init.d/postgresql restart && \
+    su scidb python /opt/scidb/14.12/bin/scidb.py startall single_server
