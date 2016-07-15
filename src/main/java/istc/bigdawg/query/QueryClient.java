@@ -87,50 +87,13 @@ public class QueryClient {
 //	@Consumes(MediaType.APPLICATION_JSON)
 //	@Produces(MediaType.APPLICATION_JSON)
 	public Response query(String istream) {
-//		// System.out.println(istream);
 		log.info("istream: " + istream.replaceAll("[\"']", "*"));
-//		QueryRequest st;
-//		try {
-//			st = ObjectMapperResource.INSTANCE.getObjectMapper().readValue(
-//					istream, QueryRequest.class);
-//			// System.out.println(mapper.writeValueAsString(st));
-//			Parser parser = new simpleParser();
-//			ASTNode parsed;
-//			parsed = parser.parseQueryIntoTree(st.getQuery());
-//
-//			// System.out.println(parsed.getShim());
-//			String queryString = st.getQuery();
-//
-//			for (DBHandler handler : registeredDbHandlers) {
-//				if (handler.getShim() == parsed.getShim()) {
-					//return handler.executeQuery(queryString);
-					try {
-						return Planner.processQuery(istream, false);
-					} catch (Exception e) {
-						e.printStackTrace();
-						return Response.status(412).entity(e.getMessage()).build();
-					}
-//					return handler.executeQuery(queryString.substring(6,queryString.length()-2));
-//				}
-//			}
-//			// no handler found
-//			QueryResponseTupleList resp = new QueryResponseTupleList(
-//					"ERROR: Unrecognized island"
-//							+ parsed.getIsland().toString(), 412, null, 1, 1,
-//					null, null, new Timestamp(0));
-//			String responseResult = ObjectMapperResource.INSTANCE
-//					.getObjectMapper().writeValueAsString(resp);
-//			return Response.status(412).entity(responseResult).build();
-//		} catch (IOException e) {
-//			e.printStackTrace();
-//			return Response.status(412).entity(e.getMessage()).build();
-//		} catch (NotSupportIslandException e) {
-//			e.printStackTrace();
-//			return Response
-//					.status(412)
-//					.entity("The island in the query is not supported. "
-//							+ e.getMessage()).build();
-//		}
+		try {
+			return Planner.processQuery(istream, false);
+		} catch (Exception e) {
+			e.printStackTrace();
+			return Response.status(412).entity(e.getMessage()).build();
+		}
 	}
 
 	public static void main(String[] args) {

@@ -110,18 +110,18 @@ public class CrossIslandQueryNodes {
 				
 				lastStop = o;
 				
-				if (o.getChildren().size() > 1) { // a set operator, to be dealt with differently TODO
-					throw new BigDawgException ("unimplemented: "+o.getClass().getSimpleName());
-				} else if (o.getChildren().get(0).isBlocking() ) {
-					processQueue.add(o.getChildren().get(0));
-					continue;
-				} else if ( o.getChildren().get(0) instanceof Join) {
-					processQueue.push(o.getChildren().get(0));
-//					currentLeavesSet.add(o.getChildren().get(0));
-					continue;
-				} else 
-					throw new BigDawgException ("shouldn't be here; "+o.getChildren().get(0).getClass().getSimpleName()
-												+"; isPruned: "+o.getChildren().get(0).isPruned());
+				for (Operator c : o.getChildren()) {
+					if (c.isBlocking() ) {
+						// add to the back
+						processQueue.add(o.getChildren().get(0));
+					} else if ( c instanceof Join) {
+						// push to the front
+						processQueue.push(c);
+					} else 
+						throw new BigDawgException ("shouldn't be here; "+o.getChildren().get(0).getClass().getSimpleName()
+													+"; isPruned: "+o.getChildren().get(0).isPruned());
+				}
+				continue;
 					
 			} else if (o instanceof Join) {
 				
@@ -139,7 +139,7 @@ public class CrossIslandQueryNodes {
 						} else if (c.isBlocking()) {
 							processQueue.add(c);
 							currentLeavesSet.add(o.getChildren().get(0));
-						} else //if (c instanceof Join)
+						} else // c is instanceof unpruned Join
 							tempStack.push(c);
 				}
 			} else 

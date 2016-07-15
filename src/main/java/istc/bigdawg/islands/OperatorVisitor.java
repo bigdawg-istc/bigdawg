@@ -31,8 +31,8 @@ public interface OperatorVisitor {
 	public String generateStatementString() throws Exception;
 	/**
 	 * This function is used for multi-engine intra-island queries; it gives two forms of outputs:
-	 * - return null or the first Join operator further down in the tree
-	 * - if the operator input is a Join, do not modify the StringBuilder; otherwise fill the StringBuilder with the string of query that treat the first join as a scan; 
+	 * - return null or the first Join/Merge/etc. migrating operator further down in the tree
+	 * - if the operator input is a Join/Merge/etc., do not modify the StringBuilder; otherwise fill the StringBuilder with the string of query that treat the first join as a scan; 
 	 * To illustrate the second output in case of a non-join operator input, 
 	 * if the operator original gives "SELECT count(*) FROM a JOIN b WHERE b.value < 3", 
 	 * this function will fill the StringBuilder with something like "SELECT count(*) FROM BIGDAWGSQLJOINTOKEN_1"

@@ -3,10 +3,10 @@ package istc.bigdawg.executor.plan;
 import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
 import org.jgrapht.graph.DefaultEdge;
 
-import java.util.Set;
-
 class ExecutionNodeSubgraph extends DirectedAcyclicGraph<ExecutionNode, DefaultEdge> {
-//    public Set<ExecutionNode> entryPoints;
+
+	private static final long serialVersionUID = -8472224818432901514L;
+	//    public Set<ExecutionNode> entryPoints;
     public ExecutionNode exitPoint;
 
     public ExecutionNodeSubgraph() {
