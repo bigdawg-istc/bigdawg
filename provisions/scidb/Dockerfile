@@ -26,4 +26,5 @@ RUN service ssh start && \
 
 CMD service ssh start && \
     /etc/init.d/postgresql restart && \
-    su scidb python /opt/scidb/14.12/bin/scidb.py startall single_server
+    su scidb && \
+    python /opt/scidb/14.12/bin/scidb.py startall single_server
