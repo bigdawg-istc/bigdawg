@@ -1,6 +1,6 @@
 echo '#!/usr/bin/expect' >> setupscidb.exp
 echo 'set timeout 20' >> setupscidb.exp
-echo "spawn \"scidb-prepare-db.sh\"" >> setupscidb.exp
+echo "spawn \"/opt/scidb/14.12/bin/scidb-prepare-db.sh\"" >> setupscidb.exp
 echo "expect \"PostgreSQL administrator login \(postgres by default\)\" {send \"\r\"}" >> setupscidb.exp
 echo "expect \"ident authentification to local server with sudo will be used\):\" {send \"\r\"}" >> setupscidb.exp
 echo "expect \"Enter system catalog owner login:\" {send \"scidb\r\"}" >> setupscidb.exp
