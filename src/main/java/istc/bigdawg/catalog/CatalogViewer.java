@@ -519,7 +519,7 @@ public class CatalogViewer {
 								+ "join catalog.databases d 	on o.physical_db = d.dbid "
 								+ "join catalog.engines e 		on d.engine_id = e.eid "
 								+ "where o.name = \'" + objName + "\' "
-								+  " and e.name ilike \'%"+dbname+"%\' "
+								+  " and e.connection_properties ilike \'%"+dbname+"%\' "
 								+ "order by d.dbid;");
 
 		while (rs.next()) {
