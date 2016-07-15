@@ -14,6 +14,11 @@ docker create --name postgres2 \
     --net=bigdawg \
     -p 5430:5432 \
     postgres2
+echo "(n/m) Creating \"scidb\" - scidb server. Exposed at scidb:1412"
+docker create --name scidb \
+    --net=bigdawg \
+    -p 1412:1412 \
+    scidb
 echo "(n/m) Creating \"maven\" - Java Maven container. Exposed at 0.0.0.0:8188"
 docker create --name maven \
     --net=bigdawg \
