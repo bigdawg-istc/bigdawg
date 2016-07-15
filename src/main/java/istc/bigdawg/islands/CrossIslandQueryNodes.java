@@ -70,6 +70,7 @@ public class CrossIslandQueryNodes {
 	public static void minimumMigrationMutation(CrossIslandQueryNode ciqn) throws Exception {
 		
 		Operator initialRemainder = ciqn.getInitialRoot();
+		Map<String, DataObjectAttribute> initialOutSchema = initialRemainder.getOutSchema();
 		Map<String, QueryContainerForCommonDatabase> containerStarters = ciqn.getQueryContainer();
 		Map<String, QueryContainerForCommonDatabase> resultContainers = new HashMap<>();
 		
@@ -184,6 +185,8 @@ public class CrossIslandQueryNodes {
 				lastStop.addChild(a);
 			} else {
 				initialRemainder = a;
+				initialRemainder.getOutSchema().clear();
+				initialRemainder.getOutSchema().putAll(initialOutSchema);
 			}
 			
 			// resetting after a Join head expansion run
