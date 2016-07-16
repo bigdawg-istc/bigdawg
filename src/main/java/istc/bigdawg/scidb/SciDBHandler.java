@@ -74,18 +74,21 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 			this.connection = getConnection(conInfo);
 		} catch (Exception e) {
 			log.debug(
-					"getConnection throws Exception from default SciDBHandler(); this is not supposed to happen. Check properties file.");
+					"getConnection throws Exception from default SciDBHandler(); "
+							+ "this is not supposed to happen. Check properties file.");
 			e.printStackTrace();
 		}
 	}
 
 	public SciDBHandler(int dbid) {
 		try {
-			this.conInfo = (SciDBConnectionInfo) CatalogViewer.getConnectionInfo(dbid);
+			this.conInfo = (SciDBConnectionInfo) CatalogViewer
+					.getConnectionInfo(dbid);
 			this.connection = getConnection(conInfo);
 		} catch (Exception e) {
 			log.debug(
-					"getConnection throws Exception from default SciDBHandler(); this is not supposed to happen. Check properties file.");
+					"getConnection throws Exception from default SciDBHandler(); "
+					+ "this is not supposed to happen. Check properties file.");
 			e.printStackTrace();
 		}
 	}
@@ -266,7 +269,8 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 			return true;
 		} catch (ArrayIndexOutOfBoundsException ex) {
 			log.error(
-					"SciDB idiosyncrasy: it returns the array out of bound exception when the array does not exist!");
+					"SciDB idiosyncrasy: it returns the java array out of bound "
+							+ "exception when the SciDB array does not exist!");
 			return false;
 		} catch (SQLException ex) {
 			String msg = " Problem with a connection or query to SciDB. "
@@ -274,7 +278,8 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 			if (ex.getCause()
 					.getCause() instanceof ArrayIndexOutOfBoundsException) {
 				log.error(
-						"SciDB idiosyncrasy: it returns the array out of bound exception when the array does not exist!");
+						"SciDB idiosyncrasy: it returns the java array out of bound "
+								+ "exception when the SciDB array does not exist!");
 				return false;
 			}
 			log.error(msg + StackTrace.getFullStackTrace(ex), ex);
@@ -625,7 +630,7 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 		}
 		return String.copyValueOf(scidbTypesPattern);
 	}
-	
+
 	/**
 	 * This is similar to dropArrayIfExists. The array is removed if it exists.
 	 * Otherwise, no exception is thrown.

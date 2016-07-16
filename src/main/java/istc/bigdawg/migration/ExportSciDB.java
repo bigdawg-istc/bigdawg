@@ -29,9 +29,8 @@ public class ExportSciDB implements Export {
 	 * Define the SciDB connection info.
 	 */
 	private ConnectionInfo connection;
-	
-	
-	private final SciDBArrays arrays;
+
+	private SciDBArrays arrays;
 
 	/**
 	 * The format in which data should be written to the file/pipe/output
@@ -55,6 +54,28 @@ public class ExportSciDB implements Export {
 	 * {@link #setMigrationInfo(MigrationInfo)}
 	 */
 	private MigrationInfo migrationInfo = null;
+
+	/**
+	 * Declare only the file format in which the data should be exported. The
+	 * remaining parameters should be added when the migration is prepared.
+	 * 
+	 * @param fileFormat
+	 *            File format in which the data should be exported.
+	 */
+	private ExportSciDB(FileFormat fileFormat) {
+		this.fileFormat = fileFormat;
+	}
+
+	/**
+	 * see: {@link #ExportSciDB(FileFormat)}
+	 * 
+	 * @param fileFormat
+	 * @return Instance of ExportSciDB which will export data in the specified
+	 *         fileFormat.
+	 */
+	public static ExportSciDB ofFormat(FileFormat fileFormat) {
+		return new ExportSciDB(fileFormat);
+	}
 
 	public ExportSciDB(ConnectionInfo connection, SciDBArrays arrays,
 			String scidbFilePath, FileFormat fileFormat, String binFullFormat) {
@@ -162,7 +183,6 @@ public class ExportSciDB implements Export {
 	@Override
 	public void setExportTo(String filePath) {
 		this.outputFile = filePath;
-
 	}
 
 	/*

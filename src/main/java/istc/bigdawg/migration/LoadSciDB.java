@@ -53,11 +53,11 @@ public class LoadSciDB implements Load {
 	private DBHandler fromHandler;
 
 	/**
-	 * Declare only the file format in which the data should be exported. The
+	 * Declare only the file format in which the data should be loaded. The
 	 * remaining parameters should be added when the migration is prepared.
 	 * 
 	 * @param fileFormat
-	 *            File format in which the data should be exported.
+	 *            File format in which the data should be loaded.
 	 */
 	private LoadSciDB(FileFormat fileFormat) {
 		this.fileFormat = fileFormat;
@@ -67,7 +67,7 @@ public class LoadSciDB implements Load {
 	 * see: {@link #ExportPostgres(FileFormat)}
 	 * 
 	 * @param fileFormat
-	 * @return Instance of ExportPostgres which will export data in the
+	 * @return Instance of LoadSciDB which will load the data in the specified
 	 *         fileFormat.
 	 */
 	public static LoadSciDB ofFormat(FileFormat fileFormat) {
@@ -310,5 +310,7 @@ public class LoadSciDB implements Load {
 	public void setHandlerFrom(DBHandler fromHandler) {
 		this.fromHandler = fromHandler;
 	}
+	
+	
 
 }

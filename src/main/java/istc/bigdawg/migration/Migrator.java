@@ -50,13 +50,19 @@ public class Migrator {
 	static {
 		registeredMigrators = new ArrayList<FromDatabaseToDatabase>();
 		registeredMigrators.add(new FromPostgresToPostgres());
-		
+
 		/* migrator from PostgreSQL to SciDB */
 		registeredMigrators.add(new FromDatabaseToDatabase(
 				ExportPostgres.ofFormat(FileFormat.CSV),
 				LoadSciDB.ofFormat(FileFormat.CSV)));
-		/* registeredMigrators.add(new FromPostgresToSciDB()); */
-		
+				/* registeredMigrators.add(new FromPostgresToSciDB()); */
+
+		/* migrator from SciDB to Postgres */
+		/*
+		 * registeredMigrators.add(new FromDatabaseToDatabase(
+		 * ExportSciDB.ofFormat(FileFormat.CSV),
+		 * LoadPostgres.ofFormat(FileFormat.CSV)));
+		 */
 		registeredMigrators.add(new FromSciDBToPostgres());
 	}
 
@@ -107,7 +113,8 @@ public class Migrator {
 	public static MigrationResult migrate(ConnectionInfo connectionFrom,
 			String objectFrom, ConnectionInfo connectionTo, String objectTo,
 			MigrationParams migrationParams) throws MigrationException {
-		logger.debug(String.format("Migrator - main facade. From: %s; To: %s;", objectFrom, objectTo ));
+		logger.debug(String.format("Migrator - main facade. From: %s; To: %s;",
+				objectFrom, objectTo));
 		for (FromDatabaseToDatabase migrator : registeredMigrators) {
 			MigrationResult result = migrator
 					.migrate(new MigrationInfo(connectionFrom, objectFrom,

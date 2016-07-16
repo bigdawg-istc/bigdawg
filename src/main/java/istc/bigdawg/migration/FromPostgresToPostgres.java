@@ -128,15 +128,8 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 		PostgreSQLHandler.executeStatement(connectionTo,
 				"create schema if not exists " + schemaTable.getSchemaName());
 
-		/*
-		 * Get the create table statement from the parameters to the migration.
-		 * (the create statement was passed directly by a user).
-		 */
-		migrationInfo.getMigrationParams()
-				.ifPresent(migrationParams -> migrationParams
-						.getCreateStatement().ifPresent(statement -> {
-							createTableStatement = statement;
-						}));
+		String createTableStatement = MigrationUtils
+				.getUserCreateStatement(migrationInfo);
 		/*
 		 * get the create table statement for the source table from the source
 		 * database
@@ -149,17 +142,22 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 					migrationInfo.getObjectTo());
 		}
 		PostgreSQLHandler.executeStatement(connectionTo, createTableStatement);
-		createTableStatement = null;
 		return schemaTable;
 	}
 
 	@Override
+	/**
+	 * Migrate data from a local instance of the database to a remote one.
+	 */
 	public MigrationResult executeMigrationLocalRemote()
 			throws MigrationException {
 		return this.executeMigration();
 	}
 
 	@Override
+	/**
+	 * Migrate data between local instances of PostgreSQL.
+	 */
 	public MigrationResult executeMigrationLocally() throws MigrationException {
 		return this.executeMigration();
 	}

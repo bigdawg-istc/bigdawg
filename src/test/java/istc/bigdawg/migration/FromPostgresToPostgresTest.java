@@ -41,28 +41,28 @@ public class FromPostgresToPostgresTest {
 			.getLogger(FromPostgresToPostgresTest.class);
 
 	/** Data migrator for the PostgreSQL <-> PostgreSQL migration */
-	private FromPostgresToPostgres migrator = new FromPostgresToPostgres();
+	protected FromPostgresToPostgres migrator = new FromPostgresToPostgres();
 
-	private String localIP = "205.208.122.55";
-	private String remoteIPmadison = "128.135.11.26";
-	private String remoteIPfrancisco = "128.135.11.131";
+	protected String localIP = "205.208.122.55";
+	protected String remoteIPmadison = "128.135.11.26";
+	protected String remoteIPfrancisco = "128.135.11.131";
 
-	private String localPassword = "test";
-	private String remotePassword = "ADAM12345testBorja2016";
+	protected String localPassword = "test";
+	protected String remotePassword = "ADAM12345testBorja2016";
 
 	/** The name of the source table in PostgreSQL. */
-	private String tableNameFrom = "test1_from_postgres_to_postgres_table_from";
+	protected String tableNameFrom = "test1_from_postgres_to_postgres_table_from";
 
 	/** The name of the target table in PostgreSQL. */
-	private String tableNameTo = "test1_from_postgres_to_postgres_table_to";
+	protected String tableNameTo = "test1_from_postgres_to_postgres_table_to";
 
 	/** Additional parameters for the migration process. */
-	private MigrationParams migrationParams = null;
+	protected MigrationParams migrationParams = null;
 
 	/** Dummy data for migration. */
-	private int intValue = 14;
-	private double doubleValue = 1.2;
-	private String stringValue = "adamdziedzic";
+	protected int intValue = 14;
+	protected double doubleValue = 1.2;
+	protected String stringValue = "adamdziedzic";
 
 	@Before
 	public void setUp() throws IOException {
@@ -75,7 +75,7 @@ public class FromPostgresToPostgresTest {
 	 *            The table name in the database.
 	 * @return SQL create table statement with the provided tableName.
 	 */
-	private String getCreateTableTest(String tableName) {
+	protected String getCreateTableTest(String tableName) {
 		String createTableSQL = "create table " + tableName
 				+ "(a int,b double precision,c varchar)";
 		logger.debug("create table SQL statement: " + createTableSQL);
@@ -88,14 +88,14 @@ public class FromPostgresToPostgresTest {
 	 *            The name of the table where the data should be inserted.
 	 * @return SQL insert into statement for the test table.
 	 */
-	private String getInsertInto(String tableName) {
+	protected String getInsertInto(String tableName) {
 		String insertIntoSQL = "insert into " + tableNameFrom + " values("
 				+ intValue + "," + doubleValue + ",'" + stringValue + "')";
 		logger.debug("insert into test table SQL statement: " + insertIntoSQL);
 		return insertIntoSQL;
 	}
 
-	private void migrateTest(PostgreSQLConnectionInfo conInfoFrom,
+	protected void migrateTest(PostgreSQLConnectionInfo conInfoFrom,
 			PostgreSQLConnectionInfo conInfoTo)
 					throws MigrationException, SQLException {
 		PostgreSQLHandler postgres1 = new PostgreSQLHandler(conInfoFrom);
@@ -163,120 +163,6 @@ public class FromPostgresToPostgresTest {
 				"localhost", "5430", "test", "pguser", localPassword);
 		migrationParams = new MigrationParams(getCreateTableTest(tableNameTo));
 		migrateTest(conInfoFrom, conInfoTo);
-	}
-
-	@Test
-	public void testFromPostgresToPostgresNetworkFromLocalToRemote()
-			throws Exception {
-		System.out.println("Migrating data from PostgreSQL to PostgreSQL");
-		PostgreSQLConnectionInfo conInfoFrom = new PostgreSQLConnectionInfo(
-				localIP, "5431", "test", "pguser", localPassword);
-		PostgreSQLConnectionInfo conInfoTo = new PostgreSQLConnectionInfo(
-				remoteIPmadison, "5431", "test", "pguser", remotePassword);
-		migrateTest(conInfoFrom, conInfoTo);
-	}
-
-	@Test
-	public void testFromPostgresToPostgresNetworkFromRemoteToLocal()
-			throws Exception {
-		System.out.println("Migrating data from PostgreSQL to PostgreSQL");
-		PostgreSQLConnectionInfo conInfoFrom = new PostgreSQLConnectionInfo(
-				remoteIPmadison, "5431", "test", "pguser", remotePassword);
-		PostgreSQLConnectionInfo conInfoTo = new PostgreSQLConnectionInfo(
-				localIP, "5431", "test", "pguser", localPassword);
-		migrateTest(conInfoFrom, conInfoTo);
-	}
-
-	@Test
-	public void testFromPostgresToPostgresNetworkTPCH() throws Exception {
-		System.out.println("Migrating data from PostgreSQL to PostgreSQL");
-		PostgreSQLConnectionInfo conInfoFrom = new PostgreSQLConnectionInfo(
-				remoteIPmadison, "5431", "tpch", "pguser", remotePassword);
-		PostgreSQLConnectionInfo conInfoTo = new PostgreSQLConnectionInfo(
-				remoteIPfrancisco, "5431", "tpch", "pguser", remotePassword);
-		String table = "lineitem";
-		MigrationResult result = migrator.migrate(conInfoFrom, table, conInfoTo,
-				table);
-		System.out.println(result);
-	}
-
-	@Test
-	public void testFromPostgresToPostgresNetworkTPCHRemote() throws Exception {
-		System.out.println("Migrating data from PostgreSQL to PostgreSQL");
-		PostgreSQLConnectionInfo conInfoFrom = new PostgreSQLConnectionInfo(
-				remoteIPmadison, "5431", "tpch", "pguser", remotePassword);
-		PostgreSQLConnectionInfo conInfoTo = new PostgreSQLConnectionInfo(
-				localIP, "5431", "tpch", "pguser", localPassword);
-		String table = "supplier";
-		MigrationResult result = migrator.migrate(conInfoFrom, table, conInfoTo,
-				table);
-		System.out.println(result);
-	}
-
-	/**
-	 * 
-	 * @param conFrom
-	 * @param tableFrom
-	 * @param conTo
-	 * @param tableTo
-	 * @return
-	 */
-	private Callable<MigrationResult> getMigrationTask(ConnectionInfo conFrom,
-			String tableFrom, ConnectionInfo conTo, String tableTo) {
-		Callable<MigrationResult> task = () -> {
-			MigrationResult result = migrator.migrate(conFrom, tableFrom, conTo,
-					tableTo);
-			return result;
-		};
-		return task;
-	}
-
-	@Test
-	public void testFromPostgresToPostgresNetworkLocking() throws Exception {
-		System.out.println("Migrating data from PostgreSQL to PostgreSQL");
-		String secondRemoteIP = "128.135.11.131";
-		PostgreSQLConnectionInfo conInfoFrom = new PostgreSQLConnectionInfo(
-				remoteIPmadison, "5431", "tpch", "pguser", remotePassword);
-		PostgreSQLConnectionInfo conInfoTo = new PostgreSQLConnectionInfo(
-				secondRemoteIP, "5431", "tpch", "pguser", remotePassword);
-		String table = "supplier";
-		ExecutorService executor = Executors.newFixedThreadPool(2);
-		Future<MigrationResult> migration1 = executor
-				.submit(getMigrationTask(conInfoFrom, table, conInfoTo, table));
-		MigrationResult result1 = migration1.get();
-		/* reverse the migration direction */
-		Future<MigrationResult> migration2 = executor
-				.submit(getMigrationTask(conInfoTo, table, conInfoFrom, table));
-		MigrationResult result2 = migration2.get();
-
-		System.out.println("result of the first migration: " + result1);
-		System.out.println("result of the second migration: " + result2);
-	}
-
-	@Test
-	public void testFromPostgresToPostgresNetworkLocking3Machines()
-			throws Exception {
-		System.out.println("Migrating data from PostgreSQL to PostgreSQL");
-		String secondRemoteIP = "128.135.11.131";
-		PostgreSQLConnectionInfo conInfoFrom1 = new PostgreSQLConnectionInfo(
-				remoteIPmadison, "5431", "tpch", "pguser", remotePassword);
-		PostgreSQLConnectionInfo conInfoFrom2 = new PostgreSQLConnectionInfo(
-				localIP, "5431", "tpch", "pguser", "test");
-		PostgreSQLConnectionInfo conInfoTo = new PostgreSQLConnectionInfo(
-				secondRemoteIP, "5431", "tpch", "pguser", remotePassword);
-		String table1 = "lineitem";
-		String table2 = "part";
-		ExecutorService executor = Executors.newFixedThreadPool(2);
-		Future<MigrationResult> migration1 = executor.submit(
-				getMigrationTask(conInfoFrom1, table1, conInfoTo, table1));
-		TimeUnit.SECONDS.sleep(1);
-		Future<MigrationResult> migration2 = executor.submit(
-				getMigrationTask(conInfoFrom2, table2, conInfoTo, table2));
-		MigrationResult result1 = migration1.get();
-		MigrationResult result2 = migration2.get();
-
-		System.out.println("result of the first migration: " + result1);
-		System.out.println("result of the second migration: " + result2);
 	}
 
 }

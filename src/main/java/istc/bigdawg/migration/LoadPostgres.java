@@ -60,6 +60,31 @@ public class LoadPostgres implements Load {
 	/** Handler to the database from which the data is exported. */
 	private DBHandler fromHandler;
 
+	/** File format in which data should be loaded to PostgreSQL. */
+	private FileFormat fileFormat;
+
+	/**
+	 * Declare only the file format in which the data should be loaded. The
+	 * remaining parameters should be added when the migration is prepared.
+	 * 
+	 * @param fileFormat
+	 *            File format in which the data should be exported.
+	 */
+	private LoadPostgres(FileFormat fileFormat) {
+		this.fileFormat = fileFormat;
+	}
+
+	/**
+	 * see: {@link #ExportPostgres(FileFormat)}
+	 * 
+	 * @param fileFormat
+	 * @return Instance of LoadPostgres which will export data in the specified
+	 *         fileFormat.
+	 */
+	public static LoadPostgres ofFormat(FileFormat fileFormat) {
+		return new LoadPostgres(fileFormat);
+	}
+
 	/**
 	 * Check: {@link #LoadPostgres(Connection, String, InputStream)}
 	 * 

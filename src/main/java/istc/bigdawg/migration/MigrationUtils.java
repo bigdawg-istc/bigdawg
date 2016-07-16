@@ -36,10 +36,10 @@ public class MigrationUtils {
 	private static Logger log = Logger.getLogger(MigrationUtils.class);
 
 	/*
-	 * the statement to be used in a database to create an object (table/array,
+	 * The statement to be used in a database to create an object (table/array,
 	 * this is a temporal variable for consumer from a lambda function
 	 */
-	private static String createStatement;
+	private static String createStatement = null;
 
 	/**
 	 * Check if this is a flat array in SciDB.
@@ -305,7 +305,8 @@ public class MigrationUtils {
 	 *            Information about data migration.
 	 * @return String representing the create statement.
 	 */
-	public static String getUserCreateStatement(MigrationInfo migrationInfo) {
+	public synchronized static String getUserCreateStatement(
+			MigrationInfo migrationInfo) {
 		createStatement = null;
 		migrationInfo.getMigrationParams().ifPresent(
 				params -> params.getCreateStatement().ifPresent(statement -> {

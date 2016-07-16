@@ -30,7 +30,6 @@ import istc.bigdawg.migration.datatypes.FromSciDBToSQLTypes;
 import istc.bigdawg.monitoring.Monitor;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
-import istc.bigdawg.postgresql.PostgreSQLSchemaTableName;
 import istc.bigdawg.query.DBHandler;
 import istc.bigdawg.scidb.SciDBArrayDimensionsAndAttributesMetaData;
 import istc.bigdawg.scidb.SciDBArrayMetaData;
@@ -233,31 +232,6 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 	}
 
 	/**
-	 * Create a new schema and table in the connectionTo if they not exist. The
-	 * table definition has to be inferred from the array in SciDB.
-	 * 
-	 * @param connectionFrom
-	 *            from which database we fetch the data
-	 * @param fromTable
-	 *            from which table we fetch the data
-	 * @param connectionTo
-	 *            to which database we connect to
-	 * @param toTable
-	 *            to which table we want to load the data
-	 * @throws SQLException
-	 * @throws UnsupportedTypeException
-	 * @throws NoTargetArrayException
-	 */
-	private static void createTargetTableSchema(Connection postgresCon,
-			String toTable, String createTableStatement) throws SQLException {
-		PostgreSQLSchemaTableName schemaTable = new PostgreSQLSchemaTableName(
-				toTable);
-		PostgreSQLHandler.executeStatement(postgresCon,
-				"create schema if not exists " + schemaTable.getSchemaName());
-		PostgreSQLHandler.executeStatement(postgresCon, createTableStatement);
-	}
-
-	/**
 	 * Example of the binary format for SciDB: (string, int64, int64 null)
 	 * 
 	 * @return the string representing a binary format for SciDB
@@ -295,7 +269,7 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 
 	/**
 	 * Decide the migration type (transfer (only the attributes) or (attributes
-	 * and dimensions)).
+	 * and dimensions)) for SciDB.
 	 * 
 	 * @throws MigrationException
 	 *             {@link MigrationException}
@@ -389,7 +363,8 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 					new PostgreSQLHandler(migrationInfo.getConnectionTo()));
 			SciDBArrays arrays = null;
 			String format = null;
-			setCreateTableStatementIfGiven();
+			createTableStatement = MigrationUtils
+					.getUserCreateStatement(migrationInfo);
 			List<AttributeMetaData> attributes = scidbArrayMetaData
 					.getAttributesOrdered();
 			if (migrationType == MigrationType.FLAT) {
@@ -447,8 +422,10 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 			connectionPostgres = PostgreSQLHandler
 					.getConnection(getConnectionTo());
 			connectionPostgres.setAutoCommit(false);
-			createTargetTableSchema(connectionPostgres,
+			PostgreSQLHandler.createTargetTableSchema(connectionPostgres,
 					migrationInfo.getObjectTo(), createTableStatement);
+			/* The statement was used. */
+			createTableStatement = null;
 			String copyToCommand = PostgreSQLHandler.getLoadBinCommand(toTable);
 			LoadPostgres loadExecutor = new LoadPostgres(connectionPostgres,
 					copyToCommand, postgresPipe);
@@ -580,7 +557,8 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 					postgresToHandler);
 			SciDBArrays arrays = null;
 
-			setCreateTableStatementIfGiven();
+			String createTableStatement = MigrationUtils
+					.getUserCreateStatement(migrationInfo);
 			List<AttributeMetaData> attributes = scidbArrayMetaData
 					.getAttributesOrdered();
 			if (migrationType == MigrationType.FLAT) {
@@ -610,8 +588,8 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 			connectionPostgres = PostgreSQLHandler
 					.getConnection(getConnectionTo());
 			connectionPostgres.setAutoCommit(false);
-			createTargetTableSchema(connectionPostgres, toTable,
-					createTableStatement);
+			PostgreSQLHandler.createTargetTableSchema(connectionPostgres,
+					toTable, createTableStatement);
 
 			List<Callable<Object>> tasks = new ArrayList<>();
 			tasks.add(new ExportSciDB(getConnectionFrom(), arrays, scidbPipe,
@@ -642,25 +620,6 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 			throw new MigrationException(errMessage + " " + ex.getMessage());
 		} finally {
 			cleanResources();
-		}
-	}
-
-	/**
-	 * Set the create table statement if it was passed as a parameter from a
-	 * user.
-	 */
-	private void setCreateTableStatementIfGiven() {
-		/*
-		 * Get the create table statement from the parameters to the migration.
-		 * (the create statement was passed directly by a user).
-		 */
-		migrationInfo.getMigrationParams()
-				.ifPresent(migrationParams -> migrationParams
-						.getCreateStatement().ifPresent(statement -> {
-							createTableStatement = statement;
-						}));
-		if (createTableStatement != null) {
-			log.debug("Create table statement: " + createTableStatement);
 		}
 	}
 
