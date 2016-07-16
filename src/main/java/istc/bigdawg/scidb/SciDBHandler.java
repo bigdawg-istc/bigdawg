@@ -141,7 +141,7 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 	}
 
 	/**
-	 * Create a new SciDB hander for a given connection. You have to close the
+	 * Create a new SciDB handler for a given connection. You have to close the
 	 * handler at the end to release the resources.
 	 * 
 	 * @param conInfo

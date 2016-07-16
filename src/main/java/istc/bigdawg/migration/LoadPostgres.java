@@ -10,12 +10,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.concurrent.Callable;
 
 import org.apache.log4j.Logger;
 import org.postgresql.copy.CopyManager;
 import org.postgresql.core.BaseConnection;
 
+import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
+import istc.bigdawg.query.ConnectionInfo;
+import istc.bigdawg.query.DBHandler;
 import istc.bigdawg.utils.StackTrace;
 
 /**
@@ -25,13 +27,11 @@ import istc.bigdawg.utils.StackTrace;
  * a file (create an instance of the LoadPostgres class providing the name of
  * the input file) or from an InputStream.
  * 
- * This class is accessible only package-wise.
- * 
  * @author Adam Dziedzic
  * 
  *         Jan 14, 2016 6:07:05 PM
  */
-public class LoadPostgres implements Callable<Object> {
+public class LoadPostgres implements Load {
 
 	/** For internal logging in the class. */
 	private static Logger log = Logger.getLogger(LoadPostgres.class);
@@ -48,8 +48,17 @@ public class LoadPostgres implements Callable<Object> {
 	/** The name of the input file from where the data should be loaded. */
 	private String inputFile;
 
-	/** Connection to a PostgreSQL instance. */
+	/** Connection (physical not info) to an instance of PostgreSQL. */
 	private Connection connection;
+
+	/**
+	 * Information about migration: connection information from/to database,
+	 * object/table/array to export/load data from/to.
+	 */
+	private MigrationInfo migrationInfo;
+
+	/** Handler to the database from which the data is exported. */
+	private DBHandler fromHandler;
 
 	/**
 	 * Check: {@link #LoadPostgres(Connection, String, InputStream)}
@@ -112,6 +121,8 @@ public class LoadPostgres implements Callable<Object> {
 	 * @throws Exception
 	 */
 	public Long call() throws Exception {
+		log.debug("Start loading data to PostgreSQL "
+				+ this.getClass().getCanonicalName() + ". ");
 		if (input == null) {
 			try {
 				input = new BufferedInputStream(new FileInputStream(inputFile));
@@ -136,5 +147,53 @@ public class LoadPostgres implements Callable<Object> {
 			throw e;
 		}
 		return countLoadedRows;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * istc.bigdawg.migration.ConnectorChecker#isSupportedConnector(istc.bigdawg
+	 * .query.ConnectionInfo)
+	 */
+	@Override
+	public boolean isSupportedConnector(ConnectionInfo connection) {
+		if (connection instanceof PostgreSQLConnectionInfo) {
+			return true;
+		}
+		return false;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * istc.bigdawg.migration.SetMigrationInfo#setMigrationInfo(istc.bigdawg.
+	 * migration.MigrationInfo)
+	 */
+	@Override
+	public void setMigrationInfo(MigrationInfo migrationInfo) {
+		this.migrationInfo = migrationInfo;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see istc.bigdawg.migration.Load#setLoadFrom(java.lang.String)
+	 */
+	@Override
+	public void setLoadFrom(String filePath) {
+		this.inputFile = filePath;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * istc.bigdawg.migration.Load#setHandlerFrom(istc.bigdawg.query.DBHandler)
+	 */
+	@Override
+	public void setHandlerFrom(DBHandler fromHandler) {
+		this.fromHandler = fromHandler;
 	}
 }

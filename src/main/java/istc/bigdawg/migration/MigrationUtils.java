@@ -19,9 +19,7 @@ import istc.bigdawg.exceptions.NoTargetArrayException;
 import istc.bigdawg.exceptions.UnsupportedTypeException;
 import istc.bigdawg.executor.ExecutorEngine.LocalQueryExecutionException;
 import istc.bigdawg.migration.datatypes.FromSQLTypesToSciDB;
-import istc.bigdawg.postgresql.PostgreSQLTableMetaData;
 import istc.bigdawg.query.ConnectionInfo;
-import istc.bigdawg.scidb.SciDBArrayDimensionsAndAttributesMetaData;
 import istc.bigdawg.scidb.SciDBArrayMetaData;
 import istc.bigdawg.scidb.SciDBHandler;
 import istc.bigdawg.utils.SessionIdentifierGenerator;
@@ -63,6 +61,9 @@ public class MigrationUtils {
 				.getAttributesOrdered();
 		List<AttributeMetaData> toAttributesOrdered = scidbArrayMetaData
 				.getAttributesOrdered();
+		if (scidbArrayMetaData.getDimensionsOrdered().size() > 1) {
+			return false;
+		}
 		if (fromAttributesOrdered.size() != toAttributesOrdered.size()) {
 			return false;
 		}
@@ -101,6 +102,29 @@ public class MigrationUtils {
 				.getAttributesOrdered();
 		List<AttributeMetaData> attrOrderedTo = metaDataTo
 				.getAttributesOrdered();
+		return areAttributesTheSame(metaDataFrom.getName(), attrOrderedFrom,
+				metaDataTo.getName(), attrOrderedTo);
+	}
+
+	/**
+	 * Check if the given list of attributes/dimensions are the same in respect
+	 * of their names.
+	 * 
+	 * @param objectFrom
+	 *            table/array from which we export the data
+	 * @param attrOrderedFrom
+	 *            the attributes that belong to the objectFrom
+	 * @param objectTo
+	 *            table/array to which we load the data
+	 * @param attrOrderedTo
+	 *            the attributes that belong to the object to which we load the
+	 *            data
+	 * @return true if the attributes are the same with respect to their names
+	 * @throws MigrationException
+	 */
+	private static boolean areAttributesTheSame(String objectFrom,
+			List<AttributeMetaData> attrOrderedFrom, String objectTo,
+			List<AttributeMetaData> attrOrderedTo) throws MigrationException {
 		if (attrOrderedFrom.size() == attrOrderedTo.size()) {
 			/*
 			 * check if the flat array attributes are at the same order as
@@ -111,10 +135,9 @@ public class MigrationUtils {
 						.equals(attrOrderedTo.get(i).getName())) {
 					String msg = "The attribute "
 							+ attrOrderedTo.get(i).getName() + " from: "
-							+ metaDataTo.getName()
+							+ objectTo
 							+ " is not matched in the same ORDER with "
-							+ "attribute in the object: "
-							+ metaDataFrom.getName()
+							+ "attribute in the object: " + objectFrom
 							+ " (in the first object, the position " + i
 							+ " is for the attribute "
 							+ attrOrderedTo.get(i).getName()
@@ -131,30 +154,20 @@ public class MigrationUtils {
 	}
 
 	/**
-	 * Check if dimensions and attributes in the array in SciDB are the same as
-	 * columns in PostgreSQL.
-	 * 
-	 * @param scidbArrayMetaData
-	 * @param postgresqlTableMetaData
-	 * @return true if dimensions and attributes in the array match exactly the
-	 *         columns in the table
-	 * @throws MigrationException
+	 * Check if dimensions and attributes are the same in both objects.
 	 */
-	public static boolean areDimensionsAndAttributesSameAsColumns(
-			SciDBArrayMetaData scidbArrayMetaData,
-			PostgreSQLTableMetaData postgresqlTableMetaData)
+	public static boolean areDimensionsAndAttributesTheSame(
+			ObjectMetaData metaDataFrom, ObjectMetaData metaDataTo)
 					throws MigrationException {
-		List<AttributeMetaData> scidbDimensionsAttributes = new ArrayList<AttributeMetaData>();
-		scidbDimensionsAttributes
-				.addAll(scidbArrayMetaData.getDimensionsOrdered());
-		scidbDimensionsAttributes
-				.addAll(scidbArrayMetaData.getAttributesOrdered());
-
-		return areAttributesTheSame(
-				new SciDBArrayDimensionsAndAttributesMetaData(
-						scidbArrayMetaData.getArrayName(),
-						scidbDimensionsAttributes),
-				postgresqlTableMetaData);
+		List<AttributeMetaData> fromDimensionsAttributes = new ArrayList<AttributeMetaData>();
+		fromDimensionsAttributes.addAll(metaDataFrom.getDimensionsOrdered());
+		fromDimensionsAttributes.addAll(metaDataFrom.getAttributesOrdered());
+		List<AttributeMetaData> toDimensionsAttributes = new ArrayList<AttributeMetaData>();
+		toDimensionsAttributes.addAll(metaDataTo.getDimensionsOrdered());
+		toDimensionsAttributes.addAll(metaDataTo.getAttributesOrdered());
+		return areAttributesTheSame(metaDataFrom.getName(),
+				fromDimensionsAttributes, metaDataTo.getName(),
+				toDimensionsAttributes);
 	}
 
 	/**

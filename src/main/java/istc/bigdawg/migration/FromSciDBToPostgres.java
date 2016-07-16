@@ -212,63 +212,19 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 	 * @throws SQLException
 	 * @throws UnsupportedTypeException
 	 */
-	private String getCreatePostgreSQLTableStatementFromSciDBAttributes()
-			throws NoTargetArrayException, SQLException,
-			UnsupportedTypeException {
-		List<AttributeMetaData> attributes = scidbArrayMetaData
-				.getAttributesOrdered();
-		List<AttributeMetaData> columns = new ArrayList<>();
-		columns.addAll(attributes);
+	private String getCreatePostgreSQLTableStatement(
+			List<AttributeMetaData> attributes) throws NoTargetArrayException,
+					SQLException, UnsupportedTypeException {
 		StringBuilder createTableStringBuf = new StringBuilder();
 		String toTable = getObjectTo();
 		createTableStringBuf
 				.append("create table if not exists " + toTable + " (");
-		for (AttributeMetaData column : columns) {
-			String colName = column.getName();
-			String scidbType = column.getDataType();
-			String postgresType = FromSciDBToSQLTypes
+		for (AttributeMetaData attribute : attributes) {
+			String attrName = attribute.getName();
+			String scidbType = attribute.getDataType();
+			String sqlType = FromSciDBToSQLTypes
 					.getSQLTypeFromSciDBType(scidbType);
-			createTableStringBuf.append(colName + " " + postgresType + ",");
-		}
-		createTableStringBuf.deleteCharAt(createTableStringBuf.length() - 1);
-		createTableStringBuf.append(")");
-		log.debug("create table command: " + createTableStringBuf.toString());
-		return createTableStringBuf.toString();
-	}
-
-	/**
-	 * Get a string representing the "create table" command in PostgreSQL. The
-	 * create table command is created based on an existing array in SciDB from
-	 * its dimensions and attributes.
-	 * 
-	 * @return the create table command
-	 * 
-	 * @throws SQLException
-	 * @throws NoTargetArrayException
-	 * @throws UnsupportedTypeException
-	 *             the given type is not supported
-	 * @throws MigrationException
-	 */
-	private String getCreatePostgreSQLTableStatementFromSciDBAttributesAndDimensions()
-			throws NoTargetArrayException, SQLException,
-			UnsupportedTypeException {
-		List<AttributeMetaData> dimensions = scidbArrayMetaData
-				.getDimensionsOrdered();
-		List<AttributeMetaData> attributes = scidbArrayMetaData
-				.getAttributesOrdered();
-		List<AttributeMetaData> columns = new ArrayList<>();
-		columns.addAll(dimensions);
-		columns.addAll(attributes);
-		StringBuilder createTableStringBuf = new StringBuilder();
-		String toTable = getObjectTo();
-		createTableStringBuf
-				.append("create table if not exists " + toTable + " (");
-		for (AttributeMetaData column : columns) {
-			String colName = column.getName();
-			String scidbType = column.getDataType();
-			String postgresType = FromSciDBToSQLTypes
-					.getSQLTypeFromSciDBType(scidbType);
-			createTableStringBuf.append(colName + " " + postgresType + ",");
+			createTableStringBuf.append(attrName + " " + sqlType + ",");
 		}
 		createTableStringBuf.deleteCharAt(createTableStringBuf.length() - 1);
 		createTableStringBuf.append(")");
@@ -292,9 +248,8 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 	 * @throws UnsupportedTypeException
 	 * @throws NoTargetArrayException
 	 */
-	private void createTargetTableSchema(Connection postgresCon,
-			String createTableStatement) throws SQLException {
-		String toTable = getObjectTo();
+	private static void createTargetTableSchema(Connection postgresCon,
+			String toTable, String createTableStatement) throws SQLException {
 		PostgreSQLSchemaTableName schemaTable = new PostgreSQLSchemaTableName(
 				toTable);
 		PostgreSQLHandler.executeStatement(postgresCon,
@@ -310,9 +265,11 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 	 * @throws SQLException
 	 * @throws MigrationException
 	 */
-	private String getSciDBBinFormat(String array)
-			throws NoTargetArrayException, SQLException, MigrationException {
-		SciDBHandler handler = new SciDBHandler(getConnectionFrom());
+	private static String getSciDBBinFormat(MigrationInfo migrationInfo,
+			String array) throws NoTargetArrayException, SQLException,
+					MigrationException {
+		SciDBHandler handler = new SciDBHandler(
+				migrationInfo.getConnectionFrom());
 		SciDBArrayMetaData arrayMetaData;
 		try {
 			arrayMetaData = handler.getObjectMetaData(array);
@@ -433,29 +390,38 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 			SciDBArrays arrays = null;
 			String format = null;
 			setCreateTableStatementIfGiven();
-			if (migrationType == MigrationType.FULL) {
-				String newFlatIntermediateArray = fromArray
-						+ "__bigdawg__flat__"
-						+ SessionIdentifierGenerator.INSTANCE
-								.nextRandom26CharString();
-				createFlatArray(newFlatIntermediateArray);
-				intermediateArrays.add(newFlatIntermediateArray);
-				arrays = new SciDBArrays(
-						new SciDBArray(newFlatIntermediateArray, true, true),
-						new SciDBArray(fromArray, false, false));
-				format = getSciDBBinFormat(newFlatIntermediateArray);
-				if (createTableStatement == null) {
-					createTableStatement = getCreatePostgreSQLTableStatementFromSciDBAttributesAndDimensions();
-				}
-			} else {
+			List<AttributeMetaData> attributes = scidbArrayMetaData
+					.getAttributesOrdered();
+			if (migrationType == MigrationType.FLAT) {
 				/*
 				 * this is a flat array so we have to export only the attributes
 				 */
 				arrays = new SciDBArrays(
 						new SciDBArray(fromArray, false, false), null);
-				format = getSciDBBinFormat(fromArray);
+				format = getSciDBBinFormat(migrationInfo, fromArray);
 				if (createTableStatement == null) {
-					createTableStatement = getCreatePostgreSQLTableStatementFromSciDBAttributes();
+					createTableStatement = getCreatePostgreSQLTableStatement(
+							attributes);
+				}
+			} else {
+				String newFlatIntermediateArray = fromArray
+						+ "__bigdawg__flat__"
+						+ SessionIdentifierGenerator.INSTANCE
+								.nextRandom26CharString();
+				createFlatArrayFromMultiDimArray(migrationInfo,
+						newFlatIntermediateArray);
+				intermediateArrays.add(newFlatIntermediateArray);
+				arrays = new SciDBArrays(
+						new SciDBArray(newFlatIntermediateArray, true, true),
+						new SciDBArray(fromArray, false, false));
+				format = getSciDBBinFormat(migrationInfo,
+						newFlatIntermediateArray);
+				List<AttributeMetaData> dimensionsAttributes = scidbArrayMetaData
+						.getDimensionsOrdered();
+				dimensionsAttributes.addAll(attributes);
+				if (createTableStatement == null) {
+					createTableStatement = getCreatePostgreSQLTableStatement(
+							dimensionsAttributes);
 				}
 			}
 
@@ -481,7 +447,8 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 			connectionPostgres = PostgreSQLHandler
 					.getConnection(getConnectionTo());
 			connectionPostgres.setAutoCommit(false);
-			createTargetTableSchema(connectionPostgres, createTableStatement);
+			createTargetTableSchema(connectionPostgres,
+					migrationInfo.getObjectTo(), createTableStatement);
 			String copyToCommand = PostgreSQLHandler.getLoadBinCommand(toTable);
 			LoadPostgres loadExecutor = new LoadPostgres(connectionPostgres,
 					copyToCommand, postgresPipe);
@@ -570,7 +537,7 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 		}
 	}
 
-	/** Handle the internal exception in the migrator */
+	/** Handle the internal exception in the migrator. */
 	private static MigrationException handleException(
 			MigrationInfo migrationInfo, Exception exception, String message,
 			Set<String> intermediateArrays) {
@@ -604,8 +571,8 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 		try {
 			long startTimeMigration = System.currentTimeMillis();
 
-			String fromArray = getObjectFrom();
-			String toTable = getObjectTo();
+			String fromArray = migrationInfo.getObjectFrom();
+			String toTable = migrationInfo.getObjectTo();
 
 			PostgreSQLHandler postgresToHandler = new PostgreSQLHandler(
 					migrationInfo.getConnectionTo());
@@ -614,17 +581,24 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 			SciDBArrays arrays = null;
 
 			setCreateTableStatementIfGiven();
+			List<AttributeMetaData> attributes = scidbArrayMetaData
+					.getAttributesOrdered();
 			if (migrationType == MigrationType.FLAT) {
 				arrays = new SciDBArrays(
 						new SciDBArray(fromArray, false, false), null);
 				if (createTableStatement == null) {
-					createTableStatement = getCreatePostgreSQLTableStatementFromSciDBAttributes();
+					createTableStatement = getCreatePostgreSQLTableStatement(
+							attributes);
 				}
 			} else { /* multidimensional array - MigrationType.FULL */
 				arrays = new SciDBArrays(null,
 						new SciDBArray(fromArray, false, false));
+				List<AttributeMetaData> dimensionsAttributes = scidbArrayMetaData
+						.getDimensionsOrdered();
+				dimensionsAttributes.addAll(attributes);
 				if (createTableStatement == null) {
-					createTableStatement = getCreatePostgreSQLTableStatementFromSciDBAttributesAndDimensions();
+					createTableStatement = getCreatePostgreSQLTableStatement(
+							dimensionsAttributes);
 				}
 			}
 			executor = Executors.newFixedThreadPool(2);
@@ -636,7 +610,8 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 			connectionPostgres = PostgreSQLHandler
 					.getConnection(getConnectionTo());
 			connectionPostgres.setAutoCommit(false);
-			createTargetTableSchema(connectionPostgres, createTableStatement);
+			createTargetTableSchema(connectionPostgres, toTable,
+					createTableStatement);
 
 			List<Callable<Object>> tasks = new ArrayList<>();
 			tasks.add(new ExportSciDB(getConnectionFrom(), arrays, scidbPipe,
@@ -693,15 +668,20 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 	 * Create a flat array in SciDB from the meta info about the
 	 * multidimensional array.
 	 * 
+	 * We migrate data from SciDB so we use the connection from.
+	 * 
 	 * @throws SQLException
 	 * @throws UnsupportedTypeException
 	 * @throws MigrationException
 	 */
-	private void createFlatArray(String flatArrayName)
-			throws SQLException, UnsupportedTypeException, MigrationException {
+	private static void createFlatArrayFromMultiDimArray(
+			MigrationInfo migrationInfo, String flatArrayName)
+					throws SQLException, UnsupportedTypeException,
+					MigrationException {
 		StringBuilder createArrayStringBuf = new StringBuilder();
 		createArrayStringBuf.append("create array " + flatArrayName + " <");
 		List<AttributeMetaData> scidbColumnsOrdered = new ArrayList<AttributeMetaData>();
+		SciDBArrayMetaData scidbArrayMetaData = getArrayMetaData(migrationInfo);
 		scidbColumnsOrdered.addAll(scidbArrayMetaData.getDimensionsOrdered());
 		scidbColumnsOrdered.addAll(scidbArrayMetaData.getAttributesOrdered());
 		for (AttributeMetaData column : scidbColumnsOrdered) {
@@ -721,7 +701,8 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 		/* this is by default 1 mln cells in a chunk */
 		createArrayStringBuf
 				.append("> [_flat_dimension_=0:*," + Long.MAX_VALUE + ",0]");
-		SciDBHandler handler = new SciDBHandler(getConnectionFrom());
+		SciDBHandler handler = new SciDBHandler(
+				migrationInfo.getConnectionFrom());
 		handler.executeStatement(createArrayStringBuf.toString());
 		handler.commit();
 		handler.close();
