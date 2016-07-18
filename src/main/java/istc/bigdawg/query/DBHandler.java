@@ -1,5 +1,8 @@
 package istc.bigdawg.query;
 
+import java.sql.Connection;
+import java.sql.SQLException;
+
 import javax.ws.rs.core.Response;
 
 import istc.bigdawg.BDConstants.Shim;
@@ -32,6 +35,13 @@ public interface DBHandler {
 	ObjectMetaData getObjectMetaData(String name) throws Exception;
 
 	/**
+	 * Get a JDBC connection to a database.
+	 * 
+	 * @return connection to a database
+	 */
+	public Connection getConnection() throws SQLException;
+
+	/**
 	 * 
 	 * @param name
 	 *            Name of the object (table/array etc.)
@@ -62,7 +72,7 @@ public interface DBHandler {
 	default public boolean isCsvLoadHeader() {
 		return false;
 	}
-	
+
 	/**
 	 * 
 	 * @return default delimiter for CSV export

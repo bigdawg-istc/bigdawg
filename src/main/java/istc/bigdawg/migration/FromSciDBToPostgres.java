@@ -164,11 +164,10 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 	 * @throws SQLException
 	 * @throws UnsupportedTypeException
 	 */
-	private String getCreatePostgreSQLTableStatement(
+	private static String getCreatePostgreSQLTableStatement(String toTable,
 			List<AttributeMetaData> attributes) throws NoTargetArrayException,
 					SQLException, UnsupportedTypeException {
 		StringBuilder createTableStringBuf = new StringBuilder();
-		String toTable = getObjectTo();
 		createTableStringBuf
 				.append("create table if not exists " + toTable + " (");
 		for (AttributeMetaData attribute : attributes) {
@@ -329,7 +328,7 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 				format = getSciDBBinFormat(migrationInfo, fromArray);
 				if (createTableStatement == null) {
 					createTableStatement = getCreatePostgreSQLTableStatement(
-							attributes);
+							toTable, attributes);
 				}
 			} else {
 				String newFlatIntermediateArray = fromArray
@@ -349,7 +348,7 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 				dimensionsAttributes.addAll(attributes);
 				if (createTableStatement == null) {
 					createTableStatement = getCreatePostgreSQLTableStatement(
-							dimensionsAttributes);
+							toTable, dimensionsAttributes);
 				}
 			}
 
@@ -519,7 +518,7 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 						new SciDBArray(fromArray, false, false), null);
 				if (createTableStatement == null) {
 					createTableStatement = getCreatePostgreSQLTableStatement(
-							attributes);
+							toTable, attributes);
 				}
 			} else { /* multidimensional array - MigrationType.FULL */
 				arrays = new SciDBArrays(null,
@@ -529,7 +528,7 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 				dimensionsAttributes.addAll(attributes);
 				if (createTableStatement == null) {
 					createTableStatement = getCreatePostgreSQLTableStatement(
-							dimensionsAttributes);
+							toTable, dimensionsAttributes);
 				}
 			}
 			executor = Executors.newFixedThreadPool(2);

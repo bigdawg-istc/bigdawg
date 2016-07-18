@@ -259,12 +259,15 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 	 * @return connection to SciDB
 	 * @throws SQLException
 	 */
-	private Connection getConnection() throws SQLException {
-		if (conInfo == null) {
-			throw new IllegalStateException(
-					"Unkonwn information about connection to SciDB.");
+	public Connection getConnection() throws SQLException {
+		if (connection == null) {
+			if (conInfo == null) {
+				throw new IllegalStateException(
+						"Unkonwn information about connection to SciDB.");
+			}
+			connection = getConnection(conInfo);
 		}
-		return getConnection(conInfo);
+		return connection;
 	}
 
 	/**

@@ -99,7 +99,7 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 	 * @throws SQLException
 	 *             if could not establish a connection
 	 */
-	private Connection getConnection() throws SQLException {
+	public Connection getConnection() throws SQLException {
 		if (con == null) {
 			if (conInfo != null) {
 				try {

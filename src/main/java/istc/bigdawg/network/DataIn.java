@@ -32,7 +32,7 @@ public class DataIn {
 	private final static int CHUNK_SIZE = 64 * 1024;
 
 	/**
-	 * Receive data to this machine to a remote host.
+	 * Receive data to this machine from a remote host.
 	 * 
 	 * @param port
 	 *            The number of port on which we should listen to get the data

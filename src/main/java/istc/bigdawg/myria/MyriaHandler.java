@@ -10,6 +10,8 @@ import istc.bigdawg.exceptions.MyriaException;
 import istc.bigdawg.query.DBHandler;
 import istc.bigdawg.query.QueryResponseTupleString;
 
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 
@@ -103,6 +105,15 @@ public class MyriaHandler implements DBHandler {
 	@Override
 	public void close() throws Exception {
 		log.debug("No aciton for closing Myria.");
+	}
+
+	/* (non-Javadoc)
+	 * @see istc.bigdawg.query.DBHandler#getConnection()
+	 */
+	@Override
+	public Connection getConnection() throws SQLException {
+		// TODO
+		throw new UnsupportedOperationException();
 	}
 
 }

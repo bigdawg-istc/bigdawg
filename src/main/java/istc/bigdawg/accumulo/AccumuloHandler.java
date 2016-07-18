@@ -5,6 +5,8 @@ package istc.bigdawg.accumulo;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
@@ -173,11 +175,24 @@ public class AccumuloHandler implements DBHandler {
 		throw new UnsupportedOperationException();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see istc.bigdawg.query.DBHandler#close()
 	 */
 	@Override
 	public void close() throws Exception {
+		// TODO
+		throw new UnsupportedOperationException();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see istc.bigdawg.query.DBHandler#getConnection()
+	 */
+	@Override
+	public Connection getConnection() throws SQLException {
 		// TODO
 		throw new UnsupportedOperationException();
 	}
