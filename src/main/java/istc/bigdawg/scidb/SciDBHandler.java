@@ -403,7 +403,9 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 
 			log.debug("query: " + LogUtils.replace(query) + "");
 			log.debug("ConnectionInfo: " + this.conInfo.toString() + "\n");
-
+			
+			st.setQueryTimeout(30);
+			
 			if (st.execute(query)) {
 				try (ResultSet rs = st.getResultSet()) {
 					return Optional.of(new JdbcQueryResult(rs, this.conInfo));
