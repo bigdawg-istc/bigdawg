@@ -79,7 +79,10 @@ public class SQLIslandSort extends SQLIslandOperator implements Sort {
 				outExps.put(s, outSchema.get(s).getExpressionString());
 		}
 		
-		for (String s : getSortKeys()) {
+		for (int i = 0 ; i < getSortKeys().size() ; i++) {
+//		for (String s : getSortKeys()) {
+			
+			String s = getSortKeys().get(i);
 			Expression e = CCJSqlParserUtil.parseExpression(SQLExpressionUtils.removeExpressionDataTypeArtifactAndConvertLike(s));
 			SQLExpressionUtils.removeExcessiveParentheses(e);
 			while (e instanceof Parenthesis) e = ((Parenthesis) e).getExpression();
@@ -90,15 +93,28 @@ public class SQLIslandSort extends SQLIslandOperator implements Sort {
 			
 			OrderByElement obe = new OrderByElement();
 			obe.setExpression(CCJSqlParserUtil.parseExpression(estr));
-			if (s.endsWith("DESC")) {
+			
+			OrderByElement userInputOBE = supplement.getOrderByClause().get(i);
+			if (userInputOBE.isAscDescPresent()) {
 				obe.setAscDescPresent(true);
-				obe.setAsc(false);
-			} else if (s.endsWith("ASC")) {
-				obe.setAscDescPresent(true);
-				obe.setAsc(true);
+				if (userInputOBE.isAsc()) {
+					obe.setAsc(true);
+				} else 
+					obe.setAsc(false);
+			} else {
+				obe.setAscDescPresent(false);
 			}
+//			if (s.toUpperCase().endsWith("DESC")) {
+//				obe.setAscDescPresent(true);
+//				obe.setAsc(false);
+//			} else if (s.toUpperCase().endsWith("ASC")) {
+//				obe.setAscDescPresent(true);
+//				obe.setAsc(true);
+//			}
 			getOrderByElements().add(obe);
 		}
+		
+		System.out.printf("\n\n<<>> getOrderByElement from construction: %s; keys: %s\n\n\n", getOrderByElements(), keys);
 	}
 	
 	public SQLIslandSort(SQLIslandOperator o, boolean addChild) throws Exception {
@@ -121,7 +137,7 @@ public class SQLIslandSort extends SQLIslandOperator implements Sort {
 	
 	
 	public String toString() {
-		return "Sort operator on columns " + getSortKeys().toString() + " with ordering " + sortOrder;
+		return "(sort "+children.get(0)+" " + getSortKeys().toString() + " " + sortOrder +")";
 	}
 	
 	/**
@@ -133,10 +149,10 @@ public class SQLIslandSort extends SQLIslandOperator implements Sort {
 		
 		List<OrderByElement> ret = new ArrayList<>();
 		
-		List<Operator> treeWalker;
+		List<Operator> treeWalker = new ArrayList<>();
 		for (OrderByElement obe : getOrderByElements()) {
 			
-			treeWalker = children;
+			treeWalker.add(this);
 			boolean found = false;
 			
 			while (treeWalker.size() > 0 && (!found)) {
@@ -152,6 +168,9 @@ public class SQLIslandSort extends SQLIslandOperator implements Sort {
 							newobe.setExpression(new Column(new Table(o.getPruneToken()), c.getColumnName()));
 							ret.add(newobe);
 							found = true;
+							newobe.setAscDescPresent(obe.isAscDescPresent());
+							if (obe.isAscDescPresent()) 
+								newobe.setAsc(obe.isAsc());
 							break;
 						}
 					} else {
@@ -164,6 +183,8 @@ public class SQLIslandSort extends SQLIslandOperator implements Sort {
 			
 			
 		}
+		
+		if (ret.isEmpty()) ret.addAll(getOrderByElements());
 		
 		return ret;
 	}
@@ -199,7 +220,7 @@ public class SQLIslandSort extends SQLIslandOperator implements Sort {
 	}
 
 	public void setOrderByElements(List<OrderByElement> orderByElements) {
-		this.orderByElements = orderByElements;
+		this.orderByElements = new ArrayList<>(orderByElements);
 	}
 	
 };

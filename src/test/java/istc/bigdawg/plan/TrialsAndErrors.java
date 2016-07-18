@@ -30,6 +30,7 @@ import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.scidb.SciDBHandler;
 import istc.bigdawg.signature.Signature;
+import net.sf.jsqlparser.statement.select.Select;
 
 public class TrialsAndErrors {
 	
@@ -100,23 +101,23 @@ public class TrialsAndErrors {
 		
 		if ( !runExplainer ) return;
 			
-		SciDBHandler psqlh = new SciDBHandler(TheObjectThatResolvesAllDifferencesAmongTheIslands.scidbSchemaHandlerDBID);
+		PostgreSQLHandler psqlh = new PostgreSQLHandler(TheObjectThatResolvesAllDifferencesAmongTheIslands.psqlSchemaHandlerDBID);
 //		System.out.println("Explainer -- Type query or \"quit\" to exit: ");
 //		Scanner scanner = new Scanner(System.in);
 //		String query = scanner.nextLine();
-		String query = "window(nation, 1, 0, 0, 0, count(n_name), count(*))";
+		String query = "select * from region";
 		boolean started = false;
 		while (!query.toLowerCase().equals("quit")) {
 			
-			AFLQueryPlan aqp = AFLPlanParser.extractDirect(psqlh, query);
-			String explainQuery = aqp.getStatement();
+			SQLQueryPlan aqp = SQLPlanParser.extractDirectFromPostgreSQL(psqlh, query);
+			Select explainQuery = aqp.getStatement();
 			System.out.println(explainQuery + "\n");
-			OperatorVisitor gen = new AFLQueryGenerator();
+			OperatorVisitor gen = new SQLQueryGenerator();
 			aqp.getRootNode().accept(gen);
 			System.out.println(gen.generateStatementString());
 			
 			if (!started) {
-				query = "window(nation, 1, 0, 0, 0, count(n_name) as q )";
+				query = "select * from region";
 				started = true;
 			} else break;
 		}

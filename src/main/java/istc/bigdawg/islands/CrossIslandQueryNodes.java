@@ -1,6 +1,7 @@
 package istc.bigdawg.islands;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -18,13 +19,18 @@ import com.google.common.collect.Sets;
 
 import istc.bigdawg.exceptions.BigDawgException;
 import istc.bigdawg.islands.IslandsAndCast.Scope;
+import istc.bigdawg.islands.operators.Aggregate;
 import istc.bigdawg.islands.operators.Join;
 import istc.bigdawg.islands.operators.Join.JoinType;
 import istc.bigdawg.islands.operators.Merge;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.operators.Scan;
+import istc.bigdawg.islands.relational.operators.SQLIslandAggregate;
+import istc.bigdawg.islands.relational.operators.SQLIslandJoin;
 import istc.bigdawg.islands.relational.operators.SQLIslandOperator;
+import istc.bigdawg.islands.relational.operators.SQLIslandScan;
 import istc.bigdawg.islands.relational.utils.SQLExpressionUtils;
+import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
@@ -42,10 +48,11 @@ public class CrossIslandQueryNodes {
 	 * @throws Exception
 	 */
 	public static void rewrite(CrossIslandQueryNode ciqn) throws Exception{
+//		trimSchemas(ciqn);
 		if (ciqn.getRemainderLoc() != null) return;
 		
 //		debugPrinting(ciqn);
-		minimumMigrationMutation(ciqn);
+//		minimumMigrationMutation(ciqn);
 		debugPrinting(ciqn);
 	}
 	
@@ -67,7 +74,48 @@ public class CrossIslandQueryNodes {
 		for (Operator c : o.getChildren()) debugPrintOperator(c, indent+1);
 	} 
 	
-	public static void minimumMigrationMutation(CrossIslandQueryNode ciqn) throws Exception {
+	private static void trimSchemas(CrossIslandQueryNode ciqn) throws Exception {
+		trimSchemaForSQL(ciqn.getInitialRoot(), ciqn.getInitialRoot().getOutSchema().values());
+	}
+	
+	private static void trimSchemaForSQL(Operator operator, Collection<DataObjectAttribute> mentionedAttributes) throws JSQLParserException, Exception {
+		Set<String> end_result = new HashSet<>();
+		
+		System.out.printf("\ntrimSchemaForSQL; mentioendAttributes = %s;\n", mentionedAttributes);
+		
+		for (String name : operator.getOutSchema().keySet()) {
+			
+			DataObjectAttribute doa = operator.getOutSchema().get(name);
+			String doaname = CCJSqlParserUtil.parseExpression(doa.name).toString();
+			
+			System.out.printf("trimSchemaForSQL; doa.name = %s;\n", doa.name);
+			
+			if (mentionedAttributes.contains(doa)) 
+				continue;
+			else if (operator instanceof Join) {
+				SQLIslandJoin j = (SQLIslandJoin) operator;
+				if (j.generateJoinFilter() != null && j.generateJoinFilter().contains(doaname)) continue;
+				if (j.generateJoinPredicate() != null && j.generateJoinPredicate().contains(doaname)) continue;
+			} else if (operator instanceof Scan) {
+				SQLIslandScan s = (SQLIslandScan) operator;
+				if (s.getFilterExpression() != null && s.getFilterExpression().toString().contains(doaname)) continue;
+				if (s.getIndexCond() != null && s.getIndexCond().toString().contains(doaname)) continue;
+			} else if (operator instanceof Aggregate) {
+				SQLIslandAggregate a = (SQLIslandAggregate) operator;
+				if (a.getAggregateFilter() != null && a.getAggregateFilter().contains(doaname)) continue;
+			}
+			end_result.add(name);
+		}
+		System.out.printf("trimSchemaForSQL; end_result = %s; original = %s\n", end_result, operator.getOutSchema().keySet());
+		
+		for (String s : end_result)
+			operator.getOutSchema().remove(s);
+		for (Operator o : operator.getChildren()) {
+			trimSchemaForSQL(o, mentionedAttributes);
+		}
+	}
+	
+	private static void minimumMigrationMutation(CrossIslandQueryNode ciqn) throws Exception {
 		
 		Operator initialRemainder = ciqn.getInitialRoot();
 		Map<String, DataObjectAttribute> initialOutSchema = initialRemainder.getOutSchema();
@@ -672,7 +720,7 @@ public class CrossIslandQueryNodes {
 		
 		o1ns.retainAll(Sets.union(jp.keySet(), jf.keySet()));
 		
-		System.out.printf("\n--->>>>> makeJoin: \n\tjp: %s; \n\tjf: %s;\n\to1ns: %s;\n\to2ns: %s\n\n", jp, jf, o1ns, o2ns);
+//		System.out.printf("\n--->>>>> makeJoin: \n\tjp: %s; \n\tjf: %s;\n\to1ns: %s;\n\to2ns: %s\n\n", jp, jf, o1ns, o2ns);
 		
 		Operator o1Temp = o1;
 		Operator o2Temp = o2;
@@ -689,7 +737,7 @@ public class CrossIslandQueryNodes {
 			List<String> pred = new ArrayList<>();
 			for  (String key : o2ns) {
 				
-				System.out.printf("s: ; key: %s; used: %s\n", s, key, used);
+//				System.out.printf("s: ; key: %s; used: %s\n", s, key, used);
 				
 				if (used.contains(key)) {
 					continue;
@@ -717,7 +765,7 @@ public class CrossIslandQueryNodes {
 					if (isUsedByPermutation) return null;
 					else break;
 				}
-				System.out.printf("-------> jp: %s, s: %s, key: %s; pred: %s\n\n", jp, s, key, pred);
+//				System.out.printf("-------> jp: %s, s: %s, key: %s; pred: %s\n\n", jp, s, key, pred);
 				return TheObjectThatResolvesAllDifferencesAmongTheIslands.constructJoin(scope, o1Temp, o2Temp, jt, pred, isFilter);
 			}
 			
@@ -726,9 +774,9 @@ public class CrossIslandQueryNodes {
 		if (isTablesConnectedViaPredicates(o1Temp, o2Temp, predicateConnections) && isUsedByPermutation) {
 			return null;
 		} else {
-			System.out.printf("\nCross island query node: raw cross join:\n  o1 class: %s; o1Temp tree: %s;\n  o2 class: %s, o2Temp tree: %s\n\n\n"
-					, o1Temp.getClass().getSimpleName(), o1Temp.getTreeRepresentation(true)
-					, o2Temp.getClass().getSimpleName(), o2Temp.getTreeRepresentation(true));
+//			System.out.printf("\nCross island query node: raw cross join:\n  o1 class: %s; o1Temp tree: %s;\n  o2 class: %s, o2Temp tree: %s\n\n\n"
+//					, o1Temp.getClass().getSimpleName(), o1Temp.getTreeRepresentation(true)
+//					, o2Temp.getClass().getSimpleName(), o2Temp.getTreeRepresentation(true));
 			return TheObjectThatResolvesAllDifferencesAmongTheIslands.constructJoin(scope, o1Temp, o2Temp, jt, null, false);
 		}
 	}
