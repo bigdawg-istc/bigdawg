@@ -24,7 +24,18 @@ RUN service ssh start && \
     cd /home/scidb && \
     su scidb 03_setup_scidb.sh
 
-CMD service ssh start && \
-    /etc/init.d/postgresql restart && \
-    su scidb && \
-    python /opt/scidb/14.12/bin/scidb.py startall single_server
+RUN apt-get install -y supervisor
+RUN mkdir -p /var/lock/apache2 /var/run/apache2 /var/run/sshd /var/log/supervisor
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+EXPOSE 22
+CMD ["/usr/bin/supervisord"]
+# CMD /usr/sbin/sshd -D && \
+    # /etc/init.d/postgresql restart
+
+# CMD ["/usr/sbin/sshd", "-D"]
+
+# CMD service ssh start && \
+#     /etc/init.d/postgresql restart
+#     su scidb && \
+#     python /opt/scidb/14.12/bin/scidb.py startall single_server
