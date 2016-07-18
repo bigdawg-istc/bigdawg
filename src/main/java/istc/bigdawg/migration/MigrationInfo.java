@@ -123,4 +123,17 @@ public class MigrationInfo {
 		return Optional.ofNullable(migrationParams);
 	}
 
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.lang.Object#toString()
+	 */
+	@Override
+	public String toString() {
+		return "MigrationInfo [connectionFrom=" + connectionFrom
+				+ ", objectFrom=" + objectFrom + ", connectionTo="
+				+ connectionTo + ", objectTo=" + objectTo + ", migrationParams="
+				+ migrationParams + "]";
+	}
+
 }

@@ -134,7 +134,8 @@ public class WaveformTest {
 		ExecutorService executor = Executors.newFixedThreadPool(1);
 		String copyFromCommand = PostgreSQLHandler.getExportBinCommand(table);
 		ExportPostgres exportExecutor = new ExportPostgres(conPostgres,
-				copyFromCommand, "/tmp/postgres.bin");
+				copyFromCommand, "/tmp/postgres.bin",
+				new PostgreSQLHandler(conPostgres));
 		FutureTask<Object> exportTask = new FutureTask<Object>(exportExecutor);
 		executor.submit(exportTask);
 		long countExtractedElements = (long) exportTask.get();

@@ -29,9 +29,10 @@ public enum FileFormat {
 	
 	/**
 	 * 
-	 * @return quota character " or '
+	 * @return quote character " or ' (single or double quote)
 	 */
 	public static String getQuoteCharacter() {
-		return "\"";
+		return "'";
 	}
+	
 }

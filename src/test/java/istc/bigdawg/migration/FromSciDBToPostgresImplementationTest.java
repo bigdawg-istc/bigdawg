@@ -55,7 +55,6 @@ public class FromSciDBToPostgresImplementationTest {
 	 */
 	public void loadDataToSciDB() throws SQLException, IOException {
 		LoggerSetup.setLogging();
-
 	}
 
 	@Test
@@ -192,7 +191,7 @@ public class FromSciDBToPostgresImplementationTest {
 
 	@After
 	public void after() {
-		System.out.println("The end of the "
+		log.debug("The end of the "
 				+ this.getClass().getCanonicalName() + " test!");
 	}
 

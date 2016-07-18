@@ -104,6 +104,7 @@ public class FromPostgresToSciDBWaveformDataTest {
 	public void testBinFlat() throws MigrationException, SQLException {
 		log.info("bin test flat");
 		// prepare the target array
+		SciDBHandler.dropArrayIfExists(conTo, toArray);
 		SciDBHandler handler = new SciDBHandler(conTo);
 		handler.executeStatement("create array " + toArray
 				+ " <id:int64,time:int64,value:double> [i=0:*,1000000,0]");
@@ -124,6 +125,7 @@ public class FromPostgresToSciDBWaveformDataTest {
 	public void testBinMulti() throws MigrationException, SQLException {
 		log.info("bin test multi-dimensional");
 		// prepare the target array
+		SciDBHandler.dropArrayIfExists(conTo, toArray);
 		SciDBHandler handler = new SciDBHandler(conTo);
 		handler.executeStatement("create array " + toArray
 				+ " <value:double> [id=0:*,1000,0,time=0:*,1000,0]");

@@ -29,7 +29,7 @@ public interface DBHandler {
 	 * @throws Exception
 	 *             (probably a connection to the database failed).
 	 */
-	public ObjectMetaData getObjectMetaData(String name) throws Exception;
+	ObjectMetaData getObjectMetaData(String name) throws Exception;
 
 	/**
 	 * 
@@ -38,10 +38,36 @@ public interface DBHandler {
 	 * @return true if the object with the specified name exists, false
 	 *         otherwise.
 	 */
-	public boolean existsObject(String name) throws Exception;
+	boolean existsObject(String name) throws Exception;
 
 	/**
 	 * Release all the resources hold by the handler.
 	 */
 	public void close() throws Exception;
+
+	/**
+	 * 
+	 * @return true if the header is added to the data in CSV format and this
+	 *         option cannot be switched off
+	 */
+	default public boolean isCsvExportHeader() {
+		return false;
+	}
+
+	/**
+	 * 
+	 * @return true if the header is required to load the data in CSV format and
+	 *         this option cannot be switched off
+	 */
+	default public boolean isCsvLoadHeader() {
+		return false;
+	}
+	
+	/**
+	 * 
+	 * @return default delimiter for CSV export
+	 */
+	default public String getCsvExportDelimiter() {
+		return "|";
+	}
 }

@@ -34,4 +34,9 @@ public interface Load extends Callable<Object>, DataPump {
 	 */
 	public void setHandlerFrom(DBHandler fromHandler);
 
+	/**
+	 * @return Handler to the database to which we load the data.
+	 */
+	public DBHandler getHandler();
+
 }

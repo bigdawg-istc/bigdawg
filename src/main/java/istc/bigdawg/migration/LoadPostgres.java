@@ -15,7 +15,9 @@ import org.apache.log4j.Logger;
 import org.postgresql.copy.CopyManager;
 import org.postgresql.core.BaseConnection;
 
+import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
+import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.query.DBHandler;
 import istc.bigdawg.utils.StackTrace;
@@ -139,6 +141,41 @@ public class LoadPostgres implements Load {
 	}
 
 	/**
+	 * Initialize the required objects for the migration.
+	 * 
+	 * @throws MigrationException
+	 */
+	private void lazyInitialization() throws MigrationException {
+		if (input == null) {
+			try {
+				input = new BufferedInputStream(new FileInputStream(inputFile));
+			} catch (FileNotFoundException e) {
+				String msg = e.getMessage()
+						+ " Problem with thread for PostgreSQL copy manager "
+						+ "while loading data from PostgreSQL.";
+				log.error(msg + StackTrace.getFullStackTrace(e), e);
+				throw new MigrationException(msg, e);
+			}
+		}
+		if (copyToString == null) {
+			if (fileFormat == FileFormat.CSV) {
+				copyToString = PostgreSQLHandler.getLoadCsvCommand(
+						migrationInfo.getObjectTo(),
+						FileFormat.getCsvDelimiter(),
+						FileFormat.getQuoteCharacter(),
+						fromHandler.isCsvExportHeader());
+			} else if (fileFormat == FileFormat.BIN_POSTGRES) {
+				copyToString = PostgreSQLHandler
+						.getLoadBinCommand(migrationInfo.getObjectTo());
+			} else {
+				String msg = "Usupported type: " + fileFormat;
+				log.error(msg);
+				throw new IllegalArgumentException(msg);
+			}
+		}
+	}
+
+	/**
 	 * Copy data to PostgreSQL.
 	 * 
 	 * @return number of loaded rows or -2 if there was any error during
@@ -148,19 +185,10 @@ public class LoadPostgres implements Load {
 	public Long call() throws Exception {
 		log.debug("Start loading data to PostgreSQL "
 				+ this.getClass().getCanonicalName() + ". ");
-		if (input == null) {
-			try {
-				input = new BufferedInputStream(new FileInputStream(inputFile));
-			} catch (FileNotFoundException e) {
-				String msg = e.getMessage()
-						+ " Problem with thread for PostgreSQL copy manager "
-						+ "while loading data from PostgreSQL.";
-				log.error(msg + StackTrace.getFullStackTrace(e), e);
-				throw e;
-			}
-		}
+		lazyInitialization();
 		Long countLoadedRows = 0L;
 		try {
+			log.debug("copy to string: " + copyToString);
 			countLoadedRows = cpTo.copyIn(copyToString, input);
 			input.close();
 			connection.commit();
@@ -220,5 +248,15 @@ public class LoadPostgres implements Load {
 	@Override
 	public void setHandlerFrom(DBHandler fromHandler) {
 		this.fromHandler = fromHandler;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see istc.bigdawg.migration.Load#getHandler()
+	 */
+	@Override
+	public DBHandler getHandler() {
+		return new PostgreSQLHandler(migrationInfo.getConnectionTo());
 	}
 }

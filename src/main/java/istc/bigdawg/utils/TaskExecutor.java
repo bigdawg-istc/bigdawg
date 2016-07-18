@@ -12,6 +12,8 @@ import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
+import org.apache.log4j.Logger;
+
 /**
  * @author Adam Dziedzic
  * 
@@ -21,6 +23,9 @@ import java.util.concurrent.Future;
  *         thrown further on.
  */
 public class TaskExecutor {
+
+	/* log */
+	private static Logger log = Logger.getLogger(TaskExecutor.class);
 
 	/**
 	 * Execute the list of tasks using the given executor and when one of the
@@ -49,15 +54,22 @@ public class TaskExecutor {
 		 * call the service as many times as there are objects in the tasks
 		 * collection
 		 */
-		for (@SuppressWarnings("unused")
-		Callable<Object> task : tasks) {
+		for (Callable<Object> task : tasks) {
 			try {
+				log.debug(task.toString());
 				/*
 				 * The take method - takes the first executed task and returns
 				 * it or waits if there is no finished tasks (it blocks).
 				 */
-				service.take().get();
+				Future<Object> resultCompletedTask = service.take();
+				if (resultCompletedTask != null
+						&& resultCompletedTask.isDone()) {
+					Object result = resultCompletedTask.get();
+					log.debug("result of execution: " + result);
+				}
 			} catch (ExecutionException e) {
+				log.error(e.getMessage() + " StackTrace: "
+						+ StackTrace.getFullStackTrace(e));
 				throw e;
 			}
 		}

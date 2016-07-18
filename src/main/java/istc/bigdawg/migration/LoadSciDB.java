@@ -3,6 +3,10 @@
  */
 package istc.bigdawg.migration;
 
+import java.io.FileNotFoundException;
+import java.sql.SQLException;
+import java.util.concurrent.TimeUnit;
+
 import org.apache.log4j.Logger;
 
 import istc.bigdawg.database.ObjectMetaData;
@@ -50,7 +54,7 @@ public class LoadSciDB implements Load {
 	private FileFormat fileFormat;
 
 	/** DBHandler from which we migrate the data. */
-	private DBHandler fromHandler;
+	private DBHandler handlerFrom;
 
 	/**
 	 * Declare only the file format in which the data should be loaded. The
@@ -75,10 +79,10 @@ public class LoadSciDB implements Load {
 	}
 
 	public LoadSciDB(MigrationInfo migrationInfo, String scidbFilePath,
-			DBHandler fromHandler) {
+			DBHandler handlerFrom) {
 		this.migrationInfo = migrationInfo;
 		this.scidbFilePath = scidbFilePath;
-		this.fromHandler = fromHandler;
+		this.handlerFrom = handlerFrom;
 		/* declare the default file format - native SciDB format. */
 		this.fileFormat = FileFormat.SCIDB_TEXT_FORMAT;
 	}
@@ -88,7 +92,7 @@ public class LoadSciDB implements Load {
 	 * @param arrays
 	 * @param scidbFilePath
 	 */
-	public LoadSciDB(MigrationInfo migrationInfo, DBHandler fromHandler,
+	public LoadSciDB(MigrationInfo migrationInfo, DBHandler handlerFrom,
 			String scidbFilePath, String binaryFormat) {
 		this.migrationInfo = migrationInfo;
 		this.scidbFilePath = scidbFilePath;
@@ -96,7 +100,30 @@ public class LoadSciDB implements Load {
 		if (this.binaryFormatString != null) {
 			this.fileFormat = FileFormat.BIN_SCIDB;
 		}
-		this.fromHandler = fromHandler;
+		this.handlerFrom = handlerFrom;
+	}
+
+	/**
+	 * Initialize the required objects for the migration.
+	 * 
+	 * @throws SQLException
+	 * @throws FileNotFoundException
+	 * @throws MigrationException
+	 */
+	private void lazyInitialization() throws MigrationException {
+		if (migrationInfo == null) {
+			throw new IllegalStateException(
+					"The migration info was not initialized.");
+		}
+		if (scidbFilePath == null) {
+			throw new IllegalStateException(
+					"The scidb file path was not initialized.");
+		}
+		if (handlerFrom == null) {
+			throw new IllegalStateException(
+					"The handler (for database from which we export the data) "
+							+ "was not initialized.");
+		}
 	}
 
 	/**
@@ -155,7 +182,7 @@ public class LoadSciDB implements Load {
 		String binaryFormatString = null;
 		if (migrationInfo
 				.getConnectionFrom() instanceof PostgreSQLConnectionInfo) {
-			binaryFormatString = MigrationUtils.getSciDBBinFormat(fromHandler
+			binaryFormatString = MigrationUtils.getSciDBBinFormat(handlerFrom
 					.getObjectMetaData(migrationInfo.getObjectFrom()));
 			return binaryFormatString;
 		} else {
@@ -193,8 +220,8 @@ public class LoadSciDB implements Load {
 			// String resultString = IOUtils.toString(resultInStream,
 			// Constants.ENCODING);
 			// log.debug("Load data to SciDB: " + resultString);
-
-			ObjectMetaData fromObjectMetaData = fromHandler
+			lazyInitialization();
+			ObjectMetaData fromObjectMetaData = handlerFrom
 					.getObjectMetaData(migrationInfo.getObjectFrom());
 
 			arrays = MigrationUtils.prepareFlatTargetArrays(migrationInfo,
@@ -238,6 +265,7 @@ public class LoadSciDB implements Load {
 						+ arrays.getMultiDimensional().getName() + "),"
 						+ arrays.getMultiDimensional().getName() + ")";
 			}
+			// TimeUnit.SECONDS.sleep(5);
 			log.debug("load command: " + finalLoadCommand);
 			SciDBHandler handler = new SciDBHandler(
 					migrationInfo.getConnectionTo());
@@ -254,6 +282,19 @@ public class LoadSciDB implements Load {
 		 * time.
 		 */
 		return null;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.lang.Object#toString()
+	 */
+	@Override
+	public String toString() {
+		return "LoadSciDB [migrationInfo=" + migrationInfo + ", scidbFilePath="
+				+ scidbFilePath + ", binaryFormatString=" + binaryFormatString
+				+ ", fileFormat=" + fileFormat + ", fromHandler=" + handlerFrom
+				+ "]";
 	}
 
 	/*
@@ -308,9 +349,17 @@ public class LoadSciDB implements Load {
 	 */
 	@Override
 	public void setHandlerFrom(DBHandler fromHandler) {
-		this.fromHandler = fromHandler;
+		this.handlerFrom = fromHandler;
 	}
-	
-	
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see istc.bigdawg.migration.Load#getHandler()
+	 */
+	@Override
+	public DBHandler getHandler() {
+		return SciDBHandler.getInstance();
+	}
 
 }

@@ -277,20 +277,26 @@ public class FromDatabaseToDatabase implements MigrationNetworkRequest {
 					.createAndGetFullName(this.getClass().getName() + "_from_"
 							+ migrationInfo.getObjectFrom() + "_to_"
 							+ migrationInfo.getObjectTo());
+			/* pipe = "/tmp/adam"; */
+
 			/* add the pipe to be removed when cleaning the resources */
 			pipes.add(pipe);
 
 			/* set output for exporter and input for importer */
 			exporter.setExportTo(pipe);
 			loader.setLoadFrom(pipe);
-			
+
 			/* set migration information for exporter and loader */
 			exporter.setMigrationInfo(migrationInfo);
 			loader.setMigrationInfo(migrationInfo);
-			
-			/* set the handler from for the loader - this is to get meta information from the source table */
+
+			/*
+			 * set the handler from for the loader - this is to get meta
+			 * information from the source table
+			 */
 			loader.setHandlerFrom(exporter.getHandler());
-			
+			exporter.setHandlerTo(loader.getHandler());
+
 			/* activate the tasks */
 			List<Callable<Object>> tasks = new ArrayList<>();
 			tasks.add(exporter);

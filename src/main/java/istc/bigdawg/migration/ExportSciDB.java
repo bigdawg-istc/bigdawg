@@ -54,6 +54,10 @@ public class ExportSciDB implements Export {
 	 * {@link #setMigrationInfo(MigrationInfo)}
 	 */
 	private MigrationInfo migrationInfo = null;
+	
+	/** Handler to the database to which we load the data. */
+	@SuppressWarnings("unused")
+	private DBHandler handlerTo;
 
 	/**
 	 * Declare only the file format in which the data should be exported. The
@@ -198,6 +202,17 @@ public class ExportSciDB implements Export {
 			throw new MigrationException(
 					e.getMessage() + " Cannot instantiate the SciDBHandler.");
 		}
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * istc.bigdawg.migration.Export#setHandlerTo(istc.bigdawg.query.DBHandler)
+	 */
+	@Override
+	public void setHandlerTo(DBHandler handlerTo) throws MigrationException {
+		this.handlerTo = handlerTo;
 	}
 
 }

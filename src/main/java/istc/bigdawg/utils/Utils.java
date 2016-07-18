@@ -12,10 +12,12 @@ import java.sql.Statement;
 import org.apache.log4j.Logger;
 import org.scidb.jdbc.IResultSetWrapper;
 
+import istc.bigdawg.LoggerSetup;
 import istc.bigdawg.executor.JdbcQueryResult;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.query.ConnectionInfo;
+import istc.bigdawg.scidb.SciDBConnectionInfo;
 import istc.bigdawg.scidb.SciDBHandler;
 
 /**
@@ -124,6 +126,14 @@ public class Utils {
 		JdbcQueryResult qr = handler
 				.executeQueryPostgreSQL("select count(*) from " + table);
 		return Long.valueOf(qr.getRows().get(0).get(0));
+	}
+
+	public static void main(String[] args) throws SQLException {
+		LoggerSetup.setLogging();
+		String array = "waveform_test";
+		long numberOfCells = getNumberOfCellsSciDB(new SciDBConnectionInfo(),
+				array);
+		log.debug("Number of cells in array " + array + ": " + numberOfCells);
 	}
 
 }

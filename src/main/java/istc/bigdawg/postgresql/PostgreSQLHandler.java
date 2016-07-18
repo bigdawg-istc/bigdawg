@@ -837,27 +837,6 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 	}
 
 	/**
-	 * Command to copy data from a table in PostgreSQL.
-	 * 
-	 * @param table
-	 *            the name of the table from which we extract data
-	 * @param delimiter
-	 *            the delimiter for the output CSV file
-	 * 
-	 * @return the command to extract data from a table in PostgreSQL
-	 */
-	public static String getExportCsvCommand(String table, String delimiter) {
-		StringBuilder copyFromStringBuf = new StringBuilder();
-		copyFromStringBuf.append("COPY ");
-		copyFromStringBuf.append(table + " ");
-		copyFromStringBuf.append("TO ");
-		copyFromStringBuf.append(" STDOUT ");
-		copyFromStringBuf
-				.append("with (format csv, delimiter '" + delimiter + "')");
-		return copyFromStringBuf.toString();
-	}
-
-	/**
 	 * Direction for the PostgreSQL copy command.
 	 * 
 	 * @author Adam Dziedzic
@@ -901,6 +880,43 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 
 	public static String getLoadBinCommand(String table) {
 		return getCopyBinCommand(table, DIRECTION.FROM, STDIO.STDIN);
+	}
+
+	/**
+	 * Command to copy data from a table in PostgreSQL.
+	 * 
+	 * @param table
+	 *            the name of the table from which we extract data
+	 * @param delimiter
+	 *            the delimiter for the output CSV file
+	 * 
+	 * @return the command to extract data from a table in PostgreSQL
+	 */
+	public static String getCopyCsvCommand(String table, DIRECTION direction,
+			STDIO stdio, String delimiter, String quote, boolean isHeader) {
+		StringBuilder copyFromStringBuf = new StringBuilder();
+		copyFromStringBuf.append("COPY ");
+		copyFromStringBuf.append(table + " ");
+		copyFromStringBuf.append(direction.toString() + " ");
+		copyFromStringBuf.append(stdio.toString());
+		copyFromStringBuf.append(" with (format csv, delimiter '" + delimiter
+				+ "', quote \"" + quote + "\", header "
+				+ (isHeader ? "true" : "false") + ")");
+		String copyCsvCommand = copyFromStringBuf.toString();
+		log.debug("copy csv command: " + copyCsvCommand);
+		return copyCsvCommand;
+	}
+
+	public static String getExportCsvCommand(String table, String delimiter,
+			String quote, boolean isHeader) {
+		return getCopyCsvCommand(table, DIRECTION.TO, STDIO.STDOUT, delimiter,
+				quote, isHeader);
+	}
+
+	public static String getLoadCsvCommand(String table, String delimiter,
+			String quote, boolean isHeader) {
+		return getCopyCsvCommand(table, DIRECTION.FROM, STDIO.STDIN, delimiter,
+				quote, isHeader);
 	}
 
 	/**

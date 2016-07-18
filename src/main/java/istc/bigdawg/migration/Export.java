@@ -37,4 +37,10 @@ public interface Export extends Callable<Object>, DataPump {
 	 *         ExportPostgres it should return PostgreSQLHandler).
 	 */
 	public DBHandler getHandler() throws MigrationException;
+
+	/**
+	 * Set the handler to the database to which we load the data.
+	 */
+	public void setHandlerTo(DBHandler handlerto) throws MigrationException;
+
 }

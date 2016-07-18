@@ -52,11 +52,6 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 	private static final long serialVersionUID = 1L;
 
 	/**
-	 * Create table statement - to be executed in the target database.
-	 */
-	private String createTableStatement = null;
-
-	/**
 	 * Always put extractor as the first task to be executed (while migrating
 	 * data from PostgreSQL to PostgreSQL).
 	 */
@@ -187,7 +182,8 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 			final PipedInputStream input = new PipedInputStream(output);
 
 			List<Callable<Object>> tasks = new ArrayList<>();
-			tasks.add(new ExportPostgres(conFrom, copyFromCommand, output));
+			tasks.add(new ExportPostgres(conFrom, copyFromCommand, output,
+					new PostgreSQLHandler(getConnectionTo())));
 			tasks.add(new LoadPostgres(conTo, copyToCommand, input));
 			executor = Executors.newFixedThreadPool(tasks.size());
 			List<Future<Object>> results = TaskExecutor.execute(executor,

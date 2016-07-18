@@ -37,7 +37,8 @@ public enum Pipe {
 	}
 
 	/**
-	 * Create a pipe and get its full path.
+	 * Create a pipe and get its full path (it also delete a previous pipe, if
+	 * exists, with the same name).
 	 * 
 	 * @param pipeName
 	 * @return

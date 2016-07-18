@@ -196,7 +196,8 @@ class FromPostgresToSciDB extends FromDatabaseToDatabase
 			// String copyFromCommand = "copy from " + fromTable + " to " +
 			// postgresPipe + " with (format binary, freeze)";
 			ExportPostgres exportExecutor = new ExportPostgres(
-					getConnectionFrom(), copyFromCommand, postgresPipe);
+					getConnectionFrom(), copyFromCommand, postgresPipe,
+					SciDBHandler.getInstance());
 			FutureTask<Object> exportTask = new FutureTask<Object>(
 					exportExecutor);
 			executor.submit(exportTask);
@@ -278,9 +279,11 @@ class FromPostgresToSciDB extends FromDatabaseToDatabase
 					.getTypePatternFromPostgresTypes(fromObjectMetaData);
 
 			List<Callable<Object>> tasks = new ArrayList<>();
-			tasks.add(new ExportPostgres(getConnectionFrom(), PostgreSQLHandler
-					.getExportCsvCommand(getObjectFrom(), delimiter),
-					postgresPipe));
+			tasks.add(new ExportPostgres(getConnectionFrom(),
+					PostgreSQLHandler.getExportCsvCommand(getObjectFrom(),
+							delimiter, FileFormat.getQuoteCharacter(),
+							SciDBHandler.getIsCsvLoadHeader()),
+					postgresPipe, SciDBHandler.getInstance()));
 			tasks.add(new TransformFromCsvToSciDBExecutor(typesPattern,
 					postgresPipe, delimiter, scidbPipe,
 					BigDawgConfigProperties.INSTANCE.getScidbBinPath()));

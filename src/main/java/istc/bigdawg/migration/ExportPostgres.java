@@ -72,6 +72,25 @@ public class ExportPostgres implements Export {
 	 */
 	private MigrationInfo migrationInfo = null;
 
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.lang.Object#toString()
+	 */
+	@Override
+	public String toString() {
+		return "ExportPostgres [cpFrom=" + cpFrom + ", copyFromString="
+				+ copyFromString + ", outputFile=" + outputFile + ", output="
+				+ output + ", fileFormat=" + fileFormat + ", connectionFrom="
+				+ connectionFrom + ", migrationInfo=" + migrationInfo
+				+ ", handlerTo=" + handlerTo + "]";
+	}
+
+	/**
+	 * Handler to the database to which we load the data.
+	 */
+	private DBHandler handlerTo;
+
 	/**
 	 * Declare only the file format in which the data should be exported. The
 	 * remaining parameters should be added when the migration is prepared.
@@ -95,23 +114,25 @@ public class ExportPostgres implements Export {
 	}
 
 	public ExportPostgres(Connection connectionPostgreSQL,
-			final String copyFromString, OutputStream output)
-					throws SQLException {
+			final String copyFromString, OutputStream output,
+			DBHandler handlerTo) throws SQLException {
 		this.connectionFrom = connectionPostgreSQL;
 		this.copyFromString = copyFromString;
 		this.output = output;
 		this.cpFrom = new CopyManager((BaseConnection) connectionFrom);
+		this.handlerTo = handlerTo;
 	}
 
 	public ExportPostgres(ConnectionInfo connectionPostgreSQL,
-			final String copyFromString, final String outputFile)
-					throws SQLException {
+			final String copyFromString, final String outputFile,
+			DBHandler handlerTo) throws SQLException {
 		connectionFrom = PostgreSQLHandler.getConnection(connectionPostgreSQL);
 		connectionFrom.setAutoCommit(false);
 		connectionFrom.setReadOnly(true);
 		this.copyFromString = copyFromString;
 		this.outputFile = outputFile;
 		this.cpFrom = new CopyManager((BaseConnection) connectionFrom);
+		this.handlerTo = handlerTo;
 	}
 
 	/**
@@ -122,6 +143,9 @@ public class ExportPostgres implements Export {
 	 * @throws MigrationException
 	 */
 	private void lazyInitialization() throws MigrationException {
+		log.debug("Lazy initialization.");
+
+		log.debug("Establish connection.");
 		if (connectionFrom == null) {
 			try {
 				connectionFrom = PostgreSQLHandler
@@ -137,6 +161,7 @@ public class ExportPostgres implements Export {
 				throw new MigrationException(msg, e);
 			}
 		}
+		log.debug("Create the output stream.");
 		if (output == null) {
 			try {
 				if (outputFile == null) {
@@ -144,8 +169,8 @@ public class ExportPostgres implements Export {
 					log.error(msg);
 					throw new IllegalStateException(msg);
 				}
-				output = new BufferedOutputStream(
-						new FileOutputStream(outputFile));
+				output = new BufferedOutputStream(new FileOutputStream(
+						outputFile));
 			} catch (FileNotFoundException e) {
 				String msg = "File not found: " + outputFile + " "
 						+ e.getMessage()
@@ -155,11 +180,14 @@ public class ExportPostgres implements Export {
 				throw new MigrationException(msg, e);
 			}
 		}
+		log.debug("Specify the copy from command for PostgreSQL.");
 		if (copyFromString == null) {
 			if (fileFormat == FileFormat.CSV) {
 				copyFromString = PostgreSQLHandler.getExportCsvCommand(
 						migrationInfo.getObjectFrom(),
-						FileFormat.getCsvDelimiter());
+						FileFormat.getCsvDelimiter(),
+						FileFormat.getQuoteCharacter(),
+						handlerTo.isCsvLoadHeader());
 			} else if (fileFormat == FileFormat.BIN_POSTGRES) {
 				copyFromString = PostgreSQLHandler
 						.getExportBinCommand(migrationInfo.getObjectFrom());
@@ -168,6 +196,11 @@ public class ExportPostgres implements Export {
 				log.error(msg);
 				throw new IllegalArgumentException(msg);
 			}
+		}
+		if (handlerTo == null) {
+			throw new IllegalStateException(
+					"The handler (for database to which we load the data) "
+							+ "was not initialized.");
 		}
 	}
 
@@ -252,5 +285,16 @@ public class ExportPostgres implements Export {
 	@Override
 	public DBHandler getHandler() {
 		return new PostgreSQLHandler(migrationInfo.getConnectionFrom());
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * istc.bigdawg.migration.Export#setHandlerTo(istc.bigdawg.query.DBHandler)
+	 */
+	@Override
+	public void setHandlerTo(DBHandler handlerTo) throws MigrationException {
+		this.handlerTo = handlerTo;
 	}
 }
