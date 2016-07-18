@@ -672,7 +672,7 @@ public class CrossIslandQueryNodes {
 		
 		o1ns.retainAll(Sets.union(jp.keySet(), jf.keySet()));
 		
-//		System.out.printf("\n--->>>>> makeJoin: \n\tjp: %s; \n\tjf: %s;\n\to1ns: %s;\n\to2ns: %s\n\n", jp, jf, o1ns, o2ns);
+		System.out.printf("\n--->>>>> makeJoin: \n\tjp: %s; \n\tjf: %s;\n\to1ns: %s;\n\to2ns: %s\n\n", jp, jf, o1ns, o2ns);
 		
 		Operator o1Temp = o1;
 		Operator o2Temp = o2;
@@ -682,12 +682,14 @@ public class CrossIslandQueryNodes {
 		
 		for (String s : o1ns) {
 			
-			if (jp.get(s) == null) continue; // because jc is modified along the way
+			if (jp.get(s) == null && jf.get(s) == null) continue; // because jc is modified along the way
 			
 			o2ns.retainAll(Sets.union(jp.keySet(), jf.keySet()));
 			
 			List<String> pred = new ArrayList<>();
 			for  (String key : o2ns) {
+				
+				System.out.printf("s: ; key: %s; used: %s\n", s, key, used);
 				
 				if (used.contains(key)) {
 					continue;
@@ -715,7 +717,7 @@ public class CrossIslandQueryNodes {
 					if (isUsedByPermutation) return null;
 					else break;
 				}
-//				System.out.printf("-------> jp: %s, s: %s, key: %s; pred: %s\n\n", jp, s, key, pred);
+				System.out.printf("-------> jp: %s, s: %s, key: %s; pred: %s\n\n", jp, s, key, pred);
 				return TheObjectThatResolvesAllDifferencesAmongTheIslands.constructJoin(scope, o1Temp, o2Temp, jt, pred, isFilter);
 			}
 			
@@ -724,9 +726,9 @@ public class CrossIslandQueryNodes {
 		if (isTablesConnectedViaPredicates(o1Temp, o2Temp, predicateConnections) && isUsedByPermutation) {
 			return null;
 		} else {
-//			System.out.printf("\nCross island query node: raw cross join:\n  o1 class: %s; o1Temp tree: %s;\no  2 class: %s, o2Temp tree: %s\n\n\n"
-//					, o1Temp.getClass().getSimpleName(), o1Temp.getTreeRepresentation(true)
-//					, o2Temp.getClass().getSimpleName(), o2Temp.getTreeRepresentation(true));
+			System.out.printf("\nCross island query node: raw cross join:\n  o1 class: %s; o1Temp tree: %s;\n  o2 class: %s, o2Temp tree: %s\n\n\n"
+					, o1Temp.getClass().getSimpleName(), o1Temp.getTreeRepresentation(true)
+					, o2Temp.getClass().getSimpleName(), o2Temp.getTreeRepresentation(true));
 			return TheObjectThatResolvesAllDifferencesAmongTheIslands.constructJoin(scope, o1Temp, o2Temp, jt, null, false);
 		}
 	}
@@ -755,21 +757,32 @@ public class CrossIslandQueryNodes {
 	private static Map<Pair<String, String>, String> processJoinPredicates(Set<String> jp) throws Exception {
 		
 		Map<Pair<String, String>, String> result = new HashMap<>();
+		Map<Pair<String, String>, List<String>> intermediateResult = new HashMap<>();
 		
 		for (String s : jp ) {
 			
 			Expression e = CCJSqlParserUtil.parseCondExpression(s);
 			List<Expression> le = SQLExpressionUtils.getFlatExpressions(e);
+			
 			for (Expression expr : le) {
 				
 				List<Column> lc = SQLExpressionUtils.getAttributes(expr);
 				
 				String temp0 = lc.get(0).getTable().getFullyQualifiedName(); // we don't look for other dots because everything is pruned
 				String temp1 = lc.get(1).getTable().getFullyQualifiedName();
-				result.put(new ImmutablePair<>(temp0, temp1), s);
-				result.put(new ImmutablePair<>(temp1, temp0), s);
+				
+				Pair<String, String> temp01 = new ImmutablePair<>(temp0, temp1);
+				Pair<String, String> temp10 = new ImmutablePair<>(temp1, temp0);
+				
+				if (intermediateResult.get(temp01) == null) intermediateResult.put(temp01, new ArrayList<>());
+				if (intermediateResult.get(temp10) == null) intermediateResult.put(temp10, new ArrayList<>());
+				intermediateResult.get(temp01).add(expr.toString());
+				intermediateResult.get(temp10).add(expr.toString());
 			}
 		}
+		
+		for (Pair<String, String> pair : intermediateResult.keySet())
+			result.put(pair, String.join(" AND ", intermediateResult.get(pair)));
 			
 		return result;
 	}

@@ -226,7 +226,8 @@ public class SQLQueryGenerator implements OperatorVisitor {
         		t0.setName(((Join)child0).getJoinToken());
         	} else {
         		t0.setName(child0ObjectMap.get(s));
-        		if (! s.equals(child0ObjectMap.get(s))) t0.setAlias(new Alias(s));
+        		String[] temp = child0ObjectMap.get(s).split("[.]");
+        		if (! s.equals(temp[temp.length-1])) t0.setAlias(new Alias(s));
         	} 
 
         	if (child1.isPruned()) {
@@ -237,7 +238,8 @@ public class SQLQueryGenerator implements OperatorVisitor {
         		t1.setName(((Join)child1).getJoinToken());
         	} else {
         		t1.setName(child1ObjectMap.get(s2));
-        		if (! s2.equals(child1ObjectMap.get(s2))) t1.setAlias(new Alias(s2));
+        		String[] temp = child1ObjectMap.get(s2).split("[.]");
+        		if (! s2.equals(temp[temp.length-1])) t1.setAlias(new Alias(s2));
         	} 
     	}
     	
