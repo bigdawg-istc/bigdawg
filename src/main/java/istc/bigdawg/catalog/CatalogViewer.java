@@ -182,6 +182,8 @@ public class CatalogViewer {
 		}
 		rs.close();
 		
+		if (extraction.isEmpty()) throw new BigDawgCatalogException("Cannot find inputs: "+inputs+"; in scope: "+scope.name()+"\n");
+		
 		return extraction;
 	};
 	

@@ -51,7 +51,7 @@ public class SciDBIslandSeqScan extends SciDBIslandScan implements SeqScan {
 			DataObjectAttribute dim = new DataObjectAttribute();
 			
 			dim.setName(expr);
-			dim.setTypeString(output.getAttributes().get(expr));
+			dim.setTypeString(output.getDimensions().get(expr));
 			dim.setHidden(true);
 			
 			String attrName = dim.getFullyQualifiedName();		
