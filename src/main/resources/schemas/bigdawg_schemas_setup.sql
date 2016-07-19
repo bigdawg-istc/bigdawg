@@ -79,3 +79,89 @@ CREATE TABLE IF NOT EXISTS mimic2v26.procedureevents (subject_id integer, hadm_i
 
 CREATE TABLE IF NOT EXISTS mimic2v26.totalbalevents (subject_id integer, icustay_id integer, itemid integer, charttime timestamp without time zone, elemid integer, realtime timestamp without time zone, cgid integer, cuid integer, pervolume double precision, cumvolume double precision, accumperiod character varying(20), approx character varying(20), reset double precision, stopped character varying(20));
 
+
+
+-- TPCH CREATE TABLES
+
+CREATE TABLE IF NOT EXISTS REGION (
+R_REGIONKEY bigint PRIMARY KEY,
+R_NAME char(25),
+R_COMMENT varchar(152)
+);
+
+CREATE TABLE IF NOT EXISTS NATION (
+N_NATIONKEY bigint PRIMARY KEY,
+N_NAME char(25),
+N_REGIONKEY bigint REFERENCES REGION (R_REGIONKEY),
+N_COMMENT varchar(152)
+);
+
+CREATE TABLE IF NOT EXISTS PART ( 
+P_PARTKEY bigint PRIMARY KEY,
+P_NAME varchar(55),
+P_MFGR char(25),
+P_BRAND char(10),
+P_TYPE varchar(25),
+P_SIZE integer,
+P_CONTAINER char(10),
+P_RETAILPRICE decimal,
+P_COMMENT varchar(23));
+
+CREATE TABLE IF NOT EXISTS SUPPLIER (
+S_SUPPKEY bigint PRIMARY KEY,
+S_NAME char(25),
+S_ADDRESS varchar(40),
+S_NATIONKEY bigint REFERENCES NATION (N_NATIONKEY),
+S_PHONE char(15),
+S_ACCTBAL decimal, 
+S_COMMENT varchar(101));
+
+CREATE TABLE IF NOT EXISTS PARTSUPP (
+PS_PARTKEY bigint REFERENCES PART (P_PARTKEY), 
+PS_SUPPKEY bigint REFERENCES SUPPLIER (S_SUPPKEY),
+PS_AVAILQTY integer,
+PS_SUPPLYCOST decimal, 
+PS_COMMENT varchar(199),
+PRIMARY KEY (PS_PARTKEY, PS_SUPPKEY));
+
+CREATE TABLE IF NOT EXISTS CUSTOMER (
+C_CUSTKEY bigint PRIMARY KEY,
+C_NAME varchar(25),
+C_ADDRESS varchar(40),
+C_NATIONKEY bigint REFERENCES NATION (N_NATIONKEY),
+C_PHONE char(15),
+C_ACCTBAL decimal,
+C_MKTSEGMENT char(10),
+C_COMMENT varchar(117));
+
+CREATE TABLE IF NOT EXISTS ORDERS (
+O_ORDERKEY bigint PRIMARY KEY,
+O_CUSTKEY bigint REFERENCES CUSTOMER (C_CUSTKEY),
+O_ORDERSTATUS char(1),
+O_TOTALPRICE decimal,
+O_ORDERDATE date,
+O_ORDERPRIORITY char(15),
+O_CLERK char(15),
+O_SHIPPRIORITY integer,
+O_COMMENT varchar(79));
+
+CREATE TABLE IF NOT EXISTS LINEITEM (
+L_ORDERKEY bigint REFERENCES ORDERS (O_ORDERKEY),
+L_PARTKEY bigint REFERENCES PART (P_PARTKEY),
+L_SUPPKEY bigint REFERENCES SUPPLIER (S_SUPPKEY),
+L_LINENUMBER integer,
+L_QUANTITY decimal,
+L_EXTENDEDPRICE decimal, 
+L_DISCOUNT decimal, 
+L_TAX decimal, 
+L_RETURNFLAG char(1),
+L_LINESTATUS char(1),
+L_SHIPDATE date,
+L_COMMITDATE date,
+L_RECEIPTDATE date,
+L_SHIPINSTRUCT char(25),
+L_SHIPMODE char(10),
+L_COMMENT varchar(44),
+PRIMARY KEY (L_ORDERKEY, L_LINENUMBER));
+
+

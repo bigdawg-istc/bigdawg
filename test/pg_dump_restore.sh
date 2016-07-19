@@ -4,7 +4,7 @@ file_from_postgres=${data_folder}from_postgres_waveform_.bin
 file_from_postgres_csv=${data_folder}from_postgres_waveform_.csv
 file_to_scidb=${data_folder}to_scidb_waveform.bin
 file_from_scidb=${data_folder}from_scidb_waveform.bin
-csv_file=${data_folder}waveform_1GB.csv
+csv_file=${data_folder}waveform_001GB.csv
 postgres_pipe=/tmp/from_postgres
 postgres_file=/tmp/postgres_file
 scidb_pipe=/tmp/to_scidb
@@ -48,7 +48,7 @@ host=localhost
 
 compress=${1:-0}
 size=${2:-"unknown"}
-size_file=${3:-"unknown"}
+size_file=${3:-"unkonwn"}
 
 psql -U ${user} -d ${database} -p 5430 -a -c "drop table if exists ${postgresql_table}; create table ${postgresql_table} (a bigint not null, b bigint not null, val double precision not null);"
 #time pg_dump --data-only --file /home/adam/data/pg_dump.out --format custom --schema public --no-owner --table test_waveform -v --compress 0 --lock-wait-timeout=10 --no-security-labels --no-tablespaces --section=data --dbname=test -p 5431 -h localhost -U postgres --no-password 
@@ -58,7 +58,7 @@ rm -f ${dump_file}
 chmod a+rw ${dump_file}
 
 START=$(date +%s.%N)
-time pg_dump --data-only --file ${dump_file} --format custom --schema public --no-owner --table ${postgresql_table} -v --compress ${compress} --lock-wait-timeout=10 --no-security-labels --no-tablespaces --section=data --dbname=${database} -p 5431 -h localhost -U adam --no-password
+time pg_dump --file ${dump_file} --format custom --schema public --no-owner --table ${postgresql_table} -v --compress ${compress} --lock-wait-timeout=10 --no-security-labels --no-tablespaces --section=data --dbname=${database} -p 5431 -h localhost -U adam --no-password --clean --if-exists --encoding=SQL_ASCII
 END=$(date +%s.%N)
 
 DIFF=$(echo "$END - $START" | bc)
@@ -66,7 +66,7 @@ DIFF=$(echo "$END - $START" | bc)
 MSG="dump, $DIFF"
 echo $MSG
 
-size_dump=`du -s -h ${dump_file} | awk '{print $1}'`
+size_dump=`du -s --block-size=1M ${dump_file} | awk '{print $1}'`
 echo size of the backup: $size_dump
 
 TIMESTAMP=$(date -d"$CURRENT +$MINUTES minutes" '+%F_%T.%N_%Z')

@@ -3,6 +3,8 @@
  */
 package istc.bigdawg.postgresql;
 
+import java.io.Serializable;
+
 /**
  * @author Adam Dziedzic
  * 
@@ -10,7 +12,12 @@ package istc.bigdawg.postgresql;
  * 
  *         Deal with the name of a table and schema.
  */
-public class PostgreSQLSchemaTableName {
+public class PostgreSQLSchemaTableName implements Serializable {
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 
 	public static final String DEFAULT_SCHEMA = "public";
 

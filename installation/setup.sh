@@ -31,9 +31,10 @@ postgres2_bin=${downloads_dir}/postgres2/bin
 
 # tpch 
 scale_factor=1
-TABLES_TPCH_POSTGRES1=(region part partsupp orders)
-# TABLES_TPCH_POSTGRES1=(region part partsupp orders nation supplier customer lineitem) # for tests
-TABLES_TPCH_POSTGRES2=(nation supplier customer lineitem)
+#TABLES_TPCH_POSTGRES1=(region part partsupp orders)
+TABLES_TPCH_POSTGRES1=(region part partsupp orders nation supplier customer lineitem) # for tests
+#TABLES_TPCH_POSTGRES2=(nation supplier customer lineitem)
+TABLES_TPCH_POSTGRES2=(region part partsupp orders nation supplier customer lineitem) # for tests
 
 # auxiliary function: this compiles the code, intalls and configures the database
 function setDB {
@@ -118,7 +119,9 @@ function prepare_postgres2 {
     ./psql -p ${port_2} -c "alter role ${pguser} with password 'test'" -d template1
 
     ./psql -p ${port_2} -c "create database ${database2} owner ${pguser}" -d template1
-    ./psql -p ${port_2} -c "create schema mimic2v26" -d ${database2} -U pguser
+    ./psql -p ${port_2} -f ${initial_dir}/data/mimic2.pgd -U ${pguser} -d ${database2}
+    # ./psql -p ${port_2} -c "create database ${database2} owner ${pguser}" -d template1
+    # ./psql -p ${port_2} -c "create schema mimic2v26" -d ${database2} -U pguser
     ./psql -p ${port_2} -f ${initial_dir}/../scripts/mimic2_sql/d_patients.sql -d ${database2}
 
     # tests
@@ -166,7 +169,7 @@ function load_tpch {
 }
 
 # main exeuction path: the function with label main are meant to be exeucted in the main path, you can comment the functions that you don't want to be executed
-#install_postgres
-#prepare_postgres1
-#prepare_postgres2
+install_postgres
+prepare_postgres1
+prepare_postgres2
 load_tpch

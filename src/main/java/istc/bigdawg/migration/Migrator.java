@@ -4,7 +4,6 @@
  */
 package istc.bigdawg.migration;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,7 +21,15 @@ import istc.bigdawg.query.ConnectionInfo;
  */
 public class Migrator {
 
+	/**
+	 * log
+	 */
 	private static Logger logger = Logger.getLogger(Migrator.class.getName());
+
+	/**
+	 * Register migrators - they will be called for migration between database
+	 * when the requests come.
+	 */
 	private static List<FromDatabaseToDatabase> registeredMigrators;
 
 	/**
@@ -38,39 +45,82 @@ public class Migrator {
 	}
 
 	/**
-	 * register the migrators
+	 * Register the migrators.
 	 */
 	static {
 		registeredMigrators = new ArrayList<FromDatabaseToDatabase>();
 		registeredMigrators.add(new FromPostgresToPostgres());
+
+		/* migrator from PostgreSQL to SciDB */
+		/*
+		 * registeredMigrators.add(new FromDatabaseToDatabase(
+		 * ExportPostgres.ofFormat(FileFormat.CSV),
+		 * LoadSciDB.ofFormat(FileFormat.CSV)));
+		 */
 		registeredMigrators.add(new FromPostgresToSciDB());
+
+		/* migrator from SciDB to Postgres */
+		/*
+		 * registeredMigrators.add(new FromDatabaseToDatabase(
+		 * ExportSciDB.ofFormat(FileFormat.CSV),
+		 * LoadPostgres.ofFormat(FileFormat.CSV)));
+		 */
 		registeredMigrators.add(new FromSciDBToPostgres());
+	}
+
+	/**
+	 * see:
+	 * {@link #migrate(ConnectionInfo, String, ConnectionInfo, String, MigrationParams)}
+	 * 
+	 * @param connectionFrom
+	 * @param objectFrom
+	 * @param connectionTo
+	 * @param objectTo
+	 * @return {@link MigrationResult} the result and information about the
+	 *         executed migration
+	 * @throws MigrationException
+	 */
+	public static MigrationResult migrate(ConnectionInfo connectionFrom,
+			String objectFrom, ConnectionInfo connectionTo, String objectTo)
+					throws MigrationException {
+		return Migrator.migrate(connectionFrom, objectFrom, connectionTo,
+				objectTo, null);
 	}
 
 	/**
 	 * Migrate data between databases.
 	 * 
 	 * @param connectionFrom
-	 *            the connection to the database from which we migrate the data.
+	 *            the connection to the database from which we migrate the data
 	 * @param objectFrom
 	 *            the array/table from which we migrate the data
 	 * @param connectionTo
 	 *            the connection to the database to which we migrate the data
 	 * @param objectTo
 	 *            the array/table to which we migrate the data
-	 * @return the result and information about the executed migration
+	 * @param migrationParams
+	 *            additional parameters for the migrator, for example, the
+	 *            "create statement" (a statement to create an object:
+	 *            table/array) which should be executed in the database
+	 *            identified by connectionTo; data should be loaded to this new
+	 *            object, the name of the target object in the create statement
+	 *            has to be the same as the migrate method parameter: objectTo
+	 * @return {@link MigrationResult} the result and information about the
+	 *         executed migration
 	 * 
 	 * @throws MigrationException
 	 *             information why the migration failed (e.g. no access to one
 	 *             of the database, schemas are not compatible
 	 */
 	public static MigrationResult migrate(ConnectionInfo connectionFrom,
-			String objectFrom, ConnectionInfo connectionTo, String objectTo)
-					throws MigrationException {
-		logger.debug("Migrator - main facade.");
+			String objectFrom, ConnectionInfo connectionTo, String objectTo,
+			MigrationParams migrationParams) throws MigrationException {
+		logger.debug(String.format("Migrator - main facade. From: %s; To: %s;",
+				objectFrom, objectTo));
 		for (FromDatabaseToDatabase migrator : registeredMigrators) {
-			MigrationResult result = migrator.migrate(connectionFrom,
-					objectFrom, connectionTo, objectTo);
+			MigrationResult result = migrator
+					.migrate(new MigrationInfo(connectionFrom, objectFrom,
+							connectionTo, objectTo, migrationParams));
 			if (result != null) {
 				return result;
 			}
@@ -78,18 +128,12 @@ public class Migrator {
 		throw new MigrationException("Unsupported migration from "
 				+ connectionFrom.getHost() + ":" + connectionFrom.getPort()
 				+ " to " + connectionTo.getHost() + ":" + connectionTo.getPort()
-				+ "!\n" + "Detail info:\n" + "From:\n"
-				+ connectionFrom.toString() + "\n To:\n"
-				+ connectionTo.toString());
+				+ "!\n" + "Details:\n" + "From:\n" + connectionFrom.toString()
+				+ "\n To:\n" + connectionTo.toString());
 	}
 
 	public static void main(String[] args) {
-		try {
-			LoggerSetup.setLogging();
-		} catch (IOException e1) {
-			e1.printStackTrace();
-			System.err.print("Logger setup failed!");
-		}
+		LoggerSetup.setLogging();
 		PostgreSQLConnectionInfo conInfoFrom = new PostgreSQLConnectionInfo(
 				"localhost", "5431", "mimic2", "pguser", "test");
 		PostgreSQLConnectionInfo conInfoTo = new PostgreSQLConnectionInfo(

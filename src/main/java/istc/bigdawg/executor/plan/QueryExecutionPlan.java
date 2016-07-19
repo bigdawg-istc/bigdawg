@@ -14,7 +14,7 @@ import org.jgrapht.Graphs;
 import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
 import org.jgrapht.graph.DefaultEdge;
 
-import istc.bigdawg.utils.IslandsAndCast.Scope;
+import istc.bigdawg.islands.IslandsAndCast.Scope;
 
 /**
  * Represents the steps needed to compute a query as a directed, acyclic graph
@@ -50,7 +50,7 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
     }
     
     public String getSerializedName() {
-    	return "QEPTERMINALNODE_"+serial;
+    	return "BIGDAWGQEPTERMINALNODE_"+serial;
     }
     
     public void setTerminalTableName(String terminalTableName) {
@@ -111,7 +111,7 @@ public class QueryExecutionPlan extends DirectedAcyclicGraph<ExecutionNode, Defa
      * @throws DirectedAcyclicGraph.CycleFoundException
      *             if any dependency would induce a cycle
      */
-    public void addDependencies(ExecutionNode node, List<ExecutionNode> dependencies)
+    public void addDependencies(ExecutionNode node, Collection<ExecutionNode> dependencies)
             throws DirectedAcyclicGraph.CycleFoundException {
         this.addNode(node);
         for (ExecutionNode dep : dependencies) {

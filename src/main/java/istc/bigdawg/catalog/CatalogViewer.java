@@ -1,6 +1,5 @@
 package istc.bigdawg.catalog;
 
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -8,82 +7,105 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
-import org.apache.log4j.Logger;
-
+import istc.bigdawg.exceptions.BigDawgCatalogException;
+import istc.bigdawg.exceptions.UnsupportedIslandException;
+import istc.bigdawg.islands.IslandsAndCast;
+import istc.bigdawg.islands.TheObjectThatResolvesAllDifferencesAmongTheIslands;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
 
 public class CatalogViewer {
-
-	private static Logger logger = Logger.getLogger(CatalogViewer.class.getName());
-
-	/**
-	 * takes a integer DBID, returns a 5-field ArrayList<String> that tells host, port, dbname, userid and password
-	 * 
-	 * @param cc
-	 * @param db_id
-	 * @return
-	 * @throws Exception
-	 */
-	public static PostgreSQLConnectionInfo getPSQLConnectionInfo(int db_id) throws Exception {
-		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
-		// input check
-		CatalogUtilities.checkConnection(cc);
-
-		PostgreSQLConnectionInfo extraction;
-
-		ResultSet rs = cc.execRet(
-				"select dbid, eid, host, port, db.name as dbname, userid, password "
-				+ "from catalog.databases db join catalog.engines e on db.engine_id = e.eid where dbid = "+db_id);
-		if (rs.next()) {
-			extraction = new PostgreSQLConnectionInfo(rs.getString("host"), rs.getString("port"), 
-					rs.getString("dbname"), rs.getString("userid"), rs.getString("password"));
-		} else {
-			rs.close();
-			throw new Exception("Postgres Connection Info Not Found: "+db_id);
-		}
-			
-		if (rs.next()) {
-			throw new Exception("Non-unique DBID: "+db_id);
-		}
-		rs.close();
-
-		return extraction;
-	}
 	
+	public static enum Engine {PostgreSQL, SciDB};
+
+//	private static Logger logger = Logger.getLogger(CatalogViewer.class.getName());
+
 	/**
 	 * takes a integer DBID, returns a 5-field ArrayList<String> that tells host, port, dbname, userid and password
 	 * 
 	 * @param cc
 	 * @param db_id
 	 * @return
+	 * @throws SQLException 
 	 * @throws Exception
 	 */
-	public static SciDBConnectionInfo getSciDBConnectionInfo(int db_id) throws Exception {
+	public static ConnectionInfo getConnectionInfo(int db_id) throws BigDawgCatalogException, SQLException {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
 		CatalogUtilities.checkConnection(cc);
 
-		SciDBConnectionInfo extraction;
+		ConnectionInfo extraction = null;
 
-		ResultSet rs = cc.execRet(
-				"select dbid, eid, host, port, connection_properties, userid, password "
-				+ "from catalog.databases db join catalog.engines e on db.engine_id = e.eid where dbid = "+db_id);
-		if (rs.next()) // String host, String port, String user, String password, String binPath
-			extraction = new SciDBConnectionInfo(rs.getString("host"), rs.getString("port"), 
-					rs.getString("userid"), rs.getString("password"), rs.getString("connection_properties"));
-		else {
-			rs.close();
-			throw new Exception("SciDB Connection Info Not Found: "+db_id);
+		// NEW ADDITION
+		ResultSet rs1 = cc.execRet("select connection_properties from catalog.databases db join catalog.engines e on db.engine_id = e.eid where dbid = "+db_id);
+		
+		Engine e = null;
+		
+		if (rs1.next()) {
+			String engineString = rs1.getString("connection_properties");
+			if (engineString.startsWith("PostgreSQL"))
+				e = Engine.PostgreSQL;
+			else if (engineString.startsWith("SciDB"))
+				e = Engine.SciDB;
+			else {
+				rs1.close();
+				throw new BigDawgCatalogException("Unsupported engine: "+ engineString);
+			}
+		} else {
+			rs1.close();
+			throw new BigDawgCatalogException(db_id);
+		}
+		rs1.close();
+		
+		
+		ResultSet rs2;
+		if (e.equals(Engine.PostgreSQL)) {
+			
+			rs2 = cc.execRet("select dbid, eid, host, port, db.name as dbname, userid, password from catalog.databases db join catalog.engines e on db.engine_id = e.eid where dbid = "+db_id);
+			if (rs2.next())
+				extraction = new PostgreSQLConnectionInfo(rs2.getString("host"), rs2.getString("port"),rs2.getString("dbname"), rs2.getString("userid"), rs2.getString("password"));
+		} else if (e.equals(Engine.SciDB)) {
+			rs2 = cc.execRet("select dbid, db.engine_id, host, port, bin_path, userid, password "
+							+ "from catalog.databases db "
+							+ "join catalog.engines e on db.engine_id = e.eid "
+							+ "join catalog.scidbbinpaths sp on db.engine_id = sp.eid where dbid = "+db_id);
+			if (rs2.next())
+				extraction = new SciDBConnectionInfo(rs2.getString("host"), rs2.getString("port"), rs2.getString("userid"), rs2.getString("password"), rs2.getString("bin_path"));
+		} else 
+			throw new BigDawgCatalogException("This is not supposed to happen");
+		
+		if (extraction == null) {
+			rs2.close();
+			throw new BigDawgCatalogException("Connection Info Cannot Be Formulated: "+db_id);
 		}
 			
-		if (rs.next()) {
-			throw new Exception("Non-unique DBID: "+db_id);
+		if (rs2.next()) {
+			throw new BigDawgCatalogException("Non-unique DBID: "+db_id);
 		}
-		rs.close();
+		rs2.close();
 
 		return extraction;
+		// NEW ADDITION END
+		
+		
+//		rs = cc.execRet(
+//				"select dbid, eid, host, port, db.name as dbname, userid, password "
+//				+ "from catalog.databases db join catalog.engines e on db.engine_id = e.eid where dbid = "+db_id);
+//		if (rs.next()) {
+//			extraction = new PostgreSQLConnectionInfo(rs.getString("host"), rs.getString("port"), 
+//					rs.getString("dbname"), rs.getString("userid"), rs.getString("password"));
+//		} else {
+//			rs.close();
+//			throw new Exception("Postgres Connection Info Not Found: "+db_id);
+//		}
+//			
+//		if (rs.next()) {
+//			throw new Exception("Non-unique DBID: "+db_id);
+//		}
+//		rs.close();
+//
+//		return extraction;
 	}
 	
 	/**
@@ -93,10 +115,10 @@ public class CatalogViewer {
 	 * @return HashMap<Integer, ArrayList<String>>
 	 * @throws Exception
 	 */
-	public static HashMap<Integer, List<String>> getDBMappingByDB (List<String> inputs) throws Exception {
+	public static HashMap<Integer, List<String>> getDBMappingByDB (List<String> inputs) throws BigDawgCatalogException, SQLException {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		CatalogUtilities.checkConnection(cc);
-		if (inputs.size() == 0) throw new Exception("Empty inputs from getDBMapping");
+		if (inputs.size() == 0) throw new BigDawgCatalogException("Empty inputs from getDBMapping");
 		
 		int len = inputs.size();
 		HashMap<Integer, List<String>> extraction = new HashMap<>();
@@ -124,31 +146,43 @@ public class CatalogViewer {
 	 * @param cc
 	 * @param inputs
 	 * @return HashMap<String,ArrayList<String>>
-	 * @throws Exception
+	 * @throws UnsupportedIslandException 
+	 * @throws SQLException 
 	 */
-	public static HashMap<String,List<String>> getDBMappingByObj (List<String> inputs) throws Exception {
+	public static HashMap<String,List<String>> getDBMappingByObj (List<String> inputs, IslandsAndCast.Scope scope) throws BigDawgCatalogException, UnsupportedIslandException, SQLException {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		
 		CatalogUtilities.checkConnection(cc);
-		if (inputs.size() == 0) throw new Exception("Empty inputs from getDBMapping");
+		if (inputs.size() == 0) throw new BigDawgCatalogException("Empty inputs from getDBMapping");
 		
 		int len = inputs.size();
 		HashMap<String, List<String>> extraction = new HashMap<>();
 		
-		String wherePred = new String(" lower(o.name) = lower(\'"+ inputs.get(0) + "\') ");
+		String wherePred = new String(" (lower(o.name) = lower(\'"+ inputs.get(0) + "\') ");
 		for (int i = 1; i < len; i++) {
-			wherePred = wherePred + "or lower(o.name) = lower(\'" + inputs.get(i) + "\') ";
+			wherePred = wherePred + " or lower(o.name) = lower(\'" + inputs.get(i) + "\') ";
 		}
+		wherePred += ")";
 		
-		ResultSet rs = cc.execRet("select name obj, string_agg(cast(physical_db as varchar), ',') db, count(name) c "
-				+ "from (select * from catalog.objects o where " + wherePred + " order by physical_db, name) as objs "
-				+ "group by name order by c desc, name;");
+		String islandName = TheObjectThatResolvesAllDifferencesAmongTheIslands.getCatalogIslandSelectionPredicate(scope); 
+		
+		ResultSet rs = cc.execRet("select o.name obj, string_agg(cast(physical_db as varchar), ',') db, count(o.name) c, scope_name island "
+								+ "from catalog.objects o "
+								+ "join catalog.databases d on o.physical_db = d.dbid "
+								+ "join catalog.shims s on d.engine_id = s.engine_id "
+								+ "join catalog.islands i on s.island_id = i.iid where " + wherePred + islandName + " group by o.name, island;");
+		
+//		ResultSet rs = cc.execRet("select name obj, string_agg(cast(physical_db as varchar), ',') db, count(name) c "
+//				+ "from (select * from catalog.objects o where " + wherePred + " order by physical_db, name) as objs "
+//				+ "group by name order by c desc, name;");
 		
 		if (rs.next()) extraction.put(rs.getString("obj"), new ArrayList<String>(Arrays.asList(rs.getString("db").split(","))));
 		while (rs.next()) {
 			extraction.put(rs.getString("obj"), new ArrayList<String>(Arrays.asList(rs.getString("db").split(","))));
 		}
 		rs.close();
+		
+		if (extraction.isEmpty()) throw new BigDawgCatalogException("Cannot find inputs: "+inputs+"; in scope: "+scope.name()+"\n");
 		
 		return extraction;
 	};
@@ -160,9 +194,9 @@ public class CatalogViewer {
 	 * @param cc
 	 * @param csvstr
 	 * @return String of TSV String of object names (obj)
-	 * @throws Exception
+	 * @throws SQLException 
 	 */
-	public static String getObjectsFromList(String csvstr) throws Exception {
+	public static String getObjectsFromList(String csvstr) throws BigDawgCatalogException, SQLException {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		
 		// input check
@@ -197,9 +231,10 @@ public class CatalogViewer {
 	 * @param cc
 	 * @return ArrayList of TSV String of shim_id, island name, engine name and
 	 *         shim access_method
+	 * @throws SQLException 
 	 * @throws Exception
 	 */
-	public static List<String> getAllShims() throws Exception {
+	public static List<String> getAllShims() throws BigDawgCatalogException, SQLException {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
 		CatalogUtilities.checkConnection(cc);
@@ -472,7 +507,7 @@ public class CatalogViewer {
 		return extraction;
 	}
 	
-	public static List<Integer> getDbsOfObject(String objName, String dbname) throws Exception {
+	public static List<Integer> getDbsOfObject(String objName, String dbname) throws BigDawgCatalogException, SQLException  {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
 		CatalogUtilities.checkConnection(cc);
@@ -480,13 +515,14 @@ public class CatalogViewer {
 		CatalogUtilities.checkLength(objName, 30);
 
 		List<Integer> extraction = new ArrayList<>();
-
-		ResultSet rs = cc.execRet("select d.dbid " + "from catalog.objects o "
-				+ "join catalog.databases d 	on o.physical_db = d.dbid "
-				+ "join catalog.engines e 		on d.engine_id = e.eid "
-				+ "where o.name = \'" + objName + "\' "
-				+ " and e.name ilike \'%"+dbname+"%\' "
-				+ "order by d.dbid;");
+		
+		ResultSet rs = cc.execRet("select d.dbid "
+								+ "from catalog.objects o "
+								+ "join catalog.databases d 	on o.physical_db = d.dbid "
+								+ "join catalog.engines e 		on d.engine_id = e.eid "
+								+ "where o.name = \'" + objName + "\' "
+								+  " and e.connection_properties ilike \'%"+dbname+"%\' "
+								+ "order by d.dbid;");
 
 		while (rs.next()) {
 			extraction.add(rs.getInt("dbid"));
@@ -835,55 +871,6 @@ public class CatalogViewer {
 		return extraction;
 	}
 
-	/**
-	 * author: Adam Dziedzic
-	 * 
-	 * Get connection to a database based on engineId and dbId.
-	 * 
-	 * 
-	 * @param cc
-	 *            catalog with the connection to catalog to PostgreSQL
-	 * @param engineId
-	 *            - id of the database engine
-	 * @param dbId
-	 *            - id of a database in the engine
-	 * @return connection information
-	 * @throws Exception
-	 *             problem with the connection to the catalog or no data for the
-	 *             arguments in the catalog
-	 */
-	public static ConnectionInfo getConnection(int dbId) throws Exception {
-		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
-		// TODO add cache for the connections (done by Adam)
-		CatalogUtilities.checkConnection(cc);
-		PreparedStatement stmt = cc.connection
-				.prepareStatement("SELECT host,port,databases.name as name,userid,password "
-						+ "FROM catalog.engines engines, catalog.databases databases "
-						+ "WHERE engines.eid=databases.engine_id and databases.dbid=?");
-		stmt.setInt(1, dbId);
-		ResultSet rs = null;
-		try {
-			rs = stmt.executeQuery();
-		} catch (SQLException e) {
-			String msg = "database access error; this method is called on a closed PreparedStatement or"
-					+ " the SQL statement does not return a ResultSet object";
-			logger.error(msg);
-			e.printStackTrace();
-			throw e;
-		}
-		if (rs.next() == false) {
-			String msg = "No results for the given dbId: " + dbId;
-			System.err.println(msg);
-			logger.error(msg);
-			throw new Exception(msg);
-		}
-		ConnectionInfo conInfo = new PostgreSQLConnectionInfo(rs.getString("host"), rs.getString("port"), rs.getString("name"),
-				rs.getString("userid"), rs.getString("password"));
-		return conInfo;
-	}
-
-	
-	
 	
 	/**
 	 * Used for updating catalog entries.

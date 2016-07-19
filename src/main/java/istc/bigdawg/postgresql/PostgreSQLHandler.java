@@ -7,7 +7,6 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
@@ -23,6 +22,14 @@ import org.apache.log4j.Logger;
 
 import istc.bigdawg.BDConstants.Shim;
 import istc.bigdawg.catalog.CatalogViewer;
+import istc.bigdawg.database.AttributeMetaData;
+import istc.bigdawg.exceptions.BigDawgCatalogException;
+import istc.bigdawg.exceptions.NoTargetArrayException;
+import istc.bigdawg.exceptions.UnsupportedTypeException;
+import istc.bigdawg.executor.ExecutorEngine;
+import istc.bigdawg.executor.IslandQueryResult;
+import istc.bigdawg.executor.JdbcQueryResult;
+import istc.bigdawg.executor.QueryResult;
 import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.query.DBHandler;
@@ -34,21 +41,47 @@ import istc.bigdawg.utils.StackTrace;
  * @author Adam Dziedzic
  * 
  */
-public class PostgreSQLHandler implements DBHandler {
+public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 
-	private static Logger log = Logger.getLogger(PostgreSQLHandler.class.getName());
-	private static int defaultSchemaServerDBID = BigDawgConfigProperties.INSTANCE.getPostgresSchemaServerDBID();
+	private static Logger log = Logger
+			.getLogger(PostgreSQLHandler.class.getName());
+	private static int defaultSchemaServerDBID = BigDawgConfigProperties.INSTANCE
+			.getPostgresSchemaServerDBID();
 	private Connection con = null;
-	private ConnectionInfo conInfo = null;
+	private PostgreSQLConnectionInfo conInfo = null;
 	private Statement st = null;
 	private PreparedStatement preparedSt = null;
 	private ResultSet rs = null;
 
+	/**
+	 * Initialize the PostgreSQL handler with only the connection information.
+	 * 
+	 * @param conInfo
+	 *            information about connection to an instance of PostgreSQL
+	 *            database
+	 */
+	public PostgreSQLHandler(PostgreSQLConnectionInfo conInfo) {
+		this.conInfo = conInfo;
+	}
+
+	public PostgreSQLHandler(ConnectionInfo conInfo) {
+		if (conInfo instanceof PostgreSQLConnectionInfo) {
+			this.conInfo = (PostgreSQLConnectionInfo) conInfo;
+		} else {
+			Exception e = new IllegalArgumentException(
+					"The conInfo parameter has to be of "
+							+ "type: PostgreSQLConnectionInfo.");
+			log.error(e.getMessage() + " " + StackTrace.getFullStackTrace(e));
+		}
+	}
+
 	public PostgreSQLHandler(int dbId) throws Exception {
 		try {
-			this.conInfo = CatalogViewer.getConnection(dbId);
+			this.conInfo = (PostgreSQLConnectionInfo) CatalogViewer
+					.getConnectionInfo(dbId);
 		} catch (Exception e) {
-			String msg = "Catalog chosen connection: " + conInfo.getHost() + " " + conInfo.getPort() + " "
+			String msg = "Catalog chosen connection: " + conInfo.getHost() + " "
+					+ conInfo.getPort() + " " + conInfo.getDatabase() + " "
 					+ conInfo.getUser() + " " + conInfo.getPassword() + ".";
 			log.error(msg);
 			e.printStackTrace();
@@ -56,12 +89,9 @@ public class PostgreSQLHandler implements DBHandler {
 		}
 	}
 
-	public PostgreSQLHandler(PostgreSQLConnectionInfo conInfo) {
-		this.conInfo = conInfo;
-	}
-
 	public PostgreSQLHandler() {
-		String msg = "Default handler. PostgreSQL parameters from a file.";
+		String msg = "Default handler. PostgreSQL parameters are "
+				+ "taken from the BigDAWG configuration file.";
 		log.info(msg);
 	}
 
@@ -71,15 +101,16 @@ public class PostgreSQLHandler implements DBHandler {
 	 * @throws SQLException
 	 *             if could not establish a connection
 	 */
-	private Connection getConnection() throws SQLException {
+	public Connection getConnection() throws SQLException {
 		if (con == null) {
 			if (conInfo != null) {
 				try {
 					con = getConnection(conInfo);
 				} catch (SQLException e) {
 					e.printStackTrace();
-					log.error(e.getMessage() + " Could not connect to PostgreSQL database using: " + conInfo.toString(),
-							e);
+					log.error(e.getMessage()
+							+ " Could not connect to PostgreSQL database using: "
+							+ conInfo.toString(), e);
 					throw e;
 				}
 			} else {
@@ -89,7 +120,28 @@ public class PostgreSQLHandler implements DBHandler {
 		return con;
 	}
 
-	public static Connection getConnection(ConnectionInfo conInfo) throws SQLException {
+	/**
+	 * Get the JDBC connection to the database. see:
+	 * {@link #getConnection(PostgreSQLConnectionInfo)}
+	 */
+	public static Connection getConnection(ConnectionInfo conInfo)
+			throws SQLException {
+		if (conInfo instanceof PostgreSQLConnectionInfo) {
+			return getConnection((PostgreSQLConnectionInfo) conInfo);
+		}
+		throw new IllegalArgumentException("The conInfo parameter has to be of "
+				+ "type: PostgreSQLConnectionInfo.");
+	}
+
+	/**
+	 * Get the JDBC connection to the database.
+	 * 
+	 * @param conInfo
+	 *            connection information (host, port, database name, etc.)
+	 * @return the JDBC connection to the database
+	 */
+	public static Connection getConnection(PostgreSQLConnectionInfo conInfo)
+			throws SQLException {
 		Connection con;
 		String url = conInfo.getUrl();
 		String user = conInfo.getUser();
@@ -97,53 +149,13 @@ public class PostgreSQLHandler implements DBHandler {
 		try {
 			con = DriverManager.getConnection(url, user, password);
 		} catch (SQLException e) {
-			String msg = "Could not connect to the PostgreSQL instance: Url: " + url + " User: " + user + " Password: "
-					+ password;
-			log.error(msg);
-			e.printStackTrace();
-			throw e;
+			String msg = "BigDAWG: Could not connect to the PostgreSQL instance: Url: "
+					+ url + " User: " + user + " Password: " + password
+					+ "; Original message from Postgres: " + e.getMessage();
+			log.error(msg + " " + StackTrace.getFullStackTrace(e));
+			throw new SQLException(msg, e);
 		}
 		return con;
-	}
-
-	public class QueryResult {
-		private List<List<String>> rows;
-		private List<String> types;
-		private List<String> colNames;
-
-		/**
-		 * @return the rows
-		 */
-		public List<List<String>> getRows() {
-			return rows;
-		}
-
-		/**
-		 * @return the types
-		 */
-		public List<String> getTypes() {
-			return types;
-		}
-
-		/**
-		 * @return the colNames
-		 */
-		public List<String> getColNames() {
-			return colNames;
-		}
-
-		/**
-		 * @param rows
-		 * @param types
-		 * @param colNames
-		 */
-		public QueryResult(List<List<String>> rows, List<String> types, List<String> colNames) {
-			super();
-			this.rows = rows;
-			this.types = types;
-			this.colNames = colNames;
-		}
-
 	}
 
 	/*
@@ -154,12 +166,13 @@ public class PostgreSQLHandler implements DBHandler {
 	@Override
 	public Response executeQuery(String queryString) {
 		long lStartTime = System.nanoTime();
-		QueryResult queryResult = null;
+		JdbcQueryResult queryResult = null;
 		try {
 			queryResult = executeQueryPostgreSQL(queryString);
 		} catch (SQLException e) {
 			return Response.status(500)
-					.entity("Problem with query execution in Postgresql: " + e.getMessage() + "; query: " + queryString)
+					.entity("Problem with query execution in Postgresql: "
+							+ e.getMessage() + "; query: " + queryString)
 					.build();
 			// return "Problem with query execution in PostgreSQL: " +
 			// queryString;
@@ -198,18 +211,18 @@ public class PostgreSQLHandler implements DBHandler {
 			rowCounter += 1;
 		}
 
-		String messageTABLE = "format TABLE Java time milliseconds: " + (System.nanoTime() - lStartTime) / 1000000
-				+ ",";
+		String messageTABLE = "format TABLE Java time milliseconds: "
+				+ (System.nanoTime() - lStartTime) / 1000000 + ",";
 		log.info(messageTABLE);
 
 		return Response.status(200).entity(out).build();
 	}
 
 	public String computeDateArithmetic(String s) throws Exception {
-		QueryResult qr = executeQueryPostgreSQL("select date("+s+");");
+		JdbcQueryResult qr = executeQueryPostgreSQL("select date(" + s + ");");
 		return qr.getRows().get(0).get(0);
 	}
-	
+
 	/**
 	 * Clean resource after a query/statement was executed in PostgreSQL.
 	 * 
@@ -243,17 +256,21 @@ public class PostgreSQLHandler implements DBHandler {
 	 *            sql statement to be executed
 	 * @throws SQLException
 	 */
-	public static void executeStatement(Connection connection, String stringStatement) throws SQLException {
+	public static void executeStatement(Connection connection,
+			String stringStatement) throws SQLException {
 		Statement statement = null;
 		try {
 			statement = connection.createStatement();
+			log.debug(
+					"Statement to be executed in Postgres: " + stringStatement);
 			statement.execute(stringStatement);
 			statement.close();
 		} catch (SQLException ex) {
 			ex.printStackTrace();
 			// remove ' from the statement - otherwise it won't be inserted into
 			// log table in Postgres
-			log.error(ex.getMessage() + "; statement to be executed: " + LogUtils.replace(stringStatement) + " "
+			log.error(ex.getMessage() + "; statement to be executed: "
+					+ LogUtils.replace(stringStatement) + " "
 					+ ex.getStackTrace(), ex);
 			throw ex;
 		} finally {
@@ -271,7 +288,8 @@ public class PostgreSQLHandler implements DBHandler {
 	 *            to be executed
 	 * @throws SQLException
 	 */
-	public void executeStatementPostgreSQL(String statement) throws SQLException {
+	public void executeStatementPostgreSQL(String statement)
+			throws SQLException {
 		getConnection();
 		try {
 			executeStatement(con, statement);
@@ -280,7 +298,8 @@ public class PostgreSQLHandler implements DBHandler {
 				this.cleanPostgreSQLResources();
 			} catch (SQLException ex) {
 				ex.printStackTrace();
-				log.info(ex.getMessage() + "; statement: " + LogUtils.replace(statement), ex);
+				log.info(ex.getMessage() + "; statement: "
+						+ LogUtils.replace(statement), ex);
 				throw ex;
 			}
 		}
@@ -294,39 +313,38 @@ public class PostgreSQLHandler implements DBHandler {
 	 * @return #Optional<QueryResult>
 	 * @throws SQLException
 	 */
-	public Optional<QueryResult> executePostgreSQL(final String query) throws SQLException {
+	public Optional<QueryResult> execute(final String query)
+			throws LocalQueryExecutionException {
 		try {
 			this.getConnection();
 
-			log.debug("\n\nquery: " + LogUtils.replace(query) + "");
+			log.debug("query: " + LogUtils.replace(query) + "");
 			log.debug("ConnectionInfo: " + this.conInfo.toString() + "\n");
 
 			st = con.createStatement();
 			if (st.execute(query)) {
 				rs = st.getResultSet();
-
-				ResultSetMetaData rsmd = rs.getMetaData();
-				List<String> colNames = getColumnNames(rsmd);
-				List<String> types = getColumnTypes(rsmd);
-				List<List<String>> rows = getRows(rs);
-				return Optional.of(new QueryResult(rows, types, colNames));
+				return Optional.of(new JdbcQueryResult(rs, this.conInfo));
 			} else {
-				return Optional.empty();
+				return Optional.of(new IslandQueryResult(this.conInfo));
 			}
-
 		} catch (SQLException ex) {
 			Logger lgr = Logger.getLogger(QueryClient.class.getName());
 			// ex.printStackTrace();
-			lgr.log(Level.ERROR, ex.getMessage() + "; query: " + LogUtils.replace(query), ex);
-			throw ex;
+			lgr.log(Level.ERROR,
+					ex.getMessage() + "; query: " + LogUtils.replace(query),
+					ex);
+			throw new LocalQueryExecutionException(ex);
 		} finally {
 			try {
 				this.cleanPostgreSQLResources();
 			} catch (SQLException ex) {
 				Logger lgr = Logger.getLogger(QueryClient.class.getName());
 				// ex.printStackTrace();
-				lgr.log(Level.INFO, ex.getMessage() + "; query: " + LogUtils.replace(query), ex);
-				throw ex;
+				lgr.log(Level.INFO,
+						ex.getMessage() + "; query: " + LogUtils.replace(query),
+						ex);
+				throw new LocalQueryExecutionException(ex);
 			}
 		}
 	}
@@ -335,10 +353,11 @@ public class PostgreSQLHandler implements DBHandler {
 	 * It executes the query and releases the resources at the end.
 	 * 
 	 * @param query
-	 * @return #QueryResult
+	 * @return #JdbcQueryResult
 	 * @throws SQLException
 	 */
-	public QueryResult executeQueryPostgreSQL(final String query) throws SQLException {
+	public JdbcQueryResult executeQueryPostgreSQL(final String query)
+			throws SQLException {
 		try {
 			this.getConnection();
 
@@ -350,15 +369,13 @@ public class PostgreSQLHandler implements DBHandler {
 			st = con.createStatement();
 			rs = st.executeQuery(query);
 
-			ResultSetMetaData rsmd = rs.getMetaData();
-			List<String> colNames = getColumnNames(rsmd);
-			List<String> types = getColumnTypes(rsmd);
-			List<List<String>> rows = getRows(rs);
-			return new QueryResult(rows, types, colNames);
+			return new JdbcQueryResult(rs, this.conInfo);
 		} catch (SQLException ex) {
 			Logger lgr = Logger.getLogger(QueryClient.class.getName());
 			// ex.printStackTrace();
-			lgr.log(Level.ERROR, ex.getMessage() + "; query: " + LogUtils.replace(query), ex);
+			lgr.log(Level.ERROR,
+					ex.getMessage() + "; query: " + LogUtils.replace(query),
+					ex);
 			throw ex;
 		} finally {
 			try {
@@ -366,7 +383,9 @@ public class PostgreSQLHandler implements DBHandler {
 			} catch (SQLException ex) {
 				Logger lgr = Logger.getLogger(QueryClient.class.getName());
 				// ex.printStackTrace();
-				lgr.log(Level.INFO, ex.getMessage() + "; query: " + LogUtils.replace(query), ex);
+				lgr.log(Level.INFO,
+						ex.getMessage() + "; query: " + LogUtils.replace(query),
+						ex);
 				throw ex;
 			}
 		}
@@ -379,12 +398,15 @@ public class PostgreSQLHandler implements DBHandler {
 	 * 
 	 * @param query
 	 * @return the String of XML execution tree plan generated by PSQL
+	 * @throws BigDawgCatalogException
 	 * @throws SQLException
 	 */
-	public String generatePostgreSQLQueryXML(final String query) throws Exception {
+	public String generatePostgreSQLQueryXML(final String query)
+			throws BigDawgCatalogException, SQLException {
 		try {
-//			this.getConnection();
-			con = getConnection(CatalogViewer.getConnection(defaultSchemaServerDBID));
+			// this.getConnection();
+			con = getConnection((PostgreSQLConnectionInfo) CatalogViewer
+					.getConnectionInfo(defaultSchemaServerDBID));
 			st = con.createStatement();
 			// st.executeUpdate("set search_path to schemas; ");
 			ResultSet rs = st.executeQuery(query);
@@ -396,7 +418,9 @@ public class PostgreSQLHandler implements DBHandler {
 		} catch (SQLException ex) {
 			Logger lgr = Logger.getLogger(QueryClient.class.getName());
 			// ex.printStackTrace();
-			lgr.log(Level.ERROR, ex.getMessage() + "; query: " + LogUtils.replace(query), ex);
+			lgr.log(Level.ERROR,
+					ex.getMessage() + "; query: " + LogUtils.replace(query),
+					ex);
 			throw ex;
 		} finally {
 			try {
@@ -404,7 +428,9 @@ public class PostgreSQLHandler implements DBHandler {
 			} catch (SQLException ex) {
 				Logger lgr = Logger.getLogger(QueryClient.class.getName());
 				// ex.printStackTrace();
-				lgr.log(Level.INFO, ex.getMessage() + "; query: " + LogUtils.replace(query), ex);
+				lgr.log(Level.INFO,
+						ex.getMessage() + "; query: " + LogUtils.replace(query),
+						ex);
 				throw ex;
 			}
 		}
@@ -419,7 +445,8 @@ public class PostgreSQLHandler implements DBHandler {
 	 * @return the String of XML execution tree plan generated by PSQL
 	 * @throws SQLException
 	 */
-	public void populateSchemasSchema(final String query, boolean drop) throws SQLException {
+	public void populateSchemasSchema(final String query, boolean drop)
+			throws SQLException {
 		try {
 			this.getConnection();
 			st = con.createStatement();
@@ -432,7 +459,9 @@ public class PostgreSQLHandler implements DBHandler {
 		} catch (SQLException ex) {
 			Logger lgr = Logger.getLogger(QueryClient.class.getName());
 			ex.printStackTrace();
-			lgr.log(Level.ERROR, ex.getMessage() + "; query: " + LogUtils.replace(query), ex);
+			lgr.log(Level.ERROR,
+					ex.getMessage() + "; query: " + LogUtils.replace(query),
+					ex);
 			throw ex;
 		} finally {
 			try {
@@ -440,59 +469,23 @@ public class PostgreSQLHandler implements DBHandler {
 			} catch (SQLException ex) {
 				Logger lgr = Logger.getLogger(QueryClient.class.getName());
 				ex.printStackTrace();
-				lgr.log(Level.INFO, ex.getMessage() + "; query: " + LogUtils.replace(query), ex);
+				lgr.log(Level.INFO,
+						ex.getMessage() + "; query: " + LogUtils.replace(query),
+						ex);
 				throw ex;
 			}
 		}
 	}
 
-	public static List<List<String>> getRows(final ResultSet rs) throws SQLException {
-		if (rs == null) {
-			return null;
-		}
-		List<List<String>> rows = new ArrayList<>();
-		try {
-			ResultSetMetaData rsmd = rs.getMetaData();
-			int NumOfCol = rsmd.getColumnCount();
-			while (rs.next()) {
-				List<String> current_row = new ArrayList<String>();
-				for (int i = 1; i <= NumOfCol; i++) {
-					Object value = rs.getObject(i);
-					if (value == null) {
-						current_row.add("null");
-					} else {
-						current_row.add(value.toString());
-					}
-				}
-				rows.add(current_row);
-			}
-			return rows;
-		} catch (SQLException e) {
-			throw e;
-		}
-	}
-
-	public static List<String> getColumnNames(final ResultSetMetaData rsmd) throws SQLException {
-		List<String> columnNames = new ArrayList<String>();
-		for (int i = 1; i <= rsmd.getColumnCount(); ++i) {
-			columnNames.add(rsmd.getColumnLabel(i));
-		}
-		return columnNames;
-	}
-
-	public static List<String> getColumnTypes(final ResultSetMetaData rsmd) throws SQLException {
-		List<String> columnTypes = new ArrayList<String>();
-		for (int i = 1; i <= rsmd.getColumnCount(); ++i) {
-			columnTypes.add(rsmd.getColumnTypeName(i));
-		}
-		return columnTypes;
-	}
-
-	public List<Integer> getPrimaryColumns(final String table) throws SQLException {
+	public List<Integer> getPrimaryColumns(final String table)
+			throws SQLException {
 		List<Integer> primaryColNum = new ArrayList<Integer>();
-		String query = "SELECT pg_attribute.attnum " + "FROM pg_index, pg_class, pg_attribute, pg_namespace " + "WHERE "
-				+ "pg_class.oid = ?::regclass AND " + "indrelid = pg_class.oid AND nspname = 'public' AND "
-				+ "pg_class.relnamespace = pg_namespace.oid AND " + "pg_attribute.attrelid = pg_class.oid AND "
+		String query = "SELECT pg_attribute.attnum "
+				+ "FROM pg_index, pg_class, pg_attribute, pg_namespace "
+				+ "WHERE " + "pg_class.oid = ?::regclass AND "
+				+ "indrelid = pg_class.oid AND nspname = 'public' AND "
+				+ "pg_class.relnamespace = pg_namespace.oid AND "
+				+ "pg_attribute.attrelid = pg_class.oid AND "
 				+ "pg_attribute.attnum = any(pg_index.indkey) AND indisprimary";
 		// System.out.println(query);
 		try {
@@ -516,28 +509,58 @@ public class PostgreSQLHandler implements DBHandler {
 	}
 
 	/**
+	 * see: {@link #getCreateTable(Connection, String, String)}
+	 * 
+	 * @param con
+	 *            connection to postgresql
+	 * @param fromTable
+	 *            the table for which you want the original create table
+	 *            statement
+	 * @return the sql statement with create table
+	 * @throws SQLException
+	 */
+	public static String getCreateTable(Connection con, String fromTable)
+			throws SQLException {
+		return getCreateTable(con, fromTable, fromTable);
+	}
+
+	/**
 	 * Get SQL create table statement. {@link getCtreateTable(String
 	 * schemaAntTableName)}
 	 * 
 	 * @param con
-	 * @param schemaAndTableName
-	 * @return
+	 *            Connection to the database where the table is stored.
+	 * @param fromTable
+	 *            Name of the schema and name of the table.
+	 * @param targetTableName
+	 *            The name of the table in the final sql statement (it can be
+	 *            different from the current name of the table in the database)
+	 *            - the current name of the table will be replace with this
+	 *            name.
+	 * @return The SQL create table statement from the table in the database
+	 *         represetned by con.
 	 * @throws SQLException
+	 *             When there is a problem with accessing the database.
 	 */
-	public static String getCreateTable(Connection con, String schemaAndTableName) throws SQLException {
+	public static String getCreateTable(Connection con, String fromTable,
+			String targetTableName) throws SQLException {
 		try {
 			StringBuilder extraction = new StringBuilder();
 
 			Statement st = con.createStatement();
 
 			ResultSet rs = st.executeQuery(
-					"SELECT attrelid, attname, format_type(atttypid, atttypmod) AS type, atttypid, atttypmod "
-							+ "FROM pg_catalog.pg_attribute " + "WHERE NOT attisdropped AND attrelid = '"
-							+ schemaAndTableName + "'::regclass AND atttypid NOT IN (26,27,28,29) "
+					"SELECT attrelid, attname, format_type(atttypid, atttypmod) "
+							+ "AS type, atttypid, atttypmod "
+							+ "FROM pg_catalog.pg_attribute "
+							+ "WHERE NOT attisdropped AND attrelid = '"
+							+ fromTable
+							+ "'::regclass AND atttypid NOT IN (26,27,28,29) "
 							+ "ORDER BY attnum;");
 
 			if (rs.next()) {
-				extraction.append("CREATE TABLE IF NOT EXISTS ").append(schemaAndTableName).append(" (");
+				extraction.append("CREATE TABLE IF NOT EXISTS ")
+						.append(targetTableName).append(" (");
 				extraction.append(rs.getString("attname")).append(" ");
 				extraction.append(rs.getString("type"));
 			}
@@ -552,8 +575,9 @@ public class PostgreSQLHandler implements DBHandler {
 			return extraction.toString();
 		} catch (SQLException ex) {
 			ex.printStackTrace();
-			log.error(ex.getMessage() + "; conInfo: " + con.getClientInfo() + "; schemaAndTableName: "
-					+ schemaAndTableName + " " + StackTrace.getFullStackTrace(ex), ex);
+			log.error(ex.getMessage() + "; conInfo: " + con.getClientInfo()
+					+ "; fromTable: " + fromTable + " ; toTable: "
+					+ targetTableName + StackTrace.getFullStackTrace(ex), ex);
 			throw ex;
 		}
 
@@ -567,17 +591,19 @@ public class PostgreSQLHandler implements DBHandler {
 	 * @return
 	 * @throws SQLException
 	 */
-	public String getCreateTable(String schemaAndTableName) throws SQLException {
+	public String getCreateTable(String schemaAndTableName)
+			throws SQLException {
 		try {
 			getConnection();
-			return getCreateTable(con, schemaAndTableName);
+			return getCreateTable(con, schemaAndTableName, schemaAndTableName);
 		} finally {
 			try {
 				this.cleanPostgreSQLResources();
 			} catch (SQLException ex) {
 				ex.printStackTrace();
-				log.error(ex.getMessage() + "; conInfo: " + conInfo.toString() + "; schemaAndTableName: "
-						+ schemaAndTableName + " " + ex.getStackTrace(), ex);
+				log.error(ex.getMessage() + "; conInfo: " + conInfo.toString()
+						+ "; schemaAndTableName: " + schemaAndTableName + " "
+						+ ex.getStackTrace(), ex);
 				throw ex;
 			}
 		}
@@ -590,61 +616,117 @@ public class PostgreSQLHandler implements DBHandler {
 	 * @return connection info associated with the DBID
 	 * @throws Exception
 	 */
-	public static ConnectionInfo generateConnectionInfo(int dbid) throws Exception {
-		return CatalogViewer.getPSQLConnectionInfo(dbid);
+	@Deprecated
+	public static ConnectionInfo generateConnectionInfo(int dbid)
+			throws Exception {
+		return CatalogViewer.getConnectionInfo(dbid);
+	}
+
+	/**
+	 * see: {@link #getObjectMetaData(String)}
+	 * 
+	 * @param tableNameInitial
+	 * @return
+	 * @throws SQLException
+	 */
+	public PostgreSQLTableMetaData getTableMetaData(String tableNameInitial)
+			throws SQLException {
+		return getObjectMetaData(tableNameInitial);
 	}
 
 	/**
 	 * Get metadata about columns (column name, position, data type, etc) for a
 	 * table in PostgreSQL.
 	 * 
-	 * @param conInfo
 	 * @param tableName
+	 *            the name of the table
 	 * @return map column name to column meta data
 	 * @throws SQLException
 	 *             if the data extraction from PostgreSQL failed
 	 */
-	public PostgreSQLTableMetaData getColumnsMetaData(String tableNameInitial) throws SQLException {
+	@Override
+	public PostgreSQLTableMetaData getObjectMetaData(String tableNameInitial)
+			throws SQLException {
 		try {
 			this.getConnection();
-			PostgreSQLSchemaTableName schemaTable = new PostgreSQLSchemaTableName(tableNameInitial);
+			PostgreSQLSchemaTableName schemaTable = new PostgreSQLSchemaTableName(
+					tableNameInitial);
 			try {
 				preparedSt = con.prepareStatement(
-						"SELECT column_name, ordinal_position, is_nullable, data_type, character_maximum_length, numeric_precision, numeric_scale "
-								+ "FROM information_schema.columns " + "WHERE table_schema=? and table_name=?"
+						"SELECT column_name, ordinal_position, is_nullable, "
+								+ "data_type, character_maximum_length, "
+								+ "numeric_precision, numeric_scale "
+								+ "FROM information_schema.columns "
+								+ "WHERE table_schema=? and table_name ilike ?"
 								+ " order by ordinal_position;");
 				preparedSt.setString(1, schemaTable.getSchemaName());
 				preparedSt.setString(2, schemaTable.getTableName());
 				// postgresql logger cannot accept single quotes
-				log.debug("replace double quotes (\") with signle quotes in the query to log it in PostgreSQL: "
+				log.debug("replace double quotes (\") with signle quotes "
+						+ "in the query to log it in PostgreSQL: "
 						+ preparedSt.toString().replace("'", "\""));
 			} catch (SQLException e) {
 				e.printStackTrace();
-				log.error("PostgreSQLHandler, the query preparation failed. " + e.getMessage() + " "
+				log.error("PostgreSQLHandler, the query preparation failed. "
+						+ e.getMessage() + " "
 						+ StackTrace.getFullStackTrace(e));
 				throw e;
 			}
 			ResultSet resultSet = preparedSt.executeQuery();
-			Map<String, PostgreSQLColumnMetaData> columnsMap = new HashMap<>();
-			List<PostgreSQLColumnMetaData> columnsOrdered = new ArrayList<>();
+			Map<String, AttributeMetaData> columnsMap = new HashMap<>();
+			List<AttributeMetaData> columnsOrdered = new ArrayList<>();
+			/*
+			 * resultSet.isBeforeFirst() returns false if the cursor is not
+			 * before the first record or if there are no rows in the result set
+			 */
+			if (!resultSet.isBeforeFirst()) {
+				throw new IllegalArgumentException(String.format(
+						"No results were found for the table: %s; connection: %s",
+						schemaTable.getFullName(), this.conInfo));
+			}
 			while (resultSet.next()) {
-				PostgreSQLColumnMetaData columnMetaData = new PostgreSQLColumnMetaData(resultSet.getString(1),
-						resultSet.getInt(2), resultSet.getBoolean(3), resultSet.getString(4), resultSet.getInt(5),
-						resultSet.getInt(6), resultSet.getInt(7));
+				/**
+				 * ordinal position in PostgreSQL starts from 1 but we want it
+				 * to start from 0.
+				 */
+				AttributeMetaData columnMetaData = new AttributeMetaData(
+						resultSet.getString(1), resultSet.getInt(2) - 1,
+						resultSet.getBoolean(3), resultSet.getString(4),
+						resultSet.getInt(5), resultSet.getInt(6),
+						resultSet.getInt(7));
 				columnsMap.put(resultSet.getString(1), columnMetaData);
 				columnsOrdered.add(columnMetaData);
 			}
-			return new PostgreSQLTableMetaData(schemaTable, columnsMap, columnsOrdered);
+			return new PostgreSQLTableMetaData(schemaTable, columnsMap,
+					columnsOrdered);
 		} finally {
 			try {
 				this.cleanPostgreSQLResources();
 			} catch (SQLException ex) {
 				ex.printStackTrace();
-				log.error(ex.getMessage() + "; conInfo: " + conInfo.toString() + "; table: " + tableNameInitial + " "
+				log.error(ex.getMessage() + "; conInfo: " + conInfo.toString()
+						+ "; table: " + tableNameInitial + " "
 						+ StackTrace.getFullStackTrace(ex), ex);
 				throw ex;
 			}
 		}
+	}
+
+	/**
+	 * Get names of the column in the table.
+	 * 
+	 * @param table
+	 *            the name of the table
+	 * @return list of names of columns for the table
+	 * @throws SQLException
+	 */
+	public List<String> getColumnNames(String table) throws SQLException {
+		List<String> columnNames = new ArrayList<>();
+		for (AttributeMetaData meta : getObjectMetaData(table)
+				.getAttributesOrdered()) {
+			columnNames.add(meta.getName());
+		}
+		return columnNames;
 	}
 
 	/**
@@ -666,7 +748,7 @@ public class PostgreSQLHandler implements DBHandler {
 			} catch (SQLException e) {
 				e.printStackTrace();
 				log.error(e.getMessage()
-						+ " PostgreSQLHandler, the query preparation for checking is a schema exists failed.");
+						+ " PostgreSQLHandler, the query preparation for checking if a schema exists failed.");
 				throw e;
 			}
 			try {
@@ -675,7 +757,8 @@ public class PostgreSQLHandler implements DBHandler {
 				return rs.getBoolean(1);
 			} catch (SQLException e) {
 				e.printStackTrace();
-				log.error(e.getMessage() + " Failed to check if a schema exists.");
+				log.error(e.getMessage()
+						+ " Failed to check if a schema exists.");
 				throw e;
 			}
 		} finally {
@@ -683,7 +766,8 @@ public class PostgreSQLHandler implements DBHandler {
 				this.cleanPostgreSQLResources();
 			} catch (SQLException ex) {
 				ex.printStackTrace();
-				log.error(ex.getMessage() + "; conInfo: " + conInfo.toString() + "; schemaName: " + schemaName, ex);
+				log.error(ex.getMessage() + "; conInfo: " + conInfo.toString()
+						+ "; schemaName: " + schemaName, ex);
 				throw ex;
 			}
 		}
@@ -730,23 +814,28 @@ public class PostgreSQLHandler implements DBHandler {
 	}
 
 	/**
-	 * Command to copy data from a table in PostgreSQL.
+	 * Create a new schema and table in the connectionTo if they not exist.
 	 * 
-	 * @param table
-	 *            the name of the table from which we extract data
-	 * @param delimiter
-	 *            the delimiter for the output CSV file
+	 * The definition of the table could have been inferred e.g. from an array
+	 * in SciDB.
 	 * 
-	 * @return the command to extract data from a table in PostgreSQL
+	 * @param postgresCon
+	 *            to which database we connect to
+	 * @param toTable
+	 *            to which table we want to load the data
+	 * @param createTableStatement
+	 *            sql statement to create a table in PostgreSQL
+	 * @throws SQLException
+	 * @throws UnsupportedTypeException
+	 * @throws NoTargetArrayException
 	 */
-	public static String getExportCsvCommand(String table, String delimiter) {
-		StringBuilder copyFromStringBuf = new StringBuilder();
-		copyFromStringBuf.append("COPY ");
-		copyFromStringBuf.append(table + " ");
-		copyFromStringBuf.append("TO ");
-		copyFromStringBuf.append(" STDOUT ");
-		copyFromStringBuf.append("with (format csv, delimiter '" + delimiter + "')");
-		return copyFromStringBuf.toString();
+	public static void createTargetTableSchema(Connection postgresCon,
+			String toTable, String createTableStatement) throws SQLException {
+		PostgreSQLSchemaTableName schemaTable = new PostgreSQLSchemaTableName(
+				toTable);
+		PostgreSQLHandler.executeStatement(postgresCon,
+				"create schema if not exists " + schemaTable.getSchemaName());
+		PostgreSQLHandler.executeStatement(postgresCon, createTableStatement);
 	}
 
 	/**
@@ -776,7 +865,8 @@ public class PostgreSQLHandler implements DBHandler {
 	 *            to/from STDOUT
 	 * @return the command to copy data
 	 */
-	public static String getCopyBinCommand(String table, DIRECTION direction, STDIO stdio) {
+	public static String getCopyBinCommand(String table, DIRECTION direction,
+			STDIO stdio) {
 		StringBuilder copyFromStringBuf = new StringBuilder();
 		copyFromStringBuf.append("COPY ");
 		copyFromStringBuf.append(table + " ");
@@ -795,6 +885,70 @@ public class PostgreSQLHandler implements DBHandler {
 	}
 
 	/**
+	 * Command to copy data from a table in PostgreSQL.
+	 * 
+	 * @param table
+	 *            the name of the table from which we extract data
+	 * @param delimiter
+	 *            the delimiter for the output CSV file
+	 * 
+	 * @return the command to extract data from a table in PostgreSQL
+	 */
+	public static String getCopyCsvCommand(String table, DIRECTION direction,
+			STDIO stdio, String delimiter, String quote, boolean isHeader) {
+		StringBuilder copyFromStringBuf = new StringBuilder();
+		copyFromStringBuf.append("COPY ");
+		copyFromStringBuf.append(table + " ");
+		copyFromStringBuf.append(direction.toString() + " ");
+		copyFromStringBuf.append(stdio.toString());
+		copyFromStringBuf.append(" with (format csv, delimiter '" + delimiter
+				+ "', quote \"" + quote + "\", header "
+				+ (isHeader ? "true" : "false") + ")");
+		String copyCsvCommand = copyFromStringBuf.toString();
+		log.debug("copy csv command: " + copyCsvCommand);
+		return copyCsvCommand;
+	}
+
+	public static String getExportCsvCommand(String table, String delimiter,
+			String quote, boolean isHeader) {
+		return getCopyCsvCommand(table, DIRECTION.TO, STDIO.STDOUT, delimiter,
+				quote, isHeader);
+	}
+
+	public static String getLoadCsvCommand(String table, String delimiter,
+			String quote, boolean isHeader) {
+		return getCopyCsvCommand(table, DIRECTION.FROM, STDIO.STDIN, delimiter,
+				quote, isHeader);
+	}
+
+	/**
+	 * Check if the table with a given name exists in the PostgreSQL database.
+	 * 
+	 * @see istc.bigdawg.query.DBHandler#existsObject(java.lang.String)
+	 */
+	@Override
+	public boolean existsObject(String name) throws SQLException {
+		return existsTable(new PostgreSQLSchemaTableName(name));
+	}
+
+	/**
+	 * Check if a given table exists in the PostgreSQL database.
+	 * 
+	 * @param connectionInfo
+	 *            The information about the connection to PostgreSQL.
+	 * @param table
+	 *            The name of the table in PostgreSQL.
+	 * @return true if table exists, false otherwise.
+	 * @throws SQLException
+	 *             Problem with a connection to PostgreSQL.
+	 */
+	public static boolean existsTable(ConnectionInfo connectionInfo,
+			String table) throws SQLException {
+		return new PostgreSQLHandler(connectionInfo)
+				.existsTable(new PostgreSQLSchemaTableName(table));
+	}
+
+	/**
 	 * Check if a table exists.
 	 * 
 	 * @param conInfo
@@ -804,7 +958,8 @@ public class PostgreSQLHandler implements DBHandler {
 	 *         given schema
 	 * @throws SQLException
 	 */
-	public boolean existsTable(PostgreSQLSchemaTableName schemaTable) throws SQLException {
+	public boolean existsTable(PostgreSQLSchemaTableName schemaTable)
+			throws SQLException {
 		try {
 			this.getConnection();
 			try {
@@ -824,7 +979,8 @@ public class PostgreSQLHandler implements DBHandler {
 				return rs.getBoolean(1);
 			} catch (SQLException e) {
 				e.printStackTrace();
-				log.error(e.getMessage() + " Failed to check if a table exists.");
+				log.error(
+						e.getMessage() + " Failed to check if a table exists.");
 				throw e;
 			}
 		} finally {
@@ -832,11 +988,44 @@ public class PostgreSQLHandler implements DBHandler {
 				cleanPostgreSQLResources();
 			} catch (SQLException ex) {
 				ex.printStackTrace();
-				log.error(ex.getMessage() + "; conInfo: " + conInfo.toString() + "; schemaName: "
-						+ schemaTable.getSchemaName() + " tableName: " + schemaTable.getTableName(), ex);
+				log.error(
+						ex.getMessage() + "; conInfo: " + conInfo.toString()
+								+ "; schemaName: " + schemaTable.getSchemaName()
+								+ " tableName: " + schemaTable.getTableName(),
+						ex);
 				throw ex;
 			}
 		}
+	}
+
+	/**
+	 * @return Create statement for a table in PostgreSQL from a given list of
+	 *         attributes.
+	 */
+	public static String getCreatePostgreSQLTableStatement(String toTable,
+			List<AttributeMetaData> attributes) {
+		StringBuilder createTableStringBuf = new StringBuilder();
+		createTableStringBuf
+				.append("create table if not exists " + toTable + " (");
+		for (AttributeMetaData attribute : attributes) {
+			String attrName = attribute.getName();
+			String sqlType = attribute.getSqlDataType();
+			createTableStringBuf.append(attrName + " " + sqlType + ",");
+		}
+		createTableStringBuf.deleteCharAt(createTableStringBuf.length() - 1);
+		createTableStringBuf.append(")");
+		log.debug("create table command: " + createTableStringBuf.toString());
+		return createTableStringBuf.toString();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see istc.bigdawg.query.DBHandler#close()
+	 */
+	@Override
+	public void close() throws Exception {
+		cleanPostgreSQLResources();
 	}
 
 }

@@ -8,13 +8,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.log4j.Logger;
+
 import convenience.RTED;
-import istc.bigdawg.packages.QueryContainerForCommonDatabase;
-import istc.bigdawg.plan.operators.Operator;
-import istc.bigdawg.signature.builder.ArraySignatureBuilder;
-import istc.bigdawg.signature.builder.RelationalSignatureBuilder;
-import istc.bigdawg.utils.IslandsAndCast.Scope;
-import istc.bigdawg.utils.sqlutil.SQLExpressionUtils;
+import istc.bigdawg.exceptions.BigDawgException;
+import istc.bigdawg.exceptions.UnsupportedIslandException;
+import istc.bigdawg.islands.IslandsAndCast.Scope;
+import istc.bigdawg.islands.QueryContainerForCommonDatabase;
+import istc.bigdawg.islands.TheObjectThatResolvesAllDifferencesAmongTheIslands;
+import istc.bigdawg.islands.operators.Operator;
+import istc.bigdawg.islands.relational.utils.SQLExpressionUtils;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Parenthesis;
@@ -22,6 +25,7 @@ import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
 
 public class Signature {
+	private static Logger logger = Logger.getLogger(Signature.class.getName());
 	
 	private static String fieldSeparator = "|||||";
 	private static String fieldSeparatorRest = "[|][|][|][|][|]";
@@ -47,17 +51,9 @@ public class Signature {
 	 * @param island
 	 * @throws Exception
 	 */
-	public Signature(String query, Scope island, Operator root, Map<String, QueryContainerForCommonDatabase> container) throws Exception {
-		
-		if (island.equals(Scope.RELATIONAL)){
-			setSig2(RelationalSignatureBuilder.sig2(query));
-			setSig3(RelationalSignatureBuilder.sig3(query));
-		} else if (island.equals(Scope.ARRAY)) {
-			setSig2(ArraySignatureBuilder.sig2(query));
-			setSig3(ArraySignatureBuilder.sig3(query));
-		} else {
-			throw new Exception("Invalid Signature island input: "+island);
-		}
+	public Signature(String query, Scope island, Operator root, Map<String, QueryContainerForCommonDatabase> container, Set<String> joinPredicates) throws Exception {
+
+		setSig3(TheObjectThatResolvesAllDifferencesAmongTheIslands.getLiteralsAndConstantsSignature(island, query));
 		
 		objectExpressionMapping = new ArrayList<>();
 		if (container.isEmpty() ) {
@@ -76,14 +72,18 @@ public class Signature {
 		
 		this.setQuery(query);
 		this.setIsland(island);
+
+		List<String> predicates = new ArrayList<>();
+		predicates.addAll(joinPredicates);
+		setSig2(predicates);
 	}
 	
 	
-	public Signature(String s) throws Exception{
+	public Signature(String s) throws BigDawgException {
 
 		List<String> parsed = Arrays.asList(s.split(fieldSeparatorRest));
 		if (parsed.size() != 5 && parsed.size() != 6) {
-			throw new Exception("Ill-formed input string; cannot recover signature; String: "+s);
+			throw new BigDawgException("Ill-formed input string; cannot recover signature; String: "+s);
 		}
 		try {
 			this.island = Scope.valueOf(parsed.get(0));
@@ -97,7 +97,7 @@ public class Signature {
 				this.sig4k = Arrays.asList(parsed.get(5).split(elementSeparatorRest));
 		} catch (Exception e) {
 			e.printStackTrace();
-			throw new Exception("Ill-formed input string; cannot recover signature; String: "+s);
+			throw new BigDawgException("Ill-formed input string; cannot recover signature; String: "+s);
 		}
 	}
 	
@@ -147,8 +147,8 @@ public class Signature {
 		this.sig3 = sig3;
 	}
 
-	public String getQuery() {
-		return query;
+	public String getQuery() throws UnsupportedIslandException {
+		return TheObjectThatResolvesAllDifferencesAmongTheIslands.getIslandStyleQuery(this.getIsland(), query);
 	}
 
 	public void setQuery(String query) {
@@ -271,51 +271,81 @@ public class Signature {
 	
 	
 	public double compare(Signature sig) {
+		logger.debug("SIGNATURE 1: " + this.toRecoverableString());
+		logger.debug("SIGNATURE 2: " + sig.toRecoverableString());
+
 		double dist = 0;
-		
-		List<String> l2;
-		List<String> l4k2 = new ArrayList<>(sig.sig4k);
-		int size;
-		
+
+		double sig1Weight = 2;
+		double sig2Weight = 1;
+		double sig3Weight = 1;
+		double sig4kWeight = 2;
+
 		// sig1
-		dist = getTreeEditDistance(sig1, sig.sig1);
-		
+		double treeEdit1 = getTreeEditDistance(sig1, "{}");
+		double treeEdit2 = getTreeEditDistance(sig.sig1, "{}");
+		double sig1Max = treeEdit1 > treeEdit2 ? treeEdit1 : treeEdit2;
+		double sig1Dist = getTreeEditDistance(sig1, sig.sig1);
+		sig1Dist /= sig1Max;
+		logger.debug("SIGNATURE sig1 dist: " + sig1Dist);
+
 		// sig2
+		List<String> l2;
+		double sig2Max = sig2.size() > sig.sig2.size() ? sig2.size() : sig.sig2.size();
 		if (sig2.size() > sig.sig2.size()) {
 			l2 = new ArrayList<>(sig2);
 			l2.retainAll(sig.sig2);
-			size = sig2.size();
 		} else { 
 			l2 = new ArrayList<>(sig.sig2);
 			l2.retainAll(sig2);
-			size = sig.sig2.size();
 		}
-		dist *= ((double)l2.size()) / size;
+		double sig2Dist = sig2Max - (double)l2.size();
+		sig2Dist /= sig2Max;
+		logger.debug("SIGNATURE sig2 dist: " + sig2Dist);
 		
 		// sig3
-		dist += (sig3.size() > sig.sig3.size()) ? sig3.size() - sig.sig3.size() : sig.sig3.size() - sig3.size();
+		double sig3Max = (sig3.size() > sig.sig3.size()) ? sig3.size() : sig.sig3.size();
+		double sig3Dist = (sig3.size() > sig.sig3.size()) ? sig3.size() - sig.sig3.size() : sig.sig3.size() - sig3.size();
+		sig3Dist /= sig3Max;
+		logger.debug("SIGNATURE sig3 dist: " + sig3Dist);
 		
 		// sig4k
-		dist += sig4k.size() < sig.sig4k.size() ? sig.sig4k.size() - sig4k.size() : sig4k.size() - sig.sig4k.size();
-		for (int i = 0 ; i < sig4k.size() ; i++ ) {
+		List<String> l4k2 = new ArrayList<>(sig.sig4k);
+		double sig4kMax = sig4k.size() > sig.sig4k.size() ? sig4k.size() : sig.sig4k.size();
+		double sig4kDist = sig4k.size() < sig.sig4k.size() ? sig.sig4k.size() - sig4k.size() : sig4k.size() - sig.sig4k.size();
+		double tree4k1 = 0.0;
+		double tree4k2 = 0.0;
+
+		for (String aSig4k: l4k2){
+			tree4k2 += getTreeEditDistance(aSig4k, "{}");
+		}
+
+		for (String aSig4k : sig4k) {
+			tree4k1 += getTreeEditDistance(aSig4k, "{}");
 			double result = Double.MAX_VALUE;
 			int j = 0;
 			int holder = -1;
 			while (!l4k2.isEmpty() && j < l4k2.size()) {
-				double temp = getTreeEditDistance(sig4k.get(i), l4k2.get(j));
+				double temp = getTreeEditDistance(aSig4k, l4k2.get(j));
 				if (temp < result) {
 					result = temp;
 					holder = j;
 				}
 				j++;
 			}
-			if (holder > 0) { 
+			if (holder > 0) {
 				l4k2.remove(holder);
-				dist += result;
-			} else 
+				sig4kDist += result;
+			} else
 				break;
 		}
-		
+		sig4kMax += tree4k1 > tree4k2 ? tree4k1 : tree4k2;
+		sig4kDist /= sig4kMax;
+		logger.debug("SIGNATURE sig4k dist: " + sig4kDist);
+
+		dist += sig1Dist*sig1Weight + sig2Dist*sig2Weight + sig3Dist*sig3Weight + sig4kDist*sig4kWeight;
+		dist /= sig1Weight + sig2Weight + sig3Weight + sig4kWeight;
+		logger.debug("SIGNATURE final dist: " + dist);
 		return dist;
 	}
 	

@@ -35,8 +35,10 @@ public class MigrationStatistics {
 	 * @param countLoadedElements
 	 * @param message
 	 */
-	public MigrationStatistics(ConnectionInfo connectionFrom, ConnectionInfo connectionTo, String objectFrom, String objectTo,
-			long startTimeMigration, long endTimeMigration, Long countExtractedElements, Long countLoadedElements,
+	public MigrationStatistics(ConnectionInfo connectionFrom,
+			ConnectionInfo connectionTo, String objectFrom, String objectTo,
+			long startTimeMigration, long endTimeMigration,
+			Long countExtractedElements, Long countLoadedElements,
 			String message) {
 		this.connectionFrom = connectionFrom;
 		this.connectionTo = connectionTo;
@@ -50,16 +52,16 @@ public class MigrationStatistics {
 	}
 
 	/**
-	 * @return the connectionFrom Information from which database the data is migrated.
-	 *         (not null)
+	 * @return the connectionFrom Information from which database the data is
+	 *         migrated. (not null)
 	 */
 	public ConnectionInfo getConnectionFrom() {
 		return connectionFrom;
 	}
 
 	/**
-	 * @return the connectionTo Information to which database the data is migrated. (not
-	 *         null)
+	 * @return the connectionTo Information to which database the data is
+	 *         migrated. (not null)
 	 */
 	public ConnectionInfo getConnectionTo() {
 		return connectionTo;
@@ -76,8 +78,8 @@ public class MigrationStatistics {
 
 	/**
 	 * @return the objectTo Array/Table or another object to which we load the
-	 *         data. (not null) The object resided in the database
-	 *         identified by connectionTo {@link #getConnectionTo()}
+	 *         data. (not null) The object resided in the database identified by
+	 *         connectionTo {@link #getConnectionTo()}
 	 */
 	public String getObjectTo() {
 		return objectTo;
@@ -104,7 +106,8 @@ public class MigrationStatistics {
 
 	/**
 	 * @return the countExtractedElements Number of extracted elements
-	 *         (rows/objects) (may not be available). These elements are extracted from the {@link #getObjectTo()}
+	 *         (rows/objects) (may not be available). These elements are
+	 *         extracted from the {@link #getObjectTo()}
 	 */
 	public Long getCountExtractedElements() {
 		return countExtractedElements;
@@ -112,7 +115,8 @@ public class MigrationStatistics {
 
 	/**
 	 * @return the countLoadedElements Number of loaded elements (rows/objects)
-	 *         (may not be available) These elements are loaded to the {@link #getObjectTo()}
+	 *         (may not be available) These elements are loaded to the
+	 *         {@link #getObjectTo()}
 	 */
 	public Long getCountLoadedElements() {
 		return countLoadedElements;

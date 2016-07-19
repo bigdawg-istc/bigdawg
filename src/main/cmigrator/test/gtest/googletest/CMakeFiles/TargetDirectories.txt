@@ -1,0 +1,2 @@
+/home/adam/workspace/googletest/googletest/CMakeFiles/gtest.dir
+/home/adam/workspace/googletest/googletest/CMakeFiles/gtest_main.dir

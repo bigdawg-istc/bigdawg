@@ -6,25 +6,33 @@ package istc.bigdawg.scidb;
 import java.util.List;
 import java.util.Map;
 
+import istc.bigdawg.database.AttributeMetaData;
+import istc.bigdawg.database.ObjectMetaData;
+
 /**
  * The meta data about an array in SciDB.
  * 
  * @author Adam Dziedzic
  * 
  */
-public class SciDBArrayMetaData {
+public class SciDBArrayMetaData implements ObjectMetaData {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	
 	private String arrayName;
-	private Map<String, SciDBColumnMetaData> dimensionsMap;
-	private List<SciDBColumnMetaData> dimensionsOrdered;
-	private Map<String, SciDBColumnMetaData> attributesMap;
-	private List<SciDBColumnMetaData> attributesOrdered;
+	private Map<String, AttributeMetaData> dimensionsMap;
+	private List<AttributeMetaData> dimensionsOrdered;
+	private Map<String, AttributeMetaData> attributesMap;
+	private List<AttributeMetaData> attributesOrdered;
 
 	public SciDBArrayMetaData(String arrayName,
-			Map<String, SciDBColumnMetaData> dimensionsMap,
-			List<SciDBColumnMetaData> dimensionsOrdered,
-			Map<String, SciDBColumnMetaData> attributesMap,
-			List<SciDBColumnMetaData> attributesOrdered) {
+			Map<String, AttributeMetaData> dimensionsMap,
+			List<AttributeMetaData> dimensionsOrdered,
+			Map<String, AttributeMetaData> attributesMap,
+			List<AttributeMetaData> attributesOrdered) {
 		this.arrayName = arrayName;
 		this.dimensionsMap = dimensionsMap;
 		this.dimensionsOrdered = dimensionsOrdered;
@@ -39,20 +47,29 @@ public class SciDBArrayMetaData {
 		return arrayName;
 	}
 
-	public Map<String, SciDBColumnMetaData> getAttributesMap() {
+	public Map<String, AttributeMetaData> getAttributesMap() {
 		return attributesMap;
 	}
 
-	public List<SciDBColumnMetaData> getAttributesOrdered() {
+	@Override
+	public List<AttributeMetaData> getAttributesOrdered() {
 		return attributesOrdered;
 	}
 
-	public Map<String, SciDBColumnMetaData> getDimensionsMap() {
+	public Map<String, AttributeMetaData> getDimensionsMap() {
 		return dimensionsMap;
 	}
 
-	public List<SciDBColumnMetaData> getDimensionsOrdered() {
+	public List<AttributeMetaData> getDimensionsOrdered() {
 		return dimensionsOrdered;
+	}
+
+	/* (non-Javadoc)
+	 * @see istc.bigdawg.database.ObjectMetaData#getName()
+	 */
+	@Override
+	public String getName() {
+		return getArrayName();
 	}
 
 }

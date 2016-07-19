@@ -17,20 +17,15 @@ public enum BigDawgConfigProperties {
 	private String postgreSQLURL;
 	private String postgreSQLUser;
 	private String postgreSQLPassword;
-	
+
 	private String postgreSQLTestHost;
 	private String postgreSQLTestPort;
 	private String postgreSQLTestDatabase;
 	private String postgreSQLTestUser;
 	private String postgreSQLTestPassword;
-	
-	private String sStoreSQLURL;
-	private String sStoreSQLUser;
-	private String sStoreSQLPassword;
 
 	private String accumuloIstanceType;
 	private String accumuloIstanceName;
-	private String accumuloZooKeepers;
 	private String accumuloUser;
 	private String accumuloPasswordToken;
 
@@ -60,10 +55,13 @@ public enum BigDawgConfigProperties {
 	private String migratorTempDir;
 	private String cmigratorDir;
 
+	private String zooKeepers;
+
 	private BigDawgConfigProperties() throws AssertionError {
 		Properties prop = new Properties();
 		String propFileName = "bigdawg-config.properties";
-		InputStream inputStream = BigDawgConfigProperties.class.getClassLoader().getResourceAsStream(propFileName);
+		InputStream inputStream = BigDawgConfigProperties.class.getClassLoader()
+				.getResourceAsStream(propFileName);
 		if (inputStream != null) {
 			try {
 				prop.load(inputStream);
@@ -73,34 +71,37 @@ public enum BigDawgConfigProperties {
 			}
 		} else {
 			FileNotFoundException e = new FileNotFoundException(
-					"property file '" + propFileName + "' not found in the classpath");
+					"property file '" + propFileName
+							+ "' not found in the classpath");
 			e.printStackTrace();
 			throw new AssertionError(e);
 		}
 		this.grizzlyIpAddress = prop.getProperty("main.grizzly.ipaddress");
 		this.grizzlyPort = prop.getProperty("main.grizzly.port");
 
-		this.postgresSchemaServerDBID = Integer.parseInt(prop.getProperty("main.postgresql.dbid.schema"));
+		this.postgresSchemaServerDBID = Integer
+				.parseInt(prop.getProperty("main.postgresql.dbid.schema"));
 		this.postgreSQLURL = prop.getProperty("main.postgresql.url");
 		this.postgreSQLUser = prop.getProperty("main.postgresql.user");
 		this.postgreSQLPassword = prop.getProperty("main.postgresql.password");
 
 		this.postgreSQLTestHost = prop.getProperty("main.postgresql.test.host");
 		this.postgreSQLTestPort = prop.getProperty("main.postgresql.test.port");
-		this.postgreSQLTestDatabase = prop.getProperty("main.postgresql.test.database");
+		this.postgreSQLTestDatabase = prop
+				.getProperty("main.postgresql.test.database");
 		this.postgreSQLTestUser = prop.getProperty("main.postgresql.test.user");
-		this.postgreSQLTestPassword = prop.getProperty("main.postgresql.test.password");
-		
-		this.sStoreSQLURL = prop.getProperty("main.sstoresql.url");
-		this.sStoreSQLUser = prop.getProperty("main.sstoresql.user");
-		this.sStoreSQLPassword = prop.getProperty("main.sstoresql.password");
-		
-		this.accumuloIstanceType = prop.getProperty("main.accumulo.instanceType");
-		this.accumuloIstanceName = prop.getProperty("main.accumulo.instanceName");
-		this.accumuloZooKeepers = prop.getProperty("main.accumulo.zooKeepers");
+		this.postgreSQLTestPassword = prop
+				.getProperty("main.postgresql.test.password");
+
+		this.accumuloIstanceType = prop
+				.getProperty("main.accumulo.instanceType");
+		this.accumuloIstanceName = prop
+				.getProperty("main.accumulo.instanceName");
 		this.accumuloUser = prop.getProperty("main.accumulo.user");
-		this.accumuloPasswordToken = prop.getProperty("main.accumulo.passwordToken");
-		this.accumuloShellScript = prop.getProperty("main.accumulo.shell.script");
+		this.accumuloPasswordToken = prop
+				.getProperty("main.accumulo.passwordToken");
+		this.accumuloShellScript = prop
+				.getProperty("main.accumulo.shell.script");
 
 		this.sStoreURL = prop.getProperty("main.sstore.alerturl");
 
@@ -108,7 +109,8 @@ public enum BigDawgConfigProperties {
 		this.myriaPort = prop.getProperty("main.myria.port");
 		this.myriaContentType = prop.getProperty("main.myria.content.type");
 
-		this.scidbSchemaServerDBID = Integer.parseInt(prop.getProperty("main.scidb.dbid.schema"));
+		this.scidbSchemaServerDBID = Integer
+				.parseInt(prop.getProperty("main.scidb.dbid.schema"));
 		this.scidbHostname = prop.getProperty("main.scidb.hostname");
 		this.scidbPort = prop.getProperty("main.scidb.port");
 		this.scidbPassword = prop.getProperty("main.scidb.password");
@@ -122,9 +124,12 @@ public enum BigDawgConfigProperties {
 		this.scidbTestBinPath = prop.getProperty("main.scidb.test.bin_path");
 
 		this.networkMessagePort = prop.getProperty("main.network.message.port");
-		this.networkRequestTimeout = Integer.valueOf(prop.getProperty("main.network.request.timeout"));
+		this.networkRequestTimeout = Integer
+				.valueOf(prop.getProperty("main.network.request.timeout"));
 		this.migratorTempDir = prop.getProperty("main.migrator.temp.dir");
 		this.cmigratorDir = prop.getProperty("main.cmigrator.dir");
+
+		this.zooKeepers = prop.getProperty("main.zooKeepers");
 	}
 
 	/**
@@ -144,8 +149,8 @@ public enum BigDawgConfigProperties {
 	/**
 	 * @return the accumuloZooKeepers
 	 */
-	public String getAccumuloZooKeepers() {
-		return accumuloZooKeepers;
+	public String getZooKeepers() {
+		return zooKeepers;
 	}
 
 	/**
@@ -200,25 +205,9 @@ public enum BigDawgConfigProperties {
 	public String getPostgreSQLURL() {
 		return postgreSQLURL;
 	}
-	
+
 	public int getPostgresSchemaServerDBID() {
 		return postgresSchemaServerDBID;
-	}
-	
-	public String getSStoreSQLUser() {
-	    return sStoreSQLUser;
-	}
-	
-	public String getSStoreSQLPassword() {
-	    return sStoreSQLPassword;
-	}
-	
-	public int getSStoreSchemaServerDBID() {
-	    return 0;
-	}
-	
-	public String getSStoreSQLurl() {
-	    return sStoreSQLURL;
 	}
 
 	public int getSciDBSchemaServerDBID() {
@@ -240,8 +229,17 @@ public enum BigDawgConfigProperties {
 	}
 
 	public String getBaseURI() {
-		String baseURI = "http://" + BigDawgConfigProperties.INSTANCE.getGrizzlyIpAddress() + ":"
-				+ BigDawgConfigProperties.INSTANCE.getGrizzlyPort() + "/bigdawg/";
+		String baseURI = "http://"
+				+ BigDawgConfigProperties.INSTANCE.getGrizzlyIpAddress() + ":"
+				+ BigDawgConfigProperties.INSTANCE.getGrizzlyPort()
+				+ "/bigdawg/";
+		return baseURI;
+	}
+
+	public String getBaseURI(String ipAddress) {
+		String baseURI = "http://" + ipAddress + ":"
+				+ BigDawgConfigProperties.INSTANCE.getGrizzlyPort()
+				+ "/bigdawg/";
 		return baseURI;
 	}
 

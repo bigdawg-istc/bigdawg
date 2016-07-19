@@ -7,6 +7,9 @@ import istc.bigdawg.query.ConnectionInfo;
 /**
  * Represents a single table on a given engine.
  * 
+ * June 9 2016 -
+ * This is currently not in use. In place of this, we issue a simple Projection on the designated table. 
+ * 
  * @author ankushg
  */
 public class TableExecutionNode implements ExecutionNode {
@@ -88,8 +91,11 @@ public class TableExecutionNode implements ExecutionNode {
         return true;
     }
 
-    @Override
-    public String toString() {
+    public String serialize() {
         return "TableExecutionNode [engine=" + engine + ", tableName=" + tableName + "]";
+    }
+
+    public String toString() {
+        return this.tableName;
     }
 }

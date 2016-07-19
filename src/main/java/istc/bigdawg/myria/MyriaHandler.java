@@ -5,10 +5,13 @@ package istc.bigdawg.myria;
 
 import istc.bigdawg.BDConstants;
 import istc.bigdawg.BDConstants.Shim;
+import istc.bigdawg.database.ObjectMetaData;
 import istc.bigdawg.exceptions.MyriaException;
 import istc.bigdawg.query.DBHandler;
 import istc.bigdawg.query.QueryResponseTupleString;
 
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 
@@ -24,9 +27,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * 
  */
 public class MyriaHandler implements DBHandler {
-	
-	Logger log = org.apache.log4j.Logger.getLogger(MyriaHandler.class
-			.getName());
+
+	/**
+	 * log
+	 */
+	Logger log = Logger.getLogger(MyriaHandler.class.getName());
 
 	/*
 	 * (non-Javadoc)
@@ -70,6 +75,45 @@ public class MyriaHandler implements DBHandler {
 			log.error(message);
 			return message;
 		}
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see istc.bigdawg.query.DBHandler#getObjectMetaData(java.lang.String)
+	 */
+	@Override
+	public ObjectMetaData getObjectMetaData(String name) throws Exception {
+		// TODO
+		throw new UnsupportedOperationException();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see istc.bigdawg.query.DBHandler#existsObject(java.lang.String)
+	 */
+	@Override
+	public boolean existsObject(String name) throws Exception {
+		// TODO
+		throw new UnsupportedOperationException();
+	}
+
+	/* (non-Javadoc)
+	 * @see istc.bigdawg.query.DBHandler#close()
+	 */
+	@Override
+	public void close() throws Exception {
+		log.debug("No aciton for closing Myria.");
+	}
+
+	/* (non-Javadoc)
+	 * @see istc.bigdawg.query.DBHandler#getConnection()
+	 */
+	@Override
+	public Connection getConnection() throws SQLException {
+		// TODO
+		throw new UnsupportedOperationException();
 	}
 
 }

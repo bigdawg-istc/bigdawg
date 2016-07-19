@@ -2,84 +2,118 @@ package istc.bigdawg.monitoring;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+
+import org.apache.log4j.Logger;
+import org.mortbay.log.Log;
 
 import istc.bigdawg.BDConstants;
 import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.exceptions.NotSupportIslandException;
 import istc.bigdawg.executor.Executor;
+import istc.bigdawg.executor.ExecutorEngine;
+import istc.bigdawg.executor.JdbcQueryResult;
 import istc.bigdawg.executor.plan.QueryExecutionPlan;
+import istc.bigdawg.islands.CrossIslandPlanNode;
+import istc.bigdawg.islands.CrossIslandQueryNode;
+import istc.bigdawg.islands.CrossIslandQueryPlan;
 import istc.bigdawg.migration.MigrationStatistics;
-import istc.bigdawg.packages.QueriesAndPerformanceInformation;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.query.ConnectionInfoParser;
 import istc.bigdawg.signature.Signature;
-import istc.bigdawg.utils.IslandsAndCast.Scope;
-
-import org.mortbay.log.Log;
 
 public class Monitor {
+    /**
+     * API for adding and retrieving monitoring information
+     */
+
+    private static Logger logger = Logger.getLogger(Monitor.class.getName());
+
     public static final String stringSeparator = "****";
 
-    private static final String INSERT = "INSERT INTO monitoring (island, signature, query, lastRan, duration) SELECT '%s', '%s', '%s', -1, -1 WHERE NOT EXISTS (SELECT 1 FROM monitoring WHERE island='%s' AND query='%s')";
-    private static final String DELETE = "DELETE FROM monitoring WHERE island='%s' AND query='%s'";
-    private static final String UPDATE = "UPDATE monitoring SET lastRan=%d, duration=%d WHERE island='%s' AND query='%s'";
-    private static final String RETRIEVE = "SELECT duration FROM monitoring WHERE island='%s' AND query='%s'";
-    private static final String SIGRETRIEVE = "SELECT duration, query FROM monitoring WHERE signature='%s'";
+    private static final String INSERT = "INSERT INTO monitoring (signature, index, lastRan, duration) SELECT '%s', %d, %d, -1 WHERE NOT EXISTS (SELECT 1 FROM monitoring WHERE signature='%s' AND index=%d)";
+    private static final String DELETE = "DELETE FROM monitoring WHERE signature='%s'";
+    private static final String UPDATE = "UPDATE monitoring SET lastRan=%d, duration=%d WHERE signature='%s' AND index=%d";
+    private static final String RETRIEVE = "SELECT duration FROM monitoring WHERE signature='%s' ORDER BY index";
     private static final String SIGS = "SELECT DISTINCT(signature) FROM monitoring";
     private static final String MINDURATION = "SELECT min(duration) FROM monitoring";
     private static final String MIGRATE = "INSERT INTO migrationstats(fromLoc, toLoc, objectFrom, objectTo, startTime, endTime, countExtracted, countLoaded, message) VALUES ('%s', '%s', '%s', '%s', %d, %d, %d, %d, '%s')";
     private static final String RETRIEVEMIGRATE = "SELECT objectFrom, objectTo, startTime, endTime, countExtracted, countLoaded, message FROM migrationstats WHERE fromLoc='%s' AND toLoc='%s'";
 
-    public static boolean addBenchmarks(List<QueryExecutionPlan> qeps, Signature signature, boolean lean) {
+    /**
+     * Adds a query as a benchmark
+     * @param signature - signature representing the query
+     * @param lean - whether in lean (production) or expansive (training) mode.
+     * @return true if all QueryExecutionPlans are inserted successfully and
+     *          the signature has not been added beforehand. false otherwise
+     * @throws Exception
+     */
+    public static boolean addBenchmarks(Signature signature, boolean lean) throws Exception {
         BDConstants.Shim[] shims = BDConstants.Shim.values();
-        return addBenchmarks(qeps, signature, lean, shims);
+        return addBenchmarks(signature, lean, shims);
     }
 
-    public static boolean addBenchmarks(List<QueryExecutionPlan> qeps, Signature signature, boolean lean, BDConstants.Shim[] shims) {
-        for (QueryExecutionPlan qep: qeps) {
-            try {
-                if (!insert(QueryExecutionPlan.qepToString(qep), signature, qep.getIsland())) {
-                    return false;
-                }
-            } catch (NotSupportIslandException e) {
-                e.printStackTrace();
-            }
+    public static boolean addBenchmarks(Signature signature, boolean lean, BDConstants.Shim[] shims) throws Exception {
+        logger.debug("Query for signature: " + signature.getQuery());
+//        CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(crossIslandQuery);
+//        CrossIslandQueryNode ciqn = ciqp.getTerminalNode();
+        CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(signature.getQuery());
+        
+        Set<CrossIslandQueryNode> qnSet = new HashSet<>();
+        
+        for (CrossIslandPlanNode cipn : ciqp.vertexSet())
+        	if (cipn instanceof CrossIslandQueryNode) 
+        		qnSet.add((CrossIslandQueryNode)cipn);
+        
+        boolean exitBoolean = true;
+        for (CrossIslandQueryNode ciqn : qnSet) {
+	        List<QueryExecutionPlan> qeps = ciqn.getAllQEPs(true);
+	        boolean isContinue = false;
+	        for (int i = 0; i < qeps.size(); i++){
+	            try {
+	                if (!insert(signature, i)) {
+//	                    return false;
+	                	exitBoolean = false;
+	                	isContinue = true;
+	                	break;
+	                }
+	            } catch (NotSupportIslandException e) {
+	                e.printStackTrace();
+	            }
+	        }
+	        if (isContinue) continue;
+	        if (!lean) {
+	            try {
+	                runBenchmarks(qeps, signature);
+	            } catch (Exception e) {
+	                e.printStackTrace();
+	            }
+	        }
+//	        return true;
         }
-
-        if (!lean) {
-            try {
-                runBenchmarks(qeps);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-
-        return true;
+        return exitBoolean;
     }
 
-    public static boolean removeBenchmarks(List<QueryExecutionPlan> qeps) {
-        return removeBenchmarks(qeps, false);
+    /**
+     * Removes a query as a benchmark
+     * @param signature - signature representing the query
+     * @return - true if deleted successfully. false otherwise
+     */
+    public static boolean removeBenchmarks(Signature signature) {
+        return delete(signature);
     }
 
-    public static boolean removeBenchmarks(List<QueryExecutionPlan> qeps, boolean removeAll) {
-        for (QueryExecutionPlan qep: qeps) {
-            try {
-                if (!delete(QueryExecutionPlan.qepToString(qep), qep.getIsland())) {
-                    return false;
-                }
-            } catch (NotSupportIslandException e) {
-                e.printStackTrace();
-            }
-        }
-        return true;
-    }
-
+    /**
+     * Checks if all queries in the Monitor have been run at least once
+     * @return true if all queries have been run at least once. false otherwise
+     */
     public static boolean allQueriesDone() {
         PostgreSQLHandler handler = new PostgreSQLHandler();
         try {
-            PostgreSQLHandler.QueryResult qresult = handler.executeQueryPostgreSQL(MINDURATION);
+            JdbcQueryResult qresult = handler.executeQueryPostgreSQL(MINDURATION);
             List<List<String>> rows = qresult.getRows();
             long minDuration = Long.MAX_VALUE;
             for (List<String> row: rows){
@@ -97,40 +131,43 @@ public class Monitor {
         return true;
     }
 
-    public static QueriesAndPerformanceInformation getBenchmarkPerformance(List<QueryExecutionPlan> qeps) throws NotSupportIslandException {
-        List<String> queries = new ArrayList<>();
+    /**
+     * Retrieves the timings for a benchmark query
+     * @param signature - signature representing the query
+     * @return A list of times for each QueryExecutionPlan the signature can
+     *          generate. The list is indexed by the order that QueryExecutionPlans are generated.
+     * @throws NotSupportIslandException
+     * @throws SQLException
+     */
+    public static List<Long> getBenchmarkPerformance(Signature signature) throws NotSupportIslandException, SQLException {
         List<Long> perfInfo = new ArrayList<>();
+        String escapedSignature = signature.toRecoverableString().replace("'", stringSeparator);
 
-        for (QueryExecutionPlan qep: qeps) {
-            String qepString = QueryExecutionPlan.qepToString(qep);
-            queries.add(qepString);
-            PostgreSQLHandler handler = new PostgreSQLHandler();
-            try {
-                PostgreSQLHandler.QueryResult qresult = handler.executeQueryPostgreSQL(String.format(RETRIEVE, qep.getIsland().toString(), qepString.replace("'", stringSeparator)));
-                List<List<String>> rows = qresult.getRows();
-                long duration = Long.MAX_VALUE;
-                for (List<String> row: rows){
-                    long currentDuration = Long.parseLong(row.get(0));
-                    if (currentDuration >= 0 && currentDuration < duration){
-                        duration = currentDuration;
-                    }
-                }
-                perfInfo.add(duration);
-            } catch (SQLException e) {
-                e.printStackTrace();
+        PostgreSQLHandler handler = new PostgreSQLHandler();
+        JdbcQueryResult qresult = handler.executeQueryPostgreSQL(String.format(RETRIEVE, escapedSignature));
+        List<List<String>> rows = qresult.getRows();
+        for (List<String> row: rows){
+            long currentDuration = Long.parseLong(row.get(0));
+            if (currentDuration >= 0){
+                perfInfo.add(currentDuration);
+            } else {
                 perfInfo.add(Long.MAX_VALUE);
             }
         }
         System.out.printf("[BigDAWG] MONITOR: Performance information generated.\n");
-        return new QueriesAndPerformanceInformation(queries, perfInfo);
+        return perfInfo;
     }
 
+    /**
+     *
+     * @return The signatures for all benchmark queries in the Monitor
+     */
     public static List<Signature> getAllSignatures() {
         List<Signature> signatures = new ArrayList<>();
 
         PostgreSQLHandler handler = new PostgreSQLHandler();
         try {
-            PostgreSQLHandler.QueryResult qresult = handler.executeQueryPostgreSQL(SIGS);
+            JdbcQueryResult qresult = handler.executeQueryPostgreSQL(SIGS);
             List<List<String>> rows = qresult.getRows();for (List<String> row: rows){
                 String signature = row.get(0).replace(stringSeparator, "'");
                 signatures.add(new Signature(signature));
@@ -142,10 +179,13 @@ public class Monitor {
         return signatures;
     }
 
+    /**
+     *
+     * @param signature - signature representing the query
+     * @return The signature of the benchmark query that is closest to the input signature
+     */
     public static Signature getClosestSignature(Signature signature) {
-        // TODO This needs to be changed to be much more efficient.
-        // We need a way to do similarity in postgres (likely indexing on signature)
-        // based on the dimensions we care about
+        // TODO This could be changed to be much more efficient.
         List<Signature> signatures = getAllSignatures();
         Signature closest = null;
         double distance = Double.MAX_VALUE;
@@ -160,76 +200,72 @@ public class Monitor {
         return closest;
     }
 
-    public static QueriesAndPerformanceInformation getBenchmarkPerformance(Signature signature) {
-        List<String> queries = new ArrayList<>();
-        List<Long> perfInfo = new ArrayList<>();
-
+    /**
+     * Inserts a benchmark for a specific QueryExecutionPlan
+     * @param signature - signature representing the query
+     * @param index - index of the QueryExecutionPlan when generating it from the signature
+     * @return true if successfully inserted. false otherwise.
+     * @throws NotSupportIslandException
+     */
+    private static boolean insert(Signature signature, int index) throws NotSupportIslandException {
         PostgreSQLHandler handler = new PostgreSQLHandler();
         try {
             String escapedSignature = signature.toRecoverableString().replace("'", stringSeparator);
-            PostgreSQLHandler.QueryResult qresult = handler.executeQueryPostgreSQL(String.format(SIGRETRIEVE, escapedSignature));
-            List<List<String>> rows = qresult.getRows();
-            for (List<String> row: rows){
-                long duration = Long.parseLong(row.get(0));
-                if (duration < 0){
-                    duration = Long.MAX_VALUE;
-                }
-                String qep = row.get(1).replace(stringSeparator, "'");
-                perfInfo.add(duration);
-                queries.add(qep);
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        System.out.printf("[BigDAWG] MONITOR: Performance information generated.\n");
-        return new QueriesAndPerformanceInformation(queries, perfInfo);
-    }
-
-    private static boolean insert(String query, Signature signature, Scope island) throws NotSupportIslandException {
-        PostgreSQLHandler handler = new PostgreSQLHandler();
-        try {
-            String escapedQuery = query.replace("'", stringSeparator);
-            String escapedSignature = signature.toRecoverableString().replace("'", stringSeparator);
-			handler.executeStatementPostgreSQL(String.format(INSERT, island.toString(), escapedSignature, escapedQuery, island.toString(), escapedQuery));
+			handler.executeStatementPostgreSQL(String.format(INSERT, escapedSignature, index, System.currentTimeMillis(), escapedSignature, index));
 			return true;
 		} catch (SQLException e) {
 			return false;
 		}
     }
 
-    private static boolean delete(String query, Scope island) throws NotSupportIslandException {
+    /**
+     * Deletes all QueryExecutionPlans in the Monitor with the given signature
+     * @param signature - signature representing the query
+     * @return true if successfully deleted. false otherwise.
+     */
+    private static boolean delete(Signature signature) {
         PostgreSQLHandler handler = new PostgreSQLHandler();
         try {
-            String escapedQuery = query.replace("'", stringSeparator);
-			handler.executeStatementPostgreSQL(String.format(DELETE, island.toString(), escapedQuery));
+            String escapedSignature = signature.toRecoverableString().replace("'", stringSeparator);
+			handler.executeStatementPostgreSQL(String.format(DELETE, escapedSignature));
 			return true;
 		} catch (SQLException e) {
 			return false;
 		}
     }
 
-    public static void runBenchmarks(List<QueryExecutionPlan> qeps) throws SQLException, MigrationException {
-        for (QueryExecutionPlan qep: qeps) {
-            Executor.executePlan(qep);
+    /**
+     * Executes a list of QueryExecutionPlans matching a signature using the Executor
+     * @param qeps - QueryExecutionPlans matching the signature
+     * @param signature - signature representing the query
+     * @throws ExecutorEngine.LocalQueryExecutionException
+     * @throws MigrationException
+     */
+    public static void runBenchmarks(List<QueryExecutionPlan> qeps, Signature signature) throws ExecutorEngine.LocalQueryExecutionException, MigrationException {
+        for (int i = 0; i < qeps.size(); i++){
+            Executor.executePlan(qeps.get(i), signature, i);
         }
     }
 
-    public void finishedBenchmark(QueryExecutionPlan qep, long startTime, long endTime) throws SQLException {
+    /**
+     * Used by the Executor. Updates the timing information for a QueryExecutionPlan
+     * @param signature - signature representing the query
+     * @param index - index of the QueryExecutionPlan when generating it from the signature
+     * @param startTime - time the query started running on the Executor in ms
+     * @param endTime - time the query finished running on the Executor in ms
+     * @throws SQLException
+     */
+    public void finishedBenchmark(Signature signature, int index, long startTime, long endTime) throws SQLException {
         PostgreSQLHandler handler = new PostgreSQLHandler();
-        String qepString = QueryExecutionPlan.qepToString(qep).replace("'", stringSeparator);
-        handler.executeStatementPostgreSQL(String.format(UPDATE, endTime, endTime-startTime, qep.getIsland(), qepString));
-
-        // Only for testing purposes.Uncomment when necessary.
-/*        try {
-            File temp = File.createTempFile("queries", ".tmp");
-            BufferedWriter bw = new BufferedWriter(new FileWriter(temp,true));
-            bw.write(String.format("%d %s %s\n", endTime-startTime, qep.getIsland(), qepString));
-            bw.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }*/
+        String escapedSignature = signature.toRecoverableString().replace("'", stringSeparator);
+        handler.executeStatementPostgreSQL(String.format(UPDATE, endTime, endTime-startTime, escapedSignature, index));
     }
 
+    /**
+     * Adds migration statistics to the Monitor
+     * @param stats - migration statistics to be added
+     * @throws SQLException
+     */
     public static void addMigrationStats(MigrationStatistics stats) throws SQLException {
         PostgreSQLHandler handler = new PostgreSQLHandler();
         String fromLoc = ConnectionInfoParser.connectionInfoToString(stats.getConnectionFrom());
@@ -245,11 +281,18 @@ public class Monitor {
         handler.executeStatementPostgreSQL(String.format(MIGRATE, fromLoc, toLoc, stats.getObjectFrom(), stats.getObjectTo(), stats.getStartTimeMigration(), stats.getEndTimeMigration(), countExtracted, countLoaded, stats.getMessage()));
     }
 
+    /**
+     * Retrieves migration statistics from the Monitor
+     * @param from The engine migrated from
+     * @param to The engine migrated to
+     * @return the stored migration statistics
+     * @throws SQLException
+     */
     public List<MigrationStatistics> getMigrationStats(ConnectionInfo from, ConnectionInfo to) throws SQLException {
         String fromLoc = ConnectionInfoParser.connectionInfoToString(from);
         String toLoc = ConnectionInfoParser.connectionInfoToString(to);
         PostgreSQLHandler handler = new PostgreSQLHandler();
-        PostgreSQLHandler.QueryResult qresult = handler.executeQueryPostgreSQL(String.format(RETRIEVEMIGRATE, fromLoc, toLoc));
+        JdbcQueryResult qresult = handler.executeQueryPostgreSQL(String.format(RETRIEVEMIGRATE, fromLoc, toLoc));
         List<MigrationStatistics> results = new ArrayList<>();
         List<List<String>> rows = qresult.getRows();
         for (List<String> row: rows){

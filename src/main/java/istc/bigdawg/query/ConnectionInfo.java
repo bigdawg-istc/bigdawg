@@ -4,10 +4,10 @@
 package istc.bigdawg.query;
 
 import java.io.Serializable;
-import java.sql.SQLException;
 import java.text.ParseException;
 import java.util.Collection;
 
+import istc.bigdawg.executor.ExecutorEngine;
 import org.apache.commons.lang3.tuple.Pair;
 
 /**
@@ -59,13 +59,13 @@ public interface ConnectionInfo extends Serializable {
 	/**
 	 * @param objects
 	 *            a Collection of objects to be removed
-	 * @return a query that when run on the instance, removes all of the given
-	 *         objects.
+	 * @return a collection of queries that when run on the instance, removes
+	 *         all of the given objects.
 	 */
-	public String getCleanupQuery(Collection<String> objects);
+	public Collection<String> getCleanupQuery(Collection<String> objects);
 
 	/**
-	 *
+	 * Used for executing shuffle joins.
 	 * @param object
 	 *            the table for which the histogram should be computed
 	 * @param attribute
@@ -81,11 +81,61 @@ public interface ConnectionInfo extends Serializable {
 	 *         elements stored in the ith bucket of the histogram
 	 */
 	public long[] computeHistogram(String object, String attribute,
-			double start, double end, int numBuckets) throws SQLException;
+			double start, double end, int numBuckets)
+					throws ExecutorEngine.LocalQueryExecutionException;
 
+	/**
+	 * Used for executing shuffle joins.
+	 * @param object
+	 * @param attribute
+	 * @return
+	 * @throws ExecutorEngine.LocalQueryExecutionException
+	 * @throws ParseException
+	 */
 	public Pair<Number, Number> getMinMax(String object, String attribute)
-			throws SQLException, ParseException;
+			throws ExecutorEngine.LocalQueryExecutionException, ParseException;
 
-	public DBHandler getHandler();
+	public ExecutorEngine getLocalQueryExecutor()
+			throws LocalQueryExecutorLookupException;
 
+	class LocalQueryExecutorLookupException extends Exception {
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 1L;
+
+		public LocalQueryExecutorLookupException() {
+			super();
+		}
+
+		public LocalQueryExecutorLookupException(String message) {
+			super(message);
+		}
+
+		public LocalQueryExecutorLookupException(Throwable cause) {
+			super(cause);
+		}
+
+		public LocalQueryExecutorLookupException(String message,
+				Throwable cause) {
+			super(message, cause);
+		}
+	}
+
+	/**
+	 * @return
+	 */
+	public default String toSimpleString() {
+		StringBuilder result = new StringBuilder();
+
+		result.append(this.getClass().getName() + " Object {");
+		result.append(" Host: " + this.getHost());
+		result.append(" Port: " + this.getPort());
+		result.append(" Database: " + this.getDatabase());
+		result.append(" User: " + this.getUser());
+		result.append(" Password: This is a secret!");
+		result.append("}");
+
+		return result.toString();
+	}
 }

@@ -5,6 +5,8 @@ package istc.bigdawg.accumulo;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,6 +30,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import istc.bigdawg.BDConstants;
 import istc.bigdawg.BDConstants.Shim;
+import istc.bigdawg.database.ObjectMetaData;
 import istc.bigdawg.exceptions.AccumuloBigDawgException;
 import istc.bigdawg.exceptions.AccumuloShellScriptException;
 import istc.bigdawg.properties.BigDawgConfigProperties;
@@ -53,25 +56,34 @@ public class AccumuloHandler implements DBHandler {
 		String database = params[0];
 		String table = params[1];
 		String query = params[2];
-		System.out.println("databse: " + database + " table: " + table + " query: " + query);
+		System.out.println("databse: " + database + " table: " + table
+				+ " query: " + query);
 		try {
-			return Response.status(200).entity(executeAccumuloShellScript(database, table, query)).build();
-		} catch (IOException | InterruptedException | AccumuloShellScriptException e) {
+			return Response.status(200)
+					.entity(executeAccumuloShellScript(database, table, query))
+					.build();
+		} catch (IOException | InterruptedException
+				| AccumuloShellScriptException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		return null;
 	}
 
-	private String executeAccumuloShellScript(String database, String table, String query)
-			throws IOException, InterruptedException, AccumuloShellScriptException {
-		String accumuloScriptPath = BigDawgConfigProperties.INSTANCE.getAccumuloShellScript();
+	private String executeAccumuloShellScript(String database, String table,
+			String query) throws IOException, InterruptedException,
+					AccumuloShellScriptException {
+		String accumuloScriptPath = BigDawgConfigProperties.INSTANCE
+				.getAccumuloShellScript();
 		System.out.println("accumuloScriptPath: " + accumuloScriptPath);
-		InputStream scriptResultInStream = RunShell.runAccumuloScript(accumuloScriptPath, database, table, query);
-		String scriptResult = IOUtils.toString(scriptResultInStream, Constants.ENCODING);
+		InputStream scriptResultInStream = RunShell
+				.runAccumuloScript(accumuloScriptPath, database, table, query);
+		String scriptResult = IOUtils.toString(scriptResultInStream,
+				Constants.ENCODING);
 		System.out.println("Accumulo script result: " + scriptResult);
-		QueryResponseTupleString resp = new QueryResponseTupleString("OK", 200, scriptResult, 1, 1,
-				AccumuloInstance.schema, AccumuloInstance.types, new Timestamp(0));
+		QueryResponseTupleString resp = new QueryResponseTupleString("OK", 200,
+				scriptResult, 1, 1, AccumuloInstance.schema,
+				AccumuloInstance.types, new Timestamp(0));
 		ObjectMapper mapper = new ObjectMapper();
 		return mapper.writeValueAsString(resp).replace("\\", "");
 	}
@@ -86,14 +98,17 @@ public class AccumuloHandler implements DBHandler {
 		return BDConstants.Shim.ACCUMULOTEXT;
 	}
 
-	private String executeQueryAccumuloPure(String table) throws TableNotFoundException, AccumuloException,
+	@SuppressWarnings("unused")
+	private String executeQueryAccumuloPure(String table)
+			throws TableNotFoundException, AccumuloException,
 			AccumuloSecurityException, IOException, AccumuloBigDawgException {
 		// specify which visibilities we are allowed to see
 		// Authorizations auths = new Authorizations("public");
 		Authorizations auths = new Authorizations();
 		AccumuloInstance accInst = AccumuloInstance.getInstance();
 		Connector conn = accInst.getConnector();
-		conn.securityOperations().changeUserAuthorizations(accInst.getUsername(), auths);
+		conn.securityOperations()
+				.changeUserAuthorizations(accInst.getUsername(), auths);
 		Scanner scan = conn.createScanner(table, auths);
 		scan.setRange(new Range("", null));
 		scan.fetchColumnFamily(new Text(""));
@@ -116,8 +131,9 @@ public class AccumuloHandler implements DBHandler {
 		}
 		ObjectMapper mapper = new ObjectMapper();
 		String allRowsString = mapper.writeValueAsString(allRows);
-		QueryResponseTupleString resp = new QueryResponseTupleString("OK", 200, allRowsString, 1, 1,
-				AccumuloInstance.fullSchema, AccumuloInstance.fullTypes, new Timestamp(0));
+		QueryResponseTupleString resp = new QueryResponseTupleString("OK", 200,
+				allRowsString, 1, 1, AccumuloInstance.fullSchema,
+				AccumuloInstance.fullTypes, new Timestamp(0));
 		return mapper.writeValueAsString(resp);
 	}
 
@@ -127,12 +143,58 @@ public class AccumuloHandler implements DBHandler {
 	public static void main(String[] args) {
 		String accumuloScript;
 		try {
-			accumuloScript = new AccumuloHandler().executeAccumuloShellScript("database", "table", "query");
+			accumuloScript = new AccumuloHandler()
+					.executeAccumuloShellScript("database", "table", "query");
 			System.out.println(accumuloScript);
-		} catch (IOException | InterruptedException | AccumuloShellScriptException e) {
+		} catch (IOException | InterruptedException
+				| AccumuloShellScriptException e) {
 			e.printStackTrace();
 		}
 
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see istc.bigdawg.query.DBHandler#getObjectMetaData(java.lang.String)
+	 */
+	@Override
+	public ObjectMetaData getObjectMetaData(String name) throws Exception {
+		// TODO
+		throw new UnsupportedOperationException();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see istc.bigdawg.query.DBHandler#existsObject(java.lang.String)
+	 */
+	@Override
+	public boolean existsObject(String name) throws Exception {
+		// TODO
+		throw new UnsupportedOperationException();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see istc.bigdawg.query.DBHandler#close()
+	 */
+	@Override
+	public void close() throws Exception {
+		// TODO
+		throw new UnsupportedOperationException();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see istc.bigdawg.query.DBHandler#getConnection()
+	 */
+	@Override
+	public Connection getConnection() throws SQLException {
+		// TODO
+		throw new UnsupportedOperationException();
 	}
 
 }

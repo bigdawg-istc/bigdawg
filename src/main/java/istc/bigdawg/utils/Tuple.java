@@ -4,12 +4,12 @@
 package istc.bigdawg.utils;
 
 /**
+ * Implement tuples.
+ * 
+ * Use it if you need Pairs, Triples and so on (for example for the return
+ * values of specified cardinality and different types).
+ * 
  * @author Adam Dziedzic
- * 
- *         Implement tuples.
- * 
- *         Use it if you need Pairs, Triples and so on (for example for the
- *         return values of specified cardinality and different types).
  * 
  */
 public class Tuple {
@@ -21,6 +21,15 @@ public class Tuple {
 		return new Tuple.Tuple3<T1, T2, T3>(t1, t2, t3);
 	}
 
+	/**
+	 * Pair.
+	 * 
+	 * @author Adam Dziedzic
+	 * 
+	 *
+	 * @param <T1>
+	 * @param <T2>
+	 */
 	public static class Tuple2<T1, T2> {
 		protected T1 t1;
 		protected T2 t2;
@@ -39,6 +48,16 @@ public class Tuple {
 		}
 	}
 
+	/**
+	 * Triple.
+	 * 
+	 * @author Adam Dziedzic
+	 * 
+	 *
+	 * @param <T1>
+	 * @param <T2>
+	 * @param <T3>
+	 */
 	public static class Tuple3<T1, T2, T3> extends Tuple2<T1, T2> {
 		protected T3 t3;
 

@@ -1,2 +1,2 @@
 #!/bin/bash
-emacs include/*.h include/attribute/*.h src/*.cpp src/attribute/*.cpp &
+emacs Makefile include/data-migrator/*.h src/data-migrator/*.cpp test/attribute/*.cc test/*.cc CMakeLists.txt &

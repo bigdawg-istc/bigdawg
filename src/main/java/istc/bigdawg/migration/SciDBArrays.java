@@ -3,23 +3,31 @@
  */
 package istc.bigdawg.migration;
 
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+
 /**
- * Names of flat and destination arrays used during the migration process.
+ * Flat and destination arrays used during the migration process.
  * 
  * @author Adam Dziedzic
  * 
- *         Feb 24, 2016 11:03:35 AM
  */
 public class SciDBArrays {
 
-	private String flat;
-	private String multiDimensional;
+	/**
+	 * A flat array in SciDB, it contains only an auxiliary dimension (e.g. i -
+	 * which is an index of a record)
+	 */
+	private SciDBArray flat;
 
 	/**
-	 * @param flat
-	 * @param multiDimensional
+	 * A multidimensional array contains specific dimensions, for example, an
+	 * multi-dim array representing a canvas contains two dimensions: x and y.
 	 */
-	public SciDBArrays(String flat, String multiDimensional) {
+	private SciDBArray multiDimensional;
+
+	public SciDBArrays(SciDBArray flat, SciDBArray multiDimensional) {
 		this.flat = flat;
 		this.multiDimensional = multiDimensional;
 	}
@@ -27,15 +35,43 @@ public class SciDBArrays {
 	/**
 	 * @return the flat
 	 */
-	public String getFlat() {
+	public SciDBArray getFlat() {
 		return flat;
 	}
 
 	/**
 	 * @return the multiDimensional
 	 */
-	public String getMultiDimensional() {
+	public SciDBArray getMultiDimensional() {
 		return multiDimensional;
+	}
+
+	/**
+	 * 
+	 * @return Names of all the arrays which were created during the migration.
+	 */
+	public Set<String> getCreatedArrays() {
+		Set<String> createdArrays = new HashSet<>();
+		for (SciDBArray array : Arrays.asList(flat, multiDimensional)) {
+			if (array != null && array.wasCreated()) {
+				createdArrays.add(array.getName());
+			}
+		}
+		return createdArrays;
+	}
+
+	/**
+	 * 
+	 * @return Names of all intermediate (flat) arrays.
+	 */
+	public Set<String> getIntermediateArrays() {
+		Set<String> intermediateArrays = new HashSet<>();
+		for (SciDBArray array : Arrays.asList(flat, multiDimensional)) {
+			if (array != null && array.isItermediate()) {
+				intermediateArrays.add(array.getName());
+			}
+		}
+		return intermediateArrays;
 	}
 
 }

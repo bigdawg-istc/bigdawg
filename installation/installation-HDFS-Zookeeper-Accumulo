@@ -156,9 +156,17 @@ java version "1.7.0_79"
 
 
 # set up zookeeper myid files
-sudo mkdir /var/lib/zookeeper
-sudo echo "number from 1 to 5" | sudo tee /var/lib/zookeeper/myid
+
+# correct configuration
+sudo mkdir -p /var/lib/zookeeper
+#sudo echo "number from 1 to 5" | sudo tee /var/lib/zookeeper/myid
+sudo echo "1" | sudo tee /var/lib/zookeeper/myid # you have to change the number for each zookeeper physical node (from 1 to 5)
 sudo chown -R hduser:hadoop /var/lib/zookeeper
+
+# bad configuration - it is bad because myid has to be different in each server
+sudo mkdir -p /usr/local/hadoop/zookeeper-3.4.6/data
+sudo echo "number from 1 to 5" | sudo tee /usr/local/hadoop/zookeeper-3.4.6/data/myid
+sudo chown -R hduser:hadoop /usr/local/hadoop/zookeeper-3.4.6/data
 
 # zookeeper - show what is the mode of the current server
 hduser@wellington ~ $ echo srvr | nc localhost 2181 | grep Mode
@@ -171,7 +179,6 @@ hduser@madison:/usr/local/hadoop/zookeeper-3.4.6/bin$ ./start_all_nodes.sh
 hadoop fs -rm -r hdfs://madison:9000/accumulo
 
 hduser@madison:/usr/local/hadoop/accumulo-1.7.0/bin$ hadoop fs -ls /
-
 
 # configure accumulo
 hduser@madison:/usr/local/hadoop/accumulo-1.7.0/conf$ ../bin/accumulo init

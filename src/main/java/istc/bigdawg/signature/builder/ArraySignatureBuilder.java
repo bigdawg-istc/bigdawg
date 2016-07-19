@@ -2,6 +2,8 @@ package istc.bigdawg.signature.builder;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.io.IOException;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -9,6 +11,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import istc.bigdawg.catalog.CatalogViewer;
+import istc.bigdawg.exceptions.BigDawgCatalogException;
 
 public class ArraySignatureBuilder {
 	
@@ -16,7 +19,7 @@ public class ArraySignatureBuilder {
 	private static Pattern objPattern = null;
 	private static Pattern litPattern = null;
 	
-	public static void listing() throws Exception {
+	public static void listing() throws IOException {
 		
 		// reading all the SQL commands
 		BufferedReader bufferedReader = new BufferedReader(new FileReader("src/main/resources/SciDBParserTerms.csv"));
@@ -63,7 +66,7 @@ public class ArraySignatureBuilder {
 		}
 	}
 
-	public static List<String> sig2(String input) throws Exception {
+	public static List<String> sig2(String input) throws IOException, BigDawgCatalogException, SQLException {
 		if (objPattern == null) listing();
 		
 		StringBuffer stringBuffer	= new StringBuffer();
@@ -98,9 +101,10 @@ public class ArraySignatureBuilder {
 	 * Signature 3, constants. Schema definition excluded.
 	 * @param input
 	 * @return TSV String of constants, including string, integer and decimal numbers, true and false, and null
+	 * @throws IOException 
 	 * @throws Exception
 	 */
-	public static List<String> sig3(String input) throws Exception {
+	public static List<String> sig3(String input) throws IOException   {
 		if (litPattern == null) listing();
 		
 		StringBuffer stringBuffer	= new StringBuffer();

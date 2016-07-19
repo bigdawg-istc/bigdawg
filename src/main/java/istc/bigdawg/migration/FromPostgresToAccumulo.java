@@ -50,7 +50,7 @@ public class FromPostgresToAccumulo {
 
 	// parameters
 	private long rowIdCounterForAccumuloFromPostgres = 0L;
-	private long accumuloBatchWriterMaxMemory = 50 * 1024 * 1024l;
+	private long accumuloBatchWriterMaxMemory = 50 * 1024 * 1024L;
 	private int accumuloBatchWriterMaxWriteThreads = 4;
 	private int accumuloBatchWriteSize = 1000;
 	private int postgreSQLFetchSize = 50;
