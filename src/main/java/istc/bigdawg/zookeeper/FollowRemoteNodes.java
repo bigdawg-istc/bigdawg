@@ -46,19 +46,19 @@ public class FollowRemoteNodes {
 		logger.debug(
 				"Execution of data migration and following the remote nodes: "
 						+ ipAddresses.toString());
-		ZooKeeperHandler zooHandler = new ZooKeeperHandler(
-				ZooKeeperInstance.INSTANCE.getZooKeeper());
 		List<Callable<Object>> callables = new ArrayList<>();
-		for (String ipAddress : ipAddresses) {
-			callables.add(zooHandler.callableWatch(
-					ZooKeeperUtils.getZnodePathNodes(ipAddress),
-					EventType.NodeDeleted));
-		}
+		// ZooKeeperHandler zooHandler = new ZooKeeperHandler(
+		// ZooKeeperInstance.INSTANCE.getZooKeeper());
+		// for (String ipAddress : ipAddresses) {
+		// callables.add(zooHandler.callableWatch(
+		// ZooKeeperUtils.getZnodePathNodes(ipAddress),
+		// EventType.NodeDeleted));
+		// }
 		callables.add(callable);
 		logger.debug("The number of threads in the executor: "
 				+ "number of nodes to follow + the migration execution.");
 		ExecutorService executor = Executors
-				.newFixedThreadPool(ipAddresses.size() + 1);
+				.newFixedThreadPool(/* ipAddresses.size() + */ 1);
 		try {
 			Object result = executor.invokeAny(callables);
 			executor.shutdownNow();

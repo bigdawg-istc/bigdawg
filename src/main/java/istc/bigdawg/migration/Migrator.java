@@ -52,11 +52,12 @@ public class Migrator {
 		registeredMigrators.add(new FromPostgresToPostgres());
 
 		/* migrator from PostgreSQL to SciDB */
-		registeredMigrators.add(new FromDatabaseToDatabase(
-				ExportPostgres.ofFormat(FileFormat.CSV),
-				LoadSciDB.ofFormat(FileFormat.CSV)));
-
-		/* registeredMigrators.add(new FromPostgresToSciDB()); */
+		/*
+		 * registeredMigrators.add(new FromDatabaseToDatabase(
+		 * ExportPostgres.ofFormat(FileFormat.CSV),
+		 * LoadSciDB.ofFormat(FileFormat.CSV)));
+		 */
+		registeredMigrators.add(new FromPostgresToSciDB());
 
 		/* migrator from SciDB to Postgres */
 		/*

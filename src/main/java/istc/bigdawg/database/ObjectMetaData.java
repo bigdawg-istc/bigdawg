@@ -3,6 +3,7 @@
  */
 package istc.bigdawg.database;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,7 +15,7 @@ import java.util.List;
  * 
  *
  */
-public interface ObjectMetaData {
+public interface ObjectMetaData extends Serializable {
 
 	/**
 	 * Get full name of the table/array/object. For example, the full name of a
@@ -31,14 +32,16 @@ public interface ObjectMetaData {
 	 * @return list of objects representing attributes
 	 */
 	public List<AttributeMetaData> getAttributesOrdered();
-	
+
 	/**
-	 * Get ordered attributes representing dimensions for the array or another object.
+	 * Get ordered attributes representing dimensions for the array or another
+	 * object.
+	 * 
 	 * @return list of attribute objects representing dimensions
 	 */
 	public default List<AttributeMetaData> getDimensionsOrdered() {
 		/** by default, return an empty list of dimensions */
 		return new ArrayList<>();
 	}
-	
+
 }

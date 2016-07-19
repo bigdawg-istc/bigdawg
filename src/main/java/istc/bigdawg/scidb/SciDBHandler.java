@@ -62,7 +62,7 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 	 * 
 	 * By default, the data should be sent without headers.
 	 */
-	private static final boolean IS_CSV_EXPORT_HEADER = false;
+	private static final boolean IS_CSV_EXPORT_HEADER = true;
 
 	/**
 	 * SciDB can accept data in CSV format with or without header. By default we
@@ -212,8 +212,10 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 	public void close() throws SQLException {
 		if (connection != null) {
 			try {
-				connection.commit();
-				connection.close();
+				commit();
+				if (!connection.isClosed()) {
+					connection.close();
+				}
 				connection = null;
 			} catch (SQLException e) {
 				e.printStackTrace();
@@ -360,7 +362,9 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 	 */
 	public void commit() throws SQLException {
 		try {
-			connection.commit();
+			if (connection != null && !connection.isClosed()) {
+				connection.commit();
+			}
 		} catch (SQLException ex) {
 			ex.printStackTrace();
 			log.error("Could not commit for a connection to a SciDB database. "

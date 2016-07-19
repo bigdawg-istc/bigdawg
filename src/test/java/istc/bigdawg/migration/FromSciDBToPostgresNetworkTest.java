@@ -20,29 +20,40 @@ import istc.bigdawg.postgresql.PostgreSQLConnectionInfoTest;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
 import istc.bigdawg.scidb.SciDBConnectionInfoTest;
-import istc.bigdawg.scidb.SciDBHandler;
 import istc.bigdawg.utils.Utils;
 
 /**
  * @author Adam Dziedzic
  * 
- *         Feb 24, 2016 7:09:13 PM
+ *
  */
-public class FromSciDBToPostgresTest {
+public class FromSciDBToPostgresNetworkTest {
 
 	/*
 	 * log
 	 */
 	private static Logger logger = Logger
-			.getLogger(FromPostgresToPostgresTest.class);
+			.getLogger(FromSciDBToPostgresNetworkTest.class);
 
 	private FromSciDBToPostgres migrator = new FromSciDBToPostgres();
-	private PostgreSQLConnectionInfo conTo = new PostgreSQLConnectionInfoTest();
+	// private PostgreSQLConnectionInfo conTo = new
+	// PostgreSQLConnectionInfoTest();
+	private PostgreSQLConnectionInfo conTo;
 	private String toTable = "region_test_from_13255_";
-	private SciDBConnectionInfo conFrom = new SciDBConnectionInfoTest();
+	// private SciDBConnectionInfo conFrom = new SciDBConnectionInfoTest();
+	private SciDBConnectionInfo conFrom;
 	private String fromArray = "region_test_from_13255_";
 	private String flatArray;
 	private long numberOfCellsSciDB = 0L;
+
+	private String localIP = "205.208.122.55";
+	private String remoteIPmadison = "128.135.11.26";
+	private String remoteIPfrancisco = "128.135.11.131";
+
+	private String localPassword = "test";
+	private String remotePassword = "ADAM12345testBorja2016";
+	private String scidbPassword = "scidb123";
+	private String scidbBinPath = "/opt/scidb/14.12/bin/";
 
 	@Before
 	/**
@@ -54,14 +65,20 @@ public class FromSciDBToPostgresTest {
 	public void beforeTests() throws SQLException, IOException {
 		LoggerSetup.setLogging();
 		flatArray = fromArray + "_flat_";
+		conFrom = new SciDBConnectionInfo(remoteIPmadison, "1239", "scidb",
+				scidbPassword, scidbBinPath);
+		conTo = new PostgreSQLConnectionInfo(remoteIPfrancisco, "5431", "test",
+				"pguser", remotePassword);
 		numberOfCellsSciDB = TestMigrationUtils.loadRegionDataToSciDB(conFrom,
 				flatArray, fromArray);
 	}
 
 	@Test
-	public void testFromSciDBToPostgreSQLNoTargetTable()
+	public void testFromSciDBToPostgreSQLNoTargetTableNetwork()
 			throws MigrationException, SQLException {
+		logger.debug("Migration from local SciDB to remote PostgreSQL.");
 		// make sure that the target array does not exist
+
 		PostgreSQLHandler handler = new PostgreSQLHandler(conTo);
 		handler.dropTableIfExists(toTable);
 		migrator.migrate(new MigrationInfo(conFrom, fromArray, conTo, toTable));
@@ -70,43 +87,6 @@ public class FromSciDBToPostgresTest {
 		assertEquals(numberOfCellsSciDB, postgresCountTuples);
 		// drop the created table
 		handler.dropTableIfExists(toTable);
-	}
-
-	@Test
-	public void testFromSciDBToPostgreSQLWithPreparedTargetTable()
-			throws MigrationException, SQLException {
-		// make sure that the target array does not exist
-		PostgreSQLHandler handler = new PostgreSQLHandler(conTo);
-		handler.dropTableIfExists(toTable);
-		handler.createTable(
-				TestMigrationUtils.getCreateRegionTableStatement(toTable));
-		migrator.migrate(new MigrationInfo(conFrom, fromArray, conTo, toTable));
-		long postgresCountTuples = Utils.getPostgreSQLCountTuples(conTo,
-				toTable);
-		assertEquals(numberOfCellsSciDB, postgresCountTuples);
-		// drop the created table
-		handler.dropTableIfExists(toTable);
-		System.out.println(
-				"The end of the test with prepared table in PosgreSQL.");
-	}
-
-	@Test
-	public void testFromSciDBToPostgresWithParameters()
-			throws SQLException, MigrationException {
-		logger.debug("General migration from Postgres to Postgres "
-				+ "with a given parameter: craete target table");
-
-		PostgreSQLHandler handler = new PostgreSQLHandler(conTo);
-		handler.dropTableIfExists(toTable);
-		MigrationParams migrationParams = new MigrationParams(
-				TestMigrationUtils.getCreateRegionTableStatement(toTable));
-		/* We migrate from the multi-dimensional array so drop to flat one. */
-		SciDBHandler.dropArrayIfExists(conFrom, flatArray);
-
-		Migrator.migrate(conFrom, fromArray, conTo, toTable, migrationParams);
-		long postgresCountTuples = Utils.getPostgreSQLCountTuples(conTo,
-				toTable);
-		assertEquals(numberOfCellsSciDB, postgresCountTuples);
 	}
 
 	@After

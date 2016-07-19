@@ -3,6 +3,7 @@
  */
 package istc.bigdawg.migration;
 
+import java.io.Serializable;
 import java.util.Optional;
 
 import istc.bigdawg.query.ConnectionInfo;
@@ -14,7 +15,12 @@ import istc.bigdawg.query.ConnectionInfo;
  * 
  * @author Adam Dziedzic
  */
-public class MigrationInfo {
+public class MigrationInfo implements Serializable {
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 
 	/** The connection to the database from which we migrate the data. */
 	private ConnectionInfo connectionFrom;

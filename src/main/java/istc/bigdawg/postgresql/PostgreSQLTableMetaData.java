@@ -13,11 +13,14 @@ import istc.bigdawg.database.ObjectMetaData;
  * Meta data about a table in PostgreSQL.
  * 
  * @author Adam Dziedzic
- * 
- *
  */
 public class PostgreSQLTableMetaData implements ObjectMetaData {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	
 	/** Name of the schema (by default public) and name of the table. */
 	private PostgreSQLSchemaTableName schemaTable;
 	private Map<String, AttributeMetaData> columnsMap;

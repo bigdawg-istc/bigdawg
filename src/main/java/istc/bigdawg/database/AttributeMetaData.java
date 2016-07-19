@@ -3,6 +3,8 @@
  */
 package istc.bigdawg.database;
 
+import java.io.Serializable;
+
 /**
  * Meta data about an attribute/column/cell in a table/array or another object
  * in a database.
@@ -14,7 +16,12 @@ package istc.bigdawg.database;
  * 
  *         2016 Jan 13, 2016 2:23:23 PM
  */
-public class AttributeMetaData {
+public class AttributeMetaData implements Serializable {
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 
 	/** The name of the attribute. */
 	private String name;

@@ -50,7 +50,8 @@ public class FromPostgresToSciDBWaveformDataTest {
 	 * @throws SQLException
 	 * @throws IOException
 	 */
-	public void loadDataToPostgres() throws SQLException, IOException {
+	public void loadDataToPostgres()
+			throws SQLException, IOException, MigrationException {
 		LoggerSetup.setLogging();
 		this.numberOfRowsPostgres = TestMigrationUtils
 				.loadDataToPostgresWaveform(conFrom, fromTable);

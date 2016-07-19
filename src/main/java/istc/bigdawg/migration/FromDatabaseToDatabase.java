@@ -52,7 +52,7 @@ public class FromDatabaseToDatabase implements MigrationNetworkRequest {
 	 * list indicates that locks for the data migration process have not been
 	 * acquired as yet.
 	 */
-	private List<String> zooKeeperLocks = null;
+	protected List<String> zooKeeperLocks = null;
 
 	/** Pipes to be removed after the execution of the migration. */
 	private List<String> pipes = new ArrayList<>();

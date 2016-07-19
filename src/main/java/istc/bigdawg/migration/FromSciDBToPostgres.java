@@ -3,10 +3,15 @@
  */
 package istc.bigdawg.migration;
 
+import static istc.bigdawg.network.NetworkUtils.isThisMyIpAddress;
+
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -18,11 +23,13 @@ import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 
 import org.apache.log4j.Logger;
+import org.apache.zookeeper.KeeperException;
 
 import istc.bigdawg.LoggerSetup;
 import istc.bigdawg.database.AttributeMetaData;
 import istc.bigdawg.database.ObjectMetaData;
 import istc.bigdawg.exceptions.MigrationException;
+import istc.bigdawg.exceptions.NetworkException;
 import istc.bigdawg.exceptions.NoTargetArrayException;
 import istc.bigdawg.exceptions.RunShellException;
 import istc.bigdawg.exceptions.UnsupportedTypeException;
@@ -30,6 +37,7 @@ import istc.bigdawg.migration.datatypes.FromSciDBToSQLTypes;
 import istc.bigdawg.monitoring.Monitor;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
+import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.query.DBHandler;
 import istc.bigdawg.scidb.SciDBArrayDimensionsAndAttributesMetaData;
 import istc.bigdawg.scidb.SciDBArrayMetaData;
@@ -39,6 +47,8 @@ import istc.bigdawg.utils.Pipe;
 import istc.bigdawg.utils.SessionIdentifierGenerator;
 import istc.bigdawg.utils.StackTrace;
 import istc.bigdawg.utils.TaskExecutor;
+import istc.bigdawg.zookeeper.FollowRemoteNodes;
+import istc.bigdawg.zookeeper.ZooKeeperUtils;
 
 /**
  * Migrate data from SciDB to PostgreSQL.
@@ -633,6 +643,114 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 	@Override
 	public MigrationResult migrate() throws MigrationException {
 		return migrateSingleThreadCSV();
+	}
+
+	/**
+	 * Execute the migration request; the node with SciDB database should manage
+	 * the migration (the main migration task runs on SciDB's node and the data
+	 * is pushed to the node on which the PostgreSQL instance resides).
+	 * 
+	 */
+	private Callable<Object> executeMigrationFromLocal() {
+		return () -> {
+			/*
+			 * execute the migration: export from local/remote machine, load to
+			 * the local machine
+			 */
+			log.debug(
+					"Migration will be executed from local database with SciDB.");
+			try {
+				return executeMigrationLocally();
+			} catch (MigrationException e) {
+				log.debug(e.getMessage());
+				return e;
+			}
+		};
+	}
+
+	/**
+	 * Dispatch the request for migration to the node with destination database.
+	 * 
+	 * Execute the request on the SciDB node, so that the node with the SciDB
+	 * database pushes the data to a remote or local PostgreSQL instance.
+	 * 
+	 * @return {@link MigrationResult} with information about the migration
+	 *         process
+	 * @throws UnknownHostException
+	 * @throws NetworkException
+	 * @throws MigrationException
+	 */
+	public MigrationResult dispatch() throws MigrationException {
+		Object result = null;
+		/*
+		 * Check if the address of SciDB is not a local host.
+		 */
+		String hostnameFrom = this.getConnectionFrom().getHost();
+		String hostnameTo = this.getConnectionTo().getHost();
+		String debugMessage = "current hostname is: "
+				+ BigDawgConfigProperties.INSTANCE.getGrizzlyIpAddress()
+				+ "; hostname from which the data is migrated: " + hostnameFrom
+				+ "; hostname to which the data is migrated: " + hostnameTo;
+		log.debug(debugMessage);
+		try {
+			if (!isThisMyIpAddress(InetAddress.getByName(hostnameFrom))) {
+				log.debug("Migration will be executed remotely (this node: "
+						+ BigDawgConfigProperties.INSTANCE.getGrizzlyIpAddress()
+						+ " only coordinates the migration).");
+				List<String> followIPs = new ArrayList<>();
+				followIPs.add(hostnameFrom);
+				if (!isThisMyIpAddress(InetAddress.getByName(hostnameTo))) {
+					followIPs.add(hostnameTo);
+				}
+				/*
+				 * This node is only a coordinator/dispatcher for the migration.
+				 */
+				result = FollowRemoteNodes.execute(Arrays.asList(hostnameFrom),
+						sendNetworkRequest(hostnameFrom));
+				log.debug("Result of migration: " + result);
+			} else {
+				/*
+				 * This machine contains the source database for the migration.
+				 */
+				/* Change the local hostname to the general ip address. */
+				String thisHostname = BigDawgConfigProperties.INSTANCE
+						.getGrizzlyIpAddress();
+				/** Acquire the ZooKeeper locks for the migration. */
+				// if (zooKeeperLocks == null) {
+				// byte[] data = debugMessage.getBytes();
+				// zooKeeperLocks = ZooKeeperUtils.acquireMigrationLocks(
+				// Arrays.asList(thisHostname, hostnameTo), data);
+				// }
+				List<String> followIPs = new ArrayList<>();
+				if (!isThisMyIpAddress(InetAddress.getByName(hostnameTo))) {
+					log.debug("Migration from: " + thisHostname
+							+ " to local database: " + hostnameTo);
+					followIPs.add(hostnameTo);
+				}
+				result = FollowRemoteNodes.execute(Arrays.asList(hostnameTo),
+						executeMigrationFromLocal());
+				log.debug("Result of migration: " + result);
+			}
+			log.debug("Process results of the migration.");
+			return MigrationResult.processResult(result);
+		} catch (MigrationException e) {
+			throw e;
+		} catch (Exception e) {
+			throw new MigrationException(e.getMessage(), e);
+		} finally {
+			if (zooKeeperLocks != null) {
+				log.debug("Release the locks in ZooKeeper.");
+				try {
+					ZooKeeperUtils.releaseMigrationLocks(zooKeeperLocks);
+				} catch (KeeperException | InterruptedException e) {
+					log.error(
+							"Could not release the following locks in ZooKeeper: "
+									+ zooKeeperLocks.toString() + " "
+									+ e.getMessage() + "Stack trace: "
+									+ StackTrace.getFullStackTrace(e));
+				}
+			}
+		}
 	}
 
 	/**

@@ -17,6 +17,11 @@ import istc.bigdawg.database.ObjectMetaData;
  */
 public class SciDBArrayMetaData implements ObjectMetaData {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	
 	private String arrayName;
 	private Map<String, AttributeMetaData> dimensionsMap;
 	private List<AttributeMetaData> dimensionsOrdered;

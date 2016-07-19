@@ -31,7 +31,7 @@ public class FromPostgresToSciDBRegionTPCHDataTest {
 	 * log
 	 */
 	private static Logger logger = Logger
-			.getLogger(FromPostgresToPostgresTest.class);
+			.getLogger(FromPostgresToSciDBRegionTPCHDataTest.class);
 
 	private FromDatabaseToDatabase migrator;
 	private PostgreSQLConnectionInfo conFrom = new PostgreSQLConnectionInfoTest();
