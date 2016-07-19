@@ -18,8 +18,11 @@ import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.exceptions.NoTargetArrayException;
 import istc.bigdawg.exceptions.UnsupportedTypeException;
 import istc.bigdawg.executor.ExecutorEngine.LocalQueryExecutionException;
+import istc.bigdawg.migration.FromSciDBToPostgres.MigrationType;
 import istc.bigdawg.migration.datatypes.FromSQLTypesToSciDB;
 import istc.bigdawg.query.ConnectionInfo;
+import istc.bigdawg.query.DBHandler;
+import istc.bigdawg.scidb.SciDBArrayDimensionsAndAttributesMetaData;
 import istc.bigdawg.scidb.SciDBArrayMetaData;
 import istc.bigdawg.scidb.SciDBHandler;
 import istc.bigdawg.utils.SessionIdentifierGenerator;
@@ -55,20 +58,21 @@ public class MigrationUtils {
 	 * @throws UnsupportedTypeException
 	 */
 	public static boolean isFlatArray(SciDBArrayMetaData scidbArrayMetaData,
-			ObjectMetaData objectToMetaData)
+			ObjectMetaData objectMetaData)
 					throws MigrationException, UnsupportedTypeException {
-		List<AttributeMetaData> fromAttributesOrdered = objectToMetaData
+		List<AttributeMetaData> objectAttributesOrdered = objectMetaData
 				.getAttributesOrdered();
-		List<AttributeMetaData> toAttributesOrdered = scidbArrayMetaData
+		List<AttributeMetaData> scidbAttributesOrdered = scidbArrayMetaData
 				.getAttributesOrdered();
 		if (scidbArrayMetaData.getDimensionsOrdered().size() > 1) {
 			return false;
 		}
-		if (fromAttributesOrdered.size() != toAttributesOrdered.size()) {
+		if (objectAttributesOrdered.size() != scidbAttributesOrdered.size()) {
 			return false;
 		}
-		Iterator<AttributeMetaData> fromIter = fromAttributesOrdered.iterator();
-		Iterator<AttributeMetaData> toIter = toAttributesOrdered.iterator();
+		Iterator<AttributeMetaData> fromIter = objectAttributesOrdered
+				.iterator();
+		Iterator<AttributeMetaData> toIter = scidbAttributesOrdered.iterator();
 		while (fromIter.hasNext() && toIter.hasNext()) {
 			AttributeMetaData fromAttributeMetaData = fromIter.next();
 			AttributeMetaData toAttributeMetaData = toIter.next();
@@ -446,4 +450,79 @@ public class MigrationUtils {
 		return new SciDBArrays(flatArray, multiDimArray);
 	}
 
+	/**
+	 * Decide the migration type (transfer (only the attributes) or (attributes
+	 * and dimensions)) for SciDB.
+	 * 
+	 * @throws MigrationException
+	 *             {@link MigrationException}
+	 */
+	public static MigrationType getMigrationType(MigrationInfo migrationInfo,
+			DBHandler toHandler) throws MigrationException {
+		SciDBHandler fromHandler = null;
+		try {
+			fromHandler = new SciDBHandler(migrationInfo.getConnectionFrom());
+			SciDBArrayMetaData scidbArrayMetaData = fromHandler
+					.getObjectMetaData(migrationInfo.getObjectFrom());
+			String toObject = migrationInfo.getObjectTo();
+			if (toHandler.existsObject(toObject)) {
+				ObjectMetaData objectToMetaData = toHandler
+						.getObjectMetaData(migrationInfo.getObjectFrom());
+				// can we migrate only the attributes from the SciDB array
+				List<AttributeMetaData> scidbAttributesOrdered = scidbArrayMetaData
+						.getAttributesOrdered();
+				List<AttributeMetaData> toAttributesOrdered = objectToMetaData
+						.getAttributesOrdered();
+				if (toAttributesOrdered.size() == scidbAttributesOrdered.size()
+						&& MigrationUtils.areAttributesTheSame(
+								scidbArrayMetaData, objectToMetaData)) {
+					return MigrationType.FLAT;
+				} /*
+					 * check if the dimensions and the attributes in the array
+					 * match the columns in the table
+					 */
+				else {
+					/*
+					 * verify the dimensions and attributes in the array with
+					 * the columns in the table
+					 */
+					List<AttributeMetaData> scidbDimensionsAttributes = new ArrayList<AttributeMetaData>();
+					scidbDimensionsAttributes
+							.addAll(scidbArrayMetaData.getDimensionsOrdered());
+					scidbDimensionsAttributes
+							.addAll(scidbArrayMetaData.getAttributesOrdered());
+
+					if (MigrationUtils.areAttributesTheSame(
+							new SciDBArrayDimensionsAndAttributesMetaData(
+									scidbArrayMetaData.getArrayName(),
+									scidbDimensionsAttributes),
+							objectToMetaData)) {
+						return MigrationType.FULL;
+					} else {
+						return MigrationType.FLAT;
+					}
+				}
+			} else {
+				return MigrationType.FULL;
+			}
+		} catch (SQLException ex) {
+			String message = "Problem with connection to one of the databases. "
+					+ ex.getMessage();
+			throw new MigrationException(message);
+		} catch (Exception ex) {
+			String message = "Problem with checking meta data. "
+					+ ex.getMessage();
+			throw new MigrationException(message);
+		} finally {
+			if (fromHandler != null) {
+				try {
+					fromHandler.close();
+				} catch (SQLException e) {
+					log.error("Could not close the handler for SciDB. "
+							+ e.getMessage() + " "
+							+ StackTrace.getFullStackTrace(e), e);
+				}
+			}
+		}
+	}
 }

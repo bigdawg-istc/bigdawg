@@ -67,7 +67,7 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 	private static final long serialVersionUID = 1L;
 
 	/** Migration either from a flat or multi-dimensional array. */
-	private enum MigrationType {
+	public enum MigrationType {
 		FULL /* export dimensions and attributes from SciDB */, FLAT
 		/* export only the attributes from SciDB */}
 
@@ -230,82 +230,6 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 	}
 
 	/**
-	 * Decide the migration type (transfer (only the attributes) or (attributes
-	 * and dimensions)) for SciDB.
-	 * 
-	 * @throws MigrationException
-	 *             {@link MigrationException}
-	 */
-	public static MigrationType getMigrationType(MigrationInfo migrationInfo,
-			DBHandler toHandler) throws MigrationException {
-		SciDBHandler fromHandler = null;
-		try {
-			fromHandler = new SciDBHandler(migrationInfo.getConnectionFrom());
-			SciDBArrayMetaData scidbArrayMetaData = fromHandler
-					.getObjectMetaData(migrationInfo.getObjectFrom());
-			String toObject = migrationInfo.getObjectTo();
-			if (toHandler.existsObject(toObject)) {
-				ObjectMetaData objectToMetaData = toHandler
-						.getObjectMetaData(migrationInfo.getObjectFrom());
-				// can we migrate only the attributes from the SciDB array
-				List<AttributeMetaData> scidbAttributesOrdered = scidbArrayMetaData
-						.getAttributesOrdered();
-				List<AttributeMetaData> toAttributesOrdered = objectToMetaData
-						.getAttributesOrdered();
-				if (toAttributesOrdered.size() == scidbAttributesOrdered.size()
-						&& MigrationUtils.areAttributesTheSame(
-								scidbArrayMetaData, objectToMetaData)) {
-					return MigrationType.FLAT;
-				} /*
-					 * check if the dimensions and the attributes in the array
-					 * match the columns in the table
-					 */
-				else {
-					/*
-					 * verify the dimensions and attributes in the array with
-					 * the columns in the table
-					 */
-					List<AttributeMetaData> scidbDimensionsAttributes = new ArrayList<AttributeMetaData>();
-					scidbDimensionsAttributes
-							.addAll(scidbArrayMetaData.getDimensionsOrdered());
-					scidbDimensionsAttributes
-							.addAll(scidbArrayMetaData.getAttributesOrdered());
-
-					if (MigrationUtils.areAttributesTheSame(
-							new SciDBArrayDimensionsAndAttributesMetaData(
-									scidbArrayMetaData.getArrayName(),
-									scidbDimensionsAttributes),
-							objectToMetaData)) {
-						return MigrationType.FULL;
-					} else {
-						return MigrationType.FLAT;
-					}
-				}
-			} else {
-				return MigrationType.FULL;
-			}
-		} catch (SQLException ex) {
-			String message = "Problem with connection to one of the databases. "
-					+ ex.getMessage();
-			throw new MigrationException(message);
-		} catch (Exception ex) {
-			String message = "Problem with checking meta data. "
-					+ ex.getMessage();
-			throw new MigrationException(message);
-		} finally {
-			if (fromHandler != null) {
-				try {
-					fromHandler.close();
-				} catch (SQLException e) {
-					log.error("Could not close the handler for SciDB. "
-							+ e.getMessage() + " "
-							+ StackTrace.getFullStackTrace(e), e);
-				}
-			}
-		}
-	}
-
-	/**
 	 * This works only for a flat array.
 	 * 
 	 * @return {@link MigrationResult} with information about the migration
@@ -321,7 +245,8 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 		String fromArray = getObjectFrom();
 		String toTable = getObjectTo();
 		try {
-			MigrationType migrationType = getMigrationType(migrationInfo,
+			MigrationType migrationType = MigrationUtils.getMigrationType(
+					migrationInfo,
 					new PostgreSQLHandler(migrationInfo.getConnectionTo()));
 			SciDBArrays arrays = null;
 			String format = null;
@@ -515,20 +440,20 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 
 			DBHandler handlerTo = new PostgreSQLHandler(
 					migrationInfo.getConnectionTo());
-			MigrationType migrationType = getMigrationType(migrationInfo,
-					handlerTo);
+			MigrationType migrationType = MigrationUtils
+					.getMigrationType(migrationInfo, handlerTo);
 			SciDBArrays arrays = null;
 
-			String createTableStatement = MigrationUtils
+			String createStatement = MigrationUtils
 					.getUserCreateStatement(migrationInfo);
 			List<AttributeMetaData> attributes = scidbArrayMetaData
 					.getAttributesOrdered();
 			if (migrationType == MigrationType.FLAT) {
 				arrays = new SciDBArrays(
 						new SciDBArray(fromArray, false, false), null);
-				if (createTableStatement == null) {
-					createTableStatement = getCreatePostgreSQLTableStatement(
-							toTable, attributes);
+				if (createStatement == null) {
+					createStatement = getCreatePostgreSQLTableStatement(toTable,
+							attributes);
 				}
 			} else { /* multidimensional array - MigrationType.FULL */
 				arrays = new SciDBArrays(null,
@@ -536,9 +461,9 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 				List<AttributeMetaData> dimensionsAttributes = scidbArrayMetaData
 						.getDimensionsOrdered();
 				dimensionsAttributes.addAll(attributes);
-				if (createTableStatement == null) {
-					createTableStatement = getCreatePostgreSQLTableStatement(
-							toTable, dimensionsAttributes);
+				if (createStatement == null) {
+					createStatement = getCreatePostgreSQLTableStatement(toTable,
+							dimensionsAttributes);
 				}
 			}
 			executor = Executors.newFixedThreadPool(2);
@@ -551,7 +476,7 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 					.getConnection(getConnectionTo());
 			connectionPostgres.setAutoCommit(false);
 			PostgreSQLHandler.createTargetTableSchema(connectionPostgres,
-					toTable, createTableStatement);
+					toTable, createStatement);
 
 			List<Callable<Object>> tasks = new ArrayList<>();
 			tasks.add(new ExportSciDB(getConnectionFrom(), arrays, scidbPipe,
