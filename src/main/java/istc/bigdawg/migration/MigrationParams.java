@@ -3,6 +3,7 @@
  */
 package istc.bigdawg.migration;
 
+import java.io.Serializable;
 import java.util.Optional;
 
 /**
@@ -12,8 +13,12 @@ import java.util.Optional;
  * 
  * @author Adam Dziedzic
  */
-public class MigrationParams {
+public class MigrationParams implements Serializable {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -7869941786159490966L;
 	/** see: {@link #getCreateStatement()} */
 	private String createStatement;
 
