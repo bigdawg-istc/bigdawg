@@ -48,8 +48,8 @@ public class TrialsAndErrors {
 	public void setUp() throws Exception {
 		CatalogInstance.INSTANCE.getCatalog();
 		
-		setupQueryExplainer();
-//		setupQueryBuilder();
+//		setupQueryExplainer();
+		setupQueryBuilder();
 //		setupRegexTester();
 //		setupTreeWalker();
 //		setupPlannerTester();
@@ -129,13 +129,13 @@ public class TrialsAndErrors {
 		
 		if ( !runBuilder ) return;
 			
-		SciDBHandler handler = new SciDBHandler(8);
+		SciDBHandler handler = new SciDBHandler(6);
 		System.out.println("Builder -- Type query or \"quit\" to exit: ");
 		Scanner scanner = new Scanner(System.in);
 //		String query = scanner.nextLine();
 //		String query = "select c_custkey, c_name from customer where c_custkey = 1 union select c_custkey as ckey, c_name from customer where c_custkey = 3 union all select c_custkey, c_name from customer where c_custkey = 5;";
 //		String query = "select c1.c_custkey, c2.c_name from customer c2, customer c1 where c2.c_custkey = c1.c_custkey limit 3;";
-		String query = "cross_join(filter(region, region.r_name = 'AMERICA') as region_trimmed, nation as nation_trimmed, region_trimmed.r_regionkey, nation_trimmed.n_regionkey);";
+		String query = "aggregate(region, approxDC(r_comment));";
 		
 //		String query = "select bucket, count(*) from ( select width_bucket(value1num, 0, 300, 300) as bucket from mimic2v26.chartevents ce,  mimic2v26.d_patients dp  where itemid in (6, 51, 455, 6701)  and ce.subject_id = dp.subject_id  and ((DATE_PART('year',ce.charttime) - DATE_PART('year',dp.dob))*12 + DATE_PART('month',ce.charttime) - DATE_PART('month',dp.dob)) > 15 ) as sbp group by bucket order by bucket;";
 		while (!query.toLowerCase().equals("quit")) {
@@ -160,8 +160,8 @@ public class TrialsAndErrors {
 			
 //			System.out.println(RTED.computeDistance(root.getTreeRepresentation(true), "{}"));
 			
-//			break;
-			query = scanner.nextLine();
+			break;
+//			query = scanner.nextLine();
 			
 		}
 		scanner.close();

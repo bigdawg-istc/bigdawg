@@ -156,7 +156,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		
 		switch (sourceScope) {
 		case ARRAY:
-			dbSchemaHandler = new SciDBHandler((SciDBConnectionInfo)CatalogViewer.getConnectionInfo(scidbSchemaHandlerDBID));
+			dbSchemaHandler = new SciDBHandler(scidbSchemaHandlerDBID);
 			for (String key : transitionSchemas.keySet()) 
 				if (children.contains(key)) {
 					((SciDBHandler)dbSchemaHandler).executeStatement(transitionSchemas.get(key));
@@ -203,6 +203,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case ARRAY:
 			for (String key : transitionSchemas.keySet()) 
 				if (children.contains(key)) {
+					dbSchemaHandler = new SciDBHandler(scidbSchemaHandlerDBID); // because now the code closes the connection forcefully each time
 					((SciDBHandler)dbSchemaHandler).executeStatementAFL("remove("+key+")");
 					((SciDBHandler)dbSchemaHandler).commit();
 				}
