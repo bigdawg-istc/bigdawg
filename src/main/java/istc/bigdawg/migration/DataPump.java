@@ -14,4 +14,15 @@ package istc.bigdawg.migration;
  */
 public interface DataPump extends ConnectorChecker, SetMigrationInfo {
 
+	/**
+	 * Close all the resources allocated for data pump (migration/export/load
+	 * etc.).
+	 * 
+	 * @throws Exception
+	 *             For example, when a connection to a database cannot be
+	 *             closed.
+	 */
+	default public void close() throws Exception {
+	};
+
 }

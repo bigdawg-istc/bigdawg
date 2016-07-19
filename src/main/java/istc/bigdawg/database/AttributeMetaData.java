@@ -4,6 +4,7 @@
 package istc.bigdawg.database;
 
 import java.io.Serializable;
+import java.util.Optional;
 
 /**
  * Meta data about an attribute/column/cell in a table/array or another object
@@ -33,50 +34,63 @@ public class AttributeMetaData implements Serializable {
 	private boolean isNullable;
 
 	/** The type of the attribute. */
-	private String dataType;
+	private String sqlDataType;
 
 	private int characterMaximumLength;
 	private int numericPrecision;
 	private int numericScale;
 
+	/** Specific data type in SciDB. It can be null. */
+	private String scidbDataType;
+
 	/** Specify if the attribute can be treated as a dimension in an array. */
 	private boolean isDimension = false;
 
 	public AttributeMetaData(String name, int position, boolean isNullable,
-			String dataType, int characterMaximumLength, int numericPrecision,
-			int numericScale) {
+			String sqlDataType, int characterMaximumLength,
+			int numericPrecision, int numericScale) {
 		this.name = name;
 		this.position = position;
 		this.isNullable = isNullable;
-		this.dataType = dataType;
+		this.sqlDataType = sqlDataType;
 		this.characterMaximumLength = characterMaximumLength;
 		this.numericPrecision = numericPrecision;
 		this.numericScale = numericScale;
 	}
 
 	public AttributeMetaData(String name, int position, boolean isNullable,
-			String dataType, int characterMaximumLength, int numericPrecision,
-			int numericScale, boolean isDimension) {
+			String sqlDataType, int characterMaximumLength,
+			int numericPrecision, int numericScale, boolean isDimension) {
 		this.name = name;
 		this.position = position;
 		this.isNullable = isNullable;
-		this.dataType = dataType;
+		this.sqlDataType = sqlDataType;
 		this.characterMaximumLength = characterMaximumLength;
 		this.numericPrecision = numericPrecision;
 		this.numericScale = numericScale;
 		this.isDimension = isDimension;
 	}
 
-	public AttributeMetaData(String name, String dataType, boolean isNullable) {
+	public AttributeMetaData(String name, String sqlDataType,
+			boolean isNullable) {
 		this.name = name;
-		this.dataType = dataType;
+		this.sqlDataType = sqlDataType;
 		this.isNullable = isNullable;
 	}
 
-	public AttributeMetaData(String name, String dataType, boolean isNullable,
-			boolean isDimension) {
+	public AttributeMetaData(String name, String sqlDataType,
+			boolean isNullable, boolean isDimension) {
 		this.name = name;
-		this.dataType = dataType;
+		this.sqlDataType = sqlDataType;
+		this.isNullable = isNullable;
+		this.isDimension = isDimension;
+	}
+
+	public AttributeMetaData(String name, String sqlDataType,
+			String scidbDataType, boolean isNullable, boolean isDimension) {
+		this.name = name;
+		this.sqlDataType = sqlDataType;
+		this.scidbDataType = scidbDataType;
 		this.isNullable = isNullable;
 		this.isDimension = isDimension;
 	}
@@ -84,7 +98,7 @@ public class AttributeMetaData implements Serializable {
 	@Override
 	public String toString() {
 		return "[name=" + name + ", position=" + position + ", isNullable="
-				+ isNullable + ", dataType=" + dataType
+				+ isNullable + ", sqlDataType=" + sqlDataType
 				+ ", characterMaximumLength=" + characterMaximumLength
 				+ ", numericPrecision=" + numericPrecision + ", numericScale="
 				+ numericScale + "]";
@@ -101,7 +115,7 @@ public class AttributeMetaData implements Serializable {
 		int result = 1;
 		result = prime * result + characterMaximumLength;
 		result = prime * result
-				+ ((dataType == null) ? 0 : dataType.hashCode());
+				+ ((sqlDataType == null) ? 0 : sqlDataType.hashCode());
 		result = prime * result + (isDimension ? 1231 : 1237);
 		result = prime * result + (isNullable ? 1231 : 1237);
 		result = prime * result + ((name == null) ? 0 : name.hashCode());
@@ -127,10 +141,10 @@ public class AttributeMetaData implements Serializable {
 		AttributeMetaData other = (AttributeMetaData) obj;
 		if (characterMaximumLength != other.characterMaximumLength)
 			return false;
-		if (dataType == null) {
-			if (other.dataType != null)
+		if (sqlDataType == null) {
+			if (other.sqlDataType != null)
 				return false;
-		} else if (!dataType.equals(other.dataType))
+		} else if (!sqlDataType.equals(other.sqlDataType))
 			return false;
 		if (isDimension != other.isDimension)
 			return false;
@@ -162,8 +176,12 @@ public class AttributeMetaData implements Serializable {
 		return isNullable;
 	}
 
-	public String getDataType() {
-		return dataType;
+	public String getSqlDataType() {
+		return sqlDataType;
+	}
+
+	public Optional<String> getSciDBDataType() {
+		return Optional.ofNullable(scidbDataType);
 	}
 
 	public int getCharacterMaximumLength() {

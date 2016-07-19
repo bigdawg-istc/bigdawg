@@ -10,11 +10,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.List;
 
 import org.apache.log4j.Logger;
 import org.postgresql.copy.CopyManager;
 import org.postgresql.core.BaseConnection;
 
+import istc.bigdawg.database.AttributeMetaData;
+import istc.bigdawg.database.ObjectMetaData;
 import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
@@ -161,7 +164,7 @@ public class LoadPostgres implements Load {
 			if (fileFormat == FileFormat.CSV) {
 				copyToString = PostgreSQLHandler.getLoadCsvCommand(
 						migrationInfo.getObjectTo(),
-						FileFormat.getCsvDelimiter(),
+						fromHandler.getCsvExportDelimiter(),
 						FileFormat.getQuoteCharacter(),
 						fromHandler.isCsvExportHeader());
 			} else if (fileFormat == FileFormat.BIN_POSTGRES) {
@@ -172,6 +175,43 @@ public class LoadPostgres implements Load {
 				log.error(msg);
 				throw new IllegalArgumentException(msg);
 			}
+		}
+		if (connection == null) {
+			try {
+				connection = PostgreSQLHandler
+						.getConnection(migrationInfo.getConnectionTo());
+				connection.setAutoCommit(false);
+			} catch (SQLException e) {
+				throw new MigrationException(e.getMessage(), e);
+			}
+		}
+		if (cpTo == null) {
+			try {
+				this.cpTo = new CopyManager((BaseConnection) connection);
+			} catch (SQLException e) {
+				throw new MigrationException(e.getMessage(), e);
+			}
+		}
+		try {
+			if (!PostgreSQLHandler.existsTable(migrationInfo.getConnectionTo(),
+					migrationInfo.getObjectTo())) {
+				ObjectMetaData objectFromMetaData = null;
+				try {
+					objectFromMetaData = fromHandler
+							.getObjectMetaData(migrationInfo.getObjectFrom());
+				} catch (Exception e) {
+					throw new MigrationException(e.getMessage(), e);
+				}
+				List<AttributeMetaData> attributes = objectFromMetaData
+						.getAllAttributesOrdered();
+				String createTableStatement = PostgreSQLHandler
+						.getCreatePostgreSQLTableStatement(
+								migrationInfo.getObjectTo(), attributes);
+				PostgreSQLHandler.createTargetTableSchema(connection,
+						migrationInfo.getObjectTo(), createTableStatement);
+			}
+		} catch (SQLException e) {
+			new MigrationException(e.getMessage(), e);
 		}
 	}
 
@@ -258,5 +298,29 @@ public class LoadPostgres implements Load {
 	@Override
 	public DBHandler getHandler() {
 		return new PostgreSQLHandler(migrationInfo.getConnectionTo());
+	}
+
+	@Override
+	/**
+	 * Close the connection to PostgreSQL.
+	 */
+	public void close() throws Exception {
+		try {
+			if (connection != null && !connection.isClosed()) {
+				try {
+					connection.commit();
+				} catch (SQLException e) {
+					log.info("Could not commit any sql statement for "
+							+ "the connection in LoadPostgres. "
+							+ e.getMessage());
+				}
+				connection.close();
+				connection = null;
+			}
+		} catch (SQLException e) {
+			String message = "Could not close the connection to SciDB. "
+					+ e.getMessage();
+			throw new SQLException(message, e);
+		}
 	}
 }

@@ -80,9 +80,9 @@ public class MigrationUtils {
 					.equals(toAttributeMetaData.getName())
 					|| fromAttributeMetaData.isNullable() != toAttributeMetaData
 							.isNullable()
-					|| !toAttributeMetaData.getDataType()
+					|| !toAttributeMetaData.getSqlDataType()
 							.equals(FromSQLTypesToSciDB.getSciDBTypeFromSQLType(
-									fromAttributeMetaData.getDataType()))) {
+									fromAttributeMetaData.getSqlDataType()))) {
 				return false;
 			}
 		}
@@ -191,7 +191,7 @@ public class MigrationUtils {
 		List<AttributeMetaData> attrOrdered = objectMetaData
 				.getAttributesOrdered();
 		for (AttributeMetaData attrMetaData : attrOrdered) {
-			String postgresColumnType = attrMetaData.getDataType();
+			String postgresColumnType = attrMetaData.getSqlDataType();
 			String attributeType = FromSQLTypesToSciDB
 					.getSciDBTypeFromSQLType(postgresColumnType);
 			String attributeNULL = "";
@@ -279,7 +279,7 @@ public class MigrationUtils {
 				.getAttributesOrdered();
 		for (AttributeMetaData fromattributeMetaData : fromAttributesOrdered) {
 			String attributeName = fromattributeMetaData.getName();
-			String postgresColumnType = fromattributeMetaData.getDataType();
+			String postgresColumnType = fromattributeMetaData.getSqlDataType();
 			String attributeType = FromSQLTypesToSciDB
 					.getSciDBTypeFromSQLType(postgresColumnType);
 			String attributeNULL = "";

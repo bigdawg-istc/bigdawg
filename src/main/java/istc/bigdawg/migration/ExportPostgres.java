@@ -169,8 +169,8 @@ public class ExportPostgres implements Export {
 					log.error(msg);
 					throw new IllegalStateException(msg);
 				}
-				output = new BufferedOutputStream(new FileOutputStream(
-						outputFile));
+				output = new BufferedOutputStream(
+						new FileOutputStream(outputFile));
 			} catch (FileNotFoundException e) {
 				String msg = "File not found: " + outputFile + " "
 						+ e.getMessage()

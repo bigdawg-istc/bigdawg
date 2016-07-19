@@ -24,6 +24,8 @@ import istc.bigdawg.BDConstants.Shim;
 import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.database.AttributeMetaData;
 import istc.bigdawg.exceptions.BigDawgCatalogException;
+import istc.bigdawg.exceptions.NoTargetArrayException;
+import istc.bigdawg.exceptions.UnsupportedTypeException;
 import istc.bigdawg.executor.ExecutorEngine;
 import istc.bigdawg.executor.IslandQueryResult;
 import istc.bigdawg.executor.JdbcQueryResult;
@@ -930,6 +932,23 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 	}
 
 	/**
+	 * Check if a given table exists in the PostgreSQL database.
+	 * 
+	 * @param connectionInfo
+	 *            The information about the connection to PostgreSQL.
+	 * @param table
+	 *            The name of the table in PostgreSQL.
+	 * @return true if table exists, false otherwise.
+	 * @throws SQLException
+	 *             Problem with a connection to PostgreSQL.
+	 */
+	public static boolean existsTable(ConnectionInfo connectionInfo,
+			String table) throws SQLException {
+		return new PostgreSQLHandler(connectionInfo)
+				.existsTable(new PostgreSQLSchemaTableName(table));
+	}
+
+	/**
 	 * Check if a table exists.
 	 * 
 	 * @param conInfo
@@ -977,6 +996,26 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 				throw ex;
 			}
 		}
+	}
+
+	/**
+	 * @return Create statement for a table in PostgreSQL from a given list of
+	 *         attributes.
+	 */
+	public static String getCreatePostgreSQLTableStatement(String toTable,
+			List<AttributeMetaData> attributes) {
+		StringBuilder createTableStringBuf = new StringBuilder();
+		createTableStringBuf
+				.append("create table if not exists " + toTable + " (");
+		for (AttributeMetaData attribute : attributes) {
+			String attrName = attribute.getName();
+			String sqlType = attribute.getSqlDataType();
+			createTableStringBuf.append(attrName + " " + sqlType + ",");
+		}
+		createTableStringBuf.deleteCharAt(createTableStringBuf.length() - 1);
+		createTableStringBuf.append(")");
+		log.debug("create table command: " + createTableStringBuf.toString());
+		return createTableStringBuf.toString();
 	}
 
 	/*
