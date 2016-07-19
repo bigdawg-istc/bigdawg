@@ -277,7 +277,7 @@ public class FromDatabaseToDatabase implements MigrationNetworkRequest {
 					.createAndGetFullName(this.getClass().getName() + "_from_"
 							+ migrationInfo.getObjectFrom() + "_to_"
 							+ migrationInfo.getObjectTo());
-			/* pipe = "/tmp/adam"; */
+							/* pipe = "/tmp/adam"; */
 
 			/* add the pipe to be removed when cleaning the resources */
 			pipes.add(pipe);

@@ -4,15 +4,22 @@
 package istc.bigdawg.migration;
 
 import java.sql.SQLException;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import istc.bigdawg.database.AttributeMetaData;
 import istc.bigdawg.exceptions.MigrationException;
+import istc.bigdawg.exceptions.NoTargetArrayException;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.query.DBHandler;
+import istc.bigdawg.scidb.SciDBArrayMetaData;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
 import istc.bigdawg.scidb.SciDBHandler;
 import istc.bigdawg.utils.LogUtils;
+import istc.bigdawg.utils.SessionIdentifierGenerator;
 import istc.bigdawg.utils.StackTrace;
 
 /**
@@ -25,11 +32,10 @@ public class ExportSciDB implements Export {
 	/* log */
 	private static Logger log = Logger.getLogger(LoadSciDB.class);
 
-	/*
-	 * Define the SciDB connection info.
+	/**
+	 * Arrays in SciDB (from which we export the data): either multi-dimensional
+	 * or flat array.
 	 */
-	private ConnectionInfo connection;
-
 	private SciDBArrays arrays;
 
 	/**
@@ -54,10 +60,21 @@ public class ExportSciDB implements Export {
 	 * {@link #setMigrationInfo(MigrationInfo)}
 	 */
 	private MigrationInfo migrationInfo = null;
-	
+
 	/** Handler to the database to which we load the data. */
 	@SuppressWarnings("unused")
 	private DBHandler handlerTo;
+
+	/*
+	 * These are the intermediate (additional) arrays that were created during
+	 * migration of data between PostgreSQL and SciDB. If something fails on the
+	 * way or at the end of the migration process, the arrays should be removed.
+	 * 
+	 * On the other hand, the tables in PostgreSQL are created within a
+	 * transaction so if something goes wrong in PostgreSQL, then the database
+	 * itself takes care of cleaning the created but not loaded tables.
+	 */
+	private Set<String> intermediateArrays = new HashSet<>();
 
 	/**
 	 * Declare only the file format in which the data should be exported. The
@@ -81,13 +98,49 @@ public class ExportSciDB implements Export {
 		return new ExportSciDB(fileFormat);
 	}
 
-	public ExportSciDB(ConnectionInfo connection, SciDBArrays arrays,
+	public ExportSciDB(MigrationInfo migrationInfo, SciDBArrays arrays,
 			String scidbFilePath, FileFormat fileFormat, String binFullFormat) {
-		this.connection = connection;
+		this.migrationInfo = migrationInfo;
 		this.arrays = arrays;
 		this.outputFile = scidbFilePath;
 		this.fileFormat = fileFormat;
 		this.binFullFormat = binFullFormat;
+	}
+
+	/**
+	 * Example of the binary format for SciDB: (string, int64, int64 null)
+	 * 
+	 * @return the string representing a binary format for SciDB
+	 * @throws NoTargetArrayException
+	 * @throws SQLException
+	 * @throws MigrationException
+	 */
+	public static String getSciDBBinFormat(MigrationInfo migrationInfo,
+			String array) throws NoTargetArrayException, SQLException,
+					MigrationException {
+		SciDBHandler handler = new SciDBHandler(
+				migrationInfo.getConnectionFrom());
+		SciDBArrayMetaData arrayMetaData;
+		try {
+			arrayMetaData = handler.getObjectMetaData(array);
+		} catch (Exception e) {
+			throw new MigrationException(e.getMessage(), e);
+		} finally {
+			handler.close();
+		}
+		List<AttributeMetaData> attributes = arrayMetaData
+				.getAttributesOrdered();
+		StringBuilder binBuf = new StringBuilder();
+		for (AttributeMetaData attribute : attributes) {
+			binBuf.append(attribute.getSqlDataType());
+			if (attribute.isNullable()) {
+				binBuf.append(" null");
+			}
+			binBuf.append(",");
+		}
+		// remove the last comma ,
+		binBuf.deleteCharAt(binBuf.length() - 1);
+		return binBuf.toString();
 	}
 
 	/**
@@ -104,21 +157,55 @@ public class ExportSciDB implements Export {
 		StringBuilder saveCommand = new StringBuilder();
 		String saveCommandFinal = null;
 		if (fileFormat == FileFormat.CSV) {
-			String csvFormat = "csv+";
-			String array = null;
+			String csvFormat = null;
+			String array = migrationInfo.getObjectFrom();
+			if (arrays == null) {
+				/*
+				 * We assume that the source array is always multi-dimensional.
+				 */
+				arrays = new SciDBArrays(null,
+						new SciDBArray(array, false, false));
+			}
 			if (arrays.getMultiDimensional() != null) {
 				array = arrays.getMultiDimensional().getName();
+				csvFormat = "csv+";
 			}
 			/* this is only a flat array so export only the attributes */
-			if (arrays.getFlat() != null) {
+			else if (arrays.getFlat() != null) {
 				/* for flat array we export only the attributes */
 				csvFormat = "csv";
 				array = arrays.getFlat().getName();
+			} else {
+				throw new IllegalStateException("Either a multi-dimensional or "
+						+ "a flat array has to be specified for SciDB export.");
 			}
 			saveCommandFinal = "save(" + array + ",'" + outputFile + "',-2,'"
 					+ csvFormat + "')";
 		} else if (fileFormat == FileFormat.BIN_SCIDB) {
 			String array = null;
+			if (arrays == null) {
+				String newFlatIntermediateArray = array + "__bigdawg__flat__"
+						+ SessionIdentifierGenerator.INSTANCE
+								.nextRandom26CharString();
+				try {
+					SciDBHandler.createFlatArrayFromMultiDimArray(
+							migrationInfo.getConnectionFrom(),
+							migrationInfo.getObjectFrom(),
+							newFlatIntermediateArray);
+				} catch (Exception e) {
+					throw new MigrationException(e.getMessage(), e);
+				}
+				intermediateArrays.add(newFlatIntermediateArray);
+				arrays = new SciDBArrays(
+						new SciDBArray(newFlatIntermediateArray, true, true),
+						new SciDBArray(array, false, false));
+				try {
+					binFullFormat = ExportSciDB.getSciDBBinFormat(migrationInfo,
+							newFlatIntermediateArray);
+				} catch (NoTargetArrayException | SQLException e) {
+					throw new MigrationException(e.getMessage(), e);
+				}
+			}
 			if (arrays.getMultiDimensional() != null) {
 				String multiDimArray = arrays.getMultiDimensional().getName();
 				String flatArray = arrays.getFlat().getName();
@@ -135,12 +222,13 @@ public class ExportSciDB implements Export {
 			saveCommand.append("')");
 			saveCommandFinal = saveCommand.toString();
 		} else {
-
+			throw new IllegalArgumentException("The file format: " + fileFormat
+					+ " is not supported for export from SciDB.");
 		}
 		log.debug("save command: " + LogUtils.replace(saveCommandFinal));
 		SciDBHandler handler;
 		try {
-			handler = new SciDBHandler(connection);
+			handler = new SciDBHandler(migrationInfo.getConnectionFrom());
 			handler.executeStatementAFL(saveCommandFinal);
 			handler.commit();
 			handler.close();
@@ -148,6 +236,8 @@ public class ExportSciDB implements Export {
 			log.error(e.getMessage() + StackTrace.getFullStackTrace(e));
 			throw new MigrationException(e.getMessage(), e);
 		}
+		MigrationUtils.removeArrays(migrationInfo.getConnectionFrom(),
+				"clean the intermediate arrays", intermediateArrays);
 		log.debug("Data successfuly exported from SciDB");
 		return null;
 	}
