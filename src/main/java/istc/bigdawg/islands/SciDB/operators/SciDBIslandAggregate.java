@@ -81,25 +81,31 @@ public class SciDBIslandAggregate extends SciDBIslandOperator implements Aggrega
 				} else if (f instanceof Column) {
 					alias = ((Column)f).getColumnName();
 				}
-				aggFuns.put(alias, f.toString());
+				aggFuns.put(alias.toLowerCase(), f.toString());
 			} catch (Exception e) {
 				String[] segs = s.split("[-\\(\\)\\.,\\*\\/\\+\\s]+");
-				aggFuns.put(segs[1]+"_"+segs[0], s);
+				aggFuns.put((segs[1]+"_"+segs[0]).toLowerCase(), s);
 			}
 			
 			
 		}
 		
-		
+		System.out.printf("aggFun: %s\n", aggFuns);
 		// iterate over outschema and 
 		// classify each term as aggregate func or group by
 		for (String expr : output.getAttributes().keySet()) {
 			
+			System.out.printf("attribute expr: %s; %s\n", expr, output.getAttributes().get(expr));
+			
 			CommonOutItemResolver out = new CommonOutItemResolver(expr, output.getAttributes().get(expr), false, null); // TODO CHECK THIS TODO
 			DataObjectAttribute attr = out.getAttribute();
 			
-			if (aggFuns.get(expr) != null) attr.setExpression(aggFuns.get(expr));
+			String exprLowerCase = expr.toLowerCase();
+			
+			if (aggFuns.get(exprLowerCase) != null) attr.setExpression(aggFuns.get(exprLowerCase));
 			else attr.setExpression(expr);
+			
+			System.out.printf("expr: %s; aggFuns.get(expr): %s; %s\n", expr, aggFuns.get(expr), attr.getSQLExpression());
 			
 			String attrName = attr.getName();
 			

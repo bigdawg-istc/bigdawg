@@ -266,7 +266,7 @@ class FromPostgresToSciDB extends FromDatabaseToDatabase
 					"Migration in binary format failed. ");
 			throw migrationException;
 		} finally {
-			cleanResources();
+//			cleanResources();
 		}
 	}
 
@@ -343,7 +343,7 @@ class FromPostgresToSciDB extends FromDatabaseToDatabase
 				| RunShellException exception) {
 			throw handleException(exception, "Migration failed.");
 		} finally {
-			cleanResources();
+//			cleanResources();
 		}
 
 	}

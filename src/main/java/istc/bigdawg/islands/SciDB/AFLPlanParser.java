@@ -342,6 +342,8 @@ public class AFLPlanParser {
 			
 			List<AFLPlanAttribute> aggAttributes = node.attributes;
 			
+			System.out.printf("aggregate attribute: %s\n", aggAttributes);
+			
 //			System.out.printf("afl parser, agg, outExpr prop: %s\n", node);
 			
 			Stack<StringBuilder> stk = new Stack<>();
@@ -374,7 +376,7 @@ public class AFLPlanParser {
 			if (!stk.isEmpty()) {
 				aggFuns.add( stk.pop().toString());
 			}
-			
+			System.out.printf("aggregate construction aggFuns: %s\n", aggFuns);
 			parameters.put("Aggregate-Functions", String.join(", ", aggFuns));
 //			if (!aggregateDimensions.isEmpty()) parameters.put("Aggregate-Dimensions", String.join("|||", aggregateDimensions));
 			break;
