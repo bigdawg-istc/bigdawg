@@ -124,8 +124,10 @@ public class FromSStoreToPostgresImplementation implements MigrationImplementati
 		    + Thread.currentThread().getStackTrace()[1].getMethodName());
 	    return new MigrationResult(countLoadedElements, countexportElements, " No information about number of loaded rows.", false);
 //	    return null;
-	} catch (SQLException | UnsupportedTypeException | InterruptedException
-		| ExecutionException | IOException | RunShellException exception) {
+//	} catch (SQLException | UnsupportedTypeException | InterruptedException
+//		| ExecutionException | IOException | RunShellException exception) {
+	} catch (SQLException | InterruptedException
+			| ExecutionException | IOException | RunShellException exception) {
 //	     MigrationException migrationException =
 //	     handleException(exception, "Migration in CSV format failed. ");
 	     throw new MigrationException(errMessage + " " + exception.getMessage());
