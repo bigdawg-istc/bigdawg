@@ -124,8 +124,8 @@ public class FromPostgresToSStoreImplementation implements MigrationImplementati
 //	    return null;
 //	} catch (SQLException | InterruptedException
 //		| ExecutionException | IOException | RunShellException exception) {
-	} catch (SQLException | InterruptedException
-			| ExecutionException exception) {
+	} catch (SQLException | 
+			ExecutionException exception) {
 //	     MigrationException migrationException =
 //	     handleException(exception, "Migration in CSV format failed. ");
 		try {
