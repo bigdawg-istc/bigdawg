@@ -60,7 +60,8 @@ public class FromSStoreToPostgres
 			if (!isThisMyIpAddress(InetAddress.getByName(hostname))) {
 				log.debug("Migration will be executed remotely.");
 				Object result = NetworkOut.send(this, hostname);
-				return processResult(result);
+//				return processResult(result);
+				return (MigrationResult) result;
 			}
 			/* execute the migration locally */
 			log.debug("Migration will be executed locally.");

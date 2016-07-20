@@ -85,11 +85,11 @@ public class SStoreSQLConnectionInfo implements ConnectionInfo {
         return null;
     }
 
-    @Override
-    public DBHandler getHandler() {
-        return new SStoreSQLHandler(this);
-    }
-    
+//    @Override
+//    public DBHandler getHandler() {
+//        return new SStoreSQLHandler(this);
+//    }
+//    
     @Override
     public String toString() {
         StringBuilder result = new StringBuilder();

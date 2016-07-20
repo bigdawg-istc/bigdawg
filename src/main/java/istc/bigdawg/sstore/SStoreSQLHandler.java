@@ -23,6 +23,7 @@ import org.voltdb.jdbc.JDBC4Connection;
 
 import istc.bigdawg.BDConstants.Shim;
 import istc.bigdawg.catalog.CatalogViewer;
+import istc.bigdawg.database.ObjectMetaData;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.query.DBHandler;
 import istc.bigdawg.query.QueryClient;
@@ -491,6 +492,11 @@ public class SStoreSQLHandler implements DBHandler {
    public boolean existsObject(String name) throws Exception {
 	   // TODO:
 	   return true;
+   }
+   
+   public ObjectMetaData getObjectMetaData(String name) throws Exception {
+	   // TODO:
+	   return null;
    }
    
 }

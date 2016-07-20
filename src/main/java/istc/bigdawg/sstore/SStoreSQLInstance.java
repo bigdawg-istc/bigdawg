@@ -22,9 +22,9 @@ public enum SStoreSQLInstance {
     }
 
     static {
-	URL = BigDawgConfigProperties.INSTANCE.getSStoreSQLurl();
-	USER = BigDawgConfigProperties.INSTANCE.getSStoreSQLUser();
-	PASSWORD = BigDawgConfigProperties.INSTANCE.getSStoreSQLPassword();
+	URL = BigDawgConfigProperties.INSTANCE.getsStoreURL();
+	USER = "";
+	PASSWORD = "";
     }
 
     public static Connection getConnection() throws SQLException {

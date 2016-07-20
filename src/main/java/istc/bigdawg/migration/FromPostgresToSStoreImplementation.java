@@ -79,7 +79,7 @@ public class FromPostgresToSStoreImplementation implements MigrationImplementati
 	log.info(generalMessage + " Mode: migrateSingleThreadCSV");
 	long startTimeMigration = System.currentTimeMillis();
 	String copyFromCommand = PostgreSQLHandler
-			.getExportCsvCommand(fromTable, "|");
+			.getExportCsvCommand(fromTable, "|", "'", false);
 	String copyToCommand = SStoreSQLHandler.getImportCommand();
 	
 	try {
