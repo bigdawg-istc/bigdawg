@@ -39,6 +39,12 @@ public class RunShell {
 		
 		System.out.printf("procBuilder: %s\n", procBuilder.command());
 		
+		Process prop0 = (new ProcessBuilder("ls", "/home/gridsan/groups/istcdata/tmp/")).start();
+		if (prop0.waitFor() != 0)
+			System.out.printf("----======= NON ZERO EXIT CODE ========----\n");
+		else 
+			System.out.printf("----======= OK ========----\nInputStream: %s\n", IOUtils.toString(prop0.getInputStream(), Constants.ENCODING));
+		
 		Process prop = procBuilder.start();
 		int exitVal = prop.waitFor();
 		if (exitVal != 0) {
