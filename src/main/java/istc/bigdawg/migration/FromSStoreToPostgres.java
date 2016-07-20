@@ -83,7 +83,7 @@ public class FromSStoreToPostgres
 				"21212", "", "user", "password");
 		String tableFrom = "ORDERS";
 		PostgreSQLConnectionInfo conTo = new PostgreSQLConnectionInfo(
-				"localhost", "5430", "test_db", "pguser", "");
+				"localhost", "5432", "seaflow", "pguser", "");
 		String tableTo = "ORDERS";
 		long startTime = System.currentTimeMillis();
 		MigrationResult result = migrator.migrate(conFrom, tableFrom, conTo, tableTo);

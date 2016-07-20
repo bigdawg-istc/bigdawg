@@ -94,12 +94,12 @@ public class FromSStoreToPostgresImplementation implements MigrationImplementati
 	    FutureTask<Long> exportTask = new FutureTask<Long>(exportExecutor);
 	    executor.submit(exportTask);
 
-	    String createTableStatement = null;
-	    createTableStatement = getCreatePostgreSQLTableStatementFromSStoreTable();
+//	    String createTableStatement = null;
+//	    createTableStatement = getCreatePostgreSQLTableStatementFromSStoreTable();
 //	    System.out.print(createTableStatement);
 	    connectionPostgres = PostgreSQLHandler.getConnection(connectionTo);
 	    connectionPostgres.setAutoCommit(false);
-	    createTargetTableSchema(connectionPostgres, createTableStatement);
+//	    createTargetTableSchema(connectionPostgres, createTableStatement);
 	    
 	    CopyToPostgresExecutor loadExecutor = new CopyToPostgresExecutor(connectionPostgres,
 			getCopyToPostgreSQLCsvCommand(toTable), sStorePipe);
