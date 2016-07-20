@@ -19,7 +19,7 @@ import javax.ws.rs.core.Response;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.voltdb.jdbc.JDBC4Connection;
+import istc.bigdawg.sstore.jdbc.JDBC4Connection;
 
 import istc.bigdawg.BDConstants.Shim;
 import istc.bigdawg.catalog.CatalogViewer;
