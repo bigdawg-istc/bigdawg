@@ -86,18 +86,6 @@ public class SStoreSQLConnectionInfo implements ConnectionInfo {
     }
 
     @Override
-    public long[] computeHistogram(String object, String attribute, double start, double end, int numBuckets) throws SQLException {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    @Override
-    public Pair<Number, Number> getMinMax(String object, String attribute) throws SQLException, ParseException {
-        // TODO Auto-generated method stub
-        return null;
-    }
-
-    @Override
     public DBHandler getHandler() {
         return new SStoreSQLHandler(this);
     }
