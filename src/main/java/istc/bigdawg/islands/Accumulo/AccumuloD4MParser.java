@@ -84,14 +84,14 @@ public class AccumuloD4MParser {
 			result.add(tempSB.toString());
 			tempSB = new StringBuilder();
 //			tempSB.append('"');
-			tempSB.append('*').append('*');
+			tempSB.append('@');
 			tempSB.append(token);
 			isParenthesized = true;
 			break;
 		case ')':
 			tempSB.append(token);
 //			tempSB.append('"');
-			tempSB.append('*').append('*');
+			tempSB.append('@');
 			isParenthesized = false;
 			break;
 		case ',':
