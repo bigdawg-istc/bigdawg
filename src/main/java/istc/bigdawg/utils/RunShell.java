@@ -36,6 +36,9 @@ public class RunShell {
 	 */
 	public static InputStream runShell(ProcessBuilder procBuilder)
 			throws RunShellException, InterruptedException, IOException {
+		
+		System.out.printf("procBuilder: %s\n", procBuilder.command());
+		
 		Process prop = procBuilder.start();
 		int exitVal = prop.waitFor();
 		if (exitVal != 0) {
