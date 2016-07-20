@@ -16,7 +16,7 @@ import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.sstore.SStoreSQLConnectionInfo;
 
 public class FromPostgresToSStore 
-	implements FromDatabaseToDatabase, MigrationNetworkRequest {
+	extends FromDatabaseToDatabase implements MigrationNetworkRequest {
 
     private static final long serialVersionUID = 1L;
     
