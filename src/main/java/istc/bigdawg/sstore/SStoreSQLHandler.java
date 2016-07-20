@@ -17,6 +17,8 @@ import java.util.Properties;
 
 import javax.ws.rs.core.Response;
 
+import jline.internal.Log;
+
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.voltdb.jdbc.JDBC4Connection;
@@ -219,7 +221,11 @@ public class SStoreSQLHandler implements DBHandler {
 
 
     public void close() {
+    	try {
         cleanSStoreSQLResources();
+    	} catch (SQLException e) {
+    		Log.info("Failed to clean S-Store resource.");
+    	}
     }
     
 
