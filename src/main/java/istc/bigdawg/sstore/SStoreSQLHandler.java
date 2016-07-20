@@ -215,6 +215,11 @@ public class SStoreSQLHandler implements DBHandler {
 
 	return Response.status(200).entity("update").build();
     }
+
+
+    public void close() {
+        cleanSStoreSQLResources();
+    }
     
 
     /**
