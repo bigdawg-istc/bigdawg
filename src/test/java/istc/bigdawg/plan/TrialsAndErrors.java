@@ -119,7 +119,7 @@ public class TrialsAndErrors {
 			SQLQueryPlan aqp = SQLPlanParser.extractDirectFromPostgreSQL(psqlh, query);
 //			Select explainQuery = aqp.getStatement();
 //			System.out.println(explainQuery + "\n");
-			OperatorVisitor gen = new SQLQueryGenerator();
+			OperatorVisitor gen = new SQLQueryGenerator(); 
 			aqp.getRootNode().accept(gen);
 			System.out.println(gen.generateStatementString());
 			

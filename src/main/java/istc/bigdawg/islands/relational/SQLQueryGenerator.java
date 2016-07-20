@@ -723,13 +723,11 @@ public class SQLQueryGenerator implements OperatorVisitor {
 			Expression fe = CCJSqlParserUtil.parseCondExpression(scanOp.getFilterExpression().toString());
 			
 			List<Column> cs = SQLExpressionUtils.getAttributes(fe);
-			List<String> ss = new ArrayList<>();
+			Set<String> ss = new HashSet<>();
 			for (Column c : cs)  ss.add(c.getTable().getName());
 			ss.remove(scanOp.getSrcTable());
 			if (scanOp.getTableAlias() != null) ss.remove(scanOp.getTableAlias());
 			ss.removeAll(allowedScans);
-			
-			System.out.printf("ss: %s\n", ss);
 			
 			if (ss.isEmpty()) {
 			
@@ -741,7 +739,6 @@ public class SQLQueryGenerator implements OperatorVisitor {
 				} else 
 					e = fe;
 				
-				System.out.printf("scanOp: %s; e: %s\n", scanOp.getFilterExpression(), e);
 				if ( e != null) e = CCJSqlParserUtil.parseCondExpression(e.toString());
 				
 				try {
