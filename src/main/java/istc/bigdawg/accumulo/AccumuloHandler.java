@@ -33,6 +33,8 @@ import istc.bigdawg.BDConstants.Shim;
 import istc.bigdawg.database.ObjectMetaData;
 import istc.bigdawg.exceptions.AccumuloBigDawgException;
 import istc.bigdawg.exceptions.AccumuloShellScriptException;
+import istc.bigdawg.executor.QueryResult;
+import istc.bigdawg.islands.Accumulo.AccumuloD4MQueryResult;
 import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.query.DBHandler;
 import istc.bigdawg.query.QueryResponseTupleString;
@@ -70,6 +72,16 @@ public class AccumuloHandler implements DBHandler {
 		return null;
 	}
 
+	public static QueryResult executeAccumuloShellScript(List<String> inputs) throws IOException, InterruptedException, AccumuloShellScriptException {
+		
+		String accumuloScriptPath = BigDawgConfigProperties.INSTANCE.getAccumuloShellScript();
+		System.out.println(String.format("accumuloScriptPath: %s; inputs: %s", accumuloScriptPath, inputs));
+		InputStream scriptResultInStream = RunShell.runNewAccumuloScript(accumuloScriptPath, inputs);
+		String scriptResult = IOUtils.toString(scriptResultInStream, Constants.ENCODING);
+		
+		return new AccumuloD4MQueryResult(scriptResult);
+	}
+	
 	private String executeAccumuloShellScript(String database, String table,
 			String query) throws IOException, InterruptedException,
 					AccumuloShellScriptException {

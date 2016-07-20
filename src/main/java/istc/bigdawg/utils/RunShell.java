@@ -5,14 +5,15 @@ package istc.bigdawg.utils;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
 
 import istc.bigdawg.LoggerSetup;
+import istc.bigdawg.exceptions.AccumuloShellScriptException;
 import istc.bigdawg.exceptions.RunShellException;
 import istc.bigdawg.exceptions.SciDBException;
-import istc.bigdawg.exceptions.AccumuloShellScriptException;
 import istc.bigdawg.properties.BigDawgConfigProperties;
 
 /**
@@ -71,6 +72,24 @@ public class RunShell {
 			e.printStackTrace();
 			String msg = "Problem with the shell script: " + filePath + " database: " + database + " table: " + table
 					+ " query: " + query + " " + e.getMessage();
+			log.error(msg);
+			throw new AccumuloShellScriptException(msg);
+		}
+	}
+	
+	public static InputStream runNewAccumuloScript(String filePath, List<String> databaseTableAndQuery)
+			throws IOException, InterruptedException, AccumuloShellScriptException {
+		try {
+			int size = databaseTableAndQuery.size();
+			if (size == 4)
+				return runShell(new ProcessBuilder(filePath, databaseTableAndQuery.get(0), databaseTableAndQuery.get(1), databaseTableAndQuery.get(2), databaseTableAndQuery.get(3)));
+			else if (size == 3)
+				return runShell(new ProcessBuilder(filePath, databaseTableAndQuery.get(0), databaseTableAndQuery.get(1), databaseTableAndQuery.get(2)));
+			else 
+				throw new AccumuloShellScriptException(String.format("Invalid input size: %s; parametres: %s\n", size, databaseTableAndQuery));
+		} catch (RunShellException e) {
+			e.printStackTrace();
+			String msg = "Problem with the new shell script runner: " + filePath + " input entries: " + databaseTableAndQuery + " " + e.getMessage();
 			log.error(msg);
 			throw new AccumuloShellScriptException(msg);
 		}

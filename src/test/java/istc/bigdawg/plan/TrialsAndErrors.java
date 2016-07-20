@@ -13,8 +13,10 @@ import org.junit.Test;
 
 import istc.bigdawg.catalog.CatalogInstance;
 import istc.bigdawg.catalog.CatalogViewer;
+import istc.bigdawg.exceptions.BigDawgException;
 import istc.bigdawg.islands.OperatorVisitor;
 import istc.bigdawg.islands.TheObjectThatResolvesAllDifferencesAmongTheIslands;
+import istc.bigdawg.islands.Accumulo.AccumuloD4MParser;
 import istc.bigdawg.islands.SciDB.AFLPlanParser;
 import istc.bigdawg.islands.SciDB.AFLQueryGenerator;
 import istc.bigdawg.islands.SciDB.AFLQueryPlan;
@@ -43,13 +45,14 @@ public class TrialsAndErrors {
 	private static boolean runSchemaGen = false;
 	private static boolean runMigration = false;
 	private static boolean runSciDBExecution = false;
+	private static boolean runParserTest = false;
 
 	@Before
 	public void setUp() throws Exception {
 		CatalogInstance.INSTANCE.getCatalog();
 		
 //		setupQueryExplainer();
-		setupQueryBuilder();
+//		setupQueryBuilder();
 //		setupRegexTester();
 //		setupTreeWalker();
 //		setupPlannerTester();
@@ -57,6 +60,7 @@ public class TrialsAndErrors {
 //		setupSchemaGenerator();
 //		setupMigrationTest();
 //		setupSciDBExecution();
+		setupParserTest();
 	}
 	
 	public void setupQueryExplainer() {
@@ -95,7 +99,10 @@ public class TrialsAndErrors {
 		runSciDBExecution = true;
 	}
 	
-
+	public void setupParserTest() {
+		runParserTest = true;
+	}
+	
 	@Test
 	public void testRunExplainer() throws Exception {
 		
@@ -321,6 +328,19 @@ public class TrialsAndErrors {
 		
 		System.out.printf("Time it took: %s\n", System.currentTimeMillis() - time);
 	}
+	
+	@Test
+	public void testParserTest() throws BigDawgException {
+		if ( !runParserTest) return;
+			
+		String input = "12.31.357.12, foo('a b ', : ), file";
+		
+		(new AccumuloD4MParser()).parse(input);
+			
+			
+	}
+	
+	
 	
 	
 //	private void printIndentation(int recLevel) {
