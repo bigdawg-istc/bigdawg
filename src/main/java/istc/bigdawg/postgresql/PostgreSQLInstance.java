@@ -44,7 +44,7 @@ public enum PostgreSQLInstance {
 		//props.setProperty("preparedStatementCacheQueries", "0");
 		//props.setProperty("preparedStatementCacheSizeMiB", "10");
 		try {
-		    	System.out.println("url is :" + URL);
+//		    	System.out.println("url is :" + URL);
 			return DriverManager.getConnection(URL, props);
 		} catch (SQLException e) {
 			log.error(e.getMessage() + " Could not establish connection to PostgreSQL using the property file: "
