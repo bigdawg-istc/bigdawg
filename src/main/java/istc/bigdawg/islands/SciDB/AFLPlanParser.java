@@ -342,11 +342,13 @@ public class AFLPlanParser {
 			
 			List<AFLPlanAttribute> aggAttributes = node.attributes;
 			
+			System.out.printf("aggregate attribute: %s\n", aggAttributes);
+			
 //			System.out.printf("afl parser, agg, outExpr prop: %s\n", node);
 			
 			Stack<StringBuilder> stk = new Stack<>();
 			List<String> aggFuns = new ArrayList<>();
-//			List<String> aggregateDimensions = new ArrayList<>();
+			List<String> aggregateDimensions = new ArrayList<>();
 			
 			for (int k = 0; k < aggAttributes.size(); ++k) {
 				AFLPlanAttribute outExpr = aggAttributes.get(k);
@@ -365,18 +367,18 @@ public class AFLPlanParser {
 					
 					if (outExpr.properties.size() > 1) stk.peek().append(')').append(" AS ").append(outExpr.properties.get(1));
 					else stk.peek().append(')');
-//				} else  {
-//					aggregateDimensions.add(outExpr.properties.get(1));
-				} else if (!outExpr.name.equals("paramDimensionReference")) {
+				} else if (outExpr.name.equals("paramDimensionReference")) {
+					aggregateDimensions.add(outExpr.properties.get(1));
+				} else {
 					System.out.printf("unhandled expression from aggregate parsing: %s", outExpr);
 				}
 			}
 			if (!stk.isEmpty()) {
 				aggFuns.add( stk.pop().toString());
 			}
-			
+			System.out.printf("aggregate construction aggFuns: %s\n", aggFuns);
 			parameters.put("Aggregate-Functions", String.join(", ", aggFuns));
-//			if (!aggregateDimensions.isEmpty()) parameters.put("Aggregate-Dimensions", String.join("|||", aggregateDimensions));
+			if (!aggregateDimensions.isEmpty()) parameters.put("Aggregate-Dimensions", String.join("|||", aggregateDimensions));
 			break;
 		case "window":
 			nodeType = "WindowAgg";

@@ -13,6 +13,7 @@ import java.util.regex.Pattern;
 import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
 import org.jgrapht.graph.DefaultEdge;
 
+import istc.bigdawg.catalog.CatalogModifier;
 import istc.bigdawg.islands.IslandsAndCast.Scope;
 import istc.bigdawg.islands.operators.Merge;
 
@@ -41,16 +42,16 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 	};
 	
 	// NEW METHOD
-	public CrossIslandQueryPlan(String userinput) throws Exception {
+	public CrossIslandQueryPlan(String userinput, Set<Integer> catalogSOD) throws Exception {
 		this();
 //		terminalOperatorsForSchemas = new HashMap<>();
 		transitionSchemas = new Stack<>();
 		entryNode = new HashSet<>();
-		addNodes(userinput);
+		addNodes(userinput, catalogSOD);
 		checkAndProcessUnionTerminalOperators();
 	};
 	
-	public void addNodes(String userinput) throws Exception {
+	public void addNodes(String userinput, Set<Integer> catalogSOD) throws Exception {
 
 		Pattern mark								= Pattern.compile("(?i)(bdrel\\(|bdarray\\(|bdtext\\(|bdgraph\\(|bdstream\\(|bdcast\\(|\\(|\\))");
 		Matcher matcher								= mark.matcher(userinput);
@@ -112,7 +113,7 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 		    		// NEW
 		    		Scope outterScope = lastScopes.isEmpty() ? null : lastScopes.peek();
 //		    		System.out.printf("This Scope: %s; Outter Scope: %s\n", thisScope, outterScope);
-		    		CrossIslandPlanNode newNode = createVertex(name, stkwrite.pop() + userinput.substring(lastStop, matcher.end()), thisScope, innerScope, outterScope);
+		    		CrossIslandPlanNode newNode = createVertex(name, stkwrite.pop() + userinput.substring(lastStop, matcher.end()), thisScope, innerScope, outterScope, catalogSOD);
 		    		
 		    		innerScope = thisScope;
 		    		
@@ -166,7 +167,7 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 		}
 	}
 	
-	private CrossIslandPlanNode createVertex(String name, String rawQueryString, Scope thisScope, Scope innerScope, Scope outterScope) throws Exception{
+	private CrossIslandPlanNode createVertex(String name, String rawQueryString, Scope thisScope, Scope innerScope, Scope outterScope, Set<Integer> catalogSOD) throws Exception{
 		
 		// IDENTIFY ISLAND AND STRIP
 		Matcher islandMatcher	= IslandsAndCast.ScopeStartPattern.matcher(rawQueryString);
@@ -202,6 +203,11 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 				
 				transitionSchemas.pop();
 				transitionSchemas.peek().put(newNode.getName(), TheObjectThatResolvesAllDifferencesAmongTheIslands.getCreationQueryForCast(outterScope, newNode.getName(), islandQuery.substring(castSchemaMatcher.start(), castSchemaMatcher.end())));
+				
+				
+				// add catalog entires
+				int dbid = TheObjectThatResolvesAllDifferencesAmongTheIslands.getSchemaEngineDBID(((CrossIslandCastNode)newNode).getDestinationScope());
+				catalogSOD.add(CatalogModifier.addObject(newNode.getName(), "TEMPORARY", dbid, dbid));
 				
 			} else if (TheObjectThatResolvesAllDifferencesAmongTheIslands.isOperatorBasedIsland(thisScope)) {
 				newNode = new CrossIslandQueryNode(thisScope, islandQuery, name, transitionSchemas.pop());

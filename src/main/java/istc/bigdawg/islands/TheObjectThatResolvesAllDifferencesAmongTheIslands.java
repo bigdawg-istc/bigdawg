@@ -12,12 +12,14 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import istc.bigdawg.accumulo.AccumuloHandler;
 import istc.bigdawg.catalog.CatalogViewer;
-import istc.bigdawg.exceptions.BigDawgCatalogException;
+import istc.bigdawg.exceptions.AccumuloShellScriptException;
 import istc.bigdawg.exceptions.BigDawgException;
 import istc.bigdawg.exceptions.UnsupportedIslandException;
 import istc.bigdawg.executor.QueryResult;
 import istc.bigdawg.islands.IslandsAndCast.Scope;
+import istc.bigdawg.islands.Accumulo.AccumuloD4MParser;
 import istc.bigdawg.islands.SciDB.AFLPlanParser;
 import istc.bigdawg.islands.SciDB.AFLQueryGenerator;
 import istc.bigdawg.islands.SciDB.AFLQueryPlan;
@@ -33,7 +35,6 @@ import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.query.DBHandler;
-import istc.bigdawg.scidb.SciDBConnectionInfo;
 import istc.bigdawg.scidb.SciDBHandler;
 import istc.bigdawg.signature.builder.ArraySignatureBuilder;
 import istc.bigdawg.signature.builder.RelationalSignatureBuilder;
@@ -83,9 +84,9 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	 * For Executor.
 	 * @param scope
 	 * @return Instance of a query generator
-	 * @throws UnsupportedIslandException
+	 * @throws BigDawgException 
 	 */
-	public static OperatorVisitor getQueryGenerator(Scope scope) throws UnsupportedIslandException {
+	public static OperatorVisitor getQueryGenerator(Scope scope) throws BigDawgException {
 		switch (scope) {
 		case ARRAY:
 			return new AFLQueryGenerator();
@@ -102,7 +103,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case STREAM:
 			break;
 		case TEXT:
-			break;
+			throw new BigDawgException("TEXT island does not support the concept of generator; getQueryGenerator");
 		default:
 			break;
 		}
@@ -132,7 +133,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case STREAM:
 			break;
 		case TEXT:
-			break;
+			return " AND scope_name = \'TEXT\' ";
 		default:
 			break;
 		}
@@ -146,17 +147,16 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	 * @param children
 	 * @param transitionSchemas
 	 * @return
-	 * @throws UnsupportedIslandException
-	 * @throws BigDawgCatalogException
 	 * @throws SQLException
+	 * @throws BigDawgException 
 	 */
-	public static DBHandler createTableForPlanning(Scope sourceScope, Set<String> children, Map<String, String> transitionSchemas) throws UnsupportedIslandException, BigDawgCatalogException, SQLException {
+	public static DBHandler createTableForPlanning(Scope sourceScope, Set<String> children, Map<String, String> transitionSchemas) throws SQLException, BigDawgException {
 
 		DBHandler dbSchemaHandler = null;
 		
 		switch (sourceScope) {
 		case ARRAY:
-			dbSchemaHandler = new SciDBHandler((SciDBConnectionInfo)CatalogViewer.getConnectionInfo(scidbSchemaHandlerDBID));
+			dbSchemaHandler = new SciDBHandler(scidbSchemaHandlerDBID);
 			for (String key : transitionSchemas.keySet()) 
 				if (children.contains(key)) {
 					((SciDBHandler)dbSchemaHandler).executeStatement(transitionSchemas.get(key));
@@ -178,7 +178,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case STREAM:
 			break;
 		case TEXT:
-			break;
+			throw new BigDawgException("TEXT island does not support data immigration; createTableForPlanning");
 		default:
 			break;
 		}
@@ -193,16 +193,16 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	 * @param dbSchemaHandler
 	 * @param children
 	 * @param transitionSchemas
-	 * @throws BigDawgCatalogException
 	 * @throws SQLException
-	 * @throws UnsupportedIslandException
+	 * @throws BigDawgException 
 	 */
-	public static void removeTemporaryTableCreatedForPlanning(Scope sourceScope, DBHandler dbSchemaHandler, Set<String> children, Map<String, String> transitionSchemas) throws BigDawgCatalogException, SQLException, UnsupportedIslandException {
+	public static void removeTemporaryTableCreatedForPlanning(Scope sourceScope, DBHandler dbSchemaHandler, Set<String> children, Map<String, String> transitionSchemas) throws SQLException, BigDawgException {
 		
 		switch (sourceScope) {
 		case ARRAY:
 			for (String key : transitionSchemas.keySet()) 
 				if (children.contains(key)) {
+					dbSchemaHandler = new SciDBHandler(scidbSchemaHandlerDBID); // because now the code closes the connection forcefully each time
 					((SciDBHandler)dbSchemaHandler).executeStatementAFL("remove("+key+")");
 					((SciDBHandler)dbSchemaHandler).commit();
 				}
@@ -223,7 +223,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case STREAM:
 			break;
 		case TEXT:
-			break;
+			throw new BigDawgException("TEXT island does not support data immigration; removeTemporaryTableCreatedForPlanning");
 		default:
 			break;
 		}
@@ -235,9 +235,9 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	 * For query planning, CrossIslandQueryNode
 	 * @param scope
 	 * @return
-	 * @throws UnsupportedIslandException
+	 * @throws BigDawgException 
 	 */
-	public static Integer getSchemaEngineDBID(Scope scope) throws UnsupportedIslandException {
+	public static Integer getSchemaEngineDBID(Scope scope) throws BigDawgException {
 		
 		switch (scope) {
 		case ARRAY:
@@ -255,7 +255,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case STREAM:
 			break;
 		case TEXT:
-			break;
+			throw new BigDawgException("TEXT island does not have a default SchemaEngine, getSchemaEngineDBID");
 		default:
 			break;
 		}
@@ -297,7 +297,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case STREAM:
 			break;
 		case TEXT:
-			break;
+			throw new BigDawgException("TEXT island does not support the concept of Join; constructJoin");
 		default:
 			break;
 		}
@@ -339,7 +339,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case STREAM:
 			break;
 		case TEXT:
-			break;
+			throw new BigDawgException("TEXT island does not support signature; generateOperatorTreesAndAddDataSetObjectsSignature");
 		default:
 			break;
 		}
@@ -351,9 +351,9 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	/**
 	 * For query planning, CrossIslandQueryNode
 	 * @return
-	 * @throws UnsupportedIslandException 
+	 * @throws BigDawgException 
 	 */
-	public static Set<String> splitPredicates(Scope scope, String predicates) throws UnsupportedIslandException {
+	public static Set<String> splitPredicates(Scope scope, String predicates) throws BigDawgException {
 		Set<String> results = new HashSet<>();
 
 		String joinDelim = null;
@@ -374,7 +374,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case STREAM:
 			break;
 		case TEXT:
-			break;
+			throw new BigDawgException("TEXT island does not participate in splitPredicates function; splitPredicates");
 		default:
 			break;
 		}
@@ -399,9 +399,9 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	 * @param query
 	 * @return
 	 * @throws IOException
-	 * @throws UnsupportedIslandException
+	 * @throws BigDawgException 
 	 */
-	public static List<String> getLiteralsAndConstantsSignature(Scope scope, String query) throws IOException, UnsupportedIslandException {
+	public static List<String> getLiteralsAndConstantsSignature(Scope scope, String query) throws IOException, BigDawgException {
 		
 		switch (scope) {
 		case ARRAY:
@@ -419,7 +419,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case STREAM:
 			break;
 		case TEXT:
-			break;
+			throw new BigDawgException("TEXT island does not support signature; getLiteralsAndConstantsSignature");
 		default:
 			break;
 		}
@@ -452,7 +452,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case STREAM:
 			break;
 		case TEXT:
-			break;
+			return String.format("bdtext(%s);", query);
 		default:
 			break;
 		}
@@ -466,9 +466,9 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	 * @param name
 	 * @param schemaCreationQuery
 	 * @return
-	 * @throws UnsupportedIslandException
+	 * @throws BigDawgException 
 	 */
-	public static String getCreationQueryForCast(Scope scope, String name, String schemaCreationQuery) throws UnsupportedIslandException {
+	public static String getCreationQueryForCast(Scope scope, String name, String schemaCreationQuery) throws BigDawgException {
 		
 		switch (scope) {
 		case ARRAY:
@@ -486,7 +486,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case STREAM:
 			break;
 		case TEXT:
-			break;
+			throw new BigDawgException("TEXT Island does not allow you to create new tables; getCreationQueryForCast");
 		default:
 			break;
 		}
@@ -517,7 +517,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	
 	//// Operator free options
 	
-	public static QueryResult runOperatorFreeIslandQuery(CrossIslandNonOperatorNode node) throws BigDawgException {
+	public static QueryResult runOperatorFreeIslandQuery(CrossIslandNonOperatorNode node) throws BigDawgException, IOException, InterruptedException, AccumuloShellScriptException {
 		
 		switch (node.sourceScope) {
 		
@@ -525,14 +525,16 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case GRAPH:
 		case KEYVALUE:
 		case STREAM:
-		case TEXT:
 			throw new UnsupportedIslandException(node.sourceScope, "runOperatorFreeIslandQuery");
-//			break;
+		case TEXT:
+			List<String> parsed = (new AccumuloD4MParser()).parse(node.queryString);
+			System.out.printf("TEXT Island Accumulot query: %s; parsed arguments: %s\n", node.queryString, parsed);
+			return AccumuloHandler.executeAccumuloShellScript(parsed);
+//			throw new BigDawgException("TEXT Island is still under construction and you can't issue query to it yet; runOperatorFreeIslandQuery");
 		case RELATIONAL:
 		case ARRAY:
 		default:
 			throw new BigDawgException("Unapplicable island for runOperatorFreeIslandQuery: "+node.sourceScope.name());
-		
 		}
 		
 	}

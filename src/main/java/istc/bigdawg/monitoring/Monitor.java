@@ -60,7 +60,7 @@ public class Monitor {
         logger.debug("Query for signature: " + signature.getQuery());
 //        CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(crossIslandQuery);
 //        CrossIslandQueryNode ciqn = ciqp.getTerminalNode();
-        CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(signature.getQuery());
+        CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(signature.getQuery(), new HashSet<>());
         
         Set<CrossIslandQueryNode> qnSet = new HashSet<>();
         

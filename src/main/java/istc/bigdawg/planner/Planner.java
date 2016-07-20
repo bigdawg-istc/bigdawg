@@ -44,14 +44,17 @@ public class Planner {
 		// UNROLLING
 		logger.debug("User query received. Parsing... " + input.replaceAll("[\"']", "*"));
 		
-		// NEW CODE 1
 		if (input.startsWith("bdcatalog(")) {
 			// process catalog query
 			throw new Exception("bdcatalog function not implemented");
 		}
-		// NEW CODE 1 END
 		
-		CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(input);
+		
+		// adding new entries
+		Set<Integer> catalogSOD = new HashSet<>();
+		Map<ConnectionInfo, Collection<String>> tempTableMOD = new HashMap<>();
+		
+		CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(input, catalogSOD);
 		if (ciqp.getTerminalNode() == null) throw new Exception("Ill formed input: "+input);
 		
 		System.out.printf("CrossIslandQueryPlan print out: #nodes: %s; #edges: %s\n%s\n\n", ciqp.vertexSet().size(), ciqp.edgeSet().size(), ciqp.toString());
@@ -61,9 +64,6 @@ public class Planner {
 		Set<CrossIslandPlanNode> nodeWalker = new HashSet<>(ciqp.getEntryNodes());
 		Set<CrossIslandPlanNode> nextGeneration;
 		Map<CrossIslandPlanNode, ConnectionInfo> nodeToResult = new HashMap<>();
-		
-		Set<Integer> catalogSOD = new HashSet<>();
-		Map<ConnectionInfo, Collection<String>> tempTableMOD = new HashMap<>();
 		
 		while (!nodeWalker.isEmpty()) {
 			nextGeneration = new HashSet<>();

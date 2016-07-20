@@ -237,10 +237,14 @@ public class AFLQueryGenerator implements OperatorVisitor {
 
 		for (String s : aggregate.getOutSchema().keySet()) {
 			DataObjectAttribute doa = aggregate.getOutSchema().get(s);
-			if (!doa.getName().equalsIgnoreCase(doa.getExpressionString()) && doa.getExpressionString().contains("(")) {
+			
+			System.out.printf("doa expression string from aggregate: %s, %s\n", doa.getExpressionString(), doa.getSQLExpression());
+			
+//			if (!doa.getName().equalsIgnoreCase(doa.getExpressionString()) && doa.getExpressionString().contains("(")) {
+			if (doa.getExpressionString().contains("(")) {
 				
 				// now we just assume that it's in the format of 'sum(a)'
-				String[] split = doa.getExpressionString().split("[\\(\\)\\s]+");
+				String[] split = doa.getExpressionString().split("[\\(\\), \t]+");
 				
 				List<SciDBExpression> templ = new ArrayList<>();
 				templ.add(new SciDBColumn(split[1], null, null, false, null, null));

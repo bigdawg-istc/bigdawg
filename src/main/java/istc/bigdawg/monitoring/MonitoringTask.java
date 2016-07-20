@@ -11,6 +11,7 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -92,7 +93,7 @@ class Task implements Runnable {
 //                    Map<String, String> crossIslandQuery = UserQueryParser.getUnwrappedQueriesByIslands(signature.getQuery());
 //                    CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(crossIslandQuery);
 //                    CrossIslandQueryNode ciqn = (CrossIslandQueryNode)ciqp.getTerminalNode();
-                	CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(signature.getQuery());
+                	CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(signature.getQuery(), new HashSet<>());
                 	CrossIslandQueryNode ciqn = null;
                     if (ciqp.getTerminalNode() instanceof CrossIslandQueryNode)
                     	ciqn = (CrossIslandQueryNode)ciqp.getTerminalNode();

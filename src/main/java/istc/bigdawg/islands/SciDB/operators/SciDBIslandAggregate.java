@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import istc.bigdawg.islands.CommonOutItemResolver;
 import istc.bigdawg.islands.DataObjectAttribute;
 import istc.bigdawg.islands.OperatorVisitor;
 import istc.bigdawg.islands.SciDB.SciDBArray;
@@ -65,6 +64,10 @@ public class SciDBIslandAggregate extends SciDBIslandOperator implements Aggrega
 		parsedGroupBys = new ArrayList<>();
 		setAggregateFilter(parameters.get("Filter"));
 		
+		if (parameters.get("Aggregate-Dimensions") != null) {
+			List<String> aggDims = Arrays.asList(parameters.get("Aggregate-Dimensions").split("[|][|][|]"));
+			for (String s : aggDims) parsedGroupBys.add(CCJSqlParserUtil.parseExpression(s));
+		} 
 		
 		Map<String, String> aggFuns = new HashMap<>();
 		for (String s : aggregateExpressions) {
@@ -81,37 +84,43 @@ public class SciDBIslandAggregate extends SciDBIslandOperator implements Aggrega
 				} else if (f instanceof Column) {
 					alias = ((Column)f).getColumnName();
 				}
-				aggFuns.put(alias, f.toString());
+				aggFuns.put(alias.toLowerCase(), f.toString());
 			} catch (Exception e) {
 				String[] segs = s.split("[-\\(\\)\\.,\\*\\/\\+\\s]+");
-				aggFuns.put(segs[1]+"_"+segs[0], s);
+				aggFuns.put((segs[1]+"_"+segs[0]).toLowerCase(), s);
 			}
 			
 			
 		}
 		
-		
+		System.out.printf("aggFun: %s\n", aggFuns);
 		// iterate over outschema and 
 		// classify each term as aggregate func or group by
 		for (String expr : output.getAttributes().keySet()) {
+
+			DataObjectAttribute attr = new DataObjectAttribute();
 			
-			CommonOutItemResolver out = new CommonOutItemResolver(expr, output.getAttributes().get(expr), false, null); // TODO CHECK THIS TODO
-			DataObjectAttribute attr = out.getAttribute();
+			attr.setName(expr);
+			attr.setTypeString(output.getAttributes().get(expr));
+			attr.setHidden(false);
 			
-			if (aggFuns.get(expr) != null) attr.setExpression(aggFuns.get(expr));
+			String exprLowerCase = expr.toLowerCase();
+			
+			if (aggFuns.get(exprLowerCase) != null) attr.setExpression(aggFuns.get(exprLowerCase));
 			else attr.setExpression(expr);
 			
-			String attrName = attr.getName();
-			
-			outSchema.put(attrName, attr);
+			outSchema.put(attr.getName(), attr);
 			
 		}
 		
 		// dimensions
 		for (String expr : output.getDimensions().keySet()) {
 			
-			CommonOutItemResolver out = new CommonOutItemResolver(expr, "Dimension", true, null);
-			DataObjectAttribute dim = out.getAttribute();
+			DataObjectAttribute dim = new DataObjectAttribute();
+			
+			dim.setName(expr);
+			dim.setTypeString(output.getDimensions().get(expr));
+			dim.setHidden(true);
 			
 			Column e = (Column) CCJSqlParserUtil.parseExpression(expr);
 			String arrayName = output.getDimensionMembership().get(expr);
@@ -119,7 +128,6 @@ public class SciDBIslandAggregate extends SciDBIslandOperator implements Aggrega
 				e.setTable(new Table(Arrays.asList(arrayName.split(", ")).get(0)));
 			}
 			
-			parsedGroupBys.add(e);
 			dim.setExpression(e);
 			
 			String dimName = dim.getFullyQualifiedName();		
