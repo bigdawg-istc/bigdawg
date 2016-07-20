@@ -6,8 +6,10 @@ import java.util.Collection;
 
 import org.apache.commons.lang3.tuple.Pair;
 
+import istc.bigdawg.executor.ExecutorEngine;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.query.DBHandler;
+import istc.bigdawg.query.ConnectionInfo.LocalQueryExecutorLookupException;
 
 public class SStoreSQLConnectionInfo implements ConnectionInfo {
     
@@ -78,7 +80,7 @@ public class SStoreSQLConnectionInfo implements ConnectionInfo {
     }
 
     @Override
-    public String getCleanupQuery(Collection<String> objects) {
+    public Collection<String> getCleanupQuery(Collection<String> objects) {
         // TODO Auto-generated method stub
         return null;
     }
@@ -180,5 +182,24 @@ public class SStoreSQLConnectionInfo implements ConnectionInfo {
             return false;
         return true;
     }
+    
+	public ExecutorEngine getLocalQueryExecutor()
+			throws LocalQueryExecutorLookupException {
+		// TODO:
+		return null;
+	}
+
+	public Pair<Number, Number> getMinMax(String object, String attribute)
+			throws ExecutorEngine.LocalQueryExecutionException, ParseException {
+		// TODO:
+		return null;
+	}
+
+	public long[] computeHistogram(String object, String attribute,
+			double start, double end, int numBuckets)
+					throws ExecutorEngine.LocalQueryExecutionException {
+		// TODO:
+		return null;
+	}
 
 }

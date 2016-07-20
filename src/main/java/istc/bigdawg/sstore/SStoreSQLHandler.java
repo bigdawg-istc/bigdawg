@@ -44,7 +44,7 @@ public class SStoreSQLHandler implements DBHandler {
 
     public SStoreSQLHandler(int dbId) throws Exception {
 	try {
-	    this.conInfo = CatalogViewer.getConnection(dbId);
+	    this.conInfo = CatalogViewer.getConnectionInfo(dbId);
 	} catch (Exception e) {
 	    String msg = "Catalog chosen connection: " + conInfo.getHost() + " " + conInfo.getPort() + " "
 		    + conInfo.getUser() + " " + conInfo.getPassword() + ".";
@@ -78,7 +78,7 @@ public class SStoreSQLHandler implements DBHandler {
      * @throws SQLException
      *             if could not establish a connection
      */
-    private Connection getConnection() throws SQLException {
+    public Connection getConnection() throws SQLException {
 	if (con == null) {
 	    if (conInfo != null) {
 		try {
@@ -488,4 +488,9 @@ public class SStoreSQLHandler implements DBHandler {
     	return "{call @LoadTableFromFile(?, ?, ?, ?)}";
     }
 
+   public boolean existsObject(String name) throws Exception {
+	   // TODO:
+	   return true;
+   }
+   
 }
