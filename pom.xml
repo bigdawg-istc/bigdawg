@@ -192,6 +192,14 @@
 		    <type>pom</type>
 		</dependency>
 
+		<dependency>
+			<groupId>S-Store</groupId>
+			<artifactId>S-Store</artifactId>
+			<version>0.1</version>
+ 			<scope>system</scope> 
+ 			<systemPath>${project.basedir}/src/main/resources/mvn-repo/org/sstore/jdbc/sstore.jar</systemPath>
+		</dependency>
+
 	</dependencies>
 
 	<repositories>
