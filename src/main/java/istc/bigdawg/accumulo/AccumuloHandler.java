@@ -79,6 +79,8 @@ public class AccumuloHandler implements DBHandler {
 		InputStream scriptResultInStream = RunShell.runNewAccumuloScript(accumuloScriptPath, inputs);
 		String scriptResult = IOUtils.toString(scriptResultInStream, Constants.ENCODING);
 		
+		System.out.printf("Accumulo result: %s\n", scriptResult);
+		
 		return new AccumuloD4MQueryResult(scriptResult);
 	}
 	

@@ -8,7 +8,7 @@ public class AccumuloD4MQueryResult implements QueryResult {
 	private String result;
 	
 	public AccumuloD4MQueryResult(String result) {
-		result = this.result;
+		this.result = result;
 	}
 	
 	@Override
