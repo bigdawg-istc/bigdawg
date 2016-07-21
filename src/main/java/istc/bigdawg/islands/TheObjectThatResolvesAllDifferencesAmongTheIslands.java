@@ -2,7 +2,9 @@ package istc.bigdawg.islands;
 
 import java.io.IOException;
 import java.sql.Connection;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -13,8 +15,10 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import istc.bigdawg.accumulo.AccumuloHandler;
+import istc.bigdawg.catalog.Catalog;
 import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.exceptions.AccumuloShellScriptException;
+import istc.bigdawg.exceptions.BigDawgCatalogException;
 import istc.bigdawg.exceptions.BigDawgException;
 import istc.bigdawg.exceptions.UnsupportedIslandException;
 import istc.bigdawg.executor.QueryResult;
@@ -34,7 +38,9 @@ import istc.bigdawg.islands.relational.operators.SQLIslandJoin;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.properties.BigDawgConfigProperties;
+import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.query.DBHandler;
+import istc.bigdawg.scidb.SciDBConnectionInfo;
 import istc.bigdawg.scidb.SciDBHandler;
 import istc.bigdawg.signature.builder.ArraySignatureBuilder;
 import istc.bigdawg.signature.builder.RelationalSignatureBuilder;
@@ -53,11 +59,19 @@ import net.sf.jsqlparser.JSQLParserException;
  */
 public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	
+	public static enum Engine {PostgreSQL, SciDB, SStore};
+	
 	public static final int  psqlSchemaHandlerDBID = BigDawgConfigProperties.INSTANCE.getPostgresSchemaServerDBID();
 	public static final int  scidbSchemaHandlerDBID = BigDawgConfigProperties.INSTANCE.getSciDBSchemaServerDBID();
 	
 	private static final Pattern predicatePattern = Pattern.compile("(?<=\\()([^\\(^\\)]+)(?=\\))");
 	
+	public static List<String> sqlEngineTokenList = new ArrayList<>();
+	
+	static {
+		sqlEngineTokenList.add("postgres");
+		sqlEngineTokenList.add("sstore");
+	}
 	/**
 	 * For CrossIslandQueryPlan
 	 * Determines whether an island is implemented
@@ -78,6 +92,75 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		default:
 			throw new UnsupportedIslandException(scope, "isOperatorBasedIsland");
 		}
+	}
+	
+	/**
+	 * Used in CatalogViewer
+	 * @param engineString
+	 * @return
+	 * @throws BigDawgException
+	 */
+	public static Engine getEngineEnum(String engineString) throws BigDawgException {
+		if (engineString.startsWith(Engine.PostgreSQL.name()))
+			return Engine.PostgreSQL;
+		else if (engineString.startsWith(Engine.SciDB.name()))
+			return Engine.SciDB;
+		else if (engineString.startsWith(Engine.SStore.name()))
+			return Engine.SStore;
+		else {
+			throw new BigDawgException("Unsupported engine: "+ engineString);
+		}
+	}
+	
+	/**
+	 * Used in CatalogViewer
+	 * @param cc
+	 * @param e
+	 * @param dbid
+	 * @return
+	 * @throws SQLException
+	 * @throws BigDawgCatalogException
+	 */
+	public static ConnectionInfo getQConnectionInfo(Catalog cc, Engine e, int dbid) throws SQLException, BigDawgCatalogException {
+		
+		ConnectionInfo extraction = null;
+		ResultSet rs2;
+		
+		if (e.equals(Engine.PostgreSQL)) {
+			
+			rs2 = cc.execRet("select dbid, eid, host, port, db.name as dbname, userid, password from catalog.databases db join catalog.engines e on db.engine_id = e.eid where dbid = "+dbid);
+			if (rs2.next())
+				extraction = new PostgreSQLConnectionInfo(rs2.getString("host"), rs2.getString("port"),rs2.getString("dbname"), rs2.getString("userid"), rs2.getString("password"));
+		} else if (e.equals(Engine.SciDB)) {
+			rs2 = cc.execRet("select dbid, db.engine_id, host, port, bin_path, userid, password "
+							+ "from catalog.databases db "
+							+ "join catalog.engines e on db.engine_id = e.eid "
+							+ "join catalog.scidbbinpaths sp on db.engine_id = sp.eid where dbid = "+dbid);
+			if (rs2.next())
+				extraction = new SciDBConnectionInfo(rs2.getString("host"), rs2.getString("port"), rs2.getString("userid"), rs2.getString("password"), rs2.getString("bin_path"));
+		} else if (e.equals(Engine.SStore)) {
+			
+			
+			
+			throw new BigDawgCatalogException("Unimplemented function for SStore: getConnectionInfo");
+			
+			
+			
+		} else 
+			throw new BigDawgCatalogException("This is not supposed to happen");
+		
+		if (extraction == null) {
+			rs2.close();
+			throw new BigDawgCatalogException("Connection Info Cannot Be Formulated: "+dbid);
+		}
+			
+		if (rs2.next()) {
+			throw new BigDawgCatalogException("Non-unique DBID: "+dbid);
+		}
+		
+		rs2.close();
+		
+		return extraction;
 	}
 	
 	/**
@@ -131,7 +214,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case RELATIONAL:
 			return " AND scope_name = \'RELATIONAL\' ";
 		case STREAM:
-			break;
+			return " AND scope_name = \'STREAM\' ";
 		case TEXT:
 			return " AND scope_name = \'TEXT\' ";
 		default:
@@ -176,7 +259,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 				if (children.contains(key)) ((PostgreSQLHandler)dbSchemaHandler).executeStatementPostgreSQL(transitionSchemas.get(key));
 			break;
 		case STREAM:
-			break;
+			throw new BigDawgException("STREAM island does not support data immigration; createTableForPlanning");
 		case TEXT:
 			throw new BigDawgException("TEXT island does not support data immigration; createTableForPlanning");
 		default:
@@ -221,7 +304,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 					((PostgreSQLHandler)dbSchemaHandler).executeStatementPostgreSQL("drop table "+key);
 			return;
 		case STREAM:
-			break;
+			throw new BigDawgException("STREAM island does not support data immigration; removeTemporaryTableCreatedForPlanning");
 		case TEXT:
 			throw new BigDawgException("TEXT island does not support data immigration; removeTemporaryTableCreatedForPlanning");
 		default:
@@ -253,7 +336,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case RELATIONAL:
 			return psqlSchemaHandlerDBID;
 		case STREAM:
-			break;
+			throw new BigDawgException("STREAM island does not have a default SchemaEngine, getSchemaEngineDBID");
 		case TEXT:
 			throw new BigDawgException("TEXT island does not have a default SchemaEngine, getSchemaEngineDBID");
 		default:
@@ -295,7 +378,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 			if (joinPred == null) return new SQLIslandJoin(o1, o2, jt, null, isFilter);
 			return new SQLIslandJoin(o1, o2, jt, String.join(" AND ", joinPred), isFilter);
 		case STREAM:
-			break;
+			throw new BigDawgException("STREAM island does not support the concept of Join; constructJoin");
 		case TEXT:
 			throw new BigDawgException("TEXT island does not support the concept of Join; constructJoin");
 		default:
@@ -337,7 +420,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 			root = relQueryPlan.getRootNode();
 			objs.addAll(RelationalSignatureBuilder.sig2(queryString));
 		case STREAM:
-			break;
+			throw new BigDawgException("STREAM island does not support signature; generateOperatorTreesAndAddDataSetObjectsSignature");
 		case TEXT:
 			throw new BigDawgException("TEXT island does not support signature; generateOperatorTreesAndAddDataSetObjectsSignature");
 		default:
@@ -372,7 +455,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case RELATIONAL:
 			joinDelim = "[=<>]+";
 		case STREAM:
-			break;
+			throw new BigDawgException("STREAM island does not participate in splitPredicates function; splitPredicates");
 		case TEXT:
 			throw new BigDawgException("TEXT island does not participate in splitPredicates function; splitPredicates");
 		default:
@@ -417,7 +500,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case RELATIONAL:
 			return RelationalSignatureBuilder.sig3(query);
 		case STREAM:
-			break;
+			throw new BigDawgException("STREAM island does not support signature; getLiteralsAndConstantsSignature");
 		case TEXT:
 			throw new BigDawgException("TEXT island does not support signature; getLiteralsAndConstantsSignature");
 		default:
@@ -450,7 +533,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case RELATIONAL:
 			return String.format("bdrel(%s);", query);
 		case STREAM:
-			break;
+			return String.format("bdstream(%s);", query);
 		case TEXT:
 			return String.format("bdtext(%s);", query);
 		default:
@@ -484,7 +567,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case RELATIONAL:
 			return String.format("CREATE TABLE %s %s", name, schemaCreationQuery);
 		case STREAM:
-			break;
+			throw new BigDawgException("STREAM Island does not allow you to create new tables; getCreationQueryForCast");
 		case TEXT:
 			throw new BigDawgException("TEXT Island does not allow you to create new tables; getCreationQueryForCast");
 		default:
@@ -509,7 +592,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		int dbid;
 
 		if (tableName.toLowerCase().startsWith("bigdawgtag_")) dbid = psqlSchemaHandlerDBID;
-		else dbid = CatalogViewer.getDbsOfObject(tableName, "postgres").get(0);
+		else dbid = CatalogViewer.getDbsOfObject(tableName, sqlEngineTokenList).get(0);
 		
 		Connection con = PostgreSQLHandler.getConnection((PostgreSQLConnectionInfo)CatalogViewer.getConnectionInfo(dbid));
 		return PostgreSQLHandler.getCreateTable(con, tableName).replaceAll("\\scharacter[\\(]", " char(");
@@ -524,8 +607,9 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case DOCUMENT:
 		case GRAPH:
 		case KEYVALUE:
-		case STREAM:
 			throw new UnsupportedIslandException(node.sourceScope, "runOperatorFreeIslandQuery");
+		case STREAM:
+			throw new BigDawgException("STREAM island is not ready to process query; runOperatorFreeIslandQuery");
 		case TEXT:
 			List<String> parsed = (new AccumuloD4MParser()).parse(node.queryString);
 			System.out.printf("TEXT Island Accumulot query: %s; parsed arguments: %s\n", node.queryString, parsed);
