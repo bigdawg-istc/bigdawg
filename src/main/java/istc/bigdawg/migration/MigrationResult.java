@@ -18,9 +18,9 @@ import istc.bigdawg.exceptions.NetworkException;
 public class MigrationResult implements Serializable {
 
 	/**
-	 * The objects of the class are serializable
+	 * The objects of the class are serializable.
 	 */
-	private static final long serialVersionUID = 1L;
+	private static final long serialVersionUID = 8348835503338320036L;
 
 	private Long countExtractedElements;
 	private Long countLoadedElements;
@@ -62,7 +62,6 @@ public class MigrationResult implements Serializable {
 	public MigrationResult(Long countExtractedElements,
 			Long countLoadedElements, Long startTimeMigration,
 			Long endTimeMigration, Long durationMsec) {
-		super();
 		this.countExtractedElements = countExtractedElements;
 		this.countLoadedElements = countLoadedElements;
 		this.startTimeMigration = startTimeMigration;

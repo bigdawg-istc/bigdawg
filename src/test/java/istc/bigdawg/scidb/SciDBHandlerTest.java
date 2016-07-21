@@ -173,44 +173,44 @@ public class SciDBHandlerTest {
 
 		AttributeMetaData firstDimension = dimensionsOrdered.get(0);
 		assertEquals("i", firstDimension.getName());
-		assertEquals("int64", firstDimension.getDataType());
+		assertEquals("int64", firstDimension.getSqlDataType());
 
 		AttributeMetaData secondDimension = dimensionsOrdered.get(1);
 		assertEquals("j", secondDimension.getName());
-		assertEquals("int64", secondDimension.getDataType());
+		assertEquals("int64", secondDimension.getSqlDataType());
 
 		Map<String, AttributeMetaData> dimensionsMap = meta.getDimensionsMap();
 		assertEquals(2, dimensionsMap.size());
 
 		AttributeMetaData firstDimensionMap = dimensionsMap.get("i");
 		assertEquals("i", firstDimensionMap.getName());
-		assertEquals("int64", firstDimensionMap.getDataType());
+		assertEquals("int64", firstDimensionMap.getSqlDataType());
 
 		AttributeMetaData secondDimensionMap = dimensionsMap.get("j");
 		assertEquals("j", secondDimensionMap.getName());
-		assertEquals("int64", secondDimensionMap.getDataType());
+		assertEquals("int64", secondDimensionMap.getSqlDataType());
 
 		List<AttributeMetaData> attributesOrdered = meta.getAttributesOrdered();
 		assertEquals(2, attributesOrdered.size());
 
 		AttributeMetaData firstAttribute = attributesOrdered.get(0);
 		assertEquals("v", firstAttribute.getName());
-		assertEquals("string", firstAttribute.getDataType());
+		assertEquals("string", firstAttribute.getSqlDataType());
 
 		AttributeMetaData secondAttribute = attributesOrdered.get(1);
 		assertEquals("d", secondAttribute.getName());
-		assertEquals("double", secondAttribute.getDataType());
+		assertEquals("double", secondAttribute.getSqlDataType());
 
 		Map<String, AttributeMetaData> attributesMap = meta.getAttributesMap();
 		assertEquals(2, attributesMap.size());
 
 		AttributeMetaData firstAttributeMap = attributesMap.get("v");
 		assertEquals("v", firstAttributeMap.getName());
-		assertEquals("string", firstAttributeMap.getDataType());
+		assertEquals("string", firstAttributeMap.getSqlDataType());
 
 		AttributeMetaData secondAttributeMap = attributesMap.get("d");
 		assertEquals("d", secondAttributeMap.getName());
-		assertEquals("double", secondAttributeMap.getDataType());
+		assertEquals("double", secondAttributeMap.getSqlDataType());
 
 		handler.close();
 

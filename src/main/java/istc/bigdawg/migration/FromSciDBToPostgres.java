@@ -27,19 +27,16 @@ import org.apache.zookeeper.KeeperException;
 
 import istc.bigdawg.LoggerSetup;
 import istc.bigdawg.database.AttributeMetaData;
-import istc.bigdawg.database.ObjectMetaData;
 import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.exceptions.NetworkException;
 import istc.bigdawg.exceptions.NoTargetArrayException;
 import istc.bigdawg.exceptions.RunShellException;
-import istc.bigdawg.exceptions.UnsupportedTypeException;
-import istc.bigdawg.migration.datatypes.FromSciDBToSQLTypes;
 import istc.bigdawg.monitoring.Monitor;
+import istc.bigdawg.network.RemoteRequest;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.query.DBHandler;
-import istc.bigdawg.scidb.SciDBArrayDimensionsAndAttributesMetaData;
 import istc.bigdawg.scidb.SciDBArrayMetaData;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
 import istc.bigdawg.scidb.SciDBHandler;
@@ -91,8 +88,8 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 
 	/*
 	 * These are the intermediate (additional) arrays that were created during
-	 * migration of data from PostgreSQL to SciDB. If something fails on the way
-	 * or at the end of the migration process, the arrays should be removed.
+	 * migration of data between PostgreSQL and SciDB. If something fails on the
+	 * way or at the end of the migration process, the arrays should be removed.
 	 * 
 	 * On the other hand, the tables in PostgreSQL are created within a
 	 * transaction so if something goes wrong in PostgreSQL, then the database
@@ -128,7 +125,13 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 	 */
 	FromSciDBToPostgres(MigrationInfo migrationInfo) throws MigrationException {
 		this.migrationInfo = migrationInfo;
-		this.scidbArrayMetaData = SciDBHandler.getArrayMetaData(migrationInfo);
+		try {
+			this.scidbArrayMetaData = SciDBHandler.getArrayMetaData(
+					migrationInfo.getConnectionFrom(),
+					migrationInfo.getObjectFrom());
+		} catch (Exception e) {
+			throw new MigrationException(e.getMessage(), e);
+		}
 	}
 
 	@Override
@@ -142,9 +145,10 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 				&& migrationInfo
 						.getConnectionTo() instanceof PostgreSQLConnectionInfo) {
 			this.migrationInfo = migrationInfo;
-			this.scidbArrayMetaData = SciDBHandler
-					.getArrayMetaData(migrationInfo);
 			try {
+				this.scidbArrayMetaData = SciDBHandler.getArrayMetaData(
+						migrationInfo.getConnectionFrom(),
+						migrationInfo.getObjectFrom());
 				return this.dispatch();
 			} catch (Exception e) {
 				throw new MigrationException(e.getMessage(), e);
@@ -164,69 +168,6 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 			throw new MigrationException("The object was not initialized");
 		}
 		return migrate();
-	}
-
-	/**
-	 * No dimensions;
-	 * 
-	 * @return
-	 * @throws NoTargetArrayException
-	 * @throws SQLException
-	 * @throws UnsupportedTypeException
-	 */
-	private static String getCreatePostgreSQLTableStatement(String toTable,
-			List<AttributeMetaData> attributes) throws NoTargetArrayException,
-					SQLException, UnsupportedTypeException {
-		StringBuilder createTableStringBuf = new StringBuilder();
-		createTableStringBuf
-				.append("create table if not exists " + toTable + " (");
-		for (AttributeMetaData attribute : attributes) {
-			String attrName = attribute.getName();
-			String scidbType = attribute.getDataType();
-			String sqlType = FromSciDBToSQLTypes
-					.getSQLTypeFromSciDBType(scidbType);
-			createTableStringBuf.append(attrName + " " + sqlType + ",");
-		}
-		createTableStringBuf.deleteCharAt(createTableStringBuf.length() - 1);
-		createTableStringBuf.append(")");
-		log.debug("create table command: " + createTableStringBuf.toString());
-		return createTableStringBuf.toString();
-	}
-
-	/**
-	 * Example of the binary format for SciDB: (string, int64, int64 null)
-	 * 
-	 * @return the string representing a binary format for SciDB
-	 * @throws NoTargetArrayException
-	 * @throws SQLException
-	 * @throws MigrationException
-	 */
-	private static String getSciDBBinFormat(MigrationInfo migrationInfo,
-			String array) throws NoTargetArrayException, SQLException,
-					MigrationException {
-		SciDBHandler handler = new SciDBHandler(
-				migrationInfo.getConnectionFrom());
-		SciDBArrayMetaData arrayMetaData;
-		try {
-			arrayMetaData = handler.getObjectMetaData(array);
-		} catch (Exception e) {
-			throw new MigrationException(e.getMessage(), e);
-		} finally {
-			handler.close();
-		}
-		List<AttributeMetaData> attributes = arrayMetaData
-				.getAttributesOrdered();
-		StringBuilder binBuf = new StringBuilder();
-		for (AttributeMetaData attribute : attributes) {
-			binBuf.append(attribute.getDataType());
-			if (attribute.isNullable()) {
-				binBuf.append(" null");
-			}
-			binBuf.append(",");
-		}
-		// remove the last comma ,
-		binBuf.deleteCharAt(binBuf.length() - 1);
-		return binBuf.toString();
 	}
 
 	/**
@@ -260,30 +201,39 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 				 */
 				arrays = new SciDBArrays(
 						new SciDBArray(fromArray, false, false), null);
-				format = getSciDBBinFormat(migrationInfo, fromArray);
+				format = ExportSciDB.getSciDBBinFormat(migrationInfo,
+						fromArray);
 				if (createTableStatement == null) {
-					createTableStatement = getCreatePostgreSQLTableStatement(
-							toTable, attributes);
+					createTableStatement = PostgreSQLHandler
+							.getCreatePostgreSQLTableStatement(toTable,
+									attributes);
 				}
 			} else {
 				String newFlatIntermediateArray = fromArray
 						+ "__bigdawg__flat__"
 						+ SessionIdentifierGenerator.INSTANCE
 								.nextRandom26CharString();
-				createFlatArrayFromMultiDimArray(migrationInfo,
-						newFlatIntermediateArray);
+				try {
+					SciDBHandler.createFlatArrayFromMultiDimArray(
+							migrationInfo.getConnectionFrom(),
+							migrationInfo.getObjectFrom(),
+							newFlatIntermediateArray);
+				} catch (Exception e) {
+					throw new MigrationException(e.getMessage(), e);
+				}
 				intermediateArrays.add(newFlatIntermediateArray);
 				arrays = new SciDBArrays(
 						new SciDBArray(newFlatIntermediateArray, true, true),
 						new SciDBArray(fromArray, false, false));
-				format = getSciDBBinFormat(migrationInfo,
+				format = ExportSciDB.getSciDBBinFormat(migrationInfo,
 						newFlatIntermediateArray);
 				List<AttributeMetaData> dimensionsAttributes = scidbArrayMetaData
 						.getDimensionsOrdered();
 				dimensionsAttributes.addAll(attributes);
 				if (createTableStatement == null) {
-					createTableStatement = getCreatePostgreSQLTableStatement(
-							toTable, dimensionsAttributes);
+					createTableStatement = PostgreSQLHandler
+							.getCreatePostgreSQLTableStatement(toTable,
+									dimensionsAttributes);
 				}
 			}
 
@@ -293,8 +243,8 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 					this.getClass().getName() + "_toPostgres_" + toTable);
 
 			executor = Executors.newFixedThreadPool(3);
-			ExportSciDB exportExecutor = new ExportSciDB(getConnectionFrom(),
-					arrays, scidbPipe, FileFormat.BIN_SCIDB, format);
+			ExportSciDB exportExecutor = new ExportSciDB(migrationInfo, arrays,
+					scidbPipe, FileFormat.BIN_SCIDB, format);
 			FutureTask<Object> exportTask = new FutureTask<Object>(
 					exportExecutor);
 			executor.submit(exportTask);
@@ -315,7 +265,7 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 			createTableStatement = null;
 			String copyToCommand = PostgreSQLHandler.getLoadBinCommand(toTable);
 			LoadPostgres loadExecutor = new LoadPostgres(connectionPostgres,
-					copyToCommand, postgresPipe);
+					migrationInfo, copyToCommand, postgresPipe);
 			FutureTask<Object> loadTask = new FutureTask<Object>(loadExecutor);
 			executor.submit(loadTask);
 
@@ -351,8 +301,8 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 							+ " Result of transformation: "
 							+ transformationMessage,
 					false);
-		} catch (SQLException | UnsupportedTypeException | InterruptedException
-				| ExecutionException | IOException | NoTargetArrayException
+		} catch (SQLException | InterruptedException | ExecutionException
+				| IOException | NoTargetArrayException
 				| RunShellException exception) {
 			MigrationException migrationException = handleException(
 					migrationInfo, exception,
@@ -422,7 +372,7 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 		} catch (MigrationException ex) {
 			return ex;
 		}
-		return new MigrationException(msg);
+		return new MigrationException(msg, exception);
 	}
 
 	/**
@@ -452,8 +402,9 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 				arrays = new SciDBArrays(
 						new SciDBArray(fromArray, false, false), null);
 				if (createStatement == null) {
-					createStatement = getCreatePostgreSQLTableStatement(toTable,
-							attributes);
+					createStatement = PostgreSQLHandler
+							.getCreatePostgreSQLTableStatement(toTable,
+									attributes);
 				}
 			} else { /* multidimensional array - MigrationType.FULL */
 				arrays = new SciDBArrays(null,
@@ -462,8 +413,9 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 						.getDimensionsOrdered();
 				dimensionsAttributes.addAll(attributes);
 				if (createStatement == null) {
-					createStatement = getCreatePostgreSQLTableStatement(toTable,
-							dimensionsAttributes);
+					createStatement = PostgreSQLHandler
+							.getCreatePostgreSQLTableStatement(toTable,
+									dimensionsAttributes);
 				}
 			}
 			executor = Executors.newFixedThreadPool(2);
@@ -479,9 +431,9 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 					toTable, createStatement);
 
 			List<Callable<Object>> tasks = new ArrayList<>();
-			tasks.add(new ExportSciDB(getConnectionFrom(), arrays, scidbPipe,
+			tasks.add(new ExportSciDB(migrationInfo, arrays, scidbPipe,
 					FileFormat.CSV, null));
-			tasks.add(new LoadPostgres(connectionPostgres,
+			tasks.add(new LoadPostgres(connectionPostgres, migrationInfo,
 					PostgreSQLHandler.getLoadCsvCommand(
 							migrationInfo.getObjectTo(),
 							SciDBHandler.getGeneralCsvExportDelimiter(),
@@ -504,60 +456,13 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 					startTimeMigration, endTimeMigration);
 			String message = "Migration was executed correctly.";
 			return summary(migrationResult, migrationInfo, message);
-		} catch (SQLException | NoTargetArrayException
-				| UnsupportedTypeException | InterruptedException
-				| ExecutionException | RunShellException | IOException ex) {
+		} catch (Exception ex) {
 			log.error(errMessage + " " + ex.getMessage()
 					+ StackTrace.getFullStackTrace(ex));
 			throw new MigrationException(errMessage + " " + ex.getMessage());
 		} finally {
 			cleanResources();
 		}
-	}
-
-	/**
-	 * Create a flat array in SciDB from the meta info about the
-	 * multidimensional array.
-	 * 
-	 * We migrate data from SciDB so we use the connection from.
-	 * 
-	 * @throws SQLException
-	 * @throws UnsupportedTypeException
-	 * @throws MigrationException
-	 */
-	private static void createFlatArrayFromMultiDimArray(
-			MigrationInfo migrationInfo, String flatArrayName)
-					throws SQLException, UnsupportedTypeException,
-					MigrationException {
-		StringBuilder createArrayStringBuf = new StringBuilder();
-		createArrayStringBuf.append("create array " + flatArrayName + " <");
-		List<AttributeMetaData> scidbColumnsOrdered = new ArrayList<AttributeMetaData>();
-		SciDBArrayMetaData scidbArrayMetaData = SciDBHandler
-				.getArrayMetaData(migrationInfo);
-		scidbColumnsOrdered.addAll(scidbArrayMetaData.getDimensionsOrdered());
-		scidbColumnsOrdered.addAll(scidbArrayMetaData.getAttributesOrdered());
-		for (AttributeMetaData column : scidbColumnsOrdered) {
-			String attributeName = column.getName();
-			String attributeType = column.getDataType();
-			String attributeNULL = "";
-			if (column.isNullable()) {
-				attributeNULL = " NULL";
-			}
-			createArrayStringBuf.append(
-					attributeName + ":" + attributeType + attributeNULL + ",");
-		}
-
-		/* delete the last comma "," */
-		createArrayStringBuf.deleteCharAt(createArrayStringBuf.length() - 1);
-		/* " r_regionkey:int64,r_name:string,r_comment:string> );" */
-		/* this is by default 1 mln cells in a chunk */
-		createArrayStringBuf
-				.append("> [_flat_dimension_=0:*," + Long.MAX_VALUE + ",0]");
-		SciDBHandler handler = new SciDBHandler(
-				migrationInfo.getConnectionFrom());
-		handler.executeStatement(createArrayStringBuf.toString());
-		handler.commit();
-		handler.close();
 	}
 
 	/*
@@ -631,7 +536,7 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 				 * This node is only a coordinator/dispatcher for the migration.
 				 */
 				result = FollowRemoteNodes.execute(Arrays.asList(hostnameFrom),
-						sendNetworkRequest(hostnameFrom));
+						new RemoteRequest(this, hostnameFrom));
 				log.debug("Result of migration: " + result);
 			} else {
 				/*

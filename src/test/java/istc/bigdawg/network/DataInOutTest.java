@@ -73,7 +73,7 @@ public class DataInOutTest {
 	}
 
 	/* The separate thread to receive the data. */
-	private Callable<Object> getReceiverCallable(String fullPathIn) {
+	public static Callable<Object> getReceiverCallable(String fullPathIn) {
 		return () -> {
 			try {
 				logger.debug("Start receiving data.");
@@ -88,8 +88,8 @@ public class DataInOutTest {
 	}
 
 	/** The separate thread to send the data. */
-	private Callable<Object> getSenderCallable(String fullPathOut, int sleepSeconds,
-			String host) {
+	public static Callable<Object> getSenderCallable(String fullPathOut,
+			int sleepSeconds, String host) {
 		return () -> {
 			try {
 				/* the main part of the test */
@@ -116,8 +116,8 @@ public class DataInOutTest {
 	 * 
 	 * @throws IOException
 	 */
-	private Callable<Object> getWriteBytesCallable(String filePath, long bytesWritten)
-			throws IOException {
+	public static Callable<Object> getWriteBytesCallable(String filePath,
+			long bytesWritten) throws IOException {
 		return () -> {
 			try {
 				logger.debug(
@@ -149,7 +149,8 @@ public class DataInOutTest {
 	 * @return number of bytes read
 	 * @throws IOException
 	 */
-	private Callable<Object> getReadBytesCallable(String filePath) throws IOException {
+	public static Callable<Object> getReadBytesCallable(String filePath)
+			throws IOException {
 		return () -> {
 			try {
 				logger.debug(
@@ -182,8 +183,7 @@ public class DataInOutTest {
 	 * @throws InterruptedException
 	 */
 	@Test
-	public void testBasicDataInOutTest()
-			throws IOException, InterruptedException, ExecutionException {
+	public void testBasicDataInOutTest() throws Exception {
 
 		String dataSend = "dummy data";
 
@@ -231,8 +231,7 @@ public class DataInOutTest {
 
 	@Test
 	/** Test transfer of big data via network. */
-	public void testBigDataTransfer() throws IOException, InterruptedException,
-			RunShellException, ExecutionException {
+	public void testBigDataTransfer() throws Exception {
 		String pipeOut = Pipe.INSTANCE.createAndGetFullName("data_out");
 		String pipeIn = Pipe.INSTANCE.createAndGetFullName("data_in");
 

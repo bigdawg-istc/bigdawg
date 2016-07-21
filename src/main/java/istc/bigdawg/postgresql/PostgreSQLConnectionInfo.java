@@ -24,17 +24,17 @@ import istc.bigdawg.query.ConnectionInfo;
 public class PostgreSQLConnectionInfo implements ConnectionInfo {
 
 	/**
-	 * 
+	 * Determines if a de-serialized file is compatible with this class.
 	 */
-	private static final long serialVersionUID = 1L;
+	private static final long serialVersionUID = 6771445537229188287L;
+
+	private static final String CLEANUP_STRING = "DROP TABLE %s;";
 
 	private String host;
 	private String port;
 	private String database;
 	private String user;
 	private String password;
-
-	private static final String CLEANUP_STRING = "DROP TABLE %s;";
 
 	public PostgreSQLConnectionInfo(String host, String port, String database,
 			String user, String password) {
@@ -51,8 +51,7 @@ public class PostgreSQLConnectionInfo implements ConnectionInfo {
 	}
 
 	public static String getUrl(String host, String port, String database) {
-		return "jdbc:postgresql://" + host + ":" + port + "/"
-				+ database;
+		return "jdbc:postgresql://" + host + ":" + port + "/" + database;
 	}
 
 	public void setHost(String host) {

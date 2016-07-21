@@ -10,11 +10,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.List;
 
 import org.apache.log4j.Logger;
 import org.postgresql.copy.CopyManager;
 import org.postgresql.core.BaseConnection;
 
+import istc.bigdawg.database.AttributeMetaData;
+import istc.bigdawg.database.ObjectMetaData;
 import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
@@ -35,23 +38,28 @@ import istc.bigdawg.utils.StackTrace;
  */
 public class LoadPostgres implements Load {
 
+	/**
+	 * Determines if a de-serialized file is compatible with this class.
+	 */
+	private static final long serialVersionUID = -6799357596677422798L;
+
 	/** For internal logging in the class. */
 	private static Logger log = Logger.getLogger(LoadPostgres.class);
 
 	/** Internally we keep the handler for the copy manager for PostgreSQL. */
-	private CopyManager cpTo;
+	private transient CopyManager cpTo;
 
 	/** SQL statement which represents the copy command. */
 	private String copyToString;
 
 	/** Input stream from which the data for loading can be read. */
-	private InputStream input;
+	private transient InputStream input;
 
 	/** The name of the input file from where the data should be loaded. */
 	private String inputFile;
 
 	/** Connection (physical not info) to an instance of PostgreSQL. */
-	private Connection connection;
+	private transient Connection connection;
 
 	/**
 	 * Information about migration: connection information from/to database,
@@ -60,7 +68,7 @@ public class LoadPostgres implements Load {
 	private MigrationInfo migrationInfo;
 
 	/** Handler to the database from which the data is exported. */
-	private DBHandler fromHandler;
+	private transient DBHandler fromHandler;
 
 	/** File format in which data should be loaded to PostgreSQL. */
 	private FileFormat fileFormat;
@@ -105,9 +113,11 @@ public class LoadPostgres implements Load {
 	 *             was trying to connect to the database (for example, wrong
 	 *             encoding).
 	 */
-	public LoadPostgres(Connection connection, final String copyToString,
-			final String inputFile) throws SQLException {
+	public LoadPostgres(Connection connection, MigrationInfo migrationInfo,
+			final String copyToString, final String inputFile)
+					throws SQLException {
 		this.connection = connection;
+		this.migrationInfo = migrationInfo;
 		this.copyToString = copyToString;
 		this.inputFile = inputFile;
 		this.input = null;
@@ -132,9 +142,10 @@ public class LoadPostgres implements Load {
 	 *             was trying to connect to the database (for example, wrong
 	 *             encoding).
 	 */
-	public LoadPostgres(Connection connection, final String copyToString,
-			InputStream input) throws SQLException {
+	public LoadPostgres(Connection connection, MigrationInfo migrationInfo,
+			final String copyToString, InputStream input) throws SQLException {
 		this.connection = connection;
+		this.migrationInfo = migrationInfo;
 		this.copyToString = copyToString;
 		this.input = input;
 		this.cpTo = new CopyManager((BaseConnection) connection);
@@ -161,7 +172,7 @@ public class LoadPostgres implements Load {
 			if (fileFormat == FileFormat.CSV) {
 				copyToString = PostgreSQLHandler.getLoadCsvCommand(
 						migrationInfo.getObjectTo(),
-						FileFormat.getCsvDelimiter(),
+						fromHandler.getCsvExportDelimiter(),
 						FileFormat.getQuoteCharacter(),
 						fromHandler.isCsvExportHeader());
 			} else if (fileFormat == FileFormat.BIN_POSTGRES) {
@@ -173,33 +184,73 @@ public class LoadPostgres implements Load {
 				throw new IllegalArgumentException(msg);
 			}
 		}
+		if (connection == null) {
+			try {
+				connection = PostgreSQLHandler
+						.getConnection(migrationInfo.getConnectionTo());
+				connection.setAutoCommit(false);
+			} catch (SQLException e) {
+				throw new MigrationException(e.getMessage(), e);
+			}
+		}
+		if (cpTo == null) {
+			try {
+				this.cpTo = new CopyManager((BaseConnection) connection);
+			} catch (SQLException e) {
+				throw new MigrationException(e.getMessage(), e);
+			}
+		}
+		try {
+			/**
+			 * If the target table does not exists. We pass the connection
+			 * because the newly created table might not have been committed.
+			 */
+			if (!new PostgreSQLHandler(migrationInfo.getConnectionTo(),
+					connection).existsTable(migrationInfo.getObjectTo())) {
+				ObjectMetaData objectFromMetaData = null;
+				try {
+					objectFromMetaData = fromHandler
+							.getObjectMetaData(migrationInfo.getObjectFrom());
+				} catch (Exception e) {
+					throw new MigrationException(e.getMessage(), e);
+				}
+				List<AttributeMetaData> attributes = objectFromMetaData
+						.getAllAttributesOrdered();
+				String createTableStatement = PostgreSQLHandler
+						.getCreatePostgreSQLTableStatement(
+								migrationInfo.getObjectTo(), attributes);
+				PostgreSQLHandler.createTargetTableSchema(connection,
+						migrationInfo.getObjectTo(), createTableStatement);
+			}
+		} catch (SQLException e) {
+			new MigrationException(e.getMessage(), e);
+		}
 	}
 
 	/**
 	 * Copy data to PostgreSQL.
 	 * 
-	 * @return number of loaded rows or -2 if there was any error during
-	 *         execution
+	 * @return number of loaded rows
+	 * 
 	 * @throws Exception
 	 */
 	public Long call() throws Exception {
 		log.debug("Start loading data to PostgreSQL "
 				+ this.getClass().getCanonicalName() + ". ");
 		lazyInitialization();
-		Long countLoadedRows = 0L;
 		try {
 			log.debug("copy to string: " + copyToString);
-			countLoadedRows = cpTo.copyIn(copyToString, input);
+			Long countLoadedRows = cpTo.copyIn(copyToString, input);
 			input.close();
 			connection.commit();
+			return countLoadedRows;
 		} catch (IOException | SQLException e) {
 			String msg = e.getMessage()
 					+ " Problem with thread for PostgreSQL copy manager "
-					+ "while copying data to PostgreSQL.";
+					+ "while copying data to PostgreSQL. ";
 			log.error(msg + " " + StackTrace.getFullStackTrace(e), e);
 			throw e;
 		}
-		return countLoadedRows;
 	}
 
 	/*
@@ -258,5 +309,39 @@ public class LoadPostgres implements Load {
 	@Override
 	public DBHandler getHandler() {
 		return new PostgreSQLHandler(migrationInfo.getConnectionTo());
+	}
+
+	@Override
+	/**
+	 * Close the connection to PostgreSQL.
+	 */
+	public void close() throws Exception {
+		try {
+			if (connection != null && !connection.isClosed()) {
+				try {
+					connection.commit();
+				} catch (SQLException e) {
+					log.info("Could not commit any sql statement for "
+							+ "the connection in LoadPostgres. "
+							+ e.getMessage());
+				}
+				connection.close();
+				connection = null;
+			}
+		} catch (SQLException e) {
+			String message = "Could not close the connection to SciDB. "
+					+ e.getMessage();
+			throw new SQLException(message, e);
+		}
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see istc.bigdawg.migration.Load#getMigrationInfo()
+	 */
+	@Override
+	public MigrationInfo getMigrationInfo() {
+		return migrationInfo;
 	}
 }

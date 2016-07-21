@@ -11,17 +11,19 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.concurrent.Callable;
 
 import org.apache.log4j.Logger;
 
 import istc.bigdawg.utils.StackTrace;
+import scala.annotation.meta.param;
 
 /**
- * @author Adam Dziedzic
+ * The server which receives (large amount of) data from network.
  * 
- *         The server which receives (large amount of) data from network.
+ * @author Adam Dziedzic
  */
-public class DataIn {
+public class DataIn implements Callable<Object> {
 
 	/*
 	 * log
@@ -32,7 +34,42 @@ public class DataIn {
 	private final static int CHUNK_SIZE = 64 * 1024;
 
 	/**
-	 * Receive data to this machine from a remote host.
+	 * @see param port in {@link #receive(int, String)}
+	 */
+	private int port;
+
+	/**
+	 * @see param filePath in {@link #receive(int, String)}
+	 */
+	private String filePath;
+
+	/**
+	 * Create an instance of DataIn which will take data from network and relay
+	 * it to the filePath.
+	 * 
+	 * @param port
+	 * @see parameter port in {@link #receive(int, String)}
+	 * @param filePath
+	 * @see parameter filePath in {@link #receive(int, String)}
+	 */
+	public DataIn(int port, String filePath) {
+		this.port = port;
+		this.filePath = filePath;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.util.concurrent.Callable#call()
+	 */
+	@Override
+	public Object call() throws Exception {
+		return receive(port, filePath);
+	}
+
+	/**
+	 * Receive data to this machine from a remote host. Write the data received
+	 * from network to the filePath.
 	 * 
 	 * @param port
 	 *            The number of port on which we should listen to get the data
@@ -40,10 +77,11 @@ public class DataIn {
 	 * @param filePath
 	 *            Full path to the file/pipe to which we should write the data
 	 *            received via network.
+	 * @return Total number of bytes received from the network.
 	 * @throws IOException
 	 *             The socket for data transfer was not opened.
 	 */
-	public static void receive(final int port, final String filePath)
+	public static Long receive(final int port, final String filePath)
 			throws IOException {
 		ServerSocket serverSocket = null;
 		Socket socket = null;
@@ -62,7 +100,8 @@ public class DataIn {
 			try {
 				socket = serverSocket.accept();
 			} catch (IOException e) {
-				String message = "Socket problem when waiting for an incoming connection. ";
+				String message = "Socket problem when waiting for"
+						+ " an incoming connection. ";
 				logger.error(message + e.getMessage()
 						+ StackTrace.getFullStackTrace(e), e);
 				throw e;
@@ -70,7 +109,8 @@ public class DataIn {
 			try {
 				in = socket.getInputStream();
 			} catch (IOException e) {
-				String message = "Could not get input stream from the socket to read the data from the network. ";
+				String message = "Could not get input stream from the socket "
+						+ "to read the data from the network. ";
 				logger.error(message + e.getMessage()
 						+ StackTrace.getFullStackTrace(e), e);
 				throw e;
@@ -89,9 +129,12 @@ public class DataIn {
 			 * should be written to the stream.
 			 */
 			int count;
+			/* Total number of bytes received from network. */
+			long totalCount = 0L;
 			try {
 				while ((count = in.read(bytes)) > 0) {
 					out.write(bytes, 0, count);
+					totalCount += count;
 				}
 			} catch (IOException e) {
 				String message = "Problem when reading data from the "
@@ -100,6 +143,9 @@ public class DataIn {
 						+ StackTrace.getFullStackTrace(e), e);
 				throw e;
 			}
+			logger.debug("All data were received from network (port: " + port
+					+ " ; data relaied to filePath:" + filePath + ")");
+			return totalCount;
 		} finally {
 			if (out != null) {
 				try {
@@ -141,5 +187,13 @@ public class DataIn {
 				}
 			}
 		}
+	}
+
+	/* (non-Javadoc)
+	 * @see java.lang.Object#toString()
+	 */
+	@Override
+	public String toString() {
+		return "DataIn [port=" + port + ", filePath=" + filePath + "]";
 	}
 }

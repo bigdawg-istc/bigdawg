@@ -60,7 +60,7 @@ public class TestMigrationUtils {
 		String createTable = "CREATE TABLE " + tableName
 				+ " (r_regionkey BIGINT NOT NULL," + "r_name CHAR(25) NOT NULL,"
 				+ "r_comment VARCHAR(152) NOT NULL)";
-		log.debug("Create table statement: " + createTable);
+		/* log.debug("Create table statement: " + createTable); */
 		return createTable;
 	}
 
@@ -76,7 +76,7 @@ public class TestMigrationUtils {
 		String flatArray = "create array " + flatArrayName
 				+ "<r_regionkey:int64,r_name:string,r_comment:string> "
 				+ "[i=0:*,1000000,0]";
-		log.debug("Create flat array statement: " + flatArray);
+		/* log.debug("Create flat array statement: " + flatArray); */
 		return flatArray;
 	}
 

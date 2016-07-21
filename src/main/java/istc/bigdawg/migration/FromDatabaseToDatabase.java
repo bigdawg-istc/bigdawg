@@ -10,7 +10,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -20,9 +19,9 @@ import org.apache.zookeeper.KeeperException;
 
 import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.exceptions.NetworkException;
-import istc.bigdawg.exceptions.RunShellException;
 import istc.bigdawg.monitoring.Monitor;
-import istc.bigdawg.network.NetworkOut;
+import istc.bigdawg.network.DataOut;
+import istc.bigdawg.network.RemoteRequest;
 import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.utils.Pipe;
@@ -32,14 +31,22 @@ import istc.bigdawg.zookeeper.FollowRemoteNodes;
 import istc.bigdawg.zookeeper.ZooKeeperUtils;
 
 /**
- * @author Adam Dziedzic
  * 
- *         Base class for migrations of data between databases.
+ * Base class for migrations of data between databases.
+ * 
+ * @author Adam Dziedzic
  */
 public class FromDatabaseToDatabase implements MigrationNetworkRequest {
 
 	/* log */
 	private static Logger log = Logger.getLogger(FromDatabaseToDatabase.class);
+
+	/** Port number for data migration (for big data transfer). */
+	private static final int DATA_PORT;
+
+	static {
+		DATA_PORT = BigDawgConfigProperties.INSTANCE.getNetworkDataPort();
+	}
 
 	/** The handler for data export from a database. */
 	private Export exporter;
@@ -81,7 +88,7 @@ public class FromDatabaseToDatabase implements MigrationNetworkRequest {
 	 * @param exporter
 	 * @param loader
 	 */
-	protected FromDatabaseToDatabase(Export exporter, Load loader) {
+	FromDatabaseToDatabase(Export exporter, Load loader) {
 		this.exporter = exporter;
 		this.loader = loader;
 	}
@@ -257,8 +264,76 @@ public class FromDatabaseToDatabase implements MigrationNetworkRequest {
 	 */
 	public MigrationResult executeMigrationLocalRemote()
 			throws MigrationException {
-		// TODO: migration via network
-		return null;
+		try {
+			String pipe = Pipe.INSTANCE
+					.createAndGetFullName(this.getClass().getName() + "_from_"
+							+ migrationInfo.getObjectFrom() + "_to_"
+							+ migrationInfo.getObjectTo());
+							/* pipe = "/tmp/adam"; */
+
+			/* Add the pipe to be removed when cleaning the resources. */
+			pipes.add(pipe);
+
+			/* Set output for exporter and input for DataOut. */
+			exporter.setExportTo(pipe);
+			DataOut dataOut = new DataOut(
+					migrationInfo.getConnectionTo().getHost(), DATA_PORT, pipe);
+
+			/* set migration information for exporter and loader */
+			exporter.setMigrationInfo(migrationInfo);
+			loader.setMigrationInfo(migrationInfo);
+
+			/*
+			 * Set the handler from for the loader - this is to get meta
+			 * information from the source object/array/table. To the same for
+			 * exporter.
+			 */
+			exporter.setHandlerTo(loader.getHandler());
+			loader.setHandlerFrom(exporter.getHandler());
+
+			LoadRemote loadRemote = new LoadRemote(DATA_PORT, exporter, loader);
+
+			/* activate the tasks */
+			List<Callable<Object>> tasks = new ArrayList<>();
+			tasks.add(new RemoteRequest(loadRemote,
+					migrationInfo.getConnectionTo().getHost()));
+			tasks.add(exporter);
+			tasks.add(dataOut);
+			executorService = Executors.newFixedThreadPool(tasks.size());
+			long startTimeMigration = System.currentTimeMillis();
+			List<Future<Object>> results = TaskExecutor.execute(executorService,
+					tasks);
+			Object remoteLoadResult = results.get(0).get();
+			if (remoteLoadResult instanceof Exception) {
+				Exception ex = (Exception) remoteLoadResult;
+				throw new MigrationException("Remote data loading failed.", ex);
+			}
+			LoadRemoteResult loadingResult = (LoadRemoteResult) remoteLoadResult;
+			Long countLoadedElements = loadingResult.getCountLoadedElements();
+			Long countExtractedElements = (Long) results.get(1).get();
+			Long bytesSent = (Long) results.get(2).get();
+			Long bytesReceived = (Long) loadingResult.getBytesReceived();
+			if (!bytesSent.equals(bytesReceived)) {
+				throw new MigrationException(
+						"Problem with data transfer via network. "
+								+ "Not all bytes sent (" + bytesSent
+								+ ") were received on the remote host "
+								+ "(bytes received: " + bytesReceived + ").");
+			}
+			long endTimeMigration = System.currentTimeMillis();
+			long durationMsec = endTimeMigration - startTimeMigration;
+			MigrationResult migrationResult = new MigrationResult(
+					countExtractedElements, countLoadedElements, durationMsec,
+					startTimeMigration, endTimeMigration);
+			String message = "Migration was executed correctly.";
+			return summary(migrationResult, migrationInfo, message);
+		} catch (Exception e) {
+			String msg = e.getMessage();
+			log.error(msg + " " + StackTrace.getFullStackTrace(e), e);
+			throw new MigrationException(msg, e);
+		} finally {
+			cleanResources();
+		}
 	}
 
 	/**
@@ -277,7 +352,7 @@ public class FromDatabaseToDatabase implements MigrationNetworkRequest {
 					.createAndGetFullName(this.getClass().getName() + "_from_"
 							+ migrationInfo.getObjectFrom() + "_to_"
 							+ migrationInfo.getObjectTo());
-			/* pipe = "/tmp/adam"; */
+							/* pipe = "/tmp/adam"; */
 
 			/* add the pipe to be removed when cleaning the resources */
 			pipes.add(pipe);
@@ -314,8 +389,7 @@ public class FromDatabaseToDatabase implements MigrationNetworkRequest {
 					startTimeMigration, endTimeMigration);
 			String message = "Migration was executed correctly.";
 			return summary(migrationResult, migrationInfo, message);
-		} catch (InterruptedException | ExecutionException | SQLException
-				| RunShellException | IOException e) {
+		} catch (Exception e) {
 			String msg = e.getMessage();
 			log.error(msg + " " + StackTrace.getFullStackTrace(e), e);
 			throw new MigrationException(msg, e);
@@ -336,8 +410,12 @@ public class FromDatabaseToDatabase implements MigrationNetworkRequest {
 						+ e.getMessage() + StackTrace.getFullStackTrace(e), e);
 			}
 		}
-		if (executorService != null && !executorService.isShutdown()) {
-			executorService.shutdownNow();
+		pipes.clear();
+		if (executorService != null) {
+			if (!executorService.isShutdown()) {
+				executorService.shutdownNow();
+			}
+			executorService = null;
 		}
 	}
 
@@ -377,30 +455,6 @@ public class FromDatabaseToDatabase implements MigrationNetworkRequest {
 				+ migrationResult.getCountLoadedElements() + ",durationMsec,"
 				+ migrationResult.getDurationMsec());
 		return migrationResult;
-	}
-
-	/**
-	 * This Callable object should be executed in a separate thread. The
-	 * intention is that we wait for the response in a thread but in another
-	 * thread we control if the remote machine to which we sent the request is
-	 * up and running. If the remote machine fails, then we stop the migration
-	 * process.
-	 * 
-	 * @param hostname
-	 *            to which node/machine we should send the network request
-	 * @return result (response) in reply to the request
-	 * 
-	 *         This is accessible only in this package.
-	 */
-	public Callable<Object> sendNetworkRequest(String hostname) {
-		return () -> {
-			try {
-				Object result = NetworkOut.send(this, hostname);
-				return result;
-			} catch (NetworkException e) {
-				return e;
-			}
-		};
 	}
 
 	/**
@@ -463,7 +517,7 @@ public class FromDatabaseToDatabase implements MigrationNetworkRequest {
 				 * this node is only a coordinator/dispatcher for the migration
 				 */
 				result = FollowRemoteNodes.execute(Arrays.asList(hostnameFrom),
-						sendNetworkRequest(hostnameFrom));
+						new RemoteRequest(this, hostnameFrom));
 			} else {
 				/*
 				 * This machine contains the source database for the migration.
@@ -480,6 +534,11 @@ public class FromDatabaseToDatabase implements MigrationNetworkRequest {
 				if (!isThisMyIpAddress(InetAddress.getByName(hostnameTo))) {
 					log.debug("Migration from a local: " + thisHostname
 							+ " to remote database: " + hostnameTo);
+					/*
+					 * The execution through the FollowRemoteNodes will ensure
+					 * that we track the remote node if it is alive and can
+					 * carry out the remaining tasks.
+					 */
 					result = FollowRemoteNodes.execute(
 							Arrays.asList(hostnameTo),
 							executeMigrationFromLocalToRemote());

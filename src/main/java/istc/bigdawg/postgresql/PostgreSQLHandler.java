@@ -24,6 +24,8 @@ import istc.bigdawg.BDConstants.Shim;
 import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.database.AttributeMetaData;
 import istc.bigdawg.exceptions.BigDawgCatalogException;
+import istc.bigdawg.exceptions.NoTargetArrayException;
+import istc.bigdawg.exceptions.UnsupportedTypeException;
 import istc.bigdawg.executor.ExecutorEngine;
 import istc.bigdawg.executor.IslandQueryResult;
 import istc.bigdawg.executor.JdbcQueryResult;
@@ -41,12 +43,21 @@ import istc.bigdawg.utils.StackTrace;
  */
 public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 
+	/**
+	 * log
+	 */
 	private static Logger log = Logger
 			.getLogger(PostgreSQLHandler.class.getName());
+
 	private static int defaultSchemaServerDBID = BigDawgConfigProperties.INSTANCE
 			.getPostgresSchemaServerDBID();
-	private Connection con = null;
+
+	/**
+	 * Information about connection to PostgreSQL (e.g. IP, port, etc.).
+	 */
 	private PostgreSQLConnectionInfo conInfo = null;
+
+	private Connection con = null;
 	private Statement st = null;
 	private PreparedStatement preparedSt = null;
 	private ResultSet rs = null;
@@ -60,6 +71,26 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 	 */
 	public PostgreSQLHandler(PostgreSQLConnectionInfo conInfo) {
 		this.conInfo = conInfo;
+	}
+
+	/**
+	 * Initialize the instance with connection information and physical
+	 * connection.
+	 * 
+	 * @param conInfo
+	 *            Information aobut the connection to PostgreSQL (host,
+	 *            password, user, etc.).
+	 * 
+	 * @param connection
+	 *            Physical connection to PostgreSQL.
+	 */
+	public PostgreSQLHandler(ConnectionInfo conInfo, Connection connection) {
+		this(conInfo);
+		if (connection == null) {
+			throw new IllegalArgumentException(
+					"Physicall connection to PostgreSQL has to be not null.");
+		}
+		this.con = connection;
 	}
 
 	public PostgreSQLHandler(ConnectionInfo conInfo) {
@@ -930,6 +961,42 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 	}
 
 	/**
+	 * Check if a given table exists in the PostgreSQL database.
+	 * 
+	 * @param connectionInfo
+	 *            The information about the connection to PostgreSQL.
+	 * @param table
+	 *            The name of the table in PostgreSQL.
+	 * @return true if table exists, false otherwise.
+	 * @throws SQLException
+	 *             Problem with a connection to PostgreSQL.
+	 */
+	public static boolean existsTable(ConnectionInfo connectionInfo,
+			String table) throws SQLException {
+		PostgreSQLHandler handler = new PostgreSQLHandler(connectionInfo);
+		boolean existsTable = handler
+				.existsTable(new PostgreSQLSchemaTableName(table));
+		try {
+			handler.close();
+		} catch (Exception ex) {
+			log.error("Could not close PostgreSQLHandler. " + ex.getMessage());
+		}
+		return existsTable;
+	}
+
+	/**
+	 * @see #existsTable(PostgreSQLSchemaTableName)
+	 * 
+	 * @param table
+	 *            The name of the table.
+	 * @return true if the table exists, false if there is no such table
+	 * @throws SQLException
+	 */
+	public boolean existsTable(String table) throws SQLException {
+		return existsTable(new PostgreSQLSchemaTableName(table));
+	}
+
+	/**
 	 * Check if a table exists.
 	 * 
 	 * @param conInfo
@@ -941,42 +1008,48 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 	 */
 	public boolean existsTable(PostgreSQLSchemaTableName schemaTable)
 			throws SQLException {
+		/* Get the connection if it has not been established. */
+		this.getConnection();
 		try {
-			this.getConnection();
-			try {
-				preparedSt = con.prepareStatement(
-						"select exists (select 1 from information_schema.tables where table_schema=? and table_name=?)");
-				preparedSt.setString(1, schemaTable.getSchemaName());
-				preparedSt.setString(2, schemaTable.getTableName());
-			} catch (SQLException e) {
-				e.printStackTrace();
-				log.error(e.getMessage()
-						+ " PostgreSQLHandler, the query preparation for checking if a table exists failed.");
-				throw e;
-			}
-			try {
-				ResultSet rs = preparedSt.executeQuery();
-				rs.next();
-				return rs.getBoolean(1);
-			} catch (SQLException e) {
-				e.printStackTrace();
-				log.error(
-						e.getMessage() + " Failed to check if a table exists.");
-				throw e;
-			}
-		} finally {
-			try {
-				cleanPostgreSQLResources();
-			} catch (SQLException ex) {
-				ex.printStackTrace();
-				log.error(
-						ex.getMessage() + "; conInfo: " + conInfo.toString()
-								+ "; schemaName: " + schemaTable.getSchemaName()
-								+ " tableName: " + schemaTable.getTableName(),
-						ex);
-				throw ex;
-			}
+			preparedSt = con.prepareStatement(
+					"select exists (select 1 from information_schema.tables where table_schema=? and table_name=?)");
+			preparedSt.setString(1, schemaTable.getSchemaName());
+			preparedSt.setString(2, schemaTable.getTableName());
+		} catch (SQLException e) {
+			e.printStackTrace();
+			log.error(e.getMessage()
+					+ " PostgreSQLHandler, the query preparation for checking if a table exists failed.");
+			throw e;
 		}
+		try {
+			ResultSet rs = preparedSt.executeQuery();
+			rs.next();
+			return rs.getBoolean(1);
+		} catch (SQLException e) {
+			e.printStackTrace();
+			log.error(e.getMessage() + " Failed to check if a table exists.");
+			throw e;
+		}
+	}
+
+	/**
+	 * @return Create statement for a table in PostgreSQL from a given list of
+	 *         attributes.
+	 */
+	public static String getCreatePostgreSQLTableStatement(String toTable,
+			List<AttributeMetaData> attributes) {
+		StringBuilder createTableStringBuf = new StringBuilder();
+		createTableStringBuf
+				.append("create table if not exists " + toTable + " (");
+		for (AttributeMetaData attribute : attributes) {
+			String attrName = attribute.getName();
+			String sqlType = attribute.getSqlDataType();
+			createTableStringBuf.append(attrName + " " + sqlType + ",");
+		}
+		createTableStringBuf.deleteCharAt(createTableStringBuf.length() - 1);
+		createTableStringBuf.append(")");
+		log.debug("create table command: " + createTableStringBuf.toString());
+		return createTableStringBuf.toString();
 	}
 
 	/*

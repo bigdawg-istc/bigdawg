@@ -30,10 +30,11 @@ import istc.bigdawg.database.AttributeMetaData;
 import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.exceptions.NoTargetArrayException;
 import istc.bigdawg.exceptions.SciDBException;
+import istc.bigdawg.exceptions.UnsupportedTypeException;
 import istc.bigdawg.executor.ExecutorEngine;
 import istc.bigdawg.executor.JdbcQueryResult;
 import istc.bigdawg.executor.QueryResult;
-import istc.bigdawg.migration.MigrationInfo;
+import istc.bigdawg.migration.datatypes.FromSciDBToSQLTypes;
 import istc.bigdawg.postgresql.PostgreSQLTableMetaData;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.query.DBHandler;
@@ -55,6 +56,9 @@ import istc.bigdawg.utils.Tuple.Tuple2;
  */
 public class SciDBHandler implements DBHandler, ExecutorEngine {
 
+	/**
+	 * log
+	 */
 	private static Logger log = Logger.getLogger(SciDBHandler.class.getName());
 
 	/**
@@ -284,14 +288,14 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 		Connection connection = getConnection();
 		Statement statement = null;
 		try {
-			
+
 			statement = connection.createStatement();
 			IStatementWrapper statementWrapper = statement
 					.unwrap(IStatementWrapper.class);
 			if (lang == Lang.AFL) {
 				statementWrapper.setAfl(true);
 			}
-			
+			log.debug("Statement to be executed in SciDB: " + stringStatement);
 			statement.execute(stringStatement);
 			connection.commit();
 		} catch (SQLException ex) {
@@ -586,6 +590,8 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 			while (!resultSetDimensions.isAfterLast()) {
 				AttributeMetaData columnMetaData = new AttributeMetaData(
 						resultSetDimensions.getString(2),
+						FromSciDBToSQLTypes.getSQLTypeFromSciDBType(
+								resultSetDimensions.getString(9)),
 						resultSetDimensions.getString(9), false, true);
 				dimensionsMap.put(resultSetDimensions.getString(2),
 						columnMetaData);
@@ -598,6 +604,8 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 			while (!resultSetAttributes.isAfterLast()) {
 				AttributeMetaData columnMetaData = new AttributeMetaData(
 						resultSetAttributes.getString(2),
+						FromSciDBToSQLTypes.getSQLTypeFromSciDBType(
+								resultSetAttributes.getString(3)),
 						resultSetAttributes.getString(3),
 						resultSetAttributes.getBoolean(4), false);
 				attributesMap.put(resultSetAttributes.getString(2),
@@ -608,9 +616,9 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 			return new SciDBArrayMetaData(arrayName, dimensionsMap,
 					dimensionsOrdered, attributesMap, attributesOrdered);
 		} catch (SQLException ex) {
-			if (ex.getMessage()
-					.contains("Array '" + arrayName + "' does not exist.")) {
-				throw new NoTargetArrayException();
+			String message = "Array '" + arrayName + "' does not exist.";
+			if (ex.getMessage().contains(message)) {
+				throw new NoTargetArrayException(message, ex);
 			}
 			ex.printStackTrace();
 			log.error("Error while trying to get meta data from SciDB. "
@@ -655,7 +663,7 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 	 */
 	private static void closeStatement(Statement statement)
 			throws SQLException {
-		if (statement != null) {
+		if (statement != null && !statement.isClosed()) {
 			try {
 				statement.close();
 			} catch (SQLException ex) {
@@ -678,7 +686,7 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 	 */
 	private static void closeConnection(Connection connection)
 			throws SQLException {
-		if (connection != null) {
+		if (connection != null && !connection.isClosed()) {
 			try {
 				connection.close();
 			} catch (SQLException ex) {
@@ -706,15 +714,15 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 		for (AttributeMetaData columnMetaData : columnsMetaData) {
 			// check the character type
 			char newType = 'N'; // N - numeric by default
-			if ((columnMetaData.getDataType().equals("character")
-					|| columnMetaData.getDataType().equals("char"))
+			if ((columnMetaData.getSqlDataType().equals("character")
+					|| columnMetaData.getSqlDataType().equals("char"))
 					&& columnMetaData.getCharacterMaximumLength() == 1) {
 				newType = 'C';
-			} else if (columnMetaData.getDataType().contains("varchar")
-					|| columnMetaData.getDataType().contains("character")
-					|| columnMetaData.getDataType()
+			} else if (columnMetaData.getSqlDataType().contains("varchar")
+					|| columnMetaData.getSqlDataType().contains("character")
+					|| columnMetaData.getSqlDataType()
 							.contains("character varying")
-					|| columnMetaData.getDataType().equals("text")) {
+					|| columnMetaData.getSqlDataType().equals("text")) {
 				// for "string" type
 				newType = 'S';
 			}
@@ -805,30 +813,82 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 	/**
 	 * Set the meta data for the SciDB array.
 	 * 
-	 * @throws MigrationException
+	 * @param connectionInfo
+	 *            Information about the connection to SciDB.
+	 * @param array
+	 *            The name of the array in SciDB.
+	 * 
+	 * @throws Exception
+	 *             When could not connect to SciDB or extraction of the meta
+	 *             data from SciDB failed.
 	 */
 	public static SciDBArrayMetaData getArrayMetaData(
-			MigrationInfo migrationInfo) throws MigrationException {
-		String fromArray = migrationInfo.getObjectFrom();
+			ConnectionInfo connectionInfo, String array) throws Exception {
+		String debugMessage = " ConnectionInfo: " + connectionInfo.toString()
+				+ " Array: " + array;
 		try {
-			SciDBHandler handler = new SciDBHandler(
-					migrationInfo.getConnectionFrom());
+			SciDBHandler handler = new SciDBHandler(connectionInfo);
 			try {
-				return handler.getObjectMetaData(fromArray);
+				return handler.getObjectMetaData(array);
 			} catch (Exception e) {
 				String message = e.getMessage()
-						+ " Extraction of meta data on the array: " + fromArray
-						+ " in SciDB failed. ";
+						+ " Extraction of meta data on the array: " + array
+						+ " in SciDB failed. " + debugMessage;
 				log.error(message + StackTrace.getFullStackTrace(e));
-				throw new MigrationException(message, e);
+				throw new Exception(message, e);
 			} finally {
 				handler.close();
 			}
 		} catch (SQLException scidbException) {
 			String msg = scidbException.getMessage()
-					+ " Could not connect to SciDB. ";
-			throw new MigrationException(msg, scidbException);
+					+ " Could not connect to SciDB. " + debugMessage;
+			throw new Exception(msg, scidbException);
 		}
+	}
+
+	/**
+	 * Create a flat array in SciDB from the meta info about the
+	 * multidimensional array.
+	 * 
+	 * We migrate data from SciDB so we use the connection from.
+	 * 
+	 * @throws Exception
+	 * 
+	 * @throws UnsupportedTypeException
+	 * @throws MigrationException
+	 */
+	public static void createFlatArrayFromMultiDimArray(
+			ConnectionInfo connectionFrom, String array, String flatArrayName)
+					throws Exception {
+		StringBuilder createArrayStringBuf = new StringBuilder();
+		createArrayStringBuf.append("create array " + flatArrayName + " <");
+		List<AttributeMetaData> scidbColumnsOrdered = new ArrayList<AttributeMetaData>();
+		SciDBArrayMetaData scidbArrayMetaData;
+		scidbArrayMetaData = SciDBHandler.getArrayMetaData(connectionFrom,
+				array);
+		scidbColumnsOrdered.addAll(scidbArrayMetaData.getDimensionsOrdered());
+		scidbColumnsOrdered.addAll(scidbArrayMetaData.getAttributesOrdered());
+		for (AttributeMetaData column : scidbColumnsOrdered) {
+			String attributeName = column.getName();
+			String attributeType = column.getSqlDataType();
+			String attributeNULL = "";
+			if (column.isNullable()) {
+				attributeNULL = " NULL";
+			}
+			createArrayStringBuf.append(
+					attributeName + ":" + attributeType + attributeNULL + ",");
+		}
+
+		/* delete the last comma "," */
+		createArrayStringBuf.deleteCharAt(createArrayStringBuf.length() - 1);
+		/* " r_regionkey:int64,r_name:string,r_comment:string> );" */
+		/* this is by default 1 mln cells in a chunk */
+		createArrayStringBuf
+				.append("> [_flat_dimension_=0:*," + Long.MAX_VALUE + ",0]");
+		SciDBHandler handler = new SciDBHandler(connectionFrom);
+		handler.executeStatement(createArrayStringBuf.toString());
+		handler.commit();
+		handler.close();
 	}
 
 	// /**

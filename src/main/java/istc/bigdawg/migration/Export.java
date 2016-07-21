@@ -3,6 +3,7 @@
  */
 package istc.bigdawg.migration;
 
+import java.io.Serializable;
 import java.util.concurrent.Callable;
 
 import istc.bigdawg.exceptions.MigrationException;
@@ -13,7 +14,7 @@ import istc.bigdawg.query.DBHandler;
  * 
  *         Export interface - export data from a database.
  */
-public interface Export extends Callable<Object>, DataPump {
+public interface Export extends Callable<Object>, DataPump, Serializable {
 
 	/**
 	 * Export data from a database.

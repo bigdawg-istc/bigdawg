@@ -4,15 +4,15 @@
 package istc.bigdawg.migration;
 
 /**
+ * File formats for the migration; current types:
+ * 
+ * CSV - a typical comma separated values (a form of text format).
+ * 
+ * BIN_POSTGRES - binary format supported by PostgreSQL.
+ * 
+ * BIN_SCIDB - binary format supported by SciDB.
+ * 
  * @author Adam Dziedzic
- * 
- *         File formats for the migration; current types:
- * 
- *         CSV - a typical comma separated values (a form of text format).
- * 
- *         BIN_POSTGRES - binary format supported by PostgreSQL.
- * 
- *         BIN_SCIDB - binary format supported by SciDB.
  */
 public enum FileFormat {
 	CSV, BIN_POSTGRES, BIN_SCIDB, SCIDB_TEXT_FORMAT;
@@ -26,7 +26,7 @@ public enum FileFormat {
 		/* Vertical pipe '|' as the default CSV delimiter. */
 		return "|";
 	}
-	
+
 	/**
 	 * 
 	 * @return quote character " or ' (single or double quote)
@@ -34,5 +34,5 @@ public enum FileFormat {
 	public static String getQuoteCharacter() {
 		return "'";
 	}
-	
+
 }

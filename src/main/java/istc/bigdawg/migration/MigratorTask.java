@@ -26,12 +26,17 @@ public class MigratorTask {
 		executor = Executors.newFixedThreadPool(numberOfThreads);
 		executor.submit(new NetworkIn());
 	}
-	
+
 	/**
 	 * Close the migrator task.
 	 */
 	public void close() {
-		executor.shutdownNow();
+		if (executor != null) {
+			if (!executor.isShutdown()) {
+				executor.shutdownNow();
+			}
+		}
+		executor = null;
 	}
 
 }
