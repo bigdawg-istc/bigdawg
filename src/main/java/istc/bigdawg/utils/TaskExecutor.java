@@ -64,12 +64,15 @@ public class TaskExecutor {
 				if (resultCompletedTask != null
 						&& resultCompletedTask.isDone()) {
 					Object result = resultCompletedTask.get();
-					if (result instanceof Exception) {
-						Exception ex = (Exception) result;
-						throw ex;
+					if (result != null) {
+						if (result instanceof Exception) {
+							Exception ex = (Exception) result;
+							throw ex;
+						}
+						log.debug("result of execution ("
+								+ resultCompletedTask.toString() + "): "
+								+ result);
 					}
-					log.debug("result of execution ("
-							+ resultCompletedTask.toString() + "): " + result);
 				}
 			} catch (ExecutionException e) {
 				log.error(e.getMessage() + " StackTrace: "

@@ -265,7 +265,7 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 			createTableStatement = null;
 			String copyToCommand = PostgreSQLHandler.getLoadBinCommand(toTable);
 			LoadPostgres loadExecutor = new LoadPostgres(connectionPostgres,
-					copyToCommand, postgresPipe);
+					migrationInfo, copyToCommand, postgresPipe);
 			FutureTask<Object> loadTask = new FutureTask<Object>(loadExecutor);
 			executor.submit(loadTask);
 
@@ -433,7 +433,7 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 			List<Callable<Object>> tasks = new ArrayList<>();
 			tasks.add(new ExportSciDB(migrationInfo, arrays, scidbPipe,
 					FileFormat.CSV, null));
-			tasks.add(new LoadPostgres(connectionPostgres,
+			tasks.add(new LoadPostgres(connectionPostgres, migrationInfo,
 					PostgreSQLHandler.getLoadCsvCommand(
 							migrationInfo.getObjectTo(),
 							SciDBHandler.getGeneralCsvExportDelimiter(),

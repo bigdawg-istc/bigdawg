@@ -158,7 +158,7 @@ public class ExportSciDB implements Export {
 	 * @return
 	 * @throws SQLException
 	 */
-	public String call() throws MigrationException {
+	public Object call() throws MigrationException {
 		StringBuilder saveCommand = new StringBuilder();
 		String saveCommandFinal = null;
 		if (fileFormat == FileFormat.CSV) {
@@ -243,7 +243,12 @@ public class ExportSciDB implements Export {
 		}
 		MigrationUtils.removeArrays(migrationInfo.getConnectionFrom(),
 				"clean the intermediate arrays", intermediateArrays);
-		log.debug("Data successfuly exported from SciDB");
+		String message = "Data successfuly exported from SciDB";
+		log.debug(message);
+		/*
+		 * SciDB does not return the information how many elements were
+		 * exported.
+		 */
 		return null;
 	}
 

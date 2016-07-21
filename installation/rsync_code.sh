@@ -1,5 +1,7 @@
+cwd=$(pwd)
+cd ../
 for machine in madison francisco; do
-    rsync -avxP ../src/ adam@${machine}:/home/adam/bigdawgmiddle/src/
-    rsync -avxP ../pom.xml adam@${machine}:/home/adam/bigdawgmiddle/pom.xml
-    
+    for module in "src/" "pom.xml" "profiles/"; do
+	rsync -avxP ${module} adam@${machine}:/home/adam/bigdawgmiddle/${module}
+    done
 done
