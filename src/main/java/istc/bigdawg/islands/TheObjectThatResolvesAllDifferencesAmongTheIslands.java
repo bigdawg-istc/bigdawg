@@ -408,6 +408,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 			AFLQueryPlan arrayQueryPlan = AFLPlanParser.extractDirect((SciDBHandler)dbSchemaHandler, queryString);
 			root = arrayQueryPlan.getRootNode();
 			objs.addAll(ArraySignatureBuilder.sig2(queryString));
+			break;
 		case CAST:
 			break;
 		case DOCUMENT:
@@ -420,6 +421,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 			SQLQueryPlan relQueryPlan = SQLPlanParser.extractDirectFromPostgreSQL((PostgreSQLHandler)dbSchemaHandler, queryString);
 			root = relQueryPlan.getRootNode();
 			objs.addAll(RelationalSignatureBuilder.sig2(queryString));
+			break;
 		case STREAM:
 			throw new BigDawgException("STREAM island does not support signature; generateOperatorTreesAndAddDataSetObjectsSignature");
 		case TEXT:
