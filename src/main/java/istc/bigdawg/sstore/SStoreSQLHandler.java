@@ -103,6 +103,9 @@ public class SStoreSQLHandler implements DBHandler {
 	String url = conInfo.getUrl();
 	String user = conInfo.getUser();
 	String password = conInfo.getPassword();
+	Log.info("url: " + url);
+	Log.info("user: " + user);
+	Log.info("password" + password);
 	try {
 	    con = DriverManager.getConnection(url, user, password);
 	} catch (SQLException e) {
