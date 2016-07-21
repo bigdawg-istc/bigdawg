@@ -17,13 +17,13 @@ import java.util.stream.Collectors;
 import istc.bigdawg.accumulo.AccumuloHandler;
 import istc.bigdawg.catalog.Catalog;
 import istc.bigdawg.catalog.CatalogViewer;
-import istc.bigdawg.exceptions.AccumuloShellScriptException;
 import istc.bigdawg.exceptions.BigDawgCatalogException;
 import istc.bigdawg.exceptions.BigDawgException;
 import istc.bigdawg.exceptions.UnsupportedIslandException;
 import istc.bigdawg.executor.QueryResult;
 import istc.bigdawg.islands.IslandsAndCast.Scope;
 import istc.bigdawg.islands.Accumulo.AccumuloD4MParser;
+import istc.bigdawg.islands.SStore.SStoreQueryParser;
 import istc.bigdawg.islands.SciDB.AFLPlanParser;
 import istc.bigdawg.islands.SciDB.AFLQueryGenerator;
 import istc.bigdawg.islands.SciDB.AFLQueryPlan;
@@ -44,6 +44,8 @@ import istc.bigdawg.scidb.SciDBConnectionInfo;
 import istc.bigdawg.scidb.SciDBHandler;
 import istc.bigdawg.signature.builder.ArraySignatureBuilder;
 import istc.bigdawg.signature.builder.RelationalSignatureBuilder;
+import istc.bigdawg.sstore.SStoreSQLConnectionInfo;
+import istc.bigdawg.sstore.SStoreSQLHandler;
 import net.sf.jsqlparser.JSQLParserException;
 
 /**
@@ -63,6 +65,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	
 	public static final int  psqlSchemaHandlerDBID = BigDawgConfigProperties.INSTANCE.getPostgresSchemaServerDBID();
 	public static final int  scidbSchemaHandlerDBID = BigDawgConfigProperties.INSTANCE.getSciDBSchemaServerDBID();
+	public static final int  sstoreDBID = BigDawgConfigProperties.INSTANCE.getSStoreDBID();
 	
 	private static final Pattern predicatePattern = Pattern.compile("(?<=\\()([^\\(^\\)]+)(?=\\))");
 	
@@ -140,11 +143,9 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 				extraction = new SciDBConnectionInfo(rs2.getString("host"), rs2.getString("port"), rs2.getString("userid"), rs2.getString("password"), rs2.getString("bin_path"));
 		} else if (e.equals(Engine.SStore)) {
 			
-			
-			
-			throw new BigDawgCatalogException("Unimplemented function for SStore: getConnectionInfo");
-			
-			
+			rs2 = cc.execRet("select dbid, eid, host, port, db.name as dbname, userid, password from catalog.databases db join catalog.engines e on db.engine_id = e.eid where dbid = "+dbid);
+			if (rs2.next())
+				extraction = new SStoreSQLConnectionInfo(rs2.getString("host"), rs2.getString("port"),rs2.getString("dbname"), rs2.getString("userid"), rs2.getString("password"));
 			
 		} else 
 			throw new BigDawgCatalogException("This is not supposed to happen");
@@ -600,7 +601,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	
 	//// Operator free options
 	
-	public static QueryResult runOperatorFreeIslandQuery(CrossIslandNonOperatorNode node) throws BigDawgException, IOException, InterruptedException, AccumuloShellScriptException {
+	public static QueryResult runOperatorFreeIslandQuery(CrossIslandNonOperatorNode node) throws Exception {
 		
 		switch (node.sourceScope) {
 		
@@ -609,11 +610,14 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case KEYVALUE:
 			throw new UnsupportedIslandException(node.sourceScope, "runOperatorFreeIslandQuery");
 		case STREAM:
-			throw new BigDawgException("STREAM island is not ready to process query; runOperatorFreeIslandQuery");
+			
+			List<String> ssparsed = (new SStoreQueryParser()).parse(node.getQueryString());
+			return (new SStoreSQLHandler(sstoreDBID)).executePreparedStatement((new SStoreSQLHandler(sstoreDBID)).getConnection(), ssparsed);
+			
 		case TEXT:
-			List<String> parsed = (new AccumuloD4MParser()).parse(node.queryString);
-			System.out.printf("TEXT Island Accumulot query: %s; parsed arguments: %s\n", node.queryString, parsed);
-			return AccumuloHandler.executeAccumuloShellScript(parsed);
+			List<String> aparsed = (new AccumuloD4MParser()).parse(node.getQueryString());
+			System.out.printf("TEXT Island Accumulot query: %s; parsed arguments: %s\n", node.queryString, aparsed);
+			return AccumuloHandler.executeAccumuloShellScript(aparsed);
 //			throw new BigDawgException("TEXT Island is still under construction and you can't issue query to it yet; runOperatorFreeIslandQuery");
 		case RELATIONAL:
 		case ARRAY:

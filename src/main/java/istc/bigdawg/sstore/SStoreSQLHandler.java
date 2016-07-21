@@ -13,24 +13,23 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 
 import javax.ws.rs.core.Response;
 
-import jline.internal.Log;
-
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.voltdb.jdbc.JDBC4Connection;
 
 import istc.bigdawg.BDConstants.Shim;
 import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.database.ObjectMetaData;
+import istc.bigdawg.exceptions.BigDawgException;
+import istc.bigdawg.executor.QueryResult;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.query.DBHandler;
 import istc.bigdawg.query.QueryClient;
 import istc.bigdawg.utils.LogUtils;
 import istc.bigdawg.utils.StackTrace;
+import jline.internal.Log;
 
 public class SStoreSQLHandler implements DBHandler {
 
@@ -116,10 +115,11 @@ public class SStoreSQLHandler implements DBHandler {
 	return con;
     }
 
-    public class QueryResult {
+    public class SStoreQueryResult implements QueryResult {
 	private List<List<String>> rows;
 	private List<String> types;
 	private List<String> colNames;
+	private ConnectionInfo connInfo;
 
 	/**
 	 * @return the rows
@@ -147,11 +147,39 @@ public class SStoreSQLHandler implements DBHandler {
 	 * @param types
 	 * @param colNames
 	 */
-	public QueryResult(List<List<String>> rows, List<String> types, List<String> colNames) {
+	public SStoreQueryResult(List<List<String>> rows, List<String> types, List<String> colNames) {
 	    super();
 	    this.rows = rows;
 	    this.types = types;
 	    this.colNames = colNames;
+	    this.connInfo = null;
+	}
+	
+	public SStoreQueryResult(List<List<String>> rows, List<String> types, List<String> colNames, ConnectionInfo ci) {
+		this(rows,types,colNames);
+		this.connInfo = ci;
+	}
+
+	@Override
+	public String toPrettyString() {
+		StringBuilder sb = new StringBuilder();
+		
+		for (String s : colNames) sb.append(s).append('\t');
+		if (sb.length() > 0) sb.deleteCharAt(sb.length()-1);
+		
+		for (List<String> r : rows) {
+			for (String s : r) 
+				sb.append(s).append('\t');
+			if (sb.length() > 0) 
+				sb.deleteCharAt(sb.length()-1).append('\n');
+		}
+		
+		return sb.toString();
+	}
+
+	@Override
+	public ConnectionInfo getConnectionInfo() {
+		return this.connInfo;
 	}
 
     }
@@ -159,9 +187,9 @@ public class SStoreSQLHandler implements DBHandler {
     @Override
     public Response executeQuery(String queryString) {
 	long lStartTime = System.nanoTime();
-	QueryResult queryResult = null;
+	SStoreQueryResult queryResult = null;
 	try {
-	    queryResult = executeQuerySStoreSQL(queryString);
+	    queryResult = (SStoreQueryResult)executeQuerySStoreSQL(queryString);
 	} catch (SQLException e) {
 	    return Response.status(500)
 		    .entity("Problem with query execution in SSToreSQL: " + e.getMessage() + "; query: " + queryString)
@@ -276,7 +304,7 @@ public class SStoreSQLHandler implements DBHandler {
 	    List<String> colNames = getColumnNames(rsmd);
 	    List<String> types = getColumnTypes(rsmd);
 	    List<List<String>> rows = getRows(rs);
-	    return new QueryResult(rows, types, colNames);
+	    return new SStoreQueryResult(rows, types, colNames);
 	} catch (SQLException ex) {
 	    Logger lgr = Logger.getLogger(QueryClient.class.getName());
 	    // ex.printStackTrace();
@@ -424,6 +452,70 @@ public class SStoreSQLHandler implements DBHandler {
 	}
     }
 
+    public QueryResult executePreparedStatement(Connection connection, List<String> parameters) throws SQLException, BigDawgException{
+    	
+    	PreparedStatement statement = null;
+    	
+    	List<List<String>> rows = new ArrayList<>();
+    	List<String> types = new ArrayList<>();
+    	List<String> colNames = new ArrayList<>();
+    	
+    	String copyToString;
+		if (parameters.size() == 5)
+			copyToString = String.format("{call @%s(%s, %s, %s, %s)}", parameters.get(0), parameters.get(1), parameters.get(1), parameters.get(3), parameters.get(4));
+		else if (parameters.size() == 1)
+			copyToString = String.format("{call @%s}", parameters.get(0));
+		else
+			throw new BigDawgException("Invalid SStore prepared statement input sequence: "+parameters);
+    	
+    	
+    	try {
+    		statement = connection.prepareCall(copyToString);
+    		if (parameters.size() == 5) {
+        		statement.setDouble(1, Double.parseDouble(parameters.get(1)));
+        		statement.setDouble(2, Double.parseDouble(parameters.get(2)));
+        		statement.setDouble(3, Double.parseDouble(parameters.get(3)));
+        		statement.setDouble(4, Double.parseDouble(parameters.get(4)));
+    			
+    		} else if (parameters.size() == 1) ;
+			else
+				throw new BigDawgException("Invalid SStore prepared statement input sequence: "+parameters);
+    		
+    		ResultSet rs = statement.executeQuery();
+    		int colCount = 0;
+    		if (rs.next()) {
+    			colCount = rs.getMetaData().getColumnCount();
+    			rows.add(new ArrayList<>());
+    			for (int i = 1; i < colCount; i++) {
+    				rows.get(rows.size() - 1).add(rs.getObject(i).toString());
+    				colNames.add(rs.getMetaData().getColumnLabel(i));
+    				types.add(rs.getMetaData().getColumnTypeName(i));
+    			}
+    		}
+    		while (rs.next()) {
+    			rows.add(new ArrayList<>());
+    			for (int i = 1; i < colCount; i++)
+    				rows.get(rows.size() - 1).add(rs.getObject(i).toString()); 
+    		}
+    		
+    		rs.close();
+    		statement.close();
+    	} catch (SQLException ex) {
+    		ex.printStackTrace();
+    		// remove ' from the statement - otherwise it won't be inserted into
+    		// log table in Postgres
+    		log.error(ex.getMessage() + "; statement to be executed: " + LogUtils.replace(copyToString) + " "
+    				+ ex.getStackTrace(), ex);
+    		throw ex;
+    	} finally {
+    		if (statement != null) {
+    			statement.close();
+    		}
+    	}
+    	
+    	return new SStoreQueryResult(rows, types, colNames);
+    };
+    
     public static Long executePreparedStatement(Connection connection, String copyFromString, String tableName,
 	    String trim, String outputFile) throws SQLException {
 	
