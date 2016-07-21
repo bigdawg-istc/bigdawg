@@ -82,8 +82,7 @@ public enum BigDawgConfigProperties {
 		this.grizzlyIpAddress = prop.getProperty("main.grizzly.ipaddress");
 		this.grizzlyPort = prop.getProperty("main.grizzly.port");
 
-		this.postgresSchemaServerDBID = Integer
-				.parseInt(prop.getProperty("main.postgresql.dbid.schema"));
+		this.postgresSchemaServerDBID = Integer.parseInt(prop.getProperty("main.postgresql.dbid.schema"));
 		this.postgreSQLURL = prop.getProperty("main.postgresql.url");
 		this.postgreSQLUser = prop.getProperty("main.postgresql.user");
 		this.postgreSQLPassword = prop.getProperty("main.postgresql.password");
@@ -106,7 +105,7 @@ public enum BigDawgConfigProperties {
 		this.accumuloShellScript = prop
 				.getProperty("main.accumulo.shell.script");
 
-		this.sstoreDBID = Integer.parseInt(prop.getProperty("main.sstore.dbid"));
+		this.sstoreDBID = Integer.parseInt(prop.getProperty("main.sstore.dbid")); 
 		this.sStoreURL = prop.getProperty("main.sstore.alerturl");
 
 		this.myriaHost = prop.getProperty("main.myria.host");
