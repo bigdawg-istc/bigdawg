@@ -76,20 +76,19 @@ public class AccumuloD4MParser {
 			if (isQuoting) tempSB.append(token);
 			break;
 		case '\'':
-//			tempSB.append('^').append('^');
-			tempSB.append('\'');
+			tempSB.append('^').append('^');
 			isQuoting = (!isQuoting);
 			break;
 		case '(':
 			result.add(tempSB.toString());
 			tempSB = new StringBuilder();
-			tempSB.append('"');
+			tempSB.append('@');
 			tempSB.append(token);
 			isParenthesized = true;
 			break;
 		case ')':
 			tempSB.append(token);
-			tempSB.append('"');
+			tempSB.append('@');
 			isParenthesized = false;
 			break;
 		case ',':

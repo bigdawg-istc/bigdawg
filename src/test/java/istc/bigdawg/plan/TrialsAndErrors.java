@@ -51,7 +51,7 @@ public class TrialsAndErrors {
 	public void setUp() throws Exception {
 		CatalogInstance.INSTANCE.getCatalog();
 		
-//		setupQueryExplainer();
+		setupQueryExplainer();
 //		setupQueryBuilder();
 //		setupRegexTester();
 //		setupTreeWalker();
@@ -60,7 +60,7 @@ public class TrialsAndErrors {
 //		setupSchemaGenerator();
 //		setupMigrationTest();
 //		setupSciDBExecution();
-		setupParserTest();
+//		setupParserTest();
 	}
 	
 	public void setupQueryExplainer() {
@@ -112,21 +112,22 @@ public class TrialsAndErrors {
 //		System.out.println("Explainer -- Type query or \"quit\" to exit: ");
 //		Scanner scanner = new Scanner(System.in);
 //		String query = scanner.nextLine();
-		String query = "select * from region";
+		String query = "select * from region where r_comment is not null  and r_name is not null and r_regionkey >1";
 		boolean started = false;
 		while (!query.toLowerCase().equals("quit")) {
 			
 			SQLQueryPlan aqp = SQLPlanParser.extractDirectFromPostgreSQL(psqlh, query);
-			Select explainQuery = aqp.getStatement();
-			System.out.println(explainQuery + "\n");
-			OperatorVisitor gen = new SQLQueryGenerator();
+//			Select explainQuery = aqp.getStatement();
+//			System.out.println(explainQuery + "\n");
+			OperatorVisitor gen = new SQLQueryGenerator(); 
 			aqp.getRootNode().accept(gen);
 			System.out.println(gen.generateStatementString());
 			
-			if (!started) {
-				query = "select * from region";
-				started = true;
-			} else break;
+//			if (!started) {
+//				query = "select * from region";
+//				started = true;
+//			} else 
+				break;
 		}
 //		scanner.close();
 	}

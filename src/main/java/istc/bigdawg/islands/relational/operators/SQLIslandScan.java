@@ -46,9 +46,7 @@ public class SQLIslandScan extends SQLIslandOperator implements Scan {
 			
 			setFilterExpression(CCJSqlParserUtil.parseCondExpression(s));
 			SQLExpressionUtils.removeExcessiveParentheses(filterExpression);
-			
 			setHasFunctionInFilterExpression(SQLExpressionUtils.isFunctionPresentInCondExpression(filterExpression));
-			
 		}
 		
 		if (parameters.get("Index-Cond") != null) {

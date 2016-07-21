@@ -723,7 +723,7 @@ public class SQLQueryGenerator implements OperatorVisitor {
 			Expression fe = CCJSqlParserUtil.parseCondExpression(scanOp.getFilterExpression().toString());
 			
 			List<Column> cs = SQLExpressionUtils.getAttributes(fe);
-			List<String> ss = new ArrayList<>();
+			Set<String> ss = new HashSet<>();
 			for (Column c : cs)  ss.add(c.getTable().getName());
 			ss.remove(scanOp.getSrcTable());
 			if (scanOp.getTableAlias() != null) ss.remove(scanOp.getTableAlias());
