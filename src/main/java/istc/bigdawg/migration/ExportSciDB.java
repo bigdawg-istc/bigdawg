@@ -23,11 +23,16 @@ import istc.bigdawg.utils.SessionIdentifierGenerator;
 import istc.bigdawg.utils.StackTrace;
 
 /**
- * @author Adam Dziedzic
+ * Export data from SciDB.
  * 
- *         Feb 26, 2016 4:39:08 PM
+ * @author Adam Dziedzic
  */
 public class ExportSciDB implements Export {
+
+	/**
+	 * Determines if a de-serialized file is compatible with this class.
+	 */
+	private static final long serialVersionUID = -5120857056647396576L;
 
 	/* log */
 	private static Logger log = Logger.getLogger(LoadSciDB.class);
@@ -63,7 +68,7 @@ public class ExportSciDB implements Export {
 
 	/** Handler to the database to which we load the data. */
 	@SuppressWarnings("unused")
-	private DBHandler handlerTo;
+	private transient DBHandler handlerTo;
 
 	/*
 	 * These are the intermediate (additional) arrays that were created during

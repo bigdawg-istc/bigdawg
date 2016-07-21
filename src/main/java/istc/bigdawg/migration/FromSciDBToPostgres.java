@@ -32,6 +32,7 @@ import istc.bigdawg.exceptions.NetworkException;
 import istc.bigdawg.exceptions.NoTargetArrayException;
 import istc.bigdawg.exceptions.RunShellException;
 import istc.bigdawg.monitoring.Monitor;
+import istc.bigdawg.network.RemoteRequest;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.properties.BigDawgConfigProperties;
@@ -455,8 +456,7 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 					startTimeMigration, endTimeMigration);
 			String message = "Migration was executed correctly.";
 			return summary(migrationResult, migrationInfo, message);
-		} catch (SQLException | InterruptedException | ExecutionException
-				| RunShellException | IOException ex) {
+		} catch (Exception ex) {
 			log.error(errMessage + " " + ex.getMessage()
 					+ StackTrace.getFullStackTrace(ex));
 			throw new MigrationException(errMessage + " " + ex.getMessage());
@@ -536,7 +536,7 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 				 * This node is only a coordinator/dispatcher for the migration.
 				 */
 				result = FollowRemoteNodes.execute(Arrays.asList(hostnameFrom),
-						sendNetworkRequest(hostnameFrom));
+						new RemoteRequest(this, hostnameFrom));
 				log.debug("Result of migration: " + result);
 			} else {
 				/*

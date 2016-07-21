@@ -56,6 +56,9 @@ import istc.bigdawg.utils.Tuple.Tuple2;
  */
 public class SciDBHandler implements DBHandler, ExecutorEngine {
 
+	/**
+	 * log
+	 */
 	private static Logger log = Logger.getLogger(SciDBHandler.class.getName());
 
 	/**
@@ -292,7 +295,11 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 			if (lang == Lang.AFL) {
 				statementWrapper.setAfl(true);
 			}
+<<<<<<< HEAD
 			
+=======
+			log.debug("Statement to be executed in SciDB: " + stringStatement);
+>>>>>>> remote migration through the generic interfaces for PostgreSQL and SciDB
 			statement.execute(stringStatement);
 			connection.commit();
 		} catch (SQLException ex) {
@@ -660,7 +667,7 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 	 */
 	private static void closeStatement(Statement statement)
 			throws SQLException {
-		if (statement != null) {
+		if (statement != null && !statement.isClosed()) {
 			try {
 				statement.close();
 			} catch (SQLException ex) {
@@ -683,7 +690,7 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 	 */
 	private static void closeConnection(Connection connection)
 			throws SQLException {
-		if (connection != null) {
+		if (connection != null && !connection.isClosed()) {
 			try {
 				connection.close();
 			} catch (SQLException ex) {

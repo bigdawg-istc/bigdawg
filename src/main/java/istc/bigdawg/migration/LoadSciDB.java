@@ -4,8 +4,8 @@
 package istc.bigdawg.migration;
 
 import java.io.FileNotFoundException;
+import java.io.Serializable;
 import java.sql.SQLException;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.Logger;
 
@@ -19,13 +19,11 @@ import istc.bigdawg.scidb.SciDBHandler;
 import istc.bigdawg.utils.StackTrace;
 
 /**
+ * Load data to the SciDB database.
+ * 
  * @author Adam Dziedzic
- * 
- *         Feb 26, 2016 4:39:08 PM
- * 
- *         Load data to the SciDB database.
  */
-public class LoadSciDB implements Load {
+public class LoadSciDB implements Load, Serializable {
 
 	/* log */
 	private static Logger log = Logger.getLogger(LoadSciDB.class);
@@ -54,7 +52,7 @@ public class LoadSciDB implements Load {
 	private FileFormat fileFormat;
 
 	/** DBHandler from which we migrate the data. */
-	private DBHandler handlerFrom;
+	private transient DBHandler handlerFrom;
 
 	/**
 	 * Declare only the file format in which the data should be loaded. The

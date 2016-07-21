@@ -11,18 +11,15 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import org.apache.log4j.Logger;
-import org.apache.zookeeper.Watcher.Event.EventType;
 
 import istc.bigdawg.utils.LogUtils;
 import istc.bigdawg.utils.StackTrace;
 
 /**
- * @author Adam Dziedzic
+ * Execution is carried out on more than one node. If one of the nodes in the
+ * execution fails, then the execution is stopped and an exception is returned.
  * 
- *         Execution is carried out on more than one node. If one of the nodes
- *         in the execution fails, then the execution is stopped and an
- *         exception is returned.
- *
+ * @author Adam Dziedzic
  */
 public class FollowRemoteNodes {
 
@@ -46,21 +43,21 @@ public class FollowRemoteNodes {
 		logger.debug(
 				"Execution of data migration and following the remote nodes: "
 						+ ipAddresses.toString());
-		List<Callable<Object>> callables = new ArrayList<>();
+		List<Callable<Object>> allCallables = new ArrayList<>();
+		allCallables.add(callable);
 		// ZooKeeperHandler zooHandler = new ZooKeeperHandler(
 		// ZooKeeperInstance.INSTANCE.getZooKeeper());
 		// for (String ipAddress : ipAddresses) {
-		// callables.add(zooHandler.callableWatch(
+		// allCallables.add(zooHandler.callableWatch(
 		// ZooKeeperUtils.getZnodePathNodes(ipAddress),
 		// EventType.NodeDeleted));
 		// }
-		callables.add(callable);
 		logger.debug("The number of threads in the executor: "
 				+ "number of nodes to follow + the migration execution.");
 		ExecutorService executor = Executors
-				.newFixedThreadPool(/* ipAddresses.size() + */ 1);
+				.newFixedThreadPool(allCallables.size());
 		try {
-			Object result = executor.invokeAny(callables);
+			Object result = executor.invokeAny(allCallables);
 			executor.shutdownNow();
 			return result;
 		} catch (InterruptedException | ExecutionException e) {

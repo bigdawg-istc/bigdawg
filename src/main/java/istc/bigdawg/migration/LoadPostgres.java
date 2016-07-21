@@ -38,23 +38,28 @@ import istc.bigdawg.utils.StackTrace;
  */
 public class LoadPostgres implements Load {
 
+	/**
+	 * Determines if a de-serialized file is compatible with this class.
+	 */
+	private static final long serialVersionUID = -6799357596677422798L;
+
 	/** For internal logging in the class. */
 	private static Logger log = Logger.getLogger(LoadPostgres.class);
 
 	/** Internally we keep the handler for the copy manager for PostgreSQL. */
-	private CopyManager cpTo;
+	private transient CopyManager cpTo;
 
 	/** SQL statement which represents the copy command. */
 	private String copyToString;
 
 	/** Input stream from which the data for loading can be read. */
-	private InputStream input;
+	private transient InputStream input;
 
 	/** The name of the input file from where the data should be loaded. */
 	private String inputFile;
 
 	/** Connection (physical not info) to an instance of PostgreSQL. */
-	private Connection connection;
+	private transient Connection connection;
 
 	/**
 	 * Information about migration: connection information from/to database,
@@ -63,7 +68,7 @@ public class LoadPostgres implements Load {
 	private MigrationInfo migrationInfo;
 
 	/** Handler to the database from which the data is exported. */
-	private DBHandler fromHandler;
+	private transient DBHandler fromHandler;
 
 	/** File format in which data should be loaded to PostgreSQL. */
 	private FileFormat fileFormat;
@@ -322,5 +327,13 @@ public class LoadPostgres implements Load {
 					+ e.getMessage();
 			throw new SQLException(message, e);
 		}
+	}
+
+	/* (non-Javadoc)
+	 * @see istc.bigdawg.migration.Load#getMigrationInfo()
+	 */
+	@Override
+	public MigrationInfo getMigrationInfo() {
+		return migrationInfo;
 	}
 }

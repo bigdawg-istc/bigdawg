@@ -43,12 +43,21 @@ import istc.bigdawg.utils.StackTrace;
  */
 public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 
+	/**
+	 * log
+	 */
 	private static Logger log = Logger
 			.getLogger(PostgreSQLHandler.class.getName());
+
 	private static int defaultSchemaServerDBID = BigDawgConfigProperties.INSTANCE
 			.getPostgresSchemaServerDBID();
-	private Connection con = null;
+
+	/**
+	 * Information about connection to PostgreSQL (e.g. IP, port, etc.).
+	 */
 	private PostgreSQLConnectionInfo conInfo = null;
+
+	private Connection con = null;
 	private Statement st = null;
 	private PreparedStatement preparedSt = null;
 	private ResultSet rs = null;
