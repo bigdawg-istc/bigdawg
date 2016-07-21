@@ -590,12 +590,12 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	 * @throws BigDawgException
 	 */
 	public static String getRelationalIslandCreateTableString(String tableName) throws SQLException, BigDawgException  {
-		int dbid;
-
-		if (tableName.toLowerCase().startsWith("bigdawgtag_")) dbid = psqlSchemaHandlerDBID;
-		else dbid = CatalogViewer.getDbsOfObject(tableName, sqlEngineTokenList).get(0);
+//		int dbid;
+//
+//		if (tableName.toLowerCase().startsWith("bigdawgtag_")) dbid = psqlSchemaHandlerDBID;
+//		else dbid = CatalogViewer.getDbsOfObject(tableName, sqlEngineTokenList).get(0);
 		
-		Connection con = PostgreSQLHandler.getConnection((PostgreSQLConnectionInfo)CatalogViewer.getConnectionInfo(dbid));
+		Connection con = PostgreSQLHandler.getConnection((PostgreSQLConnectionInfo)CatalogViewer.getConnectionInfo(psqlSchemaHandlerDBID));
 		return PostgreSQLHandler.getCreateTable(con, tableName).replaceAll("\\scharacter[\\(]", " char(");
 	}
 	
