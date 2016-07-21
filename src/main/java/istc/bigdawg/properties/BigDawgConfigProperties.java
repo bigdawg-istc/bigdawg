@@ -42,6 +42,7 @@ public enum BigDawgConfigProperties {
 	private String scidbTestPassword;
 	private String scidbTestBinPath;
 
+	private int sstoreDBID;
 	private String sStoreURL;
 	private String accumuloShellScript;
 
@@ -105,6 +106,7 @@ public enum BigDawgConfigProperties {
 		this.accumuloShellScript = prop
 				.getProperty("main.accumulo.shell.script");
 
+		this.sstoreDBID = Integer.parseInt(prop.getProperty("main.sstore.dbid"));
 		this.sStoreURL = prop.getProperty("main.sstore.alerturl");
 
 		this.myriaHost = prop.getProperty("main.myria.host");
@@ -365,6 +367,13 @@ public enum BigDawgConfigProperties {
 	 */
 	public String getScidbTestBinPath() {
 		return scidbTestBinPath;
+	}
+	
+	/**
+	 * @return DBID of the only sstore associated with this instance.  
+	 */
+	public Integer getSStoreDBID() {
+		return sstoreDBID;
 	}
 
 	/**
