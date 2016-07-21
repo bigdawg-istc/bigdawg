@@ -23,11 +23,16 @@ import istc.bigdawg.utils.SessionIdentifierGenerator;
 import istc.bigdawg.utils.StackTrace;
 
 /**
- * @author Adam Dziedzic
+ * Export data from SciDB.
  * 
- *         Feb 26, 2016 4:39:08 PM
+ * @author Adam Dziedzic
  */
 public class ExportSciDB implements Export {
+
+	/**
+	 * Determines if a de-serialized file is compatible with this class.
+	 */
+	private static final long serialVersionUID = -5120857056647396576L;
 
 	/* log */
 	private static Logger log = Logger.getLogger(LoadSciDB.class);
@@ -63,7 +68,18 @@ public class ExportSciDB implements Export {
 
 	/** Handler to the database to which we load the data. */
 	@SuppressWarnings("unused")
-	private DBHandler handlerTo;
+	private transient DBHandler handlerTo;
+
+	/*
+	 * These are the intermediate (additional) arrays that were created during
+	 * migration of data between PostgreSQL and SciDB. If something fails on the
+	 * way or at the end of the migration process, the arrays should be removed.
+	 * 
+	 * On the other hand, the tables in PostgreSQL are created within a
+	 * transaction so if something goes wrong in PostgreSQL, then the database
+	 * itself takes care of cleaning the created but not loaded tables.
+	 */
+	private Set<String> intermediateArrays = new HashSet<>();
 
 	/*
 	 * These are the intermediate (additional) arrays that were created during
@@ -153,7 +169,7 @@ public class ExportSciDB implements Export {
 	 * @return
 	 * @throws SQLException
 	 */
-	public String call() throws MigrationException {
+	public Object call() throws MigrationException {
 		StringBuilder saveCommand = new StringBuilder();
 		String saveCommandFinal = null;
 		if (fileFormat == FileFormat.CSV) {
@@ -238,7 +254,12 @@ public class ExportSciDB implements Export {
 		}
 		MigrationUtils.removeArrays(migrationInfo.getConnectionFrom(),
 				"clean the intermediate arrays", intermediateArrays);
-		log.debug("Data successfuly exported from SciDB");
+		String message = "Data successfuly exported from SciDB";
+		log.debug(message);
+		/*
+		 * SciDB does not return the information how many elements were
+		 * exported.
+		 */
 		return null;
 	}
 

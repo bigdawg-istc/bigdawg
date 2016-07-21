@@ -184,7 +184,8 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 			List<Callable<Object>> tasks = new ArrayList<>();
 			tasks.add(new ExportPostgres(conFrom, copyFromCommand, output,
 					new PostgreSQLHandler(getConnectionTo())));
-			tasks.add(new LoadPostgres(conTo, copyToCommand, input));
+			tasks.add(new LoadPostgres(conTo, migrationInfo, copyToCommand,
+					input));
 			executor = Executors.newFixedThreadPool(tasks.size());
 			List<Future<Object>> results = TaskExecutor.execute(executor,
 					tasks);

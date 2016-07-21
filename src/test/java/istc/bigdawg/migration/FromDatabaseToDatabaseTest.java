@@ -92,13 +92,83 @@ public class FromDatabaseToDatabaseTest {
 		// make sure that the target array does not exist
 		PostgreSQLHandler handler = new PostgreSQLHandler(conPostgres);
 		handler.dropTableIfExists(table);
-		MigrationResult migrationResult = migrator.migrate(migrationInfo);
+		MigrationResult migrationResult = migrator.executeMigrationLocally();
 		logger.debug("Migration result: " + migrationResult);
 		long postgresCountTuples = Utils.getPostgreSQLCountTuples(conPostgres,
 				table);
 		assertEquals(numberOfCellsSciDB, postgresCountTuples);
 		// drop the created table
 		handler.dropTableIfExists(table);
+	}
+
+	@Test
+	public void testMigrationLocalRemoteFromPostgresToSciDB()
+			throws MigrationException, SQLException, IOException {
+		MigratorTask migratorTask = null;
+		try {
+			migratorTask = new MigratorTask();
+			MigrationInfo migrationInfo = new MigrationInfo(conPostgres, table,
+					conSciDB, array);
+			logger.debug("Migration info: " + migrationInfo.toString());
+			FromDatabaseToDatabase migrator = new FromDatabaseToDatabase(
+					ExportPostgres.ofFormat(FileFormat.CSV),
+					LoadSciDB.ofFormat(FileFormat.CSV), migrationInfo);
+			/*
+			 * Prepare the test data in a table in PostgreSQL and in an array in
+			 * SciDB.
+			 */
+			this.numberOfRowsPostgres = TestMigrationUtils
+					.loadDataToPostgresRegionTPCH(conPostgres, table);
+
+			TestMigrationUtils.prepareFlatTargetArray(conSciDB, array);
+
+			MigrationResult result = migrator.executeMigrationLocalRemote();
+			logger.debug("Result of data migration: " + result.toString());
+
+			TestMigrationUtils.checkNumberOfElementsSciDB(conSciDB, array,
+					numberOfRowsPostgres);
+		} finally {
+			// drop the created array
+			SciDBHandler.dropArrayIfExists(conSciDB, array);
+			if (migratorTask != null) {
+				migratorTask.close();
+			}
+		}
+	}
+
+	@Test
+	public void testMigrationLocalRemoteFromSciDBToPostgres() throws Exception {
+		MigratorTask migratorTask = null;
+		try {
+			migratorTask = new MigratorTask();
+			MigrationInfo migrationInfo = new MigrationInfo(conSciDB, array,
+					conPostgres, table);
+			logger.debug("Migration info: " + migrationInfo.toString());
+			FromDatabaseToDatabase migrator = new FromDatabaseToDatabase(
+					ExportSciDB.ofFormat(FileFormat.CSV),
+					LoadPostgres.ofFormat(FileFormat.CSV), migrationInfo);
+
+			String flatArray = array + "_flat_";
+			numberOfCellsSciDB = TestMigrationUtils
+					.loadRegionDataToSciDB(conSciDB, flatArray, array);
+			// make sure that the target array does not exist
+			PostgreSQLHandler handler = new PostgreSQLHandler(conPostgres);
+			handler.dropTableIfExists(table);
+			handler.close();
+			MigrationResult result = migrator.executeMigrationLocalRemote();
+			logger.debug("Result of data migration: " + result.toString());
+			long postgresCountTuples = Utils
+					.getPostgreSQLCountTuples(conPostgres, table);
+			assertEquals(numberOfCellsSciDB, postgresCountTuples);
+			// drop the created table
+			handler = new PostgreSQLHandler(conPostgres);
+			handler.dropTableIfExists(table);
+			handler.close();
+		} finally {
+			if (migratorTask != null) {
+				migratorTask.close();
+			}
+		}
 	}
 
 	@After

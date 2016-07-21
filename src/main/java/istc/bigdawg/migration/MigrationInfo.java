@@ -9,7 +9,6 @@ import java.util.Optional;
 import istc.bigdawg.query.ConnectionInfo;
 
 /**
- * 
  * Information about the migration: meta data (connection, objects/tables/arrays
  * from/to which migrate the data, etc.)
  * 
@@ -18,9 +17,9 @@ import istc.bigdawg.query.ConnectionInfo;
 public class MigrationInfo implements Serializable {
 
 	/**
-	 * 
+	 * Determines if a de-serialized file is compatible with this class.
 	 */
-	private static final long serialVersionUID = 1L;
+	private static final long serialVersionUID = 8778004068551692964L;
 
 	/** The connection to the database from which we migrate the data. */
 	private ConnectionInfo connectionFrom;

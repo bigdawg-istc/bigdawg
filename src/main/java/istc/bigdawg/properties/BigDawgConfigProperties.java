@@ -51,6 +51,8 @@ public enum BigDawgConfigProperties {
 
 	private String networkMessagePort;
 	private int networkRequestTimeout;
+	private int networkDataPort;
+	private int networkRetryConnection;
 
 	private String migratorTempDir;
 	private String cmigratorDir;
@@ -126,6 +128,11 @@ public enum BigDawgConfigProperties {
 		this.networkMessagePort = prop.getProperty("main.network.message.port");
 		this.networkRequestTimeout = Integer
 				.valueOf(prop.getProperty("main.network.request.timeout"));
+		this.networkDataPort = Integer
+				.valueOf(prop.getProperty("main.network.data.port"));
+		this.networkRetryConnection = Integer
+				.valueOf(prop.getProperty("main.network.retry.connection"));
+
 		this.migratorTempDir = prop.getProperty("main.migrator.temp.dir");
 		this.cmigratorDir = prop.getProperty("main.cmigrator.dir");
 
@@ -386,6 +393,21 @@ public enum BigDawgConfigProperties {
 
 	public String getCmigratorDir() {
 		return cmigratorDir;
+	}
+
+	/**
+	 * @return the networkDataPort Get the port number through which a big data
+	 *         will be sent/received.
+	 */
+	public int getNetworkDataPort() {
+		return networkDataPort;
+	}
+
+	/**
+	 * @return the networkRetryConnection
+	 */
+	public int getNetworkRetryConnection() {
+		return networkRetryConnection;
 	}
 
 }

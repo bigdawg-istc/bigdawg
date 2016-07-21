@@ -17,6 +17,7 @@ import istc.bigdawg.exceptions.BigDawgException;
 import istc.bigdawg.islands.OperatorVisitor;
 import istc.bigdawg.islands.TheObjectThatResolvesAllDifferencesAmongTheIslands;
 import istc.bigdawg.islands.Accumulo.AccumuloD4MParser;
+import istc.bigdawg.islands.SStore.SStoreQueryParser;
 import istc.bigdawg.islands.SciDB.AFLPlanParser;
 import istc.bigdawg.islands.SciDB.AFLQueryGenerator;
 import istc.bigdawg.islands.SciDB.AFLQueryPlan;
@@ -51,7 +52,7 @@ public class TrialsAndErrors {
 	public void setUp() throws Exception {
 		CatalogInstance.INSTANCE.getCatalog();
 		
-		setupQueryExplainer();
+//		setupQueryExplainer();
 //		setupQueryBuilder();
 //		setupRegexTester();
 //		setupTreeWalker();
@@ -60,7 +61,7 @@ public class TrialsAndErrors {
 //		setupSchemaGenerator();
 //		setupMigrationTest();
 //		setupSciDBExecution();
-//		setupParserTest();
+		setupParserTest();
 	}
 	
 	public void setupQueryExplainer() {
@@ -112,7 +113,7 @@ public class TrialsAndErrors {
 //		System.out.println("Explainer -- Type query or \"quit\" to exit: ");
 //		Scanner scanner = new Scanner(System.in);
 //		String query = scanner.nextLine();
-		String query = "select * from region where r_comment is not null  and r_name is not null and r_regionkey >1";
+		String query = "SELECT s.bodc_station, s.longitude, s.latitude, s.bot_depth, count(m.bodc_station) AS sample_count FROM sampledata.station_info AS s, sampledata.main AS m WHERE s.bodc_station = m.bodc_station GROUP BY s.bodc_station";
 		boolean started = false;
 		while (!query.toLowerCase().equals("quit")) {
 			
@@ -334,9 +335,9 @@ public class TrialsAndErrors {
 	public void testParserTest() throws BigDawgException {
 		if ( !runParserTest) return;
 			
-		String input = "12.31.357.12, foo('a b ', : ), file";
+		String input = "ExtractionRemote, 0.4, 110, 10, 1.010";
 		
-		(new AccumuloD4MParser()).parse(input);
+		(new SStoreQueryParser()).parse(input);
 			
 			
 	}

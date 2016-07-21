@@ -4,9 +4,13 @@
 package istc.bigdawg.migration;
 
 import java.io.BufferedOutputStream;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutput;
+import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -15,27 +19,35 @@ import org.apache.log4j.Logger;
 import org.postgresql.copy.CopyManager;
 import org.postgresql.core.BaseConnection;
 
+import istc.bigdawg.LoggerSetup;
 import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.query.DBHandler;
+import istc.bigdawg.scidb.SciDBHandler;
 import istc.bigdawg.utils.StackTrace;
 
 /**
  * This is run as a separate thread to copy data from PostgreSQL.
  * 
  * @author Adam Dziedzic
- * 
- *         Jan 14, 2016 6:06:36 PM
  */
 public class ExportPostgres implements Export {
+
+	/**
+	 * a universal version identifier for a Serializable class. Deserialization
+	 * uses this number to ensure that a loaded class corresponds exactly to a
+	 * serialized object. If no match is found, then an InvalidClassException is
+	 * thrown.
+	 */
+	private static final long serialVersionUID = 7532657262663609711L;
 
 	/** log */
 	private static Logger log = Logger.getLogger(ExportPostgres.class);
 
 	/** Copy manager for PostgreSQL - it implements the copy command. */
-	private CopyManager cpFrom = null;
+	private transient CopyManager cpFrom = null;
 
 	/**
 	 * The SQL statement that should be used to issue the copy command from
@@ -51,7 +63,7 @@ public class ExportPostgres implements Export {
 	/**
 	 * The handler to the output stream where the data should be extracted to.
 	 */
-	private OutputStream output = null;
+	private transient OutputStream output = null;
 
 	/**
 	 * The format in which data should be written to the file/pipe/output
@@ -63,7 +75,7 @@ public class ExportPostgres implements Export {
 	 * The connection to the instance of PostgreSQL from the data should be
 	 * extracted.
 	 */
-	private Connection connectionFrom;
+	private transient Connection connection = null;
 
 	/**
 	 * Information about the migration process.
@@ -72,24 +84,14 @@ public class ExportPostgres implements Export {
 	 */
 	private MigrationInfo migrationInfo = null;
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see java.lang.Object#toString()
-	 */
-	@Override
-	public String toString() {
-		return "ExportPostgres [cpFrom=" + cpFrom + ", copyFromString="
-				+ copyFromString + ", outputFile=" + outputFile + ", output="
-				+ output + ", fileFormat=" + fileFormat + ", connectionFrom="
-				+ connectionFrom + ", migrationInfo=" + migrationInfo
-				+ ", handlerTo=" + handlerTo + "]";
-	}
-
 	/**
 	 * Handler to the database to which we load the data.
 	 */
-	private DBHandler handlerTo;
+	private transient DBHandler handlerTo = null;
+
+	public ExportPostgres() {
+
+	}
 
 	/**
 	 * Declare only the file format in which the data should be exported. The
@@ -116,22 +118,22 @@ public class ExportPostgres implements Export {
 	public ExportPostgres(Connection connectionPostgreSQL,
 			final String copyFromString, OutputStream output,
 			DBHandler handlerTo) throws SQLException {
-		this.connectionFrom = connectionPostgreSQL;
+		this.connection = connectionPostgreSQL;
 		this.copyFromString = copyFromString;
 		this.output = output;
-		this.cpFrom = new CopyManager((BaseConnection) connectionFrom);
+		this.cpFrom = new CopyManager((BaseConnection) connection);
 		this.handlerTo = handlerTo;
 	}
 
 	public ExportPostgres(ConnectionInfo connectionPostgreSQL,
 			final String copyFromString, final String outputFile,
 			DBHandler handlerTo) throws SQLException {
-		connectionFrom = PostgreSQLHandler.getConnection(connectionPostgreSQL);
-		connectionFrom.setAutoCommit(false);
-		connectionFrom.setReadOnly(true);
+		connection = PostgreSQLHandler.getConnection(connectionPostgreSQL);
+		connection.setAutoCommit(false);
+		connection.setReadOnly(true);
 		this.copyFromString = copyFromString;
 		this.outputFile = outputFile;
-		this.cpFrom = new CopyManager((BaseConnection) connectionFrom);
+		this.cpFrom = new CopyManager((BaseConnection) connection);
 		this.handlerTo = handlerTo;
 	}
 
@@ -146,14 +148,14 @@ public class ExportPostgres implements Export {
 		log.debug("Lazy initialization.");
 
 		log.debug("Establish connection.");
-		if (connectionFrom == null) {
+		if (connection == null) {
 			try {
-				connectionFrom = PostgreSQLHandler
+				connection = PostgreSQLHandler
 						.getConnection((PostgreSQLConnectionInfo) migrationInfo
 								.getConnectionFrom());
-				connectionFrom.setAutoCommit(false);
-				connectionFrom.setReadOnly(true);
-				this.cpFrom = new CopyManager((BaseConnection) connectionFrom);
+				connection.setAutoCommit(false);
+				connection.setReadOnly(true);
+				this.cpFrom = new CopyManager((BaseConnection) connection);
 			} catch (SQLException e) {
 				String msg = "Problem with connection to PostgreSQL. "
 						+ e.getMessage();
@@ -205,6 +207,43 @@ public class ExportPostgres implements Export {
 	}
 
 	/**
+	 * De-serialization as a full-blown constructor,
+	 * 
+	 * @param in
+	 *            Stream from which we read the object.
+	 * @throws IOException
+	 * @throws ClassNotFoundException
+	 */
+	private void readObject(ObjectInputStream in)
+			throws IOException, ClassNotFoundException {
+		log.debug("Read object");
+		in.defaultReadObject();
+		/** These parameters can be initialized from scratch. */
+		this.cpFrom = null;
+		this.connection = null;
+		this.output = null;
+		this.handlerTo = null;
+	}
+
+	/**
+	 * This is the default implementation of writeObject. Customize if
+	 * necessary.
+	 * 
+	 * @param aOutputStream
+	 *            Stream to which we write the object.
+	 * @throws IOException
+	 */
+	private void writeObject(ObjectOutputStream aOutputStream)
+			throws IOException {
+		log.debug("Wrtie the object to the stream.");
+		/*
+		 * perform the default serialization for all non-transient, non-static
+		 * fields
+		 */
+		aOutputStream.defaultWriteObject();
+	}
+
+	/**
 	 * Copy data from PostgreSQL.
 	 * 
 	 * @return number of extracted rows
@@ -220,7 +259,7 @@ public class ExportPostgres implements Export {
 			log.debug("psql copy statement: " + copyFromString);
 			countExtractedRows = cpFrom.copyOut(copyFromString, output);
 			// PostgreSQLHandler.executeStatement(connection, copyFromString);
-			connectionFrom.commit();
+			connection.commit();
 			output.close();
 		} catch (IOException | SQLException e) {
 			String msg = e.getMessage()
@@ -296,5 +335,38 @@ public class ExportPostgres implements Export {
 	@Override
 	public void setHandlerTo(DBHandler handlerTo) throws MigrationException {
 		this.handlerTo = handlerTo;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.lang.Object#toString()
+	 */
+	@Override
+	public String toString() {
+		return "ExportPostgres [cpFrom=" + cpFrom + ", copyFromString="
+				+ copyFromString + ", outputFile=" + outputFile + ", output="
+				+ output + ", fileFormat=" + fileFormat + ", connection="
+				+ connection + ", migrationInfo=" + migrationInfo
+				+ ", handlerTo=" + handlerTo + "]";
+	}
+
+	public static void main(String[] args) throws Exception {
+		LoggerSetup.setLogging();
+		ExportPostgres export = new ExportPostgres(FileFormat.CSV);
+		export.setHandlerTo(new SciDBHandler());
+		String fileName = "/tmp/save";
+		OutputStream file = new FileOutputStream(fileName);
+		OutputStream buffer = new BufferedOutputStream(file);
+		ObjectOutput output = new ObjectOutputStream(buffer);
+		output.writeObject(export);
+		output.close();
+		System.out.println("Export written to a file.");
+		ObjectInputStream in = new ObjectInputStream(
+				new FileInputStream(fileName));
+		ExportPostgres exportRecreated = (ExportPostgres) in.readObject();
+		exportRecreated.call();
+		System.out.println(exportRecreated);
+		in.close();
 	}
 }

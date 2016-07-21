@@ -45,7 +45,7 @@ public class NetworkOut {
 	 * @return another object result
 	 * @throws NetworkException
 	 */
-	public static Object send(Object object, String host)
+	public static Object send(NetworkObject object, String host)
 			throws NetworkException {
 		ZMQ.Context context = ZMQ.context(1);
 		ZMQ.Socket requester = context.socket(ZMQ.REQ);
