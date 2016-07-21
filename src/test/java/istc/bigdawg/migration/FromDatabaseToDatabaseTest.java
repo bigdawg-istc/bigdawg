@@ -21,7 +21,6 @@ import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
 import istc.bigdawg.scidb.SciDBHandler;
 import istc.bigdawg.utils.Utils;
-import jline.internal.Log;
 
 /**
  * @author Adam Dziedzic
@@ -93,7 +92,7 @@ public class FromDatabaseToDatabaseTest {
 		// make sure that the target array does not exist
 		PostgreSQLHandler handler = new PostgreSQLHandler(conPostgres);
 		handler.dropTableIfExists(table);
-		MigrationResult migrationResult = migrator.migrate(migrationInfo);
+		MigrationResult migrationResult = migrator.executeMigrationLocally();
 		logger.debug("Migration result: " + migrationResult);
 		long postgresCountTuples = Utils.getPostgreSQLCountTuples(conPostgres,
 				table);
@@ -115,9 +114,8 @@ public class FromDatabaseToDatabaseTest {
 					ExportPostgres.ofFormat(FileFormat.CSV),
 					LoadSciDB.ofFormat(FileFormat.CSV), migrationInfo);
 			/*
-			 * Prepare the test data in a table in PostgreSQL.
-			 * 
-			 * Prepare the source table and delete the target array.
+			 * Prepare the test data in a table in PostgreSQL and in an array in
+			 * SciDB.
 			 */
 			this.numberOfRowsPostgres = TestMigrationUtils
 					.loadDataToPostgresRegionTPCH(conPostgres, table);
@@ -139,8 +137,7 @@ public class FromDatabaseToDatabaseTest {
 	}
 
 	@Test
-	public void testMigrationLocalRemoteFromSciDBToPostgres()
-			throws MigrationException, SQLException, IOException {
+	public void testMigrationLocalRemoteFromSciDBToPostgres() throws Exception {
 		MigratorTask migratorTask = null;
 		try {
 			migratorTask = new MigratorTask();
@@ -148,26 +145,26 @@ public class FromDatabaseToDatabaseTest {
 					conPostgres, table);
 			logger.debug("Migration info: " + migrationInfo.toString());
 			FromDatabaseToDatabase migrator = new FromDatabaseToDatabase(
-					ExportPostgres.ofFormat(FileFormat.CSV),
-					LoadSciDB.ofFormat(FileFormat.CSV), migrationInfo);
-			/*
-			 * Prepare the test data in a table in PostgreSQL.
-			 * 
-			 * Prepare the source table and delete the target array.
-			 */
-			this.numberOfRowsPostgres = TestMigrationUtils
-					.loadDataToPostgresRegionTPCH(conPostgres, table);
+					ExportSciDB.ofFormat(FileFormat.CSV),
+					LoadPostgres.ofFormat(FileFormat.CSV), migrationInfo);
 
-			TestMigrationUtils.prepareFlatTargetArray(conSciDB, array);
-
+			String flatArray = array + "_flat_";
+			numberOfCellsSciDB = TestMigrationUtils
+					.loadRegionDataToSciDB(conSciDB, flatArray, array);
+			// make sure that the target array does not exist
+			PostgreSQLHandler handler = new PostgreSQLHandler(conPostgres);
+			handler.dropTableIfExists(table);
+			handler.close();
 			MigrationResult result = migrator.executeMigrationLocalRemote();
 			logger.debug("Result of data migration: " + result.toString());
-
-			TestMigrationUtils.checkNumberOfElementsSciDB(conSciDB, array,
-					numberOfRowsPostgres);
+			long postgresCountTuples = Utils
+					.getPostgreSQLCountTuples(conPostgres, table);
+			assertEquals(numberOfCellsSciDB, postgresCountTuples);
+			// drop the created table
+			handler = new PostgreSQLHandler(conPostgres);
+			handler.dropTableIfExists(table);
+			handler.close();
 		} finally {
-			// drop the created array
-			SciDBHandler.dropArrayIfExists(conSciDB, array);
 			if (migratorTask != null) {
 				migratorTask.close();
 			}

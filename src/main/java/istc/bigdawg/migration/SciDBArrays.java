@@ -3,6 +3,7 @@
  */
 package istc.bigdawg.migration;
 
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
@@ -13,7 +14,12 @@ import java.util.Set;
  * @author Adam Dziedzic
  * 
  */
-public class SciDBArrays {
+public class SciDBArrays implements Serializable {
+
+	/**
+	 * Serial version of the class (for serialization).
+	 */
+	private static final long serialVersionUID = -6536294395139331080L;
 
 	/**
 	 * A flat array in SciDB, it contains only an auxiliary dimension (e.g. i -

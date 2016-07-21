@@ -3,12 +3,19 @@
  */
 package istc.bigdawg.migration;
 
+import java.io.Serializable;
+
 /**
- * Meat info about an array for the migration process.
+ * Information about an array for the migration process.
  * 
  * @author Adam Dziedzic
  */
-public class SciDBArray {
+public class SciDBArray implements Serializable {
+
+	/**
+	 * Serial version of the class (for serialization).
+	 */
+	private static final long serialVersionUID = -4144860433440893335L;
 
 	/** The name of the array. */
 	private String name;

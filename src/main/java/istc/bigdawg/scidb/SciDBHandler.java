@@ -288,18 +288,14 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 		Connection connection = getConnection();
 		Statement statement = null;
 		try {
-			
+
 			statement = connection.createStatement();
 			IStatementWrapper statementWrapper = statement
 					.unwrap(IStatementWrapper.class);
 			if (lang == Lang.AFL) {
 				statementWrapper.setAfl(true);
 			}
-<<<<<<< HEAD
-			
-=======
 			log.debug("Statement to be executed in SciDB: " + stringStatement);
->>>>>>> remote migration through the generic interfaces for PostgreSQL and SciDB
 			statement.execute(stringStatement);
 			connection.commit();
 		} catch (SQLException ex) {
