@@ -81,17 +81,6 @@ public class ExportSciDB implements Export {
 	 */
 	private Set<String> intermediateArrays = new HashSet<>();
 
-	/*
-	 * These are the intermediate (additional) arrays that were created during
-	 * migration of data between PostgreSQL and SciDB. If something fails on the
-	 * way or at the end of the migration process, the arrays should be removed.
-	 * 
-	 * On the other hand, the tables in PostgreSQL are created within a
-	 * transaction so if something goes wrong in PostgreSQL, then the database
-	 * itself takes care of cleaning the created but not loaded tables.
-	 */
-	private Set<String> intermediateArrays = new HashSet<>();
-
 	/**
 	 * Declare only the file format in which the data should be exported. The
 	 * remaining parameters should be added when the migration is prepared.
