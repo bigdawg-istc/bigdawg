@@ -200,34 +200,34 @@ public class LoadPostgres implements Load {
 				throw new MigrationException(e.getMessage(), e);
 			}
 		}
-//		try {
-//			/**
-//			 * If the target table does not exists. We pass the connection
-//			 * because the newly created table might not have been committed.
-//			 */
-//			if (!new PostgreSQLHandler(migrationInfo.getConnectionTo(),
-//					connection).existsTable(migrationInfo.getObjectTo())) {
-//				ObjectMetaData objectFromMetaData = null;
-//				log.debug("Migration info: " + migrationInfo);
-//				if (fromHandler != null) {
-//					try {
-//						objectFromMetaData = fromHandler.getObjectMetaData(
-//								migrationInfo.getObjectFrom());
-//					} catch (Exception e) {
-//						throw new MigrationException(e.getMessage(), e);
-//					}
-//					List<AttributeMetaData> attributes = objectFromMetaData
-//							.getAllAttributesOrdered();
-//					String createTableStatement = PostgreSQLHandler
-//							.getCreatePostgreSQLTableStatement(
-//									migrationInfo.getObjectTo(), attributes);
-//					PostgreSQLHandler.createTargetTableSchema(connection,
-//							migrationInfo.getObjectTo(), createTableStatement);
-//				}
-//			}
-//		} catch (SQLException e) {
-//			new MigrationException(e.getMessage(), e);
-//		}
+		try {
+			/**
+			 * If the target table does not exists. We pass the connection
+			 * because the newly created table might not have been committed.
+			 */
+			if (!new PostgreSQLHandler(migrationInfo.getConnectionTo(),
+					connection).existsTable(migrationInfo.getObjectTo())) {
+				ObjectMetaData objectFromMetaData = null;
+				log.debug("Migration info: " + migrationInfo);
+				if (fromHandler != null) {
+					try {
+						objectFromMetaData = fromHandler.getObjectMetaData(
+								migrationInfo.getObjectFrom());
+					} catch (Exception e) {
+						throw new MigrationException(e.getMessage(), e);
+					}
+					List<AttributeMetaData> attributes = objectFromMetaData
+							.getAllAttributesOrdered();
+					String createTableStatement = PostgreSQLHandler
+							.getCreatePostgreSQLTableStatement(
+									migrationInfo.getObjectTo(), attributes);
+					PostgreSQLHandler.createTargetTableSchema(connection,
+							migrationInfo.getObjectTo(), createTableStatement);
+				}
+			}
+		} catch (SQLException e) {
+			new MigrationException(e.getMessage(), e);
+		}
 	}
 
 	/**
