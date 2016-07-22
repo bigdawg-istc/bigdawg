@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -66,12 +65,12 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	
 	private static final Pattern predicatePattern = Pattern.compile("(?<=\\()([^\\(^\\)]+)(?=\\))");
 	
-	public static List<String> sqlEngineTokenList = new ArrayList<>();
-	
-	static {
-		sqlEngineTokenList.add("postgres");
-		sqlEngineTokenList.add("sstore");
-	}
+//	public static List<String> sqlEngineTokenList = new ArrayList<>();
+//	
+//	static {
+//		sqlEngineTokenList.add("postgres");
+//		sqlEngineTokenList.add("sstore");
+//	}
 	/**
 	 * For CrossIslandQueryPlan
 	 * Determines whether an island is implemented
@@ -245,6 +244,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 					((SciDBHandler)dbSchemaHandler).executeStatement(transitionSchemas.get(key));
 					((SciDBHandler)dbSchemaHandler).commit();
 				}
+			break;
 		case CAST:
 			break;
 		case DOCUMENT:
@@ -407,6 +407,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 			AFLQueryPlan arrayQueryPlan = AFLPlanParser.extractDirect((SciDBHandler)dbSchemaHandler, queryString);
 			root = arrayQueryPlan.getRootNode();
 			objs.addAll(ArraySignatureBuilder.sig2(queryString));
+			break;
 		case CAST:
 			break;
 		case DOCUMENT:
@@ -419,6 +420,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 			SQLQueryPlan relQueryPlan = SQLPlanParser.extractDirectFromPostgreSQL((PostgreSQLHandler)dbSchemaHandler, queryString);
 			root = relQueryPlan.getRootNode();
 			objs.addAll(RelationalSignatureBuilder.sig2(queryString));
+			break;
 		case STREAM:
 			throw new BigDawgException("STREAM island does not support signature; generateOperatorTreesAndAddDataSetObjectsSignature");
 		case TEXT:
@@ -444,6 +446,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		switch (scope) {
 		case ARRAY:
 			joinDelim = "[,=]";
+			break;
 		case CAST:
 			break;
 		case DOCUMENT:
@@ -454,6 +457,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 			break;
 		case RELATIONAL:
 			joinDelim = "[=<>]+";
+			break;
 		case STREAM:
 			throw new BigDawgException("STREAM island does not participate in splitPredicates function; splitPredicates");
 		case TEXT:
@@ -589,12 +593,12 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	 * @throws BigDawgException
 	 */
 	public static String getRelationalIslandCreateTableString(String tableName) throws SQLException, BigDawgException  {
-		int dbid;
-
-		if (tableName.toLowerCase().startsWith("bigdawgtag_")) dbid = psqlSchemaHandlerDBID;
-		else dbid = CatalogViewer.getDbsOfObject(tableName, sqlEngineTokenList).get(0);
+//		int dbid;
+//
+//		if (tableName.toLowerCase().startsWith("bigdawgtag_")) dbid = psqlSchemaHandlerDBID;
+//		else dbid = CatalogViewer.getDbsOfObject(tableName, sqlEngineTokenList).get(0);
 		
-		Connection con = PostgreSQLHandler.getConnection((PostgreSQLConnectionInfo)CatalogViewer.getConnectionInfo(dbid));
+		Connection con = PostgreSQLHandler.getConnection((PostgreSQLConnectionInfo)CatalogViewer.getConnectionInfo(psqlSchemaHandlerDBID));
 		return PostgreSQLHandler.getCreateTable(con, tableName).replaceAll("\\scharacter[\\(]", " char(");
 	}
 	
