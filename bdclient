@@ -1,0 +1,33 @@
+#!/bin/bash
+
+help_ani()
+{
+  echo "Usage:"
+  echo "  One-off query..  $0 -c [BigDAWG query]"
+  echo "  Booting client.. $0"
+  exit 1
+}
+
+while getopts c:h opt
+do
+  case "$opt" in
+    c) curl -X POST -d \""${OPTARG}"\" http://localhost:8181/bigdawg/query/; exit;;
+    \?) help_ani;;
+  esac
+done
+
+
+printf '> '
+while read query
+do 
+	if [ ! -z "$query" ] && ([ "$query" == "quit" ] || [ "$query" == "exit" ]); then
+		break
+	elif [ -z "$query" ]; then
+		printf '> '
+		continue
+	else 
+		curl -X POST -d \""${query}"\" http://localhost:8181/bigdawg/query/
+	fi
+	printf '> '
+done
+exit 
