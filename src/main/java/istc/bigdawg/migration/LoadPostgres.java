@@ -208,19 +208,21 @@ public class LoadPostgres implements Load {
 			if (!new PostgreSQLHandler(migrationInfo.getConnectionTo(),
 					connection).existsTable(migrationInfo.getObjectTo())) {
 				ObjectMetaData objectFromMetaData = null;
-				try {
-					objectFromMetaData = fromHandler
-							.getObjectMetaData(migrationInfo.getObjectFrom());
-				} catch (Exception e) {
-					throw new MigrationException(e.getMessage(), e);
+				if (fromHandler != null) {
+					try {
+						objectFromMetaData = fromHandler.getObjectMetaData(
+								migrationInfo.getObjectFrom());
+					} catch (Exception e) {
+						throw new MigrationException(e.getMessage(), e);
+					}
+					List<AttributeMetaData> attributes = objectFromMetaData
+							.getAllAttributesOrdered();
+					String createTableStatement = PostgreSQLHandler
+							.getCreatePostgreSQLTableStatement(
+									migrationInfo.getObjectTo(), attributes);
+					PostgreSQLHandler.createTargetTableSchema(connection,
+							migrationInfo.getObjectTo(), createTableStatement);
 				}
-				List<AttributeMetaData> attributes = objectFromMetaData
-						.getAllAttributesOrdered();
-				String createTableStatement = PostgreSQLHandler
-						.getCreatePostgreSQLTableStatement(
-								migrationInfo.getObjectTo(), attributes);
-				PostgreSQLHandler.createTargetTableSchema(connection,
-						migrationInfo.getObjectTo(), createTableStatement);
 			}
 		} catch (SQLException e) {
 			new MigrationException(e.getMessage(), e);
