@@ -594,11 +594,6 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	 * @throws BigDawgException
 	 */
 	public static String getRelationalIslandCreateTableString(String tableName) throws SQLException, BigDawgException  {
-//		int dbid;
-//
-//		if (tableName.toLowerCase().startsWith("bigdawgtag_")) dbid = psqlSchemaHandlerDBID;
-//		else dbid = CatalogViewer.getDbsOfObject(tableName, sqlEngineTokenList).get(0);
-		
 		Connection con = PostgreSQLHandler.getConnection((PostgreSQLConnectionInfo)CatalogViewer.getConnectionInfo(psqlSchemaHandlerDBID));
 		return PostgreSQLHandler.getCreateTable(con, tableName).replaceAll("\\scharacter[\\(]", " char(");
 	}
@@ -622,7 +617,6 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 			List<String> aparsed = (new AccumuloD4MParser()).parse(node.getQueryString());
 			System.out.printf("TEXT Island Accumulot query: %s; parsed arguments: %s\n", node.queryString, aparsed);
 			return AccumuloHandler.executeAccumuloShellScript(aparsed);
-//			throw new BigDawgException("TEXT Island is still under construction and you can't issue query to it yet; runOperatorFreeIslandQuery");
 		case RELATIONAL:
 		case ARRAY:
 		default:
