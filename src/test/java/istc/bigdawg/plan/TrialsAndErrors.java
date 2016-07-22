@@ -52,7 +52,7 @@ public class TrialsAndErrors {
 	public void setUp() throws Exception {
 		CatalogInstance.INSTANCE.getCatalog();
 		
-//		setupQueryExplainer();
+		setupQueryExplainer();
 //		setupQueryBuilder();
 //		setupRegexTester();
 //		setupTreeWalker();
@@ -61,7 +61,7 @@ public class TrialsAndErrors {
 //		setupSchemaGenerator();
 //		setupMigrationTest();
 //		setupSciDBExecution();
-		setupParserTest();
+//		setupParserTest();
 	}
 	
 	public void setupQueryExplainer() {
@@ -113,7 +113,9 @@ public class TrialsAndErrors {
 //		System.out.println("Explainer -- Type query or \"quit\" to exit: ");
 //		Scanner scanner = new Scanner(System.in);
 //		String query = scanner.nextLine();
-		String query = "SELECT s.bodc_station, s.longitude, s.latitude, s.bot_depth, count(m.bodc_station) AS sample_count FROM sampledata.station_info AS s, sampledata.main AS m WHERE s.bodc_station = m.bodc_station GROUP BY s.bodc_station";
+		String query = "SELECT s.bodc_station, s.longitude, s.latitude, s.bot_depth, count(m.bodc_station) AS sample_count "
+				+ "FROM sampledata.station_info AS s, sampledata.main AS m WHERE s.bodc_station = m.bodc_station GROUP BY s.bodc_station "
+				+ "limit 3 offset 1";
 		boolean started = false;
 		while (!query.toLowerCase().equals("quit")) {
 			
