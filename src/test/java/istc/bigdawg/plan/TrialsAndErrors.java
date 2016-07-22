@@ -337,7 +337,7 @@ public class TrialsAndErrors {
 			
 		String input = "ExtractionRemote, 0.4, 110, 10, 1.010";
 		
-		(new SStoreQueryParser()).parse(input);
+//		(new SStoreQueryParser()).parse(input);
 			
 			
 	}

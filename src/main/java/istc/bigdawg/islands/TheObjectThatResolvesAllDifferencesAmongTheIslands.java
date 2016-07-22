@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -69,12 +68,12 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	
 	private static final Pattern predicatePattern = Pattern.compile("(?<=\\()([^\\(^\\)]+)(?=\\))");
 	
-	public static List<String> sqlEngineTokenList = new ArrayList<>();
-	
-	static {
-		sqlEngineTokenList.add("postgres");
-		sqlEngineTokenList.add("sstore");
-	}
+//	public static List<String> sqlEngineTokenList = new ArrayList<>();
+//	
+//	static {
+//		sqlEngineTokenList.add("postgres");
+//		sqlEngineTokenList.add("sstore");
+//	}
 	/**
 	 * For CrossIslandQueryPlan
 	 * Determines whether an island is implemented
@@ -246,6 +245,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 					((SciDBHandler)dbSchemaHandler).executeStatement(transitionSchemas.get(key));
 					((SciDBHandler)dbSchemaHandler).commit();
 				}
+			break;
 		case CAST:
 			break;
 		case DOCUMENT:
@@ -447,6 +447,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		switch (scope) {
 		case ARRAY:
 			joinDelim = "[,=]";
+			break;
 		case CAST:
 			break;
 		case DOCUMENT:
@@ -457,6 +458,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 			break;
 		case RELATIONAL:
 			joinDelim = "[=<>]+";
+			break;
 		case STREAM:
 			throw new BigDawgException("STREAM island does not participate in splitPredicates function; splitPredicates");
 		case TEXT:
