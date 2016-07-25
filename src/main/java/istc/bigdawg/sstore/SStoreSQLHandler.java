@@ -99,15 +99,35 @@ public class SStoreSQLHandler implements DBHandler {
     }
 
     public static Connection getConnection(ConnectionInfo conInfo) throws SQLException {
+	if (conInfo instanceof SStoreSQLConnectionInfo) {
+		return getConnection((SStoreSQLConnectionInfo) conInfo);
+	} throw new IllegalArgumentException("The conInfo parameter should represent a connection to SStore.");
+    }
+
+    public static Connection getConnection(SStoreSQLConnectionInfo conInfo) throws SQLException {
 	Connection con;
 	String url = conInfo.getUrl();
 	String user = conInfo.getUser();
 	String password = conInfo.getPassword();
 	Log.info("url: " + url);
-	Log.info("user: " + user);
-	Log.info("password" + password);
+//	Log.info("user: " + user);
+//	Log.info("password" + password);
 	try {
-	    con = DriverManager.getConnection(url, user, password);
+            Class.forName("org.voltdb.jdbc.Driver");
+	} catch (ClassNotFoundException ex) {
+		ex.printStackTrace();
+		Log.info("SStore jdbc driver is not in the CLASSPATH -> "
+				+ ex.getMessage() + " " + StackTrace.getFullStackTrace(ex),
+				ex);
+	//	throw new RuntimeException(ex.getMessage());
+//	} catch (Exception ex) {
+//            ex.printStackTrace();
+//            log.error("Other exceptions that we don't know.");
+	}
+//	this.conInfo = conInfo;
+	try {
+//	    con = DriverManager.getConnection(url, user, password);
+	    con = DriverManager.getConnection(url);
 	} catch (SQLException e) {
 	    String msg = "Could not connect to the SStoreSQL instance: Url: " + url + " User: " + user + " Password: "
 		    + password;
@@ -465,14 +485,15 @@ public class SStoreSQLHandler implements DBHandler {
     	
     	String copyToString;
 		if (parameters.size() == 5)
-			copyToString = String.format("{call @%s(%s, %s, %s, %s)}", parameters.get(0), parameters.get(1), parameters.get(1), parameters.get(3), parameters.get(4));
+			copyToString = String.format("{call %s(?, ?, ?, ?)}", parameters.get(0));
 		else if (parameters.size() == 1)
-			copyToString = String.format("{call @%s}", parameters.get(0));
+			copyToString = String.format("{call %s}", parameters.get(0));
 		else
 			throw new BigDawgException("Invalid SStore prepared statement input sequence: "+parameters);
     	
     	
     	try {
+		Log.info("Procedure to execute: " + copyToString);
     		statement = connection.prepareCall(copyToString);
     		if (parameters.size() == 5) {
         		statement.setDouble(1, Double.parseDouble(parameters.get(1)));

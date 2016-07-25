@@ -259,10 +259,6 @@
 
 	<repositories>
 		<repository>
-			<id>neo4j-public</id>
-			<url>http://m2.neo4j.org/content/groups/public</url>
-		</repository>
-		<repository>
     		<id>in-project</id>
     		<name>in-project-maven-repository</name>
     		<url>file://${project.basedir}/src/main/resources/mvn-repo/</url>
@@ -271,6 +267,10 @@
 			<id>maven</id>
 			<name>maven-repo</name>	
 			<url>http://central.maven.org/maven2/</url>
+		</repository>
+		<repository>
+			<id>neo4j-public</id>
+			<url>http://m2.neo4j.org/content/groups/public</url>
 		</repository>
 	</repositories>
 
@@ -486,12 +486,12 @@
 			was compiled with Java SE 6 -->
 		<jersey.version>2.19</jersey.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<!-- <bigDawg.main.class>istc.bigdawg.Main</bigDawg.main.class> -->
+		<bigDawg.main.class>istc.bigdawg.Main</bigDawg.main.class>
 		<!-- <bigDawg.main.class>istc.bigdawg.sstore.JDBCExample</bigDawg.main.class> -->
 		<!-- <bigDawg.main.class>istc.bigdawg.accumulo.DataLoader</bigDawg.main.class> -->
 		<!-- <bigDawg.main.class>istc.bigdawg.migration.TestTpchPostgresAccumulo</bigDawg.main.class> -->
 		<!-- <bigDawg.main.class>istc.bigdawg.migration.FromPostgresToPostgres</bigDawg.main.class> -->
-		<bigDawg.main.class>istc.bigdawg.migration.FromSStoreToPostgres</bigDawg.main.class>
+		<!-- <bigDawg.main.class>istc.bigdawg.migration.FromSStoreToPostgres</bigDawg.main.class> -->
 		<!--<bigDawg.main.class>istc.bigdawg.accumulo.DataLoader</bigDawg.main.class> -->
 	</properties>
 
