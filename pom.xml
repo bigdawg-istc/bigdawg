@@ -247,15 +247,14 @@
 		</dependency>
 
 		<dependency>
-			<groupId>edu.brown.sstore.jdbc</groupId>
-			<artifactId>sstore</artifactId>
+			<groupId>edu.brown</groupId>
+			<artifactId>sstore-jdbc</artifactId>
 			<version>0.1</version>
-<!--
- 			<scope>system</scope> 
+
+ 		<!-- 	<scope>system</scope> 
  			<systemPath>${project.basedir}/src/main/resources/mvn-repo/org/sstore/jdbc/sstore.jar</systemPath>
 -->
 		</dependency>
-
 	</dependencies>
 
 	<repositories>
