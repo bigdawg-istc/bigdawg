@@ -13,6 +13,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.ws.rs.core.Response;
 
@@ -186,6 +188,8 @@ public class SStoreSQLHandler implements DBHandler {
 	@Override
 	public String toPrettyString() {
 		StringBuilder sb = new StringBuilder();
+		String pattern = "^[+-]?([0-9]*[.])?[0-9]+$";
+	    Pattern p = Pattern.compile(pattern);
 		sb.append('[');
 		
 		for (List<String> r : rows) {
@@ -194,7 +198,15 @@ public class SStoreSQLHandler implements DBHandler {
 				sb.append('\"');
 				sb.append(colNames.get(i).toLowerCase());
 				sb.append('\"').append(':');
-				sb.append(r.get(i));
+			    Matcher m = p.matcher(r.get(i));
+			    if(m.find()){
+			    	sb.append(r.get(i));
+			    } else {
+			    	sb.append('\"');
+			    	sb.append(r.get(i));
+			    	sb.append('\"');
+			    }
+				
 				sb.append(',');
 			}
 			if (sb.length() > 0) sb.deleteCharAt(sb.length()-1);
