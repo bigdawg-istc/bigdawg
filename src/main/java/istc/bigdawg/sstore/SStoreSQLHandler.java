@@ -212,7 +212,7 @@ public class SStoreSQLHandler implements DBHandler {
 			if (sb.length() > 0) sb.deleteCharAt(sb.length()-1);
 			sb.append('}').append(',');
 		}
-		if (sb.length() > 0) sb.deleteCharAt(sb.length()-1);
+		if (sb.length() > 1) sb.deleteCharAt(sb.length()-1);
 		sb.append(']');
 		return sb.toString();
 	}
