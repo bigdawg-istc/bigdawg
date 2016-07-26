@@ -186,9 +186,30 @@ public class SStoreSQLHandler implements DBHandler {
 	@Override
 	public String toPrettyString() {
 		StringBuilder sb = new StringBuilder();
+		sb.append('[');
+		
+		for (List<String> r : rows) {
+			sb.append('{');
+			for(int i = 0; i<r.size();i++){
+				sb.append('\"');
+				sb.append(colNames.get(i).toLowerCase());
+				sb.append('\"').append(':');
+				sb.append(r.get(i));
+				sb.append(',');
+			}
+			if (sb.length() > 0) sb.deleteCharAt(sb.length()-1);
+			sb.append('}').append(',');
+		}
+		if (sb.length() > 0) sb.deleteCharAt(sb.length()-1);
+		sb.append(']');
+		return sb.toString();
+	}
+	/*public String toPrettyString() {
+		StringBuilder sb = new StringBuilder();
 		
 		for (String s : colNames) sb.append(s).append('\t');
 		if (sb.length() > 0) sb.deleteCharAt(sb.length()-1);
+		sb.append('\n');
 		
 		for (List<String> r : rows) {
 			for (String s : r) 
@@ -198,7 +219,7 @@ public class SStoreSQLHandler implements DBHandler {
 		}
 		
 		return sb.toString();
-	}
+	}*/
 
 	@Override
 	public ConnectionInfo getConnectionInfo() {
