@@ -551,7 +551,7 @@ public class SStoreSQLHandler implements DBHandler {
     		}
     		while (rs.next()) {
     			rows.add(new ArrayList<>());
-    			for (int i = 1; i < colCount; i++)
+    			for (int i = 1; i <= colCount; i++)
     				rows.get(rows.size() - 1).add(rs.getObject(i).toString()); 
     		}
     		
