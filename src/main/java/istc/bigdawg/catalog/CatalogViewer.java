@@ -210,6 +210,7 @@ public class CatalogViewer {
 		ResultSet rs = cc.execRet("select * from catalog.engines;");
 		while (rs.next()) {
 			extraction.add(rs.getString("eid") + "\t" + rs.getString("name") + "\t" + rs.getString("host")
+					+ "\t" + rs.getString("port") 
 					+ "\t" + rs.getString("connection_properties"));
 		}
 

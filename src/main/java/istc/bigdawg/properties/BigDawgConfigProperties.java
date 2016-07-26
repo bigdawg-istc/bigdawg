@@ -44,6 +44,7 @@ public enum BigDawgConfigProperties {
 
 	private int sstoreDBID;
 	private String sStoreURL;
+	private int seaflowDBID;
 	private String accumuloShellScript;
 
 	private String myriaHost;
@@ -107,6 +108,7 @@ public enum BigDawgConfigProperties {
 
 		this.sstoreDBID = Integer.parseInt(prop.getProperty("main.sstore.dbid")); 
 		this.sStoreURL = prop.getProperty("main.sstore.alerturl");
+		this.seaflowDBID = Integer.parseInt(prop.getProperty("main.seaflow.dbid"));
 
 		this.myriaHost = prop.getProperty("main.myria.host");
 		this.myriaPort = prop.getProperty("main.myria.port");
@@ -373,6 +375,10 @@ public enum BigDawgConfigProperties {
 	 */
 	public Integer getSStoreDBID() {
 		return sstoreDBID;
+	}
+	
+	public Integer getSeaflowDBID() {
+		return seaflowDBID;
 	}
 
 	/**
