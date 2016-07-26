@@ -543,7 +543,7 @@ public class SStoreSQLHandler implements DBHandler {
     		if (rs.next()) {
     			colCount = rs.getMetaData().getColumnCount();
     			rows.add(new ArrayList<>());
-    			for (int i = 1; i < colCount; i++) {
+    			for (int i = 1; i <= colCount; i++) {
     				rows.get(rows.size() - 1).add(rs.getObject(i).toString());
     				colNames.add(rs.getMetaData().getColumnLabel(i));
     				types.add(rs.getMetaData().getColumnTypeName(i));
