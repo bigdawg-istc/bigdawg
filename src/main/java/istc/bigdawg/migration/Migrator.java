@@ -66,8 +66,6 @@ public class Migrator {
 		 * LoadPostgres.ofFormat(FileFormat.CSV)));
 		 */
 		registeredMigrators.add(new FromSciDBToPostgres());
-		
-		registeredMigrators.add(new FromSStoreToPostgres());
 	}
 
 	/**

@@ -115,7 +115,8 @@ class Task implements Runnable {
     		String tableFrom = table;
     		String tableTo = "psql_"+table;
     		try {
-				Migrator.migrate(sstoreConnInfo, tableFrom, psqlConnInfo, tableTo);
+    			FromSStoreToPostgres migrator = new FromSStoreToPostgres();
+				migrator.migrate(sstoreConnInfo, tableFrom, psqlConnInfo, tableTo);
 			} catch (MigrationException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
