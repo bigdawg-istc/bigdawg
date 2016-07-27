@@ -87,9 +87,7 @@ public class FromSStoreToPostgres
 		String tableFrom = "sflavg_tbl";
 //		PostgreSQLConnectionInfo conTo = new PostgreSQLConnectionInfo(
 //				"localhost", "5432", "seaflow", "pguser", "");
-		PostgreSQLConnectionInfo conTo = (PostgreSQLConnectionInfo) CatalogViewer.getConnectionInfo(8);
-		System.out.println(conTo.toString());
-		System.exit(1);
+		PostgreSQLConnectionInfo conTo = (PostgreSQLConnectionInfo) CatalogViewer.getConnectionInfo(9);
 		String tableTo = "psql_sflavg_tbl";
 		long startTime = System.currentTimeMillis();
 		MigrationResult result = migrator.migrate(conFrom, tableFrom, conTo, tableTo);
