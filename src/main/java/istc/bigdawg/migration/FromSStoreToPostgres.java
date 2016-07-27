@@ -14,6 +14,7 @@ import istc.bigdawg.network.NetworkOut;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.sstore.SStoreSQLConnectionInfo;
+import istc.bigdawg.catalog.CatalogViewer;
 
 public class FromSStoreToPostgres 
 	extends FromDatabaseToDatabase implements MigrationNetworkRequest {
@@ -80,12 +81,16 @@ public class FromSStoreToPostgres
 	public static void main(String[] args) throws Exception {
 //		LoggerSetup.setLogging();
 		FromSStoreToPostgres migrator = new FromSStoreToPostgres();
-		SStoreSQLConnectionInfo conFrom = new SStoreSQLConnectionInfo("localhost",
-				"21212", "", "user", "password");
-		String tableFrom = "ORDERS";
-		PostgreSQLConnectionInfo conTo = new PostgreSQLConnectionInfo(
-				"localhost", "5432", "seaflow", "pguser", "");
-		String tableTo = "ORDERS";
+//		SStoreSQLConnectionInfo conFrom = new SStoreSQLConnectionInfo("node-041",
+//				"21212", "", "user", "password");
+		SStoreSQLConnectionInfo conFrom = (SStoreSQLConnectionInfo) CatalogViewer.getConnectionInfo(7);
+		String tableFrom = "sflavg_tbl";
+//		PostgreSQLConnectionInfo conTo = new PostgreSQLConnectionInfo(
+//				"localhost", "5432", "seaflow", "pguser", "");
+		PostgreSQLConnectionInfo conTo = (PostgreSQLConnectionInfo) CatalogViewer.getConnectionInfo(8);
+		System.out.println(conTo.toString());
+		System.exit(1);
+		String tableTo = "psql_sflavg_tbl";
 		long startTime = System.currentTimeMillis();
 		MigrationResult result = migrator.migrate(conFrom, tableFrom, conTo, tableTo);
 		long endTime = System.currentTimeMillis();
