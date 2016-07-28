@@ -54,7 +54,7 @@ public class MigratorTask implements Runnable {
 
 	private ExecutorService executor = null;
     private final ScheduledExecutorService scheduledExecutor;
-    public static final int MIGRATION_RATE_SEC = 60;
+    public static final int MIGRATION_RATE_SEC = 300;
 
 	/**
 	 * Run the service for migrator - this network task accepts remote request
@@ -86,9 +86,7 @@ public class MigratorTask implements Runnable {
 }
 
 class Task implements Runnable {
-    private static final String[] tables = {"sflavg_tbl", 
-    										"sfltojson_tbl",
-    										"bactojson_tbl"};
+    private static final String[] tables = {"sflavg_tbl"};
     private static final int sstoreDBID = BigDawgConfigProperties.INSTANCE.getSStoreDBID();
     private static final int psqlDBID = BigDawgConfigProperties.INSTANCE.getSeaflowDBID();
     private static SStoreSQLConnectionInfo sstoreConnInfo;
