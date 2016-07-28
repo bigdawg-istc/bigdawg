@@ -94,6 +94,7 @@ public class Main {
 		MonitoringTask relationalTask = new MonitoringTask();
 		relationalTask.run();
 		MigratorTask migratorTask = new MigratorTask();
+		migratorTask.run();
 		logger.info("Server started");
 		System.out.println(String.format(
 				"Jersey app started with WADL available at "
