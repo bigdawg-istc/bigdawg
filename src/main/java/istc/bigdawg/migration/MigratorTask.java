@@ -81,7 +81,7 @@ public class MigratorTask implements Runnable {
 
     @Override
     public void run() {
-        this.scheduledExecutor.scheduleAtFixedRate(new Task(), 0, MIGRATION_RATE_SEC, TimeUnit.SECONDS);
+        this.scheduledExecutor.scheduleAtFixedRate(new Task(), MIGRATION_RATE_SEC, MIGRATION_RATE_SEC, TimeUnit.SECONDS);
     }
 }
 
