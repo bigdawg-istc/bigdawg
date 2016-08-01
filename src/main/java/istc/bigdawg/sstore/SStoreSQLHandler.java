@@ -589,7 +589,6 @@ public class SStoreSQLHandler implements DBHandler {
 		for (int i = 1; i < parameters.size(); i++) {
 			String dataType;
 			dataType = dataTypes.get(i-1).substring(0, 3);
-			log.info("data type: " + dataType);
 			if (dataType.equalsIgnoreCase("dou")) {
 				statement.setDouble(i, Double.parseDouble(parameters.get(i)));
 			} else if (dataType.equalsIgnoreCase("flo")) {
@@ -608,15 +607,6 @@ public class SStoreSQLHandler implements DBHandler {
 
 		}
 		
-//		if (parameters.size() == 5) {
-//			statement.setDouble(1, Double.parseDouble(parameters.get(1)));
-//			statement.setDouble(2, Double.parseDouble(parameters.get(2)));
-//			statement.setDouble(3, Double.parseDouble(parameters.get(3)));
-//			statement.setDouble(4, Double.parseDouble(parameters.get(4)));
-//			
-//		} else if (parameters.size() == 1) ;
-//		else
-//			throw new BigDawgException("Invalid SStore prepared statement input sequence: "+parameters);
 	};
 	
 	

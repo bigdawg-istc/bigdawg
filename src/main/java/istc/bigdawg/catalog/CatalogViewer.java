@@ -414,12 +414,10 @@ public class CatalogViewer {
 
 		while (rs.next()) {
 			String dataTypesStr = rs.getString("paramtypes");
-			Log.info("data types: " + dataTypesStr);
 			dataTypes = new ArrayList<String>(Arrays.asList(dataTypesStr.replace(" ", "").split(",")));
 		}
 		rs.close();
 
-		Log.info("data types in arraylist: " + dataTypes.toString());
 		return dataTypes;
 	}
 	
