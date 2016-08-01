@@ -529,12 +529,12 @@ public class SStoreSQLHandler implements DBHandler {
 		if (parameters.size() > 1) {
 			params = "(";
 			for (String parameter : parameters.subList(1, parameters.size())) {
-				params += "?, "; 
+				params += "?,"; 
 			}
 			params = params.substring(0, params.length()-1);
 			params += ")";
 		}
-		copyToString = String.format("{call %s}%s", procName, params);
+		copyToString = String.format("{call %s%s}", procName, params);
 		System.out.println("Running procedure: " + copyToString);
     	
     	try {
