@@ -586,9 +586,9 @@ public class SStoreSQLHandler implements DBHandler {
 			log.error("Cannot get data types for procedure " + procName);
 			throw new BigDawgException("Cannot get data types for procedure " + procName);
 		}
-		for (int i = 1; i < parameters.size(); i++) {
+		for (int i = 1; i <= parameters.size(); i++) {
 			String dataType;
-			dataType = dataTypes.get(i).substring(0, 3);
+			dataType = dataTypes.get(i-1).substring(0, 3);
 			log.info("data type: " + dataType);
 			if (dataType.equalsIgnoreCase("dou")) {
 				statement.setDouble(i, Double.parseDouble(parameters.get(i)));
@@ -601,7 +601,7 @@ public class SStoreSQLHandler implements DBHandler {
 			} else if (dataType.equalsIgnoreCase("boo")) {
 				statement.setBoolean(i, Boolean.parseBoolean(parameters.get(i)));
 			} else if (dataType.equalsIgnoreCase("str")) {
-				statement.setString(1, parameters.get(i));
+				statement.setString(i, parameters.get(i));
 			} else {
 				throw new BigDawgException("Unsupported data type: "+parameters.get(i));
 			}
