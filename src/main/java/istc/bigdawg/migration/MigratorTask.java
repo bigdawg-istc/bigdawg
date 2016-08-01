@@ -9,6 +9,7 @@ import static istc.bigdawg.utils.JdbcUtils.getRows;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.Socket;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -38,6 +39,7 @@ import istc.bigdawg.monitoring.Monitor;
 import istc.bigdawg.monitoring.MonitoringTask;
 import istc.bigdawg.network.NetworkIn;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
+import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.postgresql.PostgreSQLInstance;
 import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.query.QueryClient;
@@ -55,6 +57,7 @@ public class MigratorTask implements Runnable {
 	private ExecutorService executor = null;
     private final ScheduledExecutorService scheduledExecutor;
     public static final int MIGRATION_RATE_SEC = 300;
+    private static final String[] tables = {"sflavg_tbl"};
 
 	/**
 	 * Run the service for migrator - this network task accepts remote request
@@ -79,20 +82,81 @@ public class MigratorTask implements Runnable {
 		executor = null;
 	}
 
+
+	public static boolean serverListening(String host, int port) {
+	    Socket s = null;
+	    try {
+	        s = new Socket(host, port);
+	        return true;
+	    } catch (Exception e) {
+	        return false;
+	    } finally {
+	        if(s != null) {
+	            try {
+	            	s.close();
+	            } catch(Exception e){
+	            	;
+	            }
+	        }
+	    }
+	}
+	
+	
     @Override
     public void run() {
-        this.scheduledExecutor.scheduleAtFixedRate(new Task(), MIGRATION_RATE_SEC, MIGRATION_RATE_SEC, TimeUnit.SECONDS);
+        final int sstoreDBID = BigDawgConfigProperties.INSTANCE.getSStoreDBID();
+		try {
+			SStoreSQLConnectionInfo sstoreConnInfo = 
+					(SStoreSQLConnectionInfo) CatalogViewer.getConnectionInfo(sstoreDBID);
+			String host = sstoreConnInfo.getHost();
+	    	int port = Integer.parseInt(sstoreConnInfo.getPort());
+	    	if (serverListening(host, port)) {
+	    		cleanHistoricalData();
+	    		this.scheduledExecutor.scheduleAtFixedRate(new Task(tables), MIGRATION_RATE_SEC, MIGRATION_RATE_SEC, TimeUnit.SECONDS);
+	    	}
+		} catch (BigDawgCatalogException | SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
     }
+
+	private void cleanHistoricalData() {
+		// clean the historical data before any migration
+    	int psqlDBID = BigDawgConfigProperties.INSTANCE.getSeaflowDBID();
+    	PostgreSQLConnectionInfo psqlConnInfo = null;
+    	Connection psqlConn = null;
+    	try {
+			psqlConnInfo =
+					(PostgreSQLConnectionInfo) CatalogViewer.getConnectionInfo(psqlDBID);
+			psqlConn = PostgreSQLHandler.getConnection(psqlConnInfo);
+		} catch (BigDawgCatalogException | SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+    	
+    	for (String table : tables) {
+    		String cmd = "DELETE FROM " + table + " WHERE s_cruise ilike 'CRUISE_7'";
+    		try {
+				PostgreSQLHandler.executeStatement(psqlConn, cmd);
+			} catch (SQLException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+    	}
+	}
+	
 }
 
+
 class Task implements Runnable {
-    private static final String[] tables = {"sflavg_tbl"};
     private static final int sstoreDBID = BigDawgConfigProperties.INSTANCE.getSStoreDBID();
     private static final int psqlDBID = BigDawgConfigProperties.INSTANCE.getSeaflowDBID();
     private static SStoreSQLConnectionInfo sstoreConnInfo;
     private static PostgreSQLConnectionInfo psqlConnInfo;
+    private static String[] tables;
 
-    Task(){
+    Task(String[] tables){
+    	this.tables = tables;
     	try {
 			this.sstoreConnInfo = 
 					(SStoreSQLConnectionInfo) CatalogViewer.getConnectionInfo(sstoreDBID);
