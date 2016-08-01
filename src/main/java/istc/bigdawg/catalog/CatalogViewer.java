@@ -7,6 +7,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
+import org.jfree.util.Log;
+
 import istc.bigdawg.exceptions.BigDawgCatalogException;
 import istc.bigdawg.exceptions.BigDawgException;
 import istc.bigdawg.exceptions.UnsupportedIslandException;
@@ -408,10 +410,11 @@ public class CatalogViewer {
 		ArrayList<String> dataTypes = new ArrayList<String>();
 
 		ResultSet rs = cc.execRet("select p.paramtypes from catalog.procedures p"
-				+ " where p.name ilike \'%" + procName + "%\';");
+				+ " where p.name ilike \'" + procName + "%\';");
 
 		while (rs.next()) {
-			dataTypes.add(rs.getString("paramtypes"));
+			String dataTypesStr = rs.getString("paramtypes");
+			dataTypes = new ArrayList<String>(Arrays.asList(dataTypesStr.replace(" ", "").split(",")));
 		}
 		rs.close();
 
@@ -429,6 +432,7 @@ public class CatalogViewer {
 	 */
 	public static String getProcParamType(String procName, int paramIndex) throws Exception {
 		ArrayList<String> dataTypes = getProcParamTypes(procName);
+		Log.info("data types: " + dataTypes);
 		return dataTypes.get(paramIndex);
 	}
 	

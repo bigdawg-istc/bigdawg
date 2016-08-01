@@ -618,7 +618,9 @@ public class SStoreSQLHandler implements DBHandler {
 	
 	
 	private String getDataType(String procName, int procIndex) throws Exception {
-		return CatalogViewer.getProcParamType(procName, procIndex);
+		String dataType = CatalogViewer.getProcParamType(procName, procIndex);
+		Log.info("Data type: " + dataType);
+		return dataType;
 	}
 	
 	
