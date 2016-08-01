@@ -517,13 +517,25 @@ public class SStoreSQLHandler implements DBHandler {
     	List<String> colNames = new ArrayList<>();
     	
     	String copyToString;
-		if (parameters.size() == 5)
-			copyToString = String.format("{call %s(?, ?, ?, ?)}", parameters.get(0));
-		else if (parameters.size() == 1)
-			copyToString = String.format("{call %s}", parameters.get(0));
-		else
-			throw new BigDawgException("Invalid SStore prepared statement input sequence: "+parameters);
-    	
+//		if (parameters.size() == 5)
+//			copyToString = String.format("{call %s(?, ?, ?, ?)}", parameters.get(0));
+//		else if (parameters.size() == 1)
+//			copyToString = String.format("{call %s}", parameters.get(0));
+//		else
+//			throw new BigDawgException("Invalid SStore prepared statement input sequence: "+parameters);
+		
+		String params = "";
+		String procName = parameters.get(0);
+		if (parameters.size() > 1) {
+			params = "(";
+			for (String parameter : parameters.subList(1, parameters.size())) {
+				params += "?, "; 
+			}
+			params = params.substring(0, params.length()-1);
+			params += ")";
+		}
+		copyToString = String.format("{call %s}%s", procName, params);
+		System.out.println("Running procedure: " + copyToString);
     	
     	try {
 		Log.info("Procedure to execute: " + copyToString);
