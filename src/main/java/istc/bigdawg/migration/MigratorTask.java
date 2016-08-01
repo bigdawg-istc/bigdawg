@@ -104,14 +104,23 @@ public class MigratorTask implements Runnable {
 	
     @Override
     public void run() {
-        final int sstoreDBID = BigDawgConfigProperties.INSTANCE.getSStoreDBID();
+		cleanHistoricalData();
+
+		final int sstoreDBID = BigDawgConfigProperties.INSTANCE.getSStoreDBID();
 		try {
 			SStoreSQLConnectionInfo sstoreConnInfo = 
 					(SStoreSQLConnectionInfo) CatalogViewer.getConnectionInfo(sstoreDBID);
 			String host = sstoreConnInfo.getHost();
 	    	int port = Integer.parseInt(sstoreConnInfo.getPort());
+	    	while (!serverListening(host, port)) {
+	    		try {
+					Thread.sleep(MIGRATION_RATE_SEC * 1000); // sleep 5 minutes
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+	    	}
 	    	if (serverListening(host, port)) {
-	    		cleanHistoricalData();
 	    		this.scheduledExecutor.scheduleAtFixedRate(new Task(tables), MIGRATION_RATE_SEC, MIGRATION_RATE_SEC, TimeUnit.SECONDS);
 	    	}
 		} catch (BigDawgCatalogException | SQLException e) {
