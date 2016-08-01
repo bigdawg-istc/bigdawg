@@ -392,6 +392,47 @@ public class CatalogViewer {
 		return extraction;
 	}
 
+	
+	/**
+	 * With name of procedure, fetch the data types of the parameters
+	 * 
+	 * @param procName
+	 * @return The data types of the parameters
+	 * @throws Exception
+	 */
+	public static ArrayList<String> getProcParamTypes(String procName) throws Exception {
+		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
+		// input check
+		CatalogUtilities.checkConnection(cc);
+
+		ArrayList<String> dataTypes = new ArrayList<String>();
+
+		ResultSet rs = cc.execRet("select p.paramtypes from catalog.procedures p"
+				+ " where p.name ilike \'%" + procName + "%\';");
+
+		while (rs.next()) {
+			dataTypes.add(rs.getString("paramtypes"));
+		}
+		rs.close();
+
+		return dataTypes;
+	}
+	
+	
+	/**
+	 * With name of procedure and the index of the parameter, fetch the data type of the parameter
+	 * 
+	 * @param procName
+	 * @param paramIndex
+	 * @return The data type of the parameter
+	 * @throws Exception
+	 */
+	public static String getProcParamType(String procName, int paramIndex) throws Exception {
+		ArrayList<String> dataTypes = getProcParamTypes(procName);
+		return dataTypes.get(paramIndex);
+	}
+	
+	
 	/**
 	 * With island name, fetch all DBs connected to it through a shim.
 	 * 

@@ -9,6 +9,7 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Time;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -516,13 +517,7 @@ public class SStoreSQLHandler implements DBHandler {
     	List<String> types = new ArrayList<>();
     	List<String> colNames = new ArrayList<>();
     	
-    	String copyToString;
-//		if (parameters.size() == 5)
-//			copyToString = String.format("{call %s(?, ?, ?, ?)}", parameters.get(0));
-//		else if (parameters.size() == 1)
-//			copyToString = String.format("{call %s}", parameters.get(0));
-//		else
-//			throw new BigDawgException("Invalid SStore prepared statement input sequence: "+parameters);
+    	String procCommand;
 		
 		String params = "";
 		String procName = parameters.get(0);
@@ -534,21 +529,12 @@ public class SStoreSQLHandler implements DBHandler {
 			params = params.substring(0, params.length()-1);
 			params += ")";
 		}
-		copyToString = String.format("{call %s%s}", procName, params);
-		System.out.println("Running procedure: " + copyToString);
+		procCommand = String.format("{call %s%s}", procName, params);
     	
     	try {
-		Log.info("Procedure to execute: " + copyToString);
-    		statement = connection.prepareCall(copyToString);
-    		if (parameters.size() == 5) {
-        		statement.setDouble(1, Double.parseDouble(parameters.get(1)));
-        		statement.setDouble(2, Double.parseDouble(parameters.get(2)));
-        		statement.setDouble(3, Double.parseDouble(parameters.get(3)));
-        		statement.setDouble(4, Double.parseDouble(parameters.get(4)));
-    			
-    		} else if (parameters.size() == 1) ;
-			else
-				throw new BigDawgException("Invalid SStore prepared statement input sequence: "+parameters);
+		Log.info("Procedure to execute: " + procCommand);
+    		statement = connection.prepareCall(procCommand);
+    		setProcParams(procName, statement, parameters);
     		
     		ResultSet rs = statement.executeQuery();
     		int colCount = 0;
@@ -573,7 +559,7 @@ public class SStoreSQLHandler implements DBHandler {
     		ex.printStackTrace();
     		// remove ' from the statement - otherwise it won't be inserted into
     		// log table in Postgres
-    		log.error(ex.getMessage() + "; statement to be executed: " + LogUtils.replace(copyToString) + " "
+    		log.error(ex.getMessage() + "; statement to be executed: " + LogUtils.replace(procCommand) + " "
     				+ ex.getStackTrace(), ex);
     		throw ex;
     	} finally {
@@ -583,7 +569,59 @@ public class SStoreSQLHandler implements DBHandler {
     	}
     	
     	return new SStoreQueryResult(rows, types, colNames);
-    };
+    }
+
+    
+    
+	private void setProcParams(String procName, PreparedStatement statement,
+			List<String> parameters) throws SQLException, BigDawgException {
+		if (parameters.size() < 2) {
+			return;
+		}
+		
+		for (int i = 1; i < parameters.size(); i++) {
+			String dataType;
+			try {
+				dataType = getDataType(procName, i).substring(0, 3);
+				if (dataType.equalsIgnoreCase("dou")) {
+					statement.setDouble(i, Double.parseDouble(parameters.get(i)));
+				} else if (dataType.equalsIgnoreCase("flo")) {
+					statement.setFloat(i, Float.parseFloat(parameters.get(i)));
+				} else if (dataType.equalsIgnoreCase("lon")) {
+					statement.setLong(i, Long.parseLong(parameters.get(i)));
+				} else if (dataType.equalsIgnoreCase("int")) {
+					statement.setInt(i, Integer.parseInt(parameters.get(i)));
+				} else if (dataType.equalsIgnoreCase("boo")) {
+					statement.setBoolean(i, Boolean.parseBoolean(parameters.get(i)));
+				} else if (dataType.equalsIgnoreCase("str")) {
+					statement.setString(1, parameters.get(i));
+				} else {
+					throw new BigDawgException("Unsupported data type: "+parameters.get(i));
+				}
+			} catch (Exception e) {
+				throw new BigDawgException("Unsupported data type: "+parameters.get(i));
+			}
+
+		}
+		
+//		if (parameters.size() == 5) {
+//			statement.setDouble(1, Double.parseDouble(parameters.get(1)));
+//			statement.setDouble(2, Double.parseDouble(parameters.get(2)));
+//			statement.setDouble(3, Double.parseDouble(parameters.get(3)));
+//			statement.setDouble(4, Double.parseDouble(parameters.get(4)));
+//			
+//		} else if (parameters.size() == 1) ;
+//		else
+//			throw new BigDawgException("Invalid SStore prepared statement input sequence: "+parameters);
+	};
+	
+	
+	
+	private String getDataType(String procName, int procIndex) throws Exception {
+		return CatalogViewer.getProcParamType(procName, procIndex);
+	}
+	
+	
     
     public static Long executePreparedStatement(Connection connection, String copyFromString, String tableName,
 	    String trim, String outputFile) throws SQLException {
