@@ -414,26 +414,13 @@ public class CatalogViewer {
 
 		while (rs.next()) {
 			String dataTypesStr = rs.getString("paramtypes");
+			Log.info("data types: " + dataTypesStr);
 			dataTypes = new ArrayList<String>(Arrays.asList(dataTypesStr.replace(" ", "").split(",")));
 		}
 		rs.close();
 
+		Log.info("data types in arraylist: " + dataTypes.toString());
 		return dataTypes;
-	}
-	
-	
-	/**
-	 * With name of procedure and the index of the parameter, fetch the data type of the parameter
-	 * 
-	 * @param procName
-	 * @param paramIndex
-	 * @return The data type of the parameter
-	 * @throws Exception
-	 */
-	public static String getProcParamType(String procName, int paramIndex) throws Exception {
-		ArrayList<String> dataTypes = getProcParamTypes(procName);
-		Log.info("data types: " + dataTypes);
-		return dataTypes.get(paramIndex);
 	}
 	
 	

@@ -579,26 +579,30 @@ public class SStoreSQLHandler implements DBHandler {
 			return;
 		}
 		
+		ArrayList<String> dataTypes = new ArrayList<String>();
+		try {
+			dataTypes = CatalogViewer.getProcParamTypes(procName);
+		} catch (Exception e1) {
+			log.error("Cannot get data types for procedure " + procName);
+			throw new BigDawgException("Cannot get data types for procedure " + procName);
+		}
 		for (int i = 1; i < parameters.size(); i++) {
 			String dataType;
-			try {
-				dataType = getDataType(procName, i).substring(0, 3);
-				if (dataType.equalsIgnoreCase("dou")) {
-					statement.setDouble(i, Double.parseDouble(parameters.get(i)));
-				} else if (dataType.equalsIgnoreCase("flo")) {
-					statement.setFloat(i, Float.parseFloat(parameters.get(i)));
-				} else if (dataType.equalsIgnoreCase("lon")) {
-					statement.setLong(i, Long.parseLong(parameters.get(i)));
-				} else if (dataType.equalsIgnoreCase("int")) {
-					statement.setInt(i, Integer.parseInt(parameters.get(i)));
-				} else if (dataType.equalsIgnoreCase("boo")) {
-					statement.setBoolean(i, Boolean.parseBoolean(parameters.get(i)));
-				} else if (dataType.equalsIgnoreCase("str")) {
-					statement.setString(1, parameters.get(i));
-				} else {
-					throw new BigDawgException("Unsupported data type: "+parameters.get(i));
-				}
-			} catch (Exception e) {
+			dataType = dataTypes.get(i).substring(0, 3);
+			log.info("data type: " + dataType);
+			if (dataType.equalsIgnoreCase("dou")) {
+				statement.setDouble(i, Double.parseDouble(parameters.get(i)));
+			} else if (dataType.equalsIgnoreCase("flo")) {
+				statement.setFloat(i, Float.parseFloat(parameters.get(i)));
+			} else if (dataType.equalsIgnoreCase("lon")) {
+				statement.setLong(i, Long.parseLong(parameters.get(i)));
+			} else if (dataType.equalsIgnoreCase("int")) {
+				statement.setInt(i, Integer.parseInt(parameters.get(i)));
+			} else if (dataType.equalsIgnoreCase("boo")) {
+				statement.setBoolean(i, Boolean.parseBoolean(parameters.get(i)));
+			} else if (dataType.equalsIgnoreCase("str")) {
+				statement.setString(1, parameters.get(i));
+			} else {
 				throw new BigDawgException("Unsupported data type: "+parameters.get(i));
 			}
 
@@ -616,15 +620,7 @@ public class SStoreSQLHandler implements DBHandler {
 	};
 	
 	
-	
-	private String getDataType(String procName, int procIndex) throws Exception {
-		String dataType = CatalogViewer.getProcParamType(procName, procIndex);
-		Log.info("Data type: " + dataType);
-		return dataType;
-	}
-	
-	
-    
+	    
     public static Long executePreparedStatement(Connection connection, String copyFromString, String tableName,
 	    String trim, String outputFile) throws SQLException {
 	
