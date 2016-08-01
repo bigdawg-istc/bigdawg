@@ -586,7 +586,7 @@ public class SStoreSQLHandler implements DBHandler {
 			log.error("Cannot get data types for procedure " + procName);
 			throw new BigDawgException("Cannot get data types for procedure " + procName);
 		}
-		for (int i = 1; i <= parameters.size(); i++) {
+		for (int i = 1; i < parameters.size(); i++) {
 			String dataType;
 			dataType = dataTypes.get(i-1).substring(0, 3);
 			log.info("data type: " + dataType);
