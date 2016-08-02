@@ -144,7 +144,7 @@ public class MigratorTask implements Runnable {
 		}
     	
     	for (String table : tables) {
-    		String cmd = "DELETE FROM " + table + " WHERE s_cruise ilike 'CRUISE_7'";
+    		String cmd = "DELETE FROM psql_" + table + " WHERE s_cruise ilike 'SCOPE_7%'";
     		try {
 				PostgreSQLHandler.executeStatement(psqlConn, cmd);
 			} catch (SQLException e) {
