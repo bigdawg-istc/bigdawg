@@ -281,14 +281,15 @@ public class SStoreSQLHandler implements DBHandler {
 	return Response.status(200).entity(out).build();
     }
     
-    public Response executeUpdateQuery(String queryString) {
+    public Response executeUpdateQuery(String queryString) throws SQLException {
 	long lStartTime = System.nanoTime();
 	try {
 	    executeSStoreUpdateSQL(queryString);
 	} catch (SQLException e) {
-	    return Response.status(500)
-		    .entity("Problem with query execution in SSToreSQL: " + e.getMessage() + "; query: " + queryString)
-		    .build();
+		throw e;
+//	    return Response.status(500)
+//		    .entity("Problem with query execution in SSToreSQL: " + e.getMessage() + "; query: " + queryString)
+//		    .build();
 	}
 	String messageQuery = "SSToreSQL query execution time milliseconds: "
 		+ (System.nanoTime() - lStartTime) / 1000000 + ",";

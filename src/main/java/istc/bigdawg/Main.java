@@ -96,7 +96,6 @@ public class Main {
 		MigratorTask migratorTask = new MigratorTask();
 		Thread migratorT = new Thread(migratorTask);
 		migratorT.start();
-//		migratorTask.run();
 		logger.info("Server started");
 		System.out.println(String.format(
 				"Jersey app started with WADL available at "

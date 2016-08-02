@@ -146,8 +146,12 @@ public class FromSStoreToPostgresImplementation implements MigrationImplementati
 	    	// Delete all tuples from S-Store
 	    	String rmTupleStatement = "DELETE FROM " + fromTable;
 	    	SStoreSQLHandler sstoreH = new SStoreSQLHandler(connectionFrom);
-	    	sstoreH.executeUpdateQuery(rmTupleStatement);
-	    	connectionPostgres.commit();
+	    	try {
+	    		sstoreH.executeUpdateQuery(rmTupleStatement);
+		    	connectionPostgres.commit();
+	    	} catch (SQLException sqle) {
+	    		connectionPostgres.rollback();
+	    	}
 	    }
 	}
     

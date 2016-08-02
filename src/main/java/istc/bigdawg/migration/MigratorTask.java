@@ -26,6 +26,7 @@ import java.util.regex.Pattern;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.jfree.util.Log;
 import org.jgrapht.graph.DefaultEdge;
 
 import istc.bigdawg.catalog.CatalogViewer;
@@ -111,7 +112,7 @@ public class MigratorTask implements Runnable {
 	    	int port = Integer.parseInt(sstoreConnInfo.getPort());
 	    	while (!serverListening(host, port)) {
 	    		try {
-					Thread.sleep(MIGRATION_RATE_SEC * 1000); // sleep 5 minutes
+					Thread.sleep(1000); // sleep 1 second
 				} catch (InterruptedException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -129,29 +130,8 @@ public class MigratorTask implements Runnable {
     @Override
     public void run() {
 		cleanHistoricalData();
-
-//		final int sstoreDBID = BigDawgConfigProperties.INSTANCE.getSStoreDBID();
-//		try {
-//			SStoreSQLConnectionInfo sstoreConnInfo = 
-//					(SStoreSQLConnectionInfo) CatalogViewer.getConnectionInfo(sstoreDBID);
-//			String host = sstoreConnInfo.getHost();
-//	    	int port = Integer.parseInt(sstoreConnInfo.getPort());
-//	    	while (!serverListening(host, port)) {
-//	    		try {
-//					Thread.sleep(MIGRATION_RATE_SEC * 1000); // sleep 5 minutes
-//				} catch (InterruptedException e) {
-//					// TODO Auto-generated catch block
-//					e.printStackTrace();
-//				}
-//	    	}
-//	    	if (serverListening(host, port)) {
-			waitForSStore();
-	    	this.scheduledExecutor.scheduleAtFixedRate(new Task(tables), MIGRATION_RATE_SEC, MIGRATION_RATE_SEC, TimeUnit.SECONDS);
-//	    	}
-//		} catch (BigDawgCatalogException | SQLException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
+		waitForSStore();
+	    this.scheduledExecutor.scheduleAtFixedRate(new Task(tables), MIGRATION_RATE_SEC, MIGRATION_RATE_SEC, TimeUnit.SECONDS);
     }
 
 	private void cleanHistoricalData() {
