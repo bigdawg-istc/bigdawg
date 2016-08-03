@@ -162,7 +162,8 @@ public class QueryClient {
 	    Pattern p = Pattern.compile(pattern);
 	    
 	    for(int i =0; i<values.length; i++){
-	    	sb.append(fields[i]).append(':');
+	    	sb.append('"');
+	    	sb.append(fields[i]).append('"').append(':');
 	    	Matcher m = p.matcher(values[i]);
 	    	if(m.matches() || "null".equals(values[i])){ //its a number or null value
 	    		sb.append(values[i]);
