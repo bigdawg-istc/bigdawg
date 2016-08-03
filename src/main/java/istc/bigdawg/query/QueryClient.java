@@ -131,7 +131,6 @@ public class QueryClient {
 		try {
 			Response r = Planner.processQuery(istream, false);
 			String results = (String)r.getEntity();
-			log.info("Returning: " +results);
 			return Response.ok(formatToJson(results)).build();
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -165,7 +164,7 @@ public class QueryClient {
 	    for(int i =0; i<values.length; i++){
 	    	sb.append(fields[i]).append(':');
 	    	Matcher m = p.matcher(values[i]);
-	    	if(m.matches()){ //its a number
+	    	if(m.matches() || "null".equals(values[i])){ //its a number or null value
 	    		sb.append(values[i]);
 	    	} else { //its a string
 	    		sb.append('"');
