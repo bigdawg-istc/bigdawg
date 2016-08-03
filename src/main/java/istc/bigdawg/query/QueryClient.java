@@ -10,12 +10,17 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Scanner;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import jline.internal.Log;
@@ -24,9 +29,13 @@ import org.apache.accumulo.core.client.AccumuloException;
 import org.apache.accumulo.core.client.AccumuloSecurityException;
 import org.apache.accumulo.core.client.TableNotFoundException;
 import org.apache.log4j.Logger;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import istc.bigdawg.accumulo.AccumuloHandler;
 import istc.bigdawg.exceptions.AccumuloShellScriptException;
+import istc.bigdawg.executor.QueryResult;
 import istc.bigdawg.planner.Planner;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.scidb.SciDBHandler;
@@ -104,6 +113,66 @@ public class QueryClient {
 		}
 	}
 	
+	/**
+	 * Answer a query from a client.
+	 * 
+	 * @param istream
+	 * @return
+	 * @throws AccumuloSecurityException
+	 * @throws AccumuloException
+	 * @throws TableNotFoundException
+	 * @throws AccumuloShellScriptException
+	 * @throws InterruptedException
+	 */
+	@Path("jsonquery")
+	@POST
+//	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response jsonQuery(String istream) {
+		log.info("istream: " + istream.replaceAll("[\"']", "*"));
+		try {
+			Response r = Planner.processQuery(istream, false);
+			String results = (String)r.getEntity();
+			return Response.ok(stringToJson(results)).build();
+		} catch (Exception e) {
+			e.printStackTrace();
+			return Response.status(412).entity(e.getMessage()).build();
+		}
+	}
+	
+	private JSONObject stringToJson(String s) throws JSONException{
+		Scanner scanner = new Scanner(s);
+		JSONArray results = new JSONArray();
+		String[] fields = scanner.nextLine().split("\t");
+		while(scanner.hasNextLine()){
+			Object[] line = processLine(scanner.nextLine());
+			JSONObject jo = new JSONObject();
+			for(int i = 0; i<fields.length; i++){
+				jo.put(fields[i], line[i]);
+			}
+			results.put(jo);
+		}
+		return new JSONObject().put("results", results);
+	}
+	
+
+	private Object[] processLine(String nextLine) {
+		String[] values = nextLine.split("\t");
+		Object[] results = new Object[values.length];
+		
+		String pattern = "^[+-]?([0-9]*[.])?[0-9]+$";
+	    Pattern p = Pattern.compile(pattern);
+	    for(int i =0; i<values.length; i++){
+	    	Matcher m = p.matcher(values[i]);
+	    	if(m.matches()){
+	    		results[i] = Double.parseDouble(values[i]);
+	    	} else {
+	    		results[i] = values[i];
+	    	}
+	    }
+	    
+		return results;
+	}
 
 	public static void main(String[] args) {
 		/*
