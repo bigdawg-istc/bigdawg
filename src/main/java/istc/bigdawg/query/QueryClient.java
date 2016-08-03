@@ -133,6 +133,7 @@ public class QueryClient {
 		try {
 			Response r = Planner.processQuery(istream, false);
 			String results = (String)r.getEntity();
+			log.info("Returning: " +results);
 			return Response.ok(stringToJson(results)).build();
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -141,6 +142,7 @@ public class QueryClient {
 	}
 	
 	private JSONObject stringToJson(String s) throws JSONException{
+		JSONObject output = new JSONObject();
 		Scanner scanner = new Scanner(s);
 		JSONArray results = new JSONArray();
 		String[] fields = scanner.nextLine().split("\t");
@@ -152,7 +154,8 @@ public class QueryClient {
 			}
 			results.put(jo);
 		}
-		return new JSONObject().put("results", results);
+		output.put("results", results);
+		return output;
 	}
 	
 
