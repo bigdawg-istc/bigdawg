@@ -19,7 +19,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
@@ -127,54 +126,56 @@ public class QueryClient {
 	@Path("jsonquery")
 	@POST
 //	@Consumes(MediaType.APPLICATION_JSON)
-	@Produces(MediaType.APPLICATION_JSON)
 	public Response jsonQuery(String istream) {
 		log.info("istream: " + istream.replaceAll("[\"']", "*"));
 		try {
 			Response r = Planner.processQuery(istream, false);
 			String results = (String)r.getEntity();
 			log.info("Returning: " +results);
-			return Response.ok(stringToJson(results)).build();
+			return Response.ok(formatToJson(results)).build();
 		} catch (Exception e) {
 			e.printStackTrace();
 			return Response.status(412).entity(e.getMessage()).build();
 		}
 	}
 	
-	private JSONObject stringToJson(String s) throws JSONException{
-		JSONObject output = new JSONObject();
+	private String formatToJson(String s) throws JSONException{
+		StringBuilder sb = new StringBuilder();
+		sb.append('[');
 		Scanner scanner = new Scanner(s);
-		JSONArray results = new JSONArray();
 		String[] fields = scanner.nextLine().split("\t");
 		while(scanner.hasNextLine()){
-			Object[] line = processLine(scanner.nextLine());
-			JSONObject jo = new JSONObject();
-			for(int i = 0; i<fields.length; i++){
-				jo.put(fields[i], line[i]);
-			}
-			results.put(jo);
+			sb.append('{');
+			sb.append(processLine(scanner.nextLine(),fields));
+			sb.append('}').append(',');
 		}
-		output.put("results", results);
-		return output;
+		if (sb.length() > 1) sb.deleteCharAt(sb.length()-1);
+		sb.append(']');
+		return sb.toString();
 	}
 	
 
-	private Object[] processLine(String nextLine) {
+	private String processLine(String nextLine, String[] fields) {
+		StringBuilder sb = new StringBuilder();
 		String[] values = nextLine.split("\t");
-		Object[] results = new Object[values.length];
 		
 		String pattern = "^[+-]?([0-9]*[.])?[0-9]+$";
 	    Pattern p = Pattern.compile(pattern);
-	    for(int i =0; i<values.length; i++){
-	    	Matcher m = p.matcher(values[i]);
-	    	if(m.matches()){
-	    		results[i] = Double.parseDouble(values[i]);
-	    	} else {
-	    		results[i] = values[i];
-	    	}
-	    }
 	    
-		return results;
+	    for(int i =0; i<values.length; i++){
+	    	sb.append(fields[i]).append(':');
+	    	Matcher m = p.matcher(values[i]);
+	    	if(m.matches()){ //its a number
+	    		sb.append(values[i]);
+	    	} else { //its a string
+	    		sb.append('"');
+	    		sb.append(values[i]);
+	    		sb.append('"');
+	    	}
+	    	sb.append(',');
+	    }
+	    if (sb.length() > 1) sb.deleteCharAt(sb.length()-1);
+		return sb.toString();
 	}
 
 	public static void main(String[] args) {
