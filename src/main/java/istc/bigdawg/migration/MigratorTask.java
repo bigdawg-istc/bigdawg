@@ -57,7 +57,7 @@ public class MigratorTask implements Runnable {
 
 	private ExecutorService executor = null;
     private final ScheduledExecutorService scheduledExecutor;
-    public static final int MIGRATION_RATE_SEC = 300;
+    public static final int MIGRATION_RATE_SEC = 60;
     private static final String[] tables = {"sflavg_tbl"};
 
 	/**
