@@ -10,12 +10,16 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Scanner;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import jline.internal.Log;
@@ -24,9 +28,13 @@ import org.apache.accumulo.core.client.AccumuloException;
 import org.apache.accumulo.core.client.AccumuloSecurityException;
 import org.apache.accumulo.core.client.TableNotFoundException;
 import org.apache.log4j.Logger;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import istc.bigdawg.accumulo.AccumuloHandler;
 import istc.bigdawg.exceptions.AccumuloShellScriptException;
+import istc.bigdawg.executor.QueryResult;
 import istc.bigdawg.planner.Planner;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.scidb.SciDBHandler;
@@ -104,6 +112,71 @@ public class QueryClient {
 		}
 	}
 	
+	/**
+	 * Answer a query from a client.
+	 * 
+	 * @param istream
+	 * @return
+	 * @throws AccumuloSecurityException
+	 * @throws AccumuloException
+	 * @throws TableNotFoundException
+	 * @throws AccumuloShellScriptException
+	 * @throws InterruptedException
+	 */
+	@Path("jsonquery")
+	@POST
+//	@Consumes(MediaType.APPLICATION_JSON)
+	public Response jsonQuery(String istream) {
+		log.info("istream: " + istream.replaceAll("[\"']", "*"));
+		try {
+			Response r = Planner.processQuery(istream, false);
+			String results = (String)r.getEntity();
+			return Response.ok(formatToJson(results)).build();
+		} catch (Exception e) {
+			e.printStackTrace();
+			return Response.status(412).entity(e.getMessage()).build();
+		}
+	}
+	
+	private String formatToJson(String s) throws JSONException{
+		StringBuilder sb = new StringBuilder();
+		sb.append('[');
+		Scanner scanner = new Scanner(s);
+		String[] fields = scanner.nextLine().split("\t");
+		while(scanner.hasNextLine()){
+			sb.append('{');
+			sb.append(processLine(scanner.nextLine(),fields));
+			sb.append('}').append(',');
+		}
+		if (sb.length() > 1) sb.deleteCharAt(sb.length()-1);
+		sb.append(']');
+		return sb.toString();
+	}
+	
+
+	private String processLine(String nextLine, String[] fields) {
+		StringBuilder sb = new StringBuilder();
+		String[] values = nextLine.split("\t");
+		
+		String pattern = "^[+-]?([0-9]*[.])?[0-9]+$";
+	    Pattern p = Pattern.compile(pattern);
+	    
+	    for(int i =0; i<values.length; i++){
+	    	sb.append('"');
+	    	sb.append(fields[i]).append('"').append(':');
+	    	Matcher m = p.matcher(values[i]);
+	    	if(m.matches() || "null".equals(values[i])){ //its a number or null value
+	    		sb.append(values[i]);
+	    	} else { //its a string
+	    		sb.append('"');
+	    		sb.append(values[i]);
+	    		sb.append('"');
+	    	}
+	    	sb.append(',');
+	    }
+	    if (sb.length() > 1) sb.deleteCharAt(sb.length()-1);
+		return sb.toString();
+	}
 
 	public static void main(String[] args) {
 		/*
