@@ -4,9 +4,10 @@
 #include <type_traits>
 
 #include "boost/cstdfloat.hpp"
+
+#include "../../src/data-formatter/attributeOld.h"
 #include "gtest/gtest.h"
 
-#include "attribute.h"
 
 // TEST(test_case_name, test_name) {
 //  ... test body ...

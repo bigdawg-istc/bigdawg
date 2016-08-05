@@ -1,6 +1,6 @@
+#include "../src/data-formatter/attributeOld.h"
+#include "../src/data-formatter/endianness.h"
 #include "gtest/gtest.h"
-#include "endianness.h"
-#include "attribute.h"
 
 TEST(Postgres,numeric)
 {

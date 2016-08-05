@@ -1,0 +1,2 @@
+/home/adam/cmigrator/test/gtest/googletest/build/CMakeFiles/gtest.dir
+/home/adam/cmigrator/test/gtest/googletest/build/CMakeFiles/gtest_main.dir

@@ -74,6 +74,15 @@ all the tests can be run with: ./runTests
 
 each test can be run individually, e.g.: ./attribute_unittest
 
+## GDB
+change the CMakeLists.txt (add -ggdb here: set(CMAKE_CXX_FLAGS " -ggdb -Wall ... )
 
+go to build:
+
+gdb data-migrator-exe
+$ file data-migrator-exe
+$ list
+$ b 12 // set breakpoint at line 12
+$ info sources
 
 
