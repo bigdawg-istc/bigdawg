@@ -85,11 +85,11 @@ public class FromPostgresToSStore
 //		LoggerSetup.setLogging();
 		FromPostgresToSStore migrator = new FromPostgresToSStore();
 		PostgreSQLConnectionInfo conFrom = new PostgreSQLConnectionInfo(
-				"localhost", "5430", "test_db", "pguser", "");
-		String tableFrom = "ORDERS";
+				"localhost", "5431", "tpcc", "pguser", "");
+		String tableFrom = "item";
 		SStoreSQLConnectionInfo conTo = new SStoreSQLConnectionInfo("localhost",
 				"21212", "", "user", "password");
-		String tableTo = "ORDERS";
+		String tableTo = "item";
 		long startTime = System.currentTimeMillis();
 		MigrationResult result = migrator.migrate(conFrom, tableFrom, conTo, tableTo);
 		long endTime = System.currentTimeMillis();

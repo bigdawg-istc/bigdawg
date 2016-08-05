@@ -147,14 +147,16 @@ public class FromSStoreToPostgresImplementation implements MigrationImplementati
 	    	connectionPostgres.rollback();
 	    	throw new MigrationException(errMessage + " " + "number of rows do not match");
 	    } else {
-	    	// Delete all tuples from S-Store
-	    	String rmTupleStatement = "DELETE FROM " + fromTable;
-	    	SStoreSQLHandler sstoreH = new SStoreSQLHandler(connectionFrom);
-	    	try {
-	    		sstoreH.executeUpdateQuery(rmTupleStatement);
-		    	connectionPostgres.commit();
-	    	} catch (SQLException sqle) {
-	    		connectionPostgres.rollback();
+	    	if (!caching) {
+	    		// Delete all tuples from S-Store
+	    		String rmTupleStatement = "DELETE FROM " + fromTable;
+	    		SStoreSQLHandler sstoreH = new SStoreSQLHandler(connectionFrom);
+	    		try {
+	    			sstoreH.executeUpdateQuery(rmTupleStatement);
+	    			connectionPostgres.commit();
+	    		} catch (SQLException sqle) {
+	    			connectionPostgres.rollback();
+	    		}
 	    	}
 	    }
 	}

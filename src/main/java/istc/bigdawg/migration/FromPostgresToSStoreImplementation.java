@@ -74,8 +74,12 @@ public class FromPostgresToSStoreImplementation implements MigrationImplementati
     public MigrationResult migrate() throws MigrationException {
     	return migrateSingleThreadCSV();
     }
-
+    
     private MigrationResult migrateSingleThreadCSV() throws MigrationException {
+    	return migrateSingleThreadCSV(false);
+    }
+
+    private MigrationResult migrateSingleThreadCSV(boolean caching) throws MigrationException {
 	log.info(generalMessage + " Mode: migrateSingleThreadCSV");
 	long startTimeMigration = System.currentTimeMillis();
 	String copyFromCommand = PostgreSQLHandler
@@ -105,9 +109,8 @@ public class FromPostgresToSStoreImplementation implements MigrationImplementati
 	    
 	    Long countexportElements = exportTask.get();
 	    Long countLoadedElements = loadTask.get();
-//	    Long countLoadedElements = 1L;
 	    
-	    finishTransaction(countexportElements, countLoadedElements);
+	    finishTransaction(countexportElements, countLoadedElements, caching);
 
 	    long endTimeMigration = System.currentTimeMillis();
 	    long durationMsec = endTimeMigration - startTimeMigration;
@@ -159,17 +162,24 @@ public class FromPostgresToSStoreImplementation implements MigrationImplementati
     }
 
 	private void finishTransaction(Long countexportElements,
-			Long countLoadedElements) throws SQLException, MigrationException {
+			Long countLoadedElements, boolean caching) throws SQLException, MigrationException {
 		if (!countexportElements.equals(countLoadedElements)) { // failed
 	    	connectionPostgres.rollback();
 	    	throw new MigrationException(errMessage + " " + "number of rows do not match");
 	    } else {
-	    	// Drop table in Postgres
-	    	PostgreSQLHandler postgresH = new PostgreSQLHandler(connectionFrom);
-	    	postgresH.dropTableIfExists(fromTable);
-	    	connectionPostgres.commit();
+	    	if (!caching) {
+	    		// Drop table in Postgres
+	    		try {
+	    			PostgreSQLHandler postgresH = new PostgreSQLHandler(connectionFrom);
+	    			postgresH.dropTableIfExists(fromTable);
+	    			connectionPostgres.commit();
+	    		} catch (SQLException sqle) {
+	    			connectionPostgres.rollback();
+	    		}
+	    	}
 	    }
 	}
+
 
 	public MigrationResult migrateBin() throws MigrationException, Exception {
 		log.info(generalMessage + " Mode: migrate postgreSQL binary format");

@@ -81,14 +81,14 @@ public class FromSStoreToPostgres
 	public static void main(String[] args) throws Exception {
 //		LoggerSetup.setLogging();
 		FromSStoreToPostgres migrator = new FromSStoreToPostgres();
-//		SStoreSQLConnectionInfo conFrom = new SStoreSQLConnectionInfo("node-041",
-//				"21212", "", "user", "password");
-		SStoreSQLConnectionInfo conFrom = (SStoreSQLConnectionInfo) CatalogViewer.getConnectionInfo(7);
-		String tableFrom = "sflavg_tbl";
-//		PostgreSQLConnectionInfo conTo = new PostgreSQLConnectionInfo(
-//				"localhost", "5432", "seaflow", "pguser", "");
-		PostgreSQLConnectionInfo conTo = (PostgreSQLConnectionInfo) CatalogViewer.getConnectionInfo(9);
-		String tableTo = "psql_sflavg_tbl";
+//		SStoreSQLConnectionInfo conFrom = (SStoreSQLConnectionInfo) CatalogViewer.getConnectionInfo(7);
+//		PostgreSQLConnectionInfo conTo = (PostgreSQLConnectionInfo) CatalogViewer.getConnectionInfo(9);
+		SStoreSQLConnectionInfo conFrom = new SStoreSQLConnectionInfo("localhost",
+				"21212", "", "user", "password");
+		PostgreSQLConnectionInfo conTo = new PostgreSQLConnectionInfo(
+				"localhost", "5431", "tpcc", "pguser", "");
+		String tableFrom = "item";
+		String tableTo = "item";
 		long startTime = System.currentTimeMillis();
 		MigrationResult result = migrator.migrate(conFrom, tableFrom, conTo, tableTo);
 		long endTime = System.currentTimeMillis();
