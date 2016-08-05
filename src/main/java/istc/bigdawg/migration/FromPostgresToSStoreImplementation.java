@@ -75,6 +75,10 @@ public class FromPostgresToSStoreImplementation implements MigrationImplementati
     	return migrateSingleThreadCSV();
     }
     
+    public MigrationResult migrate(boolean caching) throws MigrationException {
+    	return migrateSingleThreadCSV(caching);
+    }
+    
     private MigrationResult migrateSingleThreadCSV() throws MigrationException {
     	return migrateSingleThreadCSV(false);
     }
@@ -167,15 +171,15 @@ public class FromPostgresToSStoreImplementation implements MigrationImplementati
 	    	connectionPostgres.rollback();
 	    	throw new MigrationException(errMessage + " " + "number of rows do not match");
 	    } else {
-	    	if (!caching) {
-	    		// Drop table in Postgres
-	    		try {
-	    			PostgreSQLHandler postgresH = new PostgreSQLHandler(connectionFrom);
+	    	// Drop table in Postgres
+	    	try {
+	    		PostgreSQLHandler postgresH = new PostgreSQLHandler(connectionFrom);
+	    		if (!caching) {
 	    			postgresH.dropTableIfExists(fromTable);
 	    			connectionPostgres.commit();
-	    		} catch (SQLException sqle) {
-	    			connectionPostgres.rollback();
 	    		}
+	    	} catch (SQLException sqle) {
+	    		connectionPostgres.rollback();
 	    	}
 	    }
 	}
