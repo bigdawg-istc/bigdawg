@@ -7,6 +7,7 @@ FILE(REMOVE_RECURSE
   "CMakeFiles/data-migrator-exe.dir/src/data-formatter/csv/csv.cpp.o"
   "CMakeFiles/data-migrator-exe.dir/src/data-formatter/format/format.cpp.o"
   "CMakeFiles/data-migrator-exe.dir/src/data-formatter/format/attribute.cpp.o"
+  "CMakeFiles/data-migrator-exe.dir/src/data-formatter/scidb/scidb.cpp.o"
   "CMakeFiles/data-migrator-exe.dir/src/data-formatter/main.cpp.o"
   "data-migrator-exe.pdb"
   "data-migrator-exe"

@@ -233,9 +233,32 @@ CMakeFiles/data-migrator-exe.dir/src/data-formatter/format/attribute.cpp.o.provi
 
 CMakeFiles/data-migrator-exe.dir/src/data-formatter/format/attribute.cpp.o.provides.build: CMakeFiles/data-migrator-exe.dir/src/data-formatter/format/attribute.cpp.o
 
+CMakeFiles/data-migrator-exe.dir/src/data-formatter/scidb/scidb.cpp.o: CMakeFiles/data-migrator-exe.dir/flags.make
+CMakeFiles/data-migrator-exe.dir/src/data-formatter/scidb/scidb.cpp.o: ../src/data-formatter/scidb/scidb.cpp
+	$(CMAKE_COMMAND) -E cmake_progress_report /home/adam/bigdawgmiddle/src/main/cmigrator/build/CMakeFiles $(CMAKE_PROGRESS_9)
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Building CXX object CMakeFiles/data-migrator-exe.dir/src/data-formatter/scidb/scidb.cpp.o"
+	/usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/data-migrator-exe.dir/src/data-formatter/scidb/scidb.cpp.o -c /home/adam/bigdawgmiddle/src/main/cmigrator/src/data-formatter/scidb/scidb.cpp
+
+CMakeFiles/data-migrator-exe.dir/src/data-formatter/scidb/scidb.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/data-migrator-exe.dir/src/data-formatter/scidb/scidb.cpp.i"
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -E /home/adam/bigdawgmiddle/src/main/cmigrator/src/data-formatter/scidb/scidb.cpp > CMakeFiles/data-migrator-exe.dir/src/data-formatter/scidb/scidb.cpp.i
+
+CMakeFiles/data-migrator-exe.dir/src/data-formatter/scidb/scidb.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/data-migrator-exe.dir/src/data-formatter/scidb/scidb.cpp.s"
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_FLAGS) -S /home/adam/bigdawgmiddle/src/main/cmigrator/src/data-formatter/scidb/scidb.cpp -o CMakeFiles/data-migrator-exe.dir/src/data-formatter/scidb/scidb.cpp.s
+
+CMakeFiles/data-migrator-exe.dir/src/data-formatter/scidb/scidb.cpp.o.requires:
+.PHONY : CMakeFiles/data-migrator-exe.dir/src/data-formatter/scidb/scidb.cpp.o.requires
+
+CMakeFiles/data-migrator-exe.dir/src/data-formatter/scidb/scidb.cpp.o.provides: CMakeFiles/data-migrator-exe.dir/src/data-formatter/scidb/scidb.cpp.o.requires
+	$(MAKE) -f CMakeFiles/data-migrator-exe.dir/build.make CMakeFiles/data-migrator-exe.dir/src/data-formatter/scidb/scidb.cpp.o.provides.build
+.PHONY : CMakeFiles/data-migrator-exe.dir/src/data-formatter/scidb/scidb.cpp.o.provides
+
+CMakeFiles/data-migrator-exe.dir/src/data-formatter/scidb/scidb.cpp.o.provides.build: CMakeFiles/data-migrator-exe.dir/src/data-formatter/scidb/scidb.cpp.o
+
 CMakeFiles/data-migrator-exe.dir/src/data-formatter/main.cpp.o: CMakeFiles/data-migrator-exe.dir/flags.make
 CMakeFiles/data-migrator-exe.dir/src/data-formatter/main.cpp.o: ../src/data-formatter/main.cpp
-	$(CMAKE_COMMAND) -E cmake_progress_report /home/adam/bigdawgmiddle/src/main/cmigrator/build/CMakeFiles $(CMAKE_PROGRESS_9)
+	$(CMAKE_COMMAND) -E cmake_progress_report /home/adam/bigdawgmiddle/src/main/cmigrator/build/CMakeFiles $(CMAKE_PROGRESS_10)
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Building CXX object CMakeFiles/data-migrator-exe.dir/src/data-formatter/main.cpp.o"
 	/usr/bin/c++   $(CXX_DEFINES) $(CXX_FLAGS) -o CMakeFiles/data-migrator-exe.dir/src/data-formatter/main.cpp.o -c /home/adam/bigdawgmiddle/src/main/cmigrator/src/data-formatter/main.cpp
 
@@ -266,6 +289,7 @@ data__migrator__exe_OBJECTS = \
 "CMakeFiles/data-migrator-exe.dir/src/data-formatter/csv/csv.cpp.o" \
 "CMakeFiles/data-migrator-exe.dir/src/data-formatter/format/format.cpp.o" \
 "CMakeFiles/data-migrator-exe.dir/src/data-formatter/format/attribute.cpp.o" \
+"CMakeFiles/data-migrator-exe.dir/src/data-formatter/scidb/scidb.cpp.o" \
 "CMakeFiles/data-migrator-exe.dir/src/data-formatter/main.cpp.o"
 
 # External object files for target data-migrator-exe
@@ -279,6 +303,7 @@ data-migrator-exe: CMakeFiles/data-migrator-exe.dir/src/data-formatter/postgres/
 data-migrator-exe: CMakeFiles/data-migrator-exe.dir/src/data-formatter/csv/csv.cpp.o
 data-migrator-exe: CMakeFiles/data-migrator-exe.dir/src/data-formatter/format/format.cpp.o
 data-migrator-exe: CMakeFiles/data-migrator-exe.dir/src/data-formatter/format/attribute.cpp.o
+data-migrator-exe: CMakeFiles/data-migrator-exe.dir/src/data-formatter/scidb/scidb.cpp.o
 data-migrator-exe: CMakeFiles/data-migrator-exe.dir/src/data-formatter/main.cpp.o
 data-migrator-exe: CMakeFiles/data-migrator-exe.dir/build.make
 data-migrator-exe: /usr/local/lib/libboost_log.so
@@ -302,6 +327,7 @@ CMakeFiles/data-migrator-exe.dir/requires: CMakeFiles/data-migrator-exe.dir/src/
 CMakeFiles/data-migrator-exe.dir/requires: CMakeFiles/data-migrator-exe.dir/src/data-formatter/csv/csv.cpp.o.requires
 CMakeFiles/data-migrator-exe.dir/requires: CMakeFiles/data-migrator-exe.dir/src/data-formatter/format/format.cpp.o.requires
 CMakeFiles/data-migrator-exe.dir/requires: CMakeFiles/data-migrator-exe.dir/src/data-formatter/format/attribute.cpp.o.requires
+CMakeFiles/data-migrator-exe.dir/requires: CMakeFiles/data-migrator-exe.dir/src/data-formatter/scidb/scidb.cpp.o.requires
 CMakeFiles/data-migrator-exe.dir/requires: CMakeFiles/data-migrator-exe.dir/src/data-formatter/main.cpp.o.requires
 .PHONY : CMakeFiles/data-migrator-exe.dir/requires
 

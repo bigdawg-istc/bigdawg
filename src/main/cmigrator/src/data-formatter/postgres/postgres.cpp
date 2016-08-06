@@ -50,7 +50,13 @@ bool Postgres::isTheEnd() {
 	// we have to read the colNumber and check if it is the end of the file
 	// -1 represents the end of the binary data
 	int16_t colNumber;
-	fread(&colNumber, 2, 1, fp);
+	size_t numberOfObjectsRead = fread(&colNumber, 2, 1, fp);
+	if (numberOfObjectsRead != 1) {
+		std::string message(
+				"Failed to read from the binary file for PostgreSQL "
+						"(isTheEnd function in postgres.cpp).");
+		throw DataMigratorException(message);
+	}
 	colNumber = be16toh(colNumber);
 	if (colNumber == -1) {
 		return true;
@@ -72,7 +78,13 @@ bool Postgres::isTheEnd() {
 void Postgres::readFileHeader() {
 	size_t headerSize = 19;
 	char buffer[headerSize];
-	fread(buffer, headerSize, 1, fp);
+	size_t numberOfObjectsRead = fread(buffer, headerSize, 1, fp);
+	if (numberOfObjectsRead != 1) {
+		std::string message(
+				"Failed to read from the binary file for PostgreSQL "
+						"(readFileHeader function in postgres.cpp).");
+		throw DataMigratorException(message);
+	}
 	if (strncmp(buffer, BinarySignature, 19) != 0) {
 		throw DataMigratorException(
 				"Unrecognized PostgreSQL binary signature!");

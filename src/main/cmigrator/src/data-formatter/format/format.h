@@ -66,6 +66,7 @@ public:
 	virtual inline void writeRowFooter() {
 	}
 
+	/** Check if it is the end of the input binary file. */
 	virtual bool isTheEnd() = 0;
 
 	virtual void setTypeAttributeMap() = 0;

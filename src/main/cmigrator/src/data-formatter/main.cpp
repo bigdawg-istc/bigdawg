@@ -11,6 +11,9 @@
 #include "postgres/postgres.h"
 #include "common/utils.h"
 
+/**
+ * example: ./data-migrator-exe -tpostgres2csv -i /home/${USER}/data/int_not_null_test.bin -o /home/${USER}/data/int_not_null_test.bin.v2.csv  -f int32_t
+ */
 void printUsage() {
 	fprintf(stderr, "%s\n",
 			"usage: -t<migrationType> -i<input> -o<output> -f<format>");
@@ -46,6 +49,7 @@ int main(int argc, char *argv[]) {
 
 	nameFormatMap.insert(std::make_pair("postgres", new Postgres()));
 	nameFormatMap.insert(std::make_pair("csv", new Csv()));
+	nameFormatMap.insert(std::make_pair("scidb", new SciDB()));
 
 	std::vector < std::string > types;
 	std::vector<AttributeWrapper> attributes;

@@ -1,12 +1,10 @@
+#include <limits.h>
 #include <cstdio>
 #include <iostream>
-#include <limits.h>
 #include <type_traits>
 
-#include "boost/cstdfloat.hpp"
-
 #include "../../src/data-formatter/attributeOld.h"
-#include "gtest/gtest.h"
+#include "boost/cstdfloat.hpp"
 
 
 // TEST(test_case_name, test_name) {

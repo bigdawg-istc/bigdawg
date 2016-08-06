@@ -327,6 +327,30 @@ src/data-formatter/postgres/postgres.cpp.s:
 	$(MAKE) -f CMakeFiles/data-migrator-exe.dir/build.make CMakeFiles/data-migrator-exe.dir/src/data-formatter/postgres/postgres.cpp.s
 .PHONY : src/data-formatter/postgres/postgres.cpp.s
 
+src/data-formatter/scidb/scidb.o: src/data-formatter/scidb/scidb.cpp.o
+.PHONY : src/data-formatter/scidb/scidb.o
+
+# target to build an object file
+src/data-formatter/scidb/scidb.cpp.o:
+	$(MAKE) -f CMakeFiles/data-migrator-exe.dir/build.make CMakeFiles/data-migrator-exe.dir/src/data-formatter/scidb/scidb.cpp.o
+.PHONY : src/data-formatter/scidb/scidb.cpp.o
+
+src/data-formatter/scidb/scidb.i: src/data-formatter/scidb/scidb.cpp.i
+.PHONY : src/data-formatter/scidb/scidb.i
+
+# target to preprocess a source file
+src/data-formatter/scidb/scidb.cpp.i:
+	$(MAKE) -f CMakeFiles/data-migrator-exe.dir/build.make CMakeFiles/data-migrator-exe.dir/src/data-formatter/scidb/scidb.cpp.i
+.PHONY : src/data-formatter/scidb/scidb.cpp.i
+
+src/data-formatter/scidb/scidb.s: src/data-formatter/scidb/scidb.cpp.s
+.PHONY : src/data-formatter/scidb/scidb.s
+
+# target to generate assembly for a file
+src/data-formatter/scidb/scidb.cpp.s:
+	$(MAKE) -f CMakeFiles/data-migrator-exe.dir/build.make CMakeFiles/data-migrator-exe.dir/src/data-formatter/scidb/scidb.cpp.s
+.PHONY : src/data-formatter/scidb/scidb.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -363,6 +387,9 @@ help:
 	@echo "... src/data-formatter/postgres/postgres.o"
 	@echo "... src/data-formatter/postgres/postgres.i"
 	@echo "... src/data-formatter/postgres/postgres.s"
+	@echo "... src/data-formatter/scidb/scidb.o"
+	@echo "... src/data-formatter/scidb/scidb.i"
+	@echo "... src/data-formatter/scidb/scidb.s"
 .PHONY : help
 
 

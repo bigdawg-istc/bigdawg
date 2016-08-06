@@ -54,15 +54,14 @@ PostgresAttribute<T>::PostgresAttribute(FILE * fp, bool isNullable) :
 template<class T>
 Attribute * PostgresAttribute<T>::read() {
 	uint32_t valueBytesNumber;
-	printf("in postgres read\n");
-	if (this->fp == NULL) {
-		printf("fp is NULL");
-	}
-	if (this->fp == 0) {
-		printf("fp is zero!!");
-	}
 	//printf("this fp: %d", this->fp);
-	fread(&valueBytesNumber, 4, 1, this->fp);
+	size_t numberOfObjectsRead = fread(&valueBytesNumber, 4, 1, this->fp);
+	if (numberOfObjectsRead != 1) {
+		std::string message(
+				"Failed to read from the binary file for PostgreSQL "
+						"(read function 1st call in postgresAttribute.h).");
+		throw DataMigratorException(message);
+	}
 	valueBytesNumber = be32toh(valueBytesNumber);
 	if (valueBytesNumber == -1) {
 		// this is null and there are no bytes for the value
@@ -73,11 +72,19 @@ Attribute * PostgresAttribute<T>::read() {
 	if (valueBytesNumber != this->bytesNumber) {
 		throw new DataMigratorException(
 				"The current number of bytes in the file from PostgreSQL "
-						"has more attributes than the declared number of bytes for the attribute!");
+						"has more attributes than the declared "
+						"number of bytes for the attribute!");
 	}
-	fread(this->value, this->bytesNumber, 1, this->fp);
+	numberOfObjectsRead = fread(this->value, this->bytesNumber, 1,
+			this->fp);
+	if (numberOfObjectsRead != 1) {
+		std::string message(
+				"Failed to read from the binary file for PostgreSQL "
+						"(read function 2nd call in postgresAttribute.h).");
+		throw DataMigratorException(message);
+	}
 	// change the endianness
-	endianness::fromBigEndianToHost<T>(*(this->value));
+	endianness::fromBigEndianToHost < T > (*(this->value));
 	return this;
 }
 
@@ -88,7 +95,7 @@ void PostgresAttribute<T>::write(Attribute * attr) {
 			/* -1 indicates a NULL field value */
 			int32_t nullValue = -1;
 			/* this works in place */
-			endianness::fromHostToBigEndian<int32_t>(nullValue);
+			endianness::fromHostToBigEndian < int32_t > (nullValue);
 			fwrite(&nullValue, 4, 1, this->fp);
 			/* No value bytes follow in the NULL case. */
 		}
@@ -97,9 +104,9 @@ void PostgresAttribute<T>::write(Attribute * attr) {
 	uint32_t attrLengthPostgres = htobe32(bytesNumber);
 	fwrite(&attrLengthPostgres, 4, 1, this->fp);
 	this->value = static_cast<T*>(attr->getValue());
-	endianness::fromHostToBigEndian<T>(*(this->value));
+	endianness::fromHostToBigEndian < T > (*(this->value));
 	//BOOST_LOG_TRIVIAL(debug) << "postgresWriteBinary bytes number: " << this->bytesNumber;
-	fwrite(this->value, this->bytesNumber, 1, this->fp);
+	fwrite(this->value, bytesNumber, 1, this->fp);
 }
 
 #endif // POSTGRES_ATTRIBUTE_H
