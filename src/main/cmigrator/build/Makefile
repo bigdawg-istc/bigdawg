@@ -207,6 +207,30 @@ src/data-formatter/csv/csv.cpp.s:
 	$(MAKE) -f CMakeFiles/data-migrator-exe.dir/build.make CMakeFiles/data-migrator-exe.dir/src/data-formatter/csv/csv.cpp.s
 .PHONY : src/data-formatter/csv/csv.cpp.s
 
+src/data-formatter/csv/csvAttribute.o: src/data-formatter/csv/csvAttribute.cpp.o
+.PHONY : src/data-formatter/csv/csvAttribute.o
+
+# target to build an object file
+src/data-formatter/csv/csvAttribute.cpp.o:
+	$(MAKE) -f CMakeFiles/data-migrator-exe.dir/build.make CMakeFiles/data-migrator-exe.dir/src/data-formatter/csv/csvAttribute.cpp.o
+.PHONY : src/data-formatter/csv/csvAttribute.cpp.o
+
+src/data-formatter/csv/csvAttribute.i: src/data-formatter/csv/csvAttribute.cpp.i
+.PHONY : src/data-formatter/csv/csvAttribute.i
+
+# target to preprocess a source file
+src/data-formatter/csv/csvAttribute.cpp.i:
+	$(MAKE) -f CMakeFiles/data-migrator-exe.dir/build.make CMakeFiles/data-migrator-exe.dir/src/data-formatter/csv/csvAttribute.cpp.i
+.PHONY : src/data-formatter/csv/csvAttribute.cpp.i
+
+src/data-formatter/csv/csvAttribute.s: src/data-formatter/csv/csvAttribute.cpp.s
+.PHONY : src/data-formatter/csv/csvAttribute.s
+
+# target to generate assembly for a file
+src/data-formatter/csv/csvAttribute.cpp.s:
+	$(MAKE) -f CMakeFiles/data-migrator-exe.dir/build.make CMakeFiles/data-migrator-exe.dir/src/data-formatter/csv/csvAttribute.cpp.s
+.PHONY : src/data-formatter/csv/csvAttribute.cpp.s
+
 src/data-formatter/format/attribute.o: src/data-formatter/format/attribute.cpp.o
 .PHONY : src/data-formatter/format/attribute.o
 
@@ -327,6 +351,30 @@ src/data-formatter/postgres/postgres.cpp.s:
 	$(MAKE) -f CMakeFiles/data-migrator-exe.dir/build.make CMakeFiles/data-migrator-exe.dir/src/data-formatter/postgres/postgres.cpp.s
 .PHONY : src/data-formatter/postgres/postgres.cpp.s
 
+src/data-formatter/postgres/postgresAttribute.o: src/data-formatter/postgres/postgresAttribute.cpp.o
+.PHONY : src/data-formatter/postgres/postgresAttribute.o
+
+# target to build an object file
+src/data-formatter/postgres/postgresAttribute.cpp.o:
+	$(MAKE) -f CMakeFiles/data-migrator-exe.dir/build.make CMakeFiles/data-migrator-exe.dir/src/data-formatter/postgres/postgresAttribute.cpp.o
+.PHONY : src/data-formatter/postgres/postgresAttribute.cpp.o
+
+src/data-formatter/postgres/postgresAttribute.i: src/data-formatter/postgres/postgresAttribute.cpp.i
+.PHONY : src/data-formatter/postgres/postgresAttribute.i
+
+# target to preprocess a source file
+src/data-formatter/postgres/postgresAttribute.cpp.i:
+	$(MAKE) -f CMakeFiles/data-migrator-exe.dir/build.make CMakeFiles/data-migrator-exe.dir/src/data-formatter/postgres/postgresAttribute.cpp.i
+.PHONY : src/data-formatter/postgres/postgresAttribute.cpp.i
+
+src/data-formatter/postgres/postgresAttribute.s: src/data-formatter/postgres/postgresAttribute.cpp.s
+.PHONY : src/data-formatter/postgres/postgresAttribute.s
+
+# target to generate assembly for a file
+src/data-formatter/postgres/postgresAttribute.cpp.s:
+	$(MAKE) -f CMakeFiles/data-migrator-exe.dir/build.make CMakeFiles/data-migrator-exe.dir/src/data-formatter/postgres/postgresAttribute.cpp.s
+.PHONY : src/data-formatter/postgres/postgresAttribute.cpp.s
+
 src/data-formatter/scidb/scidb.o: src/data-formatter/scidb/scidb.cpp.o
 .PHONY : src/data-formatter/scidb/scidb.o
 
@@ -372,6 +420,9 @@ help:
 	@echo "... src/data-formatter/csv/csv.o"
 	@echo "... src/data-formatter/csv/csv.i"
 	@echo "... src/data-formatter/csv/csv.s"
+	@echo "... src/data-formatter/csv/csvAttribute.o"
+	@echo "... src/data-formatter/csv/csvAttribute.i"
+	@echo "... src/data-formatter/csv/csvAttribute.s"
 	@echo "... src/data-formatter/format/attribute.o"
 	@echo "... src/data-formatter/format/attribute.i"
 	@echo "... src/data-formatter/format/attribute.s"
@@ -387,6 +438,9 @@ help:
 	@echo "... src/data-formatter/postgres/postgres.o"
 	@echo "... src/data-formatter/postgres/postgres.i"
 	@echo "... src/data-formatter/postgres/postgres.s"
+	@echo "... src/data-formatter/postgres/postgresAttribute.o"
+	@echo "... src/data-formatter/postgres/postgresAttribute.i"
+	@echo "... src/data-formatter/postgres/postgresAttribute.s"
 	@echo "... src/data-formatter/scidb/scidb.o"
 	@echo "... src/data-formatter/scidb/scidb.i"
 	@echo "... src/data-formatter/scidb/scidb.s"

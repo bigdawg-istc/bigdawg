@@ -23,6 +23,9 @@ public:
 
 	/** write the attribute value to a source file */
 	virtual void write(Attribute * attribute);
+
+private:
+	void handleLineEnd();
 };
 
 template<class T>
@@ -63,6 +66,30 @@ void CsvAttribute<T>::write(Attribute * attr) {
 	/* copy only the value, not a pointer */
 	*(this->value) = *(static_cast<T*>(attr->getValue()));
 	fprintf(this->fp, "%d", *(this->value));
+	handleLineEnd();
+}
+
+template<>
+void CsvAttribute<char>::write(Attribute * attr);
+
+template<>
+void CsvAttribute<double>::write(Attribute * attr);
+
+template<>
+void CsvAttribute<float>::write(Attribute * attr);
+
+template<>
+void CsvAttribute<unsigned short int>::write(Attribute * attr);
+
+template<>
+void CsvAttribute<unsigned int>::write(Attribute * attr);
+
+template<>
+void CsvAttribute<unsigned long int>::write(Attribute * attr);
+
+template<class T>
+void CsvAttribute<T>::handleLineEnd() {
+	/* If this is the last attribute in the row. */
 	if (this->isLast) {
 		fprintf(this->fp, "%c", '\n');
 	} else {

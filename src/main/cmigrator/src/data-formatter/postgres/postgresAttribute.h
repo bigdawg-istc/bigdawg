@@ -54,27 +54,35 @@ PostgresAttribute<T>::PostgresAttribute(FILE * fp, bool isNullable) :
 
 template<class T>
 Attribute * PostgresAttribute<T>::read() {
-	uint32_t valueBytesNumber;
 	//printf("this fp: %d", this->fp);
-	size_t numberOfObjectsRead = fread(&valueBytesNumber, 4, 1, this->fp);
+	/* The number of bytes read for this attribute from the file. */
+	int32_t readBytesNumber;
+	size_t numberOfObjectsRead = fread(&readBytesNumber, 4, 1, this->fp);
 	if (numberOfObjectsRead != 1) {
 		std::string message(
 				"Failed to read from the binary file for PostgreSQL "
 						"(read function 1st call in postgresAttribute.h).");
 		throw DataMigratorException(message);
 	}
-	valueBytesNumber = be32toh(valueBytesNumber);
-	if (valueBytesNumber == -1) {
+	readBytesNumber = be32toh(readBytesNumber);
+	if (readBytesNumber == -1) {
 		// this is null and there are no bytes for the value
 		this->isNull = true;
+		if (this->value != NULL) {
+			delete this->value;
+			this->value = NULL;
+		}
 		return this;
 	}
-	this->isNull = false;
-	if (valueBytesNumber != this->bytesNumber) {
+	if (readBytesNumber != this->bytesNumber) {
 		throw new DataMigratorException(
 				"The current number of bytes in the file from PostgreSQL "
-						"has more attributes than the declared "
+						"has different value than the declared "
 						"number of bytes for the attribute!");
+	}
+	this->isNull = false;
+	if (this->value == NULL) {
+		this->value = new T;
 	}
 	numberOfObjectsRead = fread(this->value, this->bytesNumber, 1, this->fp);
 	if (numberOfObjectsRead != 1) {
@@ -112,6 +120,9 @@ void PostgresAttribute<T>::write(Attribute * attr) {
 	//BOOST_LOG_TRIVIAL(debug) << "postgresWriteBinary bytes number: " << this->bytesNumber;
 	fwrite(this->value, bytesNumber, 1, this->fp);
 }
+
+template<>
+Attribute * PostgresAttribute<char>::read();
 
 #endif // POSTGRES_ATTRIBUTE_H
 
