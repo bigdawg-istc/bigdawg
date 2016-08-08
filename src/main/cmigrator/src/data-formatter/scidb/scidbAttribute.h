@@ -4,6 +4,7 @@
 #include <endian.h>
 #include <stdint.h>
 #include <cstdio>
+#include <iostream>
 
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
@@ -86,10 +87,10 @@ Attribute * SciDBAttribute<T>::read() {
 			assert(nullValue == -1);
 		}
 	}
-	size_t elements_read = fread(&(this->value), this->bytesNumber, 1, this->fp);
-//BOOST_LOG_TRIVIAL(debug) << "elements_read: " << elements_read;
-//BOOST_LOG_TRIVIAL(debug) << "bytes number in the attribute: " << this->bytesNumber;
-//BOOST_LOG_TRIVIAL(debug) << "value: " << this->value;
+	size_t elements_read = fread(this->value, this->bytesNumber, 1, this->fp);
+	std::cout << "elements_read: " << elements_read;
+	std::cout << "bytes number in the attribute: " << this->bytesNumber;
+	std::cout << "value: " << this->value;
 	if (elements_read != 1) {
 		std::string message(
 				"No more data in the input file while reading data from "

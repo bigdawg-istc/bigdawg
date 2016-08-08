@@ -14,6 +14,11 @@
 
 /**
  * example: ./data-migrator-exe -tpostgres2csv -i /home/${USER}/data/int_not_null_test.bin -o /home/${USER}/data/int_not_null_test.bin.v2.csv  -f int32_t
+ *
+ * scidb2postgres: make; ./data-migrator-exe -tscidb2postgres -i /home/${USER}/data/int_scidb.bin -o /home/${USER}/data/int_postgres2.bin  -f int32_t
+ *
+ * postgres2scidb: ./data-migrator-exe -t postgres2scidb -i /home/${USER}/data/int_postgres.bin -o /home/${USER}/data/int_scidb2.bin  -f int32_t
+ *
  */
 void printUsage() {
 	fprintf(stderr, "%s\n",
@@ -53,7 +58,7 @@ int main(int argc, char *argv[]) {
 	nameFormatMap.insert(std::make_pair("scidb", new SciDB()));
 
 	std::vector < std::string > types;
-	std::vector<AttributeWrapper> attributes;
+	std::vector<AttributeWrapper *> attributes;
 
 	/* The getopt function returns the option character for the next
 	 * command line option. When no more option arguments are available,
@@ -148,18 +153,21 @@ int main(int argc, char *argv[]) {
 			sourceAttr->setIsLast(true);
 			destAttr->setIsLast(true);
 		}
-		AttributeWrapper wrapper(sourceAttr, destAttr);
+		AttributeWrapper * wrapper = new AttributeWrapper(sourceAttr, destAttr);
 		attributes.push_back(wrapper);
 		printf("wrapper added\n");
 	}
 	printf("format\n");
+	printf("Attributes size: %lu\n", attributes.size());
+	if (attributes.size() > 0) {
+		attributes.at(0)->toString();
+	}
 	Formatter::format(source, attributes, dest);
 
 	printf("delete the source and destination attributes!\n");
-	for (std::vector<AttributeWrapper>::iterator it = attributes.begin();
+	for (std::vector<AttributeWrapper*>::iterator it = attributes.begin();
 			it != attributes.end(); ++it) {
-		delete it->getDest();
-		delete it->getSource();
+		delete (*it);
 	}
 
 	for (std::map<std::string, Format *>::iterator it = nameFormatMap.begin();

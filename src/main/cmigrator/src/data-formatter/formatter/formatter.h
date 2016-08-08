@@ -14,7 +14,8 @@ public:
 	 * @param attributes wrapper for the attributes which will be transformed
 	 * @param dest the destination format
 	 */
-	static void format(Format & source, std::vector<AttributeWrapper> attributes, Format & dest);
+	static void format(Format & source,
+			std::vector<AttributeWrapper*> & attributes, Format & dest);
 };
 
 #endif // FORMATTER_H

@@ -4,6 +4,7 @@
 #include <endian.h>
 #include <stdint.h>
 #include <cstdio>
+#include <iostream>
 
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
@@ -103,7 +104,10 @@ void PostgresAttribute<T>::write(Attribute * attr) {
 	uint32_t attrLengthPostgres = htobe32(bytesNumber);
 	fwrite(&attrLengthPostgres, 4, 1, this->fp);
 	/* copy only the value */
+	std::cout << attr->getValue();
+	//std::cout << *(attr->getValue());
 	*(this->value) = *(static_cast<T*>(attr->getValue()));
+	/* fromHostToBigEndian takes parameter by reference */
 	endianness::fromHostToBigEndian < T > (*(this->value));
 	//BOOST_LOG_TRIVIAL(debug) << "postgresWriteBinary bytes number: " << this->bytesNumber;
 	fwrite(this->value, bytesNumber, 1, this->fp);

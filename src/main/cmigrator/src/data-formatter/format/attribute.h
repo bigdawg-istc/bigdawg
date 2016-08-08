@@ -133,7 +133,7 @@ public:
 	}
 
 	virtual ~GenericAttribute() {
-		printf("is nullable: %d", this->isNullable);
+		printf("is nullable: %d \n", this->isNullable);
 		delete this->value;
 		printf("Freeing memory generic attribute!\n");
 	}
