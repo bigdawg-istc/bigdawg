@@ -399,6 +399,30 @@ src/data-formatter/scidb/scidb.cpp.s:
 	$(MAKE) -f CMakeFiles/data-migrator-exe.dir/build.make CMakeFiles/data-migrator-exe.dir/src/data-formatter/scidb/scidb.cpp.s
 .PHONY : src/data-formatter/scidb/scidb.cpp.s
 
+src/data-formatter/scidb/scidbAttribute.o: src/data-formatter/scidb/scidbAttribute.cpp.o
+.PHONY : src/data-formatter/scidb/scidbAttribute.o
+
+# target to build an object file
+src/data-formatter/scidb/scidbAttribute.cpp.o:
+	$(MAKE) -f CMakeFiles/data-migrator-exe.dir/build.make CMakeFiles/data-migrator-exe.dir/src/data-formatter/scidb/scidbAttribute.cpp.o
+.PHONY : src/data-formatter/scidb/scidbAttribute.cpp.o
+
+src/data-formatter/scidb/scidbAttribute.i: src/data-formatter/scidb/scidbAttribute.cpp.i
+.PHONY : src/data-formatter/scidb/scidbAttribute.i
+
+# target to preprocess a source file
+src/data-formatter/scidb/scidbAttribute.cpp.i:
+	$(MAKE) -f CMakeFiles/data-migrator-exe.dir/build.make CMakeFiles/data-migrator-exe.dir/src/data-formatter/scidb/scidbAttribute.cpp.i
+.PHONY : src/data-formatter/scidb/scidbAttribute.cpp.i
+
+src/data-formatter/scidb/scidbAttribute.s: src/data-formatter/scidb/scidbAttribute.cpp.s
+.PHONY : src/data-formatter/scidb/scidbAttribute.s
+
+# target to generate assembly for a file
+src/data-formatter/scidb/scidbAttribute.cpp.s:
+	$(MAKE) -f CMakeFiles/data-migrator-exe.dir/build.make CMakeFiles/data-migrator-exe.dir/src/data-formatter/scidb/scidbAttribute.cpp.s
+.PHONY : src/data-formatter/scidb/scidbAttribute.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -444,6 +468,9 @@ help:
 	@echo "... src/data-formatter/scidb/scidb.o"
 	@echo "... src/data-formatter/scidb/scidb.i"
 	@echo "... src/data-formatter/scidb/scidb.s"
+	@echo "... src/data-formatter/scidb/scidbAttribute.o"
+	@echo "... src/data-formatter/scidb/scidbAttribute.i"
+	@echo "... src/data-formatter/scidb/scidbAttribute.s"
 .PHONY : help
 
 

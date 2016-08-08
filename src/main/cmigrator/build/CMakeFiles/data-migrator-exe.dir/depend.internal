@@ -3390,3 +3390,49 @@ CMakeFiles/data-migrator-exe.dir/src/data-formatter/scidb/scidb.cpp.o
  /usr/local/include/boost/utility/enable_if.hpp
  /usr/local/include/boost/utility/identity_type.hpp
  /usr/local/include/boost/version.hpp
+CMakeFiles/data-migrator-exe.dir/src/data-formatter/scidb/scidbAttribute.cpp.o
+ ../src/data-formatter/format/attribute.h
+ /home/adam/bigdawgmiddle/src/main/cmigrator/src/data-formatter/common/endianness.h
+ /home/adam/bigdawgmiddle/src/main/cmigrator/src/data-formatter/common/formatterExceptions.h
+ /home/adam/bigdawgmiddle/src/main/cmigrator/src/data-formatter/scidb/scidbAttribute.cpp
+ /home/adam/bigdawgmiddle/src/main/cmigrator/src/data-formatter/scidb/scidbAttribute.h
+ /usr/local/include/boost/detail/endian.hpp
+ /usr/local/include/boost/predef/architecture.h
+ /usr/local/include/boost/predef/architecture/alpha.h
+ /usr/local/include/boost/predef/architecture/arm.h
+ /usr/local/include/boost/predef/architecture/blackfin.h
+ /usr/local/include/boost/predef/architecture/convex.h
+ /usr/local/include/boost/predef/architecture/ia64.h
+ /usr/local/include/boost/predef/architecture/m68k.h
+ /usr/local/include/boost/predef/architecture/mips.h
+ /usr/local/include/boost/predef/architecture/parisc.h
+ /usr/local/include/boost/predef/architecture/ppc.h
+ /usr/local/include/boost/predef/architecture/pyramid.h
+ /usr/local/include/boost/predef/architecture/rs6k.h
+ /usr/local/include/boost/predef/architecture/sparc.h
+ /usr/local/include/boost/predef/architecture/superh.h
+ /usr/local/include/boost/predef/architecture/sys370.h
+ /usr/local/include/boost/predef/architecture/sys390.h
+ /usr/local/include/boost/predef/architecture/x86.h
+ /usr/local/include/boost/predef/architecture/x86/32.h
+ /usr/local/include/boost/predef/architecture/x86/64.h
+ /usr/local/include/boost/predef/architecture/z.h
+ /usr/local/include/boost/predef/detail/_cassert.h
+ /usr/local/include/boost/predef/detail/endian_compat.h
+ /usr/local/include/boost/predef/detail/os_detected.h
+ /usr/local/include/boost/predef/detail/test.h
+ /usr/local/include/boost/predef/library/c/_prefix.h
+ /usr/local/include/boost/predef/library/c/gnu.h
+ /usr/local/include/boost/predef/make.h
+ /usr/local/include/boost/predef/os/android.h
+ /usr/local/include/boost/predef/os/bsd.h
+ /usr/local/include/boost/predef/os/bsd/bsdi.h
+ /usr/local/include/boost/predef/os/bsd/dragonfly.h
+ /usr/local/include/boost/predef/os/bsd/free.h
+ /usr/local/include/boost/predef/os/bsd/net.h
+ /usr/local/include/boost/predef/os/bsd/open.h
+ /usr/local/include/boost/predef/os/ios.h
+ /usr/local/include/boost/predef/os/macos.h
+ /usr/local/include/boost/predef/os/windows.h
+ /usr/local/include/boost/predef/other/endian.h
+ /usr/local/include/boost/predef/version_number.h

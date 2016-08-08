@@ -13,7 +13,7 @@ Attribute * PostgresAttribute<char>::read() {
 		std::string message(
 				"Failed to read from the binary file for PostgreSQL "
 						"(read function 1st call for string in "
-						"postgresAttribute.h).");
+						"postgresAttribute.cpp).");
 		throw DataMigratorException(message);
 	}
 	//std::cout << "value bytes number before endianness: " << valueBytesNumber << std::endl;
@@ -30,7 +30,9 @@ Attribute * PostgresAttribute<char>::read() {
 	}
 	/* The declared number of bytes for the attribute char is irrelevant;
 	 * it can be different for each value. */
+	this->bytesNumber = readBytesNumber;
 	this->isNull = false;
+	/* Prepare buffer for the string. */
 	if (this->value != NULL) {
 		delete this->value;
 	}
@@ -41,9 +43,30 @@ Attribute * PostgresAttribute<char>::read() {
 	if (numberOfObjectsRead != 1) {
 		std::string message(
 				"Failed to read from the binary file for PostgreSQL "
-						"(read function 2nd call in postgresAttribute.h).");
+						"(read function 2nd call in postgresAttribute.cpp).");
 		throw DataMigratorException(message);
 	}
 	// std::cout << "value read: " << value << std::endl;
 	return this; // success
+}
+
+template<>
+void PostgresAttribute<char>::write(Attribute * attr) {
+	int32_t bytesNumber = attr->getBytesNumber();
+	/* We don't write the \0 null at the end of a string in PostgreSQL. */
+	--bytesNumber;
+	if (attr->getIsNullable()) {
+		if (attr->getIsNull()) {
+			/* -1 indicates a NULL field value */
+			int32_t nullValue = -1;
+			int32_t nullValuePostgres = htobe32(nullValue);
+			fwrite(&nullValuePostgres, 4, 1, fp);
+			/* No value bytes follow in the NULL case. */
+			return;
+		}
+	}
+	uint32_t attrLengthPostgres = htobe32(bytesNumber);
+	fwrite(&attrLengthPostgres, 4, 1, fp);
+	char * value = static_cast<char*>(attr->getValue());
+	fwrite(value, bytesNumber, 1, fp);
 }

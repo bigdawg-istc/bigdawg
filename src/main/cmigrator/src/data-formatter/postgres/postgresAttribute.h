@@ -124,5 +124,8 @@ void PostgresAttribute<T>::write(Attribute * attr) {
 template<>
 Attribute * PostgresAttribute<char>::read();
 
+template<>
+void PostgresAttribute<char>::write(Attribute * attribute);
+
 #endif // POSTGRES_ATTRIBUTE_H
 

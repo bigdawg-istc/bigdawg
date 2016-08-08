@@ -73,7 +73,7 @@ public:
 		this->bytesNumber = bytesNumber;
 	}
 
-	uint32_t getBytesNumber() const {
+	int32_t getBytesNumber() const {
 		return this->bytesNumber;
 	}
 

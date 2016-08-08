@@ -107,7 +107,8 @@ void SciDBAttribute<T>::write(Attribute * attr) {
 		if (attr->getIsNull()) {
 			// we don't know the reason why it is null so we'll write byte 0
 			char nullReason = 0;
-			size_t numberOfElementsWritten = fwrite(&nullReason, 1, 1, this->fp);
+			size_t numberOfElementsWritten = fwrite(&nullReason, 1, 1,
+					this->fp);
 			if (numberOfElementsWritten != 1) {
 				std::string message("Could not write to the file.");
 				throw DataMigratorException(message);
@@ -124,6 +125,9 @@ void SciDBAttribute<T>::write(Attribute * attr) {
 	*(this->value) = *(static_cast<T*>(attr->getValue()));
 	fwrite(this->value, bytesNumber, 1, this->fp);
 }
+
+template<>
+Attribute * SciDBAttribute<char>::read();
 
 #endif // SCIDB_ATTRIBUTE_H
 

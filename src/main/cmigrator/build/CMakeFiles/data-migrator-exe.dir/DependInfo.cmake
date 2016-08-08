@@ -16,6 +16,7 @@ SET(CMAKE_DEPENDS_CHECK_CXX
   "/home/adam/bigdawgmiddle/src/main/cmigrator/src/data-formatter/postgres/postgres.cpp" "/home/adam/bigdawgmiddle/src/main/cmigrator/build/CMakeFiles/data-migrator-exe.dir/src/data-formatter/postgres/postgres.cpp.o"
   "/home/adam/bigdawgmiddle/src/main/cmigrator/src/data-formatter/postgres/postgresAttribute.cpp" "/home/adam/bigdawgmiddle/src/main/cmigrator/build/CMakeFiles/data-migrator-exe.dir/src/data-formatter/postgres/postgresAttribute.cpp.o"
   "/home/adam/bigdawgmiddle/src/main/cmigrator/src/data-formatter/scidb/scidb.cpp" "/home/adam/bigdawgmiddle/src/main/cmigrator/build/CMakeFiles/data-migrator-exe.dir/src/data-formatter/scidb/scidb.cpp.o"
+  "/home/adam/bigdawgmiddle/src/main/cmigrator/src/data-formatter/scidb/scidbAttribute.cpp" "/home/adam/bigdawgmiddle/src/main/cmigrator/build/CMakeFiles/data-migrator-exe.dir/src/data-formatter/scidb/scidbAttribute.cpp.o"
   )
 SET(CMAKE_CXX_COMPILER_ID "GNU")
 
