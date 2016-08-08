@@ -66,6 +66,12 @@ Attribute * PostgresAttribute<T>::read() {
 	}
 	readBytesNumber = be32toh(readBytesNumber);
 	if (readBytesNumber == -1) {
+		if (this->isNullable != true) {
+			std::string message(
+					"This attribute is not nullable but the binary data from "
+							"the file gives a null value.");
+			throw DataMigratorException(message);
+		}
 		// this is null and there are no bytes for the value
 		this->isNull = true;
 		if (this->value != NULL) {
@@ -126,6 +132,9 @@ Attribute * PostgresAttribute<char>::read();
 
 template<>
 void PostgresAttribute<char>::write(Attribute * attribute);
+
+template<>
+Attribute * PostgresAttribute<bool>::read();
 
 #endif // POSTGRES_ATTRIBUTE_H
 

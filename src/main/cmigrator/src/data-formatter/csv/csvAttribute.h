@@ -57,6 +57,9 @@ Attribute * CsvAttribute<T>::read() {
 			"The reading from csv source not implemented!");
 }
 
+/**
+ * This works for typical integer (signed) values as well as for bool values.
+ */
 template<class T>
 void CsvAttribute<T>::write(Attribute * attr) {
 	if (attr->getIsNull())

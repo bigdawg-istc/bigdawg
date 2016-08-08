@@ -74,3 +74,70 @@ void PostgresAttribute<char>::write(Attribute * attr) {
 	char * value = static_cast<char*>(attr->getValue());
 	fwrite(value, bytesNumber, 1, fp);
 }
+
+template<>
+Attribute * PostgresAttribute<bool>::read() {
+	int32_t readBytesNumber;
+	size_t numberOfElementsRead = fread(&readBytesNumber, 4, 1, fp);
+	if (numberOfElementsRead != 1) {
+		std::string message(
+				"Failed to read from the binary file for PostgreSQL "
+						"(read function for bool 1st call in "
+						"postgresAttribute.cpp).");
+		throw DataMigratorException(message);
+	}
+	readBytesNumber = be32toh(readBytesNumber);
+	if (readBytesNumber == -1) {
+		if (isNullable != true) {
+			std::string message(
+					"This attribute is not nullable but the binary data from "
+							"the file gives a null value (bool attribute).");
+			throw DataMigratorException(message);
+		}
+		// if (isNullable==false) {
+		//     std::string msg ("Binary input shows a null value, whereas the attribute does not allow null values!");
+		//     std::cerr << msg << std::endl;
+		//     //BOOST_LOG_TRIVIAL(error) << msg;
+		//     throw msg;
+		// }
+		// this is null and there are no bytes for the value
+		this->isNull = true;
+		if (this->value != NULL) {
+			delete this->value;
+			this->value = NULL;
+		}
+		return this;
+	}
+	if (readBytesNumber != this->bytesNumber) {
+		throw new DataMigratorException(
+				"The current number of bytes in the file from PostgreSQL "
+						"has different value than the declared "
+						"number of bytes for the attribute bool!");
+	}
+	this->isNull = false;
+	/* bool value in the binary format */
+	char boolBin;
+	numberOfElementsRead = fread(&boolBin, this->bytesNumber, 1, fp);
+	if (numberOfElementsRead != 1) {
+		std::string message(
+				"Failed to read from the binary file for PostgreSQL "
+						"(read function for bool 2nd call in "
+						"postgresAttribute.cpp).");
+		throw DataMigratorException(message);
+	}
+	if (this->value == NULL) {
+		this->value = new bool;
+	}
+	if (boolBin == '\0') {
+		*(this->value) = false;
+	} else if (boolBin == 1) {
+		*(this->value) = true;
+	} else {
+		std::string message(
+				"Unrecognized value for bool attribute in the binary format: "
+						+ boolBin);
+		std::cerr << message << std::endl;
+		throw new DataMigratorException(message);
+	}
+	return this; // success
+}
