@@ -75,8 +75,7 @@ Attribute * PostgresAttribute<T>::read() {
 						"has more attributes than the declared "
 						"number of bytes for the attribute!");
 	}
-	numberOfObjectsRead = fread(this->value, this->bytesNumber, 1,
-			this->fp);
+	numberOfObjectsRead = fread(this->value, this->bytesNumber, 1, this->fp);
 	if (numberOfObjectsRead != 1) {
 		std::string message(
 				"Failed to read from the binary file for PostgreSQL "
@@ -103,7 +102,8 @@ void PostgresAttribute<T>::write(Attribute * attr) {
 	uint32_t bytesNumber = attr->getBytesNumber();
 	uint32_t attrLengthPostgres = htobe32(bytesNumber);
 	fwrite(&attrLengthPostgres, 4, 1, this->fp);
-	this->value = static_cast<T*>(attr->getValue());
+	/* copy only the value */
+	*(this->value) = *(static_cast<T*>(attr->getValue()));
 	endianness::fromHostToBigEndian < T > (*(this->value));
 	//BOOST_LOG_TRIVIAL(debug) << "postgresWriteBinary bytes number: " << this->bytesNumber;
 	fwrite(this->value, bytesNumber, 1, this->fp);

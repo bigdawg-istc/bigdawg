@@ -9,6 +9,7 @@
 #include "format/format.h"
 #include "formatter/formatter.h"
 #include "postgres/postgres.h"
+#include "scidb/scidb.h"
 #include "common/utils.h"
 
 /**

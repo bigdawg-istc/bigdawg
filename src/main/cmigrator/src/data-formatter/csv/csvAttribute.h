@@ -60,8 +60,9 @@ void CsvAttribute<T>::write(Attribute * attr) {
 		return;
 	// write the value only if it's not NULL
 	// fprintf(fp,"%" PRId64,this->value);
-	T* valuePointer = static_cast<T*>(attr->getValue());
-	fprintf(this->fp, "%d", *valuePointer);
+	/* copy only the value, not a pointer */
+	*(this->value) = *(static_cast<T*>(attr->getValue()));
+	fprintf(this->fp, "%d", *(this->value));
 	if (this->isLast) {
 		fprintf(this->fp, "%c", '\n');
 	} else {

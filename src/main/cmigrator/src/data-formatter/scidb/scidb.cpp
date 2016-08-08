@@ -2,12 +2,12 @@
 
 #include <boost/lexical_cast.hpp>
 #include <endian.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <cstdio>
 #include <cstring>
 #include <map>
 #include <utility>
-#include <stdint.h>
 
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>

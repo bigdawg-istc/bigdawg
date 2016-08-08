@@ -1219,6 +1219,8 @@ CMakeFiles/data-migrator-exe.dir/src/data-formatter/main.cpp.o
  /home/adam/bigdawgmiddle/src/main/cmigrator/src/data-formatter/main.cpp
  /home/adam/bigdawgmiddle/src/main/cmigrator/src/data-formatter/postgres/postgres.h
  /home/adam/bigdawgmiddle/src/main/cmigrator/src/data-formatter/postgres/postgresAttribute.h
+ /home/adam/bigdawgmiddle/src/main/cmigrator/src/data-formatter/scidb/scidb.h
+ /home/adam/bigdawgmiddle/src/main/cmigrator/src/data-formatter/scidb/scidbAttribute.h
  /usr/local/include/boost/align/align.hpp
  /usr/local/include/boost/align/detail/address.hpp
  /usr/local/include/boost/align/detail/align.hpp

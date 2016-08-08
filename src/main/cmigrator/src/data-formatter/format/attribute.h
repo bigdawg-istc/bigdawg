@@ -133,8 +133,9 @@ public:
 	}
 
 	virtual ~GenericAttribute() {
-		printf("Freeing memory generic attribute!\n");
+		printf("is nullable: %d", this->isNullable);
 		delete this->value;
+		printf("Freeing memory generic attribute!\n");
 	}
 
 	/** get the value of the attribute */

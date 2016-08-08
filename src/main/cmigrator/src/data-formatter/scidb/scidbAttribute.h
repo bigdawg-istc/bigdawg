@@ -41,7 +41,7 @@ SciDBAttribute<T>::~SciDBAttribute() {
 
 template<class T>
 SciDBAttribute<T> * SciDBAttribute<T>::clone() const {
-	printf("%s", "clone postgres\n");
+	printf("%s", "clone scidb\n");
 	return new SciDBAttribute(*this);
 }
 
@@ -113,14 +113,15 @@ void SciDBAttribute<T>::write(Attribute * attr) {
 			}
 			/* check if we can fill the size of the attribute with zeros */
 			assert(nullValuesSize >= bytesNumber);
-			fwrite(nullValues, bytesNumber, 1, this->fp);
+			fwrite(Attribute::nullValues, bytesNumber, 1, this->fp);
 		} else {
 			char notNull = -1;
 			fwrite(&notNull, 1, 1, this->fp);
 		}
 	}
-	this->value = static_cast<T*>(attr->getValue());
-	fwrite(&(this->value), bytesNumber, 1, this->fp);
+	/* copy only the value, not a pointer */
+	*(this->value) = *(static_cast<T*>(attr->getValue()));
+	fwrite(this->value, bytesNumber, 1, this->fp);
 }
 
 #endif // SCIDB_ATTRIBUTE_H

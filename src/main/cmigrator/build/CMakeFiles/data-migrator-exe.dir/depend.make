@@ -1218,6 +1218,8 @@ CMakeFiles/data-migrator-exe.dir/src/data-formatter/main.cpp.o: ../src/data-form
 CMakeFiles/data-migrator-exe.dir/src/data-formatter/main.cpp.o: ../src/data-formatter/main.cpp
 CMakeFiles/data-migrator-exe.dir/src/data-formatter/main.cpp.o: ../src/data-formatter/postgres/postgres.h
 CMakeFiles/data-migrator-exe.dir/src/data-formatter/main.cpp.o: ../src/data-formatter/postgres/postgresAttribute.h
+CMakeFiles/data-migrator-exe.dir/src/data-formatter/main.cpp.o: ../src/data-formatter/scidb/scidb.h
+CMakeFiles/data-migrator-exe.dir/src/data-formatter/main.cpp.o: ../src/data-formatter/scidb/scidbAttribute.h
 CMakeFiles/data-migrator-exe.dir/src/data-formatter/main.cpp.o: /usr/local/include/boost/align/align.hpp
 CMakeFiles/data-migrator-exe.dir/src/data-formatter/main.cpp.o: /usr/local/include/boost/align/detail/address.hpp
 CMakeFiles/data-migrator-exe.dir/src/data-formatter/main.cpp.o: /usr/local/include/boost/align/detail/align.hpp
