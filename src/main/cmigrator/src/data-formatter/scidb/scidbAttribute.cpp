@@ -76,3 +76,34 @@ Attribute * SciDBAttribute<char>::read() {
 	}
 	return this;
 }
+
+template<>
+void SciDBAttribute<char>::write(Attribute * attr) {
+	if (attr->getIsNullable()) {
+		/* We have to add one byte with info if it is null or not
+		 * (before the info about the length of the attribute). */
+		if (attr->getIsNull()) {
+			/* We don't know the reason why it is null so we'll write byte 0. */
+			char nullReason = 0;
+			fwrite(&nullReason, 1, 1, fp);
+			/* This is indeed null, so only write 0 as the number of bytes
+			 and don't write the NULL value (after 5 bytes). */
+			uint32_t bytesNumber = 0;
+			fwrite(&bytesNumber, 4, 1, fp);
+			return;
+		} else {
+			/* This value is not null so the byte of nullable should have
+			 * value: -1 */
+			char notNull = -1;
+			fwrite(&notNull, 1, 1, fp);
+		}
+	}
+//std::cout << "Bytes number written for SciDB: " << this->bytesNumber << std::endl;
+//fflush(stdout);
+	uint32_t bytesNumber = attr->getBytesNumber();
+	fwrite(&(bytesNumber), 4, 1, fp);
+//printf("Value written for SciDB: %.13s\n",this->value);
+//fflush(stdout);
+	char * value = static_cast<char*>(attr->getValue());
+	fwrite(value, bytesNumber, 1, fp); // +1 is for NULL \0 value at the end of the string: SciDB adds \0 at the end of each string
+}

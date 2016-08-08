@@ -19,6 +19,7 @@
  *
  * postgres2scidb: ./data-migrator-exe -t postgres2scidb -i /home/${USER}/data/int_postgres.bin -o /home/${USER}/data/int_scidb2.bin  -f int32_t
  *
+ * scidb to postgres for string: ./data-migrator-exe -t scidb2postgres -i /home/${USER}/data/names_scidb.bin -o /home/${USER}/data/names_postgres.bin -f string
  */
 void printUsage() {
 	fprintf(stderr, "%s\n",

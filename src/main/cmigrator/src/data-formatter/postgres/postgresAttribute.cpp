@@ -30,13 +30,16 @@ Attribute * PostgresAttribute<char>::read() {
 	}
 	/* The declared number of bytes for the attribute char is irrelevant;
 	 * it can be different for each value. */
-	this->bytesNumber = readBytesNumber;
+	/* +1 is for NULL \0 value at the end of the string:
+	 * Postgres does not store \0 (NULL) value at the end of string in the
+	 * binary format but we do it in the memory. */
+	this->bytesNumber = readBytesNumber + 1;
 	this->isNull = false;
 	/* Prepare buffer for the string. */
 	if (this->value != NULL) {
 		delete this->value;
 	}
-	this->value = new char[this->bytesNumber + 1]; // +1 is for NULL \0 value at the end of the string: SciDB adds \0 at the end of each string
+	this->value = new char[this->bytesNumber];
 	this->value[this->bytesNumber] = '\0';
 	//std::cout << "value bytes number: " << valueBytesNumber << std::endl;
 	numberOfObjectsRead = fread(this->value, readBytesNumber, 1, fp);
@@ -53,7 +56,8 @@ Attribute * PostgresAttribute<char>::read() {
 template<>
 void PostgresAttribute<char>::write(Attribute * attr) {
 	int32_t bytesNumber = attr->getBytesNumber();
-	/* We don't write the \0 null at the end of a string in PostgreSQL. */
+	/* We don't write the \0 null at the end of a string in PostgreSQL binary
+	 * format. */
 	--bytesNumber;
 	if (attr->getIsNullable()) {
 		if (attr->getIsNull()) {
