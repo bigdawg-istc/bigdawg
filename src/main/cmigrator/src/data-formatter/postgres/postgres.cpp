@@ -33,22 +33,38 @@ Postgres::Postgres() :
 void Postgres::setTypeAttributeMap() {
 	cleanTypeAttributeMap();
 	printf("set type attribute map for Postgres\n");
+	/* int32_t type */
 	typeAttributeMap.insert(
 			std::make_pair("int32_t",
 					new PostgresAttribute<int32_t>(fp, false)));
 	typeAttributeMap.insert(
 			std::make_pair("int32_t" + nullString,
 					new PostgresAttribute<int32_t>(fp, true)));
+	/* int type */
+	typeAttributeMap.insert(
+			std::make_pair("int",
+					new PostgresAttribute<int32_t>(fp, false)));
+	typeAttributeMap.insert(
+			std::make_pair("int" + nullString,
+					new PostgresAttribute<int32_t>(fp, true)));
+	/* string type */
 	typeAttributeMap.insert(
 			std::make_pair("string", new PostgresAttribute<char>(fp, false)));
 	typeAttributeMap.insert(
 			std::make_pair("string" + nullString,
 					new PostgresAttribute<char>(fp, true)));
+	/* bool type */
 	typeAttributeMap.insert(
 			std::make_pair("bool", new PostgresAttribute<bool>(fp, false)));
 	typeAttributeMap.insert(
 			std::make_pair("bool" + nullString,
 					new PostgresAttribute<bool>(fp, true)));
+	/* double type */
+	typeAttributeMap.insert(
+			std::make_pair("double", new PostgresAttribute<double>(fp, false)));
+	typeAttributeMap.insert(
+			std::make_pair("double" + nullString,
+					new PostgresAttribute<double>(fp, true)));
 }
 
 static const char BinarySignature[19] =

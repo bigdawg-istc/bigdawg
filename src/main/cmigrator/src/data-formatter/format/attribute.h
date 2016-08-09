@@ -137,6 +137,7 @@ public:
 				this->isNullable);
 		if (this->value != NULL) {
 			delete this->value;
+			this->value = NULL;
 		}
 		printf("Freeing memory generic attribute, the end!\n");
 	}

@@ -27,6 +27,12 @@ void Csv::setTypeAttributeMap() {
 	typeAttributeMap.insert(
 			std::make_pair("int32_t" + nullString,
 					new CsvAttribute<int32_t>(fp, true)));
+	/* type: int */
+	typeAttributeMap.insert(
+			std::make_pair("int", new CsvAttribute<int32_t>(fp, false)));
+	typeAttributeMap.insert(
+			std::make_pair("int" + nullString,
+					new CsvAttribute<int32_t>(fp, true)));
 	/* type: char (or string) */
 	typeAttributeMap.insert(
 			std::make_pair("string", new CsvAttribute<char>(fp, false)));
@@ -39,4 +45,10 @@ void Csv::setTypeAttributeMap() {
 	typeAttributeMap.insert(
 			std::make_pair("bool" + nullString,
 					new CsvAttribute<bool>(fp, true)));
+	/*type: double */
+	typeAttributeMap.insert(
+			std::make_pair("double", new CsvAttribute<double>(fp, false)));
+	typeAttributeMap.insert(
+			std::make_pair("double" + nullString,
+					new CsvAttribute<double>(fp, true)));
 }

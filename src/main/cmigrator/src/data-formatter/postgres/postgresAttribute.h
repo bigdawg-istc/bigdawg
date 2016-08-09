@@ -73,6 +73,7 @@ Attribute * PostgresAttribute<T>::read() {
 			throw DataMigratorException(message);
 		}
 		// this is null and there are no bytes for the value
+//		printf("this is null\n");
 		this->isNull = true;
 		if (this->value != NULL) {
 			delete this->value;
@@ -120,12 +121,15 @@ void PostgresAttribute<T>::write(Attribute * attr) {
 	/* copy only the value */
 	std::cout << attr->getValue();
 	//std::cout << *(attr->getValue());
-	*(this->value) = *(static_cast<T*>(attr->getValue()));
+	T* value = static_cast<T*>(attr->getValue());
 	/* fromHostToBigEndian takes parameter by reference */
-	endianness::fromHostToBigEndian < T > (*(this->value));
+	endianness::fromHostToBigEndian < T > (*(value));
 	//BOOST_LOG_TRIVIAL(debug) << "postgresWriteBinary bytes number: " << this->bytesNumber;
-	fwrite(this->value, bytesNumber, 1, this->fp);
+	fwrite(value, bytesNumber, 1, this->fp);
 }
+
+/* implementation of the template specialization can be found in
+ * postgresAttribute.cpp file */
 
 template<>
 Attribute * PostgresAttribute<char>::read();
@@ -135,6 +139,9 @@ void PostgresAttribute<char>::write(Attribute * attribute);
 
 template<>
 Attribute * PostgresAttribute<bool>::read();
+
+template<>
+void PostgresAttribute<bool>::write(Attribute * attribute);
 
 #endif // POSTGRES_ATTRIBUTE_H
 

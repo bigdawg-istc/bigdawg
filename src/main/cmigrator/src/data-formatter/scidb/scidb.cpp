@@ -39,6 +39,12 @@ void SciDB::setTypeAttributeMap() {
 	typeAttributeMap.insert(
 			std::make_pair("int32_t" + nullString,
 					new SciDBAttribute<int32_t>(fp, true)));
+	/* int type */
+	typeAttributeMap.insert(
+			std::make_pair("int", new SciDBAttribute<int32_t>(fp, false)));
+	typeAttributeMap.insert(
+			std::make_pair("int" + nullString,
+					new SciDBAttribute<int32_t>(fp, true)));
 	/* string type */
 	typeAttributeMap.insert(
 			std::make_pair("string", new SciDBAttribute<char>(fp, false)));
@@ -51,6 +57,12 @@ void SciDB::setTypeAttributeMap() {
 	typeAttributeMap.insert(
 			std::make_pair("bool" + nullString,
 					new SciDBAttribute<bool>(fp, true)));
+	/* double type */
+	typeAttributeMap.insert(
+			std::make_pair("double", new SciDBAttribute<double>(fp, false)));
+	typeAttributeMap.insert(
+			std::make_pair("double" + nullString,
+					new SciDBAttribute<double>(fp, true)));
 }
 
 bool SciDB::isTheEnd() {

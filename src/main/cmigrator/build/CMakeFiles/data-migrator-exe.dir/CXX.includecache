@@ -168,6 +168,10 @@ string
 scidbAttribute.h
 /home/adam/bigdawgmiddle/src/main/cmigrator/src/data-formatter/scidb/scidbAttribute.h
 
+/home/adam/bigdawgmiddle/src/main/cmigrator/src/data-formatter/scidb/scidbAttribute.cpp
+scidbAttribute.h
+/home/adam/bigdawgmiddle/src/main/cmigrator/src/data-formatter/scidb/scidbAttribute.h
+
 /home/adam/bigdawgmiddle/src/main/cmigrator/src/data-formatter/scidb/scidbAttribute.h
 endian.h
 -

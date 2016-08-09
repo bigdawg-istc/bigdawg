@@ -31,7 +31,9 @@ void Format::cleanTypeAttributeMap() {
 	typeAttributeMap.clear();
 }
 
-Attribute * Format::getAttribute(const std::string& type) {
+Attribute * Format::getAttribute(const std::string& typeRaw) {
+	/* Trimming - get rid of whit spaces (leading and trailing) */
+	std::string type = trim(typeRaw);
 	try {
 		return typeAttributeMap.at(type);
 	} catch (const std::out_of_range & oor) {

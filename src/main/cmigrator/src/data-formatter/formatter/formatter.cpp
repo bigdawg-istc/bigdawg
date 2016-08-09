@@ -13,14 +13,14 @@ void Formatter::format(Format & source,
 		source.readRowHeader();
 		dest.writeRowHeader();
 
-		printf("Attributes size: %lu\n", attributes.size());
-		if (attributes.size() > 0) {
-			attributes.at(0)->toString();
-		}
+//		printf("Attributes size: %lu\n", attributes.size());
+//		if (attributes.size() > 0) {
+//			attributes.at(0)->toString();
+//		}
 		for (std::vector<AttributeWrapper*>::iterator it = attributes.begin();
 				it != attributes.end(); ++it) {
-			printf("Attributes wrapper: ");
-			(*it)->toString();
+//			printf("Attributes wrapper: ");
+//			(*it)->toString();
 			(*it)->readWrite();
 		}
 		source.readRowFooter();

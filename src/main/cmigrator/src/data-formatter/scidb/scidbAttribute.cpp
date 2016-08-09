@@ -17,9 +17,10 @@ Attribute * SciDBAttribute<char>::read() {
 		size_t bytes_read;
 		bytes_read = fread(&nullValue, 1, 1, fp);
 		if (bytes_read != 1) {
-			std::string message("Failed to read from the binary file for SciDB "
-					"(read function 1st call for string in "
-					"scidbAttribute.cpp).");
+			std::string message(
+					"Failed to read from the binary file for SciDB char "
+							"(read function 1st call for string in "
+							"scidbAttribute.cpp, checking isNullable).");
 			throw DataMigratorException(message);
 		}
 		if (nullValue >= 0) {
@@ -35,10 +36,16 @@ Attribute * SciDBAttribute<char>::read() {
 			 For example, an int8 will require 2 bytes and an int64
 			 will require 9 bytes. (In the figure, see bytes 2-4 or 17-19.)
 			 */
+		} else if (nullValue == -1) {
+			this->isNull = false;
 		} else {
 			/* if nullValue != -1: it means that there was another unexpected value
 			 different from [-1,127] */
-			assert(nullValue == -1);
+			std::string message(
+					"For null indicator we expected value in the range but got: ");
+			message += nullValue;
+			message += " (read function null call in scidbAttribute.cpp).";
+			throw DataMigratorException(message);
 		}
 	}
 	/* Read the length of the string. */
@@ -47,15 +54,17 @@ Attribute * SciDBAttribute<char>::read() {
 	int32_t readBytesNumber; // [re:d] bytes number
 	size_t elements_read = fread(&(readBytesNumber), 4, 1, fp);
 	if (elements_read != 1) {
-		std::string message("Failed to read from the binary file for SciDB "
-				"(read function 2nd call in scidbAttribute.cpp).");
+		std::string message(
+				"Failed to read from the binary file for SciDB char - not null"
+						"(read function 2nd call in scidbAttribute.cpp).");
 		throw DataMigratorException(message);
 	}
 	if (this->isNull) {
-		if (this->bytesNumber != 0) {
+		printf("read bytes number for scidb: %d", readBytesNumber);
+		if (readBytesNumber != 0) {
 			std::string message(
 					"The null byte indicated null value but the string size "
-							"is different than zero!");
+							"is different than zero (scidb char)!");
 			std::cerr << message << std::endl;
 			throw DataMigratorException(message);
 		}
@@ -68,10 +77,13 @@ Attribute * SciDBAttribute<char>::read() {
 	this->value = new char[readBytesNumber];
 	/* Set the read bytes number. */
 	this->bytesNumber = readBytesNumber;
+	printf("read bytes number: %d\n", readBytesNumber);
 	elements_read = fread(this->value, readBytesNumber, 1, fp);
+	printf("value %s\n", this->value);
 	if (elements_read != 1) {
-		std::string message("Failed to read from the binary file for SciDB "
-				"(read function 3nd call in scidbAttribute.cpp).");
+		std::string message(
+				"Failed to read from the binary file for SciDB char - not null"
+						"(read function call in scidbAttribute.cpp).");
 		throw DataMigratorException(message);
 	}
 	return this;
@@ -123,10 +135,9 @@ Attribute * SciDBAttribute<bool>::read() {
 		size_t elementsRead = fread(&nullValue, 1, 1, fp);
 		//BOOST_LOG_TRIVIAL(debug) << "bytes read: " << bytes_read;
 		if (elementsRead != 1) {
-			std::string message(
-						"Failed to read from the binary file for SciDB "
-								"(read function for bool 1st call in "
-								"scidbAttribute.cpp).");
+			std::string message("Failed to read from the binary file for SciDB "
+					"(read function for bool this->isNUllable call in "
+					"scidbAttribute.cpp).");
 			throw DataMigratorException(message);
 		}
 		if (nullValue >= 0) {
@@ -138,23 +149,28 @@ Attribute * SciDBAttribute<bool>::read() {
 			 For example, an int8 will require 2 bytes and an int64
 			 will require 9 bytes. (In the figure, see bytes 2-4 or 17-19.)
 			 */
-			if (this->value != NULL) {
-				delete this->value;
-				this->value = NULL;
-			}
-			return this;
+		} else if (nullValue == -1) {
+			this->isNull = false;
 		} else {
 			/* if nullValue != -1: it means that there was another unexpected value
 			 different from [-1,127] */
-			assert(nullValue == -1);
+			std::string message(
+					"For null indicator we expected value in the range but got: ");
+			message += nullValue;
+			message += " (read function null call in scidbAttribute.cpp).";
+			throw DataMigratorException(message);
 		}
 	}
 	char boolValue;
 	size_t elements_read = fread(&boolValue, this->bytesNumber, 1, fp);
+	std::cout << "elements_read: " << elements_read << std::endl;
+	std::cout << "bytes number in the attribute: " << this->bytesNumber
+			<< std::endl;
+	std::cout << "value: " << *(this->value) << std::endl;
 	if (elements_read != 1) {
 		std::string message("Failed to read from the binary file "
 				"for SciDB for a bool value "
-				"(read function 3nd call in scidbAttribute.cpp).");
+				"(read function not-null call in scidbAttribute.cpp).");
 		throw DataMigratorException(message);
 	}
 	//BOOST_LOG_TRIVIAL(debug) << "elements_read: " << elements_read;
@@ -176,4 +192,31 @@ Attribute * SciDBAttribute<bool>::read() {
 		throw DataMigratorException(message);
 	}
 	return this; // everything is correct: success
+}
+
+template<>
+void SciDBAttribute<bool>::write(Attribute * attr) {
+	assert(this->bytesNumber == attr.getBytesNumber());
+	if (attr->getIsNullable()) {
+		if (attr->getIsNull()) {
+			// we don't know the reason why it is null so we'll write byte 0
+			char nullReason = 0;
+			fwrite(&nullReason, 1, 1, fp);
+			/* check if we have enough long the null array to fill the value */
+			assert(nullValuesSize >= this->bytesNumber);
+			fwrite(nullValues, this->bytesNumber, 1, fp);
+			return;
+		} else {
+			char notNull = -1;
+			fwrite(&notNull, 1, 1, fp);
+		}
+	}
+	char writeValue;
+	bool * value = static_cast<bool*>(attr->getValue());
+	if (*(value) == true) {
+		writeValue = 1;
+	} else {
+		writeValue = '\0';
+	}
+	fwrite(&writeValue, this->bytesNumber, 1, fp);
 }

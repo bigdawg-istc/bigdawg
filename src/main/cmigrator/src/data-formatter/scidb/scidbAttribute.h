@@ -66,12 +66,13 @@ Attribute * SciDBAttribute<T>::read() {
 		int8_t nullValue;
 		size_t bytes_read;
 		bytes_read = fread(&nullValue, 1, 1, this->fp);
-		if (bytes_read < 1) {
+		if (bytes_read != 1) {
 			std::string message(
 					"No more data in the input file while reading data from "
 							"the binary scidb file.");
 			throw DataMigratorException(message);
 		}
+		this->isNull = false;
 		if (nullValue >= 0 && nullValue <= 127) {
 			this->isNull = true;
 			// we don't need the reason why it is null so we'll write byte 0
@@ -81,16 +82,26 @@ Attribute * SciDBAttribute<T>::read() {
 			 For example, an int8 will require 2 bytes and an int64
 			 will require 9 bytes. (In the figure, see bytes 2-4 or 17-19.)
 			 */
+		} else if (nullValue == -1) {
+			this->isNull = false;
 		} else {
 			/* if nullValue != -1: it means that there was another unexpected value
 			 different from [-1,127] */
-			assert(nullValue == -1);
+			std::string message(
+					"For null indicator we expected value in the range but got: ");
+			message += nullValue;
+			message += " (read function null call in scidbAttribute.cpp).";
+			throw DataMigratorException(message);
 		}
 	}
+	if (this->value == NULL) {
+		this->value = new T;
+	}
 	size_t elements_read = fread(this->value, this->bytesNumber, 1, this->fp);
-	std::cout << "elements_read: " << elements_read;
-	std::cout << "bytes number in the attribute: " << this->bytesNumber;
-	std::cout << "value: " << this->value;
+	std::cout << "elements_read: " << elements_read << std::endl;
+	std::cout << "bytes number in the attribute: " << this->bytesNumber
+			<< std::endl;
+	std::cout << "value: " << *(this->value) << std::endl;
 	if (elements_read != 1) {
 		std::string message(
 				"No more data in the input file while reading data from "
@@ -103,6 +114,7 @@ Attribute * SciDBAttribute<T>::read() {
 template<class T>
 void SciDBAttribute<T>::write(Attribute * attr) {
 	uint32_t bytesNumber = attr->getBytesNumber();
+//	printf("attr is null: %d\n", attr->getIsNull());
 	if (attr->getIsNullable()) {
 		if (attr->getIsNull()) {
 			// we don't know the reason why it is null so we'll write byte 0
@@ -116,15 +128,20 @@ void SciDBAttribute<T>::write(Attribute * attr) {
 			/* check if we can fill the size of the attribute with zeros */
 			assert(nullValuesSize >= bytesNumber);
 			fwrite(Attribute::nullValues, bytesNumber, 1, this->fp);
+			return; /* This has to be the end of the writting to the binary scidb. */
 		} else {
 			char notNull = -1;
 			fwrite(&notNull, 1, 1, this->fp);
 		}
 	}
 	/* copy only the value, not a pointer */
-	*(this->value) = *(static_cast<T*>(attr->getValue()));
-	fwrite(this->value, bytesNumber, 1, this->fp);
+	T* value = static_cast<T*>(attr->getValue());
+//	printf("value of the int: %d\n", *value);
+	fwrite(value, bytesNumber, 1, this->fp);
 }
+
+/* implementation of the template specialization can be found in
+ * scidbAttribute.cpp file */
 
 template<>
 Attribute * SciDBAttribute<char>::read();
@@ -134,6 +151,9 @@ void SciDBAttribute<char>::write(Attribute * attr);
 
 template<>
 Attribute * SciDBAttribute<bool>::read();
+
+template<>
+void SciDBAttribute<bool>::write(Attribute * attr);
 
 #endif // SCIDB_ATTRIBUTE_H
 

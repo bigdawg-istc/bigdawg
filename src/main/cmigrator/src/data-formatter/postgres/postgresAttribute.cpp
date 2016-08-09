@@ -142,3 +142,29 @@ Attribute * PostgresAttribute<bool>::read() {
 	}
 	return this; // success
 }
+
+template<>
+void PostgresAttribute<bool>::write(Attribute * attr) {
+	if (attr->getIsNullable()) {
+		if (attr->getIsNull()) {
+			/* -1 indicates a NULL field value */
+			int32_t nullValue = -1;
+			int32_t nullValuePostgres = htobe32(nullValue);
+			fwrite(&nullValuePostgres, 4, 1, fp);
+			/* No value bytes follow in the NULL case. */
+			return;
+		}
+	}
+	assert(this->bytesNumber == attr->getBytesNumber());
+	uint32_t attrLengthPostgres = htobe32(this->bytesNumber);
+	fwrite(&attrLengthPostgres, 4, 1, fp);
+	bool * value = static_cast<bool*>(attr->getValue());
+	char boolBin;
+	if (*(value) == false) {
+		boolBin = '\0';
+	} else {
+		boolBin = 1;
+	}
+	//BOOST_LOG_TRIVIAL(debug) << "postgresWriteBinary bytes number: " << this->bytesNumber;
+	fwrite(&boolBin, this->bytesNumber, 1, fp);
+}

@@ -44,3 +44,14 @@ void sortPrintVector(const char* message, std::vector<std::string> & vector) {
 	}
 	std::cerr << std::endl;
 }
+
+std::string trim(const std::string & text, const std::string & whitespaces) {
+	const size_t strBegin = text.find_first_not_of(whitespaces);
+	/* string::npos - used to indicate no matches */
+	if (strBegin == std::string::npos) {
+		return ""; // no content
+	}
+	const size_t strEnd = text.find_last_not_of(whitespaces);
+	const size_t strRange = strEnd - strBegin + 1;
+	return text.substr(strBegin, strRange);
+}
