@@ -77,6 +77,7 @@ void PostgresAttribute<char>::write(Attribute * attr) {
 
 template<>
 Attribute * PostgresAttribute<bool>::read() {
+	/* Number of bytes read from the binary file. */
 	int32_t readBytesNumber;
 	size_t numberOfElementsRead = fread(&readBytesNumber, 4, 1, fp);
 	if (numberOfElementsRead != 1) {

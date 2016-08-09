@@ -132,5 +132,8 @@ Attribute * SciDBAttribute<char>::read();
 template<>
 void SciDBAttribute<char>::write(Attribute * attr);
 
+template<>
+Attribute * SciDBAttribute<bool>::read();
+
 #endif // SCIDB_ATTRIBUTE_H
 
