@@ -113,6 +113,7 @@ void PostgresAttribute<T>::write(Attribute * attr) {
 			endianness::fromHostToBigEndian < int32_t > (nullValue);
 			fwrite(&nullValue, 4, 1, this->fp);
 			/* No value bytes follow in the NULL case. */
+			return;
 		}
 	}
 	uint32_t bytesNumber = attr->getBytesNumber();

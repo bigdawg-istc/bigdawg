@@ -88,7 +88,7 @@ Attribute * SciDBAttribute<T>::read() {
 			/* if nullValue != -1: it means that there was another unexpected value
 			 different from [-1,127] */
 			std::string message(
-					"For null indicator we expected value in the range but got: ");
+					"For null indicator we expected value in the range but akegot: ");
 			message += nullValue;
 			message += " (read function null call in scidbAttribute.cpp).";
 			throw DataMigratorException(message);
