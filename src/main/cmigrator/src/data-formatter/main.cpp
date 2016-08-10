@@ -11,6 +11,7 @@
 #include "postgres/postgres.h"
 #include "scidb/scidb.h"
 #include "common/utils.h"
+#include "fcntl.h"
 
 /**
  * example: ./data-migrator-exe -tpostgres2csv -i /home/${USER}/data/int_not_null_test.bin -o /home/${USER}/data/int_not_null_test.bin.v2.csv  -f int32_t
@@ -46,6 +47,20 @@ void printMapKeys(const char * message, std::map<std::string, Format *> map) {
 }
 
 int main(int argc, char *argv[]) {
+
+	/* direct to stdout to a file */
+	int out_file = open("cout.log", O_RDWR | O_CREAT | O_APPEND, 0600);
+	if (-1 == out_file) {
+		perror("opening cout.log");
+		return 255;
+	}
+	int save_out = dup(fileno(stdout));
+	if (-1 == dup2(out_file, fileno(stdout))) {
+		perror("cannot redirect stdout");
+		return 254;
+	}
+	/* the end of redirecting stdout */
+
 	printf("%s\n", "test formatter now");
 	printf("Number of arguments: %d\n", argc);
 	for (int i = 0; i < argc; ++i) {
@@ -176,4 +191,11 @@ int main(int argc, char *argv[]) {
 			it != nameFormatMap.end(); ++it) {
 		delete it->second;
 	}
+
+	/* go back to normal stdout */
+	fflush (stdout);
+	close(out_file);
+	dup2(save_out, fileno(stdout));
+	close(save_out);
+	/* the end of going to standard stdout */
 }

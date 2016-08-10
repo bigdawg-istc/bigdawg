@@ -42,3 +42,10 @@ void CsvAttribute<unsigned long int>::write(Attribute * attr) {
 	fprintf(this->fp, "%lu", *(this->value));
 	handleLineEnd();
 }
+
+template<>
+void CsvAttribute<int64_t>::write(Attribute * attr) {
+	*(this->value) = *(static_cast<unsigned int64_t*>(attr->getValue()));
+	fprintf(this->fp, "%lu", *(this->value));
+	handleLineEnd();
+}

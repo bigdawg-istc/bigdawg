@@ -42,11 +42,16 @@ void Postgres::setTypeAttributeMap() {
 					new PostgresAttribute<int32_t>(fp, true)));
 	/* int type */
 	typeAttributeMap.insert(
-			std::make_pair("int",
-					new PostgresAttribute<int32_t>(fp, false)));
+			std::make_pair("int", new PostgresAttribute<int32_t>(fp, false)));
 	typeAttributeMap.insert(
 			std::make_pair("int" + nullString,
 					new PostgresAttribute<int32_t>(fp, true)));
+	/* int64 type */
+	typeAttributeMap.insert(
+			std::make_pair("int64", new PostgresAttribute<int64_t>(fp, false)));
+	typeAttributeMap.insert(
+			std::make_pair("int64" + nullString,
+					new PostgresAttribute<int64_t>(fp, true)));
 	/* string type */
 	typeAttributeMap.insert(
 			std::make_pair("string", new PostgresAttribute<char>(fp, false)));

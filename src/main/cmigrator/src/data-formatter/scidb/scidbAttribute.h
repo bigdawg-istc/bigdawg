@@ -85,6 +85,7 @@ Attribute * SciDBAttribute<T>::read() {
 		} else if (nullValue == -1) {
 			this->isNull = false;
 		} else {
+
 			/* if nullValue != -1: it means that there was another unexpected value
 			 different from [-1,127] */
 			std::string message(

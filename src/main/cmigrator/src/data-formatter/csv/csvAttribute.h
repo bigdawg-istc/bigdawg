@@ -90,6 +90,9 @@ void CsvAttribute<unsigned int>::write(Attribute * attr);
 template<>
 void CsvAttribute<unsigned long int>::write(Attribute * attr);
 
+template<>
+void CsvAttribute<int64_t>::write(Attribute * attr);
+
 template<class T>
 void CsvAttribute<T>::handleLineEnd() {
 	/* If this is the last attribute in the row. */

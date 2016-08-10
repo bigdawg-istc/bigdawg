@@ -45,6 +45,12 @@ void SciDB::setTypeAttributeMap() {
 	typeAttributeMap.insert(
 			std::make_pair("int" + nullString,
 					new SciDBAttribute<int32_t>(fp, true)));
+	/* int64 type */
+	typeAttributeMap.insert(
+			std::make_pair("int64", new SciDBAttribute<int64_t>(fp, false)));
+	typeAttributeMap.insert(
+			std::make_pair("int64" + nullString,
+					new SciDBAttribute<int64_t>(fp, true)));
 	/* string type */
 	typeAttributeMap.insert(
 			std::make_pair("string", new SciDBAttribute<char>(fp, false)));
