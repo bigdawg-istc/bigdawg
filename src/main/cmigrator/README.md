@@ -63,8 +63,21 @@ adam@gaia:~/cmigrator$ ./data-migrator -t postgres2scidb -i /home/adam/data/scid
 
 AFL% load(bool_array4,'/home/adam/data/scidb/bool_table_test_to_scidb2.bin',-2,'(bool null)');
 
+### Full example for data migration between PostgreSQL and SciDB for basic types: bool, int, double and string
+
+```sql
+// create table in PostgreSQL
+
+create table test_all (a bool not null, b bool, c int not null, d int, e double precision not null, f double precision, g varchar not null, h varchar);
+insert into test_all values(true, null, 1, null, 1.0, null, 'adam', 'dziedzic');
+insert into test_all values(true, false, 1, 2, 1.2, 1.3, 'aaron', 'elmore');
+insert into test_all values(false, null, 4, 5, 2.1, 2.3, 'barack', 'obama');
+
+```
+
 ## TESTS
 We use google tests: https://github.com/google/googletest/blob/master/googletest/docs/Primer.md
+
 
 the test are in cmigrator/test
 
