@@ -230,8 +230,8 @@ class FromPostgresToSciDB extends FromDatabaseToDatabase
 
 			LoadSciDB loadExecutor = new LoadSciDB(migrationInfo,
 					new PostgreSQLHandler(migrationInfo.getConnectionFrom()),
-					MigrationUtils.getSciDBBinFormat(fromObjectMetaData),
-					scidbPipe);
+					scidbPipe,
+					MigrationUtils.getSciDBBinFormat(fromObjectMetaData));
 			FutureTask<Object> loadTask = new FutureTask<Object>(loadExecutor);
 			executor.submit(loadTask);
 
