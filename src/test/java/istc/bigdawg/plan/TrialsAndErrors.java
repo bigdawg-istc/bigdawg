@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
 
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -16,8 +18,7 @@ import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.exceptions.BigDawgException;
 import istc.bigdawg.islands.OperatorVisitor;
 import istc.bigdawg.islands.TheObjectThatResolvesAllDifferencesAmongTheIslands;
-import istc.bigdawg.islands.Accumulo.AccumuloD4MParser;
-import istc.bigdawg.islands.SStore.SStoreQueryParser;
+import istc.bigdawg.islands.Myria.MyriaQueryParser;
 import istc.bigdawg.islands.SciDB.AFLPlanParser;
 import istc.bigdawg.islands.SciDB.AFLQueryGenerator;
 import istc.bigdawg.islands.SciDB.AFLQueryPlan;
@@ -33,7 +34,6 @@ import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.scidb.SciDBHandler;
 import istc.bigdawg.signature.Signature;
-import net.sf.jsqlparser.statement.select.Select;
 
 public class TrialsAndErrors {
 	
@@ -47,12 +47,13 @@ public class TrialsAndErrors {
 	private static boolean runMigration = false;
 	private static boolean runSciDBExecution = false;
 	private static boolean runParserTest = false;
+	private static boolean runJSONTrial = false;
 
 	@Before
 	public void setUp() throws Exception {
 		CatalogInstance.INSTANCE.getCatalog();
 		
-		setupQueryExplainer();
+//		setupQueryExplainer();
 //		setupQueryBuilder();
 //		setupRegexTester();
 //		setupTreeWalker();
@@ -61,47 +62,42 @@ public class TrialsAndErrors {
 //		setupSchemaGenerator();
 //		setupMigrationTest();
 //		setupSciDBExecution();
-//		setupParserTest();
+		setupParserTest();
+//		setupJSONTrial();
 	}
 	
 	public void setupQueryExplainer() {
 		runExplainer = true;
 	}; 
-	
 	public void setupQueryBuilder() {
 		runBuilder = true;
 	};
-	
 	public void setupRegexTester() {
 		runRegex = true;
 	};
-	
 	public void setupTreeWalker() {
 		runWalker = true;
 	};
-	
 	public void setupPlannerTester() {
 		runPlanner = true;
 	}
-	
 	public void setupMapTrial() {
 		runMapTrial = true;
 	}
-	
 	public void setupSchemaGenerator() {
 		runSchemaGen = true;
 	}
-	
 	public void setupMigrationTest() {
 		runMigration = true;
 	}
-	
 	public void setupSciDBExecution() {
 		runSciDBExecution = true;
 	}
-	
 	public void setupParserTest() {
 		runParserTest = true;
+	}
+	public void setupJSONTrial() {
+		runJSONTrial = true;
 	}
 	
 	@Test
@@ -337,11 +333,24 @@ public class TrialsAndErrors {
 	public void testParserTest() throws BigDawgException {
 		if ( !runParserTest) return;
 			
-		String input = "ExtractionRemote, 0.4, 110, 10, 1.010";
+//		String input = "ExtractionRemote, 0.4, 110, 10, 1.010";
+		String input = "materialize; a = scan(smallTable); store(a, smallTable_curl);";
 		
-//		(new SStoreQueryParser()).parse(input);
+		(new MyriaQueryParser()).parse(input);
 			
 			
+	}
+	
+	@Test
+	public void testJSON() throws JSONException {
+		if ( !runJSONTrial ) return;
+		
+		String s = "{\"finishTime\": null, \"status\": \"ACCEPTED\", \"language\": \"myrial\", \"rawQuery\": \"a = scan(smallTable); store(a, smallTable_curl);\", \"elapsedNanos\": null, \"url\": \"http://localhost:8753/query/query-920\", \"submitTime\": \"2016-08-10T18:55:56.843Z\", \"logicalRa\": \"Store(public:adhoc:smallTable_curl)[Scan(public:adhoc:smallTable)]\", \"queryId\": 920, \"plan\": {\"fragments\": [{\"fragmentIndex\": -1, \"workers\": null, \"operators\": [{\"relationKey\": {\"userName\": \"public\", \"relationName\": \"smallTable\", \"programName\": \"adhoc\"}, \"opId\": 0, \"opType\": \"TableScan\", \"opName\": \"MyriaScan(public:adhoc:smallTable)\", \"storedRelationId\": null}, {\"connectionInfo\": null, \"opType\": \"DbInsert\", \"argChild\": 0, \"opName\": \"MyriaStore(public:adhoc:smallTable_curl)\", \"argOverwriteTable\": true, \"relationKey\": {\"userName\": \"public\", \"relationName\": \"smallTable_curl\", \"programName\": \"adhoc\"}, \"indexes\": null, \"opId\": 1, \"partitionFunction\": null}], \"overrideWorkers\": null}], \"type\": \"SubQuery\"}, \"startTime\": null, \"message\": null, \"profilingMode\": [], \"ftMode\": \"NONE\"}";
+		
+		JSONObject obj = new JSONObject (s);
+		
+		System.out.printf("status: %s; queryId: %s\n", obj.getString("status"), obj.getInt("queryId"));
+		
 	}
 	
 	

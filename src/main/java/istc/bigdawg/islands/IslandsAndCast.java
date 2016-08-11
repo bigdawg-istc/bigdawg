@@ -6,14 +6,15 @@ import istc.bigdawg.exceptions.UnsupportedIslandException;
 
 public class IslandsAndCast {
 	public enum Scope {
-		RELATIONAL, ARRAY, KEYVALUE, TEXT, GRAPH, DOCUMENT, STREAM, CAST 
+		RELATIONAL, ARRAY, KEYVALUE, TEXT, GRAPH, DOCUMENT, STREAM, CAST, MYRIA 
 	}
 	
-	public static Pattern ScopeStartPattern	= Pattern.compile("^((bdrel\\()|(bdarray\\()|(bdkv\\()|(bdtext\\()|(bdgraph\\()|(bddoc\\()|(bdstream\\()|(bdcast\\())");
-	public static Pattern ScopeEndPattern	= Pattern.compile("\\) *;? *$");
-	public static Pattern CastScopePattern	= Pattern.compile("(?i)(relational|array|keyvalue|text|graph|document|stream)\\) *;? *$");
-	public static Pattern CastSchemaPattern	= Pattern.compile("(?<=([_a-z0-9, ]+')).*(?=(' *, *(relational|array|keyvalue|text|graph|document|stream)))");
-	public static Pattern CastNamePattern	= Pattern.compile("(?<=(, ))([_@0-9a-zA-Z]+)(?=, *')");
+	public static Pattern QueryParsingPattern	= Pattern.compile("(?i)(bdrel\\(|bdarray\\(|bdkv\\(|bdtext\\(|bdgraph\\(|bddoc\\(|bdstream\\(|bdmyria\\(|bdcast\\(|\\(|\\))");
+	public static Pattern ScopeStartPattern		= Pattern.compile("^((bdrel\\()|(bdarray\\()|(bdkv\\()|(bdtext\\()|(bdgraph\\()|(bddoc\\()|(bdstream\\()|(bdmyria\\()|(bdcast\\())");
+	public static Pattern ScopeEndPattern		= Pattern.compile("\\) *;? *$");
+	public static Pattern CastScopePattern		= Pattern.compile("(?i)(relational|array|keyvalue|text|graph|document|stream|myria)\\) *;? *$");
+	public static Pattern CastSchemaPattern		= Pattern.compile("(?<=([_a-z0-9, ]+')).*(?=(' *, *(relational|array|keyvalue|text|graph|document|stream|myria)))");
+	public static Pattern CastNamePattern		= Pattern.compile("(?<=(, ))([_@0-9a-zA-Z]+)(?=, *')");
 	
 	public static Scope convertFunctionScope (String prefix) throws UnsupportedIslandException {
 		switch (prefix) {
@@ -41,6 +42,9 @@ public class IslandsAndCast {
 		case "bdcast(":
 		case "bdcast":
 			return Scope.CAST;
+		case "bdmyria(":
+		case "bdmyria":
+			return Scope.MYRIA;
 		default:
 			throw new UnsupportedIslandException(prefix);
 		}
@@ -65,6 +69,8 @@ public class IslandsAndCast {
 			return Scope.STREAM;
 		case "cast":
 			return Scope.CAST;
+		case "myria":
+			return Scope.MYRIA;
 		default:
 			throw new UnsupportedIslandException(prefix);
 		}

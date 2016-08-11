@@ -5,15 +5,20 @@ package istc.bigdawg.utils;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import istc.bigdawg.LoggerSetup;
 import istc.bigdawg.exceptions.AccumuloShellScriptException;
+import istc.bigdawg.exceptions.BigDawgException;
 import istc.bigdawg.exceptions.RunShellException;
 import istc.bigdawg.exceptions.SciDBException;
+import istc.bigdawg.myria.MyriaHandler;
 import istc.bigdawg.properties.BigDawgConfigProperties;
 
 /**
@@ -103,6 +108,82 @@ public class RunShell {
 			log.error(msg);
 			throw new AccumuloShellScriptException(msg);
 		}
+	}
+	
+//	public static InputStream runMyriaCommand(List<String> databaseTableAndQuery)
+	public static InputStream runMyriaCommand(String curlParameters, String name, boolean isQuery, boolean isDownload)
+			throws IOException, InterruptedException, JSONException, BigDawgException {
+		
+		InputStream scriptResultInStream;
+		try {
+			System.out.printf("\nbeginning commands: %s;\n\n", Arrays.asList(curlParameters.split("@@@")));
+			scriptResultInStream = runShell(new ProcessBuilder(curlParameters.split("@@@")));
+		} catch (RunShellException e) {
+			e.printStackTrace();
+			String msg = "Problem with the new shell script runner: curl " + curlParameters;
+			log.error(msg);
+			throw new BigDawgException(msg);
+		}
+		
+		if (isQuery ^ isDownload) return scriptResultInStream;
+		else if (! isQuery && ! isDownload) throw new BigDawgException("Myria command not query and not download: "+name+"; "+curlParameters);
+		
+		// else we're talking about a tracked query
+		
+		String myriaQueryHost = BigDawgConfigProperties.INSTANCE.getMyriaHost();
+		String myriaQueryPort = BigDawgConfigProperties.INSTANCE.getMyriaPort();
+		String myriaDownloadPort = BigDawgConfigProperties.INSTANCE.getMyriaDownloadPort();
+		
+		String scriptResult = IOUtils.toString(scriptResultInStream, Constants.ENCODING);
+		
+		System.out.printf("\ncommands: %s; \nscriptResult from server: %s\n\n", Arrays.asList(curlParameters.split("@@@")), scriptResult);
+		
+		JSONObject obj = new JSONObject (scriptResult);
+		String status = obj.getString("status");
+		String queryID = obj.getString("queryId");
+		
+		int sleepInterval = 250;
+		while (!status.equalsIgnoreCase("SUCCESS") && !status.equalsIgnoreCase("ERROR")) {
+			Thread.sleep(sleepInterval); 
+			
+			try {
+				System.out.printf("status: %s; queryId: %s; sleepInterval: %s\n", status, queryID, sleepInterval);
+				scriptResultInStream = runShell(new ProcessBuilder(String.format(MyriaHandler.myriaInquieryString, myriaQueryHost, myriaQueryPort, queryID).split("@@@")));
+			} catch (RunShellException e) {
+				e.printStackTrace();
+				String msg = "Problem with constant inquery: " + String.format(MyriaHandler.myriaInquieryString, myriaQueryHost, myriaQueryPort, queryID);
+				log.error(msg);
+				throw new BigDawgException(msg);
+			}
+			
+			scriptResult = IOUtils.toString(scriptResultInStream, Constants.ENCODING);
+			
+			obj = new JSONObject (scriptResult);
+			status = obj.getString("status");
+			
+			if (sleepInterval < 4000) sleepInterval *= 2;
+		}
+		
+		System.out.printf("EXITED status: %s; queryId: %s; sleepInterval: %s\n", status, queryID, sleepInterval);
+		
+		if (status.equalsIgnoreCase("ERROR")) {
+			System.out.printf("Error exit; scriptResult: %s\n", scriptResult);
+			return scriptResultInStream;
+		}
+		
+		
+		System.out.printf("NO ERROR status: %s; queryId: %s\n", status, queryID);
+		
+		// download the query
+		try {
+			return runShell(new ProcessBuilder(String.format(MyriaHandler.myriaDataRetrievalString, myriaQueryHost, myriaDownloadPort, name).split("@@@")));
+		} catch (RunShellException e) {
+			e.printStackTrace();
+			String msg = "Problem with downloading the data: " + String.format(MyriaHandler.myriaDataRetrievalString, myriaQueryHost, myriaDownloadPort, name);
+			log.error(msg);
+			throw new BigDawgException(msg);
+		}
+		
 	}
 
 	public static InputStream runSciDBAFLquery(String host, String port, String binPath, String query)

@@ -21,6 +21,7 @@ import istc.bigdawg.exceptions.BigDawgException;
 import istc.bigdawg.exceptions.UnsupportedIslandException;
 import istc.bigdawg.executor.QueryResult;
 import istc.bigdawg.islands.IslandsAndCast.Scope;
+import istc.bigdawg.islands.Myria.MyriaQueryParser;
 import istc.bigdawg.islands.Accumulo.AccumuloD4MParser;
 import istc.bigdawg.islands.SStore.SStoreQueryParser;
 import istc.bigdawg.islands.SciDB.AFLPlanParser;
@@ -34,6 +35,7 @@ import istc.bigdawg.islands.relational.SQLPlanParser;
 import istc.bigdawg.islands.relational.SQLQueryGenerator;
 import istc.bigdawg.islands.relational.SQLQueryPlan;
 import istc.bigdawg.islands.relational.operators.SQLIslandJoin;
+import istc.bigdawg.myria.MyriaHandler;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.properties.BigDawgConfigProperties;
@@ -90,6 +92,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case KEYVALUE:
 		case STREAM:
 		case TEXT:
+		case MYRIA:
 			return false;
 		default:
 			throw new UnsupportedIslandException(scope, "isOperatorBasedIsland");
@@ -187,6 +190,8 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 			break;
 		case TEXT:
 			throw new BigDawgException("TEXT island does not support the concept of generator; getQueryGenerator");
+		case MYRIA:
+			throw new BigDawgException("MYRIA island does not support the concept of generator; getQueryGenerator");
 		default:
 			break;
 		}
@@ -217,6 +222,8 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 			return " AND scope_name = \'STREAM\' ";
 		case TEXT:
 			return " AND scope_name = \'TEXT\' ";
+		case MYRIA:
+			return " AND scope_name = \'MYRIA\' ";
 		default:
 			break;
 		}
@@ -263,6 +270,8 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 			throw new BigDawgException("STREAM island does not support data immigration; createTableForPlanning");
 		case TEXT:
 			throw new BigDawgException("TEXT island does not support data immigration; createTableForPlanning");
+		case MYRIA:
+			throw new BigDawgException("MYRIA island does not support data immigration; createTableForPlanning");
 		default:
 			break;
 		}
@@ -308,6 +317,8 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 			throw new BigDawgException("STREAM island does not support data immigration; removeTemporaryTableCreatedForPlanning");
 		case TEXT:
 			throw new BigDawgException("TEXT island does not support data immigration; removeTemporaryTableCreatedForPlanning");
+		case MYRIA:
+			throw new BigDawgException("MYRIA island does not support data immigration; removeTemporaryTableCreatedForPlanning");
 		default:
 			break;
 		}
@@ -340,6 +351,8 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 			throw new BigDawgException("STREAM island does not have a default SchemaEngine, getSchemaEngineDBID");
 		case TEXT:
 			throw new BigDawgException("TEXT island does not have a default SchemaEngine, getSchemaEngineDBID");
+		case MYRIA:
+			throw new BigDawgException("MYRIA island does not have a default SchemaEngine, getSchemaEngineDBID");
 		default:
 			break;
 		}
@@ -382,6 +395,8 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 			throw new BigDawgException("STREAM island does not support the concept of Join; constructJoin");
 		case TEXT:
 			throw new BigDawgException("TEXT island does not support the concept of Join; constructJoin");
+		case MYRIA:
+			throw new BigDawgException("MYRIA island does not support the concept of Join; constructJoin");
 		default:
 			break;
 		}
@@ -426,6 +441,8 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 			throw new BigDawgException("STREAM island does not support signature; generateOperatorTreesAndAddDataSetObjectsSignature");
 		case TEXT:
 			throw new BigDawgException("TEXT island does not support signature; generateOperatorTreesAndAddDataSetObjectsSignature");
+		case MYRIA:
+			throw new BigDawgException("MYRIA island does not support signature; generateOperatorTreesAndAddDataSetObjectsSignature");
 		default:
 			break;
 		}
@@ -463,6 +480,8 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 			throw new BigDawgException("STREAM island does not participate in splitPredicates function; splitPredicates");
 		case TEXT:
 			throw new BigDawgException("TEXT island does not participate in splitPredicates function; splitPredicates");
+		case MYRIA:
+			throw new BigDawgException("MYRIA island does not participate in splitPredicates function; splitPredicates");
 		default:
 			break;
 		}
@@ -508,6 +527,8 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 			throw new BigDawgException("STREAM island does not support signature; getLiteralsAndConstantsSignature");
 		case TEXT:
 			throw new BigDawgException("TEXT island does not support signature; getLiteralsAndConstantsSignature");
+		case MYRIA:
+			throw new BigDawgException("MYRIA island does not support signature; getLiteralsAndConstantsSignature");
 		default:
 			break;
 		}
@@ -541,6 +562,8 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 			return String.format("bdstream(%s);", query);
 		case TEXT:
 			return String.format("bdtext(%s);", query);
+		case MYRIA:
+			return String.format("bdmyria(%s);", query);
 		default:
 			break;
 		}
@@ -575,6 +598,8 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 			throw new BigDawgException("STREAM Island does not allow you to create new tables; getCreationQueryForCast");
 		case TEXT:
 			throw new BigDawgException("TEXT Island does not allow you to create new tables; getCreationQueryForCast");
+		case MYRIA:
+			throw new BigDawgException("MYRIA Island does not allow you to create new tables; getCreationQueryForCast");	
 		default:
 			break;
 		}
@@ -617,6 +642,14 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 			List<String> aparsed = (new AccumuloD4MParser()).parse(node.getQueryString());
 			System.out.printf("TEXT Island Accumulot query: %s; parsed arguments: %s\n", node.queryString, aparsed);
 			return AccumuloHandler.executeAccumuloShellScript(aparsed);
+			
+		case MYRIA:
+			String input = node.getQueryString();
+			List<String> mparsed = (new MyriaQueryParser()).parse(input);
+			
+			System.out.printf("MYRIA Island query: -->%s<--; parsed form: -->%s<--\n", input, mparsed);
+			
+			return MyriaHandler.executeMyriaQuery(mparsed);
 		case RELATIONAL:
 		case ARRAY:
 		default:

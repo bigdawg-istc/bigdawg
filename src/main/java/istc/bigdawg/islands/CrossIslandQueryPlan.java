@@ -53,7 +53,7 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 	
 	public void addNodes(String userinput, Set<Integer> catalogSOD) throws Exception {
 
-		Pattern mark								= Pattern.compile("(?i)(bdrel\\(|bdarray\\(|bdtext\\(|bdgraph\\(|bdstream\\(|bdcast\\(|\\(|\\))");
+		Pattern mark								= IslandsAndCast.QueryParsingPattern;
 		Matcher matcher								= mark.matcher(userinput);
 		
 	    Stack<String> stkwrite						= new Stack<>();

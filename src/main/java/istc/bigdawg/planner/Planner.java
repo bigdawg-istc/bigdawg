@@ -55,7 +55,7 @@ public class Planner {
 		Map<ConnectionInfo, Collection<String>> tempTableMOD = new HashMap<>();
 		
 		CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(input, catalogSOD);
-		if (ciqp.getTerminalNode() == null) throw new Exception("Ill formed input: "+input);
+		if (ciqp.getTerminalNode() == null) throw new Exception("Ill formed input: "+input+"\n");
 		
 		System.out.printf("CrossIslandQueryPlan print out: #nodes: %s; #edges: %s\n%s\n\n", ciqp.vertexSet().size(), ciqp.edgeSet().size(), ciqp.toString());
 		
