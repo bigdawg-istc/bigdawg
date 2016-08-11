@@ -128,9 +128,20 @@ test=# select * from test_all2;
 ## TESTS
 We use google tests: https://github.com/google/googletest/blob/master/googletest/docs/Primer.md
 
+the test are in cmigrator/test/main_tests
 
-the test are in cmigrator/test
+Tests were integrated with cmake.
+Go to bigdawgmiddle/src/main/cmigrator/build and execute:
+```
+cmake ..
+make
+cmake --build .
+ctest -VV
+```
 
+The test files are specified in bigdawgmiddle/src/main/cmigrator/CMakeLists.txt file in the line: file(GLOB TEST_SRC_FILES ${PROJECT_SOURCE_DIR}/test/main_tests/*.cc). The main test files are currently in bigdawgmiddle/src/main/cmigrator/test/main_tests/*.cc 
+
+### obsolete version
 run make to build the tests
 
 all the tests can be run with: ./runTests
@@ -148,4 +159,6 @@ $ list
 $ b 12 // set breakpoint at line 12
 $ info sources
 
+to run the tests go to bigdawgmiddle/src/main/cmigrator/build: 
+gdb --args 
 
