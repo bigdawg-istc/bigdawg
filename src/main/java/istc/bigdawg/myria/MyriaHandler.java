@@ -45,7 +45,7 @@ public class MyriaHandler implements DBHandler {
 	 */
 	Logger log = Logger.getLogger(MyriaHandler.class.getName());
 	private static final String myriaQueryString = "curl@@@-X@@@POST@@@-F@@@query=%s@@@-F@@@language=myrial@@@-F@@@push_sql=False@@@-F@@@multiway_join=False@@@http://%s:%s/execute";
-	public static final String myriaDataRetrievalString = "curl@@@-i@@@-XGET@@@%s:%s/dataset/public/adhoc/%s/data?format=json";
+	public static final String myriaDataRetrievalString = "curl@@@-XGET@@@%s:%s/dataset/user-public/program-adhoc/relation-%s/data?format=json";
 	public static final String myriaInquieryString = "curl@@@http://%s:%s/execute?queryId=%s"; 
 	
 	
@@ -59,20 +59,23 @@ public class MyriaHandler implements DBHandler {
 		boolean isDownload;
 		
 		String queryString;
+		String nameString;
 		if (inputs.size() == 1) {
 			queryString = String.format(myriaDataRetrievalString, myriaQueryHost, myriaDownloadPort, inputs.get(0));
+			nameString = inputs.get(0);
 			isDownload = true;
 			isQuery = false;
 		} else {
 			queryString = String.format(myriaQueryString, inputs.get(2), myriaQueryHost, myriaQueryPort);
+			nameString = inputs.get(1);
 			isQuery = true;
-			isDownload = inputs.get(0).equalsIgnoreCase("materialize;");
+			isDownload = inputs.get(0).equalsIgnoreCase("materialize");
 		}
 		
 		System.out.printf("Query string: %s; isQuery: %s; isDownload: %s;", queryString, isQuery, isDownload);
 		
-		InputStream scriptResultInStream = RunShell.runMyriaCommand(queryString, inputs.get(1), isQuery, isDownload);
-		String scriptResult = IOUtils.toString(scriptResultInStream, Constants.ENCODING);
+		InputStream scriptResultInStream = RunShell.runMyriaCommand(queryString, nameString, isQuery, isDownload);
+		String scriptResult = IOUtils.toString(scriptResultInStream, Constants.ENCODING) + '\n';
 		
 		
 		return new MyriaQueryResult(scriptResult);

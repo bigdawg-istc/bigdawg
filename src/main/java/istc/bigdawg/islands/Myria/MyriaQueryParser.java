@@ -25,6 +25,9 @@ public class MyriaQueryParser {
 			processSingleFragment(result);
 			inputSB.deleteCharAt(0);
 		}
+		if (result.size() == 0 && tempSB.length() > 0) {
+			result.add(tempSB.toString().trim());
+		}
 		
 		if (result.size() > 1) {
 			inputSB.append(result.get(result.size()-1));
@@ -50,7 +53,7 @@ public class MyriaQueryParser {
 		char token = inputSB.charAt(0);
 		switch (token) {
 		case ';':
-			tempSB.append(token);
+			if (result.size() > 0) tempSB.append(token);
 			result.add(tempSB.toString().trim());
 			tempSB = new StringBuilder();
 			break;

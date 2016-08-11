@@ -132,7 +132,7 @@ public class RunShell {
 		
 		String myriaQueryHost = BigDawgConfigProperties.INSTANCE.getMyriaHost();
 		String myriaQueryPort = BigDawgConfigProperties.INSTANCE.getMyriaPort();
-		String myriaDownloadPort = BigDawgConfigProperties.INSTANCE.getMyriaDownloadPort();
+//		String myriaDownloadPort = BigDawgConfigProperties.INSTANCE.getMyriaDownloadPort();
 		
 		String scriptResult = IOUtils.toString(scriptResultInStream, Constants.ENCODING);
 		
@@ -176,10 +176,11 @@ public class RunShell {
 		
 		// download the query
 		try {
-			return runShell(new ProcessBuilder(String.format(MyriaHandler.myriaDataRetrievalString, myriaQueryHost, myriaDownloadPort, name).split("@@@")));
+			System.out.printf("Downloading... queryId: %s; query: %s\n", queryID, String.format(MyriaHandler.myriaDataRetrievalString, myriaQueryHost, myriaQueryPort, name));
+			return runShell(new ProcessBuilder(String.format(MyriaHandler.myriaDataRetrievalString, myriaQueryHost, myriaQueryPort, name).split("@@@")));
 		} catch (RunShellException e) {
 			e.printStackTrace();
-			String msg = "Problem with downloading the data: " + String.format(MyriaHandler.myriaDataRetrievalString, myriaQueryHost, myriaDownloadPort, name);
+			String msg = "Problem with downloading the data: " + String.format(MyriaHandler.myriaDataRetrievalString, myriaQueryHost, myriaQueryPort, name);
 			log.error(msg);
 			throw new BigDawgException(msg);
 		}

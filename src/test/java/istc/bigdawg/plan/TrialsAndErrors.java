@@ -334,7 +334,8 @@ public class TrialsAndErrors {
 		if ( !runParserTest) return;
 			
 //		String input = "ExtractionRemote, 0.4, 110, 10, 1.010";
-		String input = "materialize; a = scan(smallTable); store(a, smallTable_curl);";
+//		String input = "materialize; a = scan(smallTable); store(a, smallTable_curl);";
+		String input = "smallTable_curl";
 		
 		(new MyriaQueryParser()).parse(input);
 			
