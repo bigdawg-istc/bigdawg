@@ -443,10 +443,11 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		Set<String> results = new HashSet<>();
 
 		String joinDelim = null;
-		
+
 		switch (scope) {
 		case ARRAY:
 			joinDelim = "[,=]";
+			break;
 		case CAST:
 			break;
 		case DOCUMENT:
@@ -457,6 +458,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 			break;
 		case RELATIONAL:
 			joinDelim = "[=<>]+";
+			break;
 		case STREAM:
 			throw new BigDawgException("STREAM island does not participate in splitPredicates function; splitPredicates");
 		case TEXT:
