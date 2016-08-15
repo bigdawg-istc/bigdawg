@@ -41,13 +41,13 @@ import javax.ws.rs.core.Response;
 
 public class Dataplacement implements Serializable {
 	private enum Tables {
-		ORDER, ORDER_LINE, ITEM, CUSTOMER, NEW_ORDER
+		ORDERS, ORDER_LINE, ITEM, CUSTOMER, NEW_ORDER
 	}
 	private enum Databases {
 		SSTORE, POSTGRES
 	}
 	private enum Queries {
-		SSTOREQ3, POSTGRESQJOINAGG, UPDATE, SSTOREUPDATE, POSTGRESUPDATE
+		SSTOREQ3, POSTGRESQJOINAGG, UPDATE, SSTOREUPDATE, POSTGRESUPDATE, POSTGRESQ3
 	}
 	private enum MigrationDirection {
 		FROMSSTORETOPOSTGRES, FROMPOSTGRESTOSSTORE
@@ -79,12 +79,13 @@ public class Dataplacement implements Serializable {
 	            		"ORDER BY ol_number"
 					);
 		queries.put(Queries.UPDATE, "update");
+		queries.put(Queries.POSTGRESQ3, "SELECT ol_o_id, ol_w_id, ol_d_id, SUM(ol_amount) as revenue, o_entry_d FROM CUSTOMER, NEW_ORDER, ORDERS, ORDER_LINE WHERE c_id = o_c_id and c_w_id = o_w_id and c_d_id = o_d_id and no_w_id = o_w_id and no_d_id = o_d_id and no_o_id = o_id and ol_w_id = o_w_id and ol_d_id = o_d_id and ol_o_id = o_id and o_entry_d > '0' GROUP BY ol_o_id, ol_w_id, ol_d_id, o_entry_d ORDER BY o_entry_d");
 //		queries.put(Queries.SSTOREUPDATE, "UpdateOrderLine");
 //		queries.put(Queries.POSTGRESUPDATE, "UPDATE order_line SET ol_quantity = ol_quantity + 1 WHERE ol_o_id = 100");
 
-		percentage.add(0.005);
-		percentage.add(0.005);
-		percentage.add(0.99);
+		percentage.add(0.1);
+		percentage.add(0.1);
+		percentage.add(0.80);
 
 		Double sumP = 0.0;
 		for (Double p : percentage) {
@@ -92,13 +93,13 @@ public class Dataplacement implements Serializable {
 			accumuPercentage.add(sumP);
 		}
 		
-		tableName.put(Tables.ORDER, "ORDER");
+		tableName.put(Tables.ORDERS, "ORDERS");
 		tableName.put(Tables.ORDER_LINE, "ORDER_LINE");
 		tableName.put(Tables.ITEM, "ITEM");
 		tableName.put(Tables.CUSTOMER, "CUSTOMER");
 		tableName.put(Tables.NEW_ORDER, "NEW_ORDER");
 		
-		tableLocation.put(Tables.ORDER, new HashSet<Databases>(Arrays.asList(Databases.SSTORE)));
+		tableLocation.put(Tables.ORDERS, new HashSet<Databases>(Arrays.asList(Databases.SSTORE)));
 		tableLocation.put(Tables.ORDER_LINE, new HashSet<Databases>(Arrays.asList(Databases.SSTORE)));
 		tableLocation.put(Tables.ITEM, new HashSet<Databases>(Arrays.asList(Databases.SSTORE)));
 		tableLocation.put(Tables.CUSTOMER, new HashSet<Databases>(Arrays.asList(Databases.SSTORE)));
@@ -106,17 +107,23 @@ public class Dataplacement implements Serializable {
 		
 		queryTables.put(Queries.SSTOREQ3, new ArrayList<Tables>(Arrays.asList(Tables.CUSTOMER, 
 																Tables.NEW_ORDER, 
-																Tables.ORDER, 
+																Tables.ORDERS, 
 																Tables.ORDER_LINE)));
 		queryTables.put(Queries.POSTGRESQJOINAGG, new ArrayList<Tables>(Arrays.asList(Tables.ORDER_LINE, Tables.ITEM)));
 		queryTables.put(Queries.UPDATE, new ArrayList<Tables>(Arrays.asList(Tables.ORDER_LINE)));
 		queryTables.put(Queries.SSTOREUPDATE, new ArrayList<Tables>(Arrays.asList(Tables.ORDER_LINE)));
 		queryTables.put(Queries.POSTGRESUPDATE, new ArrayList<Tables>(Arrays.asList(Tables.ORDER_LINE)));
-		
+		queryTables.put(Queries.POSTGRESQ3, new ArrayList<Tables>(Arrays.asList(
+				Tables.CUSTOMER,
+				Tables.NEW_ORDER,
+				Tables.ORDERS,
+				Tables.ORDER_LINE)));
+
 		queryDatabase.put(Queries.SSTOREQ3, Databases.SSTORE);
 		queryDatabase.put(Queries.POSTGRESQJOINAGG, Databases.POSTGRES);
 		queryDatabase.put(Queries.SSTOREUPDATE, Databases.SSTORE);
 		queryDatabase.put(Queries.POSTGRESUPDATE, Databases.POSTGRES);
+		queryDatabase.put(Queries.POSTGRESQ3, Databases.POSTGRES);
 		
 		this.caching = caching;
 		
@@ -147,9 +154,11 @@ public class Dataplacement implements Serializable {
 //		}
 		
 //		workload.add(Queries.SSTOREQ3);
-		workload.add(Queries.POSTGRESQJOINAGG);
+//		workload.add(Queries.POSTGRESQJOINAGG);
 //		workload.add(Queries.UPDATE);
 //		workload.add(Queries.SSTOREQ3);
+		
+		workload.add(Queries.POSTGRESQ3);
 		
 		return workload;
 	}
@@ -291,12 +300,12 @@ public class Dataplacement implements Serializable {
 		logger = Logger.getLogger(Main.class);
 		logger.info("Starting application ...");
 		
-//		String workloadFilename = "workload.ser.99";
+//		String workloadFilename = "workload.ser.80";
 		String workloadFilename = "workload.ser.tmp";
 		
 		boolean caching = true;
 		Dataplacement dp = new Dataplacement(caching);
-		ArrayList<Queries> workload = dp.generateWorkload(100);
+		ArrayList<Queries> workload = dp.generateWorkload(1000);
 		FileOutputStream workloadOut = new FileOutputStream(workloadFilename);
 		ObjectOutputStream out = new ObjectOutputStream(workloadOut);
 		out.writeObject(workload);

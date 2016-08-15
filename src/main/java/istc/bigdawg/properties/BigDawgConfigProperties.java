@@ -49,6 +49,8 @@ public enum BigDawgConfigProperties {
 	private String postgreSQLOceanDBUser;
 	private String postgreSQLOceanDBPassword;
 	private String accumuloShellScript;
+	
+	private int tpccDBID;
 
 	private String myriaHost;
 	private String myriaPort;
@@ -119,6 +121,8 @@ public enum BigDawgConfigProperties {
 		this.myriaHost = prop.getProperty("main.myria.host");
 		this.myriaPort = prop.getProperty("main.myria.port");
 		this.myriaContentType = prop.getProperty("main.myria.content.type");
+		
+		this.tpccDBID = Integer.parseInt(prop.getProperty("main.tpcc.dbid"));
 
 		this.scidbSchemaServerDBID = Integer
 				.parseInt(prop.getProperty("main.scidb.dbid.schema"));
@@ -385,6 +389,10 @@ public enum BigDawgConfigProperties {
 	
 	public Integer getSeaflowDBID() {
 		return seaflowDBID;
+	}
+	
+	public Integer getTpccDBID() {
+		return tpccDBID;
 	}
 
 	/**
