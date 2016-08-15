@@ -11,6 +11,8 @@ echo "Starting postgres2..."
 docker start postgres2
 echo "Starting scidb..."
 docker start scidb
+echo "Starting accumulo..."
+docker start accumulo
 echo "Waiting 5 seconds for db to spin up..."
 sleep 5
 echo "Starting maven..."

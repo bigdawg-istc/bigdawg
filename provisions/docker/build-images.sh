@@ -27,17 +27,25 @@ cp -a src/main/resources/create_logs_table.sql provisions/postgres1/
 # Build the project's Docker images if you don't want to pull the prebuilt ones from Docker Hub
 echo "Building Docker images..."
 
-echo "Building postgres-base (1/5)"
+echo "Building postgres-base (1/6)"
 docker build -t bigdawg/postgres-base provisions/postgres-base/
 
-echo "Building postgres1 (2/5)"
+echo ""
+echo "Building postgres1 (2/6)"
 docker build -t postgres1 provisions/postgres1/
 
-echo "Building postgres2 (3/5)"
+echo ""
+echo "Building postgres2 (3/6)"
 docker build -t postgres2 provisions/postgres2/
 
-echo "Building scidb (4/5)"
+echo ""
+echo "Building scidb (4/6)"
 docker build -t scidb provisions/scidb/
 
-echo "Building maven (5/5)"
+echo ""
+echo "Building accumulo (5/6)"
+docker build -t accumulo provisions/accumulo-1.6.5
+
+echo ""
+echo "Building maven (6/6)"
 docker build -t maven /vagrant/
