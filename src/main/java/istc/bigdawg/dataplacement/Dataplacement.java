@@ -61,6 +61,8 @@ public class Dataplacement implements Serializable {
 	private Map<Tables, Set<Databases>> tableLocation = new HashMap<Tables, Set<Databases>>();
 	private Map<Queries, ArrayList<Tables>> queryTables = new HashMap<Queries, ArrayList<Tables>>();
 	private Map<Queries, Databases> queryDatabase = new HashMap<Queries, Databases>();
+	private Map<Queries, Long> queryTime = new HashMap<Queries, Long>();
+	private Map<Tables, Long> migrationTime = new HashMap<Tables, Long>();
 	boolean caching;
 
     private static final int sstoreDBID = BigDawgConfigProperties.INSTANCE.getSStoreDBID();
@@ -83,9 +85,9 @@ public class Dataplacement implements Serializable {
 //		queries.put(Queries.SSTOREUPDATE, "UpdateOrderLine");
 //		queries.put(Queries.POSTGRESUPDATE, "UPDATE order_line SET ol_quantity = ol_quantity + 1 WHERE ol_o_id = 100");
 
-		percentage.add(0.1);
-		percentage.add(0.1);
-		percentage.add(0.80);
+		percentage.add(0.01);
+		percentage.add(0.01);
+		percentage.add(0.98);
 
 		Double sumP = 0.0;
 		for (Double p : percentage) {
@@ -125,6 +127,15 @@ public class Dataplacement implements Serializable {
 		queryDatabase.put(Queries.POSTGRESUPDATE, Databases.POSTGRES);
 		queryDatabase.put(Queries.POSTGRESQ3, Databases.POSTGRES);
 		
+		Long baseTime = 50L;
+		int timeRatio = 10;
+		double olapQueryTimeRatio = 1.0;
+		Long migrationBaseTime = baseTime * 80;
+		queryTime.put(Queries.SSTOREQ3, baseTime*timeRatio);
+		queryTime.put(Queries.POSTGRESQJOINAGG, (long)(baseTime*timeRatio*olapQueryTimeRatio));
+		queryTime.put(Queries.UPDATE, baseTime);
+		migrationTime.put(Tables.ORDER_LINE, migrationBaseTime);
+		
 		this.caching = caching;
 		
     	try {
@@ -145,20 +156,20 @@ public class Dataplacement implements Serializable {
 	private ArrayList<Queries> generateWorkload(Integer totalQueries) {
 		ArrayList<Queries> workload = new ArrayList<Queries>();
 		
-//		Random r = new Random();
-//		for (int i = 0; i < totalQueries; i++) {
-//			Double p = r.nextDouble();
-//			int ind = -(Collections.binarySearch(accumuPercentage, p) + 1);
-//			
-//			workload.add(Queries.values()[ind]);
-//		}
+		Random r = new Random();
+		for (int i = 0; i < totalQueries; i++) {
+			Double p = r.nextDouble();
+			int ind = -(Collections.binarySearch(accumuPercentage, p) + 1);
+			
+			workload.add(Queries.values()[ind]);
+		}
 		
 //		workload.add(Queries.SSTOREQ3);
 //		workload.add(Queries.POSTGRESQJOINAGG);
 //		workload.add(Queries.UPDATE);
 //		workload.add(Queries.SSTOREQ3);
 		
-		workload.add(Queries.POSTGRESQ3);
+//		workload.add(Queries.POSTGRESQ3);
 		
 		return workload;
 	}
@@ -176,11 +187,12 @@ public class Dataplacement implements Serializable {
 		return queryNumbers;
 	}
 	
-	private long executeUpdateQuery(Tables t) {
+	private long executeUpdateQuery(Tables t, Boolean realTime) {
 		QueryClient qClient = new QueryClient();
 		long lStartTime = System.nanoTime();
 		String queryStr;
 		Response response1;
+		int updateTableNum = 0;
 		for (Databases db : tableLocation.get(t)) {
 			if (db==Databases.SSTORE) {
 				queryStr = "UpdateOrderLine";
@@ -195,21 +207,28 @@ public class Dataplacement implements Serializable {
 					postgresH.executeStatementPostgreSQL(queryStr);
 				} catch (SQLException e) {
 					// TODO Auto-generated catch block
-					e.printStackTrace();
+					e.printStackTrace();//			System.out.println("workload time: " + String.valueOf(workloadTime));
+
 				}
 			}
+			updateTableNum ++;
 		}
 		
-		return (System.nanoTime() - lStartTime) / 1000000;
+		return (long) (realTime ? (System.nanoTime() - lStartTime) / 1000000 :
+			queryTime.get(Queries.UPDATE) * Math.pow(1.8, updateTableNum - 1)); // Hueristics: base * 1.8^(x-1)
 	}
 	
 	private long executeQuery(String queryStr, Databases db) {
+		return executeQuery(queryStr, db, true);
+	}
+	
+	private long executeQuery(String queryStr, Databases db, Boolean realTime) {
 		QueryClient qClient = new QueryClient();
 		long lStartTime = System.nanoTime();
 		Response response1;
 		if (queryStr.equals("update")) {
 			for (Tables t : queryTables.get(Queries.UPDATE)) {
-				return executeUpdateQuery(t);
+				return executeUpdateQuery(t, realTime);
 			}
 		}
 		switch(db) {
@@ -223,11 +242,21 @@ public class Dataplacement implements Serializable {
 				break;
 		}
 			
-		return (System.nanoTime() - lStartTime) / 1000000;
+		if (realTime) { 
+			return (System.nanoTime() - lStartTime) / 1000000;
+		} else if (db == Databases.SSTORE) {
+			return queryTime.get(Queries.SSTOREQ3);
+		}
+		
+		return queryTime.get(Queries.POSTGRESQJOINAGG);
 //		System.out.println(response1.getEntity());
 	}
 	
 	private long executeWorkload(ArrayList<Queries> workload) {
+		return executeWorkload(workload, true);
+	}
+	
+	private long executeWorkload(ArrayList<Queries> workload, Boolean realTime) {
 		if (workload == null) {
 			return -1;
 		}
@@ -250,15 +279,20 @@ public class Dataplacement implements Serializable {
 							break;
 						}
 						long lEndTime = System.nanoTime();
-						System.out.println("Moving "+t.toString()+": "+String.valueOf((lEndTime - lStartTime) / 1000000)+"ms.");
-						workloadTime += (lEndTime - lStartTime) / 1000000;
+//						System.out.println("Moving "+t.toString()+": "+String.valueOf((lEndTime - lStartTime) / 1000000)+"ms.");
+						if (realTime) {
+							workloadTime += (lEndTime - lStartTime) / 1000000;
+						} else {
+							workloadTime += migrationTime.get(Tables.ORDER_LINE);
+						}
 					}
 				}
 			}
 			// execute
 			String queryStr = queries.get(p);
-			long execTime = executeQuery(queryStr, currentDB);
+			long execTime = executeQuery(queryStr, currentDB, realTime);
 			workloadTime += execTime;
+//			System.out.println("workload time: " + String.valueOf(workloadTime));
 		}
 		return workloadTime;
 	}
@@ -303,17 +337,18 @@ public class Dataplacement implements Serializable {
 //		String workloadFilename = "workload.ser.80";
 		String workloadFilename = "workload.ser.tmp";
 		
-		boolean caching = true;
-		Dataplacement dp = new Dataplacement(caching);
-		ArrayList<Queries> workload = dp.generateWorkload(1000);
-		FileOutputStream workloadOut = new FileOutputStream(workloadFilename);
-		ObjectOutputStream out = new ObjectOutputStream(workloadOut);
-		out.writeObject(workload);
-		out.close();
-		workloadOut.close();
-		
-		long workloadTime = dp.executeWorkload(workload);
-		System.out.println("Workload finished in: " + String.valueOf(workloadTime) + "ms for caching.");
+//		boolean caching = true;
+//		boolean realTime = false;
+//		Dataplacement dp = new Dataplacement(caching);
+//		ArrayList<Queries> workload = dp.generateWorkload(1000);
+//		FileOutputStream workloadOut = new FileOutputStream(workloadFilename);
+//		ObjectOutputStream out = new ObjectOutputStream(workloadOut);
+//		out.writeObject(workload);
+//		out.close();
+//		workloadOut.close();
+//		
+//		long workloadTime = dp.executeWorkload(workload, realTime);
+//		System.out.println("Workload finished in: " + String.valueOf(workloadTime) + "ms for caching.");
 		
 //		Map<Queries, Integer> queryNumbers = dp.getQueryNumbers(workload);
 //		for (Queries q : queryNumbers.keySet()) {
@@ -323,20 +358,21 @@ public class Dataplacement implements Serializable {
 //			System.out.println(dp.queries.get(p));
 //		}
 		
-//		FileInputStream workloadIn = new FileInputStream(workloadFilename);
-//		ObjectInputStream in = new ObjectInputStream(workloadIn);
-//		ArrayList<Queries> workload = null;
-//		try {
-//			workload = (ArrayList<Queries>) in.readObject();
-//		} catch (ClassNotFoundException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-//		
-//		boolean caching = false;
-//		Dataplacement dpMoving = new Dataplacement(caching);
-//		long workloadMovingTime = dpMoving.executeWorkload(workload);
-//		System.out.println("Workload finished in: " + String.valueOf(workloadMovingTime) + "ms for moving.");
+		FileInputStream workloadIn = new FileInputStream(workloadFilename);
+		ObjectInputStream in = new ObjectInputStream(workloadIn);
+		ArrayList<Queries> workload = null;
+		try {
+			workload = (ArrayList<Queries>) in.readObject();
+		} catch (ClassNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		boolean caching = false;
+		boolean realTime = false;
+		Dataplacement dpMoving = new Dataplacement(caching);
+		long workloadMovingTime = dpMoving.executeWorkload(workload, realTime);
+		System.out.println("Workload finished in: " + String.valueOf(workloadMovingTime) + "ms for moving.");
 		
 	}
 	

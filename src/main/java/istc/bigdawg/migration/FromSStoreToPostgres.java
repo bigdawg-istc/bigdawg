@@ -101,7 +101,7 @@ public class FromSStoreToPostgres
 		String tableFrom = "item";
 		String tableTo = "item";
 		long startTime = System.currentTimeMillis();
-		boolean caching = false;
+		boolean caching = true;
 		MigrationResult result = migrator.migrate(conFrom, tableFrom, conTo, tableTo, caching);
 		long endTime = System.currentTimeMillis();
 		System.out.println("time duration is: " + (endTime - startTime));
