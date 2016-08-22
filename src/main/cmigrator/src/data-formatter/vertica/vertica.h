@@ -30,6 +30,9 @@ public:
 
 	Vertica();
 
+	/** Write the file header for Vertica binary format. */
+	virtual void writeFileHeader();
+
 	virtual void setTypeAttributeMap();
 
 	virtual bool isTheEnd();

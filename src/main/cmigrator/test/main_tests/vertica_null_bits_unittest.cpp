@@ -18,24 +18,31 @@ TEST(Vertia,nullBits)
   nullPositions.push_back(0);
   nullPositions.push_back(5);
   nullPositions.push_back(19);
+  /*
+   * 1st byte: 10000100 (positions from 0 to 7)
+   * 2nd byte: 00000000 (positions from 8 to 15)
+   * 3rd byte: 00010000 (positions from 16 to 23)
+   */
   std::cout << "Set bits to denote null attributes." << std::endl;
   vertica->setAttributesNull(nullPositions);
   delete vertica;
 
   FILE * fp = fopen(fileName, "r");
+  /* Omit the first 4 bytes to omit the size of the row header. */
   moveFilePosition(fp, sizeof(int32_t));
-  int8_t byte;
-  size_t bytesRead = fread(&byte, sizeof(int8_t), 1, fp);
+  uint8_t byte;
+  size_t bytesRead = fread(&byte, sizeof(uint8_t), 1, fp);
   std::cout << "Bytes read: " << bytesRead << std::endl;
-  assert (bytesRead == sizeof(int8_t));
+  assert (bytesRead == sizeof(uint8_t));
   std::cout << "Byte read: " << std::hex << byte << std::endl;
-  printf("Byte read: %X\n", byte);
-  EXPECT_EQ(33,byte);
-  bytesRead = fread(&byte, sizeof(int8_t), 1, fp);
-  assert (bytesRead == sizeof(int8_t));
+  printf("Byte read: %#1x\n", byte);
+  EXPECT_EQ(132,byte);
+  bytesRead = fread(&byte, sizeof(uint8_t), 1, fp);
+  assert (bytesRead == sizeof(uint8_t));
+  printf("Byte read: %#1x\n", byte);
   EXPECT_EQ(0, byte);
-  bytesRead = fread(&byte, sizeof(int8_t), 1, fp);
-  assert(bytesRead == sizeof(int8_t));
+  bytesRead = fread(&byte, sizeof(uint8_t), 1, fp);
+  assert(bytesRead == sizeof(uint8_t));
   EXPECT_EQ(8, byte);
   fclose(fp);
 

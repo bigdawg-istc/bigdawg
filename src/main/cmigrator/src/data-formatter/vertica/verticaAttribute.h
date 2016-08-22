@@ -40,6 +40,10 @@ template<class T>
 VerticaAttribute<T>::VerticaAttribute(const VerticaAttribute &obj) :
 		GenericAttribute<T>(obj) {
 	printf("Copy constructor vertica attribute.\n");
+	/* At the beginning the size of the string attriubute is set to -1;
+	 * The column width for a VARCHAR column is -1 to signal that
+	 * it contains variable-length data. */
+	this->bytesNumber = -1;
 }
 
 template<class T>
@@ -69,11 +73,12 @@ Attribute * VerticaAttribute<T>::read() {
 
 template<class T>
 void VerticaAttribute<T>::write(Attribute * attr) {
-	uint32_t bytesNumber = attr->getBytesNumber();
-//	printf("attr is null: %d\n", attr->getIsNull());
+	this->bytesNumber = attr->getBytesNumber();
+	//	printf("attr is null: %d\n", attr->getIsNull());
 	if (attr->getIsNullable()) {
 		if (attr->getIsNull()) {
-			// we don't know the reason why it is null so we'll write byte 0
+			this->isNull = true;
+			// We don't know the reason why it is null so we'll write byte 0.
 			char nullReason = 0;
 			size_t numberOfElementsWritten = fwrite(&nullReason, 1, 1,
 					this->fp);
@@ -82,18 +87,18 @@ void VerticaAttribute<T>::write(Attribute * attr) {
 				throw DataMigratorException(message);
 			}
 			/* check if we can fill the size of the attribute with zeros */
-			assert(Attribute::nullValuesSize >= bytesNumber);
-			fwrite(Attribute::nullValues, bytesNumber, 1, this->fp);
+			assert(Attribute::nullValuesSize >= this->bytesNumber);
+			fwrite(Attribute::nullValues, this->bytesNumber, 1, this->fp);
 			return; /* This has to be the end of the writting to the binary vertica. */
 		} else {
 			char notNull = -1;
 			fwrite(&notNull, 1, 1, this->fp);
 		}
 	}
-	/* copy only the value, not a pointer */
+	/* Copy the value, not a pointer. */
 	T* value = static_cast<T*>(attr->getValue());
-//	printf("value of the int: %d\n", *value);
-	fwrite(value, bytesNumber, 1, this->fp);
+	//	printf("value of the int: %d\n", *value);
+	fwrite(value, this->bytesNumber, 1, this->fp);
 }
 
 /* implementation of the template specialization can be found in

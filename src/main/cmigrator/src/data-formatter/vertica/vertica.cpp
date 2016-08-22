@@ -96,18 +96,18 @@ void Vertica::setAttributesNull(const std::vector<int32_t> & nullPositions) {
 	 * and so on. */
 	/* The last byte to which we set the position. */
 	int32_t lastSetByte = 0;
-	int8_t byte = 0; /* Byte in which we set the null values. */
+	uint8_t byte = 0; /* Byte in which we set the null values. */
 	for (std::vector<int32_t>::const_iterator it = nullPositions.begin();
 			it != nullPositions.end();) {
-		/* fish out the value: (*it) represents the integer position. */
+		/* Fish out the value: (*it) represents the integer position. */
 		int32_t nextPosition = *it;
 		int32_t byteNumberForNextPosition = nextPosition / 8;
 		if (byteNumberForNextPosition != lastSetByte) {
 			/* The first column was set on the least significant bit of
 			 * the byte so now we have to reverse the order. */
-			byte = reverseBitsInByte(byte);
+			//byte = reverseBitsInByte(byte);
 			/* Write the byte to the output file. */
-			fwrite(&byte, sizeof(int8_t), 1, this->fp);
+			fwrite(&byte, sizeof(uint8_t), 1, this->fp);
 			/* Reinitialize the byte. */
 			byte = 0;
 			/* The fp was moved by 1 byte, so we move the lastSetByte by 1. */
@@ -125,29 +125,125 @@ void Vertica::setAttributesNull(const std::vector<int32_t> & nullPositions) {
 				lastSetByte = byteNumberForNextPosition;
 			}
 		}
-		/* Normalize the position, e.g. bit 10 is set to (10-8=2) to 2nd
-		 * position within a byte: 0,1,[2],3,4,5,6,7. */
-		nextPosition -= (byteNumberForNextPosition) * 8;
-		assert(nextPosition < 8);
+		/* Normalize the position, e.g. bit 10 is set to (15-10=5) the 2nd
+		 * position within a byte: 0,[1],2,3,4,5,6,7. */
+		uint8_t nextPositionNormalized = (uint8_t)(
+				(((byteNumberForNextPosition + 1) * 8) - 1) - nextPosition);
+		assert(nextPositionNormalized < 8);
 		/* Set next bit. */
-		byte = byte | (int8_t)(1 << nextPosition);
+		byte = byte | (uint8_t)((uint8_t) 1 << nextPositionNormalized);
 		++it;
 		if (it == nullPositions.end()) {
 			/* Write the last byte. */
 			fwrite(&byte, sizeof(int8_t), 1, this->fp);
 		}
 	}
-	/* Move file position to the beginning of the row. */
+	/* Move the file position to the beginning of the row. */
 	moveToPreviousPosition(fp, firstFilePosition);
 }
 
 void Vertica::writeRowHeader() {
-
+	this->rowHeaderPosition = getCurrentFilePosition(fp);
 }
 
 void Vertica::writeRowFooter() {
+	/* After we wrote the row, we can go back to the beginning of the row and
+	 * fulfill the missing data: e.g. the full size of the row.
+	 */
+	/* Current position of the fp is at the end of the row, go back here at the
+	 * end of the method. */
+	long int rowEndPosition = getCurrentFilePosition(this->fp);
 
+	/* Go to the beginning of the row. */
+	moveToPreviousPosition(this->fp, this->rowHeaderPosition);
+
+	/* Prepare the header of the row. */
+	int32_t rowSize = 0;
+
+	/* Gather the null positions from the attributes. */
+	std::vector < int32_t > nullPositions;
+
+	/** Iterate through the attributes/columns:
+	 * 1) Sum up the total size of the attributes.
+	 * 2) Get positions of the null values for the attributes. */
+	int positionCounter = 0;
+	for (std::vector<AttributeWrapper*>::iterator it = attributes.begin();
+			it != attributes.end(); ++it, ++positionCounter) {
+		/* The iterator: it - represents a pointer to the attribute operator. */
+		Attribute * destination = (*it)->getDest();
+		/* Add the size of this attribute to the total size of the row. */
+		rowSize += destination->getBytesNumber();
+		if (destination->getIsNull()) {
+			nullPositions.push_back(positionCounter);
+		}
+	}
+
+	/* The size of the space for the row size value. */
+	int32_t rowSizeSize = sizeof(int32_t);
+	/* Write the row size. */
+	fwrite(&rowSize, rowSizeSize, 1, fp);
+
+	/* Write the null vector. */
+	setAttributesNull (nullPositions);
+
+	/* Go back to the end of the row. */
+	moveToPreviousPosition(this->fp, rowEndPosition);
 }
 
+void Vertica::writeFileHeader() {
+	//printf("Write Vertica header.\n");
+	/* Write the signature of the file. */
+	//int8_t signature[12] = {'A','N','I','T','E','V','\377','\n','\n','\r','\000','\000'};
+	int8_t signature[11] = { 'N', 'A', 'T', 'I', 'V', 'E', '\n', '\377', '\r',
+			'\n', '\000' };
+	//std::cout << "Bytes number for signature: " << bytesNumber << std::endl;
+	//std::cout << "Signature: " << signature << std::endl;
+	fwrite(&signature, sizeof(signature), 1, fp);
 
+	/* Produce the header of the file. */
+
+	/* Leave 4 bytes to write the number of bytes in the header once you write the header. */
+	uint32_t bytesWritten = 0;
+	int32_t bytesWrittenSize = sizeof(int32_t);
+
+	/* Prepare spce for the file header. */
+	moveFilePosition(fp, bytesWrittenSize);
+
+	/* 2 bytes - version number = 1. */
+	int16_t versionNumber = 1;
+	fwrite(&versionNumber, sizeof(int16_t), 1, fp);
+	bytesWritten += (uint32_t) sizeof(int16_t);
+
+	/* 1 byte filler. */
+	int8_t filler = 0;
+	int32_t fillerSize = sizeof(int8_t);
+	fwrite(&filler, fillerSize, 1, fp);
+	bytesWritten += fillerSize;
+
+	/* 2 bytes - number of columns. */
+	uint16_t colNumber = (uint16_t) attributes.size();
+	fwrite(&colNumber, sizeof(int16_t), 1, fp);
+	bytesWritten += (uint32_t) sizeof(int16_t);
+
+	/** Iterate through the columns and set the size of them in the
+	 * binary header. */
+	for (std::vector<AttributeWrapper*>::iterator it = attributes.begin();
+			it != attributes.end(); ++it) {
+		/* it - represents an attribute operator. */
+		Attribute * destination = (*it)->getDest();
+		/* 4 bytes - the size of the column. */
+		int32_t colSize = destination->getBytesNumber();
+		fwrite(&colSize, sizeof(int32_t), 1, fp);
+		bytesWritten += (uint32_t) sizeof(int32_t);
+	}
+
+	/* We have to go back to the position of the file where the size of
+	 * the header should be written. */
+	moveFilePosition(fp, -(bytesWritten + bytesWrittenSize));
+	//std::cout << "bytesWritten: " << bytesWritten << std::endl;
+	fwrite(&bytesWritten, bytesWrittenSize, 1, fp);
+	moveFilePosition(fp, bytesWritten);
+	/* We left fp (file position) on the position when the first row can
+	 * be written. */
+}
 

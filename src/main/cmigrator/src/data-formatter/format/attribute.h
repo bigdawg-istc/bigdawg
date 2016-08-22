@@ -25,7 +25,7 @@ protected:
 	/** How many bytes the attribute requires
 	 this is only the number of real values (without any NULL values, for example, for char*)
 	 but PostgreSQL can set it to -1 so this is why it is int and not unsigned int. */
-	int32_t bytesNumber;
+	uint32_t bytesNumber;
 
 	/* is this instance of the argument a NULL value or not */
 	bool isNull;
@@ -77,10 +77,6 @@ public:
 		this->bytesNumber = bytesNumber;
 	}
 
-	int32_t getBytesNumber() const {
-		return this->bytesNumber;
-	}
-
 	/** set that this attribute is a null attribute */
 	void setIsNull(bool isNull) {
 		this->isNull = isNull;
@@ -110,6 +106,12 @@ public:
 	/** @retrun The position of the attribute in a row. */
 	int32_t getPosition() {
 		return position;
+	}
+
+	/** Get the initial size of the attribute or the final size of
+	 * the attribute if the value of the attribute was read or written. */
+	int32_t getBytesNumber() const {
+		return this->bytesNumber;
 	}
 
 	/** get the value of this attribute */
