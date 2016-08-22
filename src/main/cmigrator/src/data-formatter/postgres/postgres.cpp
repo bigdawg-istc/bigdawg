@@ -91,13 +91,13 @@ bool Postgres::isTheEnd() {
 	colNumber = be16toh(colNumber);
 	if (colNumber == -1) {
 		return true;
-	} else if (colNumber == attributesNumber) {
+	} else if (colNumber == attributes.size()) {
 		return false;
 	} else {
 		std::string message(
 				"PostgreSQL input file. Expected number of attributes: "
 						+ boost::lexical_cast < std::string
-						> (attributesNumber)
+						> (attributes.size())
 								+ "; The number of attributes in the file: "
 								+ boost::lexical_cast < std::string
 						> (colNumber) + ".");
@@ -129,7 +129,7 @@ void Postgres::writeFileHeader() {
 
 /* Each tuple begins with a 16-bit integer count of the number of fields in the tuple. */
 void Postgres::writeRowHeader() {
-	uint16_t colNumberPostgres = htobe16(attributesNumber);
+	uint16_t colNumberPostgres = htobe16(attributes.size());
 	fwrite(&colNumberPostgres, 2, 1, fp);
 }
 

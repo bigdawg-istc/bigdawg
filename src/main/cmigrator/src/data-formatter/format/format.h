@@ -6,6 +6,7 @@
 #include "boost/smart_ptr/shared_ptr.hpp"
 #include "boost/smart_ptr/make_shared.hpp"
 #include "attribute.h"
+#include "attributeWrapper.h"
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 
@@ -15,16 +16,21 @@
 class Format {
 
 protected:
+	/** Just a value with only nulls to be written to a binary file where
+	 * more than one null value is needed. */
 	const static std::string nullString;
 
-	/** the number of attributes for a given row */
-	uint64_t attributesNumber;
+	/** The attributes for a given row. */
+	std::vector<AttributeWrapper*> attributes;
 
 	/** Map type names to attributes. */
 	std::map<std::string, Attribute *> typeAttributeMap;
 
 	/** File pointer where the data is read from / written to. */
 	FILE * fp;
+
+	/** Set the file for the formatter. */
+	void setFile(const std::string & fileName, const char * fileMode);
 
 public:
 
@@ -71,13 +77,15 @@ public:
 
 	virtual void setTypeAttributeMap() = 0;
 
-	inline void setAttributesNumber(uint64_t attributesNumber) {
-		this->attributesNumber = attributesNumber;
+	void inline setAttributes(std::vector<AttributeWrapper*> & attributes) {
+		this->attributes = attributes;
 	}
 
 	void cleanTypeAttributeMap();
 
-	void setFile(const std::string & fileName, const char * fileMode);
+	/** Set the file for the formatter and update the attribute map which
+	 * depends on the file. */
+	void setFormat(const std::string & fileName, const char * fileMode);
 
 	/** Get attribute for a given type name. */
 	Attribute * getAttribute(const std::string& type);

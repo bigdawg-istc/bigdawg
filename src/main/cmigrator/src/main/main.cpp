@@ -10,6 +10,7 @@
 #include "formatter/formatter.h"
 #include "postgres/postgres.h"
 #include "scidb/scidb.h"
+#include "vertica/vertica.h"
 #include "common/utils.h"
 #include "fcntl.h"
 
@@ -73,6 +74,7 @@ int main(int argc, char *argv[]) {
 	nameFormatMap.insert(std::make_pair("postgres", new Postgres()));
 	nameFormatMap.insert(std::make_pair("csv", new Csv()));
 	nameFormatMap.insert(std::make_pair("scidb", new SciDB()));
+	nameFormatMap.insert(std::make_pair("vertica", new Vertica()));
 
 	std::vector < std::string > types;
 	std::vector<AttributeWrapper *> attributes;
@@ -138,7 +140,7 @@ int main(int argc, char *argv[]) {
 		return 1; //something went wrong
 	}
 	Format & source = (*sourceIterator->second);
-	source.setFile(in, "r");
+	source.setFormat(in, "r");
 
 	std::map<std::string, Format *>::iterator destIterator = nameFormatMap.find(
 			migrators[1]);
@@ -150,19 +152,18 @@ int main(int argc, char *argv[]) {
 		return 1; // something went wrong
 	}
 	Format & dest = (*destIterator->second);
-	dest.setFile(out, "w");
+	dest.setFormat(out, "w");
 
 	//Postgres postgres = Postgres("/home/adam/data/int_not_null_test.bin", "r");
 	//Csv csv = Csv("/home/adam/data/int_not_null_test.bin.v2.csv", "w");
 
 	types = splitString(typesRaw, ','); // types.push_back(std::string("int32_t"));
 
-	source.setAttributesNumber(types.size());
-	dest.setAttributesNumber(types.size());
-
+	/* Iterate through the attributes. */
+	int32_t attributePosition = 0;
 	for (std::vector<std::string>::iterator it = types.begin();
 			it != types.end();) {
-		printf("Type name: %s\n", (*it).c_str());
+		//printf("Type name: %s\n", (*it).c_str());
 		Attribute * sourceAttr = source.getAttribute(*it)->clone();
 		Attribute * destAttr = dest.getAttribute(*it)->clone();
 		++it;
@@ -170,32 +171,42 @@ int main(int argc, char *argv[]) {
 			sourceAttr->setIsLast(true);
 			destAttr->setIsLast(true);
 		}
+		/* Set the position of the attributes. */
+		sourceAttr->setPosition(attributePosition);
+		destAttr->setPosition(attributePosition);
+		++attributePosition;
+
+		/* Create the attribute wrapper which combines (connects) internally
+		 * the source and destination attributes.
+		 * The source attribute reads from the source binary file and the
+		 * destination attribute writes to the destination binary file. */
 		AttributeWrapper * wrapper = new AttributeWrapper(sourceAttr, destAttr);
 		attributes.push_back(wrapper);
-		printf("wrapper added\n");
+		//printf("wrapper added\n");
 	}
-	printf("format\n");
-	printf("Attributes size: %lu\n", attributes.size());
-	if (attributes.size() > 0) {
-		attributes.at(0)->toString();
-	}
+	//printf("format\n");
+	//printf("Attributes size: %lu\n", attributes.size());
+
+	source.setAttributes(attributes);
+	dest.setAttributes(attributes);
 	Formatter::format(source, attributes, dest);
 
-	printf("delete the source and destination attributes!\n");
+	//printf("delete the source and destination attributes!\n");
 	for (std::vector<AttributeWrapper*>::iterator it = attributes.begin();
 			it != attributes.end(); ++it) {
 		delete (*it);
 	}
 
+	/* Delete the formats: cpp, postgres, scidb, vertica, etc. */
 	for (std::map<std::string, Format *>::iterator it = nameFormatMap.begin();
 			it != nameFormatMap.end(); ++it) {
 		delete it->second;
 	}
 
-	/* go back to normal stdout */
+	/* Go back to normal stdout. */
 	fflush (stdout);
 	close(out_file);
 	dup2(save_out, fileno(stdout));
 	close(save_out);
-	/* the end of going to standard stdout */
+	/* The end of going to standard stdout. */
 }

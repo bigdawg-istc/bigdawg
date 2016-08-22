@@ -196,7 +196,7 @@ Attribute * SciDBAttribute<bool>::read() {
 
 template<>
 void SciDBAttribute<bool>::write(Attribute * attr) {
-	assert(this->bytesNumber == attr.getBytesNumber());
+	assert(this->bytesNumber == attr->getBytesNumber());
 	if (attr->getIsNullable()) {
 		if (attr->getIsNull()) {
 			// we don't know the reason why it is null so we'll write byte 0

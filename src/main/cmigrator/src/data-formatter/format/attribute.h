@@ -13,15 +13,18 @@
 class Attribute {
 
 protected:
-	/* can the argument be a NULL value */
+	/* Can the argument be a NULL value. */
 	bool isNullable;
 
-	/* is it the last attribute in a sequence of attributes for a line */
+	/** Position of the attribute in a row (position starts from 0). */
+	int32_t position;
+
+	/* Is it the last attribute in a sequence of attributes for a line. */
 	bool isLast;
 
-	/* how many bytes the attribute requires
+	/** How many bytes the attribute requires
 	 this is only the number of real values (without any NULL values, for example, for char*)
-	 but PostgreSQL can set it to -1 so this is why it is int and not unsigned int */
+	 but PostgreSQL can set it to -1 so this is why it is int and not unsigned int. */
 	int32_t bytesNumber;
 
 	/* is this instance of the argument a NULL value or not */
@@ -52,6 +55,7 @@ public:
 		this->isNull = obj.isNull;
 		this->bytesNumber = obj.bytesNumber;
 		this->isLast = obj.isLast;
+		this->position = obj.position;
 	}
 
 	virtual ~Attribute() {
@@ -97,6 +101,17 @@ public:
 		return isLast;
 	}
 
+	/** Set the position of the attribute in a row
+	 * (position number starts from 0). */
+	void setPosition(int32_t position) {
+		this->position = position;
+	}
+
+	/** @retrun The position of the attribute in a row. */
+	int32_t getPosition() {
+		return position;
+	}
+
 	/** get the value of this attribute */
 	virtual void * getValue() = 0;
 
@@ -113,6 +128,7 @@ template<class T>
 class GenericAttribute: public Attribute {
 
 protected:
+	/** The value of the attribute. */
 	T * value;
 
 public:

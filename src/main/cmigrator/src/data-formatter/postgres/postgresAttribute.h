@@ -11,7 +11,7 @@
 
 #include "../common/endianness.h"
 #include "../common/formatterExceptions.h"
-#include "attribute.h"
+#include "../format/attribute.h"
 
 template<class T>
 class PostgresAttribute: public GenericAttribute<T> {

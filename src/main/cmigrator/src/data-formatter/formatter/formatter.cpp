@@ -24,7 +24,7 @@ void Formatter::format(Format & source,
 			(*it)->readWrite();
 		}
 		source.readRowFooter();
-		source.writeRowFooter();
+		dest.writeRowFooter();
 	}
 	source.readFileFooter();
 	dest.writeFileFooter();

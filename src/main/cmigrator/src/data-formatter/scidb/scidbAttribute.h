@@ -11,7 +11,7 @@
 
 #include "../common/endianness.h"
 #include "../common/formatterExceptions.h"
-#include "attribute.h"
+#include "../format/attribute.h"
 
 template<class T>
 class SciDBAttribute: public GenericAttribute<T> {
@@ -127,7 +127,7 @@ void SciDBAttribute<T>::write(Attribute * attr) {
 				throw DataMigratorException(message);
 			}
 			/* check if we can fill the size of the attribute with zeros */
-			assert(nullValuesSize >= bytesNumber);
+			assert(Attribute::nullValuesSize >= bytesNumber);
 			fwrite(Attribute::nullValues, bytesNumber, 1, this->fp);
 			return; /* This has to be the end of the writting to the binary scidb. */
 		} else {
