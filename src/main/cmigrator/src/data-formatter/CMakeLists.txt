@@ -9,8 +9,7 @@ set(project_path ".")
 file(GLOB_RECURSE HEADERS "${project_path}/*.h")
 MESSAGE( STATUS "project_path:         " ${project_path} )
 MESSAGE( STATUS "HEADERS:         " ${HEADERS} )
-include_directories(${project_path} ${project_path}/format ${project_path}/formatter ${project_path}/postgres ${project_path}/common ${project_path}/csv ${project_path}/vertica ${project_path}/vertica)
-
+include_directories(${project_path} ${project_path}/attribute ${project_path}/format ${project_path}/formatter ${project_path}/postgres ${project_path}/common ${project_path}/csv ${project_path}/vertica)
 file(GLOB_RECURSE SOURCES "${project_path}/*.cpp")
 MESSAGE(STATUS "SOURCES: " ${SOURCES} )
 

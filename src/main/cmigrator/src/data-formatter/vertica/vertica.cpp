@@ -147,16 +147,6 @@ void Vertica::writeRowHeader() {
 }
 
 void Vertica::writeRowFooter() {
-	/* After we wrote the row, we can go back to the beginning of the row and
-	 * fulfill the missing data: e.g. the full size of the row.
-	 */
-	/* Current position of the fp is at the end of the row, go back here at the
-	 * end of the method. */
-	long int rowEndPosition = getCurrentFilePosition(this->fp);
-
-	/* Go to the beginning of the row. */
-	moveToPreviousPosition(this->fp, this->rowHeaderPosition);
-
 	/* Prepare the header of the row. */
 	int32_t rowSize = 0;
 
@@ -172,7 +162,7 @@ void Vertica::writeRowFooter() {
 		/* The iterator: it - represents a pointer to the attribute operator. */
 		Attribute * destination = (*it)->getDest();
 		/* Add the size of this attribute to the total size of the row. */
-		rowSize += destination->getBytesNumber();
+		rowSize += destination->getBufferSize();
 		if (destination->getIsNull()) {
 			nullPositions.push_back(positionCounter);
 		}
@@ -186,14 +176,25 @@ void Vertica::writeRowFooter() {
 	/* Write the null vector. */
 	setAttributesNull (nullPositions);
 
-	/* Go back to the end of the row. */
-	moveToPreviousPosition(this->fp, rowEndPosition);
+	/* Write the bytes for the attributes. */
+	for (std::vector<AttributeWrapper*>::iterator it = attributes.begin();
+			it != attributes.end(); ++it, ++positionCounter) {
+		/* The iterator: it - represents a pointer to the attribute operator. */
+		Attribute * destination = (*it)->getDest();
+		if (!destination->getIsNull()) {
+			char* buffer = destination->getBuffer();
+			int32_t bufferSize = destination->getBufferSize();
+			fwrite(buffer, bufferSize, 1, fp);
+			/* Dealloc the buffer (it was used) and set its size to 0. */
+			free(buffer);
+			destination->setBufferSize(0);
+		}
+	}
 }
 
 void Vertica::writeFileHeader() {
 	//printf("Write Vertica header.\n");
 	/* Write the signature of the file. */
-	//int8_t signature[12] = {'A','N','I','T','E','V','\377','\n','\n','\r','\000','\000'};
 	int8_t signature[11] = { 'N', 'A', 'T', 'I', 'V', 'E', '\n', '\377', '\r',
 			'\n', '\000' };
 	//std::cout << "Bytes number for signature: " << bytesNumber << std::endl;
@@ -206,24 +207,31 @@ void Vertica::writeFileHeader() {
 	uint32_t bytesWritten = 0;
 	int32_t bytesWrittenSize = sizeof(int32_t);
 
-	/* Prepare spce for the file header. */
-	moveFilePosition(fp, bytesWrittenSize);
+	/* Calculate the size of the header == bytesWritten. */
+	/* 1) Version number. */
+	bytesWritten += (uint32_t) sizeof(int16_t);
+	/* 2) One byte filler. */
+	int32_t fillerSize = sizeof(int8_t);
+	bytesWritten += fillerSize;
+	/* 3) Meta information: number of columns. */
+	uint32_t numberOfColumnsSize = (uint32_t) sizeof(int16_t);
+	bytesWritten += numberOfColumnsSize;
+	/* 4) Number of attributes time 4. */
+	bytesWritten += (uint32_t)(sizeof(int32_t) * attributes.size());
+	/* Finally, write how many bytes will be in the header. */
+	fwrite(&bytesWritten, bytesWrittenSize, 1, fp);
 
 	/* 2 bytes - version number = 1. */
 	int16_t versionNumber = 1;
 	fwrite(&versionNumber, sizeof(int16_t), 1, fp);
-	bytesWritten += (uint32_t) sizeof(int16_t);
 
 	/* 1 byte filler. */
 	int8_t filler = 0;
-	int32_t fillerSize = sizeof(int8_t);
 	fwrite(&filler, fillerSize, 1, fp);
-	bytesWritten += fillerSize;
 
 	/* 2 bytes - number of columns. */
 	uint16_t colNumber = (uint16_t) attributes.size();
-	fwrite(&colNumber, sizeof(int16_t), 1, fp);
-	bytesWritten += (uint32_t) sizeof(int16_t);
+	fwrite(&colNumber, numberOfColumnsSize, 1, fp);
 
 	/** Iterate through the columns and set the size of them in the
 	 * binary header. */
@@ -234,15 +242,8 @@ void Vertica::writeFileHeader() {
 		/* 4 bytes - the size of the column. */
 		int32_t colSize = destination->getBytesNumber();
 		fwrite(&colSize, sizeof(int32_t), 1, fp);
-		bytesWritten += (uint32_t) sizeof(int32_t);
 	}
 
-	/* We have to go back to the position of the file where the size of
-	 * the header should be written. */
-	moveFilePosition(fp, -(bytesWritten + bytesWrittenSize));
-	//std::cout << "bytesWritten: " << bytesWritten << std::endl;
-	fwrite(&bytesWritten, bytesWrittenSize, 1, fp);
-	moveFilePosition(fp, bytesWritten);
 	/* We left fp (file position) on the position when the first row can
 	 * be written. */
 }

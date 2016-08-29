@@ -11,7 +11,7 @@
 
 #include "../common/endianness.h"
 #include "../common/formatterExceptions.h"
-#include "../format/attribute.h"
+#include "../attribute/attribute.h"
 
 template<class T>
 class SciDBAttribute: public GenericAttribute<T> {

@@ -2,9 +2,7 @@
 
 #include <stdint.h>
 #include <map>
-#include <string>
 #include <utility>
-
 #include "csvAttribute.h"
 
 const char Csv::defaultDelimiter = '|';

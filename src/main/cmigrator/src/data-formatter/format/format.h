@@ -5,8 +5,8 @@
 #include <vector>
 #include "boost/smart_ptr/shared_ptr.hpp"
 #include "boost/smart_ptr/make_shared.hpp"
-#include "attribute.h"
-#include "attributeWrapper.h"
+#include "../attribute/attribute.h"
+#include "../attribute/attributeWrapper.h"
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 

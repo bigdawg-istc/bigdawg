@@ -5,7 +5,7 @@
 #include <iostream>
 
 #include "csv/csv.h"
-#include "format/attributeWrapper.h"
+#include "attribute/attributeWrapper.h"
 #include "format/format.h"
 #include "formatter/formatter.h"
 #include "postgres/postgres.h"

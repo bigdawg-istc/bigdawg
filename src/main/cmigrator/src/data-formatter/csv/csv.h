@@ -2,9 +2,8 @@
 #define CSV_H
 
 #include <string>
-
-#include "../common/formatterExceptions.h"
 #include "../format/format.h"
+#include "../common/formatterExceptions.h"
 
 class Csv: public Format {
 public:

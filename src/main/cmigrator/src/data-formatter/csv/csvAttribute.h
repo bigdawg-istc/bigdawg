@@ -4,7 +4,7 @@
 #include <cstdio>
 
 #include "../common/formatterExceptions.h"
-#include "../format/attribute.h"
+#include "attribute.h"
 #include "csv.h"
 
 template<class T>

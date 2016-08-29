@@ -39,6 +39,12 @@ protected:
 	/** File pointer where the data is read/written. */
 	FILE * fp;
 
+	/* Buffer for the bytes that are written to the output file/pipe. */
+	char* buffer;
+
+	/* Size of the buffer for bytes. */
+	int32_t bufferSize;
+
 public:
 	Attribute(FILE * fp, bool isNullable) {
 		this->isNullable = isNullable;
@@ -113,6 +119,15 @@ public:
 	int32_t getBytesNumber() const {
 		return this->bytesNumber;
 	}
+
+	char* getBuffer() {
+		return buffer;
+	}
+	int32_t getBufferSize() {
+		return bufferSize;
+	}
+
+	void setBufferSize(int32_t bufferSize) {this->bufferSize = bufferSize;}
 
 	/** get the value of this attribute */
 	virtual void * getValue() = 0;

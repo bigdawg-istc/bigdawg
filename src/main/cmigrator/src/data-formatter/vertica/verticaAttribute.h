@@ -3,7 +3,8 @@
 
 #include <endian.h>
 #include <stdint.h>
-#include <cstdio>
+#include <stdio.h>
+#include <string.h>
 #include <iostream>
 
 #define __STDC_FORMAT_MACROS
@@ -11,7 +12,7 @@
 
 #include "../common/endianness.h"
 #include "../common/formatterExceptions.h"
-#include "../format/attribute.h"
+#include "../attribute/attribute.h"
 
 template<class T>
 class VerticaAttribute: public GenericAttribute<T> {
@@ -49,7 +50,6 @@ VerticaAttribute<T>::VerticaAttribute(const VerticaAttribute &obj) :
 template<class T>
 VerticaAttribute<T>::~VerticaAttribute() {
 	printf("Freeing memory vertica attribute!\n");
-
 }
 
 template<class T>
@@ -77,28 +77,25 @@ void VerticaAttribute<T>::write(Attribute * attr) {
 	//	printf("attr is null: %d\n", attr->getIsNull());
 	if (attr->getIsNullable()) {
 		if (attr->getIsNull()) {
+			/* Columns containing NULL values do not have any data in the row.
+			 * If column 3 has a NULL value, then column 4's data immediately
+			 * follows the end of column 2's data. */
 			this->isNull = true;
-			// We don't know the reason why it is null so we'll write byte 0.
-			char nullReason = 0;
-			size_t numberOfElementsWritten = fwrite(&nullReason, 1, 1,
-					this->fp);
-			if (numberOfElementsWritten != 1) {
-				std::string message("Could not write to the file.");
-				throw DataMigratorException(message);
-			}
-			/* check if we can fill the size of the attribute with zeros */
-			assert(Attribute::nullValuesSize >= this->bytesNumber);
-			fwrite(Attribute::nullValues, this->bytesNumber, 1, this->fp);
-			return; /* This has to be the end of the writting to the binary vertica. */
+			/* This has to be the end of the writting to the binary
+			 vertica. */
+			return;
 		} else {
 			char notNull = -1;
 			fwrite(&notNull, 1, 1, this->fp);
 		}
 	}
 	/* Copy the value, not a pointer. */
-	T* value = static_cast<T*>(attr->getValue());
+	this->value = static_cast<T*>(attr->getValue());
 	//	printf("value of the int: %d\n", *value);
-	fwrite(value, this->bytesNumber, 1, this->fp);
+	/* Generate bytes that have to be written at the end. */
+	this->bufferSize = sizeof(T);
+	this->buffer = (char*)malloc(this->bufferSize);
+	memcpy(this->buffer, this->value, sizeof(T));
 }
 
 /* implementation of the template specialization can be found in
