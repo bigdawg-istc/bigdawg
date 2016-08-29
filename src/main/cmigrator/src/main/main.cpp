@@ -50,9 +50,11 @@ void printMapKeys(const char * message, std::map<std::string, Format *> map) {
 int main(int argc, char *argv[]) {
 
 	/* direct to stdout to a file */
-	int out_file = open("cout.log", O_RDWR | O_CREAT | O_APPEND, 0600);
+	const char* coutFile = "cout.log";
+	printf("stdout is redirected to: %s\n", coutFile);
+	int out_file = open(coutFile, O_RDWR | O_CREAT | O_APPEND, 0600);
 	if (-1 == out_file) {
-		perror("opening cout.log");
+		perror("opening file for redirecting stdout");
 		return 255;
 	}
 	int save_out = dup(fileno(stdout));

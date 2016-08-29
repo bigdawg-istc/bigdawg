@@ -135,7 +135,7 @@ void SciDBAttribute<T>::write(Attribute * attr) {
 			fwrite(&notNull, 1, 1, this->fp);
 		}
 	}
-	/* copy only the value, not a pointer */
+	/* Copy only the pointer. */
 	T* value = static_cast<T*>(attr->getValue());
 //	printf("value of the int: %d\n", *value);
 	fwrite(value, bytesNumber, 1, this->fp);

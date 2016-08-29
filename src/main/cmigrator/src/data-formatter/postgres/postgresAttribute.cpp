@@ -40,7 +40,7 @@ Attribute * PostgresAttribute<char>::read() {
 		delete this->value;
 	}
 	this->value = new char[this->bytesNumber];
-	this->value[this->bytesNumber] = '\0';
+	this->value[this->bytesNumber-1] = '\0';
 	//std::cout << "value bytes number: " << valueBytesNumber << std::endl;
 	numberOfObjectsRead = fread(this->value, readBytesNumber, 1, fp);
 	if (numberOfObjectsRead != 1) {

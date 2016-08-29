@@ -40,11 +40,7 @@ public:
 template<class T>
 VerticaAttribute<T>::VerticaAttribute(const VerticaAttribute &obj) :
 		GenericAttribute<T>(obj) {
-	printf("Copy constructor vertica attribute.\n");
-	/* At the beginning the size of the string attriubute is set to -1;
-	 * The column width for a VARCHAR column is -1 to signal that
-	 * it contains variable-length data. */
-	this->bytesNumber = -1;
+	printf("Copy constructor vertica T attribute.\n");
 }
 
 template<class T>
@@ -81,21 +77,23 @@ void VerticaAttribute<T>::write(Attribute * attr) {
 			 * If column 3 has a NULL value, then column 4's data immediately
 			 * follows the end of column 2's data. */
 			this->isNull = true;
-			/* This has to be the end of the writting to the binary
+			/* This has to be the end of the writing to the binary
 			 vertica. */
 			return;
-		} else {
-			char notNull = -1;
-			fwrite(&notNull, 1, 1, this->fp);
 		}
 	}
-	/* Copy the value, not a pointer. */
-	this->value = static_cast<T*>(attr->getValue());
+	/* It copies only the pointer. */
+	T* value = static_cast<T*>(attr->getValue());
 	//	printf("value of the int: %d\n", *value);
 	/* Generate bytes that have to be written at the end. */
 	this->bufferSize = sizeof(T);
-	this->buffer = (char*)malloc(this->bufferSize);
-	memcpy(this->buffer, this->value, sizeof(T));
+	this->buffer = new char[this->bufferSize];
+	memcpy(this->buffer, value, this->bufferSize);
+	//	std::cout << "this buffer address: " << this->buffer << std::endl;
+	//	std::cout << "this buffer value: " << *(this->buffer) << std::endl;
+	//	std::cout << "this value address:  " << this->value << std::endl;
+	//	std::cout << "this value: " << *(this->value) << std::endl;
+	//fflush(stdout);
 }
 
 /* implementation of the template specialization can be found in
@@ -106,6 +104,9 @@ Attribute * VerticaAttribute<char>::read();
 
 template<>
 void VerticaAttribute<char>::write(Attribute * attr);
+
+template<>
+VerticaAttribute<char>::VerticaAttribute(const VerticaAttribute<char> &obj);
 
 template<>
 Attribute * VerticaAttribute<bool>::read();

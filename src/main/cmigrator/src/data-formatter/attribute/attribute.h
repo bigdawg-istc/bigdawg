@@ -65,6 +65,7 @@ public:
 	}
 
 	virtual ~Attribute() {
+		printf("Delete the attribute.");
 	}
 
 	virtual Attribute* clone() const = 0;
@@ -121,13 +122,24 @@ public:
 	}
 
 	char* getBuffer() {
-		return buffer;
-	}
-	int32_t getBufferSize() {
-		return bufferSize;
+		return this->buffer;
 	}
 
-	void setBufferSize(int32_t bufferSize) {this->bufferSize = bufferSize;}
+	void freeBuffer() {
+		printf("Free buffer.");
+		if (this->buffer != NULL) {
+			delete [] this->buffer;
+			this->buffer = NULL;
+		}
+	}
+
+	int32_t getBufferSize() {
+		return this->bufferSize;
+	}
+
+	void setBufferSize(int32_t bufferSize) {
+		this->bufferSize = bufferSize;
+	}
 
 	/** get the value of this attribute */
 	virtual void * getValue() = 0;

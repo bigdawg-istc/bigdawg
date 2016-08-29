@@ -10,12 +10,6 @@
 
 class Vertica: public Format {
 
-private:
-
-	/** Position of the current row header in the file
-	 * from the beginning of the file. */
-	long int rowHeaderPosition;
-
 public:
 	virtual ~Vertica();
 
@@ -36,8 +30,6 @@ public:
 	virtual void setTypeAttributeMap();
 
 	virtual bool isTheEnd();
-
-	virtual void writeRowHeader();
 
 	virtual void writeRowFooter();
 

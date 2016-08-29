@@ -5,16 +5,17 @@
 #include "formatterExceptions.h"
 #include "utils.h"
 
-Format::Format(const std::string & fileName, const char * fileMode) {
+Format::Format(const std::string & fileName, const char * fileMode) : Format() {
 	setFile(fileName, fileMode);
 }
 
 Format::Format() {
+	this->fp = NULL;
 }
 
 Format::~Format() {
 	printf("Freeing memory Format\n");
-	fflush (stdout);
+	//fflush (stdout);
 	if (fp != NULL) {
 		fclose(fp);
 	}

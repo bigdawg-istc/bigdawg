@@ -12,6 +12,7 @@ TEST(Vertia,nullBits)
   std::cout << "Test bit setting for Vertica." << std::endl;
   const char * fileName = "test_bit_set.bin";
   std::cout << "File name in the test: " << fileName << std::endl;
+
   Vertica * vertica = new Vertica(fileName,"w");
   std::cout << "The Vertica object was initialized." << std::endl;
   std::vector<int32_t> nullPositions;
@@ -28,22 +29,21 @@ TEST(Vertia,nullBits)
   delete vertica;
 
   FILE * fp = fopen(fileName, "r");
-  /* Omit the first 4 bytes to omit the size of the row header. */
-  moveFilePosition(fp, sizeof(int32_t));
   uint8_t byte;
   size_t bytesRead = fread(&byte, sizeof(uint8_t), 1, fp);
   std::cout << "Bytes read: " << bytesRead << std::endl;
   assert (bytesRead == sizeof(uint8_t));
   std::cout << "Byte read: " << std::hex << byte << std::endl;
-  printf("Byte read: %#1x\n", byte);
+  printf("Byte read 1: %#1x\n", byte);
   EXPECT_EQ(132,byte);
   bytesRead = fread(&byte, sizeof(uint8_t), 1, fp);
   assert (bytesRead == sizeof(uint8_t));
-  printf("Byte read: %#1x\n", byte);
+  printf("Byte read 2: %#1x\n", byte);
   EXPECT_EQ(0, byte);
   bytesRead = fread(&byte, sizeof(uint8_t), 1, fp);
   assert(bytesRead == sizeof(uint8_t));
-  EXPECT_EQ(8, byte);
+  printf("Byte read 3: %#1x\n", byte);
+  EXPECT_EQ(16, byte);
   fclose(fp);
 
 }

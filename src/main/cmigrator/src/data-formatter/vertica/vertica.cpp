@@ -87,16 +87,22 @@ bool Vertica::isTheEnd() {
  * The null positions of the attributes should be set in bulk.
  */
 void Vertica::setAttributesNull(const std::vector<int32_t> & nullPositions) {
-	/* Precondition: the fp is set to the beginning of the line. */
-	long int firstFilePosition = getCurrentFilePosition(fp);
-	/* Skip the first 4 bytes for the row size (move forward). */
-	moveFilePosition(fp, sizeof(int32_t));
+	/* Precondition: the fp is set to the beginning of the place where
+	 * we can write the nullPositions, just after the field representing
+	 * the size of the line. */
+
 	/* Which byte from the bitVector for nulls should be modified.
 	 * Positions: 0-7 are in the first byte, positions 8-15 are in the second byte,
 	 * and so on. */
 	/* The last byte to which we set the position. */
 	int32_t lastSetByte = 0;
 	uint8_t byte = 0; /* Byte in which we set the null values. */
+	/* Prepare the array of bytes for the null values.
+	 * The array will be written to the file at the end of the processing. */
+	size_t nullVectorSize = (size_t)ceil((double)attributes.size()/8.0);
+	printf("null vector size: %ld\n", nullVectorSize);
+	uint8_t * nullVector = new uint8_t[nullVectorSize];
+
 	for (std::vector<int32_t>::const_iterator it = nullPositions.begin();
 			it != nullPositions.end();) {
 		/* Fish out the value: (*it) represents the integer position. */
@@ -107,7 +113,8 @@ void Vertica::setAttributesNull(const std::vector<int32_t> & nullPositions) {
 			 * the byte so now we have to reverse the order. */
 			//byte = reverseBitsInByte(byte);
 			/* Write the byte to the output file. */
-			fwrite(&byte, sizeof(uint8_t), 1, this->fp);
+			//fwrite(&byte, sizeof(uint8_t), 1, this->fp);
+			nullVector[lastSetByte] = byte;
 			/* Reinitialize the byte. */
 			byte = 0;
 			/* The fp was moved by 1 byte, so we move the lastSetByte by 1. */
@@ -120,8 +127,10 @@ void Vertica::setAttributesNull(const std::vector<int32_t> & nullPositions) {
 				throw DataMigratorException(message);
 			}
 			if (byteNumberForNextPosition > lastSetByte) {
-				/* Move fp forward to byteNumberForNextPosition. */
-				moveFilePosition(fp, (byteNumberForNextPosition - lastSetByte));
+				/* Move fp forward to byteNumberForNextPosition.
+				 * We can move the file position forward even for pipes!
+				 * */
+				//moveFilePosition(fp, (byteNumberForNextPosition - lastSetByte));
 				lastSetByte = byteNumberForNextPosition;
 			}
 		}
@@ -131,19 +140,18 @@ void Vertica::setAttributesNull(const std::vector<int32_t> & nullPositions) {
 				(((byteNumberForNextPosition + 1) * 8) - 1) - nextPosition);
 		assert(nextPositionNormalized < 8);
 		/* Set next bit. */
-		byte = byte | (uint8_t)((uint8_t) 1 << nextPositionNormalized);
+		byte = byte | (uint8_t)(1 << nextPositionNormalized);
 		++it;
 		if (it == nullPositions.end()) {
 			/* Write the last byte. */
-			fwrite(&byte, sizeof(int8_t), 1, this->fp);
+			//fwrite(&byte, sizeof(int8_t), 1, this->fp);
+			nullVector[lastSetByte] = byte;
 		}
 	}
-	/* Move the file position to the beginning of the row. */
-	moveToPreviousPosition(fp, firstFilePosition);
-}
-
-void Vertica::writeRowHeader() {
-	this->rowHeaderPosition = getCurrentFilePosition(fp);
+	fwrite(nullVector, nullVectorSize, 1, this->fp);
+	delete [] nullVector;
+	/* Post-condition: file position at the beginning of the row where the \
+	 * the values are stored. */
 }
 
 void Vertica::writeRowFooter() {
@@ -185,8 +193,9 @@ void Vertica::writeRowFooter() {
 			char* buffer = destination->getBuffer();
 			int32_t bufferSize = destination->getBufferSize();
 			fwrite(buffer, bufferSize, 1, fp);
-			/* Dealloc the buffer (it was used) and set its size to 0. */
-			free(buffer);
+			/* Free the buffer (it was used) and set its size to 0. */
+			std::cout << "Free the buffer in vertica.cpp." << std::endl;
+			destination->freeBuffer();
 			destination->setBufferSize(0);
 		}
 	}
