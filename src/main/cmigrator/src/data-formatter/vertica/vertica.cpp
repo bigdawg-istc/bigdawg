@@ -189,8 +189,10 @@ void Vertica::writeRowFooter() {
 			it != attributes.end(); ++it, ++positionCounter) {
 		/* The iterator: it - represents a pointer to the attribute operator. */
 		Attribute * destination = (*it)->getDest();
+		printf("Position counter: %d\n", positionCounter);
 		if (!destination->getIsNull()) {
 			char* buffer = destination->getBuffer();
+			printf("Value in buffer: %d\n", buffer);
 			int32_t bufferSize = destination->getBufferSize();
 			fwrite(buffer, bufferSize, 1, fp);
 			/* Free the buffer (it was used) and set its size to 0. */

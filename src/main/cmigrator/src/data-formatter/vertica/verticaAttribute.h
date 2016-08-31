@@ -71,6 +71,8 @@ template<class T>
 void VerticaAttribute<T>::write(Attribute * attr) {
 	this->bytesNumber = attr->getBytesNumber();
 	//	printf("attr is null: %d\n", attr->getIsNull());
+	/* Reset the null value for the attribute. */
+	this->isNull = false;
 	if (attr->getIsNullable()) {
 		if (attr->getIsNull()) {
 			/* Columns containing NULL values do not have any data in the row.
@@ -84,7 +86,7 @@ void VerticaAttribute<T>::write(Attribute * attr) {
 	}
 	/* It copies only the pointer. */
 	T* value = static_cast<T*>(attr->getValue());
-	//	printf("value of the int: %d\n", *value);
+	printf("value of the int: %d\n", *value);
 	/* Generate bytes that have to be written at the end. */
 	this->bufferSize = sizeof(T);
 	this->buffer = new char[this->bufferSize];

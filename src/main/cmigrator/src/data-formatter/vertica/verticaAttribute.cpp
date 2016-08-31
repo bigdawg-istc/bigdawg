@@ -16,6 +16,8 @@ void VerticaAttribute<char>::write(Attribute * attr) {
 	int32_t stringSize = attr->getBytesNumber() - 1;
 	this->bufferSize = (int32_t) sizeof(stringSize) + stringSize;
 	//	printf("attr is null: %d\n", attr->getIsNull());
+	/* Reset the null value for the attribute. */
+	this->isNull = false;
 	if (attr->getIsNullable()) {
 		if (attr->getIsNull()) {
 			/* Columns containing NULL values do not have any data in the row.
@@ -40,12 +42,14 @@ void VerticaAttribute<char>::write(Attribute * attr) {
 template<>
 Attribute * VerticaAttribute<bool>::read() {
 	std::string message(
-			"Vertica does not suppot export of data in native binary format.");
+			"Vertica does not support export of data in native binary format.");
 	throw DataMigratorException(message);
 }
 
 template<>
 void VerticaAttribute<bool>::write(Attribute * attr) {
+	/* Reset the null value for the attribute. */
+	this->isNull = false;
 	if (attr->getIsNullable()) {
 		if (attr->getIsNull()) {
 			/* Columns containing NULL values do not have any data in the row.
@@ -65,7 +69,8 @@ void VerticaAttribute<bool>::write(Attribute * attr) {
 	} else {
 		boolBin = 1;
 	}
-	this->buffer = new char[1];
+	this->bufferSize = sizeof(char);
+	this->buffer = new char[this->bufferSize];
 	this->buffer[0] = boolBin;
 }
 
