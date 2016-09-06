@@ -5,7 +5,8 @@
 #include "formatterExceptions.h"
 #include "utils.h"
 
-Format::Format(const std::string & fileName, const char * fileMode) : Format() {
+Format::Format(const std::string & fileName, const char * fileMode) {
+	this->fp = NULL;
 	setFile(fileName, fileMode);
 }
 
