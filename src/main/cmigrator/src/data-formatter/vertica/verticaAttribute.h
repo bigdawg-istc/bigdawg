@@ -26,7 +26,7 @@ private:
 
 public:
 	VerticaAttribute(const VerticaAttribute & obj);
-	virtual ~VerticaAttribute();
+    virtual ~VerticaAttribute();
 	VerticaAttribute(FILE * fp, bool isNullable = false);
 	virtual VerticaAttribute * clone() const;
 

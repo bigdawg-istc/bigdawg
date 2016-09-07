@@ -103,6 +103,11 @@ void Vertica::setAttributesNull(const std::vector<int32_t> & nullPositions) {
 	printf("null vector size: %ld\n", nullVectorSize);
 	uint8_t * nullVector = new uint8_t[nullVectorSize];
 
+    /* Set zeros in the null vector. */
+    for (size_t i=0; i<nullVectorSize; ++i) {
+        nullVector[i] = 0;
+    }
+
 	for (std::vector<int32_t>::const_iterator it = nullPositions.begin();
 			it != nullPositions.end();) {
 		/* Fish out the value: (*it) represents the integer position. */
@@ -171,6 +176,7 @@ void Vertica::writeRowFooter() {
 		Attribute * destination = (*it)->getDest();
 		/* Add the size of this attribute to the total size of the row. */
 		rowSize += destination->getBufferSize();
+        std::cout << "position counter: " << positionCounter << std::endl;
 		if (destination->getIsNull()) {
 			nullPositions.push_back(positionCounter);
 		}

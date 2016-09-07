@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <cstdio>
+#include <assert.h>
 
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
