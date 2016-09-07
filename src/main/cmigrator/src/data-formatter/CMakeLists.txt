@@ -1,5 +1,5 @@
 # set the data-formatter library
-set(CMAKE_CXX_FLAGS " -ggdb -Wall -Wextra -Woverloaded-virtual -Wconversion -Wpointer-arith -Wcast-qual -Wcast-align -Wwrite-strings -Winit-self -Wno-sign-compare -Wno-unused-parameter -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -DNOCLOCK -fno-omit-frame-pointer -fvisibility=hidden -DBOOST_SP_DISABLE_THREADS -Wno-ignored-qualifiers -fno-strict-aliasing -Wno-return-type")
+set(CMAKE_CXX_FLAGS " -ggdb -Wall -Wextra -Woverloaded-virtual -Wconversion -Wpointer-arith -Wcast-qual -Wcast-align -Wwrite-strings -Winit-self -Wno-sign-compare -Wno-unused-parameter -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS -DNOCLOCK -fno-omit-frame-pointer -fvisibility=hidden -DBOOST_SP_DISABLE_THREADS -Wno-ignored-qualifiers -fno-strict-aliasing -Wno-return-type -O2")
 
 set(target_library libdataformat)
 
