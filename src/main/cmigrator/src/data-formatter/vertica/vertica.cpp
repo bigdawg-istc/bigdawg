@@ -202,7 +202,7 @@ void Vertica::writeRowFooter() {
 			int32_t bufferSize = destination->getBufferSize();
 			fwrite(buffer, bufferSize, 1, fp);
 			/* Free the buffer (it was used) and set its size to 0. */
-			std::cout << "Free the buffer in vertica.cpp." << std::endl;
+            //std::cout << "Free the buffer in vertica.cpp." << std::endl;
 			destination->freeBuffer();
 			destination->setBufferSize(0);
 		}

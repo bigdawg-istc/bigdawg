@@ -23,7 +23,7 @@ public:
 
 	/** read an attribute value from the source file and write it to the destination */
 	inline void readWrite() {
-		printf("Read write in the attribute wrapper.\n");
+        //printf("Read write in the attribute wrapper.\n");
 		dest->write(source->read());
 	}
 
@@ -36,8 +36,8 @@ public:
 	}
 
 	~AttributeWrapper() {
-		printf("attributes wrapper destructor \n");
-		fflush (stdout);
+        //printf("attributes wrapper destructor \n");
+        //fflush (stdout);
 		delete this->dest;
 		delete this->source;
 	}
