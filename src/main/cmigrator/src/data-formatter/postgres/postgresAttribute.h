@@ -32,24 +32,24 @@ public:
 template<class T>
 PostgresAttribute<T>::PostgresAttribute(const PostgresAttribute &obj) :
 		GenericAttribute<T>(obj) {
-	printf("Copy constructor postgres attribute.\n");
+    //printf("Copy constructor postgres attribute.\n");
 }
 
 template<class T>
 PostgresAttribute<T>::~PostgresAttribute() {
-	printf("Freeing memory postgres attribute!\n");
+    //printf("Freeing memory postgres attribute!\n");
 }
 
 template<class T>
 PostgresAttribute<T> * PostgresAttribute<T>::clone() const {
-	printf("%s", "clone postgres\n");
+    //printf("%s", "clone postgres\n");
 	return new PostgresAttribute(*this);
 }
 
 template<class T>
 PostgresAttribute<T>::PostgresAttribute(FILE * fp, bool isNullable) :
 		GenericAttribute<T>(fp, isNullable) {
-	printf("Create a brand new postgres attribute!\n");
+    //printf("Create a brand new postgres attribute!\n");
 }
 
 template<class T>
@@ -73,7 +73,7 @@ Attribute * PostgresAttribute<T>::read() {
 			throw DataMigratorException(message);
 		}
 		// this is null and there are no bytes for the value
-//		printf("this is null\n");
+        // printf("this is null\n");
 		this->isNull = true;
 		if (this->value != NULL) {
 			delete this->value;
@@ -120,7 +120,7 @@ void PostgresAttribute<T>::write(Attribute * attr) {
 	uint32_t attrLengthPostgres = htobe32(bytesNumber);
 	fwrite(&attrLengthPostgres, 4, 1, this->fp);
 	/* copy only the value */
-	std::cout << attr->getValue();
+    //std::cout << attr->getValue();
 	//std::cout << *(attr->getValue());
 	T* value = static_cast<T*>(attr->getValue());
 	/* fromHostToBigEndian takes parameter by reference */

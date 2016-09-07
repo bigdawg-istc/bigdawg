@@ -32,7 +32,7 @@ Postgres::Postgres() :
 
 void Postgres::setTypeAttributeMap() {
 	cleanTypeAttributeMap();
-	printf("set type attribute map for Postgres\n");
+    //printf("set type attribute map for Postgres\n");
 	/* int32_t type */
 	typeAttributeMap.insert(
 			std::make_pair("int32_t",
