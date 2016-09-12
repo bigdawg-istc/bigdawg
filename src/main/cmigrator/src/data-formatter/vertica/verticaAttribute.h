@@ -26,7 +26,7 @@ private:
 
 public:
 	VerticaAttribute(const VerticaAttribute & obj);
-	virtual ~VerticaAttribute();
+    virtual ~VerticaAttribute();
 	VerticaAttribute(FILE * fp, bool isNullable = false);
 	virtual VerticaAttribute * clone() const;
 
@@ -40,24 +40,24 @@ public:
 template<class T>
 VerticaAttribute<T>::VerticaAttribute(const VerticaAttribute &obj) :
 		GenericAttribute<T>(obj) {
-	printf("Copy constructor vertica T attribute.\n");
+    //printf("Copy constructor vertica T attribute.\n");
 }
 
 template<class T>
 VerticaAttribute<T>::~VerticaAttribute() {
-	printf("Freeing memory vertica attribute!\n");
+    //printf("Freeing memory vertica attribute!\n");
 }
 
 template<class T>
 VerticaAttribute<T> * VerticaAttribute<T>::clone() const {
-	printf("%s", "clone vertica\n");
+    //printf("%s", "clone vertica\n");
 	return new VerticaAttribute(*this);
 }
 
 template<class T>
 VerticaAttribute<T>::VerticaAttribute(FILE * fp, bool isNullable) :
 		GenericAttribute<T>(fp, isNullable) {
-	printf("Create a brand new vertica attribute!\n");
+    //printf("Create a brand new vertica attribute!\n");
 }
 
 template<class T>
@@ -86,7 +86,7 @@ void VerticaAttribute<T>::write(Attribute * attr) {
 	}
 	/* It copies only the pointer. */
 	T* value = static_cast<T*>(attr->getValue());
-	printf("value of the int: %d\n", *value);
+    // printf("value of the int: %d\n", *value);
 	/* Generate bytes that have to be written at the end. */
 	this->bufferSize = sizeof(T);
 	this->buffer = new char[this->bufferSize];

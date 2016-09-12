@@ -29,7 +29,7 @@ void VerticaAttribute<char>::write(Attribute * attr) {
 			return;
 		}
 	}
-	/* Copy the value, not a pointer. */
+    /* Copy the value, not a pointer. */
 	char* value = static_cast<char*>(attr->getValue());
 	//	printf("value of the int: %d\n", *value);
 	/* Generate bytes that have to be written at the end. */
@@ -77,7 +77,7 @@ void VerticaAttribute<bool>::write(Attribute * attr) {
 template<>
 VerticaAttribute<char>::VerticaAttribute(const VerticaAttribute<char> &obj) :
 		GenericAttribute<char>(obj) {
-	printf("Copy constructor vertica char attribute.\n");
+    //printf("Copy constructor vertica char attribute.\n");
 	/* At the beginning the size of the string attribute is set to -1;
 	 * The column width for a VARCHAR column is -1 to signal that
 	 * it contains variable-length data. */

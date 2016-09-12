@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <cstdio>
+#include <assert.h>
 
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
@@ -55,7 +56,7 @@ public:
 	}
 
 	Attribute(const Attribute & obj) {
-		printf("clone in attribute.h\n");
+        //printf("clone in attribute.h\n");
 		this->isNullable = obj.isNullable;
 		this->fp = obj.fp;
 		this->isNull = obj.isNull;
@@ -65,7 +66,7 @@ public:
 	}
 
 	virtual ~Attribute() {
-		printf("Delete the attribute.");
+        //printf("Delete the attribute.");
 	}
 
 	virtual Attribute* clone() const = 0;
@@ -126,7 +127,7 @@ public:
 	}
 
 	void freeBuffer() {
-		printf("Free buffer.");
+        //printf("Free buffer.");
 		if (this->buffer != NULL) {
 			delete [] this->buffer;
 			this->buffer = NULL;
@@ -164,27 +165,26 @@ public:
 
 	GenericAttribute(FILE * fp, bool isNullable) :
 			Attribute(fp, isNullable) {
-		printf("Allocate memory generic attribute!\n");
+        //printf("Allocate memory generic attribute!\n");
 		this->bytesNumber = sizeof(T);
 		this->value = new T;
 	}
 
 	GenericAttribute(const GenericAttribute & obj) :
 			Attribute(obj) {
-		printf("copy constructor generic attribute!\n");
-		fflush (stdout);
+        //printf("copy constructor generic attribute!\n");
+        //fflush (stdout);
 		this->value = new T;
 		*(this->value) = *(obj.value);
 	}
 
 	virtual ~GenericAttribute() {
-		printf("Delete the generic attribute (is nullable: %d )\n",
-				this->isNullable);
+        //printf("Delete the generic attribute (is nullable: %d )\n", this->isNullable);
 		if (this->value != NULL) {
 			delete this->value;
 			this->value = NULL;
 		}
-		printf("Freeing memory generic attribute, the end!\n");
+        //printf("Freeing memory generic attribute, the end!\n");
 	}
 
 	/** get the value of the attribute */

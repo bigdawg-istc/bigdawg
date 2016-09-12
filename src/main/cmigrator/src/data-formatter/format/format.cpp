@@ -15,7 +15,7 @@ Format::Format() {
 }
 
 Format::~Format() {
-	printf("Freeing memory Format\n");
+    //printf("Freeing memory Format\n");
 	//fflush (stdout);
 	if (fp != NULL) {
 		fclose(fp);
@@ -57,15 +57,15 @@ void Format::getSupportedTypes(std::vector<std::string> & supportedTypes) {
 void Format::setFormat(const std::string & fileName, const char * fileMode) {
 	setFile(fileName, fileMode);
 	/* We have to update the fp (file pointer) in the attribute map. */
-	printf("Set attribute map.");
+    //printf("Set attribute map.");
 	setTypeAttributeMap();
 }
 
 void Format::setFile(const std::string & fileName, const char * fileMode) {
 	/* initialize the input file;
 	 * we will have to establish if it is for reads or for writes */
-	printf("file name %s and file mode %s\n", fileName.c_str(), fileMode);
-	printf("setFile for format in format.cpp\n");
+    //printf("file name %s and file mode %s\n", fileName.c_str(), fileMode);
+    //printf("setFile for format in format.cpp\n");
 	if (fileName == "stdout") {
 		this->fp = stdout;
 	} else if (fileName == "stdin") {

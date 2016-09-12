@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <cstdio>
 #include <iostream>
+#include <assert.h>
 
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>

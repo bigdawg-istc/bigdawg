@@ -33,10 +33,10 @@ Vertica::Vertica() :
 
 void Vertica::setTypeAttributeMap() {
 	cleanTypeAttributeMap();
-	printf("set type attribute map for Vertica\n");
+    //printf("set type attribute map for Vertica\n");
 	/* int32_t type */
 	typeAttributeMap.insert(
-			std::make_pair("int32_t",
+            std::make_pair("int32_t",
 					new VerticaAttribute<int32_t>(fp, false)));
 	typeAttributeMap.insert(
 			std::make_pair("int32_t" + nullString,
@@ -100,8 +100,13 @@ void Vertica::setAttributesNull(const std::vector<int32_t> & nullPositions) {
 	/* Prepare the array of bytes for the null values.
 	 * The array will be written to the file at the end of the processing. */
 	size_t nullVectorSize = (size_t)ceil((double)attributes.size()/8.0);
-	printf("null vector size: %ld\n", nullVectorSize);
+    //printf("null vector size: %ld\n", nullVectorSize);
 	uint8_t * nullVector = new uint8_t[nullVectorSize];
+
+    /* Set zeros in the null vector. */
+    for (size_t i=0; i<nullVectorSize; ++i) {
+        nullVector[i] = 0;
+    }
 
 	for (std::vector<int32_t>::const_iterator it = nullPositions.begin();
 			it != nullPositions.end();) {
@@ -138,7 +143,7 @@ void Vertica::setAttributesNull(const std::vector<int32_t> & nullPositions) {
 		 * position within a byte: 0,[1],2,3,4,5,6,7. */
 		uint8_t nextPositionNormalized = (uint8_t)(
 				(((byteNumberForNextPosition + 1) * 8) - 1) - nextPosition);
-		assert(nextPositionNormalized < 8);
+        (nextPositionNormalized < 8);
 		/* Set next bit. */
 		byte = byte | (uint8_t)(1 << nextPositionNormalized);
 		++it;
@@ -171,6 +176,7 @@ void Vertica::writeRowFooter() {
 		Attribute * destination = (*it)->getDest();
 		/* Add the size of this attribute to the total size of the row. */
 		rowSize += destination->getBufferSize();
+        //std::cout << "position counter: " << positionCounter << std::endl;
 		if (destination->getIsNull()) {
 			nullPositions.push_back(positionCounter);
 		}
@@ -189,14 +195,14 @@ void Vertica::writeRowFooter() {
 			it != attributes.end(); ++it, ++positionCounter) {
 		/* The iterator: it - represents a pointer to the attribute operator. */
 		Attribute * destination = (*it)->getDest();
-		printf("Position counter: %d\n", positionCounter);
+        //printf("Position counter: %d\n", positionCounter);
 		if (!destination->getIsNull()) {
 			char* buffer = destination->getBuffer();
-			printf("Value in buffer: %d\n", buffer);
+            //printf("Value in buffer: %d\n", buffer);
 			int32_t bufferSize = destination->getBufferSize();
 			fwrite(buffer, bufferSize, 1, fp);
 			/* Free the buffer (it was used) and set its size to 0. */
-			std::cout << "Free the buffer in vertica.cpp." << std::endl;
+            //std::cout << "Free the buffer in vertica.cpp." << std::endl;
 			destination->freeBuffer();
 			destination->setBufferSize(0);
 		}

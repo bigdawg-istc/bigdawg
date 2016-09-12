@@ -2,7 +2,7 @@
 
 template<>
 Attribute * PostgresAttribute<char>::read() {
-	printf("Handle strings for Postgres.\n");
+    //printf("Handle strings for Postgres.\n");
 	/* string is handled differently than other types, e.g., the number of
 	 * bytes read for a string attribute determines how many bytes we have
 	 * to currently read (in other cases we can just use the default value
