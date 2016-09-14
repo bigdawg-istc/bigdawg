@@ -25,6 +25,11 @@ import istc.bigdawg.utils.StackTrace;
  */
 public class LoadSciDB implements Load, Serializable {
 
+	/**
+	 * Number for serialization.
+	 */
+	private static final long serialVersionUID = -8804015421846615006L;
+
 	/* log */
 	private static Logger log = Logger.getLogger(LoadSciDB.class);
 
@@ -242,10 +247,6 @@ public class LoadSciDB implements Load, Serializable {
 						 * SciDB.
 						 */
 						binaryFormatString = getBinaryFormatString();
-					} else {
-						throw new IllegalStateException(
-								"Could not create the binary format string for SciDB. "
-										+ "Check the supported data types and data formats.");
 					}
 					loadCommand.append("'(" + binaryFormatString + ")'");
 				} else if (this.fileFormat == FileFormat.CSV) {

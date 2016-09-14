@@ -1,7 +1,8 @@
+#include "../src/data-formatter/typeAttributeMap.h"
+
 #include "gtest/gtest.h"
 #include "boost/smart_ptr/shared_ptr.hpp"
 
-#include "typeAttributeMap.h"
 
 TEST(TypeAttributeMapTest,getAttributesFromTypes)
 {

@@ -12,6 +12,7 @@ import java.util.concurrent.FutureTask;
 
 import org.apache.log4j.Logger;
 
+import istc.bigdawg.LoggerSetup;
 import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.utils.RunShell;
 import istc.bigdawg.utils.StackTrace;
@@ -36,8 +37,12 @@ public class TransformBinExecutor implements Callable<Long> {
 	 */
 	private final String binFormat;
 
-	/** the default value for the path to the cmigrator for development */
-	private final static String DEV_CMIGRATOR_PATH = "dev";
+	/** Path to the migrator. */
+	static private String path;
+
+	static {
+		path = BigDawgConfigProperties.INSTANCE.getCmigratorDir();
+	}
 
 	/**
 	 * the type of migration: specify between which databases it should be
@@ -54,21 +59,15 @@ public class TransformBinExecutor implements Callable<Long> {
 				"scidb2postgres");
 
 		/** this represents the full path to the c++ migrator */
-		private final String path;
+		private final String type;
 
 		private TYPE(String type) {
-			String cmigratorPath = BigDawgConfigProperties.INSTANCE
-					.getCmigratorDir();
-			String path = "src/main/cmigrator";
-			if (!cmigratorPath.equals(DEV_CMIGRATOR_PATH)) {
-				path = cmigratorPath;
-			}
-			this.path = path + "/" + type;
-			log.debug("cmigrator path: " + this.path);
+			this.type = type;
+			log.debug("type: " + this.type);
 		}
 
 		public String toString() {
-			return path;
+			return type;
 		}
 
 	}
@@ -95,11 +94,16 @@ public class TransformBinExecutor implements Callable<Long> {
 	 */
 	public Long call() {
 		try {
-			log.debug("transformation command: " + type.toString() + "-i"
-					+ inputBinPath + "-o" + outputBinPath + "-f" + binFormat);
-			return (long) RunShell.runShellReturnExitValue(
-					new ProcessBuilder(type.toString(), "-i", inputBinPath,
-							"-o", outputBinPath, "-f", binFormat));
+			/*
+			 * The attributes from the format have to enclosed in a quotation
+			 * marks to be read as a single argument.
+			 */
+			log.debug("transformation command: " + path + "data-migrator-exe"
+					+ " -t " + type.toString() + " -i " + inputBinPath + " -o "
+					+ outputBinPath + " -f " + binFormat);
+			return (long) RunShell.runShellReturnExitValue(new ProcessBuilder(
+					path + "data-migrator-exe", "-t", type.toString(), "-i",
+					inputBinPath, "-o", outputBinPath, "-f", binFormat));
 		} catch (IOException | InterruptedException ex) {
 			ex.printStackTrace();
 			log.error("The binary transformation " + type.name() + " failed: "
@@ -116,6 +120,7 @@ public class TransformBinExecutor implements Callable<Long> {
 	 */
 	public static void main(String[] args)
 			throws InterruptedException, ExecutionException {
+		LoggerSetup.setLogging();
 		ExecutorService executor = null;
 		try {
 			// TransformFromPostgresBinToSciDBBinExecutor transformExecutor =
