@@ -16,11 +16,9 @@ import istc.bigdawg.properties.BigDawgConfigProperties;
  * This it the pipe for the migrations. It creates a mkfifo in the local file
  * system.
  * 
- * The pipe can be used only by one thread.
+ * The pipe can be used only by one thread (from each end).
  * 
  * @author Adam Dziedzic
- * 
- *         Mar 2, 2016 1:54:17 PM
  */
 public enum Pipe {
 	INSTANCE;
@@ -39,7 +37,8 @@ public enum Pipe {
 	}
 
 	/**
-	 * Create a pipe and get its full path.
+	 * Create a pipe and get its full path (it also delete a previous pipe, if
+	 * exists, with the same name).
 	 * 
 	 * @param pipeName
 	 * @return
@@ -49,10 +48,11 @@ public enum Pipe {
 	 */
 	synchronized public String createAndGetFullName(String pipeName)
 			throws IOException, InterruptedException, RunShellException {
-//		String fullName = System.getProperty("user.dir") + "/src/main/resources/tmp/bigdawg_" + pipeName + "_"
-//				+ globalCounter.incrementAndGet();
-		String fullName = BigDawgConfigProperties.INSTANCE.getMigratorTempDir() +"/" + pipeName + "_"
-				+ globalCounter.incrementAndGet();
+		// String fullName = System.getProperty("user.dir") +
+		// "/src/main/resources/tmp/bigdawg_" + pipeName + "_"
+		// + globalCounter.incrementAndGet();
+		String fullName = BigDawgConfigProperties.INSTANCE.getMigratorTempDir()
+				+ "/" + pipeName + "_" + globalCounter.incrementAndGet();
 		log.debug("full path name for the pipe: " + fullName);
 		/* if a test/execution fails then a pipe can still exists */
 		this.deletePipeIfExists(fullName);
@@ -62,7 +62,8 @@ public enum Pipe {
 			// debug */
 			RunShell.runShell(new ProcessBuilder("chmod", "a+rw", fullName));
 		} else {
-			throw new RuntimeException("The platforms (such as Windows, Solaris) are not supported.");
+			throw new RuntimeException(
+					"The platforms (such as Windows, Solaris) are not supported.");
 		}
 		/*
 		 * For windows: SystemUtils.IS_OS_WINDOWS_7 or
@@ -83,7 +84,8 @@ public enum Pipe {
 	 *         because it did not exist
 	 * @throws IOException
 	 */
-	synchronized public boolean deletePipeIfExists(String pipeNameFull) throws IOException {
+	synchronized public boolean deletePipeIfExists(String pipeNameFull)
+			throws IOException {
 		return SystemUtilities.deleteFileIfExists(pipeNameFull);
 	}
 

@@ -18,10 +18,11 @@ import istc.bigdawg.utils.RunShell;
  * 
  * @author Adam Dziedzic
  */
-public class TransformFromCsvToSciDBExecutor implements Callable<Integer> {
+public class TransformFromCsvToSciDBExecutor implements Callable<Object> {
 
 	/* log */
-	private static Logger log = Logger.getLogger(TransformFromCsvToSciDBExecutor.class);
+	private static Logger log = Logger
+			.getLogger(TransformFromCsvToSciDBExecutor.class);
 
 	/*
 	 * format of data in the csv file, it specifies number of columns and their
@@ -64,8 +65,9 @@ public class TransformFromCsvToSciDBExecutor implements Callable<Integer> {
 	 *            path to the binary file for SciDB that converts a file in CSV
 	 *            format to a file in SciDB format
 	 */
-	public TransformFromCsvToSciDBExecutor(String typesPattern, String csvFilePath, String delimiter,
-			String scidbFilePath, String scidbBinPath) {
+	public TransformFromCsvToSciDBExecutor(String typesPattern,
+			String csvFilePath, String delimiter, String scidbFilePath,
+			String scidbBinPath) {
 		this.typesPattern = typesPattern;
 		this.csvFilePath = csvFilePath;
 		this.delimiter = delimiter;
@@ -78,21 +80,27 @@ public class TransformFromCsvToSciDBExecutor implements Callable<Integer> {
 	 * @throws MigrationException thrown when conversion from csv to scidb
 	 * format fails
 	 */
-	public Integer call() throws MigrationException {
-		ProcessBuilder csv2scidb = new ProcessBuilder(scidbBinPath + "csv2scidb", "-i", csvFilePath, "-o",
-				scidbFilePath, "-p", typesPattern, "-d", "\"" + delimiter + "\"");
-		log.debug("Command - csv to scidb transformation for loading:" + csv2scidb.command());
+	public Long call() throws MigrationException {
+		ProcessBuilder csv2scidb = new ProcessBuilder(
+				scidbBinPath + "csv2scidb", "-i", csvFilePath, "-o",
+				scidbFilePath, "-p", typesPattern, "-d",
+				"\"" + delimiter + "\"");
+		log.debug("Command - csv to scidb transformation for loading:"
+				+ csv2scidb.command());
 		try {
-			int returnValue = RunShell.runShellReturnExitValue(csv2scidb);
+			Long returnValue = (long) RunShell
+					.runShellReturnExitValue(csv2scidb);
 			if (returnValue != 0) {
-				String message = "Conversion from csv to scidb format failed! " + this.toString();
+				String message = "Conversion from csv to scidb format failed! "
+						+ this.toString();
 				log.error(message);
 				throw new MigrationException(message);
 			}
 			return returnValue;
 		} catch (InterruptedException | IOException e) {
 			e.printStackTrace();
-			String message = "Conversion from csv to scidb format failed! " + e.getMessage() + " " + this.toString();
+			String message = "Conversion from csv to scidb format failed! "
+					+ e.getMessage() + " " + this.toString();
 			log.error(message);
 			throw new MigrationException(message);
 		}
@@ -101,17 +109,19 @@ public class TransformFromCsvToSciDBExecutor implements Callable<Integer> {
 
 	@Override
 	public String toString() {
-		return "TransformFromCsvToSciDBExecutor [typesPattern=" + typesPattern + ", csvFilePath=" + csvFilePath
-				+ ", delimiter=" + delimiter + ", scidbFilePath=" + scidbFilePath + ", scidbBinPath=" + scidbBinPath
-				+ "]";
+		return "TransformFromCsvToSciDBExecutor [typesPattern=" + typesPattern
+				+ ", csvFilePath=" + csvFilePath + ", delimiter=" + delimiter
+				+ ", scidbFilePath=" + scidbFilePath + ", scidbBinPath="
+				+ scidbBinPath + "]";
 	}
 
 	/**
 	 * @param args
 	 * @throws MigrationException
-	 * @throws IOException 
+	 * @throws IOException
 	 */
-	public static void main(String[] args) throws MigrationException, IOException {
+	public static void main(String[] args)
+			throws MigrationException, IOException {
 		LoggerSetup.setLogging();
 		SciDBConnectionInfo connectionInfo = new SciDBConnectionInfo();
 		String scidbBinPath = connectionInfo.getBinPath();
@@ -119,9 +129,10 @@ public class TransformFromCsvToSciDBExecutor implements Callable<Integer> {
 		String csvFilePath = "src/test/resources/region.csv";
 		String scidbFilePath = "src/test/resources/region_test.scidb";
 		String delimiter = "|";
-		TransformFromCsvToSciDBExecutor executor = new TransformFromCsvToSciDBExecutor(typesPattern, csvFilePath,
-				delimiter, scidbFilePath, scidbBinPath);
-		int result = executor.call();
+		TransformFromCsvToSciDBExecutor executor = new TransformFromCsvToSciDBExecutor(
+				typesPattern, csvFilePath, delimiter, scidbFilePath,
+				scidbBinPath);
+		long result = executor.call();
 		System.out.println("result of the execution: " + result);
 	}
 

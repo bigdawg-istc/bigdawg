@@ -13,6 +13,7 @@ import org.zeromq.ZMQ;
 import istc.bigdawg.LoggerSetup;
 import istc.bigdawg.exceptions.NetworkException;
 import istc.bigdawg.properties.BigDawgConfigProperties;
+import istc.bigdawg.utils.StackTrace;
 
 /**
  * Receive a message from the network and execute the received object.
@@ -31,16 +32,21 @@ public class NetworkIn implements Runnable {
 		// Socket to talk to clients
 		ZMQ.Socket responder = context.socket(ZMQ.REP);
 		try {
-			String fullAddress = "tcp://" + BigDawgConfigProperties.INSTANCE.getGrizzlyIpAddress() + ":"
+			// The * can be replaced by:
+			// BigDawgConfigProperties.INSTANCE.getGrizzlyIpAddress()
+			String fullAddress = "tcp://" + "*" + ":"
 					+ BigDawgConfigProperties.INSTANCE.getNetworkMessagePort();
 			log.debug(fullAddress);
 			responder.bind(fullAddress);
 
 			while (!Thread.currentThread().isInterrupted()) {
-				// Wait for next request from the client
+				log.debug("Wait for the next request from a client ...");
 				byte[] requestBytes = responder.recv(0);
+				log.debug("New message was received!");
 				if (requestBytes == null) {
-					log.error("ZeroMQ: The message was not received properly!");
+					log.error(
+							"ZeroMQ: The message was not received properly (request bytes is null)!");
+					continue; /* go back and wait for a next message */
 				}
 				Object requestObject = null;
 				try {
@@ -50,16 +56,20 @@ public class NetworkIn implements Runnable {
 					// Send reply back
 					boolean isSuccess = responder.send(serialize(result), 0);
 					if (!isSuccess) {
-						log.error("ZeroMQ: The response was not sent properly!");
+						log.error(
+								"ZeroMQ: The response was not sent properly!");
 					}
-				} catch (NetworkException ex) {
-					String message = "The request could not be processed properly! " + ex.getMessage();
-					handleException(message, ex, responder);
+					log.debug("The request was processed.");
 				} catch (Exception ex) {
-					ex.printStackTrace();
-					String message = "The request command could not be executed on the remote server (host: "
-							+ THIS_HOST_ADDRESS + "). " + ex.getMessage();
-					handleException(message, ex, responder);
+					log.debug(
+							"Add information about remote host where the error happened.");
+					String message = " The request command could not be executed on the remote server (host: "
+							+ THIS_HOST_ADDRESS + "; "
+							+ BigDawgConfigProperties.INSTANCE
+									.getGrizzlyIpAddress()
+							+ "). " + ex.getMessage();
+					Exception e = new Exception(ex.getMessage() + message);
+					handleException(message, e, responder);
 				}
 			}
 		} finally {
@@ -75,19 +85,19 @@ public class NetworkIn implements Runnable {
 	 * @param ex
 	 * @param responder
 	 */
-	private void handleException(String message, Exception ex, ZMQ.Socket responder) {
-		log.error(message);
+	private void handleException(String message, Exception ex,
+			ZMQ.Socket responder) {
 		byte[] exBytes = message.getBytes();
 		/* try to send the exception message */
 		try {
 			exBytes = serialize(ex);
 		} catch (NetworkException exSerialize) {
-			exSerialize.printStackTrace();
-			log.error(exSerialize.getMessage());
+			log.error(StackTrace.getFullStackTrace(exSerialize));
 		}
 		boolean isSuccess = responder.send(exBytes, 0);
 		if (!isSuccess) {
-			log.error("ZeroMQ: The response (from NetworkException) was not sent properly!");
+			log.error(
+					"ZeroMQ: The response (from NetworkException) was not sent properly!");
 		}
 	}
 

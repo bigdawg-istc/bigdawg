@@ -15,5 +15,6 @@ import java.io.Serializable;
 public interface NetworkObject extends Serializable {
 
 	/** execute the commands in the object and return its result */
-	Object execute() throws Exception;
+	abstract public Object execute() throws Exception;
+	
 }

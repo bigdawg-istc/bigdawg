@@ -3,15 +3,14 @@ package istc.bigdawg.islands.SciDB;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Stack;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import istc.bigdawg.islands.SciDB.operators.SciDBIslandOperatorFactory;
 import istc.bigdawg.islands.operators.Operator;
-import istc.bigdawg.islands.operators.OperatorFactory;
 import istc.bigdawg.scidb.SciDBHandler;
 
 
@@ -343,11 +342,13 @@ public class AFLPlanParser {
 			
 			List<AFLPlanAttribute> aggAttributes = node.attributes;
 			
+			System.out.printf("aggregate attribute: %s\n", aggAttributes);
+			
 //			System.out.printf("afl parser, agg, outExpr prop: %s\n", node);
 			
 			Stack<StringBuilder> stk = new Stack<>();
 			List<String> aggFuns = new ArrayList<>();
-//			List<String> aggregateDimensions = new ArrayList<>();
+			List<String> aggregateDimensions = new ArrayList<>();
 			
 			for (int k = 0; k < aggAttributes.size(); ++k) {
 				AFLPlanAttribute outExpr = aggAttributes.get(k);
@@ -366,21 +367,72 @@ public class AFLPlanParser {
 					
 					if (outExpr.properties.size() > 1) stk.peek().append(')').append(" AS ").append(outExpr.properties.get(1));
 					else stk.peek().append(')');
-//				} else  {
-//					aggregateDimensions.add(outExpr.properties.get(1));
-				} else if (!outExpr.name.equals("paramDimensionReference")) {
+				} else if (outExpr.name.equals("paramDimensionReference")) {
+					aggregateDimensions.add(outExpr.properties.get(1));
+				} else {
 					System.out.printf("unhandled expression from aggregate parsing: %s", outExpr);
 				}
 			}
 			if (!stk.isEmpty()) {
 				aggFuns.add( stk.pop().toString());
 			}
-			
+			System.out.printf("aggregate construction aggFuns: %s\n", aggFuns);
 			parameters.put("Aggregate-Functions", String.join(", ", aggFuns));
-//			if (!aggregateDimensions.isEmpty()) parameters.put("Aggregate-Dimensions", String.join("|||", aggregateDimensions));
+			if (!aggregateDimensions.isEmpty()) parameters.put("Aggregate-Dimensions", String.join("|||", aggregateDimensions));
 			break;
 		case "window":
 			nodeType = "WindowAgg";
+			
+			List<String> dimensionBounds = new ArrayList<>();
+			Stack<StringBuilder> windowStk = new Stack<>();
+			List<String> windowAggFuns = new ArrayList<>();
+			List<AFLPlanAttribute> windowAttributes = node.attributes;
+			
+			
+			for (int k = 0; k < windowAttributes.size(); ++k) {
+				AFLPlanAttribute outExpr = windowAttributes.get(k);
+				if (outExpr.name.equals("opParamPlaceholder")) 
+					continue;
+				
+				if (outExpr.name.equals("paramLogicalExpression")) {
+					// get the constants
+					dimensionBounds.add(outExpr.subAttributes.get(0).properties.get(3));
+					continue;
+				}
+				
+				if (outExpr.name.equals("paramAggregateCall")) {
+					if (!windowStk.isEmpty()) {
+						windowAggFuns.add(windowStk.pop().toString());
+					}
+					windowStk.push(new StringBuilder(outExpr.properties.get(0) + "("));
+					
+					for (AFLPlanAttribute a : outExpr.subAttributes) {
+						if (windowStk.peek().charAt(windowStk.peek().length()-1) != '(') windowStk.peek().append(", ");
+						if (a.name.equals("paramAsterisk")) windowStk.peek().append(a.properties.get(0));
+						else windowStk.peek().append(a.properties.get(1));
+						
+						System.out.printf("window attr: %s\n", windowStk.peek());
+						
+					}
+					
+					windowStk.peek().append(')');
+					if (outExpr.properties.size() > 1) 
+						windowStk.peek().append(" AS ").append(outExpr.properties.get(1));
+					
+					continue;
+				} 
+
+				if (!outExpr.name.equals("paramDimensionReference")) {
+					System.out.printf("unhandled expression from aggregate parsing: %s", outExpr);
+				}
+			}
+			while (!windowStk.isEmpty()) {
+				windowAggFuns.add( windowStk.pop().toString());
+			}
+			
+			parameters.put("Window-Dimension-Parameters", String.join(", ", dimensionBounds));
+			parameters.put("Window-Aggregate-Functions", String.join(", ", windowAggFuns));
+			
 			break;
 		case "apply":
 			nodeType = "Seq Scan";
@@ -425,7 +477,7 @@ public class AFLPlanParser {
 		Operator op;
 		parameters.put("sectionName", "main");
 		node.schema.addSchemaAliases(node.schemaAlias);
-		op =  OperatorFactory.get(nodeType, parameters, node.schema, sortKeys, childOps, queryPlan);
+		op =  SciDBIslandOperatorFactory.get(nodeType, parameters, node.schema, sortKeys, childOps, queryPlan);
 
 		return op;
 	}

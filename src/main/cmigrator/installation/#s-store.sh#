@@ -1,0 +1,2 @@
+
+ant hstore-prepare -Dproject=ycsb -Dhosts="localhost:0:0"

@@ -2,15 +2,20 @@ package istc.bigdawg.islands;
 
 import java.util.List;
 
-import istc.bigdawg.utils.IslandsAndCast.Scope;
+import istc.bigdawg.islands.IslandsAndCast.Scope;
 
 public class CrossIslandCastNode extends CrossIslandPlanNode {
 	
+	protected static int maxSerial = 0;
+	protected int serial; 
 	protected Scope destinationScope;
 	
-	public CrossIslandCastNode(Scope sourceScope, Scope destinationScope, String schemaCreationQuery, String name) {
-		super(sourceScope, schemaCreationQuery, name);
+	public CrossIslandCastNode(Scope sourceScope, Scope destinationScope, String schemaFilling, String name) throws Exception {
+		super(sourceScope, schemaFilling, name);
+		maxSerial++;
+		serial = maxSerial;
 		this.destinationScope = destinationScope;
+		setQueryString(TheObjectThatResolvesAllDifferencesAmongTheIslands.getCreationQueryForCast(destinationScope, name, schemaFilling));
 	}
 
 	public Scope getDestinationScope() {
@@ -28,4 +33,8 @@ public class CrossIslandCastNode extends CrossIslandPlanNode {
 		else return source.get(0);
 	}
 	
+	@Override
+	public String toString() {
+		return String.format("(CICN_%s %s to %s)", serial, sourceScope.name(), destinationScope.name());
+	}
 }

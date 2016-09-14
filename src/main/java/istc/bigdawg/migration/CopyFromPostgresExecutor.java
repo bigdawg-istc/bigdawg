@@ -88,6 +88,7 @@ public class CopyFromPostgresExecutor implements Callable<Long> {
 			log.error(msg + StackTrace.getFullStackTrace(e), e);
 			e.printStackTrace();
 		}
+		log.info("Number of rows extracted from Postgres: " + countExtractedRows);
 		return countExtractedRows;
 	}
 }

@@ -53,7 +53,8 @@ CXXFLAGS += -g -Wall -Wextra -pthread # -O2
 
 # All tests produced by this Makefile.  Remember to add new tests you
 # created to the list.
-TESTS = attribute_unittest sample1_unittest typeAttributeMap_unittest buffer_unittest numeric_unittest main
+#TESTS = attribute_unittest sample1_unittest typeAttributeMap_unittest buffer_unittest numeric_unittest main
+TESTS = sample1_unittest numeric_unittest
 
 # All Google Test headers.  Usually you shouldn't change this
 # definition.
@@ -114,58 +115,58 @@ sample1_unittest : sample1.o sample1_unittest.o gtest_main.a
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -lpthread $^ -o $@
 
 
-# tests for attributes
-$(ODIR)/buffer.o: $(SOURCES)/buffer.cpp $(HEADERS)/buffer.h $(GTEST_HEADERS) 
-	$(CXX) -c $< -o $@ $(CPPFLAGS) $(CXXFLAGS) $(LIBS)
+# # tests for attributes
+# $(ODIR)/buffer.o: $(SOURCES)/buffer.cpp $(HEADERS)/buffer.h $(GTEST_HEADERS) 
+# 	$(CXX) -c $< -o $@ $(CPPFLAGS) $(CXXFLAGS) $(LIBS)
 
-$(ODIR_ATTRIBUTE)/attribute.o: $(ATTRIBUTE_SRC)/attribute.cpp $(warning $(ODIR_ATTRIBUTE)) $(warning $(ATTRIBUTE_HEADER)) $(ATTRIBUTE_HEADER)/attribute.h $(GTEST_HEADERS) $(HEADERS)/attribute.h $(HEADERS)/buffer.h $(HEADERS)/common
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(LIBS) -c $< -o $@
+# $(ODIR_ATTRIBUTE)/attribute.o: $(ATTRIBUTE_SRC)/attribute.cpp $(warning $(ODIR_ATTRIBUTE)) $(warning $(ATTRIBUTE_HEADER)) $(ATTRIBUTE_HEADER)/attribute.h $(GTEST_HEADERS) $(HEADERS)/attribute.h $(HEADERS)/buffer.h $(HEADERS)/common
+# 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(LIBS) -c $< -o $@
 
-attribute_unittest.o : $(ATTRIBUTE_TEST)/attribute_unittest.cc \
-		       $(ATTRIBUTE_HEADER)/attribute.h $(GTEST_HEADERS)
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(LIBS) -c -o $@ $<
+# attribute_unittest.o : $(ATTRIBUTE_TEST)/attribute_unittest.cc \
+# 		       $(ATTRIBUTE_HEADER)/attribute.h $(GTEST_HEADERS)
+# 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(LIBS) -c -o $@ $<
 
-attribute_unittest : $(ODIR_ATTRIBUTE)/attribute.o attribute_unittest.o $(ODIR)/buffer.o $(ATTRIBUTE_HEADER)/attribute.h gtest_main.a
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(LIBS) $^ -o $@
+# attribute_unittest : $(ODIR_ATTRIBUTE)/attribute.o attribute_unittest.o $(ODIR)/buffer.o $(ATTRIBUTE_HEADER)/attribute.h gtest_main.a
+# 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(LIBS) $^ -o $@
 
-# tests for typeAttributeMap
-$(ODIR)/typeAttributeMap.o: $(SOURCES)/typeAttributeMap.cpp $(HEADERS)/typeAttributeMap.h $(warning $(ATTRIBUTE_HEADER)) $(ATTRIBUTE_HEADER)/attribute.h $(ATTRIBUTE_SRC)/attribute.cpp $(HEADERS)/dataMigratorExceptions.h $(GTEST_HEADERS) 
-	$(CXX) -c $< -o $@ $(CPPFLAGS) $(CXXFLAGS) $(LIBS)
+# # tests for typeAttributeMap
+# $(ODIR)/typeAttributeMap.o: $(SOURCES)/typeAttributeMap.cpp $(HEADERS)/typeAttributeMap.h $(warning $(ATTRIBUTE_HEADER)) $(ATTRIBUTE_HEADER)/attribute.h $(ATTRIBUTE_SRC)/attribute.cpp $(HEADERS)/dataMigratorExceptions.h $(GTEST_HEADERS) 
+# 	$(CXX) -c $< -o $@ $(CPPFLAGS) $(CXXFLAGS) $(LIBS)
 
-typeAttributeMap_unittest.o : $(TESTS_DIR)/typeAttributeMap_unittest.cc $(HEADERS)/typeAttributeMap.h \
-		       $(ATTRIBUTE_HEADER)/attribute.h $(HEADERS)/dataMigratorExceptions.h $(GTEST_HEADERS)
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(LIBS) -c $< -o $@
+# typeAttributeMap_unittest.o : $(TESTS_DIR)/typeAttributeMap_unittest.cc $(HEADERS)/typeAttributeMap.h \
+# 		       $(ATTRIBUTE_HEADER)/attribute.h $(HEADERS)/dataMigratorExceptions.h $(GTEST_HEADERS)
+# 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(LIBS) -c $< -o $@
 
-typeAttributeMap_unittest : $(ODIR_ATTRIBUTE)/attribute.o $(ODIR)/typeAttributeMap.o typeAttributeMap_unittest.o gtest_main.a
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -lpthread $(LIBS) $^ -o $@
+# typeAttributeMap_unittest : $(ODIR_ATTRIBUTE)/attribute.o $(ODIR)/typeAttributeMap.o typeAttributeMap_unittest.o gtest_main.a
+# 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -lpthread $(LIBS) $^ -o $@
 
-# tests for typeAttributeMap
-$(ODIR)/utils.o: $(SOURCES)/utils.cpp $(HEADERS)/utils.h $(GTEST_HEADERS) 
-	$(CXX) -c $< -o $@ $(CPPFLAGS) $(CXXFLAGS) $(LIBS)
+# # tests for typeAttributeMap
+# $(ODIR)/utils.o: $(SOURCES)/utils.cpp $(HEADERS)/utils.h $(GTEST_HEADERS) 
+# 	$(CXX) -c $< -o $@ $(CPPFLAGS) $(CXXFLAGS) $(LIBS)
 
-$(ODIR)/typeAttributeMap.o: $(SOURCES)/typeAttributeMap.cpp $(HEADERS)/typeAttributeMap.h $(warning $(ATTRIBUTE_HEADER)) $(ATTRIBUTE_HEADER)/attribute.h $(ATTRIBUTE_SRC)/attribute.cpp $(HEADERS)/dataMigratorExceptions.h $(GTEST_HEADERS) 
-	$(CXX) -c $< -o $@ $(CPPFLAGS) $(CXXFLAGS)
+# $(ODIR)/typeAttributeMap.o: $(SOURCES)/typeAttributeMap.cpp $(HEADERS)/typeAttributeMap.h $(warning $(ATTRIBUTE_HEADER)) $(ATTRIBUTE_HEADER)/attribute.h $(ATTRIBUTE_SRC)/attribute.cpp $(HEADERS)/dataMigratorExceptions.h $(GTEST_HEADERS) 
+# 	$(CXX) -c $< -o $@ $(CPPFLAGS) $(CXXFLAGS)
 
-typeAttributeMap_unittest.o : $(TESTS_DIR)/typeAttributeMap_unittest.cc $(HEADERS)/typeAttributeMap.h \
-		       $(ATTRIBUTE_HEADER)/attribute.h $(HEADERS)/dataMigratorExceptions.h $(GTEST_HEADERS)
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(LIBS) -c $< -o $@
+# typeAttributeMap_unittest.o : $(TESTS_DIR)/typeAttributeMap_unittest.cc $(HEADERS)/typeAttributeMap.h \
+# 		       $(ATTRIBUTE_HEADER)/attribute.h $(HEADERS)/dataMigratorExceptions.h $(GTEST_HEADERS)
+# 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(LIBS) -c $< -o $@
 
-typeAttributeMap_unittest : $(ODIR_ATTRIBUTE)/attribute.o $(ODIR)/typeAttributeMap.o typeAttributeMap_unittest.o $(ODIR)/buffer.o gtest_main.a $(ODIR)/utils.o
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -lpthread $(LIBS) $^ -o $@
+# typeAttributeMap_unittest : $(ODIR_ATTRIBUTE)/attribute.o $(ODIR)/typeAttributeMap.o typeAttributeMap_unittest.o $(ODIR)/buffer.o gtest_main.a $(ODIR)/utils.o
+# 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -lpthread $(LIBS) $^ -o $@
 
-# tests for typeAttributeMap
-buffer_unittest.o : $(TESTS_DIR)/buffer_unittest.cc $(HEADERS)/buffer.h $(GTEST_HEADERS)
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(LIBS) -c $< -o $@
+# # tests for typeAttributeMap
+# buffer_unittest.o : $(TESTS_DIR)/buffer_unittest.cc $(HEADERS)/buffer.h $(GTEST_HEADERS)
+# 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(LIBS) -c $< -o $@
 
-buffer_unittest : $(ODIR)/buffer.o buffer_unittest.o gtest_main.a
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -lpthread $(LIBS) $^ -o $@
+# buffer_unittest : $(ODIR)/buffer.o buffer_unittest.o gtest_main.a
+# 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -lpthread $(LIBS) $^ -o $@
 
-# tests for numeric types from postgres
-$(ODIR)/numeric.o: $(SOURCES)/postgres-types/numeric/numeric.c $(HEADERS)/postgres-types/numeric/pgtypes_numeric.h $(HEADERS)/postgres-types/numeric/pgtypes_error.h $(GTEST_HEADERS) $(ATTRIBUTE_HEADER)/attribute.h
-	$(CXX) -c $< -o $@ $(CPPFLAGS) $(CXXFLAGS) $(LIBS) -I$(HEADERS)/postgres-types/numeric
+# # tests for numeric types from postgres
+# $(ODIR)/numeric.o: $(SOURCES)/postgres-types/numeric/numeric.c $(HEADERS)/postgres-types/numeric/pgtypes_numeric.h $(HEADERS)/postgres-types/numeric/pgtypes_error.h $(GTEST_HEADERS) $(ATTRIBUTE_HEADER)/attribute.h
+# 	$(CXX) -c $< -o $@ $(CPPFLAGS) $(CXXFLAGS) $(LIBS) -I$(HEADERS)/postgres-types/numeric
 
-numeric_unittest.o : $(TESTS_DIR)/numeric_unittest.cc $(HEADERS)/postgres-types/numeric/pgtypes_numeric.h $(GTEST_HEADERS)
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(LIBS) -c $< -o $@
+# numeric_unittest.o : $(TESTS_DIR)/numeric_unittest.cc $(HEADERS)/postgres-types/numeric/pgtypes_numeric.h $(GTEST_HEADERS)
+# 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(LIBS) -c $< -o $@
 
-numeric_unittest : $(ODIR)/numeric.o numeric_unittest.o gtest_main.a $(ODIR)/attribute.o $(ODIR)/buffer.o
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -lpthread $(LIBS) $^ -o $@
+# numeric_unittest : $(ODIR)/numeric.o numeric_unittest.o gtest_main.a $(ODIR)/attribute.o $(ODIR)/buffer.o
+# 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -lpthread $(LIBS) $^ -o $@

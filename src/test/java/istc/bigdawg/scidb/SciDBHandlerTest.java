@@ -12,19 +12,32 @@ import java.sql.Statement;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.log4j.Logger;
+import org.junit.Before;
 import org.junit.Test;
 
+import istc.bigdawg.LoggerSetup;
+import istc.bigdawg.database.AttributeMetaData;
+import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.exceptions.NoTargetArrayException;
+import istc.bigdawg.utils.StackTrace;
 
 /**
- * Test the operation executed in SciDB.
+ * Test the operations executed in SciDB.
  * 
  * @author Adam Dziedzic
- * 
- *
  */
 public class SciDBHandlerTest {
 
+	private static Logger log = Logger.getLogger(SciDBHandlerTest.class);
+
+	private SciDBConnectionInfo conTo = new SciDBConnectionInfoTest();
+
+	@Before
+	public void init() {
+		LoggerSetup.setLogging();	
+	}
+	
 	@Test
 	/**
 	 * Test execute statement based on create/delete an array in SciDB.
@@ -43,11 +56,31 @@ public class SciDBHandlerTest {
 			handler.executeStatement(
 					"create array " + arrayName + "<v:string> [i=0:10,1,0]");
 			handler.close();
-
 		} finally {
 			handler = new SciDBHandler();
 			handler.executeStatement("drop array " + arrayName);
 			handler.close();
+		}
+	}
+
+	@Test
+	public void testExistsArray() throws SQLException {
+		String arrayName = "adam_test_scidb_011_exists";
+		//String arrayName = "test";
+		SciDBHandler.dropArrayIfExists(conTo, arrayName);
+
+		boolean existsFalse = SciDBHandler.existsArray(conTo, arrayName);
+		assertEquals(false, existsFalse);
+		try {
+			SciDBHandler handler = new SciDBHandler();
+			handler.executeStatement(
+					"create array " + arrayName + "<v:string> [i=0:10,1,0]");
+			handler.close();
+
+			boolean existsTrue = SciDBHandler.existsArray(conTo, arrayName);
+			assertEquals(true, existsTrue);
+		} finally {
+			SciDBHandler.dropArrayIfExists(conTo, arrayName);
 		}
 	}
 
@@ -117,7 +150,7 @@ public class SciDBHandlerTest {
 	 * @throws NoTargetArrayException
 	 */
 	public void testGetArrayMetaData()
-			throws SQLException, NoTargetArrayException {
+			throws SQLException, NoTargetArrayException, MigrationException {
 		String arrayName2 = "adam_test_scidb_011_2";
 		SciDBHandler handler = new SciDBHandler();
 		// create array
@@ -125,56 +158,59 @@ public class SciDBHandlerTest {
 				+ "<v:string,d:double> [i=0:10,1,0,j=0:100,1,0]");
 		handler.close();
 		handler = new SciDBHandler();
+		SciDBArrayMetaData meta = null;
+		try {
+			meta = handler.getObjectMetaData(arrayName2);
+		} catch (Exception e) {
+			log.error(e.getMessage() + StackTrace.getFullStackTrace(e), e);
+			throw new MigrationException(e.getMessage(), e);
+		} finally {
+			handler.close();
+		}
 
-		SciDBArrayMetaData meta = handler.getArrayMetaData(arrayName2);
-
-		List<SciDBColumnMetaData> dimensionsOrdered = meta
-				.getDimensionsOrdered();
+		List<AttributeMetaData> dimensionsOrdered = meta.getDimensionsOrdered();
 		assertEquals(2, dimensionsOrdered.size());
 
-		SciDBColumnMetaData firstDimension = dimensionsOrdered.get(0);
-		assertEquals("i", firstDimension.getColumnName());
-		assertEquals("int64", firstDimension.getColumnType());
+		AttributeMetaData firstDimension = dimensionsOrdered.get(0);
+		assertEquals("i", firstDimension.getName());
+		assertEquals("int64", firstDimension.getSqlDataType());
 
-		SciDBColumnMetaData secondDimension = dimensionsOrdered.get(1);
-		assertEquals("j", secondDimension.getColumnName());
-		assertEquals("int64", secondDimension.getColumnType());
+		AttributeMetaData secondDimension = dimensionsOrdered.get(1);
+		assertEquals("j", secondDimension.getName());
+		assertEquals("int64", secondDimension.getSqlDataType());
 
-		Map<String, SciDBColumnMetaData> dimensionsMap = meta
-				.getDimensionsMap();
+		Map<String, AttributeMetaData> dimensionsMap = meta.getDimensionsMap();
 		assertEquals(2, dimensionsMap.size());
 
-		SciDBColumnMetaData firstDimensionMap = dimensionsMap.get("i");
-		assertEquals("i", firstDimensionMap.getColumnName());
-		assertEquals("int64", firstDimensionMap.getColumnType());
+		AttributeMetaData firstDimensionMap = dimensionsMap.get("i");
+		assertEquals("i", firstDimensionMap.getName());
+		assertEquals("int64", firstDimensionMap.getSqlDataType());
 
-		SciDBColumnMetaData secondDimensionMap = dimensionsMap.get("j");
-		assertEquals("j", secondDimensionMap.getColumnName());
-		assertEquals("int64", secondDimensionMap.getColumnType());
+		AttributeMetaData secondDimensionMap = dimensionsMap.get("j");
+		assertEquals("j", secondDimensionMap.getName());
+		assertEquals("int64", secondDimensionMap.getSqlDataType());
 
-		List<SciDBColumnMetaData> attributesOrdered = meta
-				.getAttributesOrdered();
+		List<AttributeMetaData> attributesOrdered = meta.getAttributesOrdered();
 		assertEquals(2, attributesOrdered.size());
 
-		SciDBColumnMetaData firstAttribute = attributesOrdered.get(0);
-		assertEquals("v", firstAttribute.getColumnName());
-		assertEquals("string", firstAttribute.getColumnType());
+		AttributeMetaData firstAttribute = attributesOrdered.get(0);
+		assertEquals("v", firstAttribute.getName());
+		assertEquals("string", firstAttribute.getSqlDataType());
 
-		SciDBColumnMetaData secondAttribute = attributesOrdered.get(1);
-		assertEquals("d", secondAttribute.getColumnName());
-		assertEquals("double", secondAttribute.getColumnType());
+		AttributeMetaData secondAttribute = attributesOrdered.get(1);
+		assertEquals("d", secondAttribute.getName());
+		assertEquals("double", secondAttribute.getSqlDataType());
 
-		Map<String, SciDBColumnMetaData> attributesMap = meta
-				.getAttributesMap();
+		Map<String, AttributeMetaData> attributesMap = meta.getAttributesMap();
 		assertEquals(2, attributesMap.size());
 
-		SciDBColumnMetaData firstAttributeMap = attributesMap.get("v");
-		assertEquals("v", firstAttributeMap.getColumnName());
-		assertEquals("string", firstAttributeMap.getColumnType());
+		AttributeMetaData firstAttributeMap = attributesMap.get("v");
+		assertEquals("v", firstAttributeMap.getName());
+		assertEquals("string", firstAttributeMap.getSqlDataType());
 
-		SciDBColumnMetaData secondAttributeMap = attributesMap.get("d");
-		assertEquals("d", secondAttributeMap.getColumnName());
-		assertEquals("double", secondAttributeMap.getColumnType());
+		AttributeMetaData secondAttributeMap = attributesMap.get("d");
+		assertEquals("d", secondAttributeMap.getName());
+		assertEquals("double", secondAttributeMap.getSqlDataType());
 
 		handler.close();
 

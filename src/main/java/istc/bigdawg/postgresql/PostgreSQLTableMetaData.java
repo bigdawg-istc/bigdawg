@@ -6,21 +6,29 @@ package istc.bigdawg.postgresql;
 import java.util.List;
 import java.util.Map;
 
+import istc.bigdawg.database.AttributeMetaData;
+import istc.bigdawg.database.ObjectMetaData;
+
 /**
  * Meta data about a table in PostgreSQL.
  * 
  * @author Adam Dziedzic
- * 
- *
  */
-public class PostgreSQLTableMetaData {
+public class PostgreSQLTableMetaData implements ObjectMetaData {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	
+	/** Name of the schema (by default public) and name of the table. */
 	private PostgreSQLSchemaTableName schemaTable;
-	private Map<String, PostgreSQLColumnMetaData> columnsMap;
-	private List<PostgreSQLColumnMetaData> columnsOrdered;
+	private Map<String, AttributeMetaData> columnsMap;
+	private List<AttributeMetaData> columnsOrdered;
 
-	public PostgreSQLTableMetaData(PostgreSQLSchemaTableName schemaTable, Map<String, PostgreSQLColumnMetaData> columnsMap,
-			List<PostgreSQLColumnMetaData> columnsOrdered) {
+	public PostgreSQLTableMetaData(PostgreSQLSchemaTableName schemaTable,
+			Map<String, AttributeMetaData> columnsMap,
+			List<AttributeMetaData> columnsOrdered) {
 		this.schemaTable = schemaTable;
 		this.columnsMap = columnsMap;
 		this.columnsOrdered = columnsOrdered;
@@ -33,11 +41,17 @@ public class PostgreSQLTableMetaData {
 		return schemaTable;
 	}
 
-	public Map<String, PostgreSQLColumnMetaData> getColumnsMap() {
+	public Map<String, AttributeMetaData> getColumnsMap() {
 		return columnsMap;
 	}
 
-	public List<PostgreSQLColumnMetaData> getColumnsOrdered() {
+	@Override
+	public String getName() {
+		return getSchemaTable().getFullName();
+	}
+
+	@Override
+	public List<AttributeMetaData> getAttributesOrdered() {
 		return columnsOrdered;
 	}
 }

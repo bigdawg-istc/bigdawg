@@ -19,14 +19,11 @@ import java.util.Map.Entry;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javassist.bytecode.SignatureAttribute.ClassType;
-
-import org.glassfish.grizzly.utils.StringEncoder;
-
 /**
  * @author Adam Dziedzic
  * 
  */
+@SuppressWarnings("rawtypes")
 public class Row {
 	public List<Entry<Object, Class>> row;
 	public static Map<String, Class> TYPE;

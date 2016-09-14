@@ -21,21 +21,24 @@ import istc.bigdawg.exceptions.AccumuloBigDawgException;
 public class TestTpchPostgresAccumulo {
 
 	public static String getFullLog(String message) {
-		SimpleDateFormat timeFormatter = new SimpleDateFormat("yyyy-MM-dd_HH:mm:ss.SSS");
-		String currentTime = timeFormatter.format(System.currentTimeMillis());	
-		return currentTime+" "+message; 
+		SimpleDateFormat timeFormatter = new SimpleDateFormat(
+				"yyyy-MM-dd_HH:mm:ss.SSS");
+		String currentTime = timeFormatter.format(System.currentTimeMillis());
+		return currentTime + " " + message;
 	}
-	
+
 	/**
 	 * @param args
-	 * @throws TableNotFoundException 
-	 * @throws AccumuloBigDawgException 
-	 * @throws AccumuloSecurityException 
-	 * @throws AccumuloException 
-	 * @throws SQLException 
-	 * @throws IOException 
+	 * @throws TableNotFoundException
+	 * @throws AccumuloBigDawgException
+	 * @throws AccumuloSecurityException
+	 * @throws AccumuloException
+	 * @throws SQLException
+	 * @throws IOException
 	 */
-	public static void main(String[] args) throws IOException, SQLException, AccumuloException, AccumuloSecurityException, AccumuloBigDawgException, TableNotFoundException {
+	public static void main(String[] args) throws IOException, SQLException,
+			AccumuloException, AccumuloSecurityException,
+			AccumuloBigDawgException, TableNotFoundException {
 		FromPostgresToAccumulo.main(args);
 		FromAccumuloToPostgres.main(args);
 	}

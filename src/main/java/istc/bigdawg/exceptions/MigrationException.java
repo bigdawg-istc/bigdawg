@@ -11,17 +11,16 @@ package istc.bigdawg.exceptions;
 public class MigrationException extends BigDawgException {
 
 	/**
-	 * generated serial version id
+	 * Default serial version id.
 	 */
-	private static final long serialVersionUID = -1380667796547079555L;
-	private static final String MIGRATION_MSG = "Migration problem. "; 
+	private static final long serialVersionUID = 1L;
 
 	public MigrationException(String msg) {
-		super(MIGRATION_MSG+msg);
+		super(msg);
 	}
-	
+
 	public MigrationException(String msg, Throwable cause) {
-		super(MIGRATION_MSG+msg,cause);
+		super(msg, cause);
 	}
 
 }

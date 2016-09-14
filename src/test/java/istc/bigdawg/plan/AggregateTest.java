@@ -9,10 +9,10 @@ import org.junit.Before;
 import org.junit.Test;
 
 import istc.bigdawg.catalog.CatalogInstance;
-import istc.bigdawg.islands.PostgreSQL.SQLPlanParser;
-import istc.bigdawg.islands.PostgreSQL.SQLQueryGenerator;
-import istc.bigdawg.islands.PostgreSQL.SQLQueryPlan;
 import istc.bigdawg.islands.operators.Operator;
+import istc.bigdawg.islands.relational.SQLPlanParser;
+import istc.bigdawg.islands.relational.SQLQueryGenerator;
+import istc.bigdawg.islands.relational.SQLQueryPlan;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.select.Select;
@@ -92,7 +92,7 @@ public class AggregateTest {
 	
 	public void runTestCase(String testname) {
 		try {
-			SQLQueryPlan qp = SQLPlanParser.extractDirect(psqlh, inputs.get(testname));
+			SQLQueryPlan qp = SQLPlanParser.extractDirectFromPostgreSQL(psqlh, inputs.get(testname));
 			Operator root = qp.getRootNode();
 			
 			SQLQueryGenerator gen = new SQLQueryGenerator();

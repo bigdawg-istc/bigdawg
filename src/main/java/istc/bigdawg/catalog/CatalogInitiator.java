@@ -3,6 +3,7 @@ package istc.bigdawg.catalog;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.sql.DriverManager;
+import java.sql.SQLException;
 
 /**
  * 
@@ -18,9 +19,9 @@ public class CatalogInitiator {
 	 * @param url
 	 * @param username
 	 * @param password
-	 * @throws Exception
+	 * @throws SQLException 
 	 */
-	public static void connect (Catalog cc, String url, String username, String password) throws Exception {
+	public static void connect (Catalog cc, String url, String username, String password) throws SQLException  {
 		
 		if (cc.isInitiated()) { 
 			cc.connection.close(); 
@@ -37,7 +38,7 @@ public class CatalogInitiator {
 		cc.setLastPassword(password);
 	}
 	
-	public static void close(Catalog cc) throws Exception {
+	public static void close(Catalog cc) throws SQLException {
 		if (cc.isInitiated()) { 
 			cc.stmt.close();
 			cc.connection.close();

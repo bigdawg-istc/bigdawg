@@ -14,7 +14,7 @@ import org.jgrapht.Graphs;
 import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
 import org.jgrapht.graph.DefaultEdge;
 
-import istc.bigdawg.utils.IslandsAndCast.Scope;
+import istc.bigdawg.islands.IslandsAndCast.Scope;
 
 /**
  * Represents the steps needed to compute a query as a directed, acyclic graph

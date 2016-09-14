@@ -26,7 +26,6 @@ public enum BigDawgConfigProperties {
 
 	private String accumuloIstanceType;
 	private String accumuloIstanceName;
-	private String accumuloZooKeepers;
 	private String accumuloUser;
 	private String accumuloPasswordToken;
 
@@ -43,23 +42,30 @@ public enum BigDawgConfigProperties {
 	private String scidbTestPassword;
 	private String scidbTestBinPath;
 
+	private int sstoreDBID;
 	private String sStoreURL;
 	private String accumuloShellScript;
 
 	private String myriaHost;
 	private String myriaPort;
+	private String myriaDownloadPort;
 	private String myriaContentType;
 
 	private String networkMessagePort;
 	private int networkRequestTimeout;
+	private int networkDataPort;
+	private int networkRetryConnection;
 
 	private String migratorTempDir;
 	private String cmigratorDir;
 
+	private String zooKeepers;
+
 	private BigDawgConfigProperties() throws AssertionError {
 		Properties prop = new Properties();
 		String propFileName = "bigdawg-config.properties";
-		InputStream inputStream = BigDawgConfigProperties.class.getClassLoader().getResourceAsStream(propFileName);
+		InputStream inputStream = BigDawgConfigProperties.class.getClassLoader()
+				.getResourceAsStream(propFileName);
 		if (inputStream != null) {
 			try {
 				prop.load(inputStream);
@@ -69,7 +75,8 @@ public enum BigDawgConfigProperties {
 			}
 		} else {
 			FileNotFoundException e = new FileNotFoundException(
-					"property file '" + propFileName + "' not found in the classpath");
+					"property file '" + propFileName
+							+ "' not found in the classpath");
 			e.printStackTrace();
 			throw new AssertionError(e);
 		}
@@ -83,24 +90,32 @@ public enum BigDawgConfigProperties {
 
 		this.postgreSQLTestHost = prop.getProperty("main.postgresql.test.host");
 		this.postgreSQLTestPort = prop.getProperty("main.postgresql.test.port");
-		this.postgreSQLTestDatabase = prop.getProperty("main.postgresql.test.database");
+		this.postgreSQLTestDatabase = prop
+				.getProperty("main.postgresql.test.database");
 		this.postgreSQLTestUser = prop.getProperty("main.postgresql.test.user");
-		this.postgreSQLTestPassword = prop.getProperty("main.postgresql.test.password");
+		this.postgreSQLTestPassword = prop
+				.getProperty("main.postgresql.test.password");
 
-		this.accumuloIstanceType = prop.getProperty("main.accumulo.instanceType");
-		this.accumuloIstanceName = prop.getProperty("main.accumulo.instanceName");
-		this.accumuloZooKeepers = prop.getProperty("main.accumulo.zooKeepers");
+		this.accumuloIstanceType = prop
+				.getProperty("main.accumulo.instanceType");
+		this.accumuloIstanceName = prop
+				.getProperty("main.accumulo.instanceName");
 		this.accumuloUser = prop.getProperty("main.accumulo.user");
-		this.accumuloPasswordToken = prop.getProperty("main.accumulo.passwordToken");
-		this.accumuloShellScript = prop.getProperty("main.accumulo.shell.script");
+		this.accumuloPasswordToken = prop
+				.getProperty("main.accumulo.passwordToken");
+		this.accumuloShellScript = prop
+				.getProperty("main.accumulo.shell.script");
 
+		this.sstoreDBID = Integer.parseInt(prop.getProperty("main.sstore.dbid")); 
 		this.sStoreURL = prop.getProperty("main.sstore.alerturl");
 
 		this.myriaHost = prop.getProperty("main.myria.host");
 		this.myriaPort = prop.getProperty("main.myria.port");
+		this.myriaDownloadPort = prop.getProperty("main.myria.downloadport");
 		this.myriaContentType = prop.getProperty("main.myria.content.type");
 
-		this.scidbSchemaServerDBID = Integer.parseInt(prop.getProperty("main.scidb.dbid.schema"));
+		this.scidbSchemaServerDBID = Integer
+				.parseInt(prop.getProperty("main.scidb.dbid.schema"));
 		this.scidbHostname = prop.getProperty("main.scidb.hostname");
 		this.scidbPort = prop.getProperty("main.scidb.port");
 		this.scidbPassword = prop.getProperty("main.scidb.password");
@@ -114,9 +129,17 @@ public enum BigDawgConfigProperties {
 		this.scidbTestBinPath = prop.getProperty("main.scidb.test.bin_path");
 
 		this.networkMessagePort = prop.getProperty("main.network.message.port");
-		this.networkRequestTimeout = Integer.valueOf(prop.getProperty("main.network.request.timeout"));
+		this.networkRequestTimeout = Integer
+				.valueOf(prop.getProperty("main.network.request.timeout"));
+		this.networkDataPort = Integer
+				.valueOf(prop.getProperty("main.network.data.port"));
+		this.networkRetryConnection = Integer
+				.valueOf(prop.getProperty("main.network.retry.connection"));
+
 		this.migratorTempDir = prop.getProperty("main.migrator.temp.dir");
 		this.cmigratorDir = prop.getProperty("main.cmigrator.dir");
+
+		this.zooKeepers = prop.getProperty("main.zooKeepers");
 	}
 
 	/**
@@ -136,8 +159,8 @@ public enum BigDawgConfigProperties {
 	/**
 	 * @return the accumuloZooKeepers
 	 */
-	public String getAccumuloZooKeepers() {
-		return accumuloZooKeepers;
+	public String getZooKeepers() {
+		return zooKeepers;
 	}
 
 	/**
@@ -216,8 +239,17 @@ public enum BigDawgConfigProperties {
 	}
 
 	public String getBaseURI() {
-		String baseURI = "http://" + BigDawgConfigProperties.INSTANCE.getGrizzlyIpAddress() + ":"
-				+ BigDawgConfigProperties.INSTANCE.getGrizzlyPort() + "/bigdawg/";
+		String baseURI = "http://"
+				+ BigDawgConfigProperties.INSTANCE.getGrizzlyIpAddress() + ":"
+				+ BigDawgConfigProperties.INSTANCE.getGrizzlyPort()
+				+ "/bigdawg/";
+		return baseURI;
+	}
+
+	public String getBaseURI(String ipAddress) {
+		String baseURI = "http://" + ipAddress + ":"
+				+ BigDawgConfigProperties.INSTANCE.getGrizzlyPort()
+				+ "/bigdawg/";
 		return baseURI;
 	}
 
@@ -239,6 +271,10 @@ public enum BigDawgConfigProperties {
 		return myriaHost;
 	}
 
+	public String getMyriaDownloadPort(){
+		return myriaDownloadPort;
+	}
+	
 	/**
 	 * @return the myriaPort
 	 */
@@ -337,6 +373,13 @@ public enum BigDawgConfigProperties {
 	public String getScidbTestBinPath() {
 		return scidbTestBinPath;
 	}
+	
+	/**
+	 * @return DBID of the only sstore associated with this instance.  
+	 */
+	public Integer getSStoreDBID() {
+		return sstoreDBID;
+	}
 
 	/**
 	 * @return the networkMessagePort
@@ -364,6 +407,21 @@ public enum BigDawgConfigProperties {
 
 	public String getCmigratorDir() {
 		return cmigratorDir;
+	}
+
+	/**
+	 * @return the networkDataPort Get the port number through which a big data
+	 *         will be sent/received.
+	 */
+	public int getNetworkDataPort() {
+		return networkDataPort;
+	}
+
+	/**
+	 * @return the networkRetryConnection
+	 */
+	public int getNetworkRetryConnection() {
+		return networkRetryConnection;
 	}
 
 }

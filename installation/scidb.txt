@@ -1,13 +1,18 @@
+# DEFAULT installation of SciDB on Ubuntu 14.12
+
 this is what to do to install scidb 14.12 on ubuntu:
 
-add the following to: 
+in the file: 
 sudo emacs /etc/apt/sources.list.d/scidb.list
+
+add the following:
 deb https://downloads.paradigm4.com/ ubuntu14.04/14.12/
 deb-src https://downloads.paradigm4.com/ ubuntu14.04/14.12/
 
+then:
 sudo apt-get update
-and run: sudo apt-get install scidb-14.12-installer
-
+and run: 
+sudo apt-get install scidb-14.12-installer
 
 #################################################################################################################################################################################################
 

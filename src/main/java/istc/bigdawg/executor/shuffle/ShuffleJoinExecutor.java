@@ -9,8 +9,9 @@ import istc.bigdawg.executor.plan.BinaryJoinExecutionNode;
 import istc.bigdawg.executor.plan.ExecutionNode;
 import istc.bigdawg.executor.plan.LocalQueryExecutionNode;
 import istc.bigdawg.executor.plan.QueryExecutionPlan;
+import istc.bigdawg.islands.IslandsAndCast;
 import istc.bigdawg.query.ConnectionInfo;
-import istc.bigdawg.utils.IslandsAndCast;
+
 import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
 
 import java.text.ParseException;

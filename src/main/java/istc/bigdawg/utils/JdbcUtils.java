@@ -119,20 +119,25 @@ public class JdbcUtils {
 
     public static String printResultSet(List<List<String>> rows, List<String> colNames) {
         StringBuffer out = new StringBuffer();
-
+        char delim = '\t';
+        
+//        out.append("Row");
         for (String name : colNames) {
-            out.append("\t" + name);
+            out.append(name).append(delim);
         }
-        out.append("\n");
+        if (out.length() > 0) out.delete(out.length() - 1, out.length());
+        
+        out.append('\n');
 
-        int rowCounter = 1;
+//        int rowCounter = 1;
         for (List<String> row : rows) {
-            out.append(rowCounter + ".");
+//            out.append(rowCounter + ".");
             for (String s : row) {
-                out.append("\t" + s);
+                out.append(s).append(delim);
             }
-            out.append("\n");
-            rowCounter += 1;
+            if (out.length() > 0) out.delete(out.length() - 1, out.length());
+            out.append('\n');
+//            rowCounter += 1;
         }
 
         return out.toString();

@@ -2,10 +2,11 @@ package istc.bigdawg.monitoring;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
-import org.jgrapht.graph.DefaultEdge;
 import org.mortbay.log.Log;
 
 import istc.bigdawg.BDConstants;
@@ -15,7 +16,7 @@ import istc.bigdawg.executor.Executor;
 import istc.bigdawg.executor.ExecutorEngine;
 import istc.bigdawg.executor.JdbcQueryResult;
 import istc.bigdawg.executor.plan.QueryExecutionPlan;
-import istc.bigdawg.islands.CrossIslandCastNode;
+import istc.bigdawg.islands.CrossIslandPlanNode;
 import istc.bigdawg.islands.CrossIslandQueryNode;
 import istc.bigdawg.islands.CrossIslandQueryPlan;
 import istc.bigdawg.migration.MigrationStatistics;
@@ -51,53 +52,49 @@ public class Monitor {
      * @throws Exception
      */
     public static boolean addBenchmarks(Signature signature, boolean lean) throws Exception {
-//<<<<<<< HEAD
         BDConstants.Shim[] shims = BDConstants.Shim.values();
         return addBenchmarks(signature, lean, shims);
     }
 
     public static boolean addBenchmarks(Signature signature, boolean lean, BDConstants.Shim[] shims) throws Exception {
-//        Map<String, String> crossIslandQuery = UserQueryParser.getUnwrappedQueriesByIslands(signature.getQuery());
-//=======
-//        LinkedHashMap<String, String> crossIslandQuery = UserQueryParser.getUnwrappedQueriesByIslands(signature.getQuery());
-//>>>>>>> b2ce787ea887d71d9b4ca2b480485e08a742be8e
         logger.debug("Query for signature: " + signature.getQuery());
 //        CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(crossIslandQuery);
 //        CrossIslandQueryNode ciqn = ciqp.getTerminalNode();
-        CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(signature.getQuery());
-        CrossIslandQueryNode ciqn = null;
-        if (ciqp.getTerminalNode() instanceof CrossIslandQueryNode)
-        	ciqn = (CrossIslandQueryNode)ciqp.getTerminalNode();
-        else {
-        	ciqp.edgesOf(ciqp.getTerminalNode());
-        	for (DefaultEdge e : ciqp.edgeSet()) {
-        		if (ciqp.getEdgeTarget(e) instanceof CrossIslandCastNode) {
-        			ciqn = (CrossIslandQueryNode)(ciqp.getEdgeSource(e));
-        			break;
-        		};
-        	} 
+        CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(signature.getQuery(), new HashSet<>());
+        
+        Set<CrossIslandQueryNode> qnSet = new HashSet<>();
+        
+        for (CrossIslandPlanNode cipn : ciqp.vertexSet())
+        	if (cipn instanceof CrossIslandQueryNode) 
+        		qnSet.add((CrossIslandQueryNode)cipn);
+        
+        boolean exitBoolean = true;
+        for (CrossIslandQueryNode ciqn : qnSet) {
+	        List<QueryExecutionPlan> qeps = ciqn.getAllQEPs(true);
+	        boolean isContinue = false;
+	        for (int i = 0; i < qeps.size(); i++){
+	            try {
+	                if (!insert(signature, i)) {
+//	                    return false;
+	                	exitBoolean = false;
+	                	isContinue = true;
+	                	break;
+	                }
+	            } catch (NotSupportIslandException e) {
+	                e.printStackTrace();
+	            }
+	        }
+	        if (isContinue) continue;
+	        if (!lean) {
+	            try {
+	                runBenchmarks(qeps, signature);
+	            } catch (Exception e) {
+	                e.printStackTrace();
+	            }
+	        }
+//	        return true;
         }
-        List<QueryExecutionPlan> qeps = ciqn.getAllQEPs(true);
-
-        for (int i = 0; i < qeps.size(); i++){
-            try {
-                if (!insert(signature, i)) {
-                    return false;
-                }
-            } catch (NotSupportIslandException e) {
-                e.printStackTrace();
-            }
-        }
-
-        if (!lean) {
-            try {
-                runBenchmarks(qeps, signature);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-
-        return true;
+        return exitBoolean;
     }
 
     /**

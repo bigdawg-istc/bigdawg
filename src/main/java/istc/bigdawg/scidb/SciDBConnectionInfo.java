@@ -41,20 +41,22 @@ public class SciDBConnectionInfo implements ConnectionInfo {
 		this.password = BigDawgConfigProperties.INSTANCE.getScidbPassword();
 		this.binPath = BigDawgConfigProperties.INSTANCE.getScidbBinPath();
 	}
-	
-	public SciDBConnectionInfo(String host, String port, String user, String password, String binPath) {
-		this(host,port,user,password,binPath,null);
+
+	public SciDBConnectionInfo(String host, String port, String user,
+			String password, String binPath) {
+		this(host, port, user, password, binPath, null);
 	}
 
-	public SciDBConnectionInfo(String host, String port, String user, String password, String binPath, String database) {
+	public SciDBConnectionInfo(String host, String port, String user,
+			String password, String binPath, String database) {
 		this.host = host;
 		this.port = port;
 		this.user = user;
 		this.password = password;
 		this.binPath = binPath;
-		this.database=database;
+		this.database = database;
 	}
-	
+
 	public String getUrl() {
 		return "jdbc:scidb://" + getHost() + ":" + getPort() + "/";
 	}
@@ -108,21 +110,26 @@ public class SciDBConnectionInfo implements ConnectionInfo {
 	@Override
 	public Collection<String> getCleanupQuery(Collection<String> objects) {
 		// TODO(ankush) Auto-generated method stub
-		return objects.stream().map(o -> "remove("+o+")").collect(Collectors.toSet());
+		return objects.stream().map(o -> "remove(" + o + ")")
+				.collect(Collectors.toSet());
 	}
 
 	@Override
-	public long[] computeHistogram(String object, String attribute, double start, double end, int numBuckets) {
+	public long[] computeHistogram(String object, String attribute,
+			double start, double end, int numBuckets) {
 		// TODO(ankush) implement histogram computation
 		throw new UnsupportedOperationException();
 	}
 
 	@Override
-	public Pair<Number, Number> getMinMax(String object, String attribute) throws ExecutorEngine.LocalQueryExecutionException, ParseException {
+	public Pair<Number, Number> getMinMax(String object, String attribute)
+			throws ExecutorEngine.LocalQueryExecutionException, ParseException {
 		// TODO(ankush) implement min/max computation
-		throw new UnsupportedOperationException();	}
+		throw new UnsupportedOperationException();
+	}
 
-	public ExecutorEngine getLocalQueryExecutor() throws LocalQueryExecutorLookupException {
+	public ExecutorEngine getLocalQueryExecutor()
+			throws LocalQueryExecutorLookupException {
 		try {
 			return new SciDBHandler(this);
 		} catch (Exception e) {
@@ -139,8 +146,9 @@ public class SciDBConnectionInfo implements ConnectionInfo {
 
 	@Override
 	public String toString() {
-		return "SciDBConnectionInfo [host=" + host + ", port=" + port + ", user=" + user + ", password=" + password
-				+ ", binPath=" + binPath + "]";
+		return "SciDBConnectionInfo [host=" + host + ", port=" + port
+				+ ", user=" + user + ", password=" + password + ", binPath="
+				+ binPath + "]";
 	}
 
 	@Override
@@ -149,7 +157,8 @@ public class SciDBConnectionInfo implements ConnectionInfo {
 		int result = 1;
 		result = prime * result + ((binPath == null) ? 0 : binPath.hashCode());
 		result = prime * result + ((host == null) ? 0 : host.hashCode());
-		result = prime * result + ((password == null) ? 0 : password.hashCode());
+		result = prime * result
+				+ ((password == null) ? 0 : password.hashCode());
 		result = prime * result + ((port == null) ? 0 : port.hashCode());
 		result = prime * result + ((user == null) ? 0 : user.hashCode());
 		return result;

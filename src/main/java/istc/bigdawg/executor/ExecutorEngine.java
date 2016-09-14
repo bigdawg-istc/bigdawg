@@ -7,9 +7,12 @@ import java.util.Optional;
  */
 public interface ExecutorEngine {
     Optional<QueryResult> execute(String query) throws LocalQueryExecutionException;
-
+    
     class LocalQueryExecutionException extends Exception {
-        public LocalQueryExecutionException() {
+		
+    	private static final long serialVersionUID = 8428418816495714789L;
+
+		public LocalQueryExecutionException() {
             super();
         }
         public LocalQueryExecutionException(String message) {
