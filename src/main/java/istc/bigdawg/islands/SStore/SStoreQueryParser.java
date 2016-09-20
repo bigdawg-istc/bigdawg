@@ -26,7 +26,7 @@ public class SStoreQueryParser {
 		}
 		result.add(tempSB.toString());
 		
-		System.out.printf("StringBuilder from SStoreQueryParser: %s; result: %s\n", inputSB, result);
+//		System.out.printf("StringBuilder from SStoreQueryParser: %s; result: %s\n", inputSB, result);
 		return result;
 	}
 	

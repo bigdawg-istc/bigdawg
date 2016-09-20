@@ -9,11 +9,13 @@ import java.util.Map;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
+import istc.bigdawg.islands.CrossIslandQueryNode;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.relational.operators.SQLIslandOperatorFactory;
 import istc.bigdawg.islands.relational.utils.SQLPrepareQuery;
@@ -36,6 +38,7 @@ import net.sf.jsqlparser.statement.select.WithItem;
 
 public class SQLPlanParser {
 	
+	private static Logger logger = Logger.getLogger(SQLPlanParser.class);
 	// needed for type resolution
 	//private DatabaseSingleton catalog;
 	SQLQueryPlan queryPlan;
@@ -116,8 +119,8 @@ public class SQLPlanParser {
 		SQLQueryPlan queryPlan = parser.getSQLQueryPlan();
 		
 		
-		System.out.println("query: \n"+query);
-		System.out.println("\n\nXMLString: \n"+xmlString+"\n");
+		logger.info(String.format("query: \n"+query));
+		logger.info(String.format("\n\nXMLString: \n"+xmlString+"\n"));
 		
 		// run parser
 		@SuppressWarnings("unused")

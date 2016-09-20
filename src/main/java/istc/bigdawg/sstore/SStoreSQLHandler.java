@@ -112,14 +112,14 @@ public class SStoreSQLHandler implements DBHandler {
 	String url = conInfo.getUrl();
 	String user = conInfo.getUser();
 	String password = conInfo.getPassword();
-	Log.info("url: " + url);
+	log.info("url: " + url);
 //	Log.info("user: " + user);
 //	Log.info("password" + password);
 	try {
             Class.forName("org.voltdb.jdbc.Driver");
 	} catch (ClassNotFoundException ex) {
 		ex.printStackTrace();
-		Log.info("SStore jdbc driver is not in the CLASSPATH -> "
+		log.info("SStore jdbc driver is not in the CLASSPATH -> "
 				+ ex.getMessage() + " " + StackTrace.getFullStackTrace(ex),
 				ex);
 	//	throw new RuntimeException(ex.getMessage());
@@ -533,7 +533,7 @@ public class SStoreSQLHandler implements DBHandler {
 		procCommand = String.format("{call %s%s}", procName, params);
     	
     	try {
-		Log.info("Procedure to execute: " + procCommand);
+		log.info("Procedure to execute: " + procCommand);
     		statement = connection.prepareCall(procCommand);
     		setProcParams(procName, statement, parameters);
     		

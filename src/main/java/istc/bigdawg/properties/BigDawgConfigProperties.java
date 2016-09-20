@@ -114,9 +114,9 @@ public enum BigDawgConfigProperties {
 		this.sstoreDBID = Integer.parseInt(prop.getProperty("main.sstore.dbid")); 
 		this.sStoreURL = prop.getProperty("main.sstore.alerturl");
 		this.seaflowDBID = Integer.parseInt(prop.getProperty("main.seaflow.dbid"));
-		this.postgreSQLOceanDBURL = prop.getProperty("main.postgresql.oceandb.url");
-		this.postgreSQLOceanDBUser = prop.getProperty("main.postgresql.oceandb.user");
-		this.postgreSQLOceanDBPassword = prop.getProperty("main.postgresql.oceandb.password");
+//		this.postgreSQLOceanDBURL = prop.getProperty("main.postgresql.oceandb.url");
+//		this.postgreSQLOceanDBUser = prop.getProperty("main.postgresql.oceandb.user");
+//		this.postgreSQLOceanDBPassword = prop.getProperty("main.postgresql.oceandb.password");
 
 		this.myriaHost = prop.getProperty("main.myria.host");
 		this.myriaPort = prop.getProperty("main.myria.port");
