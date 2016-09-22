@@ -545,7 +545,7 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 				/* Change the local hostname to the general ip address. */
 				String thisHostname = BigDawgConfigProperties.INSTANCE
 						.getGrizzlyIpAddress();
-				/** Acquire the ZooKeeper locks for the migration. */
+				/* Acquire the ZooKeeper locks for the migration. */
 				// if (zooKeeperLocks == null) {
 				// byte[] data = debugMessage.getBytes();
 				// zooKeeperLocks = ZooKeeperUtils.acquireMigrationLocks(

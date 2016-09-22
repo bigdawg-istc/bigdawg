@@ -81,8 +81,7 @@ public class MigrationUtils {
 					|| fromAttributeMetaData.isNullable() != toAttributeMetaData
 							.isNullable()
 					|| !toAttributeMetaData.getSqlDataType()
-							.equals(FromSQLTypesToSciDB.getSciDBTypeFromSQLType(
-									fromAttributeMetaData.getSqlDataType()))) {
+							.equals(fromAttributeMetaData.getSqlDataType())) {
 				return false;
 			}
 		}

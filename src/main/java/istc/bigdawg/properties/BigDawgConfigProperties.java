@@ -54,6 +54,7 @@ public enum BigDawgConfigProperties {
 
 	private String myriaHost;
 	private String myriaPort;
+	private String myriaDownloadPort;
 	private String myriaContentType;
 
 	private String networkMessagePort;
@@ -120,6 +121,7 @@ public enum BigDawgConfigProperties {
 
 		this.myriaHost = prop.getProperty("main.myria.host");
 		this.myriaPort = prop.getProperty("main.myria.port");
+		this.myriaDownloadPort = prop.getProperty("main.myria.downloadport");
 		this.myriaContentType = prop.getProperty("main.myria.content.type");
 		
 		this.tpccDBID = Integer.parseInt(prop.getProperty("main.tpcc.dbid"));
@@ -281,6 +283,10 @@ public enum BigDawgConfigProperties {
 		return myriaHost;
 	}
 
+	public String getMyriaDownloadPort(){
+		return myriaDownloadPort;
+	}
+	
 	/**
 	 * @return the myriaPort
 	 */

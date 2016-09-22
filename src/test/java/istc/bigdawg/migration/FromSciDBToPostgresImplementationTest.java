@@ -55,6 +55,10 @@ public class FromSciDBToPostgresImplementationTest {
 	 */
 	public void loadDataToSciDB() throws SQLException, IOException {
 		LoggerSetup.setLogging();
+		long numberOfCellsSciDB = TestMigrationUtils
+				.loadRegionDataToSciDB(conFrom, flatArray, multiDimArray);
+		numberOfCellsSciDBFlat = numberOfCellsSciDB;
+		numberOfCellsSciDBMultiDim = numberOfCellsSciDB;
 	}
 
 	@Test
@@ -155,8 +159,8 @@ public class FromSciDBToPostgresImplementationTest {
 		// make sure that the target array does not exist
 		PostgreSQLHandler handler = new PostgreSQLHandler(conTo);
 		handler.dropTableIfExists(toTable);
-		handler.createTable("create table " + toTable
-				+ " (r_name CHAR(25) NOT NULL, r_comment VARCHAR(152) NOT NULL);");
+		handler.createTable(
+				TestMigrationUtils.getCreateRegionTableStatement(toTable));
 		FromSciDBToPostgres migrator = new FromSciDBToPostgres(
 				new MigrationInfo(conFrom, multiDimArray, conTo, toTable));
 		migrator.migrateSingleThreadCSV();
@@ -191,8 +195,8 @@ public class FromSciDBToPostgresImplementationTest {
 
 	@After
 	public void after() {
-		log.debug("The end of the "
-				+ this.getClass().getCanonicalName() + " test!");
+		log.debug("The end of the " + this.getClass().getCanonicalName()
+				+ " test!");
 	}
 
 }

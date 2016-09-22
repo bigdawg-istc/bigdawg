@@ -171,7 +171,7 @@ public class SQLHandler implements SelectVisitor, OrderByVisitor, SelectItemVisi
         if (plainSelect.getOrderByElements() != null) {
             deparseOrderBy(plainSelect.isOracleSiblings(), plainSelect.getOrderByElements());
         }
-
+        
         if (plainSelect.getLimit() != null) {
             deparseLimit(plainSelect.getLimit());
         }
@@ -352,16 +352,21 @@ public class SQLHandler implements SelectVisitor, OrderByVisitor, SelectItemVisi
     public void deparseOffset(Offset offset) {
         // OFFSET offset
         // or OFFSET offset (ROW | ROWS)
+    	
+    	if (supplementVariables.getLimit() == null) supplementVariables.setLimit(new Limit());
+    	Limit l = supplementVariables.getLimit();
+    	
         if (offset.isOffsetJdbcParameter()) {
             buffer.append(" OFFSET ?");
+            l.setOffsetJdbcParameter(offset.isOffsetJdbcParameter());
         } else if (offset.getOffset() != 0) {
             buffer.append(" OFFSET ");
             buffer.append(offset.getOffset());
+            l.setOffset(offset.getOffset());
         }
         if (offset.getOffsetParam() != null) {
             buffer.append(" ").append(offset.getOffsetParam());
         }
-
     }
 
     public void deparseFetch(Fetch fetch) {

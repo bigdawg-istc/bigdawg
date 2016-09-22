@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -15,7 +14,6 @@ import java.util.concurrent.Future;
 import org.apache.log4j.Logger;
 
 import istc.bigdawg.exceptions.MigrationException;
-import istc.bigdawg.exceptions.RunShellException;
 import istc.bigdawg.network.DataIn;
 import istc.bigdawg.network.NetworkObject;
 import istc.bigdawg.utils.Pipe;

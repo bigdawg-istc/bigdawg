@@ -71,10 +71,8 @@ public class SQLParseLogical {
 
 		deparser.setTableSupplement(supplement);
 		expressionSupplement.setTableSupplement(supplement);
-
 		select.getSelectBody().accept(deparser);
 		queryPlan.addTableSupplement("main_0", supplement);
-
 		if (select.getSelectBody() instanceof SetOperationList) {
 			List<SelectBody> sbs = ((SetOperationList)select.getSelectBody()).getSelects();
 			for (int i = 1; i < sbs.size(); ++i ) {

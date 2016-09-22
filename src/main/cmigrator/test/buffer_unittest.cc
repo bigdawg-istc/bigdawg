@@ -1,6 +1,7 @@
+#include "../src/data-formatter/buffer.h"
+
 #include "gtest/gtest.h"
 
-#include "buffer.h"
 
 TEST(BufferTest,basic)
 {
