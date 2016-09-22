@@ -2,12 +2,38 @@
 # Adam Dziedzic
 # logs=# select * from logs where logger like '%FromSciDBToPostgresImplementation%' and message like 'Migration result,%Bin%FULL' order by time desc;
 
+# install updates and required packages, including java8
+sudo apt-add-repository ppa:webupd8team/java -y
+sudo apt-get update
+sudo apt-get install -y libreadline-dev zlib1g-dev
+
+# java8 needs to be installed. It does require a prompt to be answered.
+# Sorry - I haven't found a workaround for this yet. -ARC 2016-06-20
+sudo apt-get install oracle-java8-installer -y
+sudo apt-get install maven -y
+
 initial_dir=$(pwd)
-mkdir Downloads
+
+# use this for vagrant
+rm -rf Downloads
+mkdir ~/Downloads
+ln -s ~/Downloads ./Downloads
+
+# OR use this for a non-vagrant setup
+# mkdir Downloads
+
 cd Downloads
 downloads_dir=$(pwd)
 
-# get catalog resource 
+# Download and mimic2 data and move it to data
+wget https://bitbucket.org/adam-dziedzic/bigdawgdata/raw/6ade22253695bfeb33074e82929e83b52cb121f1/mimic2.pgd
+mv mimic2.pgd /vagrant/installation/data/mimic2.pgd
+
+# Download and extract postgres
+wget https://ftp.postgresql.org/pub/source/v9.4.5/postgresql-9.4.5.tar.gz
+tar -xf postgresql-9.4.5.tar.gz
+
+# get catalog resource
 resources=${initial_dir}/../src/main/resources/
 catalog_resource=${resources}catalog/
 monitor_resource=${resources}/monitor/
@@ -29,7 +55,7 @@ port_2=5430
 postgres1_bin=${downloads_dir}/postgres1/bin
 postgres2_bin=${downloads_dir}/postgres2/bin
 
-# tpch 
+# tpch
 scale_factor=1
 #TABLES_TPCH_POSTGRES1=(region part partsupp orders)
 TABLES_TPCH_POSTGRES1=(region part partsupp orders nation supplier customer lineitem) # for tests
@@ -55,6 +81,7 @@ function setDB {
     cd ${postgres_bin}
     ./initdb -D ${postgres_data}
     cp ${postgres_data}/postgresql.conf ${postgres_data}/postgresql.conf.backup
+
     python ${initial_dir}/change_port.py -f ${postgres_data}/postgresql.conf -p ${port}
     ./pg_ctl -w start -l postgres.log -D ${postgres_data}
     cd ${init_dir}
@@ -119,10 +146,15 @@ function prepare_postgres2 {
     ./psql -p ${port_2} -c "alter role ${pguser} with password 'test'" -d template1
 
     ./psql -p ${port_2} -c "create database ${database2} owner ${pguser}" -d template1
+
+    # May return an error about there not being a root role. It's not an issue, so ignore
     ./psql -p ${port_2} -f ${initial_dir}/data/mimic2.pgd -U ${pguser} -d ${database2}
+
     # ./psql -p ${port_2} -c "create database ${database2} owner ${pguser}" -d template1
     # ./psql -p ${port_2} -c "create schema mimic2v26" -d ${database2} -U pguser
-    ./psql -p ${port_2} -f ${initial_dir}/../scripts/mimic2_sql/d_patients.sql -d ${database2}
+
+    # d_patients.sql is a legacy sample that's not even supposed to run
+    # ./psql -p ${port_2} -f ${initial_dir}/../scripts/mimic2_sql/d_patients.sql -d ${database2}
 
     # tests
     ./psql -p ${port_2} -c "create database test owner ${pguser}" -d template1 -U postgres
@@ -151,6 +183,7 @@ function load_tables {
 
 # main function
 function load_tpch {
+# This is widely used benchmark dataset for business settings
     cd ${downloads_dir}
     mkdir -p tpch
     cd tpch
@@ -163,13 +196,24 @@ function load_tpch {
 
     # postgres1
     load_tables  ${postgres1_bin} ${port_1} TABLES_TPCH_POSTGRES1[*]
-    
+
     # postgres2
     load_tables ${postgres2_bin} ${port_2} TABLES_TPCH_POSTGRES2[*]
+}
+
+function run_bigdawg {
+    # Runs the bigdawg system. Assumes that this is being run in a vagrant machine
+    # where the project root is /vagrant
+    echo "======================"
+    echo "Running BigDAWG System"
+    echo "======================"
+    cd /vagrant
+    mvn exec:java -P dev
 }
 
 # main exeuction path: the function with label main are meant to be exeucted in the main path, you can comment the functions that you don't want to be executed
 install_postgres
 prepare_postgres1
 prepare_postgres2
-load_tpch
+#load_tpch
+run_bigdawg

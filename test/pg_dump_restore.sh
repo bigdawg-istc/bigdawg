@@ -22,8 +22,8 @@ postgresql_version=pgsql-9.4.5  #pgsql-9.3.9 # pgsql-9.3.9 pgsql4scidb
 pg_path=/home/adam/bigdawgmiddle/installation/Downloads/postgres1
 pg_bin=${pg_path}/bin/
 psql=${pg_bin}psql
-port=5431 # 5431 5432
-host=localhost
+port=5432 # 5431 5432
+host=postgres1
 #postgresql_data_location=/home/adam/data-database/PostgreSQL/${postgresql_version}/data
 postgresql_data_location=/home/adam/databases/PostgreSQL/dataPostgreSQL/${postgresql_version}/data
 BENCHMARK=mimic2
@@ -42,16 +42,16 @@ port1=5431 # 5431 5432
 pg_path2=/home/adam/bigdawgmiddle/installation/Downloads/postgres2
 pg_bin2=${pg_path}/bin/
 psql2=${pg_bin}psql
-port2=5430 # 5431 5432
+port2=5432 # 5431 5432
 
-host=localhost
+host=postgres2
 
 compress=${1:-0}
 size=${2:-"unknown"}
 size_file=${3:-"unkonwn"}
 
 psql -U ${user} -d ${database} -p 5430 -a -c "drop table if exists ${postgresql_table}; create table ${postgresql_table} (a bigint not null, b bigint not null, val double precision not null);"
-#time pg_dump --data-only --file /home/adam/data/pg_dump.out --format custom --schema public --no-owner --table test_waveform -v --compress 0 --lock-wait-timeout=10 --no-security-labels --no-tablespaces --section=data --dbname=test -p 5431 -h localhost -U postgres --no-password 
+#time pg_dump --data-only --file /home/adam/data/pg_dump.out --format custom --schema public --no-owner --table test_waveform -v --compress 0 --lock-wait-timeout=10 --no-security-labels --no-tablespaces --section=data --dbname=test -p 5431 -h localhost -U postgres --no-password
 dump_file=/home/adam/data/pg_dump.out
 rm -f ${dump_file}
 #mkfifo ${dump_file}
