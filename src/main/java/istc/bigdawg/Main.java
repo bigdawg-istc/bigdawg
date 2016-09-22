@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.URI;
 
 import org.apache.log4j.Logger;
+
 import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
 import org.glassfish.jersey.server.ResourceConfig;
@@ -22,27 +23,17 @@ public class Main {
 	public static String BASE_URI;
 	private static Logger logger;
 
-	static {
-		BASE_URI = BigDawgConfigProperties.INSTANCE.getBaseURI();
-	}
-
-	/**
-	 * see: {@link #startServer(String)}
-	 * 
-	 * @return Grizzly HTTP server.
-	 * @throws IOException
-	 */
-	public static HttpServer startServer() throws IOException {
-		return startServer(null);
-	}
+//	static {
+//		BASE_URI = BigDawgConfigProperties.INSTANCE.getBaseURI();
+//	}
 
 	/**
 	 * Starts Grizzly HTTP server exposing JAX-RS resources defined in this
 	 * application.
 	 * 
-	 * @param ipAddress
-	 *            The IP address on the Grizzly server should wait on requests.
-	 * @return Grizzly HTTP server.
+	 * @param  ipAddress
+	 *         The IP address on which the Grizzly server should wait for requests.
+	 * @return Grizzly HTTP Server.
 	 * @throws IOException
 	 */
 	public static HttpServer startServer(String ipAddress) throws IOException {
@@ -57,21 +48,26 @@ public class Main {
 		final ResourceConfig rc = new ResourceConfig().packages("istc.bigdawg");
 
 		// create and start a new instance of grizzly http server
-		return GrizzlyHttpServerFactory.createHttpServer(URI.create(BASE_URI),
-				rc);
+		return GrizzlyHttpServerFactory.createHttpServer(URI.create(BASE_URI), rc);
 	}
 
 	/**
 	 * Main method.
 	 * 
-	 * There is an optional one argument (args[0]) which can store the ip
-	 * address on which the grizzly server should wait for requests.
-	 * 
+	 * There is an optional one argument (args[0]) which can store the ip address on which the grizzly server should
+     * wait for requests. If empty, then use the configured base uri
+	 *
+     * Starts the HTTP server, Catalog, Monitor, and Migrator.
+     *
+     * Requires Catalog database
+     *
 	 * @param args
+     *
 	 * @throws IOException
 	 */
 	public static void main(String[] args) throws IOException {
-		// show current classpath
+
+        // For debug: show current classpath
 		// ClassLoader cl = ClassLoader.getSystemClassLoader();
 		// URL[] urls = ((URLClassLoader) cl).getURLs();
 		// System.out.println("Class-paths:");
@@ -79,30 +75,45 @@ public class Main {
 		// System.out.println(url.getFile());
 		// }
 		// System.out.println("The end of class-paths.");
-		LoggerSetup.setLogging();
-		logger = Logger.getLogger(Main.class);
-		logger.info("Starting application ...");
+
+        // Logger
+        LoggerSetup.setLogging();
+        logger = Logger.getLogger(Main.class);
+        logger.info("Starting application ...");
+
+        // Assign the IP address to listen on
+        String ipAddress = null;
+        logger.debug("args length: " + args.length);
+        if (args.length > 0) {
+            logger.debug("args 0: " + args[0]);
+            ipAddress = args[0];
+        }
+
+        // Catalog
 		CatalogInstance.INSTANCE.getCatalog();
-		String ipAddress = null;
-		logger.debug("args length: " + args.length);
-		if (args.length > 0) {
-			logger.debug("args 0: " + args[0]);
-			ipAddress = args[0];
-		}
-		final HttpServer server = startServer(ipAddress);
-		// ZooKeeperUtils.registerNodeInZooKeeper();
-		MonitoringTask relationalTask = new MonitoringTask();
+
+        // ZooKeeperUtils.registerNodeInZooKeeper();
+
+        // Monitor
+        MonitoringTask relationalTask = new MonitoringTask();
 		relationalTask.run();
-		MigratorTask migratorTask = new MigratorTask();
+
+        // Migrator
+        MigratorTask migratorTask = new MigratorTask();
 		Thread migratorT = new Thread(migratorTask);
 		migratorT.start();
-		logger.info("Server started");
-		System.out.println(String.format(
-				"Jersey app started with WADL available at "
-						+ "%sapplication.wadl\nHit enter to stop it...",
-				BASE_URI));
-		System.in.read();
-		CatalogInstance.INSTANCE.closeCatalog();
+
+        // HTTP server
+        final HttpServer server = startServer(ipAddress);
+        logger.info("Server started");
+        System.out.println(String.format(
+                "Jersey app started with WADL available at %sapplication.wadl\n" +
+                        "Hit enter to stop it...",
+                BASE_URI));
+        System.in.read();
+
+        // Shutdown
+        CatalogInstance.INSTANCE.closeCatalog();
 		migratorTask.close();
 		// ZooKeeperUtils.unregisterNodeInZooKeeper();
 		server.shutdownNow();
