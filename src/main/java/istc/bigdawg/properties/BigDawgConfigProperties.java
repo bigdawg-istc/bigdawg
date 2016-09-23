@@ -45,9 +45,6 @@ public enum BigDawgConfigProperties {
 	private int sstoreDBID;
 	private String sStoreURL;
 	private int seaflowDBID;
-	private String postgreSQLOceanDBURL;
-	private String postgreSQLOceanDBUser;
-	private String postgreSQLOceanDBPassword;
 	private String accumuloShellScript;
 	
 	private int tpccDBID;

@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.net.URI;
 
 import org.apache.log4j.Logger;
-
 import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
 import org.glassfish.jersey.server.ResourceConfig;
@@ -40,6 +39,8 @@ public class Main {
 		// exposing the Jersey application at BASE_URI
 		if (ipAddress != null) {
 			BASE_URI = BigDawgConfigProperties.INSTANCE.getBaseURI(ipAddress);
+		} else {
+			BASE_URI = BigDawgConfigProperties.INSTANCE.getBaseURI();
 		}
 		logger.info("base uri: " + BASE_URI);
 
@@ -100,8 +101,9 @@ public class Main {
 
         // Migrator
         MigratorTask migratorTask = new MigratorTask();
-		Thread migratorT = new Thread(migratorTask);
-		migratorT.start();
+		
+        // S-Store migration task
+        // SStoreMigrationTask sstoreMigration = new SStoreMigrationTask();
 
         // HTTP server
         final HttpServer server = startServer(ipAddress);
