@@ -9,10 +9,13 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Time;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.ws.rs.core.Response;
 
@@ -99,15 +102,35 @@ public class SStoreSQLHandler implements DBHandler {
     }
 
     public static Connection getConnection(ConnectionInfo conInfo) throws SQLException {
+	if (conInfo instanceof SStoreSQLConnectionInfo) {
+		return getConnection((SStoreSQLConnectionInfo) conInfo);
+	} throw new IllegalArgumentException("The conInfo parameter should represent a connection to SStore.");
+    }
+
+    public static Connection getConnection(SStoreSQLConnectionInfo conInfo) throws SQLException {
 	Connection con;
 	String url = conInfo.getUrl();
 	String user = conInfo.getUser();
 	String password = conInfo.getPassword();
-	Log.info("url: " + url);
-	Log.info("user: " + user);
-	Log.info("password" + password);
+	log.info("url: " + url);
+//	Log.info("user: " + user);
+//	Log.info("password" + password);
 	try {
-	    con = DriverManager.getConnection(url, user, password);
+            Class.forName("org.voltdb.jdbc.Driver");
+	} catch (ClassNotFoundException ex) {
+		ex.printStackTrace();
+		log.info("SStore jdbc driver is not in the CLASSPATH -> "
+				+ ex.getMessage() + " " + StackTrace.getFullStackTrace(ex),
+				ex);
+	//	throw new RuntimeException(ex.getMessage());
+//	} catch (Exception ex) {
+//            ex.printStackTrace();
+//            log.error("Other exceptions that we don't know.");
+	}
+//	this.conInfo = conInfo;
+	try {
+//	    con = DriverManager.getConnection(url, user, password);
+	    con = DriverManager.getConnection(url);
 	} catch (SQLException e) {
 	    String msg = "Could not connect to the SStoreSQL instance: Url: " + url + " User: " + user + " Password: "
 		    + password;
@@ -166,9 +189,40 @@ public class SStoreSQLHandler implements DBHandler {
 	@Override
 	public String toPrettyString() {
 		StringBuilder sb = new StringBuilder();
+		String pattern = "^[+-]?([0-9]*[.])?[0-9]+$";
+	    Pattern p = Pattern.compile(pattern);
+		sb.append('[');
+		
+		for (List<String> r : rows) {
+			sb.append('{');
+			for(int i = 0; i<r.size();i++){
+				sb.append('\"');
+				sb.append(colNames.get(i).toLowerCase());
+				sb.append('\"').append(':');
+			    Matcher m = p.matcher(r.get(i));
+			    if(m.find()){
+			    	sb.append(r.get(i));
+			    } else {
+			    	sb.append('\"');
+			    	sb.append(r.get(i));
+			    	sb.append('\"');
+			    }
+				
+				sb.append(',');
+			}
+			if (sb.length() > 0) sb.deleteCharAt(sb.length()-1);
+			sb.append('}').append(',');
+		}
+		if (sb.length() > 1) sb.deleteCharAt(sb.length()-1);
+		sb.append(']');
+		return sb.toString();
+	}
+	/*public String toPrettyString() {
+		StringBuilder sb = new StringBuilder();
 		
 		for (String s : colNames) sb.append(s).append('\t');
 		if (sb.length() > 0) sb.deleteCharAt(sb.length()-1);
+		sb.append('\n');
 		
 		for (List<String> r : rows) {
 			for (String s : r) 
@@ -178,7 +232,7 @@ public class SStoreSQLHandler implements DBHandler {
 		}
 		
 		return sb.toString();
-	}
+	}*/
 
 	@Override
 	public ConnectionInfo getConnectionInfo() {
@@ -228,14 +282,15 @@ public class SStoreSQLHandler implements DBHandler {
 	return Response.status(200).entity(out).build();
     }
     
-    public Response executeUpdateQuery(String queryString) {
+    public Response executeUpdateQuery(String queryString) throws SQLException {
 	long lStartTime = System.nanoTime();
 	try {
 	    executeSStoreUpdateSQL(queryString);
 	} catch (SQLException e) {
-	    return Response.status(500)
-		    .entity("Problem with query execution in SSToreSQL: " + e.getMessage() + "; query: " + queryString)
-		    .build();
+		throw e;
+//	    return Response.status(500)
+//		    .entity("Problem with query execution in SSToreSQL: " + e.getMessage() + "; query: " + queryString)
+//		    .build();
 	}
 	String messageQuery = "SSToreSQL query execution time milliseconds: "
 		+ (System.nanoTime() - lStartTime) / 1000000 + ",";
@@ -463,33 +518,31 @@ public class SStoreSQLHandler implements DBHandler {
     	List<String> types = new ArrayList<>();
     	List<String> colNames = new ArrayList<>();
     	
-    	String copyToString;
-		if (parameters.size() == 5)
-			copyToString = String.format("{call @%s(%s, %s, %s, %s)}", parameters.get(0), parameters.get(1), parameters.get(1), parameters.get(3), parameters.get(4));
-		else if (parameters.size() == 1)
-			copyToString = String.format("{call @%s}", parameters.get(0));
-		else
-			throw new BigDawgException("Invalid SStore prepared statement input sequence: "+parameters);
-    	
+    	String procCommand;
+		
+		String params = "";
+		String procName = parameters.get(0);
+		if (parameters.size() > 1) {
+			params = "(";
+			for (String parameter : parameters.subList(1, parameters.size())) {
+				params += "?,"; 
+			}
+			params = params.substring(0, params.length()-1);
+			params += ")";
+		}
+		procCommand = String.format("{call %s%s}", procName, params);
     	
     	try {
-    		statement = connection.prepareCall(copyToString);
-    		if (parameters.size() == 5) {
-        		statement.setDouble(1, Double.parseDouble(parameters.get(1)));
-        		statement.setDouble(2, Double.parseDouble(parameters.get(2)));
-        		statement.setDouble(3, Double.parseDouble(parameters.get(3)));
-        		statement.setDouble(4, Double.parseDouble(parameters.get(4)));
-    			
-    		} else if (parameters.size() == 1) ;
-			else
-				throw new BigDawgException("Invalid SStore prepared statement input sequence: "+parameters);
+		log.info("Procedure to execute: " + procCommand);
+    		statement = connection.prepareCall(procCommand);
+    		setProcParams(procName, statement, parameters);
     		
     		ResultSet rs = statement.executeQuery();
     		int colCount = 0;
     		if (rs.next()) {
     			colCount = rs.getMetaData().getColumnCount();
     			rows.add(new ArrayList<>());
-    			for (int i = 1; i < colCount; i++) {
+    			for (int i = 1; i <= colCount; i++) {
     				rows.get(rows.size() - 1).add(rs.getObject(i).toString());
     				colNames.add(rs.getMetaData().getColumnLabel(i));
     				types.add(rs.getMetaData().getColumnTypeName(i));
@@ -497,7 +550,7 @@ public class SStoreSQLHandler implements DBHandler {
     		}
     		while (rs.next()) {
     			rows.add(new ArrayList<>());
-    			for (int i = 1; i < colCount; i++)
+    			for (int i = 1; i <= colCount; i++)
     				rows.get(rows.size() - 1).add(rs.getObject(i).toString()); 
     		}
     		
@@ -507,7 +560,7 @@ public class SStoreSQLHandler implements DBHandler {
     		ex.printStackTrace();
     		// remove ' from the statement - otherwise it won't be inserted into
     		// log table in Postgres
-    		log.error(ex.getMessage() + "; statement to be executed: " + LogUtils.replace(copyToString) + " "
+    		log.error(ex.getMessage() + "; statement to be executed: " + LogUtils.replace(procCommand) + " "
     				+ ex.getStackTrace(), ex);
     		throw ex;
     	} finally {
@@ -517,8 +570,48 @@ public class SStoreSQLHandler implements DBHandler {
     	}
     	
     	return new SStoreQueryResult(rows, types, colNames);
-    };
+    }
+
     
+    
+	private void setProcParams(String procName, PreparedStatement statement,
+			List<String> parameters) throws SQLException, BigDawgException {
+		if (parameters.size() < 2) {
+			return;
+		}
+		
+		ArrayList<String> dataTypes = new ArrayList<String>();
+		try {
+			dataTypes = CatalogViewer.getProcParamTypes(procName);
+		} catch (Exception e1) {
+			log.error("Cannot get data types for procedure " + procName);
+			throw new BigDawgException("Cannot get data types for procedure " + procName);
+		}
+		for (int i = 1; i < parameters.size(); i++) {
+			String dataType;
+			dataType = dataTypes.get(i-1).substring(0, 3);
+			if (dataType.equalsIgnoreCase("dou")) {
+				statement.setDouble(i, Double.parseDouble(parameters.get(i)));
+			} else if (dataType.equalsIgnoreCase("flo")) {
+				statement.setFloat(i, Float.parseFloat(parameters.get(i)));
+			} else if (dataType.equalsIgnoreCase("lon")) {
+				statement.setLong(i, Long.parseLong(parameters.get(i)));
+			} else if (dataType.equalsIgnoreCase("int")) {
+				statement.setInt(i, Integer.parseInt(parameters.get(i)));
+			} else if (dataType.equalsIgnoreCase("boo")) {
+				statement.setBoolean(i, Boolean.parseBoolean(parameters.get(i)));
+			} else if (dataType.equalsIgnoreCase("str")) {
+				statement.setString(i, parameters.get(i));
+			} else {
+				throw new BigDawgException("Unsupported data type: "+parameters.get(i));
+			}
+
+		}
+		
+	};
+	
+	
+	    
     public static Long executePreparedStatement(Connection connection, String copyFromString, String tableName,
 	    String trim, String outputFile) throws SQLException {
 	

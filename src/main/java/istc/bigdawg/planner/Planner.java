@@ -57,7 +57,8 @@ public class Planner {
 		CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(input, catalogSOD);
 		if (ciqp.getTerminalNode() == null) throw new Exception("Ill formed input: "+input+"\n");
 		
-		System.out.printf("CrossIslandQueryPlan print out: #nodes: %s; #edges: %s\n%s\n\n", ciqp.vertexSet().size(), ciqp.edgeSet().size(), ciqp.toString());
+		logger.info("CrossIslandQueryPlan print out: #nodes: " + ciqp.vertexSet().size() + 
+				"; #edges: " + ciqp.edgeSet().size() + "\n" + ciqp.toString() + "\n\n");
 		
 		// NEW CODE 2
 		// use a walker

@@ -460,7 +460,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		Set<String> results = new HashSet<>();
 
 		String joinDelim = null;
-		
+
 		switch (scope) {
 		case ARRAY:
 			joinDelim = "[,=]";

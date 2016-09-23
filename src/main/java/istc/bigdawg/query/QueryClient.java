@@ -10,12 +10,16 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Scanner;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import jline.internal.Log;
@@ -24,9 +28,13 @@ import org.apache.accumulo.core.client.AccumuloException;
 import org.apache.accumulo.core.client.AccumuloSecurityException;
 import org.apache.accumulo.core.client.TableNotFoundException;
 import org.apache.log4j.Logger;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import istc.bigdawg.accumulo.AccumuloHandler;
 import istc.bigdawg.exceptions.AccumuloShellScriptException;
+import istc.bigdawg.executor.QueryResult;
 import istc.bigdawg.planner.Planner;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.scidb.SciDBHandler;
@@ -104,80 +112,72 @@ public class QueryClient {
 		}
 	}
 	
-//	/**
-//	 * Run a procedure from a client
-//	 * @param istream
-//	 * @return
-//	 */
-//	public Response procedure(String istream) {
-//		Log.info("procedure: " + istream.replaceAll("[\"']", "*"));
-//		
-//		// get a frontend handler
-//		
-//		// get input from the frontend handler
-//		
-//		// run the procedure
-//		
-//		// return the result to the frontend
-//		
-//		// keep listening from the frontend handler
-//		
-//	}
-//
-//	protected void doGet(
-//		    HttpServletRequest request,
-//		    HttpServletResponse response)
-//		      throws ServletException, IOException {
-//
-//		    String procedureName = request.getParameter("procedure");
-//		    String callProcedure, param1, param2, param3, param4;
-//	    	PreparedStatement statement = null;
-//	    	Long countExtractedRows = 0L;
-//			SStoreSQLConnectionInfo connectionSStore = new SStoreSQLConnectionInfo("localhost",
-//					"21212", "", "user", "password");
-//			SStoreSQLConnection connectionSStore
-//	    	try {
-//		    if (procedureName.startsWith("GetTracks")) {
-//		    	param1 = request.getParameter("lat_low");
-//		    	param2 = request.getParameter("lat_high");
-//		    	param3 = request.getParameter("lon_low");
-//		    	param4 = request.getParameter("lon_high");
-//		    	callProcedure = "{call @" + procedureName + "(?, ?, ?, ?)}";
-//	    		statement = connectionSStore.prepareCall(callProcedure);
-//	    		statement.setDouble(1, Double.parseDouble(param1));
-//	    		statement.setDouble(2, Double.parseDouble(param2));
-//	    		statement.setDouble(3, Double.parseDouble(param3));
-//	    		statement.setDouble(4, Double.parseDouble(param4));
-//	    		ResultSet rs = statement.executeQuery();
-//	    		rs.next();
-//	    		countExtractedRows = rs.getLong(1);
-//	    		rs.close();
-//	    		statement.close();
-//		    } else {
-//		    	callProcedure = "{call @" + procedureName + "()";
-//	    		statement = connectionSStore.prepareCall(callProcedure);
-//	    		ResultSet rs = statement.executeQuery();
-//	    		rs.next();
-//	    		countExtractedRows = rs.getLong(1);
-//	    		rs.close();
-//	    		statement.close();
-//		    }
-//	    	} catch (SQLException ex) {
-//	    		ex.printStackTrace();
-//	    		// remove ' from the statement - otherwise it won't be inserted into
-//	    		// log table in Postgres
-//	    		log.error(ex.getMessage() + "; statement to be executed: " + LogUtils.replace(copyToString) + " "
-//	    				+ ex.getStackTrace(), ex);
-//	    		throw ex;
-//	    	} finally {
-//	    		if (statement != null) {
-//	    			statement.close();
-//	    		}
-//	    	}
-//	    	return countExtractedRows;
-//
-//	}	
-//	
+	/**
+	 * Answer a query from a client.
+	 * 
+	 * @param istream
+	 * @return
+	 * @throws AccumuloSecurityException
+	 * @throws AccumuloException
+	 * @throws TableNotFoundException
+	 * @throws AccumuloShellScriptException
+	 * @throws InterruptedException
+	 */
+	@Path("jsonquery")
+	@POST
+//	@Consumes(MediaType.APPLICATION_JSON)
+	public Response jsonQuery(String istream) {
+		log.info("istream: " + istream.replaceAll("[\"']", "*"));
+		try {
+			Response r = Planner.processQuery(istream, false);
+			String results = (String)r.getEntity();
+			return Response.ok(formatToJson(results)).build();
+		} catch (Exception e) {
+			e.printStackTrace();
+			return Response.status(412).entity(e.getMessage()).build();
+		}
+	}
+	
+	private String formatToJson(String s) throws JSONException{
+		StringBuilder sb = new StringBuilder();
+		sb.append('[');
+		Scanner scanner = new Scanner(s);
+		String[] fields = scanner.nextLine().split("\t");
+		while(scanner.hasNextLine()){
+			sb.append('{');
+			sb.append(processLine(scanner.nextLine(),fields));
+			sb.append('}').append(',');
+		}
+		if (sb.length() > 1) sb.deleteCharAt(sb.length()-1);
+		sb.append(']');
+		return sb.toString();
+	}
+	
+
+	private String processLine(String nextLine, String[] fields) {
+		StringBuilder sb = new StringBuilder();
+		String[] values = nextLine.split("\t");
+		
+		String pattern = "^[+-]?([0-9]*[.])?[0-9]+$";
+	    Pattern p = Pattern.compile(pattern);
+	    
+	    for(int i =0; i<values.length; i++){
+	    	sb.append('"');
+	    	sb.append(fields[i]).append('"').append(':');
+	    	Matcher m = p.matcher(values[i]);
+	    	if(m.matches() || "null".equals(values[i])){ //its a number or null value
+	    		sb.append(values[i]);
+	    	} else { //its a string
+	    		sb.append('"');
+	    		sb.append(values[i]);
+	    		sb.append('"');
+	    	}
+	    	sb.append(',');
+	    }
+	    if (sb.length() > 1) sb.deleteCharAt(sb.length()-1);
+		return sb.toString();
+	}
+
 	public static void main(String[] args) {
 		/*
 		QueryClient qClient = new QueryClient();

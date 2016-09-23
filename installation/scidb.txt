@@ -1,8 +1,21 @@
-# DEFAULT installation of SciDB on Ubuntu 14.12
+Instructions for getting scidb to run on an ubuntu 14.04 docker container:
+
+docker run -ti ubuntu:14.04 /bin/bash
+apt-get update
+apt-get install wget apt-transport-https -y
+
+echo deb "https://downloads.paradigm4.com/ ubuntu14.04/14.12/" >> /etc/apt/sources.list.d/scidb.list
+echo "deb-src https://downloads.paradigm4.com/ ubuntu14.04/14.12/" >> /etc/apt/sources.list.d/scidb.list
+
+apt-get update
+apt-get install scidb-14.12-installer -y
+
+
+#################################################################################################################################################################################################
 
 this is what to do to install scidb 14.12 on ubuntu:
 
-in the file: 
+add the following to:
 sudo emacs /etc/apt/sources.list.d/scidb.list
 
 add the following:
@@ -22,7 +35,7 @@ sudo apt-get update
 
 
 
-root@big:/home/ubuntu/Downloads/SciDB/deployment/cluster_install# ./cluster_install -p credo -u ubuntu ../config 
+root@big:/home/ubuntu/Downloads/SciDB/deployment/cluster_install# ./cluster_install -p credo -u ubuntu ../config
 
 You have elected to install Enterprise Edition Extensions without installing SciDB.
 BUT there is no SciDB installation.
@@ -34,7 +47,7 @@ Would you like me to also install SciDB ? [y|n] y
 
 
 ===========================================
-Officially: SciDB does not support Ubuntu as the operating system. 
+Officially: SciDB does not support Ubuntu as the operating system.
 
 download deb packages:
 
@@ -53,7 +66,7 @@ wget http://ftp.us.debian.org/debian/pool/main/o/openmpi/libopenmpi1.3_1.4.5-1_a
 sudo apt-get install scidb-14.12-installer
 
 sample connection to PostgreSQL:
- * Restarting PostgreSQL 9.3 database server                                                                                                                                                   [ OK ] 
+ * Restarting PostgreSQL 9.3 database server                                                                                                                                                   [ OK ]
  is the result
 Adding user scidb_pg_user...
 CREATE ROLE
@@ -66,7 +79,7 @@ scidb@big2:~$ scidb-prepare-db.sh
 This script guide you through several steps and prepare clean database for SciDB system catalog
 Enter PostgreSQL administrator login (postgres by default): postgres
 Enter PostgreSQL administrator password for remote authentification (if password not provided
-    ident authentification to local server with sudo will be used): 
+    ident authentification to local server with sudo will be used):
 Enter system catalog owner login: scidb
 Enter system catalog owner password: mypassw
 Enter catalog database name: mydb
@@ -96,11 +109,11 @@ scidb@big2:/opt/scidb/14.12/etc$ iquery -aq "build(<v:string>[i=0:0,1,0], 'hello
 PostgreSQL and SciDB:
 
 17112 ?        S      0:00 /usr/lib/postgresql/9.3/bin/postgres -D /var/lib/postgresql/9.3/main -c config_file=/etc/postgresql/9.3/main/postgresql.conf
-17114 ?        Ss     0:00 postgres: checkpointer process                                                                                              
-17115 ?        Ss     0:00 postgres: writer process                                                                                                    
-17116 ?        Ss     0:00 postgres: wal writer process                                                                                                
-17117 ?        Ss     0:00 postgres: autovacuum launcher process                                                                                       
-17118 ?        Ss     0:00 postgres: stats collector process                                                                                           
+17114 ?        Ss     0:00 postgres: checkpointer process
+17115 ?        Ss     0:00 postgres: writer process
+17116 ?        Ss     0:00 postgres: wal writer process
+17117 ?        Ss     0:00 postgres: autovacuum launcher process
+17118 ?        Ss     0:00 postgres: stats collector process
 17292 ?        S      0:00 [kworker/2:0]
 17378 ?        R      0:00 [kworker/3:2]
 17395 ?        S      0:00 /home/scidb/scidb_data/000/0/SciDB-000-0-single_server -i localhost -p 1239 -k -l /opt/scidb/14.12/share/scidb/log4cxx.properties -s /home/scidb/scidb_data/000/0/storage.c
@@ -111,10 +124,10 @@ PostgreSQL and SciDB:
 17408 ?        Sl     0:00 /home/scidb/scidb_data/000/3/SciDB-000-3-single_server -i localhost -p 1242 -k -l /opt/scidb/14.12/share/scidb/log4cxx.properties -s /home/scidb/scidb_data/000/3/storage.c
 17409 ?        Sl     0:00 /home/scidb/scidb_data/000/1/SciDB-000-1-single_server -i localhost -p 1240 -k -l /opt/scidb/14.12/share/scidb/log4cxx.properties -s /home/scidb/scidb_data/000/1/storage.c
 17410 ?        Sl     0:00 /home/scidb/scidb_data/000/0/SciDB-000-0-single_server -i localhost -p 1239 -k -l /opt/scidb/14.12/share/scidb/log4cxx.properties -s /home/scidb/scidb_data/000/0/storage.c
-17411 ?        Ss     0:00 postgres: scidb_pg_user single_server 127.0.0.1(50493) idle                                                                 
-17412 ?        Ss     0:00 postgres: scidb_pg_user single_server 127.0.0.1(50495) idle                                                                 
-17413 ?        Ss     0:00 postgres: scidb_pg_user single_server 127.0.0.1(50494) idle                                                                 
-17414 ?        Ss     0:00 postgres: scidb_pg_user single_server 127.0.0.1(50497) idle                                                                 
+17411 ?        Ss     0:00 postgres: scidb_pg_user single_server 127.0.0.1(50493) idle
+17412 ?        Ss     0:00 postgres: scidb_pg_user single_server 127.0.0.1(50495) idle
+17413 ?        Ss     0:00 postgres: scidb_pg_user single_server 127.0.0.1(50494) idle
+17414 ?        Ss     0:00 postgres: scidb_pg_user single_server 127.0.0.1(50497) idle
 
 1
 
@@ -123,11 +136,11 @@ PostgreSQL and SciDB:
 
 
 postgres 13387  0.0  0.0 251952 16180 ?        S    22:58   0:00 /usr/lib/postgresql/9.3/bin/postgres -D /var/lib/postgresql/9.3/main -c config_file=/etc/postgresql/9.3/main/postgresql.conf
-postgres 13389  0.0  0.0 251952  1892 ?        Ss   22:58   0:00 postgres: checkpointer process                                                                                              
-postgres 13390  0.0  0.0 251952  2424 ?        Ss   22:58   0:00 postgres: writer process                                                                                                    
-postgres 13391  0.0  0.0 251952  1680 ?        Ss   22:58   0:00 postgres: wal writer process                                                                                                
-postgres 13392  0.0  0.0 252812  3032 ?        Ss   22:58   0:00 postgres: autovacuum launcher process                                                                                       
-postgres 13393  0.0  0.0 107628  1788 ?        Ss   22:58   0:00 postgres: stats collector process                                                                                           
+postgres 13389  0.0  0.0 251952  1892 ?        Ss   22:58   0:00 postgres: checkpointer process
+postgres 13390  0.0  0.0 251952  2424 ?        Ss   22:58   0:00 postgres: writer process
+postgres 13391  0.0  0.0 251952  1680 ?        Ss   22:58   0:00 postgres: wal writer process
+postgres 13392  0.0  0.0 252812  3032 ?        Ss   22:58   0:00 postgres: autovacuum launcher process
+postgres 13393  0.0  0.0 107628  1788 ?        Ss   22:58   0:00 postgres: stats collector process
 adam     13687  0.0  0.0  15944   948 pts/23   R+   23:00   0:00 grep --color=auto postgres
 
 ln -s /etc/postgresql/9.3/main/postgresql.conf /var/lib/postgresql/9.3/main/postgresql.conf

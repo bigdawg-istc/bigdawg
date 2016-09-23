@@ -23,15 +23,15 @@ public class JDBCExample {
 	PreparedStatement stmt2 = null;
 	try {
 
-	    conn = DriverManager.getConnection("jdbc:voltdb://localhost:21212");
-	    String sql1 = "Select * from area_code_state;";
+	    conn = DriverManager.getConnection("jdbc:voltdb://node-051:21212");
+	    String sql1 = "Select * from sflavg_tbl;";
 	    stmt1 = conn.createStatement();
 	    ResultSet results1 = stmt1.executeQuery(sql1);
 	    System.out.println("query 1 result: ");
 	    while (results1.next()) {
 		System.out.println(results1.getInt(1));
 	    }
-
+/*
 	    String sql2 = "Select * from contestants where contestant_number = ?";
 	    stmt2 = conn.prepareStatement(sql2);
 	    stmt2.setInt(1, 10);
@@ -55,6 +55,7 @@ public class JDBCExample {
 			+ result4.getBoolean("IS_NULLABLE") + " " + result4.getInt("RELATIVE_INDEX") + " "
 			+ result4.getInt("COLUMN_SIZE"));
 	    }
+*/
 	} catch (SQLException e) {
 	    // TODO Auto-generated catch block
 	    e.printStackTrace();

@@ -1,0 +1,14 @@
+<configuration>
+	<property>
+		<name>fs.defaultFS</name>
+		<value>hdfs://HOSTNAME:9000</value>
+	</property>
+		<property>
+      <name>hadoop.tmp.dir</name>
+         <value>/var/data/hadoop/tmp/${user.name}</value> 
+     </property>
+     <property>
+         <name>fs.checkpoint.dir</name>
+         <value>/var/data/hadoop/snn</value> 
+     </property>
+</configuration>

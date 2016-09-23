@@ -22,14 +22,14 @@ SciDB 14.12
 
 Accumulo 1.7.1
 
-Eclipse GUI guide
+Eclipse GUI guide (Mars.2 Release 4.5.2)
 -------------------
 
 Prepare:
 -- Import with Eclipse, then right click the project 'istc.bigdawg [...]' -> property -> Maven -> Active Maven Profile -> put down the word 'dev';
 
-Run: 
--- follow the Phase specific guides to set up the databases, make sure you could access each of which BigDAWG uses  
+Run:
+-- follow the Phase specific guides to set up the databases, make sure you could access each of which BigDAWG uses
 -- In Eclipse, right click Main.java under istc.bigdawg, and do "Run as" -> "Java Application" (or on OS X press "shift + fn + command + F11")
 
 
@@ -43,8 +43,8 @@ Prepare Eclipse (may need eclipse restart)
 
 
 download dependencies
--> mvn install -P XXX  
-  (note: XXX is the word 'dev', 'test', or 'prod') 
+-> mvn install -P XXX
+  (note: XXX is the word 'dev', 'test', or 'prod')
 
 build jar
 -> mvn package -P XXX
@@ -70,15 +70,15 @@ The next step is to build a distributed migrator so that we will be able to migr
 
 # For demo of Phase 0.2:
 
-The main question is how we can handle many database instances. The idea is to store the meta-information (instance host, port, datbase name, etc.) in the catalog. The only connection information stored in the config file: bigdawgmiddle/src/main/resources/bigdawg-config.properties pertain to the PostgreSQL instance where the data for the catalog is stored. Additionally, the config file: bigdawgmiddle/src/main/resources/bigdawg-log4j.properties contains information about PostgreSQL instance where the logs are stored. 
+The main question is how we can handle many database instances. The idea is to store the meta-information (instance host, port, datbase name, etc.) in the catalog. The only connection information stored in the config file: bigdawgmiddle/src/main/resources/bigdawg-config.properties pertain to the PostgreSQL instance where the data for the catalog is stored. Additionally, the config file: bigdawgmiddle/src/main/resources/bigdawg-log4j.properties contains information about PostgreSQL instance where the logs are stored.
 
 
 ### Prepare environment with 2 PostgreSQL instances:
 - go to bigdawgmiddle/installation (there are the scripts that we will use)
 - mkdir data
 - cd data
-- download mimic2.pgd to the data directory from [BitBucket](https://bitbucket.org/adam-dziedzic/bigdawgdata/raw/6ade22253695bfeb33074e82929e83b52cb121f1/mimic2.pgd) or [box.com](https://app.box.com/s/8by2c36m8bwxl9654bwf3mttdt25uu4k).
-- run script: **bash setup.sh** (this script should be executed only once)
+- download mimic2.pgd to the data directory from [https://app.box.com/s/8by2c36m8bwxl9654bwf3mttdt25uu4k](https://app.box.com/s/8by2c36m8bwxl9654bwf3mttdt25uu4k)
+- run script: `bash setup.sh` (this script should be executed only once)
 - to stop the PostgreSQL instances run: bash stop_postgres.sh
 - to start the PostgreSQL instances run: bash start_postgres.sh
 
@@ -112,7 +112,7 @@ Migrating data from PostgreSQL to PostgreSQL
 
 
 ## You can access a few databases in the following way:
-### logs: 
+### logs:
 - go to bigdawgmiddle/installation/Downloads/postgres1/bin
 - ./psql -p 5431 -d logs
 - select * from logs order by time desc;
@@ -121,8 +121,8 @@ Migrating data from PostgreSQL to PostgreSQL
 ```
 #!sql
 
- user_id |          time           |                    logger                     | level |                                                                                message                    
-                                                            
+ user_id |          time           |                    logger                     | level |                                                                                message
+
 ---------+-------------------------+-----------------------------------------------+-------+-----------------------------------------------------------------------------------------------------------
 ------------------------------------------------------------
          | 2015-12-23 12:17:24.358 | istc.bigdawg.migration.FromPostgresToPostgres | DEBUG | Number of extracted rows: 143 Number of loaded rows: 143
@@ -144,7 +144,7 @@ e":1,"pageNumber":1,"timestamp":"2012-04-23T18:25:43.511Z"}
 ```
 #!sql
 
- eid |   name    |   host    | port |              connection_properties              
+ eid |   name    |   host    | port |              connection_properties
 -----+-----------+-----------+------+-------------------------------------------------
    0 | postgres1 | localhost | 5431 | engine for bigdawg catalog data and mimic2 data
    1 | postgres2 | localhost | 5430 | main engine for mimic2_copy data
@@ -156,7 +156,7 @@ e":1,"pageNumber":1,"timestamp":"2012-04-23T18:25:43.511Z"}
 ```
 #!sql
 
- dbid | engine_id |      name       |  userid  | password 
+ dbid | engine_id |      name       |  userid  | password
 ------+-----------+-----------------+----------+----------
     0 |         0 | bigdawg_catalog | postgres | test
     1 |         0 | bigdawg_schemas | postgres | test
@@ -208,7 +208,7 @@ INSERT INTO d_patients VALUES(2, "Jane Smith");
 CREATE USER pguser PASSWORD 'test';
 GRANT ALL ON ALL TABLES IN SCHEMA mimic2v26 TO pguser;
 
-To run a query with one bdrel(...) layer: 
+To run a query with one bdrel(...) layer:
 
 curl -v -H "Content-Type: application/json" -X POST -d '{"query":"RELATION(bdrel(select * from mimic2v26.d_patients limit 5);)","authorization":{},"tuplesPerPage":1,"pageNumber":1,"timestamp":"2012-04-23T18:25:43.511Z"}' http://localhost:8080/bigdawg/query
 
@@ -276,7 +276,7 @@ curl  -H "Content-Type: application/json" -X POST -d '{"script":"/home/adam/Chic
 maven profiles
 --------
 Building jar for test (big2: ssh ubuntu@128.52.183.84) and prod (big: ssh ubuntu@128.52.183.245) environemnts.
-To run your local development environment run: 
+To run your local development environment run:
 
 mvn clean compile test -P dev
 
@@ -295,9 +295,9 @@ and finally run the application on the server:
 java -jar /home/ubuntu/jars/istc.bigdawg-1.0-SNAPSHOT-jar-with-dependencies.jar
 
 checks:
-test: curl -v -H "Content-Type: application/json" -X POST -d '{"query":"RELATION(select * from mimic2v26.d_patients limit 5)","authorization":{},"tuplesPerPage":1,"pageNumber":1,"timestamp":"2012-04-23T18:25:43.511Z"}' http://128.52.183.84:8080/bigdawg/query    
+test: curl -v -H "Content-Type: application/json" -X POST -d '{"query":"RELATION(select * from mimic2v26.d_patients limit 5)","authorization":{},"tuplesPerPage":1,"pageNumber":1,"timestamp":"2012-04-23T18:25:43.511Z"}' http://128.52.183.84:8080/bigdawg/query
 
-prod: curl -v -H "Content-Type: application/json" -X POST -d '{"query":"RELATION(select * from mimic2v26.d_patients limit 5)","authorization":{},"tuplesPerPage":1,"pageNumber":1,"timestamp":"2012-04-23T18:25:43.511Z"}' http://128.52.183.245:8080/bigdawg/query    
+prod: curl -v -H "Content-Type: application/json" -X POST -d '{"query":"RELATION(select * from mimic2v26.d_patients limit 5)","authorization":{},"tuplesPerPage":1,"pageNumber":1,"timestamp":"2012-04-23T18:25:43.511Z"}' http://128.52.183.245:8080/bigdawg/query
 
 relay requests
 --------

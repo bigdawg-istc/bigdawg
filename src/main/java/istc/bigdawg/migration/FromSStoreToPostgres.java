@@ -14,6 +14,7 @@ import istc.bigdawg.network.NetworkOut;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.sstore.SStoreSQLConnectionInfo;
+import istc.bigdawg.catalog.CatalogViewer;
 
 public class FromSStoreToPostgres 
 	extends FromDatabaseToDatabase implements MigrationNetworkRequest {
@@ -29,8 +30,7 @@ public class FromSStoreToPostgres
     private String toTable;
 
 
-    @Override
-    public MigrationResult execute() throws MigrationException {
+    public MigrationResult execute(boolean caching) throws MigrationException {
 	if (this.connectionFrom == null || this.fromTable == null
 		|| this.connectionTo == null || this.toTable == null) {
 	throw new MigrationException("The object was not initialized");
@@ -38,12 +38,24 @@ public class FromSStoreToPostgres
         FromSStoreToPostgresImplementation migrator = new FromSStoreToPostgresImplementation(
         		connectionFrom, fromTable, connectionTo, toTable);
 //        return migrator.migrate();
-        return migrator.migrateBin();
+        return migrator.migrateBin(caching);
+    }
+    
+    @Override
+    public MigrationResult execute() throws MigrationException {
+    	return execute(false);
     }
 
+    
     @Override
     public MigrationResult migrate(ConnectionInfo connectionFrom, String objectFrom, ConnectionInfo connectionTo,
 	    String objectTo) throws MigrationException {
+    	return migrate(connectionFrom, objectFrom, connectionTo, objectTo, false);
+    }
+    
+    
+    public MigrationResult migrate(ConnectionInfo connectionFrom, String objectFrom, ConnectionInfo connectionTo,
+	    String objectTo, boolean caching) throws MigrationException {
 	log.debug("General data migration: " + this.getClass().getName());
 	if (connectionFrom instanceof SStoreSQLConnectionInfo
 			&& connectionTo instanceof PostgreSQLConnectionInfo) {
@@ -65,7 +77,7 @@ public class FromSStoreToPostgres
 			}
 			/* execute the migration locally */
 			log.debug("Migration will be executed locally.");
-			return execute();
+			return execute(caching);
 		} catch (Exception e) {
 			throw new MigrationException(e.getMessage(), e);
 		}
@@ -80,14 +92,17 @@ public class FromSStoreToPostgres
 	public static void main(String[] args) throws Exception {
 //		LoggerSetup.setLogging();
 		FromSStoreToPostgres migrator = new FromSStoreToPostgres();
+//		SStoreSQLConnectionInfo conFrom = (SStoreSQLConnectionInfo) CatalogViewer.getConnectionInfo(7);
+//		PostgreSQLConnectionInfo conTo = (PostgreSQLConnectionInfo) CatalogViewer.getConnectionInfo(9);
 		SStoreSQLConnectionInfo conFrom = new SStoreSQLConnectionInfo("localhost",
 				"21212", "", "user", "password");
-		String tableFrom = "ORDERS";
 		PostgreSQLConnectionInfo conTo = new PostgreSQLConnectionInfo(
-				"localhost", "5432", "seaflow", "pguser", "");
-		String tableTo = "ORDERS";
+				"localhost", "5431", "tpcc", "pguser", "");
+		String tableFrom = "item";
+		String tableTo = "item";
 		long startTime = System.currentTimeMillis();
-		MigrationResult result = migrator.migrate(conFrom, tableFrom, conTo, tableTo);
+		boolean caching = true;
+		MigrationResult result = migrator.migrate(conFrom, tableFrom, conTo, tableTo, caching);
 		long endTime = System.currentTimeMillis();
 		System.out.println("time duration is: " + (endTime - startTime));
 		System.out.println(result);

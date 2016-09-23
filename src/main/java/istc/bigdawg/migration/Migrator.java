@@ -1,6 +1,6 @@
 
 /**
- * 
+ *
  */
 package istc.bigdawg.migration;
 
@@ -16,7 +16,7 @@ import istc.bigdawg.query.ConnectionInfo;
 
 /**
  * The main interface to the migrator module.
- * 
+ *
  * @author Adam Dziedzic
  */
 public class Migrator {
@@ -35,9 +35,9 @@ public class Migrator {
 	/**
 	 * Types of data migration, for example, CSV_PARALLEL means that data are
 	 * moved in CSV format in many threads
-	 * 
+	 *
 	 * @author Adam Dziedzic
-	 * 
+	 *
 	 *         Feb 25, 2016 5:25:05 PM
 	 */
 	public enum Type {
@@ -89,7 +89,7 @@ public class Migrator {
 
 	/**
 	 * Migrate data between databases.
-	 * 
+	 *
 	 * @param connectionFrom
 	 *            the connection to the database from which we migrate the data
 	 * @param objectFrom
@@ -135,9 +135,9 @@ public class Migrator {
 	public static void main(String[] args) {
 		LoggerSetup.setLogging();
 		PostgreSQLConnectionInfo conInfoFrom = new PostgreSQLConnectionInfo(
-				"localhost", "5431", "mimic2", "pguser", "test");
+				"postgres1", "5432", "mimic2", "pguser", "test");
 		PostgreSQLConnectionInfo conInfoTo = new PostgreSQLConnectionInfo(
-				"localhost", "5430", "mimic2_copy", "pguser", "test");
+				"postgres2", "5432", "mimic2_copy", "pguser", "test");
 		ConnectionInfo conFrom = conInfoFrom;
 		ConnectionInfo conTo = conInfoTo;
 		MigrationResult result;

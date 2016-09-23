@@ -192,25 +192,85 @@
 		    <type>pom</type>
 		</dependency>
 
+		<!-- http://mvnrepository.com/artifact/commons-codec/commons-codec -->
 		<dependency>
-			<groupId>S-Store</groupId>
-			<artifactId>S-Store</artifactId>
-			<version>0.1</version>
- 			<scope>system</scope> 
- 			<systemPath>${project.basedir}/src/main/resources/mvn-repo/org/sstore/jdbc/sstore.jar</systemPath>
+		    <groupId>commons-codec</groupId>
+		    <artifactId>commons-codec</artifactId>
+		    <version>1.5</version>
+		    <type>pom</type>
 		</dependency>
 
+		<!-- http://mvnrepository.com/artifact/commons-collections/commons-collections -->
+		<dependency>
+		    <groupId>commons-collections</groupId>
+		    <artifactId>commons-collections</artifactId>
+		    <version>3.2.1</version>
+		    <type>pom</type>
+		</dependency>
+
+		<!-- http://mvnrepository.com/artifact/commons-configuration/commons-configuration -->
+		<dependency>
+		    <groupId>commons-configuration</groupId>
+		    <artifactId>commons-configuration</artifactId>
+		    <version>1.6</version>
+		    <type>pom</type>
+		</dependency>
+
+		<!-- http://mvnrepository.com/artifact/commons-logging/commons-logging -->
+		<dependency>
+		    <groupId>commons-logging</groupId>
+		    <artifactId>commons-logging</artifactId>
+		    <version>1.1.1</version>
+		    <type>pom</type>
+		</dependency>
+
+		<!-- http://mvnrepository.com/artifact/commons-pool/commons-pool -->
+		<dependency>
+		    <groupId>commons-pool</groupId>
+		    <artifactId>commons-pool</artifactId>
+		    <version>1.5.5</version>
+		    <type>pom</type>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/com.google.gdata/core -->
+		<dependency>
+		    <groupId>com.google.gdata</groupId>
+		    <artifactId>core</artifactId>
+		    <version>1.47.1</version>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/jfree/jcommon -->
+		<dependency>
+		    <groupId>jfree</groupId>
+		    <artifactId>jcommon</artifactId>
+		    <version>1.0.16</version>
+		</dependency>
+
+		<dependency>
+			<groupId>edu.brown</groupId>
+			<artifactId>sstore-jdbc</artifactId>
+			<version>0.1</version>
+
+ 		<!-- 	<scope>system</scope> 
+ 			<systemPath>${project.basedir}/src/main/resources/mvn-repo/org/sstore/jdbc/sstore.jar</systemPath>
+-->
+		</dependency>
 	</dependencies>
 
 	<repositories>
 		<repository>
-			<id>neo4j-public</id>
-			<url>http://m2.neo4j.org/content/groups/public</url>
-		</repository>
-		<repository>
     		<id>in-project</id>
     		<name>in-project-maven-repository</name>
     		<url>file://${project.basedir}/src/main/resources/mvn-repo/</url>
+		</repository>
+		<repository>
+			<id>maven</id>
+			<name>maven-repo</name>	
+			<url>http://central.maven.org/maven2/</url>
+		</repository>
+		<repository>
+			<id>neo4j-public</id>
+			<url>http://m2.neo4j.org/content/groups/public</url>
 		</repository>
 	</repositories>
 
@@ -427,9 +487,11 @@
 		<jersey.version>2.19</jersey.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<bigDawg.main.class>istc.bigdawg.Main</bigDawg.main.class>
+		<!-- <bigDawg.main.class>istc.bigdawg.sstore.JDBCExample</bigDawg.main.class> -->
 		<!-- <bigDawg.main.class>istc.bigdawg.accumulo.DataLoader</bigDawg.main.class> -->
 		<!-- <bigDawg.main.class>istc.bigdawg.migration.TestTpchPostgresAccumulo</bigDawg.main.class> -->
 		<!-- <bigDawg.main.class>istc.bigdawg.migration.FromPostgresToPostgres</bigDawg.main.class> -->
+		<!-- <bigDawg.main.class>istc.bigdawg.migration.FromSStoreToPostgres</bigDawg.main.class> -->
 		<!--<bigDawg.main.class>istc.bigdawg.accumulo.DataLoader</bigDawg.main.class> -->
 	</properties>
 

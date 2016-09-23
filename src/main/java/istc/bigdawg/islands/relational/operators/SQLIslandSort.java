@@ -6,6 +6,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.log4j.Logger;
+
+import istc.bigdawg.islands.CrossIslandQueryNode;
 import istc.bigdawg.islands.OperatorVisitor;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.operators.Sort;
@@ -23,6 +26,7 @@ import net.sf.jsqlparser.statement.select.OrderByElement;
 public class SQLIslandSort extends SQLIslandOperator implements Sort {
 
 	
+	private static Logger logger = Logger.getLogger(SQLIslandOperator.class);
 	private List<String> sortKeys;
 	
 //	public enum SortOrder {ASC, DESC}; // ascending or descending?
@@ -114,7 +118,7 @@ public class SQLIslandSort extends SQLIslandOperator implements Sort {
 			getOrderByElements().add(obe);
 		}
 		
-		System.out.printf("\n\n<<>> getOrderByElement from construction: %s; keys: %s\n\n\n", getOrderByElements(), keys);
+		logger.info(String.format("\n\n<<>> getOrderByElement from construction: %s; keys: %s\n\n\n", getOrderByElements(), keys));
 	}
 	
 	public SQLIslandSort(SQLIslandOperator o, boolean addChild) throws Exception {
