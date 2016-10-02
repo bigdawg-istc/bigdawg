@@ -5,15 +5,13 @@
 #   postgres1: builds on postgres-base. It should hold the mimic2 dataset
 #
 
+# if (( EUID != 0 )); then
+#    echo "Script must be run as root."
+#    exit 126
+# fi
 
-if (( EUID != 0 )); then
-   echo "Script must be run as root."
-   exit 126
-fi
-
-
-# Default use case is to run BigDawg in a Vagrant VM. Nonstandard setups should run this script from the BigDawg working directory.
-cd /vagrant &> /dev/null
+# # Default use case is to run BigDawg in a Vagrant VM. Nonstandard setups should run this script from the BigDawg working directory.
+# cd /vagrant &> /dev/null
 
 # Download mimic2 data to the base image, if necessary
 if [ ! -f provisions/postgres-base/mimic2.pgd ]; then
@@ -38,20 +36,20 @@ docker build -t bigdawg/postgres-base provisions/postgres-base/
 
 echo ""
 echo "Building postgres1 (2/6)"
-docker build -t postgres1 provisions/postgres1/
+docker build -t bigdawg/postgres1 provisions/postgres1/
 
 echo ""
 echo "Building postgres2 (3/6)"
-docker build -t postgres2 provisions/postgres2/
+docker build -t bigdawg/postgres2 provisions/postgres2/
 
-echo ""
-echo "Building scidb (4/6)"
-docker build -t scidb provisions/scidb/
+# echo ""
+# echo "Building scidb (4/6)"
+# docker build -t scidb provisions/scidb/
 
-echo ""
-echo "Building accumulo (5/6)"
-docker build -t accumulo provisions/accumulo-1.6.5
+# echo ""
+# echo "Building accumulo (5/6)"
+# docker build -t accumulo provisions/accumulo-1.6.5
 
-echo ""
-echo "Building maven (6/6)"
-docker build -t maven /vagrant/
+# echo ""
+# echo "Building maven (6/6)"
+# docker build -t maven /vagrant/
