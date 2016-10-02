@@ -212,7 +212,7 @@ function run_bigdawg {
 }
 
 # main exeuction path: the function with label main are meant to be exeucted in the main path, you can comment the functions that you don't want to be executed
-install_postgres
+#install_postgres
 prepare_postgres1
 prepare_postgres2
 #load_tpch
