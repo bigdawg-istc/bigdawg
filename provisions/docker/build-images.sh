@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# This script builds Docker containers for postgres, accuulo, and scidb
+#   postgres-base: the root docker image
+#   postgres1: builds on postgres-base. It should hold the mimic2 dataset
+#
+
+
 if (( EUID != 0 )); then
    echo "Script must be run as root."
    exit 126
@@ -15,10 +21,10 @@ if [ ! -f provisions/postgres-base/mimic2.pgd ]; then
     wget -O provisions/postgres-base/mimic2.pgd \
         https://bitbucket.org/adam-dziedzic/bigdawgdata/raw/6ade22253695bfeb33074e82929e83b52cb121f1/mimic2.pgd
 else
-    echo "Skipping download"
+    echo "mimic2.pgd exists. Skipping download"
 fi
 
-
+# copy necessary files for postgres1
 cp -a src/main/resources/catalog provisions/postgres1/
 cp -a src/main/resources/monitor provisions/postgres1/
 cp -a src/main/resources/schemas provisions/postgres1/

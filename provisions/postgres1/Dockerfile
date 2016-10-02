@@ -7,5 +7,4 @@ ADD catalog /tmp/catalog
 ADD monitor /tmp/monitor
 ADD schemas /tmp/schemas
 ADD create_logs_table.sql /tmp/
-
 ADD 01_load_mimic_data.sh /docker-entrypoint-initdb.d/

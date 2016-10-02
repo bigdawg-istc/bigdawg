@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # remeber where you start (which directory)
 current_dir=$(pwd)
 
