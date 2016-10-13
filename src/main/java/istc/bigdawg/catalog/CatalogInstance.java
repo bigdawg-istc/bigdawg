@@ -16,12 +16,12 @@ import istc.bigdawg.postgresql.PostgreSQLInstance;
 public enum CatalogInstance {
 
 	INSTANCE;
-	
+
 	private Logger logger = org.apache.log4j.Logger.getLogger(CatalogInstance.class
 			.getName());
 	private Catalog catalog;
 
-	private CatalogInstance() {
+	CatalogInstance() {
 		catalog = new Catalog();
 		try {
 			CatalogInitiator.connect(catalog, PostgreSQLInstance.URL, PostgreSQLInstance.USER,

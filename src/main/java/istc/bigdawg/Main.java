@@ -15,16 +15,11 @@ import istc.bigdawg.properties.BigDawgConfigProperties;
 
 /**
  * Main class.
- * 
  */
 public class Main {
 
 	public static String BASE_URI;
 	private static Logger logger;
-
-//	static {
-//		BASE_URI = BigDawgConfigProperties.INSTANCE.getBaseURI();
-//	}
 
 	/**
 	 * Starts Grizzly HTTP server exposing JAX-RS resources defined in this
@@ -43,8 +38,9 @@ public class Main {
 			BASE_URI = BigDawgConfigProperties.INSTANCE.getBaseURI();
 		}
 		logger.info("base uri: " + BASE_URI);
+        System.out.println("HTTP Server: " + BASE_URI);
 
-		// create a resource config that scans for JAX-RS resources and
+        // create a resource config that scans for JAX-RS resources and
 		// providers in istc.bigdawg package
 		final ResourceConfig rc = new ResourceConfig().packages("istc.bigdawg");
 
@@ -53,47 +49,24 @@ public class Main {
 	}
 
 	/**
-	 * Main method.
-	 * 
-	 * There is an optional one argument (args[0]) which can store the ip address on which the grizzly server should
-     * wait for requests. If empty, then use the configured base uri
+	 * Main method. Starts the Catalog, Monitor, Migrator, and HTTP server.
 	 *
-     * Starts the HTTP server, Catalog, Monitor, and Migrator.
-     *
      * Requires Catalog database
      *
-	 * @param args
+	 * @param args[0] ip address on which the grizzly server should
+     * wait for requests. If empty, then use the configured base uri.
      *
 	 * @throws IOException
 	 */
 	public static void main(String[] args) throws IOException {
-
-        // For debug: show current classpath
-		// ClassLoader cl = ClassLoader.getSystemClassLoader();
-		// URL[] urls = ((URLClassLoader) cl).getURLs();
-		// System.out.println("Class-paths:");
-		// for (URL url : urls) {
-		// System.out.println(url.getFile());
-		// }
-		// System.out.println("The end of class-paths.");
 
         // Logger
         LoggerSetup.setLogging();
         logger = Logger.getLogger(Main.class);
         logger.info("Starting application ...");
 
-        // Assign the IP address to listen on
-        String ipAddress = null;
-        logger.debug("args length: " + args.length);
-        if (args.length > 0) {
-            logger.debug("args 0: " + args[0]);
-            ipAddress = args[0];
-        }
-
         // Catalog
 		CatalogInstance.INSTANCE.getCatalog();
-
-        // ZooKeeperUtils.registerNodeInZooKeeper();
 
         // Monitor
         MonitoringTask relationalTask = new MonitoringTask();
@@ -101,9 +74,23 @@ public class Main {
 
         // Migrator
         MigratorTask migratorTask = new MigratorTask();
-		
-        // S-Store migration task
-        // SStoreMigrationTask sstoreMigration = new SStoreMigrationTask();
+
+
+
+//        // ZooKeeperUtils.registerNodeInZooKeeper();
+//
+//        // S-Store migration task
+//        // SStoreMigrationTask sstoreMigration = new SStoreMigrationTask();
+
+
+        // Assign the IP address for the HTTP server to listen on
+        String ipAddress = null;
+        if (args.length > 0) {
+            ipAddress = args[0];
+            logger.debug("args 0: " + args[0]);
+        } else {
+            logger.debug("args length: " + args.length);
+        }
 
         // HTTP server
         final HttpServer server = startServer(ipAddress);
@@ -113,6 +100,7 @@ public class Main {
                         "Hit enter to stop it...",
                 BASE_URI));
         System.in.read();
+
 
         // Shutdown
         CatalogInstance.INSTANCE.closeCatalog();

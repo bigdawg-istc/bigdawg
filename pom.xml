@@ -306,7 +306,7 @@
 						<!-- filtering - replaces variables, denoted by the ${...} with values -->
 						<filtering>true</filtering>
 						<includes>
-							<include>*.properties</include>
+							<include>**/*.properties</include>
 							<!-- <include>*.jar</include> -->
 						</includes>
 					</resource>
@@ -405,11 +405,11 @@
 						<directory>src/main/resources</directory>
 						<!-- ${project.build.directory} refers to the output directory of the 
 							project -->
-						<targetPath>${project.build.directory}/bigdawg-conf/</targetPath>
+						<!-- <targetPath>${project.build.directory}/bigdawg-conf/</targetPath> -->
 						<!-- filtering - replaces variables, denoted by the ${...} with values -->
 						<filtering>true</filtering>
 						<includes>
-							<include>*.properties</include>
+							<include>**/*.properties</include>
 						</includes>
 						<!-- <targetPath>${project.build.directory}</targetPath> -->
 						<!-- <includes> <include>log4j.properties</include> </includes> -->
