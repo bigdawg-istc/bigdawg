@@ -7,8 +7,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
-import org.jfree.util.Log;
-
 import istc.bigdawg.exceptions.BigDawgCatalogException;
 import istc.bigdawg.exceptions.BigDawgException;
 import istc.bigdawg.exceptions.UnsupportedIslandException;
@@ -52,7 +50,6 @@ public class CatalogViewer {
 			throw new BigDawgCatalogException(dbid);
 		}
 		rs1.close();
-		
 		return TheObjectThatResolvesAllDifferencesAmongTheIslands.getQConnectionInfo(cc, e, dbid);
 	}
 	

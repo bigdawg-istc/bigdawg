@@ -162,7 +162,6 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		}
 		
 		rs2.close();
-		
 		return extraction;
 	}
 	

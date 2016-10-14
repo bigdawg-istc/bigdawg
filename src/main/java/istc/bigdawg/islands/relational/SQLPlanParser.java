@@ -15,7 +15,6 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
-import istc.bigdawg.islands.CrossIslandQueryNode;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.relational.operators.SQLIslandOperatorFactory;
 import istc.bigdawg.islands.relational.utils.SQLPrepareQuery;
