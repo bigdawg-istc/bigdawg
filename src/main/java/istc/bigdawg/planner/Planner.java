@@ -13,6 +13,7 @@ import org.apache.log4j.Logger;
 import org.mortbay.log.Log;
 
 import istc.bigdawg.catalog.CatalogModifier;
+import istc.bigdawg.catalog.CatalogUtilities;
 import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.exceptions.BigDawgException;
 import istc.bigdawg.executor.Executor;
@@ -44,9 +45,20 @@ public class Planner {
 		// UNROLLING
 		logger.debug("User query received. Parsing... " + input.replaceAll("[\"']", "*"));
 		
-		if (input.startsWith("bdcatalog(")) {
-			// process catalog query
-			throw new Exception("bdcatalog function not implemented");
+		
+		/*
+		 * catalog_command
+		 * |- Catalog table name followed, optionally, by column names
+		 * |- SQL commands -- SELECT, INSERT, UPDATE, DELETE
+		 * Usage: bdcatalog(catalog_command; ...)
+		 */
+		String trim;
+		if (input.startsWith("\"bdcatalog(")) {
+			trim = input.substring(1, input.length() - 1);
+			return Response.status(200).entity(CatalogUtilities.catalogQueryResult(CatalogUtilities.parseCatalogQuery(trim))).build();
+		} else if (input.startsWith("bdcatalog(")) {
+			trim = input;
+			return Response.status(200).entity(CatalogUtilities.catalogQueryResult(CatalogUtilities.parseCatalogQuery(trim))).build();
 		}
 		
 		
