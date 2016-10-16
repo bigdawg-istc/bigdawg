@@ -5,10 +5,10 @@
 #    exit 126
 # fi
 
-echo "Starting postgres1..."
-docker start postgres1
-echo "Starting postgres2..."
-docker start postgres2
+echo "Starting postgres1. May take a few minutes to initialize and accept connections..."
+docker start bigdawg-postgres1
+echo "Starting postgres2. May take a few minutes to initialize and accept connections..."
+docker start bigdawg-postgres2
 # echo "Starting scidb..."
 # docker start scidb
 # echo "Starting accumulo..."

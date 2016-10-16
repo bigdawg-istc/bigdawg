@@ -425,7 +425,9 @@
 				configuration directory of the active Maven profile. -->
 			<filter>profiles/${build.profile.id}/${build.profile.id}-config.properties</filter>
 		</filters>
+
 		<plugins>
+
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
@@ -437,6 +439,7 @@
 					<target>1.8</target>
 				</configuration>
 			</plugin>
+
 			<plugin>
 				<groupId>org.codehaus.mojo</groupId>
 				<artifactId>exec-maven-plugin</artifactId>
@@ -452,6 +455,7 @@
 					<mainClass>${bigDawg.main.class}</mainClass>
 				</configuration>
 			</plugin>
+
 			<plugin>
 				<!-- NOTE: We don't need a groupId specification because the group is 
 					org.apache.maven.plugins ...which is assumed by default. -->

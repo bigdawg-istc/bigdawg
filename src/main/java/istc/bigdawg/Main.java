@@ -2,6 +2,7 @@ package istc.bigdawg;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.Scanner;
 
 import org.apache.log4j.Logger;
 import org.glassfish.grizzly.http.server.HttpServer;
@@ -100,7 +101,6 @@ public class Main {
                         "Hit enter to stop it...",
                 BASE_URI));
         System.in.read();
-
 
         // Shutdown
         CatalogInstance.INSTANCE.closeCatalog();

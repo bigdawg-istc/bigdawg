@@ -1,18 +1,22 @@
 # Dockerfile for running the bigdawg middleware maven project
-# https://hub.docker.com/_/maven/
+# See https://hub.docker.com/_/maven/
+# Build this image with docker build -t bigdawg/middleware .
 
 FROM maven:3.3.9-jdk-8
 
-# Set working directory for subsequent commands. Create directory if it doesn't exist
-WORKDIR /bigdawg
+# Set working directory for subsequent commands. Creates directory if it doesn't exist.
+WORKDIR /opt/bigdawg
 
-# Copy the repository into the container
-COPY . /bigdawg
+# Copy the project (needs pom, local maven dependencies like scidb/sstore, and profiles)
+COPY . /opt/bigdawg/
 
-# Clean compile
-RUN mvn clean compile -P mit
+# Install
+ENV MAVEN_OPTS="-Xmx1024m"
+RUN mvn clean install -P mit -DskipTests
 
-# Move resources
-RUN mvn resources:resources -P dev
+# Expose local port for HTTP server
+EXPOSE 8080
 
-CMD ls; mvn exec:java
+# Execute
+#CMD ["mvn", "exec:java"]  # Inside docker, this causes a re-download of dependencies.
+CMD java -jar target/istc.bigdawg-1.0-SNAPSHOT-jar-with-dependencies.jar
