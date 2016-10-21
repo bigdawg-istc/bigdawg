@@ -4,8 +4,8 @@ insert into catalog.islands values (0, 'RELATIONAL', 'PSQL');
 insert into catalog.islands values (1, 'ARRAY', 'AFL');
 
 --add database catalog engines: engine_id, name, host, port, connection_properties
-insert into catalog.engines values(0,'postgres1','localhost',5431,'PostgreSQL 9.4.5');
-insert into catalog.engines values(1,'postgres2','localhost',5430,'PostgreSQL 9.4.5');
+insert into catalog.engines values(0,'postgres1','bigdawg-postgres1',5431,'PostgreSQL 9.4.5');
+insert into catalog.engines values(1,'postgres2','bigdawg-postgres2',5430,'PostgreSQL 9.4.5');
 insert into catalog.engines values(2,'scidb_local','localhost',1239,'SciDB 14.12');
 -- insert into catalog.engines values(3,'scidb_codd7','codd07',1239,'SciDB 14.12');
 -- insert into catalog.engines values(4,'scidb_codd6','codd06',1239,'SciDB 14.12');

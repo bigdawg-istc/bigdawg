@@ -24,6 +24,10 @@ public enum CatalogInstance {
 	CatalogInstance() {
 		catalog = new Catalog();
 		try {
+			System.out.println("Connecting to catalog:");
+			System.out.println("==>> " + PostgreSQLInstance.URL);
+			System.out.println("==>> " + PostgreSQLInstance.USER);
+			System.out.println("==>> " + PostgreSQLInstance.PASSWORD);
 			CatalogInitiator.connect(catalog, PostgreSQLInstance.URL, PostgreSQLInstance.USER,
 					PostgreSQLInstance.PASSWORD);
 		} catch (Exception e) {

@@ -2,9 +2,9 @@
 
 echo "Creating Docker containers..."
 echo "(n/m) Creating \"postgres1\" - Postgres server. Exposed at postgres1:5432"
-docker create --name bigdawg-postgres1 -e POSTGRES_PASSWORD=postgres --net=bigdawg -p 5431:5432 bigdawg/postgres1
+docker create --name bigdawg-postgres1 -e POSTGRES_PASSWORD=test --net=bigdawg -p 5431:5432 bigdawg/postgres1
 echo "(n/m) Creating \"postgres2\" - Postgres server. Exposed at postgres2:5432"
-docker create --name bigdawg-postgres2 -e POSTGRES_PASSWORD=postgres --net=bigdawg -p 5430:5432 bigdawg/postgres2
+docker create --name bigdawg-postgres2 -e POSTGRES_PASSWORD=test --net=bigdawg -p 5430:5432 bigdawg/postgres2
 # echo "(n/m) Creating \"scidb\" - scidb server. Exposed at scidb:1412"
 # docker create --name scidb --net=bigdawg -p 1412:1412 scidb
 # echo "(n/m) Creating \"accumulo\" - accumulo server. Exposed at :1412"
