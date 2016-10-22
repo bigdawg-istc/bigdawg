@@ -11,7 +11,7 @@ WORKDIR /opt/bigdawg
 COPY . /opt/bigdawg/
 
 # Install
-ENV MAVEN_OPTS="-Xmx1024m"
+ENV MAVEN_OPTS="-Xmx1500m"
 RUN mvn clean install -P mit -DskipTests
 
 # Expose local port for HTTP server
