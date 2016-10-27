@@ -15,10 +15,10 @@ gosu postgres psql -f /tmp/catalog/catalog_ddl.sql -d bigdawg_catalog
 gosu postgres psql -f /tmp/catalog/catalog_inserts.sql -d bigdawg_catalog
 gosu postgres psql -f /tmp/monitor/monitor_ddl.sql -d bigdawg_catalog
 
-# schemas database
+## schemas database
 gosu postgres psql -c "create database bigdawg_schemas"
 gosu postgres psql -f /tmp/schemas/mimic2_schemas_ddl.sql -d bigdawg_schemas
-gosu postgres psql -f /tmp/schemas/tpch_schemas_ddl.sql -d bigdawg_schemas
+#gosu postgres psql -f /tmp/schemas/tpch_schemas_ddl.sql -d bigdawg_schemas
 
 # mimic2 database
 gosu postgres psql -c "create database mimic2 owner ${pguser}"
