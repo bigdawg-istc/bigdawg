@@ -3,23 +3,19 @@ package istc.bigdawg;
 import java.io.IOException;
 import java.net.URI;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Scanner;
 
-import istc.bigdawg.accumulo.AccumuloHandler;
-import istc.bigdawg.postgresql.PostgreSQLHandler;
-import istc.bigdawg.query.DBHandler;
-import istc.bigdawg.scidb.SciDBHandler;
-import istc.bigdawg.utils.StackTrace;
 import org.apache.log4j.Logger;
 import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
 import org.glassfish.jersey.server.ResourceConfig;
 
+import istc.bigdawg.accumulo.AccumuloHandler;
 import istc.bigdawg.catalog.CatalogInstance;
 import istc.bigdawg.migration.MigratorTask;
 import istc.bigdawg.monitoring.MonitoringTask;
+import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.properties.BigDawgConfigProperties;
+import istc.bigdawg.scidb.SciDBHandler;
 
 /**
  * Main class.
