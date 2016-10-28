@@ -123,8 +123,7 @@ public enum BigDawgConfigProperties {
 		
 //		this.tpccDBID = Integer.parseInt(prop.getProperty("main.tpcc.dbid"));
 
-//		this.scidbSchemaServerDBID = Integer
-//				.parseInt(prop.getProperty("main.scidb.dbid.schema"));
+		this.scidbSchemaServerDBID = Integer.parseInt(prop.getProperty("main.scidb.dbid.schema"));
 		this.scidbHostname = prop.getProperty("main.scidb.hostname");
 		this.scidbPort = prop.getProperty("main.scidb.port");
 		this.scidbPassword = prop.getProperty("main.scidb.password");
@@ -138,12 +137,12 @@ public enum BigDawgConfigProperties {
 		this.scidbTestBinPath = prop.getProperty("main.scidb.test.bin_path");
 
 		this.networkMessagePort = prop.getProperty("main.network.message.port");
-//		this.networkRequestTimeout = Integer
-//				.valueOf(prop.getProperty("main.network.request.timeout"));
-//		this.networkDataPort = Integer
-//				.valueOf(prop.getProperty("main.network.data.port"));
-//		this.networkRetryConnection = Integer
-//				.valueOf(prop.getProperty("main.network.retry.connection"));
+		this.networkRequestTimeout = Integer
+				.valueOf(prop.getProperty("main.network.request.timeout"));
+		this.networkDataPort = Integer
+				.valueOf(prop.getProperty("main.network.data.port"));
+		this.networkRetryConnection = Integer
+				.valueOf(prop.getProperty("main.network.retry.connection"));
 
 		this.migratorTempDir = prop.getProperty("main.migrator.temp.dir");
 		this.cmigratorDir = prop.getProperty("main.cmigrator.dir");

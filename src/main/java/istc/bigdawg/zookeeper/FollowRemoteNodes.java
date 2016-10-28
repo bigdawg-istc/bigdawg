@@ -38,11 +38,9 @@ public class FollowRemoteNodes {
 	 * @param callable
 	 *            the task to be executed on this and other nodes
 	 */
-	public static Object execute(List<String> ipAddresses,
-			Callable<Object> callable) {
-		logger.debug(
-				"Execution of data migration and following the remote nodes: "
-						+ ipAddresses.toString());
+	public static Object execute(List<String> ipAddresses, Callable<Object> callable) {
+		logger.debug("Execution of data migration and following the remote nodes: "
+				+ ipAddresses.toString());
 		List<Callable<Object>> allCallables = new ArrayList<>();
 		allCallables.add(callable);
 		// ZooKeeperHandler zooHandler = new ZooKeeperHandler(

@@ -39,7 +39,7 @@ public class Planner {
 
 	public static Response processQuery(String queryString, boolean isTrainingMode) throws Exception {
 
-		// Clean up the query string by replacing newlines and tabs
+		// Clean up the query string
 		String input = queryString.replaceAll("[/\n/]", "").replaceAll("[ /\t/]+", " ");
 		logger.debug("Planner received query string. Parsing... " + input.replaceAll("[\"']", "*"));
 
@@ -58,7 +58,7 @@ public class Planner {
 		logger.info("CrossIslandQueryPlan: #nodes: " + ciqp.vertexSet().size() +
 				"; #edges: " + ciqp.edgeSet().size() + "\n" + ciqp.toString() + "\n\n");
 
-		// Traverse the graph and execute the actions
+		// Traverse the graph and run the execution plans
 		Set<CrossIslandPlanNode> entryNodes = new HashSet<>(ciqp.getEntryNodes());
 		Set<CrossIslandPlanNode> nextNodes;
 		Map<CrossIslandPlanNode, ConnectionInfo> connectionInfoMap = new HashMap<>();
@@ -80,21 +80,21 @@ public class Planner {
 					CrossIslandQueryNode source = (CrossIslandQueryNode) ((CrossIslandCastNode) node).getSourceVertex(ciqp);
 					CrossIslandQueryNode target = (CrossIslandQueryNode) ((CrossIslandCastNode) node).getTargetVertex(ciqp);
 
-					int sourceLoc = 0;
-					int targetLoc = 0;
+					int sourceDBID = 0;
+					int targetDBID = 0;
 
 					// get the target, and pick destination -- default location
 					if (target.getRemainderLoc() != null) {
-						targetLoc = Integer.parseInt(target.getRemainderLoc().get(0));
+						targetDBID = Integer.parseInt(target.getRemainderLoc().get(0));
 					} else {
-						targetLoc = Integer.parseInt(target.getQueryContainer().entrySet().iterator().next().getValue().getDBID());
+						targetDBID = Integer.parseInt(target.getQueryContainer().entrySet().iterator().next().getValue().getDBID());
 					}
 
 					// get the source, and get the engine 
-					ConnectionInfo ci = null;
-					if (targetLoc > 0) ci = CatalogViewer.getConnectionInfo(targetLoc);
+					ConnectionInfo targetConnInfo = null;
+					if (targetDBID > 0) targetConnInfo = CatalogViewer.getConnectionInfo(targetDBID);
 					else
-						throw new Exception(String.format("\n\nNegative target loc: %s; requires resolution.\n\n", targetLoc));
+						throw new Exception(String.format("\n\nNegative target loc: %s; requires resolution.\n\n", targetDBID));
 					String remoteName = processRemoteName(((CrossIslandCastNode) node).getSourceScope(), ((CrossIslandCastNode) node).getDestinationScope(), node.getName());
 
 					logger.debug(String.format("\n\nconnectionInfoMap: %s; source: %s\n\n", connectionInfoMap, source));
@@ -104,28 +104,30 @@ public class Planner {
 							, connectionInfoMap.get(source).getHost() + ":" + connectionInfoMap.get(source).getPort()
 							, connectionInfoMap.get(source).getClass().getSimpleName()
 							, remoteName
-							, ci.getHost() + ":" + ci.getPort()
-							, ci.getClass().getSimpleName()));
+							, targetConnInfo.getHost() + ":" + targetConnInfo.getPort()
+							, targetConnInfo.getClass().getSimpleName()));
 
 					// Create schema before migration 
 //					remoteSchemaCreation((CrossIslandCastNode)node, ci);
 					logger.debug(String.format("CAST query string: %s", node.getQueryString()));
 
 					// migrate
-					Migrator.migrate(connectionInfoMap.get(source), source.getName(), ci, remoteName, new MigrationParams(node.getQueryString()));
+					Migrator.migrate(connectionInfoMap.get(source), source.getName(), targetConnInfo, remoteName, new MigrationParams(node.getQueryString()));
 
-
-					// add to Table set of destruction
-					if (!tempTableInfo.containsKey(ci)) tempTableInfo.put(ci, new HashSet<>());
-					if (!tempTableInfo.containsKey(connectionInfoMap.get(source)))
+					// add the temporary objects to be deleted
+					if (!tempTableInfo.containsKey(targetConnInfo)) {
+						tempTableInfo.put(targetConnInfo, new HashSet<>());
+					}
+					if (!tempTableInfo.containsKey(connectionInfoMap.get(source))) {
 						tempTableInfo.put(connectionInfoMap.get(source), new HashSet<>());
+					}
 					tempTableInfo.get(connectionInfoMap.get(source)).add(source.getName());
-					tempTableInfo.get(ci).add(remoteName);
+					tempTableInfo.get(targetConnInfo).add(remoteName);
 
 
 					// add catalog entry of the temp table, add to catalog set of destruction
 					// unsafe use of ""
-					objectsToDelete.add(CatalogModifier.addObject(remoteName, "", sourceLoc, targetLoc)); //TODO find the correct DBID for source
+					objectsToDelete.add(CatalogModifier.addObject(remoteName, "", sourceDBID, targetDBID)); //TODO find the correct DBID for source
 
 					// add target to the next gen
 					nextNodes.add(target);
@@ -137,7 +139,6 @@ public class Planner {
 
 					// Todo: move this block to a separate function
 					// business as usual
-
 					CrossIslandQueryNode ciqn = (CrossIslandQueryNode) node;
 
 					// int choice = getGetPerformanceAndPickTheBest(ciqn, isTrainingMode);
@@ -173,26 +174,29 @@ public class Planner {
 			throw new Exception("Unimplemented feature: CASTing output");
 
 		} else if (cipn instanceof CrossIslandQueryNode) {
+
 			// business as usual
-
 			CrossIslandQueryNode ciqn = (CrossIslandQueryNode) cipn;
+
+			// Ask the Monitor for the best QueryExecutionPlan
 			int choice = getGetPerformanceAndPickTheBest(ciqn, isTrainingMode);
+			QueryExecutionPlan qep = ciqn.getQEP(choice, true);
 
-			// currently there should be just one island, therefore one child, root.
-			QueryExecutionPlan qep = ((CrossIslandQueryNode) ciqp.getTerminalNode()).getQEP(choice, true);
+			// Execute the plan
+			logger.debug("Executing terminal node...");
+			QueryResult queryResult = Executor.executePlan(qep, ciqn.getSignature(), choice);
+			Response response = compileResults(ciqp.getSerial(), queryResult);
 
-			// EXECUTE THE RESULT
-			logger.debug("Executing query execution tree exit node...");
-			Response responseHolder = compileResults(ciqp.getSerial(), Executor.executePlan(qep, ciqn.getSignature(), choice));
-
+			// Clean up temp tables
 			cleanUpTemporaryTables(objectsToDelete, tempTableInfo);
 
-			return responseHolder;
+			return response ;
 
 		} else if (cipn instanceof CrossIslandNonOperatorNode) {
 			// EXECUTE THE RESULT
 			logger.debug("Executing CrossIslandNonOperatorNode exit node...");
-			Response responseHolder = compileResults(ciqp.getSerial(), TheObjectThatResolvesAllDifferencesAmongTheIslands.runOperatorFreeIslandQuery((CrossIslandNonOperatorNode) cipn));
+			QueryResult queryResult = TheObjectThatResolvesAllDifferencesAmongTheIslands.runOperatorFreeIslandQuery((CrossIslandNonOperatorNode) cipn);
+			Response responseHolder = compileResults(ciqp.getSerial(), queryResult);
 
 			cleanUpTemporaryTables(objectsToDelete, tempTableInfo);
 

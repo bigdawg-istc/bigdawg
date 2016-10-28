@@ -146,8 +146,7 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 
 	public SciDBHandler(int dbid) {
 		try {
-			this.conInfo = (SciDBConnectionInfo) CatalogViewer
-					.getConnectionInfo(dbid);
+			this.conInfo = (SciDBConnectionInfo) CatalogViewer.getConnectionInfo(dbid);
 			this.connection = getConnection(conInfo);
 		} catch (Exception e) {
 			log.error(

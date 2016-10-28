@@ -509,8 +509,9 @@ public class FromDatabaseToDatabase implements MigrationNetworkRequest {
 				+ "; hostname to which the data is migrated: " + hostnameTo;
 		log.debug(debugMessage);
 		try {
-			if (!isThisMyIpAddress(InetAddress.getByName(hostnameFrom))) {
-				log.debug("Migration will be executed remotely (this node: "
+//			if (!isThisMyIpAddress(InetAddress.getByName(hostnameFrom))) {
+			if (isThisMyIpAddress(InetAddress.getByName(hostnameFrom))) {
+				log.debug("Source and target hosts are on different IPs. Migration will be executed remotely (this node: "
 						+ BigDawgConfigProperties.INSTANCE.getGrizzlyIpAddress()
 						+ " only coordinates the migration).");
 				/*
@@ -531,7 +532,8 @@ public class FromDatabaseToDatabase implements MigrationNetworkRequest {
 				// zooKeeperLocks = ZooKeeperUtils.acquireMigrationLocks(
 				// Arrays.asList(thisHostname, hostnameTo), data);
 				// }
-				if (!isThisMyIpAddress(InetAddress.getByName(hostnameTo))) {
+				//if (!isThisMyIpAddress(InetAddress.getByName(hostnameTo))) {
+				if (isThisMyIpAddress(InetAddress.getByName(hostnameTo))) {
 					log.debug("Migration from a local: " + thisHostname
 							+ " to remote database: " + hostnameTo);
 					/*
