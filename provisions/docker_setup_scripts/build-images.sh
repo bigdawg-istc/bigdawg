@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# This script builds Docker containers for postgres, accuulo, and scidb
+# This script builds Docker containers for postgres, accumulo, and scidb
 #   postgres-base: the root docker image
 #   postgres1: builds on postgres-base. It should hold the mimic2 dataset
 #
