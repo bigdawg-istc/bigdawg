@@ -2,7 +2,6 @@ package istc.bigdawg;
 
 import java.io.IOException;
 import java.net.URI;
-import java.util.Scanner;
 
 import org.apache.log4j.Logger;
 import org.glassfish.grizzly.http.server.HttpServer;

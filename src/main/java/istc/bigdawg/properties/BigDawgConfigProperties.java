@@ -46,7 +46,7 @@ public enum BigDawgConfigProperties {
 	private String sStoreURL;
 	private int seaflowDBID;
 	private String accumuloShellScript;
-	
+
 	private int tpccDBID;
 
 	private String myriaHost;
@@ -86,7 +86,8 @@ public enum BigDawgConfigProperties {
 		this.grizzlyIpAddress = prop.getProperty("main.grizzly.ipaddress");
 		this.grizzlyPort = prop.getProperty("main.grizzly.port");
 
-		this.postgresSchemaServerDBID = Integer.parseInt(prop.getProperty("main.postgresql.dbid.schema"));
+		this.postgresSchemaServerDBID = Integer
+				.parseInt(prop.getProperty("main.postgresql.dbid.schema"));
 		this.postgreSQLURL = prop.getProperty("main.postgresql.url");
 		this.postgreSQLUser = prop.getProperty("main.postgresql.user");
 		this.postgreSQLPassword = prop.getProperty("main.postgresql.password");
@@ -109,22 +110,27 @@ public enum BigDawgConfigProperties {
 		this.accumuloShellScript = prop
 				.getProperty("main.accumulo.shell.script");
 
-//		this.sstoreDBID = Integer.parseInt(prop.getProperty("main.sstore.dbid"));
+		// this.sstoreDBID =
+		// Integer.parseInt(prop.getProperty("main.sstore.dbid"));
 		this.sStoreURL = prop.getProperty("main.sstore.alerturl");
-//		this.seaflowDBID = Integer.parseInt(prop.getProperty("main.seaflow.dbid"));
-//		this.postgreSQLOceanDBURL = prop.getProperty("main.postgresql.oceandb.url");
-//		this.postgreSQLOceanDBUser = prop.getProperty("main.postgresql.oceandb.user");
-//		this.postgreSQLOceanDBPassword = prop.getProperty("main.postgresql.oceandb.password");
+		// this.seaflowDBID =
+		// Integer.parseInt(prop.getProperty("main.seaflow.dbid"));
+		// this.postgreSQLOceanDBURL =
+		// prop.getProperty("main.postgresql.oceandb.url");
+		// this.postgreSQLOceanDBUser =
+		// prop.getProperty("main.postgresql.oceandb.user");
+		// this.postgreSQLOceanDBPassword =
+		// prop.getProperty("main.postgresql.oceandb.password");
 
 		this.myriaHost = prop.getProperty("main.myria.host");
 		this.myriaPort = prop.getProperty("main.myria.port");
 		this.myriaDownloadPort = prop.getProperty("main.myria.downloadport");
 		this.myriaContentType = prop.getProperty("main.myria.content.type");
-		
-//		this.tpccDBID = Integer.parseInt(prop.getProperty("main.tpcc.dbid"));
 
-//		this.scidbSchemaServerDBID = Integer
-//				.parseInt(prop.getProperty("main.scidb.dbid.schema"));
+		// this.tpccDBID = Integer.parseInt(prop.getProperty("main.tpcc.dbid"));
+		//
+		// this.scidbSchemaServerDBID = Integer
+		// .parseInt(prop.getProperty("main.scidb.dbid.schema"));
 		this.scidbHostname = prop.getProperty("main.scidb.hostname");
 		this.scidbPort = prop.getProperty("main.scidb.port");
 		this.scidbPassword = prop.getProperty("main.scidb.password");
@@ -138,12 +144,12 @@ public enum BigDawgConfigProperties {
 		this.scidbTestBinPath = prop.getProperty("main.scidb.test.bin_path");
 
 		this.networkMessagePort = prop.getProperty("main.network.message.port");
-//		this.networkRequestTimeout = Integer
-//				.valueOf(prop.getProperty("main.network.request.timeout"));
-//		this.networkDataPort = Integer
-//				.valueOf(prop.getProperty("main.network.data.port"));
-//		this.networkRetryConnection = Integer
-//				.valueOf(prop.getProperty("main.network.retry.connection"));
+		this.networkRequestTimeout = Integer
+				.valueOf(prop.getProperty("main.network.request.timeout"));
+		this.networkRetryConnection = Integer
+				.valueOf(prop.getProperty("main.network.retry.connection"));
+		// this.networkDataPort = Integer
+		// .valueOf(prop.getProperty("main.network.data.port"));
 
 		this.migratorTempDir = prop.getProperty("main.migrator.temp.dir");
 		this.cmigratorDir = prop.getProperty("main.cmigrator.dir");
@@ -280,10 +286,10 @@ public enum BigDawgConfigProperties {
 		return myriaHost;
 	}
 
-	public String getMyriaDownloadPort(){
+	public String getMyriaDownloadPort() {
 		return myriaDownloadPort;
 	}
-	
+
 	/**
 	 * @return the myriaPort
 	 */
@@ -382,18 +388,18 @@ public enum BigDawgConfigProperties {
 	public String getScidbTestBinPath() {
 		return scidbTestBinPath;
 	}
-	
+
 	/**
-	 * @return DBID of the only sstore associated with this instance.  
+	 * @return DBID of the only sstore associated with this instance.
 	 */
 	public Integer getSStoreDBID() {
 		return sstoreDBID;
 	}
-	
+
 	public Integer getSeaflowDBID() {
 		return seaflowDBID;
 	}
-	
+
 	public Integer getTpccDBID() {
 		return tpccDBID;
 	}
