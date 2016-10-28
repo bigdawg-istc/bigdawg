@@ -345,11 +345,11 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 	public Optional<QueryResult> execute(final String query)
 			throws LocalQueryExecutionException {
 		try {
+
+			log.debug("PostgreSQLHandler is attempting query: " + LogUtils.replace(query) + "");
+			log.debug("ConnectionInfo:\n" + this.conInfo.toString());
+
 			this.getConnection();
-
-			log.debug("query: " + LogUtils.replace(query) + "");
-			log.debug("ConnectionInfo: " + this.conInfo.toString() + "\n");
-
 			st = con.createStatement();
 			if (st.execute(query)) {
 				rs = st.getResultSet();
