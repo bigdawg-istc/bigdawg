@@ -64,7 +64,7 @@ public enum BigDawgConfigProperties {
 
 	private String zooKeepers;
 
-	private BigDawgConfigProperties() throws AssertionError {
+	BigDawgConfigProperties() throws AssertionError {
 		Properties prop = new Properties();
 		String propFileName = "bigdawg-config.properties";
 		InputStream inputStream = BigDawgConfigProperties.class.getClassLoader()
@@ -110,8 +110,7 @@ public enum BigDawgConfigProperties {
 		this.accumuloShellScript = prop
 				.getProperty("main.accumulo.shell.script");
 
-		// this.sstoreDBID =
-		// Integer.parseInt(prop.getProperty("main.sstore.dbid"));
+		this.sstoreDBID =Integer.parseInt(prop.getProperty("main.sstore.dbid"));
 		this.sStoreURL = prop.getProperty("main.sstore.alerturl");
 		// this.seaflowDBID =
 		// Integer.parseInt(prop.getProperty("main.seaflow.dbid"));
@@ -142,19 +141,9 @@ public enum BigDawgConfigProperties {
 		this.scidbTestBinPath = prop.getProperty("main.scidb.test.bin_path");
 
 		this.networkMessagePort = prop.getProperty("main.network.message.port");
-		this.networkRequestTimeout = Integer
-				.valueOf(prop.getProperty("main.network.request.timeout"));
-<<<<<<< HEAD
-		this.networkDataPort = Integer
-				.valueOf(prop.getProperty("main.network.data.port"));
-		this.networkRetryConnection = Integer
-				.valueOf(prop.getProperty("main.network.retry.connection"));
-=======
-		this.networkRetryConnection = Integer
-				.valueOf(prop.getProperty("main.network.retry.connection"));
-		// this.networkDataPort = Integer
-		// .valueOf(prop.getProperty("main.network.data.port"));
->>>>>>> 9af0e26dab0a42c9a2c5916486e0bb363d715109
+		this.networkDataPort = Integer.valueOf(prop.getProperty("main.network.data.port"));
+		this.networkRequestTimeout = Integer.valueOf(prop.getProperty("main.network.request.timeout"));
+		this.networkRetryConnection = Integer.valueOf(prop.getProperty("main.network.retry.connection"));
 
 		this.migratorTempDir = prop.getProperty("main.migrator.temp.dir");
 		this.cmigratorDir = prop.getProperty("main.cmigrator.dir");
