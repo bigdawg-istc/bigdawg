@@ -19,9 +19,7 @@ import istc.bigdawg.islands.operators.Merge;
 
 public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNode, DefaultEdge> 
 	implements Iterable<CrossIslandPlanNode> {
-	/**
-	 * 
-	 */
+
 	private static final long serialVersionUID = -3609729432970736589L;
 	private Stack<Map<String, String>> transitionSchemas;
 	private Set<CrossIslandPlanNode> entryNode;
@@ -29,29 +27,26 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 	private static final String outputToken  = "BIGDAWG_OUTPUT";
 	private static final String extractTitle = "BIGDAWGTAG_";
 	private static final String castTitle = "BIGDAWGCAST_";
-	
 	private static int maxSerial = 0;
 	private int serial;
-	
-	
 	
 	public CrossIslandQueryPlan() {
 		super(DefaultEdge.class);
 		maxSerial++;
 		this.serial = maxSerial;
-	};
+	}
 	
 	// NEW METHOD
-	public CrossIslandQueryPlan(String userinput, Set<Integer> catalogSOD) throws Exception {
+	public CrossIslandQueryPlan(String userinput, Set<Integer> objectsToDelete) throws Exception {
 		this();
 //		terminalOperatorsForSchemas = new HashMap<>();
 		transitionSchemas = new Stack<>();
 		entryNode = new HashSet<>();
-		addNodes(userinput, catalogSOD);
+		addNodes(userinput, objectsToDelete);
 		checkAndProcessUnionTerminalOperators();
-	};
+	}
 	
-	public void addNodes(String userinput, Set<Integer> catalogSOD) throws Exception {
+	public void addNodes(String userinput, Set<Integer> objectsToDelete) throws Exception {
 
 		Pattern mark								= IslandsAndCast.QueryParsingPattern;
 		Matcher matcher								= mark.matcher(userinput);
@@ -113,7 +108,7 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 		    		// NEW
 		    		Scope outterScope = lastScopes.isEmpty() ? null : lastScopes.peek();
 //		    		System.out.printf("This Scope: %s; Outter Scope: %s\n", thisScope, outterScope);
-		    		CrossIslandPlanNode newNode = createVertex(name, stkwrite.pop() + userinput.substring(lastStop, matcher.end()), thisScope, innerScope, outterScope, catalogSOD);
+		    		CrossIslandPlanNode newNode = createVertex(name, stkwrite.pop() + userinput.substring(lastStop, matcher.end()), thisScope, innerScope, outterScope, objectsToDelete);
 		    		
 		    		innerScope = thisScope;
 		    		
@@ -226,7 +221,7 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 	
 	public CrossIslandPlanNode getTerminalNode() {
 		return terminalNode;
-	};
+	}
 	
 	public Stack<Map<String, String>> getTransitionSchemas() {
 		return transitionSchemas;
@@ -246,14 +241,11 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 	
 	@Override
 	public String toString() {
-		
 		StringBuilder sb = new StringBuilder();
-		
 		Set<CrossIslandPlanNode> nodeList = new HashSet<>();
 		nodeList.addAll(this.getEntryNodes());
 		while (!nodeList.isEmpty()) {
 			Set<CrossIslandPlanNode> nextGen = new HashSet<>();
-			
 			for (CrossIslandPlanNode n : nodeList) {
 				for (DefaultEdge e : this.edgesOf(n)) {
 					if (this.getEdgeTarget(e) == n)  continue;
@@ -261,10 +253,8 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 					nextGen.add(this.getEdgeTarget(e));
 				}
 			}
-			
 			nodeList = nextGen; 
 		}
 		return sb.toString();
 	}
-	
 }

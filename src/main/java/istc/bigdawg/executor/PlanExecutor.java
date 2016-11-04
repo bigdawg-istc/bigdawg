@@ -62,18 +62,15 @@ class PlanExecutor {
      */
     public PlanExecutor(QueryExecutionPlan plan) {
         this.plan = plan;
+        Logger.info(this, "PlanExecutor received plan %s", plan.getSerializedName());
+        if (plan.vertexSet().isEmpty()) System.out.printf("\n---> vertex set is empty\n");
 
+        // Print the plan details
         final StringBuilder sb = new StringBuilder();
         for(ExecutionNode n : plan) {
             sb.append(String.format("%s -> (%s)\n", n, plan.getDependents(n)));
         }
-
-        Logger.info(this, "Received plan %s", plan.getSerializedName());
-
-        Logger.debug(this, "Nodes for plan %s: \n %s", plan.getSerializedName(), sb);
-        
-        if (plan.vertexSet().isEmpty()) System.out.printf("\n---> vertex set empty\n");
-        
+        Logger.debug(this, "Nodes for plan %s: \n%s", plan.getSerializedName(), sb);
         Logger.debug(this, "Ordered queries: \n %s",
                 StreamSupport.stream(plan.spliterator(), false)
                     .map(ExecutionNode::getQueryString)
@@ -93,7 +90,6 @@ class PlanExecutor {
      */
     Optional<QueryResult> executePlan(Optional<Pair<Signature, Integer>> reportValues) throws ExecutorEngine.LocalQueryExecutionException, MigrationException {
         final long start = System.currentTimeMillis();
-
         Logger.info(this, "Executing query plan %s...", plan.getSerializedName());
 
         CompletableFuture<Optional<QueryResult>> finalResult = CompletableFuture.completedFuture(Optional.empty());
@@ -124,9 +120,9 @@ class PlanExecutor {
 //		}
         dropTemporaryTables();
 
+        // Log timing results
         final long end = System.currentTimeMillis();
         Logger.info(this, "Finished executing query plan %s, in %d ms.", plan.getSerializedName(), (end - start));
-
         if (reportValues.isPresent()) {
             Logger.info(this, "Sending timing to monitor...");
             try {
@@ -137,16 +133,15 @@ class PlanExecutor {
         } else {
             Logger.info(this, "Not reporting timing to monitor.");
         }
-
         Logger.info(this, "Returning result...");
         return result;
     }
     
     private Optional<QueryResult> executeNode(ExecutionNode node) {
+
         // perform shuffle join if equijoin and hint doesn't specify otherwise
         if (node instanceof BinaryJoinExecutionNode) {
             BinaryJoinExecutionNode joinNode = (BinaryJoinExecutionNode) node;
-
             if(joinNode.isEquiJoin() && joinNode.getHint().orElse(BinaryJoinExecutionNode.JoinAlgorithms.BROADCAST) == BinaryJoinExecutionNode.JoinAlgorithms.SHUFFLE) {
                 try {
                     Logger.info(this, "Attempting to perform Shuffle Join for %s...", joinNode.getTableName().get());
@@ -160,7 +155,6 @@ class PlanExecutor {
                 }
             }
         }
-
 
         // otherwise execute as local query execution (same as broadcast join)
         // colocate dependencies, blocking until completed
@@ -236,7 +230,7 @@ class PlanExecutor {
             Thread.currentThread().interrupt();
         }
 
-        Logger.debug(this, "Colocating dependencies of %s to %s", node, node.getEngine());
+        Logger.debug(this, "Colocating dependencies of %s to\n%s", node, node.getEngine());
 
         ignoreCopy.addAll(plan.getDependencies(node).stream()
                 .filter(d -> resultLocations.containsEntry(d, node.getEngine()))

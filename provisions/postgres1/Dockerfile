@@ -1,10 +1,13 @@
 FROM bigdawg/postgres-base
 
-# Make sure to copy these files into the same folder as the Dockerfile before building.
-# These files live in ../../src/main/resources/, but Docker doesn't ADD files
-# from outside of the current build context.
+# Postgres listens on this port
+# See https://www.postgresql.org/docs/9.4/static/app-postgres.html
+ENV PGPORT 5431
+
 ADD catalog /tmp/catalog
 ADD monitor /tmp/monitor
+ADD mimic2 /tmp/mimic2
 ADD schemas /tmp/schemas
-ADD create_logs_table.sql /tmp/
-ADD 01_load_mimic_data.sh /docker-entrypoint-initdb.d/
+ADD tpch /tmp/tpch
+ADD logs /tmp/logs
+ADD setup_postgres1.sh /docker-entrypoint-initdb.d/

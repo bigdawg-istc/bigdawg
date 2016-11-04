@@ -66,9 +66,9 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 		// collect the cross island children
 		children = getCrossIslandChildrenReferences(transitionSchemas);
 		
-		logger.info(String.format("\n-> Island query: %s;\n", islandQuery));
-		logger.info(String.format("---> CrossIslandChildren: %s;\n",children.toString()));
-		logger.info(String.format("---> TransitionSchemas: %s;\n\n",transitionSchemas.toString()));
+		logger.info(String.format("Island query: %s;", islandQuery));
+		logger.info(String.format("--> CrossIsland children: %s;",children.toString()));
+		logger.info(String.format("--> Transition schemas: %s;",transitionSchemas.toString()));
 		
 		// create temporary tables that are used for as schemas
 		dbSchemaHandler = TheObjectThatResolvesAllDifferencesAmongTheIslands.createTableForPlanning(sourceScope, children, transitionSchemas);
@@ -232,7 +232,7 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 					joinPredicates.add(((SQLIslandScan)node).getIndexCond().toString());
 				}
 				
-				logger.info(String.format("--->> printing qualified name: %s; originalMap: %s; \n", ((SeqScan) node).getFullyQualifiedName(), originalMap));
+				logger.info(String.format("--> printing qualified name: %s; originalMap: %s;", ((SeqScan) node).getFullyQualifiedName(), originalMap));
 				
 				if (originalMap.get(((SeqScan) node).getFullyQualifiedName()) != null)
 					ret = new ArrayList<String>(originalMap.get(((SeqScan) node).getFullyQualifiedName()));

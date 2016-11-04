@@ -1,3 +1,7 @@
 FROM bigdawg/postgres-base
 
-ADD 01_load_mimic_data.sh /docker-entrypoint-initdb.d/
+# Postgres listens on this port
+# See https://www.postgresql.org/docs/9.4/static/app-postgres.html
+ENV PGPORT 5430
+
+ADD setup_postgres2.sh /docker-entrypoint-initdb.d/

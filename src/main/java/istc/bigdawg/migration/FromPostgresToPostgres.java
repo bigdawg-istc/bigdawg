@@ -80,13 +80,10 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 	/**
 	 * Migrate data between instances of PostgreSQL.
 	 */
-	public MigrationResult migrate(MigrationInfo migrationInfo)
-			throws MigrationException {
+	public MigrationResult migrate(MigrationInfo migrationInfo)	throws MigrationException {
 		logger.debug("General data migration: " + this.getClass().getName());
-		if (migrationInfo
-				.getConnectionFrom() instanceof PostgreSQLConnectionInfo
-				&& migrationInfo
-						.getConnectionTo() instanceof PostgreSQLConnectionInfo) {
+		if (migrationInfo.getConnectionFrom() instanceof PostgreSQLConnectionInfo
+				&& migrationInfo.getConnectionTo() instanceof PostgreSQLConnectionInfo) {
 			try {
 				this.migrationInfo = migrationInfo;
 				return this.dispatch();
