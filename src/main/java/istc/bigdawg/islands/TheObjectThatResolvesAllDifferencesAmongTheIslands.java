@@ -21,8 +21,8 @@ import istc.bigdawg.exceptions.BigDawgException;
 import istc.bigdawg.exceptions.UnsupportedIslandException;
 import istc.bigdawg.executor.QueryResult;
 import istc.bigdawg.islands.IslandsAndCast.Scope;
-import istc.bigdawg.islands.Myria.MyriaQueryParser;
 import istc.bigdawg.islands.Accumulo.AccumuloD4MParser;
+import istc.bigdawg.islands.Myria.MyriaQueryParser;
 import istc.bigdawg.islands.SStore.SStoreQueryParser;
 import istc.bigdawg.islands.SciDB.AFLPlanParser;
 import istc.bigdawg.islands.SciDB.AFLQueryGenerator;
@@ -31,6 +31,7 @@ import istc.bigdawg.islands.SciDB.operators.SciDBIslandJoin;
 import istc.bigdawg.islands.operators.Join;
 import istc.bigdawg.islands.operators.Join.JoinType;
 import istc.bigdawg.islands.operators.Operator;
+import istc.bigdawg.islands.relational.RelationalAFLQueryGenerator;
 import istc.bigdawg.islands.relational.SQLPlanParser;
 import istc.bigdawg.islands.relational.SQLQueryGenerator;
 import istc.bigdawg.islands.relational.SQLQueryPlan;
@@ -168,13 +169,27 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	/**
 	 * For Executor.
 	 * @param scope
+	 * @param remainderDBID 
 	 * @return Instance of a query generator
 	 * @throws BigDawgException 
+	 * @throws SQLException 
 	 */
-	public static OperatorVisitor getQueryGenerator(Scope scope) throws BigDawgException {
+	public static OperatorVisitor getQueryGenerator(Scope scope, int dbid) throws BigDawgException, SQLException {
+		
+		Engine e = CatalogViewer.getEngineOfDB(dbid);
+		
 		switch (scope) {
 		case ARRAY:
-			return new AFLQueryGenerator();
+			switch (e) {
+			case PostgreSQL: 
+			case SStore:
+				return new SQLQueryGenerator();
+			case SciDB:
+				return new AFLQueryGenerator();
+			default:
+				break;
+			}
+			throw new BigDawgException("getQueryGenerator fails for scope: "+scope.name()+" and dbid: "+dbid);
 		case CAST:
 			break;
 		case DOCUMENT:
@@ -184,7 +199,16 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case KEYVALUE:
 			break;
 		case RELATIONAL:
-			return new SQLQueryGenerator();
+			switch (e) {
+			case PostgreSQL: 
+			case SStore:
+				return new SQLQueryGenerator();
+			case SciDB:
+				return new RelationalAFLQueryGenerator();
+			default:
+				break;
+			}
+			throw new BigDawgException("getQueryGenerator fails for scope: "+scope.name()+" and dbid: "+dbid);
 		case STREAM:
 			break;
 		case TEXT:
@@ -194,7 +218,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		default:
 			break;
 		}
-		throw new UnsupportedIslandException(scope, "getQueryGenerator");
+		throw new BigDawgException("getQueryGenerator fails for scope: "+scope.name()+" and dbid: "+dbid);
 	}
 	
 	/**

@@ -165,9 +165,9 @@ public class ExecutionNodeFactory {
 	 * @return
 	 * @throws Exception
 	 */
-	private static ExecutionNode createJoinNode(String broadcastQuery, ConnectionInfo engine, String joinDestinationTable, Join joinOp, Scope island) throws Exception {
+	private static ExecutionNode createJoinNode(String broadcastQuery, ConnectionInfo engine, int dbid, String joinDestinationTable, Join joinOp, Scope island) throws Exception {
 
-		OperatorVisitor gen = TheObjectThatResolvesAllDifferencesAmongTheIslands.getQueryGenerator(island);
+		OperatorVisitor gen = TheObjectThatResolvesAllDifferencesAmongTheIslands.getQueryGenerator(island, dbid);
 
 		// Break apart Join Predicate Objects into usable Strings
 		// It used to be just 3 items list: comparator string, table-column string for left, table-column string for right
@@ -208,10 +208,10 @@ public class ExecutionNodeFactory {
 	 * @return
 	 * @throws Exception
 	 */
-	private static ExecutionNodeSubgraph buildOperatorSubgraph(Operator op, ConnectionInfo engine, String dest, Map<String, LocalQueryExecutionNode> containerNodes, boolean isSelect, Scope island) throws Exception {
+	private static ExecutionNodeSubgraph buildOperatorSubgraph(Operator op, ConnectionInfo engine, int dbid, String dest, Map<String, LocalQueryExecutionNode> containerNodes, boolean isSelect, Scope island) throws Exception {
 		StringBuilder sb = new StringBuilder();
 
-		OperatorVisitor gen = TheObjectThatResolvesAllDifferencesAmongTheIslands.getQueryGenerator(island);
+		OperatorVisitor gen = TheObjectThatResolvesAllDifferencesAmongTheIslands.getQueryGenerator(island, dbid);
 
 		Operator joinOp = gen.generateStatementForPresentNonMigratingSegment(op, sb, isSelect);
 		final String sqlStatementForPresentNonJoinSegment = sb.toString();
@@ -244,7 +244,8 @@ public class ExecutionNodeFactory {
 
 			ExecutionNode joinNode = null;
 			
-			if (joinOp instanceof Join) joinNode = ExecutionNodeFactory.createJoinNode(broadcastQuery, engine, joinDestinationTable, (Join)joinOp, island);
+			// we want to know the destination DBID
+			if (joinOp instanceof Join) joinNode = ExecutionNodeFactory.createJoinNode(broadcastQuery, engine, dbid, joinDestinationTable, (Join)joinOp, island);
 			else if (joinOp instanceof Merge) joinNode = new LocalQueryExecutionNode(broadcastQuery, engine, joinDestinationTable);
 
 			result.addVertex(joinNode);
@@ -262,7 +263,7 @@ public class ExecutionNodeFactory {
 					result.addEdge(containerNode, joinNode);
 				} else {
 					String token = child.isSubTree() ? child.getSubTreeToken() : null;
-					ExecutionNodeSubgraph subgraph = buildOperatorSubgraph(child, engine, token, containerNodes, false, island);
+					ExecutionNodeSubgraph subgraph = buildOperatorSubgraph(child, engine, dbid, token, containerNodes, false, island);
 					Graphs.addGraph(result, subgraph);
 					result.addEdge(subgraph.exitPoint, joinNode);
 				}
@@ -295,7 +296,7 @@ public class ExecutionNodeFactory {
 
 		String remainderSelectIntoString;
 		ConnectionInfo remainderCI = CatalogViewer.getConnectionInfo(remainderDBID);
-		OperatorVisitor gen = TheObjectThatResolvesAllDifferencesAmongTheIslands.getQueryGenerator(qep.getIsland());
+		OperatorVisitor gen = TheObjectThatResolvesAllDifferencesAmongTheIslands.getQueryGenerator(qep.getIsland(), remainderDBID);
 		
 		Map<String, LocalQueryExecutionNode> containerNodes = new HashMap<>();
 		for (Map.Entry<String, QueryContainerForCommonDatabase> entry : containers.entrySet()) {
@@ -332,7 +333,7 @@ public class ExecutionNodeFactory {
 			String lStr = String.format("\n\n<><><><><> Loc non null QEP terminal: %s; isSelect?: %s; remainder into: %s <><><><><><><> \n\n\n", qep.getTerminalTableNode().getQueryString(), isSelect, destinationName);
 			log.info(lStr);
 		} else {
-			ExecutionNodeSubgraph subgraph = buildOperatorSubgraph(remainder, remainderCI, destinationName, containerNodes, isSelect, qep.getIsland());
+			ExecutionNodeSubgraph subgraph = buildOperatorSubgraph(remainder, remainderCI, remainderDBID, destinationName, containerNodes, isSelect, qep.getIsland());
 			Graphs.addGraph(qep, subgraph);
 			qep.setTerminalTableNode(subgraph.exitPoint);
 			String lStr = String.format("\n\n<><><><><><><> Loc null QEP terminal: %s; isSelect?: %s; remainder into: %s <><><><><><><> \n\n\n", qep.getTerminalTableNode().getQueryString(), isSelect, destinationName);
