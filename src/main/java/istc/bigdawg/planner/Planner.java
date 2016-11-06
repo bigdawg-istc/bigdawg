@@ -13,6 +13,7 @@ import org.apache.log4j.Logger;
 import org.mortbay.log.Log;
 
 import istc.bigdawg.catalog.CatalogModifier;
+import istc.bigdawg.catalog.CatalogUtilities;
 import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.exceptions.BigDawgException;
 import istc.bigdawg.executor.Executor;
@@ -37,15 +38,27 @@ public class Planner {
 
 	private static Logger logger = Logger.getLogger(Planner.class);
 
-	public static Response processQuery(String queryString, boolean isTrainingMode) throws Exception {
-
-		// Clean up the query string
-		String input = queryString.replaceAll("[/\n/]", "").replaceAll("[ /\t/]+", " ");
-		logger.debug("Planner received query string. Parsing... " + input.replaceAll("[\"']", "*"));
-
-		// Todo: implement this bdcatalog query
-		if (input.startsWith("bdcatalog(")) {
-			throw new Exception("bdcatalog function not implemented");
+	public static Response processQuery(String userinput, boolean isTrainingMode) throws Exception {
+		
+		String input = userinput.replaceAll("[/\n/]", "").replaceAll("[ /\t/]+", " ");
+		
+		// UNROLLING
+		logger.debug("User query received. Parsing... " + input.replaceAll("[\"']", "*"));
+		
+		
+		/*
+		 * catalog_command
+		 * |- Catalog table name followed, optionally, by column names
+		 * |- SQL commands -- SELECT, INSERT, UPDATE, DELETE
+		 * Usage: bdcatalog(catalog_command; ...)
+		 */
+		String trim;
+		if (input.startsWith("\"bdcatalog(")) {
+			trim = input.substring(1, input.length() - 1);
+			return Response.status(200).entity(CatalogUtilities.catalogQueryResult(CatalogUtilities.parseCatalogQuery(trim))).build();
+		} else if (input.startsWith("bdcatalog(")) {
+			trim = input;
+			return Response.status(200).entity(CatalogUtilities.catalogQueryResult(CatalogUtilities.parseCatalogQuery(trim))).build();
 		}
 
 		// Track the temporary objects and table info for later deletion
