@@ -140,7 +140,7 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 		if (perm >= remainderPermutations.size()) throw new Exception ("Permutation reference index out of bound");
 		
 		QueryExecutionPlan qep = new QueryExecutionPlan(sourceScope); 
-		ExecutionNodeFactory.addNodesAndEdges(qep, remainderPermutations.get(perm), remainderLoc, queryContainer, isSelect, name);
+		ExecutionNodeFactory.addNodesAndEdgesNew(qep, remainderPermutations.get(perm), remainderLoc, queryContainer, isSelect, name);
 		
 		return qep;
 	}
@@ -153,7 +153,7 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 		
 		for (int i = 0; i < remainderPermutations.size(); i++ ){
 			QueryExecutionPlan qep = new QueryExecutionPlan(getSourceScope()); 
-			ExecutionNodeFactory.addNodesAndEdges(qep, remainderPermutations.get(i), remainderLoc, queryContainer, isSelect, name);
+			ExecutionNodeFactory.addNodesAndEdgesNew(qep, remainderPermutations.get(i), remainderLoc, queryContainer, isSelect, name);
 			qepl.add(qep);
 		}
 		
