@@ -2,17 +2,20 @@ package istc.bigdawg;
 
 import java.io.IOException;
 import java.net.URI;
-import java.util.Scanner;
+import java.sql.SQLException;
 
 import org.apache.log4j.Logger;
 import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
 import org.glassfish.jersey.server.ResourceConfig;
 
+import istc.bigdawg.accumulo.AccumuloHandler;
 import istc.bigdawg.catalog.CatalogInstance;
 import istc.bigdawg.migration.MigratorTask;
 import istc.bigdawg.monitoring.MonitoringTask;
+import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.properties.BigDawgConfigProperties;
+import istc.bigdawg.scidb.SciDBHandler;
 
 /**
  * Main class.
@@ -49,12 +52,32 @@ public class Main {
 		return GrizzlyHttpServerFactory.createHttpServer(URI.create(BASE_URI), rc);
 	}
 
+	public static void checkDatabaseConnections() {
+		// Todo: configure these checks based on catalog contents
+		int postgreSQL1Engine = 0;
+		try {
+			new PostgreSQLHandler(postgreSQL1Engine);
+		} catch (Exception e) {
+			e.printStackTrace();
+			String msg = "QueryClient could not register PostgreSQL handler!";
+			System.err.println(msg);
+			System.exit(1);
+		}
+		new AccumuloHandler();
+		try {
+			new SciDBHandler();
+		} catch (SQLException e) {
+			e.printStackTrace();
+			//log.error(e.getMessage() + " " + StackTrace.getFullStackTrace(e));
+		}
+	}
+
 	/**
 	 * Main method. Starts the Catalog, Monitor, Migrator, and HTTP server.
 	 *
      * Requires Catalog database
      *
-	 * @param args[0] ip address on which the grizzly server should
+	 * @param args ip address on which the grizzly server should
      * wait for requests. If empty, then use the configured base uri.
      *
 	 * @throws IOException
@@ -67,7 +90,11 @@ public class Main {
         logger.info("Starting application ...");
 
         // Catalog
+		logger.info("Connecting to catalog");
 		CatalogInstance.INSTANCE.getCatalog();
+
+		logger.info("Checking registered database connections");
+		checkDatabaseConnections();
 
         // Monitor
         MonitoringTask relationalTask = new MonitoringTask();
@@ -95,7 +122,6 @@ public class Main {
 
         // HTTP server
         final HttpServer server = startServer(ipAddress);
-        logger.info("Server started");
         System.out.println(String.format(
                 "Jersey app started with WADL available at %sapplication.wadl\n" +
                         "Hit enter to stop it...",

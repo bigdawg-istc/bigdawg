@@ -61,37 +61,36 @@ import istc.bigdawg.utils.StackTrace;
 @Path("/")
 public class QueryClient {
 
-	private static Logger log = Logger
-			.getLogger(QueryClient.class.getName());
+	private static Logger log = Logger.getLogger(QueryClient.class.getName());
 
-	private static List<DBHandler> registeredDbHandlers;
-
-	static {
-		registeredDbHandlers = new ArrayList<DBHandler>();
-		int postgreSQL1Engine=0;
-		try {
-			registeredDbHandlers.add(new PostgreSQLHandler(postgreSQL1Engine));
-		} catch (Exception e) {
-			e.printStackTrace();
-			String msg = "Could not register PostgreSQL handler!";
-			System.err.println(msg);
-			log.error(msg);
-			System.exit(1);
-		}
-		registeredDbHandlers.add(new AccumuloHandler());
-		try {
-			registeredDbHandlers.add(new SciDBHandler());
-		} catch (SQLException e) {
-			e.printStackTrace();
-			log.error(e.getMessage() + " " + StackTrace.getFullStackTrace(e));
-		}
-	}
+// Todo: This block was moved to Main(). Delete later.
+//	// Create a list of registered database handlers
+//	private static ArrayList<DBHandler> registeredDbHandlers = new ArrayList<DBHandler>();
+//	static {
+//		int postgreSQL1Engine=0;
+//		try {
+//			registeredDbHandlers.add(new PostgreSQLHandler(postgreSQL1Engine));
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//			String msg = "QueryClient could not register PostgreSQL handler!";
+//			System.err.println(msg);
+//			log.error(msg);
+//			System.exit(1);
+//		}
+//		registeredDbHandlers.add(new AccumuloHandler());
+//		try {
+//			registeredDbHandlers.add(new SciDBHandler());
+//		} catch (SQLException e) {
+//			e.printStackTrace();
+//			log.error(e.getMessage() + " " + StackTrace.getFullStackTrace(e));
+//		}
+//	}
 
 	/**
 	 * Answer a query from a client.
 	 * 
-	 * @param istream
-	 * @return
+	 * @param istream Query string from the client
+	 * @return Response to the query
 	 * @throws AccumuloSecurityException
 	 * @throws AccumuloException
 	 * @throws TableNotFoundException
@@ -102,10 +101,10 @@ public class QueryClient {
 	@POST
 //	@Consumes(MediaType.APPLICATION_JSON)
 //	@Produces(MediaType.APPLICATION_JSON)
-	public Response query(String istream) {
-		log.info("istream: " + istream.replaceAll("[\"']", "*"));
+	public Response query(String queryString) {
+		log.info("QueryClient received query. Passing to Planner. Query string: " + queryString.replaceAll("[\"']", "*"));
 		try {
-			return Planner.processQuery(istream, false);
+			return Planner.processQuery(queryString, false);
 		} catch (Exception e) {
 			e.printStackTrace();
 			return Response.status(412).entity(e.getMessage()).build();

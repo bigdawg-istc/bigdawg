@@ -115,8 +115,8 @@ public class Migrator {
 	public static MigrationResult migrate(ConnectionInfo connectionFrom,
 			String objectFrom, ConnectionInfo connectionTo, String objectTo,
 			MigrationParams migrationParams) throws MigrationException {
-		logger.debug(String.format("Migrator - main facade. From: %s; To: %s;",
-				objectFrom, objectTo));
+		logger.debug(String.format("Migrator - main facade. From object: %s; To object: %s; From connection: %s; To connection: %s",
+				objectFrom, objectTo, connectionFrom.toSimpleString(), connectionTo.toSimpleString()));
 		for (FromDatabaseToDatabase migrator : registeredMigrators) {
 			MigrationResult result = migrator
 					.migrate(new MigrationInfo(connectionFrom, objectFrom,

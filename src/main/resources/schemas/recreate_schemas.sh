@@ -31,7 +31,7 @@ echo postgres1_bin $(pwd)
 #./psql -p ${port_2} -c "drop database if exists ${database}" -d template1
 #./psql -p ${port_2} -c "create database ${database}" -d template1
 
-#./psql -p ${port_2} -f ${schemas_resource}/bigdawg_schemas_setup.sql -d ${database}
+#./psql -p ${port_2} -f ${schemas_resource}/mimic2_ddl.sql -d ${database}
 #./psql -p ${port_2} -f ${schemas_resource}/plain.sql -d ${database}
 #./psql -p ${port_1} -f ${schemas_resource}/insert_into_ailment.sql -d ${database}
 

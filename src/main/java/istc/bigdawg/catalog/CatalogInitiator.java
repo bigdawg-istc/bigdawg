@@ -62,7 +62,7 @@ public class CatalogInitiator {
 		CatalogUtilities.checkConnection(cc);
 		
 		// reading all the SQL commands
-		BufferedReader bufferedReader = new BufferedReader(new FileReader("src/main/resources/catalog/bigdawg_ddl.sql"));
+		BufferedReader bufferedReader = new BufferedReader(new FileReader("src/main/resources/catalog/catalog_ddl.sql"));
 		StringBuffer stringBuffer 	  = new StringBuffer();
 		String line 				  = bufferedReader.readLine();
 		while(line != null) {
