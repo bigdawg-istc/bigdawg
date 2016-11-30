@@ -43,6 +43,21 @@ public class FromPostgresToSciDBWaveformDataTest {
 	private String toArray = "waveform4";
 	private long numberOfRowsPostgres = 0L;
 
+	/**
+	 * Create table sql statement for PostgreSQL with integer instead of bigint
+	 * to check the data type conversion.
+	 */
+	private static final String CREATE_TABLE_POSTGRESQL = "CREATE TABLE %s "
+			+ " (id int not null," + "time bigint not null,"
+			+ "value double precision not null)";
+
+	/**
+	 * Name for the table from mimic2: we migrate data from PostgreSQL to SciDB
+	 * and want to change the data type on the fly from int32 (integer) to int64
+	 * (bigint).
+	 */
+	private static final String CHANGE_TYPE_WAVEFORM_MIMIC_TABLE_DATA = "waveform_int32.csv";
+
 	@Before
 	/**
 	 * Prepare the test data in a table in PostgreSQL.
@@ -83,6 +98,32 @@ public class FromPostgresToSciDBWaveformDataTest {
 	public void testCsvMultiDimensionalArrays()
 			throws MigrationException, SQLException {
 		log.info("csv test multi-dimensional");
+		// prepare the target array
+		SciDBHandler.dropArrayIfExists(conTo, toArray);
+		SciDBHandler handler = new SciDBHandler(conTo);
+		handler.executeStatement("create array " + toArray
+				+ " <value:double> [id=0:*,1000,0,time=0:*,1000,0]");
+		handler.commit();
+		handler.close();
+		/*
+		 * test of the main method
+		 */
+		FromPostgresToSciDB migrator = new FromPostgresToSciDB(
+				new MigrationInfo(conFrom, fromTable, conTo, toArray));
+		migrator.migrateSingleThreadCSV();
+		checkNumberOfElementsInSciDB(conTo, toArray);
+		// clean: remove the target array
+		SciDBHandler.dropArrayIfExists(conTo, toArray);
+	}
+
+	@Test
+	public void testCsvMultiDimensionalArraysChangeType()
+			throws MigrationException, SQLException, IOException {
+		log.info("csv test multi-dimensional");
+		this.numberOfRowsPostgres = TestMigrationUtils
+				.loadDataToPostgresWaveform(conFrom, fromTable,
+						CREATE_TABLE_POSTGRESQL,
+						CHANGE_TYPE_WAVEFORM_MIMIC_TABLE_DATA);
 		// prepare the target array
 		SciDBHandler.dropArrayIfExists(conTo, toArray);
 		SciDBHandler handler = new SciDBHandler(conTo);

@@ -45,8 +45,13 @@ public class TestMigrationUtils {
 	/** Name for the table in TPCH. */
 	private static final String REGION_TPCH_TABLE = "region";
 
-	/** Name for the table from mimi2 - waveform. */
-	private static final String WAVEFORM_MIMIC_TABLE = "waveform";
+	/** Name for the table from mimic2 - waveform. */
+	private static final String WAVEFORM_MIMIC_TABLE_DATA = "waveform.csv";
+
+	/** Create table sql statement for PostgreSQL. */
+	private static final String CREATE_TABLE_POSTGRESQL = "CREATE TABLE %s "
+			+ " (id bigint not null," + "time bigint not null,"
+			+ "value double precision not null)";
 
 	/**
 	 * SQL statement for creation of a table with a given name and structure as
@@ -178,24 +183,44 @@ public class TestMigrationUtils {
 	 *            connection to PostgreSQL
 	 * @param fromTable
 	 *            the table to load the data to
+	 * 
 	 * @return number of loaded rows
 	 * @throws SQLException
 	 * @throws IOException
 	 */
 	public static long loadDataToPostgresWaveform(ConnectionInfo conFrom,
 			String fromTable) throws SQLException, IOException {
+		return loadDataToPostgresWaveform(conFrom, fromTable,
+				CREATE_TABLE_POSTGRESQL, WAVEFORM_MIMIC_TABLE_DATA);
+	}
+
+	/**
+	 * Load waveform data to PostgreSQL.
+	 * 
+	 * @param conFrom
+	 *            connection to PostgreSQL
+	 * @param fromTable
+	 *            the table to load the data to
+	 * @param CREATE_TABLE_SQL
+	 *            SQL statement to create a table with %s to fill it with the name
+	 *            of the table.
+	 * @return number of loaded rows
+	 * @throws SQLException
+	 * @throws IOException
+	 */
+	public static long loadDataToPostgresWaveform(ConnectionInfo conFrom,
+			String fromTable, String CREATE_TABLE_SQL, String dataFileName)
+					throws SQLException, IOException {
 		log.info("Preparing the PostgreSQL source table.");
 		PostgreSQLHandler handler = new PostgreSQLHandler(conFrom);
 		handler.dropTableIfExists(fromTable);
-		handler.createTable("CREATE TABLE " + fromTable
-				+ " (id bigint not null," + "time bigint not null,"
-				+ "value double precision not null)");
+		handler.createTable(String.format(CREATE_TABLE_SQL, fromTable));
 		Connection con = PostgreSQLHandler.getConnection(conFrom);
 		con.setAutoCommit(false);
 		CopyManager cpTo = new CopyManager((BaseConnection) con);
-		InputStream input = FromPostgresToSciDBRegionTPCHDataTest.class
+		InputStream input = TestMigrationUtils.class
 				.getClassLoader()
-				.getResourceAsStream(WAVEFORM_MIMIC_TABLE + ".csv");
+				.getResourceAsStream(dataFileName);
 		// CHECK IF THE INPUT STREAM CONTAINS THE REQUIRED DATA
 		// int size = 384;
 		// byte[] buffer = new byte[size];
@@ -247,7 +272,7 @@ public class TestMigrationUtils {
 		String loadCommand = "load(" + flatArray + ", '"
 				+ target.getAbsolutePath() + "')";
 		log.debug("Load to SciDB command: " + loadCommand);
-		
+
 		handler = new SciDBHandler(conFrom);
 		handler.executeStatementAFL(loadCommand);
 		handler.commit();
@@ -259,7 +284,7 @@ public class TestMigrationUtils {
 
 		// prepare the target array
 		SciDBHandler.dropArrayIfExists(conFrom, multiDimArray);
-		
+
 		handler = new SciDBHandler(conFrom);
 		handler.executeStatement("create array " + multiDimArray + " "
 				+ "<r_name:string,r_comment:string> "
