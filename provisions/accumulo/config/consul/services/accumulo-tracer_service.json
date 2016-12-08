@@ -1,0 +1,17 @@
+{
+  "services": [
+    {
+      "id": "accumulo-tracer",
+      "name": "accumulo-tracer",
+      "checks": [
+        {
+          "id": "tracer process jps check",
+          "script": "/etc/consul/checkscripts/accumulo-tracer",
+          "interval": "10s",
+          "timeout": "1s"
+        }
+      ]
+    }
+  ]
+}
+

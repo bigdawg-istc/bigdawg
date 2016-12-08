@@ -42,18 +42,18 @@ public class Main {
 			BASE_URI = BigDawgConfigProperties.INSTANCE.getBaseURI();
 		}
 		logger.info("base uri: " + BASE_URI);
-        System.out.println("HTTP Server: " + BASE_URI);
 
         // create a resource config that scans for JAX-RS resources and
 		// providers in istc.bigdawg package
 		final ResourceConfig rc = new ResourceConfig().packages("istc.bigdawg");
 
 		// create and start a new instance of grizzly http server
+		System.out.println("Starting HTTP server on: " + BASE_URI);
 		return GrizzlyHttpServerFactory.createHttpServer(URI.create(BASE_URI), rc);
 	}
 
 	public static void checkDatabaseConnections() {
-		// Todo: configure these checks based on catalog contents
+		// Todo: configure these checks based on catalog.engines
 		int postgreSQL1Engine = 0;
 		try {
 			new PostgreSQLHandler(postgreSQL1Engine);

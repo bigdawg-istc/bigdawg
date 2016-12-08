@@ -1,0 +1,17 @@
+{
+  "services": [
+    {
+      "id": "accumulo-proxy",
+      "name": "accumulo-proxy",
+      "checks": [
+        {
+          "id": "proxy process jps check",
+          "script": "/etc/consul/checkscripts/accumulo-proxy",
+          "interval": "10s",
+          "timeout": "1s"
+        }
+      ]
+    }
+  ]
+}
+

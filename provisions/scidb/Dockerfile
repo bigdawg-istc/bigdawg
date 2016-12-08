@@ -1,30 +1,94 @@
-FROM ubuntu:14.04
+# SciDB 14.12
+#
+# VERSION 1.0
+#
+#
+#
+#
+#
+#
+#PORT MAPPING
+#SERVICE		DEFAULT
+#ssh 			22
+#shim			8083s
+#Postgresql 		5432
+#SciDB			1239		
 
-ADD 00_update_and_add_sources.sh /docker-entrypoint-initdb.d/
 
-ADD 01_install_scidb.sh /docker-entrypoint-initdb.d/
+#FROM ubuntu:12.04
 
-ADD 02_fix_postgres_networking.sh /docker-entrypoint-initdb.d/
+FROM bigdawg/ubuntu1204java8
 
-ADD 03_setup_scidb.sh /docker-entrypoint-initdb.d/
 
-RUN cd /docker-entrypoint-initdb.d/ && \
-    sh 00_update_and_add_sources.sh
+# Scidb-related:
+RUN apt-get install -y openssh-server && \
+    apt-get install -y sudo && \
+    apt-get install -y wget && \
+    apt-get install -y gdebi && \
+    apt-get install -y postgresql-8.4 && \
+    apt-get install -y sshpass && \
+    apt-get install -y git-core && \
+    apt-get install -y apt-transport-https && \
+    apt-get install -y net-tools && \
+    apt-get clean
+#apt-get install -y postgresql-8.4 && \
+#apt-get install -y nano && \
 
-RUN cd /docker-entrypoint-initdb.d/ && \
-    sh 01_install_scidb.sh && \
-    sh 02_fix_postgres_networking.sh
+# Set environment
+RUN locale-gen en_US.UTF-8
+ENV LANG en_US.UTF-8
+ENV LANGUAGE en_US:en
+ENV LC_ALL en_US.UTF-8
+#RUN env
 
-RUN mv /docker-entrypoint-initdb.d/03_setup_scidb.sh /home/scidb/03_setup_scidb.sh && \
-    chown scidb /home/scidb/03_setup_scidb.sh && \
-    chmod 755 /home/scidb/03_setup_scidb.sh
 
-RUN service ssh start && \
-    /etc/init.d/postgresql restart && \
-    cd /home/scidb && \
-    su scidb 03_setup_scidb.sh
+# Configure users
+RUN useradd --home /home/scidb --create-home --uid 1005 --group sudo --shell /bin/bash scidb && \
+	echo 'root:bigdawg' | chpasswd && \
+	echo 'postgres:bigdawg' | chpasswd && \
+	echo 'scidb:bigdawg' | chpasswd && \
+	echo 'bigdawg'  >> /home/scidb/pass.txt  && \
+	mkdir /var/run/sshd && \
+	mkdir /home/scidb/data && \
+	mkdir /home/scidb/catalog
 
-COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+# Configure SSH and Postgres
+RUN echo 'StrictHostKeyChecking no' >> /etc/ssh/ssh_config && \
+	echo 'host  all all 255.255.0.0/16   md5' >> /etc/postgresql/8.4/main/pg_hba.conf
+
+
+# Add files
+ADD containerSetup.sh /root/containerSetup.sh
+ADD conf /root/conf
+ADD iquery.conf /home/scidb/.config/scidb/iquery.conf
+ADD installPackages.R /home/scidb/installPackages.R
+ADD startScidb.sh /home/scidb/startScidb.sh
+ADD stopScidb.sh /home/scidb/stopScidb.sh
+ADD scidb_docker.ini /home/scidb/scidb_docker.ini
+
+
+RUN chown -R root:root /root/*   && \
+	chown -R scidb:scidb /home/scidb/* && \
+	chmod +x /root/*.sh /home/scidb/*.sh
+
+
+# Restarting services
+#RUN stop ssh
+#RUN start ssh
+#RUN /etc/init.d/postgresql restart
+
 
 EXPOSE 22
-CMD ["/usr/bin/supervisord"]
+EXPOSE 8083
+
+# Added by kyle:
+ENV USER scidb
+ADD initScidb.sh /
+COPY resources /src/main/resources
+RUN /usr/sbin/sshd && \
+	/root/containerSetup.sh
+ADD istc.bigdawg-1.0-SNAPSHOT-jar-with-dependencies.jar /
+
+CMD /initScidb.sh
+
+#CMD    ["/usr/sbin/sshd", "-D"]

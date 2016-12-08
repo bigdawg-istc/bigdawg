@@ -1,0 +1,17 @@
+{
+  "services": [
+    {
+      "id": "accumulo-gc",
+      "name": "accumulo-gc",
+      "checks": [
+        {
+          "id": "gc process jps check",
+          "script": "/etc/consul/checkscripts/accumulo-gc",
+          "interval": "10s",
+          "timeout": "1s"
+        }
+      ]
+    }
+  ]
+}
+
