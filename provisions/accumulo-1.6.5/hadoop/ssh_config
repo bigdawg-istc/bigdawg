@@ -1,6 +1,0 @@
-Host *
-  UserKnownHostsFile /dev/null
-  StrictHostKeyChecking no
-  UsePrivilegeSeparation no
-  LogLevel quiet
-  Port 2122

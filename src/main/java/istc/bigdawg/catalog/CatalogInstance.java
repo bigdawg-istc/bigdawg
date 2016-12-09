@@ -4,8 +4,9 @@
 package istc.bigdawg.catalog;
 
 import org.apache.log4j.Logger;
-
+//import java.util.concurrent.TimeUnit;
 import istc.bigdawg.postgresql.PostgreSQLInstance;
+import istc.bigdawg.postgresql.PostgresCatalogInstance;
 
 /**
  * @author Adam Dziedzic
@@ -16,9 +17,7 @@ import istc.bigdawg.postgresql.PostgreSQLInstance;
 public enum CatalogInstance {
 
 	INSTANCE;
-
-	private Logger logger = org.apache.log4j.Logger.getLogger(CatalogInstance.class
-			.getName());
+	private Logger logger = org.apache.log4j.Logger.getLogger(CatalogInstance.class.getName());
 	private Catalog catalog;
 
 	CatalogInstance() {
@@ -35,17 +34,14 @@ public enum CatalogInstance {
 			System.err.println(msg);
 			logger.error(msg);
 			e.printStackTrace();
-			System.out.println("==>> " + PostgreSQLInstance.URL);
-			System.out.println("==>> " + PostgreSQLInstance.USER);
-			System.out.println("==>> " + PostgreSQLInstance.PASSWORD);
 			System.exit(1);
 		}
 	}
-	
+
 	public Catalog getCatalog() {
 		return catalog;
 	}
-	
+
 	public void closeCatalog() {
 		try {
 			CatalogInitiator.close(catalog);

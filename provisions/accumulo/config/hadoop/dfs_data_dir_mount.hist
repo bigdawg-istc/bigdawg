@@ -1,0 +1,7 @@
+# This file keeps track of the last known mount-point for each DFS data dir.
+# It is safe to delete, since it will get regenerated the next time that the DataNode starts.
+# However, it is not advised to delete this file since Ambari may 
+# re-create a DFS data dir that used to be mounted on a drive but is now mounted on the root.
+# Comments begin with a hash (#) symbol
+# data_dir,mount_point
+/hadoop/hdfs/data,/
