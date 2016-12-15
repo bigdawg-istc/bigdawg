@@ -20,13 +20,16 @@ void getCurrentPath(char * cCurrentPath, size_t sizeCurrentPath) {
 std::vector<std::string> splitString(const std::string &text, char sep) {
 	std::vector < std::string > tokens;
 	std::size_t start = 0, end = 0;
+	std::string temp; /* The last string has to be added separately. */
+
+	/* std::string::npos - end of string indicator */
 	while ((end = text.find(sep, start)) != std::string::npos) {
 		std::string temp = text.substr(start, end - start);
 		if (temp != "")
 			tokens.push_back(temp);
 		start = end + 1;
 	}
-	std::string temp = text.substr(start);
+	temp = text.substr(start);
 	if (temp != "")
 		tokens.push_back(temp);
 	return tokens;
