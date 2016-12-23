@@ -1,0 +1,4 @@
+#!/bin/bash
+
+/sbin/pidof sshd
+exit $?

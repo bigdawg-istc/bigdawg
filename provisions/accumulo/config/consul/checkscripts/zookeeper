@@ -1,4 +1,0 @@
-#!/bin/bash
-
-echo ruok | nc localhost 2181 2>/dev/null
-exit $?

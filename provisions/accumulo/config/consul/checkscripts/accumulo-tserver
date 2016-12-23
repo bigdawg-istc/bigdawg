@@ -1,4 +1,0 @@
-#!/bin/bash
-
-su - accumulo -c '/usr/bin/jps -m | grep "Main tserver"'
-exit $?
