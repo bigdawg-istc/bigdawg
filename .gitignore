@@ -36,3 +36,6 @@ src/main/cmigrator/scidb2postgres
 .DS_Store
 *.DS_Store
 
+# Docker
+provisions/**/istc.bigdawg-1.0-SNAPSHOT-jar-with-dependencies.jar
+provisions/**/mimic2_flatfiles.tar.gz

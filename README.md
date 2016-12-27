@@ -14,7 +14,7 @@ The Big Data Analytics Working Group (BigDAWG) project is exploring challenges a
 Dependency | Version | 
 --- | --- | ---
 Java | 8 | 
-Maven | 3 |
+Maven | 3.3 |
 PostgreSQL | 9.4.5
 SciDB | 14.12
 Accumulo | 1.7.1
