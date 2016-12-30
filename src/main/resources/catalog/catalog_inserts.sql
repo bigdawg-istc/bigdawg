@@ -34,7 +34,7 @@ insert into catalog.engines values(2,'scidb_local','localhost',1239,'SciDB 14.12
 -- catalog.databases: dbid, engine_id, name, userid, password
 insert into catalog.databases values(0,0,'bigdawg_catalog','pguser','test');
 insert into catalog.databases values(1,0,'bigdawg_schemas','pguser','test');
-insert into catalog.databases values(2,0,'mimic2','pguser','test');
+insert into catalog.databases values(2,1,'mimic2','pguser','test');
 insert into catalog.databases values(3,1,'mimic2_copy','pguser','test');
 insert into catalog.databases values(4,0,'tpch','pguser','test');
 insert into catalog.databases values(5,1,'tpch','pguser','test');

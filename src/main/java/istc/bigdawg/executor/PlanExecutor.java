@@ -63,14 +63,14 @@ class PlanExecutor {
     public PlanExecutor(QueryExecutionPlan plan) {
         this.plan = plan;
         Logger.info(this, "PlanExecutor received plan %s", plan.getSerializedName());
+        if (plan.vertexSet().isEmpty()) System.out.printf("\n---> vertex set is empty\n");
 
+        // Print the plan details
         final StringBuilder sb = new StringBuilder();
         for(ExecutionNode n : plan) {
             sb.append(String.format("%s -> (%s)\n", n, plan.getDependents(n)));
         }
         Logger.debug(this, "Nodes for plan %s: \n%s", plan.getSerializedName(), sb);
-        if (plan.vertexSet().isEmpty()) System.out.printf("\n---> vertex set is empty\n");
-        
         Logger.debug(this, "Ordered queries: \n %s",
                 StreamSupport.stream(plan.spliterator(), false)
                     .map(ExecutionNode::getQueryString)
@@ -90,7 +90,6 @@ class PlanExecutor {
      */
     Optional<QueryResult> executePlan(Optional<Pair<Signature, Integer>> reportValues) throws ExecutorEngine.LocalQueryExecutionException, MigrationException {
         final long start = System.currentTimeMillis();
-
         Logger.info(this, "Executing query plan %s...", plan.getSerializedName());
 
         CompletableFuture<Optional<QueryResult>> finalResult = CompletableFuture.completedFuture(Optional.empty());

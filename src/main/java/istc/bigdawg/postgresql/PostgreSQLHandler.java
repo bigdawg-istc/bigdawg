@@ -88,7 +88,7 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 		this(conInfo);
 		if (connection == null) {
 			throw new IllegalArgumentException(
-					"Physicall connection to PostgreSQL has to be not null.");
+					"Physical connection to PostgreSQL has to be not null.");
 		}
 		this.con = connection;
 	}

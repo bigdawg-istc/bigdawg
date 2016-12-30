@@ -146,14 +146,12 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 
 	public SciDBHandler(int dbid) {
 		try {
-			this.conInfo = (SciDBConnectionInfo) CatalogViewer
-					.getConnectionInfo(dbid);
+			this.conInfo = (SciDBConnectionInfo) CatalogViewer.getConnectionInfo(dbid);
 			this.connection = getConnection(conInfo);
 		} catch (Exception e) {
-			log.error(
-					"getConnection throws Exception from default SciDBHandler(); "
-							+ "this is not supposed to happen. Check properties file."
-							+ StackTrace.getFullStackTrace(e));
+			log.error("Attempted to get connection info for dbid " + String.valueOf(dbid) +
+					". Check properties file.");
+			log.error(StackTrace.getFullStackTrace(e));
 		}
 	}
 

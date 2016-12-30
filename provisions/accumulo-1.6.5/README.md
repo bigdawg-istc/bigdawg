@@ -1,2 +1,0 @@
-# accumulo
-Accumulo
