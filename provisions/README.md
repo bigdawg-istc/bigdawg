@@ -1,14 +1,15 @@
 # README #
+---
 
 Docker images for BigDAWG engines.
 
-## How To Start
+# How To Start
+---
 
 * Make sure that you have packaged the bigdawg maven project and have `istc.bigdawg-1.0-SNAPSHOT-jar-with-dependencies.jar` under `target`
 	* Example: `mvn clean package -P mit -DskipTests`
 
 * If you're using macOS..
-
 	* Install [Docker Toolbox](https://www.docker.com/products/docker-toolbox) from the docker official website
 	* Run the `Docker Quickstart Terminal` application to open a special terminal
 	* Change directory to `provisions`
@@ -23,7 +24,8 @@ Docker images for BigDAWG engines.
 	* `run_all_containers.sh`: Run this second. Runs the built images after executing the above.
 	* Run `cleanup_containers.sh` to stop and remove any containers before running them again
 	
-## Contents
+# Contents
+---
 
 **Ports**:
 
@@ -41,13 +43,17 @@ Docker images for BigDAWG engines.
 | accumulo-data-proxy      | n/a |
 
 
-**Baseline images**: This directory contains the following baseline images of clean database engines with no data:
+**Baseline images**: 
+
+This directory contains the following baseline images of clean database engines with no data:
 
 * `postgres/`: Baseline postgres image.
 * `scidb/`: Baseline scidb image.
 * `docker-builds/accumulo/`: A fork of [https://github.com/sroegner/docker-builds](https://github.com/sroegner/docker-builds). Contains baseline accumulo image.
 
-**Data images**: You may use the above images and populate them with your own test data. However, the following images add a layer of data to the baseline images:
+**Data images**: 
+
+You may use the above images and populate them with your own test data. However, the following images add a layer of data to the baseline images:
 
 * `postgres-catalog/`: Adds a BigDAWG catalog database data to the `postgres` image
 * `postgres-data1/`: Adds Mimic II data to the `postgres` image
@@ -55,7 +61,8 @@ Docker images for BigDAWG engines.
 * `scidb-data/`: Adds Mimic II waveform data to the `scidb` image
 * `accumulo-data/`: Adds Mimic II text data to the `docker-builds/accumulo` image
 
-## Docker installation
+# Docker installation
+---
 
 You must have docker installed to use these images.
 
