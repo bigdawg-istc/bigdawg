@@ -25,11 +25,12 @@ echo "===== accumulo-data-*: Stopping and removing containers ====="
 echo "============================================================="
 docker rm -f accumulo-data-zookeeper
 docker rm -f accumulo-data-tserver0
+docker rm -f accumulo-data-tserver1
 docker rm -f accumulo-data-master
 docker rm -f accumulo-data-proxy
+docker rm -f accumulo-data-namenode
 echo
 echo "=========================================================================="
 echo "===== Done. Final container status (both running and stopped state): ====="
 echo "=========================================================================="
 docker ps -a
-
