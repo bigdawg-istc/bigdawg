@@ -4,9 +4,25 @@ Docker images for BigDAWG engines.
 
 ## How To Start
 
-* `build_all_images.sh`: Execute this first. Builds all images.
-* `run_all_containers.sh`: Run this second. Runs the built images after executing the above.
+* Make sure that you have packaged the bigdawg maven project and have `istc.bigdawg-1.0-SNAPSHOT-jar-with-dependencies.jar` under `target`
+	* Example: `mvn clean package -P mit -DskipTests`
 
+* If you're using macOS..
+
+	* Install [Docker Toolbox](https://www.docker.com/products/docker-toolbox) from the docker official website
+	* Run the `Docker Quickstart Terminal` application to open a special terminal
+	* Change directory to `provisions`
+	* Run `build_all_images.sh` to build all images
+	* Use command `docker ps -a` to check if you have previously ran some of the containers
+	* Use command `docker rm [CONTAINER IDs]` to kill off the old containers
+	* Run `run_all_containers.sh` to boot the built images -- the process may take a while, especially when initializing the Accumulo containers
+	* Run `cleanup_containers.sh` to stop and remove any containers before running them again
+
+* If you're using Linux..
+	* `build_all_images.sh`: Execute this first. Builds all images.
+	* `run_all_containers.sh`: Run this second. Runs the built images after executing the above.
+	* Run `cleanup_containers.sh` to stop and remove any containers before running them again
+	
 ## Contents
 
 **Baseline images**: This directory contains the following baseline images of clean database engines with no data:
