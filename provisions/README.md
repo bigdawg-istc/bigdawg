@@ -25,6 +25,22 @@ Docker images for BigDAWG engines.
 	
 ## Contents
 
+**Ports**:
+
+| hostname                 | ports |
+| ------------------------ | ------------------------------------------------------|
+| bigdawg-postgres-catalog | 5400 for postgres, 8080 for accepting bigdawg queries |
+| bigdawg-postgres-data1   | 5401 for postgres |
+| bigdawg-postgres-data2   | 5402 for postgres |
+| bigdawg-scidb            | 1239 for scidb, 49901 for ssh |
+| accumulo-data-master     | 9999 for Master thrift server, 50095 for Monitor service |
+| accumulo-data-tserver0   | 9997 for TabletServer thrift server |
+| accumulo-data-tserver1   | n/a |
+| accumulo-data-zookeeper  | 2181 for zookeeper client connections |
+| accumulo-data-namenode   | n/a |
+| accumulo-data-proxy      | n/a |
+
+
 **Baseline images**: This directory contains the following baseline images of clean database engines with no data:
 
 * `postgres/`: Baseline postgres image.
