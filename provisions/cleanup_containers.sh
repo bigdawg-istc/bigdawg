@@ -1,21 +1,35 @@
+#!/bin/bash
 echo
-echo "===== Stopping and removing container: postgres-catalog ====="
+echo "====================================================================="
+echo "===== bigdawg-postgres-catalog: Stopping and removing container ====="
+echo "====================================================================="
 docker rm -f bigdawg-postgres-catalog
 echo
-echo "===== Stopping and removing container: postgres-data1 ====="
+echo "==================================================================="
+echo "===== bigdawg-postgres-data1: Stopping and removing container ====="
+echo "==================================================================="
 docker rm -f bigdawg-postgres-data1
 echo
-echo "===== Stopping and removing container: postgres-data2 ====="
+echo "==================================================================="
+echo "===== bigdawg-postgres-data2: Stopping and removing container ====="
+echo "==================================================================="
 docker rm -f bigdawg-postgres-data2
 echo
-echo "===== Stopping and removing conainer: scidb-data ====="
+echo "========================================================="
+echo "===== bigdawg-scidb: Stopping and removing conainer ====="
+echo "========================================================="
 docker rm -f bigdawg-scidb bigdawg/scidb
 echo
-echo "===== Stopping and removing containers for accumulo-data ====="
+echo "============================================================="
+echo "===== accumulo-data-*: Stopping and removing containers ====="
+echo "============================================================="
 docker rm -f accumulo-data-zookeeper
 docker rm -f accumulo-data-tserver0
 docker rm -f accumulo-data-master
 docker rm -f accumulo-data-proxy
 echo
-echo "===== Done. Remaining containers (both running and stopped state): =====
+echo "=========================================================================="
+echo "===== Done. Final container status (both running and stopped state): ====="
+echo "=========================================================================="
 docker ps -a
+
