@@ -105,12 +105,13 @@ public class Migrator {
 	 *            identified by connectionTo; data should be loaded to this new
 	 *            object, the name of the target object in the create statement
 	 *            has to be the same as the migrate method parameter: objectTo
+	 *            
 	 * @return {@link MigrationResult} the result and information about the
 	 *         executed migration
 	 * 
 	 * @throws MigrationException
 	 *             information why the migration failed (e.g. no access to one
-	 *             of the database, schemas are not compatible
+	 *             of the databases, schemas are not compatible, etc.).
 	 */
 	public static MigrationResult migrate(ConnectionInfo connectionFrom,
 			String objectFrom, ConnectionInfo connectionTo, String objectTo,
