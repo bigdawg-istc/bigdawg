@@ -8,6 +8,14 @@
 
 void getCurrentPath(char * currentPath, size_t currentPathSize);
 
+/**
+ * Split the string based on the separator.
+ *
+ * @param text - the string to be split
+ * @param sep - a separato char (e.g. ';'-semicolon, ',' - colon, \tab, etc.)
+ *
+ * @return a sequence of divided strings
+ */
 std::vector<std::string> splitString(const std::string &text, char sep);
 
 void sortPrintVector(const char * message, std::vector<std::string> & vector);

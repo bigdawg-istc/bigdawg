@@ -14,6 +14,10 @@
 #include "common/utils.h"
 #include "fcntl.h"
 
+/** The separator between the types of migrators, e.g. scidb2postgresql includes
+ * two migrators: (1) scidb, (2) postgresql */
+const char SEPARATOR = '2';
+
 /**
  * example: ./data-migrator-exe -tpostgres2csv -i /home/${USER}/data/int_not_null_test.bin -o /home/${USER}/data/int_not_null_test.bin.v2.csv  -f int32_t
  *
@@ -30,9 +34,11 @@ void printUsage() {
 	fprintf(stderr, "%s\n",
 			"format: (<type> [null]), for example: -fint32_t,int32_t null,double,double null,string,string null");
 	fprintf(stderr, "%s\n",
-			"full examples:\n./postgres2scdb -istdin -ostdout -f'int32_t,int32_t null,double,double null,string,string null'");
+			"full examples: ./data-migrator-exe postgres2scdb -istdin -ostdout -f'int32_t,int32_t null,double,double null,string,string null'");
 	fprintf(stderr, "%s\n",
-			"./postgres2scidb -i /home/${USER}/data/fromPostgresIntDoubleString.bin -o /home/${USER}/data/toSciDBIntDoubleString.bin -f'int32_t,int32_t null,double,double null,string,string null'");
+			"./data-migrator-exe -t postgres2scidb -i /home/${USER}/data/fromPostgresIntDoubleString.bin -o /home/${USER}/data/toSciDBIntDoubleString.bin -f'int32_t,int32_t null,double,double null,string,string null'");
+	fprintf(stderr, "%s\n", "./data-migrator-exe -t scidb2postgres -i /home/${USER}/data/names_scidb.bin -o /home/${USER}/data/names_postgres.bin -f string");
+	fprintf(stderr, "%s\n", "./data-migrator-exe -t scidb2vertica -i /home/${USER}/data/names_scidb.bin -o /home/${USER}/data/names_vertica.bin -f string");
 }
 
 /**
@@ -120,9 +126,13 @@ int main(int argc, char *argv[]) {
 	}
 	fprintf(stderr, "migrationType=%s, in=%s, out=%s, types=%s\n",
 			migrationType, in, out, typesRaw);
-
+	if (migrationType == NULL || in == NULL || out == NULL
+			|| typesRaw == NULL) {
+		printUsage();
+		return 1;
+	}
 	/* set the migrators */
-	std::vector < std::string > migrators = splitString(migrationType, '2');
+	std::vector < std::string > migrators = splitString(migrationType, SEPARATOR);
 
 	if (migrators.size() != 2) {
 		fprintf(stderr, "%s\n",

@@ -18,6 +18,7 @@ RUN /etc/init.d/postgresql start && \
 # These can be overridden by the docker run command by using -e flag
 ENV PGPORT 5400
 EXPOSE 5400
+ENV BDHOST bigdawg-postgres-catalog
 
 COPY istc.bigdawg-1.0-SNAPSHOT-jar-with-dependencies.jar /image_contents/
 
