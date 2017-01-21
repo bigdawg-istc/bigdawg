@@ -65,7 +65,13 @@ docker run -d --net=${accumulo_net} \
                          -e='SVCLIST=datanode,accumulo-tserver' \
                          --name=accumulo-data-tserver0 ${tag} \
                          /usr/bin/supervisord -n
-run_container tserver1 'datanode,accumulo-tserver'
+#run_container tserver1 'datanode,accumulo-tserver'
+docker run -d --net=${accumulo_net} \
+                         --hostname=tserver1.docker.local --net-alias=tserver1.docker.local \
+                         --expose=9997 \
+                         -e='SVCLIST=datanode,accumulo-tserver' \
+                         --name=accumulo-data-tserver1 ${tag} \
+                         /usr/bin/supervisord -n
 
 echo "start accumulo master"
 docker run -d --net=${accumulo_net} \

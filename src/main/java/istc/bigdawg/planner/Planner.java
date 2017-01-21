@@ -38,6 +38,25 @@ public class Planner {
 
 	private static Logger logger = Logger.getLogger(Planner.class);
 
+	
+	private static Response processCatalogQuery(String input) throws Exception {
+		/*
+		 * catalog_command
+		 * |- Catalog table name followed, optionally, by column names
+		 * |- SQL commands -- SELECT, INSERT, UPDATE, DELETE
+		 * Usage: bdcatalog(catalog_command; ...)
+		 */
+		String trim = input;
+		if (input.startsWith("\"bdcatalog(")) {
+			trim = input.substring(1, input.length() - 1);
+		} else if (input.startsWith("bdcatalog(")) {
+			// do nothing
+		} else 
+			return null;
+		
+		return Response.status(200).entity(CatalogUtilities.catalogQueryResult(CatalogUtilities.parseCatalogQuery(trim))).build();
+	}
+	
 	public static Response processQuery(String userinput, boolean isTrainingMode) throws Exception {
 		
 		String input = userinput.replaceAll("[/\n/]", "").replaceAll("[ /\t/]+", " ");
@@ -45,21 +64,9 @@ public class Planner {
 		// UNROLLING
 		logger.debug("User query received. Parsing... " + input.replaceAll("[\"']", "*"));
 		
-		
-		/*
-		 * catalog_command
-		 * |- Catalog table name followed, optionally, by column names
-		 * |- SQL commands -- SELECT, INSERT, UPDATE, DELETE
-		 * Usage: bdcatalog(catalog_command; ...)
-		 */
-		String trim;
-		if (input.startsWith("\"bdcatalog(")) {
-			trim = input.substring(1, input.length() - 1);
-			return Response.status(200).entity(CatalogUtilities.catalogQueryResult(CatalogUtilities.parseCatalogQuery(trim))).build();
-		} else if (input.startsWith("bdcatalog(")) {
-			trim = input;
-			return Response.status(200).entity(CatalogUtilities.catalogQueryResult(CatalogUtilities.parseCatalogQuery(trim))).build();
-		}
+		// identify and process Catalog query
+		Response r = processCatalogQuery(input);
+		if (r != null) return r;
 
 		// Track the temporary objects and table info for later deletion
 		Set<Integer> objectsToDelete = new HashSet<>();
