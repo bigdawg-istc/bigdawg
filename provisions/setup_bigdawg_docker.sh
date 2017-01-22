@@ -38,7 +38,7 @@ docker rm -f bigdawg-postgres-data2
 docker run -d --net=bigdawg -h bigdawg-postgres-data2 -p 5402:5402 -e "PGPORT=5402" -e "BDHOST=bigdawg-postgres-data2" --name bigdawg-postgres-data2 bigdawg/postgres
 echo "==> scidb"
 docker pull bigdawg/scidb
-docker run -d --net=bigdawg -h bigdawg-scidb-data -p 49901:22 -p 8000:8000 --expose=5432 -p 1239:1239 --name bigdawg-scidb bigdawg/scidb
+docker run -d --net=bigdawg -h bigdawg-scidb-data -p 49901:22 -p 8000:8000 --expose=5432 -p 1239:1239 --name bigdawg-scidb-data bigdawg/scidb
 echo "==> accumulo"
 docker pull bigdawg/accumulo
 accumulo/start_accumulo_cluster.sh
@@ -71,9 +71,20 @@ docker cp cluster_setup/postgres-data2/bdsetup bigdawg-postgres-data2:/
 docker cp mimic2_flatfiles.tar.gz bigdawg-postgres-data2:/bdsetup/
 docker exec --user=root bigdawg-postgres-data2 /bdsetup/setup.sh
 
+# scidb
+docker cp cluster_setup/scidb-data/bdsetup bigdawg-scidb-data:/home/scidb/
+docker exec bigdawg-scidb-data /home/scidb/bdsetup/setup.sh
+
 # accumulo
 docker cp cluster_setup/accumulo-data/bdsetup bigdawg-accumulo-zookeeper:/
 docker exec bigdawg-accumulo-zookeeper /bdsetup/insertData.sh
+
+echo
+echo "======================================="
+echo "===== Starting BigDAWG Middleware ====="
+echo "======================================="
+docker exec bigdawg-postgres-catalog java -classpath "istc.bigdawg-1.0-SNAPSHOT-jar-with-dependencies.jar" istc.bigdawg.Main
+
 
 echo
 echo "================="

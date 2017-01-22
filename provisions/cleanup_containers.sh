@@ -18,17 +18,17 @@ echo
 echo "========================================================="
 echo "===== bigdawg-scidb: Stopping and removing conainer ====="
 echo "========================================================="
-docker rm -f bigdawg-scidb bigdawg/scidb
+docker rm -f bigdawg-scidb-data
 echo
 echo "============================================================="
 echo "===== accumulo-data-*: Stopping and removing containers ====="
 echo "============================================================="
-docker rm -f accumulo-data-zookeeper
-docker rm -f accumulo-data-tserver0
-docker rm -f accumulo-data-tserver1
-docker rm -f accumulo-data-master
-docker rm -f accumulo-data-proxy
-docker rm -f accumulo-data-namenode
+docker rm -f bigdawg-accumulo-zookeeper
+docker rm -f bigdawg-accumulo-tserver0
+docker rm -f bigdawg-accumulo-tserver1
+docker rm -f bigdawg-accumulo-master
+docker rm -f bigdawg-accumulo-proxy
+docker rm -f bigdawg-accumulo-namenode
 echo
 echo "=========================================================================="
 echo "===== Done. Final container status (both running and stopped state): ====="
