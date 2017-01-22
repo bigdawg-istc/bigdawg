@@ -1,6 +1,6 @@
 #! /usr/bin/octave --traditional
 
-cd /image_contents
+cd /bdsetup
 javaaddpath("./d4m_api/lib/graphulo-2.6.3-alldeps.jar")
 addpath('./d4m_api/matlab_src/');
 

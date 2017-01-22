@@ -1,5 +1,6 @@
 #! /usr/local/bin/octave --traditional
 
+cd /bdsetup
 addpath('./d4m_api/matlab_src/');
 
 

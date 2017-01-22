@@ -41,12 +41,13 @@ docker pull bigdawg/scidb
 docker run -d --net=bigdawg -h bigdawg-scidb-data -p 49901:22 -p 8000:8000 --expose=5432 -p 1239:1239 --name bigdawg-scidb bigdawg/scidb
 echo "==> accumulo"
 docker pull bigdawg/accumulo
-cluster_setup/accumulo-data/start_accumulo_cluster.sh
+accumulo/start_accumulo_cluster.sh
 
 echo
 echo "========================"
 echo "===== Loading data ====="
 echo "========================"
+
 # postgres-catalog
 docker cp cluster_setup/postgres-catalog/bdsetup bigdawg-postgres-catalog:/
 docker exec bigdawg-postgres-catalog /bdsetup/setup.sh
@@ -70,7 +71,9 @@ docker cp cluster_setup/postgres-data2/bdsetup bigdawg-postgres-data2:/
 docker cp mimic2_flatfiles.tar.gz bigdawg-postgres-data2:/bdsetup/
 docker exec --user=root bigdawg-postgres-data2 /bdsetup/setup.sh
 
-
+# accumulo
+docker cp cluster_setup/accumulo-data/bdsetup bigdawg-accumulo-zookeeper:/
+docker exec bigdawg-accumulo-zookeeper /bdsetup/insertData.sh
 
 echo
 echo "================="
