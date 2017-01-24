@@ -61,6 +61,7 @@ docker run -d --net=${network_name} \
               --hostname=proxy.docker.local \
               --net-alias=proxy.docker.local \
               --name=${container_name}-proxy \
+              -p 42424:42424 \
               -e "SVCLIST=accumulo-tracer,accumulo-gc,accumulo-proxy" \
               ${tag} /usr/bin/supervisord -n
 
