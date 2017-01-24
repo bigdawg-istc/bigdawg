@@ -1,4 +1,4 @@
-package istc.bigdawg.islands.Accumulo;
+package istc.bigdawg.islands.text;
 
 import istc.bigdawg.executor.QueryResult;
 import istc.bigdawg.query.ConnectionInfo;

@@ -21,6 +21,8 @@ import istc.bigdawg.islands.operators.CommonTableExpressionScan;
 import istc.bigdawg.islands.operators.Join;
 import istc.bigdawg.islands.operators.Merge;
 import istc.bigdawg.islands.operators.Operator;
+import istc.bigdawg.islands.text.operators.TextOperator;
+import istc.bigdawg.islands.text.operators.TextScan;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.query.ConnectionInfoParser;
 
@@ -373,8 +375,15 @@ public class ExecutionNodeFactory {
 
 		OperatorVisitor gen = TheObjectThatResolvesAllDifferencesAmongTheIslands.getQueryGenerator(island, dbid);
 
-		Operator joinOp = gen.generateStatementForPresentNonMigratingSegment(op, sb, isSelect);
-		final String sqlStatementForPresentNonJoinSegment = sb.toString();
+		Operator joinOp = null;
+		final String sqlStatementForPresentNonJoinSegment;
+		
+		if (gen != null) {
+			joinOp = gen.generateStatementForPresentNonMigratingSegment(op, sb, isSelect);
+			sqlStatementForPresentNonJoinSegment = sb.toString();
+		} else {
+			sqlStatementForPresentNonJoinSegment = op.getSubTreeToken();
+		}
 
 		System.out.printf("\njoinOp: %s; statement: %s\n", joinOp, sqlStatementForPresentNonJoinSegment.length() > 0 ? sqlStatementForPresentNonJoinSegment : "(no content)");
 		
@@ -474,9 +483,13 @@ public class ExecutionNodeFactory {
 //		String remainderInto = remainder.getSubTreeToken();
 		qep.setTerminalTableName(destinationName);
 
-		remainder.accept(gen);
-		if (isSelect) remainderSelectIntoString = gen.generateStatementString();
-		else remainderSelectIntoString = gen.generateSelectIntoStatementForExecutionTree(destinationName);
+		if (remainder instanceof TextOperator) {
+			remainderSelectIntoString = ((TextScan)remainder).getSubTreeToken();
+		} else {
+			remainder.accept(gen);
+			if (isSelect) remainderSelectIntoString = gen.generateStatementString();
+			else remainderSelectIntoString = gen.generateSelectIntoStatementForExecutionTree(destinationName);
+		}
 		
 		String logStr = String.format("\n\n<><><> Remainder class: %s; QEP: %s; children count: %s; query string: %s\n"
 				, remainder.getClass().getSimpleName()

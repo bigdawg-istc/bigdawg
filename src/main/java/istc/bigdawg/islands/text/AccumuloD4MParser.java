@@ -1,4 +1,4 @@
-package istc.bigdawg.islands.Accumulo;
+package istc.bigdawg.islands.text;
 
 import java.util.ArrayList;
 import java.util.List;

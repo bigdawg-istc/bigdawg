@@ -21,6 +21,7 @@ import org.apache.accumulo.core.data.Mutation;
 import org.apache.accumulo.core.data.Range;
 import org.apache.accumulo.core.data.Value;
 import org.apache.accumulo.core.security.Authorizations;
+import org.apache.hadoop.io.Text;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Before;
@@ -46,10 +47,13 @@ public class AccumuloConnectorTest {
 		
 		LoggerSetupForTests.setTestLogging();
 		
-		cc = ClientConfiguration.loadDefault().withInstance("accumulo").withZkHosts("192.168.99.100:2181");//.withZkHosts("zookeeper.docker.local:2181"); // .withZkTimeout(timeout)
-        this.username = "bigdawg";
-        this.auth = new PasswordToken("bigdawg");
+		cc = ClientConfiguration.loadDefault().withInstance("classdb55").withZkHosts("localhost:2333");//.withInstance("accumulo").withZkHosts("192.168.99.100:2181");//.withZkHosts("zookeeper.docker.local:2181"); // .withZkTimeout(timeout)
+//        this.username = "bigdawg";
+//        this.auth = new PasswordToken("bigdawg");
+		this.username = "AccumuloUser";
+        this.auth = new PasswordToken("bJsTTwyiMjbK%1PMEh2hioMK@");
 		
+        //scan -t bk0802_oTsampleDegree -e S0100
         
 		instance = new ZooKeeperInstance(cc);
 		conn = instance.getConnector(username, auth);
@@ -100,16 +104,17 @@ public class AccumuloConnectorTest {
 	
 	@Test
 	public void test2() throws TableNotFoundException, MutationsRejectedException {
-		String tR = "testtable";
+//		String tR = "testtable";
+		String tR = "bk0802_oTsampleDegree";
 		
 	    Map<Key,Value> actual = new TreeMap<>(TestUtil.COMPARE_KEY_TO_COLQ);
 	    {
 
 	      BatchScanner scanner = conn.createBatchScanner(tR, Authorizations.EMPTY, 2);
-	      scanner.setRanges(Collections.singleton(new Range()));
+	      scanner.setRanges(Collections.singleton(new Range(null, new Key(new Text("S0100")))));
 	      for (Map.Entry<Key, Value> entry : scanner) {
 	        actual.put(entry.getKey(), entry.getValue());
-	        log.debug("Entry "+actual.size()+": "+entry.getKey()+"    "+entry.getValue());
+	        log.debug("Entry "+actual.size()+": -"+entry.getKey()+"-    -"+entry.getValue());
 	      }
 	      scanner.close();
 	    }

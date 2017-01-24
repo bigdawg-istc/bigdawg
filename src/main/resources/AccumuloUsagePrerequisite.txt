@@ -1,0 +1,16 @@
+-- setup
+
+-- add this line to your /etc/hosts
+127.0.0.1 classdb55.cloud.llgrid.txe1.mit.edu
+
+-- modify and run these two in two separate terminals before launching bigdawg server
+ssh -L 2333:classdb55.cloud.llgrid.txe1.mit.edu:2181 {YOUR TXE1 USERNAME}@txe1-login.mit.edu
+ssh -L 9997:classdb55.cloud.llgrid.txe1.mit.edu:9997 {YOUR TXE1 USERNAME}@txe1-login.mit.edu
+
+-- Modify and execute AccumuloAdditionToBigDAWGCatalog.sql in database bigdawg_catalog
+ 
+-- launch the server
+
+-- run this
+curl -X POST -d "bdtext({ 'op' : 'scan', 'table' : 'bk0802_oTsampleDegree', 'range' : { 'end' : ['S0100', '', '']} });" http://localhost:8080/bigdawg/query
+

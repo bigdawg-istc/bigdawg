@@ -1,2 +1,2 @@
-datanode0.docker.local
-datanode1.docker.local
+tserver0.docker.local
+tserver1.docker.local

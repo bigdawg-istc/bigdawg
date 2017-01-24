@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -13,6 +14,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import istc.bigdawg.accumulo.AccumuloConnectionInfo;
+import istc.bigdawg.accumulo.AccumuloExecutionEngine;
 import istc.bigdawg.accumulo.AccumuloHandler;
 import istc.bigdawg.catalog.Catalog;
 import istc.bigdawg.catalog.CatalogViewer;
@@ -21,7 +24,6 @@ import istc.bigdawg.exceptions.BigDawgException;
 import istc.bigdawg.exceptions.UnsupportedIslandException;
 import istc.bigdawg.executor.QueryResult;
 import istc.bigdawg.islands.IslandsAndCast.Scope;
-import istc.bigdawg.islands.Accumulo.AccumuloD4MParser;
 import istc.bigdawg.islands.Myria.MyriaQueryParser;
 import istc.bigdawg.islands.SStore.SStoreQueryParser;
 import istc.bigdawg.islands.SciDB.AFLPlanParser;
@@ -36,6 +38,9 @@ import istc.bigdawg.islands.relational.SQLPlanParser;
 import istc.bigdawg.islands.relational.SQLQueryGenerator;
 import istc.bigdawg.islands.relational.SQLQueryPlan;
 import istc.bigdawg.islands.relational.operators.SQLIslandJoin;
+import istc.bigdawg.islands.text.AccumuloD4MParser;
+import istc.bigdawg.islands.text.AccumuloJSONQueryParser;
+import istc.bigdawg.islands.text.operators.TextScan;
 import istc.bigdawg.myria.MyriaHandler;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
@@ -63,7 +68,7 @@ import net.sf.jsqlparser.JSQLParserException;
  */
 public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	
-	public static enum Engine {PostgreSQL, SciDB, SStore};
+	public static enum Engine {PostgreSQL, SciDB, SStore, Accumulo};
 	
 	public static final int  psqlSchemaHandlerDBID = BigDawgConfigProperties.INSTANCE.getPostgresSchemaServerDBID();
 	public static final int  scidbSchemaHandlerDBID = BigDawgConfigProperties.INSTANCE.getSciDBSchemaServerDBID();
@@ -87,12 +92,12 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		switch (scope) {
 		case ARRAY:
 		case RELATIONAL:
+		case TEXT:
 			return true;
 		case DOCUMENT:
 		case GRAPH:
 		case KEYVALUE:
 		case STREAM:
-		case TEXT:
 		case MYRIA:
 			return false;
 		default:
@@ -113,6 +118,8 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 			return Engine.SciDB;
 		else if (engineString.startsWith(Engine.SStore.name()))
 			return Engine.SStore;
+		else if (engineString.startsWith(Engine.Accumulo.name()))
+			return Engine.Accumulo;
 		else {
 			throw new BigDawgException("Unsupported engine: "+ engineString);
 		}
@@ -150,6 +157,10 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 			if (rs2.next())
 				extraction = new SStoreSQLConnectionInfo(rs2.getString("host"), rs2.getString("port"),rs2.getString("dbname"), rs2.getString("userid"), rs2.getString("password"));
 			
+		} else if (e.equals(Engine.Accumulo)) {
+			rs2 = cc.execRet("select dbid, eid, host, port, db.name as dbname, userid, password from catalog.databases db join catalog.engines e on db.engine_id = e.eid where dbid = "+dbid);
+			if (rs2.next())
+				extraction = new AccumuloConnectionInfo(rs2.getString("host"), rs2.getString("port"),rs2.getString("dbname"), rs2.getString("userid"), rs2.getString("password"));
 		} else 
 			throw new BigDawgCatalogException("This is not supposed to happen");
 		
@@ -212,7 +223,8 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case STREAM:
 			break;
 		case TEXT:
-			throw new BigDawgException("TEXT island does not support the concept of generator; getQueryGenerator");
+			// returning null just to keep it going...
+			return null;
 		case MYRIA:
 			throw new BigDawgException("MYRIA island does not support the concept of generator; getQueryGenerator");
 		default:
@@ -292,7 +304,8 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case STREAM:
 			throw new BigDawgException("STREAM island does not support data immigration; createTableForPlanning");
 		case TEXT:
-			throw new BigDawgException("TEXT island does not support data immigration; createTableForPlanning");
+			return null;
+//			throw new BigDawgException("TEXT island does not support data immigration; createTableForPlanning");
 		case MYRIA:
 			throw new BigDawgException("MYRIA island does not support data immigration; createTableForPlanning");
 		default:
@@ -339,7 +352,8 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case STREAM:
 			throw new BigDawgException("STREAM island does not support data immigration; removeTemporaryTableCreatedForPlanning");
 		case TEXT:
-			throw new BigDawgException("TEXT island does not support data immigration; removeTemporaryTableCreatedForPlanning");
+			return;
+//			throw new BigDawgException("TEXT island does not support data immigration; removeTemporaryTableCreatedForPlanning");
 		case MYRIA:
 			throw new BigDawgException("MYRIA island does not support data immigration; removeTemporaryTableCreatedForPlanning");
 		default:
@@ -463,7 +477,12 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case STREAM:
 			throw new BigDawgException("STREAM island does not support signature; generateOperatorTreesAndAddDataSetObjectsSignature");
 		case TEXT:
-			throw new BigDawgException("TEXT island does not support signature; generateOperatorTreesAndAddDataSetObjectsSignature");
+			root = (new AccumuloJSONQueryParser()).parse(queryString);
+			if (!(root instanceof TextScan))
+				throw new BigDawgException("TEXT island does not support operator "+root.getClass().getName()+"; generateOperatorTreesAndAddDataSetObjectsSignature");
+			AccumuloExecutionEngine.addExecutionTree(root.getSubTreeToken(), root);
+			objs.add(((TextScan)root).getSourceTableName());
+			break;
 		case MYRIA:
 			throw new BigDawgException("MYRIA island does not support signature; generateOperatorTreesAndAddDataSetObjectsSignature");
 		default:
@@ -549,7 +568,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case STREAM:
 			throw new BigDawgException("STREAM island does not support signature; getLiteralsAndConstantsSignature");
 		case TEXT:
-			throw new BigDawgException("TEXT island does not support signature; getLiteralsAndConstantsSignature");
+			return new ArrayList<>();
 		case MYRIA:
 			throw new BigDawgException("MYRIA island does not support signature; getLiteralsAndConstantsSignature");
 		default:
