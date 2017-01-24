@@ -32,3 +32,10 @@ RUN /etc/init.d/postgresql start &&\
 	echo "listen_addresses='*'" >> /etc/postgresql/9.4/main/postgresql.conf && \
 	psql -c "CREATE USER pguser WITH SUPERUSER PASSWORD 'test';" && \
 	/etc/init.d/postgresql stop
+
+COPY start_services.sh /
+
+# Copy the middleware jar (build script should move this here)
+COPY istc.bigdawg-1.0-SNAPSHOT-jar-with-dependencies.jar /
+
+CMD /start_services.sh

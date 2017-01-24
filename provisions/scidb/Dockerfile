@@ -51,17 +51,17 @@ RUN echo 'StrictHostKeyChecking no' >> /etc/ssh/ssh_config
 RUN echo 'host  all all 255.255.0.0/16   md5' >> /etc/postgresql/8.4/main/pg_hba.conf
 
 # Add supporting files
-ADD image_contents/containerSetup.sh /root/containerSetup.sh
-ADD image_contents/conf /root/conf
-ADD image_contents/iquery.conf /home/scidb/.config/scidb/iquery.conf
-ADD image_contents/installPackages.R /home/scidb/installPackages.R
-ADD image_contents/startScidb.sh /home/scidb/startScidb.sh
-ADD image_contents/stopScidb.sh /home/scidb/stopScidb.sh
-ADD image_contents/scidb_docker.ini /home/scidb/scidb_docker.ini
+ADD containerSetup.sh /root/containerSetup.sh
+ADD conf /root/conf
+ADD iquery.conf /home/scidb/.config/scidb/iquery.conf
+ADD installPackages.R /home/scidb/installPackages.R
+ADD startScidb.sh /home/scidb/startScidb.sh
+ADD stopScidb.sh /home/scidb/stopScidb.sh
+ADD scidb_docker.ini /home/scidb/scidb_docker.ini
 
 
 # Run the scidb installer
-ADD image_contents/deployment-14.12.tar /home/scidb
+ADD deployment-14.12.tar /home/scidb
 RUN mkdir /var/run/sshd /home/scidb/data /home/scidb/catalog && \
 	/usr/sbin/sshd && \
 	/etc/init.d/postgresql start && \
@@ -76,5 +76,5 @@ RUN chown -R root:root /root/* && \
 EXPOSE 22
 EXPOSE 8083
 
-COPY image_contents/start_services.sh /
+COPY start_services.sh /
 CMD /start_services.sh
