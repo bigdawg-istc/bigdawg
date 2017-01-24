@@ -38,14 +38,14 @@ docker run -d --net=${network_name} \
               -e 'SVCLIST=datanode,accumulo-tserver' \
               ${tag} /usr/bin/supervisord -n
 
-echo "start tserver1"
-docker run -d --net=${network_name} \
-              --hostname=tserver1.docker.local \
-              --net-alias=tserver1.docker.local \
-              --name=${container_name}-tserver1 \
-              --expose=9997 \
-              -e 'SVCLIST=datanode,accumulo-tserver' \
-              ${tag} /usr/bin/supervisord -n
+#echo "start tserver1"
+#docker run -d --net=${network_name} \
+#              --hostname=tserver1.docker.local \
+#              --net-alias=tserver1.docker.local \
+#              --name=${container_name}-tserver1 \
+#              --expose=9997 \
+#              -e 'SVCLIST=datanode,accumulo-tserver' \
+#              ${tag} /usr/bin/supervisord -n
 
 echo "start accumulo master"
 docker run -d --net=${network_name} \
