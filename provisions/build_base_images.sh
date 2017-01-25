@@ -10,7 +10,7 @@ echo "===== Packaging the Middleware jar ====="
 echo "========================================"
 #mvn clean -f ../pom.xml 
 #mvn resources:resources -f ../pom.xml
-#mvn package -P mit -DskipTests -f ../pom.xml
+mvn package -P mit -DskipTests -f ../pom.xml
 cp ../target/istc.bigdawg-1.0-SNAPSHOT-jar-with-dependencies.jar postgres
 
 echo
