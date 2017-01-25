@@ -8,8 +8,8 @@ addpath('./d4m_api/matlab_src/');
 hostname='zookeeper.docker.local';
 port=':2181';
 dbname='accumulo';
-user='root';
-password='DOCKERDEFAULT';
+user='bigdawg';
+password='bigdawg';
 
 DB=DBserver([hostname port], 'Accumulo', dbname, user, password);
 
