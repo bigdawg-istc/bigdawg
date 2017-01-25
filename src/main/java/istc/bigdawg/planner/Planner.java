@@ -337,7 +337,10 @@ public class Planner {
 	 * @param result
 	 * @return 0 if no error; otherwise incomplete
 	 */
-	public static Response compileResults(int querySerial, QueryResult result) {
+	public static Response compileResults(int querySerial, QueryResult result) throws Exception {
+		if (result == null) {
+			throw new Exception("Unknown execution error; contact the administrator with query number " + querySerial + "\n");
+		}
 		logger.debug("[BigDAWG] PLANNER: Query "+querySerial+" is completed. Result:\n"+result.toPrettyString());
 		return Response.status(200).entity(result.toPrettyString()).build();
 	}

@@ -43,7 +43,7 @@ public class TextScan extends TextOperator implements SeqScan {
 
 	@Override
 	public String getTreeRepresentation(boolean isRoot) throws Exception {
-		if (range == null)
+		if (range.getStartKey() == null && range.getEndKey() == null)
 			return String.format("(TextScan, %s, FULL_RANGE)", tableName);
 		else 
 			return String.format("(TextScan, %s%s%s)", 

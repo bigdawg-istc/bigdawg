@@ -51,20 +51,20 @@ public class AccumuloExecutionEngine implements ExecutorEngine, DBHandler {
 	private ConnectionInfo ci = null;
 	
 	
-	public AccumuloExecutionEngine() throws AccumuloException, AccumuloSecurityException{
-
-		this.ci = new AccumuloConnectionInfo("localhost", "2333", "classdb55", "AccumuloUser", "bJsTTwyiMjbK%1PMEh2hioMK@");
-		
-		ClientConfiguration cc = ClientConfiguration.loadDefault().withInstance(this.ci.getDatabase()).withZkHosts(this.ci.getUrl());
-		String username = this.ci.getUser();
-		PasswordToken auth = new PasswordToken(this.ci.getPassword());
-		
-		//scan -t bk0802_oTsampleDegree -e S0100
-      
-      	zkInstance = new ZooKeeperInstance(cc);
-		conn = zkInstance.getConnector(username, auth);
-
-	};
+//	public AccumuloExecutionEngine() throws AccumuloException, AccumuloSecurityException{
+//
+//		this.ci = new AccumuloConnectionInfo("localhost", "2333", "classdb55", "AccumuloUser", "bJsTTwyiMjbK%1PMEh2hioMK@");
+//		
+//		ClientConfiguration cc = ClientConfiguration.loadDefault().withInstance(this.ci.getDatabase()).withZkHosts(this.ci.getUrl());
+//		String username = this.ci.getUser();
+//		PasswordToken auth = new PasswordToken(this.ci.getPassword());
+//		
+//		//scan -t bk0802_oTsampleDegree -e S0100
+//      
+//      	zkInstance = new ZooKeeperInstance(cc);
+//		conn = zkInstance.getConnector(username, auth);
+//
+//	};
 	
 	public AccumuloExecutionEngine(ConnectionInfo zooKeeperConnectionInfo) throws BigDawgException, AccumuloException, AccumuloSecurityException {
 		this.ci = zooKeeperConnectionInfo;

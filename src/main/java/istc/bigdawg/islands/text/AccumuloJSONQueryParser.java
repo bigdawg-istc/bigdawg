@@ -77,6 +77,8 @@ public class AccumuloJSONQueryParser {
 				end = new Key( row, cf, cq); 
 			}
 			range = new Range(start, end);
+		} else {
+			range = new Range();
 		}
 		
 		return new TextScan(table, range);
