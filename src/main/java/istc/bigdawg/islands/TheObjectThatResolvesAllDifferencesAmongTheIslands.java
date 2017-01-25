@@ -311,7 +311,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case STREAM:
 			throw new BigDawgException("STREAM island does not support data immigration; createTableForPlanning");
 		case TEXT:
-			dbSchemaHandler = new AccumuloExecutionEngine(CatalogViewer.getConnectionInfo(psqlSchemaHandlerDBID));
+			dbSchemaHandler = new AccumuloExecutionEngine(CatalogViewer.getConnectionInfo(accumuloSchemaHandlerDBID));
 			for (String key : transitionSchemas.keySet()) 
 				if (children.contains(key)) ((AccumuloExecutionEngine)dbSchemaHandler).createTable(key);
 			break;
@@ -365,7 +365,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case STREAM:
 			throw new BigDawgException("STREAM island does not support data immigration; removeTemporaryTableCreatedForPlanning");
 		case TEXT:
-			dbSchemaHandler = new AccumuloExecutionEngine(CatalogViewer.getConnectionInfo(psqlSchemaHandlerDBID));
+			dbSchemaHandler = new AccumuloExecutionEngine(CatalogViewer.getConnectionInfo(accumuloSchemaHandlerDBID));
 			for (String key : transitionSchemas.keySet()) 
 				if (children.contains(key)) ((AccumuloExecutionEngine)dbSchemaHandler).deleteTable(key);
 			return;
