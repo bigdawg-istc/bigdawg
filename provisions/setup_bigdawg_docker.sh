@@ -49,6 +49,9 @@ echo "===== Loading data ====="
 echo "========================"
 
 # postgres-catalog
+docker exec -u root bigdawg-postgres-catalog mkdir -p /src/main/resources
+docker cp ../src/main/resources/PostgresParserTerms.csv bigdawg-postgres-catalog:/src/main/resources
+docker cp ../src/main/resources/SciDBParserTerms.csv bigdawg-postgres-catalog:/src/main/resources
 docker cp cluster_setup/postgres-catalog/bdsetup bigdawg-postgres-catalog:/
 docker exec bigdawg-postgres-catalog /bdsetup/setup.sh
 
@@ -76,14 +79,14 @@ docker cp cluster_setup/scidb-data/bdsetup bigdawg-scidb-data:/home/scidb/
 docker exec bigdawg-scidb-data /home/scidb/bdsetup/setup.sh
 
 # accumulo
-docker cp cluster_setup/accumulo-data/bdsetup bigdawg-accumulo-zookeeper:/
-docker exec bigdawg-accumulo-zookeeper /bdsetup/insertData.sh
+#docker cp cluster_setup/accumulo-data/bdsetup bigdawg-accumulo-zookeeper:/
+#docker exec bigdawg-accumulo-zookeeper /bdsetup/insertData.sh
 
 echo
 echo "======================================="
 echo "===== Starting BigDAWG Middleware ====="
 echo "======================================="
-docker exec bigdawg-postgres-catalog java -classpath "istc.bigdawg-1.0-SNAPSHOT-jar-with-dependencies.jar" istc.bigdawg.Main
+docker exec bigdawg-postgres-catalog java -classpath "istc.bigdawg-1.0-SNAPSHOT-jar-with-dependencies.jar" istc.bigdawg.Main bigdawg-postgres-catalog
 
 
 echo
