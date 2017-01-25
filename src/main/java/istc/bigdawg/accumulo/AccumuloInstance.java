@@ -45,8 +45,8 @@ public class AccumuloInstance {
 	private String instanceName;
 	private String zooKeepers;
 	private String passwordToken;
-	private long scanTimeout=2000; // 2000 ms = 2 seconds
-	private int batchSize=1000;
+	private long scanTimeout = 2000; // 2000 ms = 2 seconds
+	private int batchSize = 1000;
 
 	public static final List<String> fullSchema = Arrays.asList("rowId",
 			"colFam", "colKey", "visibility", "value");
@@ -121,8 +121,7 @@ public class AccumuloInstance {
 
 	private static AccumuloInstance getFullInstance(AccumuloInstance accInst)
 			throws AccumuloException, AccumuloSecurityException {
-		accInst.zooKeepers = BigDawgConfigProperties.INSTANCE
-				.getZooKeepers();
+		accInst.zooKeepers = BigDawgConfigProperties.INSTANCE.getZooKeepers();
 		accInst.username = BigDawgConfigProperties.INSTANCE.getAccumuloUser();
 		accInst.passwordToken = BigDawgConfigProperties.INSTANCE
 				.getAccumuloPasswordToken();
@@ -132,12 +131,12 @@ public class AccumuloInstance {
 				accInst.zooKeepers);
 
 		try {
-			//System.out.println("username: " + accInst.username);
-			//System.out.println("password: " + accInst.passwordToken);
+			// System.out.println("username: " + accInst.username);
+			// System.out.println("password: " + accInst.passwordToken);
 
 			Connector conn = inst.getConnector(accInst.username,
 					new PasswordToken(accInst.passwordToken));
-			//System.out.println("Connection to Accumulo accepted.");
+			// System.out.println("Connection to Accumulo accepted.");
 			// Connector conn = inst.getConnector( "root",new
 			// AuthenticationToken("root", "pass", null));
 			accInst.conn = conn;
@@ -175,8 +174,8 @@ public class AccumuloInstance {
 	}
 
 	public AccumuloInstance(String instanceName, String zooServers,
-			String userName, String password) throws AccumuloException,
-			AccumuloSecurityException {
+			String userName, String password)
+					throws AccumuloException, AccumuloSecurityException {
 		Instance inst = new ZooKeeperInstance(instanceName, zooServers);
 		conn = inst.getConnector(userName, new PasswordToken(password));
 	}
@@ -199,7 +198,7 @@ public class AccumuloInstance {
 		}
 		return false;
 	}
-	
+
 	public boolean deleteTable(String tableName) {
 		TableOperations tabOp = getConnector().tableOperations();
 		try {
@@ -221,16 +220,17 @@ public class AccumuloInstance {
 		Authorizations authorizations = new Authorizations();
 		Scanner scan = conn.createScanner(table, authorizations);
 		scan.setBatchSize(batchSize);
-		scan.setTimeout(scanTimeout,TimeUnit.MILLISECONDS);
-		scan.setRange(new Range()); // get all data sorted - we want to recover rows
+		scan.setTimeout(scanTimeout, TimeUnit.MILLISECONDS);
+		scan.setRange(new Range()); // get all data sorted - we want to recover
+									// rows
 		Iterator<Entry<Key, Value>> iter = scan.iterator();
 		return iter;
 	}
-	
-		public long countRows(final String tableName)
+
+	public long countRows(final String tableName)
 			throws TableNotFoundException {
 		Iterator<Entry<Key, Value>> iter = this.getTableIterator(tableName);
-		long counter=0;
+		long counter = 0;
 		while (iter.hasNext()) {
 			iter.next();
 			++counter;
@@ -241,7 +241,7 @@ public class AccumuloInstance {
 	public long readAllData(final String tableName)
 			throws TableNotFoundException {
 		Iterator<Entry<Key, Value>> iter = this.getTableIterator(tableName);
-		long counter=0;
+		long counter = 0;
 		while (iter.hasNext()) {
 			++counter;
 			Entry<Key, Value> e = iter.next();
@@ -256,10 +256,16 @@ public class AccumuloInstance {
 
 	/**
 	 * @param args
+	 * @throws AccumuloBigDawgException
+	 * @throws AccumuloSecurityException
+	 * @throws AccumuloException
+	 * @throws TableNotFoundException
 	 */
-	public static void main(String[] args) {
-		// TODO Auto-generated method stub
-
+	public static void main(String[] args)
+			throws AccumuloException, AccumuloSecurityException,
+			AccumuloBigDawgException, TableNotFoundException {
+		AccumuloInstance acc = getInstance();
+		acc.readAllData("pythontable");
 	}
 
 }

@@ -3,7 +3,7 @@
  */
 package istc.bigdawg.migration;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 import java.util.Map.Entry;
 
@@ -30,6 +30,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 import istc.bigdawg.LoggerSetup;
+import istc.bigdawg.accumulo.AccumuloInstance;
+import istc.bigdawg.exceptions.AccumuloBigDawgException;
 
 /**
  * Test basic data loading to Accumulo. Load a single row using BatchWriter.
@@ -37,8 +39,8 @@ import istc.bigdawg.LoggerSetup;
  * @author Adam Dziedzic
  */
 public class AccumuloTest {
-	
-	private final String AUTHORIZATION = "public"; 
+
+	private final String AUTHORIZATION = "public";
 	private final String COL_FAMILY = "myColFamily";
 	private final String TABLE = "testTable";
 	private final String VALUE = "myValue";
@@ -83,7 +85,7 @@ public class AccumuloTest {
 			/* BatchWriterConfig has reasonable defaults. */
 			BatchWriterConfig config = new BatchWriterConfig();
 			/* Bytes available to batchwriter for buffering mutations. */
-			config.setMaxMemory(10000L); 
+			config.setMaxMemory(10000L);
 			BatchWriter writer;
 			try {
 				writer = conn.createBatchWriter(TABLE, config);
@@ -109,7 +111,7 @@ public class AccumuloTest {
 							+ rowIdResult + " _ColFam_:" + colFamResult
 							+ " _ColQual_:" + colKeyResult + " _Value_:"
 							+ valueResult);
-					assertEquals(VALUE,valueResult.toString());
+					assertEquals(VALUE, valueResult.toString());
 				}
 			} catch (TableNotFoundException e) {
 				logger.error("Table for scanner not found!", e);
@@ -121,5 +123,14 @@ public class AccumuloTest {
 		} catch (AccumuloSecurityException e) {
 			e.printStackTrace();
 		}
+	}
+
+	@Test
+	public void testMitInstance()
+			throws AccumuloException, AccumuloSecurityException,
+			AccumuloBigDawgException, TableNotFoundException {
+		AccumuloInstance acc = AccumuloInstance.getInstance();
+		acc.createTable("adam_test");
+		
 	}
 }
