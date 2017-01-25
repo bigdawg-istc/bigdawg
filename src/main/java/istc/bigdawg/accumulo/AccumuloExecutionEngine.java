@@ -77,6 +77,7 @@ public class AccumuloExecutionEngine implements ExecutorEngine, DBHandler {
       
       	zkInstance = new ZooKeeperInstance(cc);
 		conn = zkInstance.getConnector(username, auth);
+//		conn.tableOperations().delete(tableName);
 	};
 	
 	public static void addExecutionTree(String queryIdentifier, Operator queryRootOperator) {
@@ -109,8 +110,17 @@ public class AccumuloExecutionEngine implements ExecutorEngine, DBHandler {
 			for (Map.Entry<Key, Value> entry : scanner) {
 				List<String> row = new ArrayList<>();
 				row.add(entry.getKey().getRow().toString());
-				row.add(entry.getKey().getColumnFamily().toString());
-				row.add(entry.getKey().getColumnQualifier().toString());
+
+				String column = "";
+				if (entry.getKey().getColumnFamily() != null) {
+					column += entry.getKey().getColumnFamily().toString();
+				}
+				column += ":";
+				if (entry.getKey().getColumnQualifier() != null) {
+					column += entry.getKey().getColumnQualifier().toString();
+				}
+				if (column.length() > 1) row.add(column);
+				
 				row.add(entry.getValue().toString());
 				result.add(row);
 //				actual.put(entry.getKey(), entry.getValue());

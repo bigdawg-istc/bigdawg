@@ -1,5 +1,7 @@
 -- setup
 
+# if you have an account on TX-E1 and are using the classdb55 Accumulo instance
+
 -- add this line to your /etc/hosts
 127.0.0.1 classdb55.cloud.llgrid.txe1.mit.edu
 
