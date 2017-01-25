@@ -8,10 +8,10 @@ echo
 echo "========================================"
 echo "===== Packaging the Middleware jar ====="
 echo "========================================"
-cd ..
-mvn clean package -P mit -DskipTests
-cp target/istc.bigdawg-1.0-SNAPSHOT-jar-with-dependencies.jar provisions/postgres
-cd provisinos
+#mvn clean -f ../pom.xml 
+#mvn resources:resources -f ../pom.xml
+#mvn package -P mit -DskipTests -f ../pom.xml
+cp ../target/istc.bigdawg-1.0-SNAPSHOT-jar-with-dependencies.jar postgres
 
 echo
 echo "===================================================="
