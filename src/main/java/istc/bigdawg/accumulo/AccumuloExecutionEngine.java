@@ -16,6 +16,8 @@ import org.apache.accumulo.core.client.AccumuloSecurityException;
 import org.apache.accumulo.core.client.BatchScanner;
 import org.apache.accumulo.core.client.ClientConfiguration;
 import org.apache.accumulo.core.client.Connector;
+import org.apache.accumulo.core.client.TableExistsException;
+import org.apache.accumulo.core.client.TableNotFoundException;
 import org.apache.accumulo.core.client.ZooKeeperInstance;
 import org.apache.accumulo.core.client.security.tokens.PasswordToken;
 import org.apache.accumulo.core.data.Key;
@@ -65,6 +67,7 @@ public class AccumuloExecutionEngine implements ExecutorEngine, DBHandler {
 //		conn = zkInstance.getConnector(username, auth);
 //
 //	};
+
 	
 	public AccumuloExecutionEngine(ConnectionInfo zooKeeperConnectionInfo) throws BigDawgException, AccumuloException, AccumuloSecurityException {
 		this.ci = zooKeeperConnectionInfo;
@@ -158,6 +161,14 @@ public class AccumuloExecutionEngine implements ExecutorEngine, DBHandler {
 //				throw new LocalQueryExecutionException(ex);
 //			}
 		}
+	}
+	
+	public void createTable(String tableName) throws AccumuloException, AccumuloSecurityException, TableExistsException {
+		conn.tableOperations().create(tableName);
+	};
+	
+	public void deleteTable(String tableName) throws AccumuloException, AccumuloSecurityException, TableNotFoundException {
+		conn.tableOperations().delete(tableName);
 	}
 
 	@Override

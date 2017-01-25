@@ -14,9 +14,13 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import org.apache.accumulo.core.client.AccumuloException;
+import org.apache.accumulo.core.client.AccumuloSecurityException;
+import org.apache.accumulo.core.client.TableExistsException;
+import org.apache.accumulo.core.client.TableNotFoundException;
+
 import istc.bigdawg.accumulo.AccumuloConnectionInfo;
 import istc.bigdawg.accumulo.AccumuloExecutionEngine;
-import istc.bigdawg.accumulo.AccumuloHandler;
 import istc.bigdawg.catalog.Catalog;
 import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.exceptions.BigDawgCatalogException;
@@ -38,7 +42,6 @@ import istc.bigdawg.islands.relational.SQLPlanParser;
 import istc.bigdawg.islands.relational.SQLQueryGenerator;
 import istc.bigdawg.islands.relational.SQLQueryPlan;
 import istc.bigdawg.islands.relational.operators.SQLIslandJoin;
-import istc.bigdawg.islands.text.AccumuloD4MParser;
 import istc.bigdawg.islands.text.AccumuloJSONQueryParser;
 import istc.bigdawg.islands.text.operators.TextScan;
 import istc.bigdawg.myria.MyriaHandler;
@@ -73,6 +76,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	public static final int  psqlSchemaHandlerDBID = BigDawgConfigProperties.INSTANCE.getPostgresSchemaServerDBID();
 	public static final int  scidbSchemaHandlerDBID = BigDawgConfigProperties.INSTANCE.getSciDBSchemaServerDBID();
 	public static final int  sstoreDBID = BigDawgConfigProperties.INSTANCE.getSStoreDBID();
+	public static final int  accumuloSchemaHandlerDBID = BigDawgConfigProperties.INSTANCE.getAccumuloSchemaServerDBID(); 
 	
 	private static final Pattern predicatePattern = Pattern.compile("(?<=\\()([^\\(^\\)]+)(?=\\))");
 	
@@ -274,8 +278,11 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	 * @return
 	 * @throws SQLException
 	 * @throws BigDawgException 
+	 * @throws AccumuloSecurityException 
+	 * @throws AccumuloException 
+	 * @throws TableExistsException 
 	 */
-	public static DBHandler createTableForPlanning(Scope sourceScope, Set<String> children, Map<String, String> transitionSchemas) throws SQLException, BigDawgException {
+	public static DBHandler createTableForPlanning(Scope sourceScope, Set<String> children, Map<String, String> transitionSchemas) throws SQLException, BigDawgException, AccumuloException, AccumuloSecurityException, TableExistsException {
 
 		DBHandler dbSchemaHandler = null;
 		
@@ -304,7 +311,10 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case STREAM:
 			throw new BigDawgException("STREAM island does not support data immigration; createTableForPlanning");
 		case TEXT:
-			return null;
+			dbSchemaHandler = new AccumuloExecutionEngine(CatalogViewer.getConnectionInfo(psqlSchemaHandlerDBID));
+			for (String key : transitionSchemas.keySet()) 
+				if (children.contains(key)) ((AccumuloExecutionEngine)dbSchemaHandler).createTable(key);
+			break;
 //			throw new BigDawgException("TEXT island does not support data immigration; createTableForPlanning");
 		case MYRIA:
 			throw new BigDawgException("MYRIA island does not support data immigration; createTableForPlanning");
@@ -324,8 +334,11 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	 * @param transitionSchemas
 	 * @throws SQLException
 	 * @throws BigDawgException 
+	 * @throws AccumuloSecurityException 
+	 * @throws AccumuloException 
+	 * @throws TableNotFoundException 
 	 */
-	public static void removeTemporaryTableCreatedForPlanning(Scope sourceScope, DBHandler dbSchemaHandler, Set<String> children, Map<String, String> transitionSchemas) throws SQLException, BigDawgException {
+	public static void removeTemporaryTableCreatedForPlanning(Scope sourceScope, DBHandler dbSchemaHandler, Set<String> children, Map<String, String> transitionSchemas) throws SQLException, BigDawgException, AccumuloException, AccumuloSecurityException, TableNotFoundException {
 		
 		switch (sourceScope) {
 		case ARRAY:
@@ -352,8 +365,10 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case STREAM:
 			throw new BigDawgException("STREAM island does not support data immigration; removeTemporaryTableCreatedForPlanning");
 		case TEXT:
+			dbSchemaHandler = new AccumuloExecutionEngine(CatalogViewer.getConnectionInfo(psqlSchemaHandlerDBID));
+			for (String key : transitionSchemas.keySet()) 
+				if (children.contains(key)) ((AccumuloExecutionEngine)dbSchemaHandler).deleteTable(key);
 			return;
-//			throw new BigDawgException("TEXT island does not support data immigration; removeTemporaryTableCreatedForPlanning");
 		case MYRIA:
 			throw new BigDawgException("MYRIA island does not support data immigration; removeTemporaryTableCreatedForPlanning");
 		default:
@@ -676,15 +691,8 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case KEYVALUE:
 			throw new UnsupportedIslandException(node.sourceScope, "runOperatorFreeIslandQuery");
 		case STREAM:
-			
 			List<String> ssparsed = (new SStoreQueryParser()).parse(node.getQueryString());
 			return (new SStoreSQLHandler(sstoreDBID)).executePreparedStatement((new SStoreSQLHandler(sstoreDBID)).getConnection(), ssparsed);
-			
-		case TEXT:
-			List<String> aparsed = (new AccumuloD4MParser()).parse(node.getQueryString());
-			System.out.printf("TEXT Island Accumulot query: %s; parsed arguments: %s\n", node.queryString, aparsed);
-			return AccumuloHandler.executeAccumuloShellScript(aparsed);
-			
 		case MYRIA:
 			String input = node.getQueryString();
 			List<String> mparsed = (new MyriaQueryParser()).parse(input);
@@ -694,6 +702,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 			return MyriaHandler.executeMyriaQuery(mparsed);
 		case RELATIONAL:
 		case ARRAY:
+		case TEXT:
 		default:
 			throw new BigDawgException("Unapplicable island for runOperatorFreeIslandQuery: "+node.sourceScope.name());
 		}

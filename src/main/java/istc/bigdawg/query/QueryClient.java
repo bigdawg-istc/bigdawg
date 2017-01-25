@@ -4,43 +4,22 @@
  */
 package istc.bigdawg.query;
 
-import java.io.IOException;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-
-import jline.internal.Log;
 
 import org.apache.accumulo.core.client.AccumuloException;
 import org.apache.accumulo.core.client.AccumuloSecurityException;
 import org.apache.accumulo.core.client.TableNotFoundException;
 import org.apache.log4j.Logger;
-import org.json.JSONArray;
 import org.json.JSONException;
-import org.json.JSONObject;
 
-import istc.bigdawg.accumulo.AccumuloHandler;
 import istc.bigdawg.exceptions.AccumuloShellScriptException;
-import istc.bigdawg.executor.QueryResult;
 import istc.bigdawg.planner.Planner;
-import istc.bigdawg.postgresql.PostgreSQLHandler;
-import istc.bigdawg.scidb.SciDBHandler;
-import istc.bigdawg.sstore.SStoreSQLConnectionInfo;
-import istc.bigdawg.utils.LogUtils;
-import istc.bigdawg.utils.StackTrace;
 /**
  * @author Adam Dziedzic
  * 

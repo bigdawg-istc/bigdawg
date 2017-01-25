@@ -24,6 +24,7 @@ public enum BigDawgConfigProperties {
 	private String postgreSQLTestUser;
 	private String postgreSQLTestPassword;
 
+	private int accumuloSchemaServerDBID;
 	private String accumuloIstanceType;
 	private String accumuloIstanceName;
 	private String accumuloUser;
@@ -100,6 +101,8 @@ public enum BigDawgConfigProperties {
 		this.postgreSQLTestPassword = prop
 				.getProperty("main.postgresql.test.password");
 
+		this.accumuloSchemaServerDBID = Integer
+				.parseInt(prop.getProperty("main.accumulo.dbid.schema"));
 		this.accumuloIstanceType = prop
 				.getProperty("main.accumulo.instanceType");
 		this.accumuloIstanceName = prop
@@ -439,6 +442,10 @@ public enum BigDawgConfigProperties {
 	 */
 	public int getNetworkRetryConnection() {
 		return networkRetryConnection;
+	}
+
+	public int getAccumuloSchemaServerDBID() {
+		return accumuloSchemaServerDBID;
 	}
 
 }

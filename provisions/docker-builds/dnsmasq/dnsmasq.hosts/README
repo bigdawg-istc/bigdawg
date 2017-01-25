@@ -1,1 +1,0 @@
-# place hosts files in this directory and dnsmasq will pick them up at startup (no automatic re-load)
