@@ -76,8 +76,8 @@ docker cp cluster_setup/scidb-data/bdsetup bigdawg-scidb-data:/home/scidb/
 docker exec bigdawg-scidb-data /home/scidb/bdsetup/setup.sh
 
 # accumulo
-#docker cp cluster_setup/accumulo-data/bdsetup bigdawg-accumulo-zookeeper:/
-#docker exec bigdawg-accumulo-zookeeper /bdsetup/insertData.sh
+docker cp cluster_setup/accumulo-data/bdsetup bigdawg-accumulo-zookeeper:/
+docker exec bigdawg-accumulo-zookeeper /bdsetup/insertData.sh
 
 echo
 echo "======================================="
