@@ -165,7 +165,7 @@ public class CatalogUtilities {
 		}
 	}
 	
-	private static String processCatalogResultSet(ResultSet rs) throws Exception {
+	private static String processCatalogResultSet(ResultSet rs) throws SQLException {
 		
 		if (rs == null) return "Done.\n";
 		
@@ -188,32 +188,37 @@ public class CatalogUtilities {
 		return sb.toString();
 	}
 	
-	public static String catalogQueryResult (List<String> parsedResult) throws Exception {
+	public static String catalogQueryResult (List<String> parsedResult) throws SQLException, BigDawgCatalogException  {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		CatalogUtilities.checkConnection(cc);
 		StringBuilder result = new StringBuilder();
 		String interm;
 		ResultSet rs = null;
 		
-		for (int i = 0; i < parsedResult.size(); i = i+2) {
-			System.out.printf("catalog query: %s %s\n", parsedResult.get(i), parsedResult.get(i+1));
-			
-			if (isCatalogSQL(parsedResult.get(i))) {
-				if (parsedResult.get(i).equalsIgnoreCase("update") || parsedResult.get(i).equalsIgnoreCase("insert") || parsedResult.get(i).equalsIgnoreCase("delete"))
-					cc.execNoRet(String.format("%s %s", parsedResult.get(i), parsedResult.get(i+1)));
-				else
-					rs = cc.execRet(String.format("%s %s", parsedResult.get(i), parsedResult.get(i+1)));
-			} else {
-				String columns = parsedResult.get(i+1).length() > 0 ? parsedResult.get(i+1) : "*";
-				String tablename = parsedResult.get(i).toLowerCase().startsWith("catalog.") ? parsedResult.get(i).toLowerCase() : ("catalog."+parsedResult.get(i).toLowerCase());
-				rs = cc.execRet(String.format("SELECT %s FROM %s", columns, tablename));
+		try {
+			for (int i = 0; i < parsedResult.size(); i = i+2) {
+				System.out.printf("catalog query: %s %s\n", parsedResult.get(i), parsedResult.get(i+1));
+				
+				if (isCatalogSQL(parsedResult.get(i))) {
+					if (parsedResult.get(i).equalsIgnoreCase("update") || parsedResult.get(i).equalsIgnoreCase("insert") || parsedResult.get(i).equalsIgnoreCase("delete"))
+						cc.execNoRet(String.format("%s %s", parsedResult.get(i), parsedResult.get(i+1)));
+					else
+						rs = cc.execRet(String.format("%s %s", parsedResult.get(i), parsedResult.get(i+1)));
+				} else {
+					String columns = parsedResult.get(i+1).length() > 0 ? parsedResult.get(i+1) : "*";
+					String tablename = parsedResult.get(i).toLowerCase().startsWith("catalog.") ? parsedResult.get(i).toLowerCase() : ("catalog."+parsedResult.get(i).toLowerCase());
+					rs = cc.execRet(String.format("SELECT %s FROM %s", columns, tablename));
+				}
+				interm = processCatalogResultSet(rs);
+				cc.commit();
+				System.out.printf("Catalog query result: \n%s\n", interm);
+				if (i > 0) result.append('\n');
+				result.append(interm);
 			}
-			interm = processCatalogResultSet(rs);
-			cc.commit();
+		} catch (SQLException e) {
+			cc.rollback();
+		} finally {
 			if (rs != null) rs.close();
-			System.out.printf("New catalog query result: \n%s\n", interm);
-			if (i > 0) result.append('\n');
-			result.append(interm);
 		}
 		
 		return result.toString();

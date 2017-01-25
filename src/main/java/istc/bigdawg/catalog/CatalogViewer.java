@@ -23,19 +23,25 @@ public class CatalogViewer {
 		CatalogUtilities.checkConnection(cc);
 
 		// NEW ADDITION
-		ResultSet rs1 = cc.execRet("select connection_properties from catalog.databases db join catalog.engines e on db.engine_id = e.eid where dbid = "+dbid);
+		ResultSet rs1 = null;
+		try {
+			rs1 = cc.execRet("select connection_properties from catalog.databases db join catalog.engines e on db.engine_id = e.eid where dbid = "+dbid);
 		
-		if (rs1.next()) {
-			String engineString = rs1.getString("connection_properties");
-			try {
-				return TheObjectThatResolvesAllDifferencesAmongTheIslands.getEngineEnum(engineString);
-			} catch (BigDawgException ex) {
-				ex.printStackTrace();
-				rs1.close();
-				throw new BigDawgCatalogException("Unsupported engine: "+ engineString);
+			if (rs1.next()) {
+				String engineString = rs1.getString("connection_properties");
+				try {
+					return TheObjectThatResolvesAllDifferencesAmongTheIslands.getEngineEnum(engineString);
+				} catch (BigDawgException ex) {
+					ex.printStackTrace();
+					throw new BigDawgCatalogException("Unsupported engine: "+ engineString);
+				}
 			}
-		} 
-		rs1.close();
+		} catch (SQLException e) {
+			cc.rollback();
+			throw e;
+		} finally {
+			if (rs1 != null) rs1.close();
+		}
 		throw new BigDawgCatalogException("Cannot find engine name for dbid "+dbid);
 	
 	} 
@@ -100,16 +106,22 @@ public class CatalogViewer {
 			wherePred = wherePred + "or lower(o.name) = lower(\'" + inputs.get(i) + "\') ";
 		}
 		
-		ResultSet rs = cc.execRet("select physical_db db, string_agg(cast(name as varchar), ',') obj, count(name) c "
-				+ "from (select * from catalog.objects o where " + wherePred + " order by name, physical_db) as objs "
-				+ "group by physical_db order by c desc, physical_db;");
-		
-		if (rs.next()) extraction.put(rs.getInt("db"), new ArrayList<String>(Arrays.asList(rs.getString("obj").split(","))));
-		while (rs.next()) {
-			extraction.put(rs.getInt("db"), new ArrayList<String>(Arrays.asList(rs.getString("obj").split(","))));
+		ResultSet rs = null;
+		try {
+			rs = cc.execRet("select physical_db db, string_agg(cast(name as varchar), ',') obj, count(name) c "
+					+ "from (select * from catalog.objects o where " + wherePred + " order by name, physical_db) as objs "
+					+ "group by physical_db order by c desc, physical_db;");
+			
+			if (rs.next()) extraction.put(rs.getInt("db"), new ArrayList<String>(Arrays.asList(rs.getString("obj").split(","))));
+			while (rs.next()) {
+				extraction.put(rs.getInt("db"), new ArrayList<String>(Arrays.asList(rs.getString("obj").split(","))));
+			}
+		} catch (SQLException e) {
+			cc.rollback();
+			throw e;
+		} finally {
+			if (rs != null) rs.close();
 		}
-		rs.close();
-		
 		return extraction;
 	};
 	
@@ -138,21 +150,24 @@ public class CatalogViewer {
 		
 		String islandName = TheObjectThatResolvesAllDifferencesAmongTheIslands.getCatalogIslandSelectionPredicate(scope); 
 		
-		ResultSet rs = cc.execRet("select o.name obj, string_agg(cast(physical_db as varchar), ',') db, count(o.name) c, scope_name island "
-								+ "from catalog.objects o "
-								+ "join catalog.databases d on o.physical_db = d.dbid "
-								+ "join catalog.shims s on d.engine_id = s.engine_id "
-								+ "join catalog.islands i on s.island_id = i.iid where " + wherePred + islandName + " group by o.name, island;");
-		
-//		ResultSet rs = cc.execRet("select name obj, string_agg(cast(physical_db as varchar), ',') db, count(name) c "
-//				+ "from (select * from catalog.objects o where " + wherePred + " order by physical_db, name) as objs "
-//				+ "group by name order by c desc, name;");
-		
-		if (rs.next()) extraction.put(rs.getString("obj"), new ArrayList<String>(Arrays.asList(rs.getString("db").split(","))));
-		while (rs.next()) {
-			extraction.put(rs.getString("obj"), new ArrayList<String>(Arrays.asList(rs.getString("db").split(","))));
+		ResultSet rs = null;
+		try {
+			rs = cc.execRet("select o.name obj, string_agg(cast(physical_db as varchar), ',') db, count(o.name) c, scope_name island "
+									+ "from catalog.objects o "
+									+ "join catalog.databases d on o.physical_db = d.dbid "
+									+ "join catalog.shims s on d.engine_id = s.engine_id "
+									+ "join catalog.islands i on s.island_id = i.iid where " + wherePred + islandName + " group by o.name, island;");
+			
+			if (rs.next()) extraction.put(rs.getString("obj"), new ArrayList<String>(Arrays.asList(rs.getString("db").split(","))));
+			while (rs.next()) {
+				extraction.put(rs.getString("obj"), new ArrayList<String>(Arrays.asList(rs.getString("db").split(","))));
+			}
+		} catch (SQLException e) {
+			cc.rollback();
+			throw e;
+		} finally {
+			if (rs != null) rs.close();
 		}
-		rs.close();
 		
 		if (extraction.isEmpty()) throw new BigDawgCatalogException("Cannot find inputs: "+inputs+"; in scope: "+scope.name()+"\n");
 		
@@ -185,16 +200,48 @@ public class CatalogViewer {
 			wherePred = wherePred + "or lower(o.name) = lower(\'" + strs[i].trim() + "\') ";
 		}
 
-		ResultSet rs = cc.execRet(
-				"select distinct o.name obj " + "from catalog.objects o " + "where " + wherePred + "order by o.name;");
-		if (rs.next())
-			extraction = extraction + rs.getString("obj");
+		ResultSet rs = null;
+		try {
+			rs = cc.execRet(
+					"select distinct o.name obj " + "from catalog.objects o " + "where " + wherePred + "order by o.name;");
+			if (rs.next())
+				extraction = extraction + rs.getString("obj");
+			while (rs.next()) {
+				extraction = extraction + "\t" + rs.getString("obj");
+			}
+		} catch (SQLException e) {
+			cc.rollback();
+			throw e;
+		} finally {
+			if (rs != null) rs.close();
+		}
+		return extraction;
+	}
+	
+	/**
+	 * With name of procedure, fetch the data types of the parameters
+	 * 
+	 * @param procName
+	 * @return The data types of the parameters
+	 * @throws Exception
+	 */
+	public static ArrayList<String> getProcParamTypes(String procName) throws Exception {
+		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
+		// input check
+		CatalogUtilities.checkConnection(cc);
+
+		ArrayList<String> dataTypes = new ArrayList<String>();
+
+		ResultSet rs = cc.execRet("select p.paramtypes from catalog.procedures p"
+				+ " where p.name ilike \'" + procName + "%\';");
+
 		while (rs.next()) {
-			extraction = extraction + "\t" + rs.getString("obj");
+			String dataTypesStr = rs.getString("paramtypes");
+			dataTypes = new ArrayList<String>(Arrays.asList(dataTypesStr.replace(" ", "").split(",")));
 		}
 		rs.close();
 
-		return extraction;
+		return dataTypes;
 	}
 
 	/**
@@ -206,6 +253,7 @@ public class CatalogViewer {
 	 * @throws SQLException 
 	 * @throws Exception
 	 */
+	@Deprecated
 	public static List<String> getAllShims() throws BigDawgCatalogException, SQLException {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
@@ -225,7 +273,7 @@ public class CatalogViewer {
 	}
 	
 	
-	
+	@Deprecated
 	public static List<String> getAllEngines() throws Exception {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
@@ -243,6 +291,7 @@ public class CatalogViewer {
 		return extraction;
 	}
 	
+	@Deprecated
 	public static List<String> getAllDatabases() throws Exception {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
@@ -268,6 +317,7 @@ public class CatalogViewer {
 	 *         (dst), and cast access_method
 	 * @throws Exception
 	 */
+	@Deprecated
 	public static List<String> getAllCasts() throws Exception {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
@@ -292,6 +342,7 @@ public class CatalogViewer {
 	 *         physical_db, and name of engine (engine)
 	 * @throws Exception
 	 */
+	@Deprecated
 	public static List<String> getAllObjectsByEngine() throws Exception {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
@@ -310,7 +361,7 @@ public class CatalogViewer {
 		return extraction;
 	}
 	
-	
+	@Deprecated
 	public static List<String> getAllObjects(boolean includeFields) throws Exception {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
@@ -341,6 +392,7 @@ public class CatalogViewer {
 	 *         physical_db, physical_db
 	 * @throws Exception
 	 */
+	@Deprecated
 	public static List<String> getObjectsByName(String objName) throws Exception {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
@@ -361,326 +413,8 @@ public class CatalogViewer {
 
 		return extraction;
 	}
-
-	/**
-	 * With name of the db, fetch its access information
-	 * 
-	 * @param cc
-	 * @param db
-	 * @return ArrayList of TSV String of db name (name), userid and password.
-	 * @throws Exception
-	 */
-	public static List<String> getDbAccessInfo(String dbName) throws Exception {
-		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
-		// input check
-		CatalogUtilities.checkConnection(cc);
-		CatalogUtilities.checkLength(dbName, 15);
-
-		List<String> extraction = new ArrayList<String>();
-
-		ResultSet rs = cc.execRet(
-				"select name, userid, password " + "from catalog.databases where name ilike \'%" + dbName + "%\';");
-
-		while (rs.next()) {
-			extraction.add(rs.getString("name") + "\t" + rs.getString("userid") + "\t" + rs.getString("password"));
-		}
-		rs.close();
-
-		return extraction;
-	}
-
-	/**
-	 * With name of engine, fetch all db associated with it
-	 * 
-	 * @param cc
-	 * @param engineName
-	 * @return ArrayList of TSV String of db name (name) and engine name
-	 *         (engine).
-	 * @throws Exception
-	 */
-	public static List<String> getDbsOfEngine(String engineName) throws Exception {
-		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
-		// input check
-		CatalogUtilities.checkConnection(cc);
-		CatalogUtilities.checkLength(engineName, 15);
-
-		List<String> extraction = new ArrayList<String>();
-
-		ResultSet rs = cc.execRet("select d.name db, e.name engine " + "from catalog.databases d "
-				+ "join catalog.engines e 	on d.engine_id = e.eid " + "where e.name ilike \'%" + engineName + "%\' "
-				+ "order by d.name, e.name;");
-
-		while (rs.next()) {
-			extraction.add(rs.getString("db") + "\t" + rs.getString("engine"));
-		}
-		rs.close();
-
-		return extraction;
-	}
-
 	
-	/**
-	 * With name of procedure, fetch the data types of the parameters
-	 * 
-	 * @param procName
-	 * @return The data types of the parameters
-	 * @throws Exception
-	 */
-	public static ArrayList<String> getProcParamTypes(String procName) throws Exception {
-		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
-		// input check
-		CatalogUtilities.checkConnection(cc);
 
-		ArrayList<String> dataTypes = new ArrayList<String>();
-
-		ResultSet rs = cc.execRet("select p.paramtypes from catalog.procedures p"
-				+ " where p.name ilike \'" + procName + "%\';");
-
-		while (rs.next()) {
-			String dataTypesStr = rs.getString("paramtypes");
-			dataTypes = new ArrayList<String>(Arrays.asList(dataTypesStr.replace(" ", "").split(",")));
-		}
-		rs.close();
-
-		return dataTypes;
-	}
-	
-	
-	/**
-	 * With island name, fetch all DBs connected to it through a shim.
-	 * 
-	 * @param cc
-	 * @param islandName
-	 * @return ArrayList of TSV String of db name (db), island name (island),
-	 *         and shim access method (access_method)
-	 * @throws Exception
-	 */
-	public static List<String> getDbsOfIsland(String islandName) throws Exception {
-		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
-		// input check
-		CatalogUtilities.checkConnection(cc);
-		CatalogUtilities.checkLength(islandName, 15);
-
-		List<String> extraction = new ArrayList<String>();
-
-		ResultSet rs = cc.execRet("select d.name db, e.name engine, i.scope_name island, sh.access_method "
-				+ "from catalog.databases d " + "join catalog.shims sh 	on d.engine_id = sh.engine_id "
-				+ "join catalog.engines e	on d.engine_id = e.eid "
-				+ "join catalog.islands i 	on sh.island_id = i.iid " + "where i.scope_name ilike \'%" + islandName
-				+ "%\' " + "order by d.name, i.scope_name;");
-
-		while (rs.next()) {
-			extraction.add(rs.getString("db") + "\t" + rs.getString("engine") + "\t" + rs.getString("island") + "\t"
-					+ rs.getString("access_method"));
-		}
-		rs.close();
-
-		return extraction;
-	}
-
-	/**
-	 * With object name, fetch dbid
-	 * 
-	 * @param objName
-	 * @return ArrayList of integers of database id (dbid)
-	 * @throws Exception
-	 */
-	public static List<Integer> getDbsOfObject(String objName) throws Exception {
-		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
-		// input check
-		CatalogUtilities.checkConnection(cc);
-		CatalogUtilities.checkLength(objName, 50);
-
-		List<Integer> extraction = new ArrayList<>();
-
-		ResultSet rs = cc.execRet("select d.dbid " + "from catalog.objects o "
-				+ "join catalog.databases d 	on o.physical_db = d.dbid "
-//				+ "join catalog.engines e 		on d.engine_id = e.eid "
-				+ "where o.name = \'" + objName + "\' "
-//				+ " and e.name ilike \'%postgres%\' "
-				+ "order by d.dbid;");
-
-		while (rs.next()) {
-			extraction.add(rs.getInt("dbid"));
-		}
-		rs.close();
-
-		return extraction;
-	}
-	
-	public static List<Integer> getDbsOfObject(String objName, List<String> dbnames) throws BigDawgCatalogException, SQLException  {
-		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
-		// input check
-		CatalogUtilities.checkConnection(cc);
-		CatalogUtilities.checkLength(objName, 50);
-		CatalogUtilities.checkLength(objName, 30);
-
-		List<Integer> extraction = new ArrayList<>();
-		
-		StringBuilder sb = new StringBuilder();
-		boolean started = false;
-		sb.append('(');
-		for (String s : dbnames) {
-			if (!started) started = true;
-			else sb.append(" OR ");
-			sb.append("e.connection_properties ilike \'%").append(s).append("%\'");
-		}
-		sb.append(')').append(' ');
-		
-		ResultSet rs = cc.execRet("select d.dbid "
-								+ "from catalog.objects o "
-								+ "join catalog.databases d 	on o.physical_db = d.dbid "
-								+ "join catalog.engines e 		on d.engine_id = e.eid "
-								+ "where o.name = \'" + objName + "\' "
-								+  " and "//e.connection_properties ilike \'%"+dbname+"%\' "
-								+ sb.toString()
-								+ "order by d.dbid;");
-
-		while (rs.next()) {
-			extraction.add(rs.getInt("dbid"));
-		}
-		rs.close();
-
-		return extraction;
-	}
-
-	/**
-	 * With a list of objects and the corresponding islands, fetch all relevant
-	 * shim informations. NOTE: if a shim is not available it will not show
-	 * 
-	 * @param cc
-	 * @param objs
-	 * @return ArrayList of TSV String of object name (obj), fields, dbid, iid,
-	 *         shim_id
-	 * @throws Exception
-	 */
-	public static List<String> getShimsUseObjectsIslands(List<String> objs, List<String> islands) throws Exception {
-		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
-		// input check
-		CatalogUtilities.checkConnection(cc);
-		if (objs.size() == 0)
-			return new ArrayList<String>();
-		if (islands.size() != objs.size())
-			throw new Exception("getShimsUseObjectsIslands - Lengths of object list and islands list do not match");
-		for (String objName : objs)
-			CatalogUtilities.checkLength(objName, 15);
-		for (String islName : islands)
-			CatalogUtilities.checkLength(islName, 15);
-
-		List<String> extraction = new ArrayList<String>();
-		List<String> objsdup = new ArrayList<String>();
-		objsdup.addAll(objs.subList(1, objs.size()));
-		List<String> isldup = new ArrayList<String>();
-		isldup.addAll(islands.subList(1, islands.size()));
-
-		String wherePred;
-		if (islands.size() == 0)
-			wherePred = new String(" o.name ilike \'%" + objs.get(0) + "%\' ");
-		else {
-			wherePred = new String(" (o.name ilike \'%" + objs.get(0) + "%\' and isl.scope_name ilike \'%"
-					+ String.join("%\' and isl.scope_name ilike \'%", islands.get(0).split(",")) + "%\') ");
-		}
-
-		for (String objName : objsdup) {
-			if (isldup.get(objsdup.indexOf(objName)) == "") {
-				wherePred = wherePred + "or o.name ilike \'%" + objName + "%\' ";
-			} else {
-				wherePred = wherePred + "or (o.name ilike \'%" + objName + "%\' and isl.scope_name ilike \'%" + String
-						.join("%\' and isl.scope_name ilike \'%", isldup.get(objsdup.indexOf(objName)).split(","))
-						+ "%\') ";
-			}
-		}
-
-		ResultSet rs = cc.execRet("select o.name obj, o.fields, d.name db, isl.scope_name island, sh.access_method "
-				+ "from catalog.objects o " + "join catalog.databases d  		on o.physical_db = d.dbid "
-				+ "join catalog.engines e   		on d.engine_id = e.eid "
-				+ "right join catalog.shims sh   	on e.eid = sh.engine_id "
-				+ "join catalog.islands isl  		on sh.island_id = isl.iid " + "where " + wherePred
-				+ "order by o.name, d.name, iid, shim_id;");
-		while (rs.next()) {
-			extraction.add(rs.getString("obj") + "\t" + rs.getString("fields") + "\t" + rs.getString("db") + "\t"
-					+ rs.getString("island") + "\t" + rs.getString("access_method"));
-		}
-		rs.close();
-
-		return extraction;
-	}
-
-	/**
-	 * With a list of object, a list of some of their fields and the list of
-	 * corresponding islands, fetch all relevant shim information. Each string
-	 * in the fs is a CSV string of some or all fields included in the object.
-	 * If a string in fs is blank string "", all fields will be included. NOTE:
-	 * if a shim does not exist, it will not show
-	 * 
-	 * @param cc
-	 * @param objs
-	 * @param fs
-	 * @return ArrayList of TSV String of object name (obj), fields, db name
-	 *         (db), island, and shim access method.
-	 * @throws Exception
-	 */
-	public static List<String> getShimsUseObjectsFieldsIslands(List<String> objs, List<String> fs, List<String> islands) throws Exception {
-		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
-		// input check
-		CatalogUtilities.checkConnection(cc);
-		if (objs.size() == 0)
-			return new ArrayList<String>();
-		if (fs.size() != objs.size() || islands.size() != objs.size())
-			throw new Exception(
-					"getShimsUseObjectsFieldsIslands - Lengths of object, fields and islands lists do not match");
-		for (String objName : objs)
-			CatalogUtilities.checkLength(objName, 15);
-		for (String f : fs)
-			CatalogUtilities.checkLength(f, 300);
-		for (String islName : islands) {
-			CatalogUtilities.checkLength(islName, 15);
-			if (islName == "" || islName == null)
-				throw new Exception("getShimsUseObjectsFieldsIslands - islands ArrayList is not well constructed.");
-		}
-
-		List<String> extraction = new ArrayList<String>();
-		List<String> objsdup = new ArrayList<String>();
-		objsdup.addAll(objs.subList(1, objs.size()));
-		List<String> fsdup = new ArrayList<String>();
-		fsdup.addAll(fs.subList(1, fs.size()));
-		List<String> isldup = new ArrayList<String>();
-		isldup.addAll(islands.subList(1, islands.size()));
-		String wherePred;
-		if (fs.size() == 0)
-			wherePred = new String(
-					" o.name ilike \'%" + objs.get(0) + "%\' and i.scope_name ilike \'%" + islands.get(0) + "%\' ");
-		else {
-			wherePred = new String(" (o.name ilike \'%" + objs.get(0) + "%\' and o.fields ilike \'%"
-					+ String.join("%\' and o.fields ilike \'%", fs.get(0).split(",")) + "%\' and i.scope_name ilike \'%"
-					+ islands.get(0) + "%\') ");
-		}
-
-		for (String objName : objsdup) {
-			if (fsdup.get(objsdup.indexOf(objName)) == "") {
-				wherePred = wherePred + "or (o.name ilike \'%" + objName + "%\' and i.scope_name ilike \'%"
-						+ isldup.get(objsdup.indexOf(objName)) + "%\') ";
-			} else {
-				wherePred = wherePred + "or (o.name ilike \'%" + objName + "%\' and o.fields ilike \'%"
-						+ String.join("%\' and o.fields ilike \'%", fsdup.get(objsdup.indexOf(objName)).split(","))
-						+ "%\' " + "and i.scope_name ilike \'%" + isldup.get(objsdup.indexOf(objName)) + "%\') ";
-			}
-		}
-
-		ResultSet rs = cc.execRet("select o.name obj, o.fields, d.name db, i.scope_name island, sh.access_method "
-				+ "from catalog.objects o " + "join catalog.databases d  		on o.physical_db = d.dbid "
-				+ "join catalog.engines e   		on d.engine_id = e.eid "
-				+ "right join catalog.shims sh   	on e.eid = sh.engine_id "
-				+ "join catalog.islands i	  		on sh.island_id = i.iid " + "where " + wherePred
-				+ "order by o.name, fields, d.name, i.scope_name;");
-		while (rs.next()) {
-			extraction.add(rs.getString("obj") + "\t" + rs.getString("fields") + "\t" + rs.getString("db") + "\t"
-					+ rs.getString("island") + "\t" + rs.getString("access_method"));
-		}
-		rs.close();
-
-		return extraction;
-	}
 
 	/**
 	 * With a list of objects, fetch all relevant one-step casts. Useful for
