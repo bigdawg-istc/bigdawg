@@ -8,7 +8,8 @@ installation/data
 .mtj.tmp/
 
 # Package Files #
-*.jar
+.jar
+!graphulo-2.6.3-alldeps.jar #Don't exclude this jar
 *.war
 *.ear
 
