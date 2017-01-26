@@ -26,6 +26,7 @@ import org.apache.accumulo.core.data.Value;
 import org.apache.accumulo.core.security.Authorizations;
 import org.apache.hadoop.io.Text;
 import org.apache.log4j.Logger;
+import org.jfree.util.Log;
 
 import istc.bigdawg.exceptions.AccumuloBigDawgException;
 import istc.bigdawg.properties.BigDawgConfigProperties;
@@ -153,7 +154,8 @@ public class AccumuloInstance {
 		}
 	}
 
-	public static AccumuloConnectionInfo getDefaultConnection() throws Exception {
+	public static AccumuloConnectionInfo getDefaultConnection()
+			throws Exception {
 		String[] zk = BigDawgConfigProperties.INSTANCE.getZooKeepers()
 				.split(":");
 		if (zk.length != 2) {
@@ -235,6 +237,30 @@ public class AccumuloInstance {
 		return conn;
 	}
 
+	public boolean createTableIfNotExists(String tableName) throws Exception {
+		TableOperations tabOp = getConnector().tableOperations();
+		if (!tabOp.exists(tableName)) {
+			try {
+				tabOp.create(tableName);
+				return true;
+			} catch (AccumuloException | AccumuloSecurityException exp) {
+				String msg = "Problem with access to Acccumulo! "
+						+ exp.getMessage();
+				logger.error(msg + StackTrace.getFullStackTrace(exp));
+				throw exp;
+			} catch (TableExistsException exp) {
+				String msg = "This error should not have happened."
+						+ " We checked that the table did not exist and " + ""
+						+ "only then wanted to create a new table. "
+						+ "Probably a table with the same name "
+						+ " was added concurrently. " + exp.getMessage();
+				logger.error(msg + StackTrace.getFullStackTrace(exp));
+				throw exp;
+			}
+		}
+		return false;
+	}
+
 	public boolean createTable(String tableName) {
 		TableOperations tabOp = getConnector().tableOperations();
 		try {
@@ -245,7 +271,7 @@ public class AccumuloInstance {
 		} catch (AccumuloSecurityException e) {
 			e.printStackTrace();
 		} catch (TableExistsException e1) {
-			System.out.println("Table " + tableName + " already exists.");
+			logger.info("Table " + tableName + " already exists.");
 		}
 		return false;
 	}

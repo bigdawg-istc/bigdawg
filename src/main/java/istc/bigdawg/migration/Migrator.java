@@ -67,6 +67,7 @@ public class Migrator {
 		 */
 		registeredMigrators.add(new FromSciDBToPostgres());
 		registeredMigrators.add(new FromAccumuloToPostgres());
+		registeredMigrators.add(new FromPostgresToAccumulo());
 	}
 
 	/**

@@ -12,6 +12,7 @@ import org.apache.accumulo.core.client.AccumuloSecurityException;
 import org.apache.accumulo.core.client.TableNotFoundException;
 
 import istc.bigdawg.exceptions.AccumuloBigDawgException;
+import istc.bigdawg.exceptions.MigrationException;
 
 /**
  * 
@@ -35,10 +36,11 @@ public class TestTpchPostgresAccumulo {
 	 * @throws AccumuloException
 	 * @throws SQLException
 	 * @throws IOException
+	 * @throws MigrationException 
 	 */
 	public static void main(String[] args) throws IOException, SQLException,
 			AccumuloException, AccumuloSecurityException,
-			AccumuloBigDawgException, TableNotFoundException {
+			AccumuloBigDawgException, TableNotFoundException, MigrationException {
 		FromPostgresToAccumulo.main(args);
 		FromAccumuloToPostgres.main(args);
 	}

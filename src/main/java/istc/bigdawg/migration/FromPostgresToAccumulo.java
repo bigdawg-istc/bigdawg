@@ -19,6 +19,7 @@ import org.apache.accumulo.core.client.AccumuloException;
 import org.apache.accumulo.core.client.AccumuloSecurityException;
 import org.apache.accumulo.core.client.BatchWriter;
 import org.apache.accumulo.core.client.BatchWriterConfig;
+import org.apache.accumulo.core.client.MutationsRejectedException;
 import org.apache.accumulo.core.client.TableNotFoundException;
 import org.apache.accumulo.core.data.Mutation;
 import org.apache.accumulo.core.data.Value;
@@ -26,22 +27,35 @@ import org.apache.hadoop.io.Text;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
+import istc.bigdawg.accumulo.AccumuloConnectionInfo;
+
 /**
  * 
  */
 
 import istc.bigdawg.accumulo.AccumuloInstance;
 import istc.bigdawg.exceptions.AccumuloBigDawgException;
+import istc.bigdawg.exceptions.MigrationException;
+import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.postgresql.PostgreSQLInstance;
+import istc.bigdawg.utils.StackTrace;
 
 /**
  * @author Adam Dziedzic
  * 
  */
-public class FromPostgresToAccumulo {
+public class FromPostgresToAccumulo extends FromDatabaseToDatabase {
+
+	/**
+	 * For transfer via network.
+	 */
+	private static final long serialVersionUID = 1L;
 
 	private static Logger lgr = org.apache.log4j.Logger
+			.getLogger(FromPostgresToAccumulo.class);
+
+	private static Logger logger = Logger
 			.getLogger(FromPostgresToAccumulo.class);
 
 	private Connection con = null;
@@ -56,13 +70,19 @@ public class FromPostgresToAccumulo {
 	private int accumuloBatchWriteSize = 1000;
 	private int postgreSQLFetchSize = 50;
 
+	private PostgreSQLConnectionInfo conFrom;
+	private AccumuloConnectionInfo conTo;
+
 	public AccumuloInstance getAccumuloInstance() {
 		return accInst;
 	}
 
-	public FromPostgresToAccumulo() throws AccumuloException,
-			AccumuloSecurityException, AccumuloBigDawgException {
-		accInst = AccumuloInstance.getInstance();
+	public FromPostgresToAccumulo() {
+		logger.debug("Created migrator from PostgreSQL to Accumulo");
+	}
+
+	public FromPostgresToAccumulo(AccumuloInstance accInst) {
+		this.accInst = accInst;
 	}
 
 	private BatchWriter getAccumuloBatchWriter(final String table)
@@ -86,9 +106,6 @@ public class FromPostgresToAccumulo {
 			throws SQLException {
 		String query = "Select * from "
 				+ table.replace(";", "").replace(" ", "");
-		con = PostgreSQLInstance.getConnection();
-		con.setReadOnly(true);
-		con.setAutoCommit(false);
 		st = con.prepareStatement(query, ResultSet.TYPE_FORWARD_ONLY,
 				ResultSet.CONCUR_READ_ONLY);
 		// Turn use of the cursor on.
@@ -124,15 +141,59 @@ public class FromPostgresToAccumulo {
 		return new Text(rowIdInit.toString());
 	}
 
-	public void fromPostgresToAccumulo(final String postgresTable,
-			final String accumuloTable) throws SQLException, AccumuloException,
-					AccumuloSecurityException, AccumuloBigDawgException,
-					TableNotFoundException {
-		BatchWriter writer = null;
+	@Override
+	public MigrationResult migrate(MigrationInfo migrationInfo)
+			throws MigrationException {
+		if (!(migrationInfo.getConnectionTo() instanceof AccumuloConnectionInfo
+				&& migrationInfo
+						.getConnectionFrom() instanceof PostgreSQLConnectionInfo)) {
+			return null;
+		}
+		conTo = (AccumuloConnectionInfo) migrationInfo.getConnectionTo();
+		conFrom = (PostgreSQLConnectionInfo) migrationInfo.getConnectionFrom();
 		try {
-			writer = getAccumuloBatchWriter(accumuloTable);
-			List<Integer> primaryColNum = new PostgreSQLHandler()
-					.getPrimaryColumns(postgresTable);
+			this.con = PostgreSQLHandler.getConnection(conFrom);
+			con.setAutoCommit(false);
+			con.setReadOnly(true);
+		} catch (SQLException e) {
+			String msg = "Could not connect to PostgreSQL.";
+			logger.error(msg + StackTrace.getFullStackTrace(e), e);
+		}
+
+		try {
+			this.accInst = AccumuloInstance.getFullInstance(conTo);
+			accInst.createTableIfNotExists(migrationInfo.getObjectTo());
+		} catch (Exception e) {
+			throw new MigrationException("Problem with Accumulo", e);
+		}
+		try {
+			return fromPostgresToAccumulo(migrationInfo.getObjectFrom(),
+					migrationInfo.getObjectTo());
+		} catch (MigrationException e) {
+			String msg = "Could not close the destination database connection.";
+			logger.error(msg + StackTrace.getFullStackTrace(e), e);
+			throw new MigrationException(msg, e);
+		}
+	}
+
+	public MigrationResult fromPostgresToAccumulo(final String postgresTable,
+			final String accumuloTable) throws MigrationException {
+		logger.debug("Migrate data from PostgreSQL to Accumulo.");
+		long startTimeMigration = System.currentTimeMillis();
+		BatchWriter writer = null;
+		long fullRowCounter = 0; /* Full counter of rows extracted/loaded. */
+		try {
+			try {
+				writer = getAccumuloBatchWriter(accumuloTable);
+			} catch (AccumuloException | AccumuloSecurityException
+					| AccumuloBigDawgException | TableNotFoundException exp) {
+				String msg = "Could not open Accumulo BatchWriter.";
+				logger.error(msg + StackTrace.getFullStackTrace(exp), exp);
+				throw new MigrationException(msg, exp);
+			}
+			List<Integer> primaryColNum;
+			primaryColNum = new PostgreSQLHandler(conFrom, con)
+					.getPrimaryColumnsNoRecourceCleaning(postgresTable);
 			/*
 			 * gettting results from Postgres has to be after determining the PK
 			 * columns we use the same reference to rs - ResultSet in the whole
@@ -144,41 +205,91 @@ public class FromPostgresToAccumulo {
 						+ postgresTable;
 				// System.out.println(message);
 				lgr.log(Level.INFO, message);
-				return;
-			}
-			ResultSetMetaData rsmd = rs.getMetaData();
-			int numOfCol = rsmd.getColumnCount();
-			long counter = 0;
-			while (rs.next()) {
-				++counter;
-				Text rowId = getRowIdAccumuloFromPostgres(primaryColNum);
-				// Text rowId = new Text(Long.toString(counter));
-				for (int colNum = 1; colNum <= numOfCol; ++colNum) {
-					/*
-					 * We can have a composite primary key so we have to store
-					 * each column separately including primary keys.
-					 */
-					Mutation mutation = new Mutation(rowId);
-					/* colFamily, colQualifier, value */
-					mutation.put(new Text(rsmd.getColumnName(colNum)),
-							new Text("" + colNum), new Value(rs
-									.getObject(colNum).toString().getBytes()));
-					writer.addMutation(mutation);
+			} else {
+				ResultSetMetaData rsmd = rs.getMetaData();
+				int numOfCol = rsmd.getColumnCount();
+				long counterLocal = 0; /* Local counter for rows for a batch. */
+				while (rs.next()) {
+					++counterLocal;
+					Text rowId = getRowIdAccumuloFromPostgres(primaryColNum);
+					// Text rowId = new Text(Long.toString(counter));
+					for (int colNum = 1; colNum <= numOfCol; ++colNum) {
+						/*
+						 * We can have a composite primary key so we have to
+						 * store each column separately including primary keys.
+						 */
+						Mutation mutation = new Mutation(rowId);
+						/* colFamily, colQualifier, value */
+						Text colFamily = new Text("" + colNum);
+						Text colQual = new Text(rsmd.getColumnName(colNum));
+						Value value = new Value(
+								rs.getObject(colNum).toString().getBytes());
+						mutation.put(colFamily, colQual, value);
+						try {
+							writer.addMutation(mutation);
+						} catch (MutationsRejectedException e) {
+							String msg = "Mutation (new data) to Accumulo"
+									+ " was rejected with: " + "colFamily: "
+									+ colFamily + " colQualifier: " + colQual
+									+ " value:" + value;
+							logger.error(msg + StackTrace.getFullStackTrace(e),
+									e);
+							throw new MigrationException(msg, e);
+						}
+					}
+					if (counterLocal % accumuloBatchWriteSize == 0) {
+						counterLocal = 0;
+						try {
+							writer.flush();
+							writer.close();
+						} catch (MutationsRejectedException exp) {
+							String msg = "Could not close BatchWriter to Accumulo.";
+							logger.error(
+									msg + StackTrace.getFullStackTrace(exp),
+									exp);
+							throw new MigrationException(msg, exp);
+						}
+						try {
+							writer = getAccumuloBatchWriter(accumuloTable);
+						} catch (AccumuloException | AccumuloSecurityException
+								| AccumuloBigDawgException
+								| TableNotFoundException exp) {
+							String msg = "Could not open next Accumulo BatchWriter.";
+							logger.error(
+									msg + StackTrace.getFullStackTrace(exp),
+									exp);
+							throw new MigrationException(msg, exp);
+						}
+					}
 				}
-				if (counter % accumuloBatchWriteSize == 0) {
-					counter = 0;
-					writer.close();
-					writer = getAccumuloBatchWriter(accumuloTable);
-				}
 			}
-		} catch (SQLException e) {
-			e.printStackTrace();
-			throw e;
+			long endTimeMigration = System.currentTimeMillis();
+			long durationMsec = endTimeMigration - startTimeMigration;
+			return new MigrationResult(fullRowCounter, fullRowCounter,
+					startTimeMigration, endTimeMigration, durationMsec);
+		} catch (SQLException exp) {
+			String msg = "Problem with access to PostgreSQL: "
+					+ exp.getMessage();
+			logger.error(msg + StackTrace.getFullStackTrace(exp), exp);
+			throw new MigrationException(msg, exp);
 		} finally {
 			if (writer != null) {
-				writer.close();
+				try {
+					writer.flush();
+					writer.close();
+				} catch (MutationsRejectedException exp) {
+					String msg = "Could not close BatchWriter to Accumulo.";
+					logger.error(msg + StackTrace.getFullStackTrace(exp), exp);
+					throw new MigrationException(msg, exp);
+				}
 			}
-			cleanPostgreSQLResources();
+			try {
+				cleanPostgreSQLResources();
+			} catch (SQLException exp) {
+				String msg = "Could not clean resources to PostgreSQL.";
+				logger.error(msg + StackTrace.getFullStackTrace(exp), exp);
+				throw new MigrationException(msg, exp);
+			}
 		}
 	}
 
@@ -217,11 +328,12 @@ public class FromPostgresToAccumulo {
 
 		FromPostgresToAccumulo tpch = null;
 		try {
-			tpch = new FromPostgresToAccumulo();
+			AccumuloInstance accInst = AccumuloInstance.getInstance();
+			tpch = new FromPostgresToAccumulo(accInst);
 		} catch (AccumuloException | AccumuloSecurityException
 				| AccumuloBigDawgException e1) {
 			e1.printStackTrace();
-			return;
+			System.exit(1);
 		}
 		List<String> tables = new ArrayList<String>();
 		tables.add("region");
@@ -277,8 +389,12 @@ public class FromPostgresToAccumulo {
 					new FileWriter("fromPostgresToAccumulo.log", true)));
 			long lStartTime = System.nanoTime();
 			for (String table : tables) {
-				System.out.println(table);
-				tpch.fromPostgresToAccumulo(table, table);
+				logger.debug("Table: " + table);
+				try {
+					tpch.fromPostgresToAccumulo(table, table);
+				} catch (MigrationException e) {
+					e.printStackTrace();
+				}
 			}
 			String message = "From Postgres to Accumulo execution time in seconds: "
 					+ (System.nanoTime() - lStartTime) / 1000000000L

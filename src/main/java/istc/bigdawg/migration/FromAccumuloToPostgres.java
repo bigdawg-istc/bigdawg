@@ -128,7 +128,6 @@ public class FromAccumuloToPostgres extends FromDatabaseToDatabase {
 						.getConnectionTo() instanceof PostgreSQLConnectionInfo)) {
 			return null;
 		}
-
 		AccumuloConnectionInfo conFrom = (AccumuloConnectionInfo) migrationInfo
 				.getConnectionFrom();
 		PostgreSQLConnectionInfo conTo = (PostgreSQLConnectionInfo) migrationInfo
@@ -187,7 +186,6 @@ public class FromAccumuloToPostgres extends FromDatabaseToDatabase {
 			if (rs == null) {
 				String message = "No results were fetched for the table: "
 						+ postgresTable;
-				// System.out.println(message);
 				logger.log(Level.INFO, message);
 			} else {
 				ResultSetMetaData rsmd = rs.getMetaData();
@@ -243,9 +241,9 @@ public class FromAccumuloToPostgres extends FromDatabaseToDatabase {
 					flushRowsToPostgreSQL(sBuilder, reader, cpManager,
 							postgresTable, copyString);
 				}
+				con.commit();
 			}
 		} finally {
-			con.commit();
 			cleanPostgreSQLResources();
 		}
 

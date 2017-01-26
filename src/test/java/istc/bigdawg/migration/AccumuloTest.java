@@ -3,7 +3,7 @@
  */
 package istc.bigdawg.migration;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 import java.util.Map.Entry;
 
@@ -32,6 +32,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import istc.bigdawg.LoggerSetup;
+import istc.bigdawg.accumulo.AccumuloConnectionInfo;
 import istc.bigdawg.accumulo.AccumuloInstance;
 import istc.bigdawg.exceptions.AccumuloBigDawgException;
 
@@ -60,20 +61,24 @@ public class AccumuloTest {
 		LoggerSetup.setLogging();
 	}
 
-	/**
-	 * Load data to table using connection conn.
-	 * 
-	 * @param conn
-	 * @param table
-	 */
-	protected static void loadData(Connector conn, String table) {
-		TableOperations tabOp = conn.tableOperations();
+	protected static void recreateTable(AccumuloConnectionInfo conTo,
+			String table) throws AccumuloSecurityException, AccumuloException {
+		AccumuloInstance accInst = AccumuloInstance.getFullInstance(conTo);
+		Connector connector = accInst.getConn();
+		TableOperations tabOp = connector.tableOperations();
+		recreateTable(tabOp, table);
+	}
+
+	protected static void recreateTable(TableOperations tabOp, String table) {
 		try {
 			try {
 				tabOp.delete(table);
 			} catch (TableNotFoundException e) {
+				logger.debug("We have to drop the previous table " + table
+						+ " and create a new one.");
 				e.printStackTrace();
 			}
+			logger.debug("Create a new table " + table + " in Accumulo.");
 			tabOp.create(table);
 		} catch (TableExistsException e1) {
 			logger.debug("Table exception, table creation failed.");
@@ -83,6 +88,17 @@ public class AccumuloTest {
 		} catch (AccumuloSecurityException e) {
 			e.printStackTrace();
 		}
+	}
+
+	/**
+	 * Load data to table using connection conn.
+	 * 
+	 * @param conn
+	 * @param table
+	 */
+	protected static void loadData(Connector conn, String table) {
+		TableOperations tabOp = conn.tableOperations();
+		recreateTable(tabOp, table);
 		Text rowID = new Text(ROW);
 		Text colFam = new Text(COL_FAMILY);
 		Text colQual = new Text(COL_QUAL);
@@ -101,6 +117,7 @@ public class AccumuloTest {
 		try {
 			writer = conn.createBatchWriter(table, config);
 			writer.addMutation(mutation);
+			writer.flush();
 			writer.close();
 		} catch (TableNotFoundException e) {
 			logger.error("Problem with creating BatchWriter, table not found.",
