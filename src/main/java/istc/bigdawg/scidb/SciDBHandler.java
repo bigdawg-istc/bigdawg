@@ -477,6 +477,7 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 
 				st.setQueryTimeout(30);
 				if (st.execute(query)) {
+					connection.commit();
 					try {
 						ResultSet rs = st.getResultSet();
 						return Optional

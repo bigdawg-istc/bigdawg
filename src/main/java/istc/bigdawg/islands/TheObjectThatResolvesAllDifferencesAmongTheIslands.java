@@ -19,6 +19,8 @@ import org.apache.accumulo.core.client.AccumuloSecurityException;
 import org.apache.accumulo.core.client.TableExistsException;
 import org.apache.accumulo.core.client.TableNotFoundException;
 
+import com.beust.jcommander.internal.Lists;
+
 import istc.bigdawg.accumulo.AccumuloConnectionInfo;
 import istc.bigdawg.accumulo.AccumuloExecutionEngine;
 import istc.bigdawg.catalog.Catalog;
@@ -292,14 +294,24 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	public static DBHandler createTableForPlanning(Scope sourceScope, Set<String> children, Map<String, String> transitionSchemas) throws SQLException, BigDawgException, AccumuloException, AccumuloSecurityException, TableExistsException {
 
 		DBHandler dbSchemaHandler = null;
-		
+		Set<String> createdTables = new HashSet<>();
 		switch (sourceScope) {
 		case ARRAY:
 			dbSchemaHandler = new SciDBHandler(scidbSchemaHandlerDBID);
+			createdTables = new HashSet<>();
 			for (String key : transitionSchemas.keySet()) 
 				if (children.contains(key)) {
-					((SciDBHandler)dbSchemaHandler).executeStatement(transitionSchemas.get(key));
-					((SciDBHandler)dbSchemaHandler).commit();
+					try {
+						createdTables.add(key);
+						((SciDBHandler)dbSchemaHandler).executeStatement(transitionSchemas.get(key));
+						((SciDBHandler)dbSchemaHandler).commit();	
+					} catch (Exception e) {
+						for (String s : createdTables) {
+							((SciDBHandler)dbSchemaHandler).executeStatement("remove("+s+")");
+							((SciDBHandler)dbSchemaHandler).commit();	
+						}
+						throw e;
+					}
 				}
 			break;
 		case CAST:
@@ -312,8 +324,21 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 			break;
 		case RELATIONAL:
 			dbSchemaHandler = new PostgreSQLHandler((PostgreSQLConnectionInfo)CatalogViewer.getConnectionInfo(psqlSchemaHandlerDBID));
-			for (String key : transitionSchemas.keySet()) 
-				if (children.contains(key)) ((PostgreSQLHandler)dbSchemaHandler).executeStatementPostgreSQL(transitionSchemas.get(key));
+			createdTables = new HashSet<>();
+			for (String key : transitionSchemas.keySet()) {
+				if (children.contains(key)) {
+					try {
+						createdTables.add(key);
+						((PostgreSQLHandler)dbSchemaHandler).executeStatementPostgreSQL(transitionSchemas.get(key));
+					} catch (Exception e) {
+						for (String s : createdTables) {
+							((PostgreSQLHandler)dbSchemaHandler).executeStatementPostgreSQL("drop table "+s);
+						}
+						throw e;
+					}
+				}
+			}
+				
 			break;
 		case STREAM:
 			throw new BigDawgException("STREAM island does not support data immigration; createTableForPlanning");
