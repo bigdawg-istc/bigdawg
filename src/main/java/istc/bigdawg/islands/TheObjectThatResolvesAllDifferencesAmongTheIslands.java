@@ -141,43 +141,50 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	public static ConnectionInfo getQConnectionInfo(Catalog cc, Engine e, int dbid) throws SQLException, BigDawgCatalogException {
 		
 		ConnectionInfo extraction = null;
-		ResultSet rs2;
+		ResultSet rs2 = null;
 		
-		if (e.equals(Engine.PostgreSQL)) {
+		try {
+			if (e.equals(Engine.PostgreSQL)) {
+				
+				rs2 = cc.execRet("select dbid, eid, host, port, db.name as dbname, userid, password from catalog.databases db join catalog.engines e on db.engine_id = e.eid where dbid = "+dbid);
+				if (rs2.next())
+					extraction = new PostgreSQLConnectionInfo(rs2.getString("host"), rs2.getString("port"),rs2.getString("dbname"), rs2.getString("userid"), rs2.getString("password"));
+			} else if (e.equals(Engine.SciDB)) {
+				rs2 = cc.execRet("select dbid, db.engine_id, host, port, bin_path, userid, password "
+								+ "from catalog.databases db "
+								+ "join catalog.engines e on db.engine_id = e.eid "
+								+ "join catalog.scidbbinpaths sp on db.engine_id = sp.eid where dbid = "+dbid);
+				if (rs2.next())
+					extraction = new SciDBConnectionInfo(rs2.getString("host"), rs2.getString("port"), rs2.getString("userid"), rs2.getString("password"), rs2.getString("bin_path"));
+			} else if (e.equals(Engine.SStore)) {
+				
+				rs2 = cc.execRet("select dbid, eid, host, port, db.name as dbname, userid, password from catalog.databases db join catalog.engines e on db.engine_id = e.eid where dbid = "+dbid);
+				if (rs2.next())
+					extraction = new SStoreSQLConnectionInfo(rs2.getString("host"), rs2.getString("port"),rs2.getString("dbname"), rs2.getString("userid"), rs2.getString("password"));
+				
+			} else if (e.equals(Engine.Accumulo)) {
+				rs2 = cc.execRet("select dbid, eid, host, port, db.name as dbname, userid, password from catalog.databases db join catalog.engines e on db.engine_id = e.eid where dbid = "+dbid);
+				if (rs2.next())
+					extraction = new AccumuloConnectionInfo(rs2.getString("host"), rs2.getString("port"),rs2.getString("dbname"), rs2.getString("userid"), rs2.getString("password"));
+			} else 
+				throw new BigDawgCatalogException("This is not supposed to happen");
 			
-			rs2 = cc.execRet("select dbid, eid, host, port, db.name as dbname, userid, password from catalog.databases db join catalog.engines e on db.engine_id = e.eid where dbid = "+dbid);
-			if (rs2.next())
-				extraction = new PostgreSQLConnectionInfo(rs2.getString("host"), rs2.getString("port"),rs2.getString("dbname"), rs2.getString("userid"), rs2.getString("password"));
-		} else if (e.equals(Engine.SciDB)) {
-			rs2 = cc.execRet("select dbid, db.engine_id, host, port, bin_path, userid, password "
-							+ "from catalog.databases db "
-							+ "join catalog.engines e on db.engine_id = e.eid "
-							+ "join catalog.scidbbinpaths sp on db.engine_id = sp.eid where dbid = "+dbid);
-			if (rs2.next())
-				extraction = new SciDBConnectionInfo(rs2.getString("host"), rs2.getString("port"), rs2.getString("userid"), rs2.getString("password"), rs2.getString("bin_path"));
-		} else if (e.equals(Engine.SStore)) {
-			
-			rs2 = cc.execRet("select dbid, eid, host, port, db.name as dbname, userid, password from catalog.databases db join catalog.engines e on db.engine_id = e.eid where dbid = "+dbid);
-			if (rs2.next())
-				extraction = new SStoreSQLConnectionInfo(rs2.getString("host"), rs2.getString("port"),rs2.getString("dbname"), rs2.getString("userid"), rs2.getString("password"));
-			
-		} else if (e.equals(Engine.Accumulo)) {
-			rs2 = cc.execRet("select dbid, eid, host, port, db.name as dbname, userid, password from catalog.databases db join catalog.engines e on db.engine_id = e.eid where dbid = "+dbid);
-			if (rs2.next())
-				extraction = new AccumuloConnectionInfo(rs2.getString("host"), rs2.getString("port"),rs2.getString("dbname"), rs2.getString("userid"), rs2.getString("password"));
-		} else 
-			throw new BigDawgCatalogException("This is not supposed to happen");
-		
-		if (extraction == null) {
-			rs2.close();
-			throw new BigDawgCatalogException("Connection Info Cannot Be Formulated: "+dbid);
+			if (extraction == null) {
+				rs2.close();
+				throw new BigDawgCatalogException("Connection Info Cannot Be Formulated: "+dbid);
+			}
+				
+			if (rs2.next()) {
+				throw new BigDawgCatalogException("Non-unique DBID: "+dbid);
+			}
+		} catch (SQLException ex) {
+			cc.rollback();
+			throw ex;
+		} finally {
+			if (rs2 != null) rs2.close();
 		}
-			
-		if (rs2.next()) {
-			throw new BigDawgCatalogException("Non-unique DBID: "+dbid);
-		}
 		
-		rs2.close();
+		
 		return extraction;
 	}
 	
