@@ -195,8 +195,9 @@ public class Planner {
 			while (!entryNodes.isEmpty()) {
 				entryNodes = processCrossIslandPlanNodes(ciqp, entryNodes, connectionInfoMap, tempTableInfo, objectsToDelete);
 			}
-		} finally {
+		} catch (Exception e) {
 			cleanUpTemporaryTables(objectsToDelete, tempTableInfo);
+			throw e;
 		} 
 
 		// we assume there is no lone CAST
