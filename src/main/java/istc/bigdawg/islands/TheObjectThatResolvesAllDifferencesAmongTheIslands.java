@@ -79,6 +79,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	public static final int  scidbSchemaHandlerDBID = BigDawgConfigProperties.INSTANCE.getSciDBSchemaServerDBID();
 	public static final int  sstoreDBID = BigDawgConfigProperties.INSTANCE.getSStoreDBID();
 	public static final int  accumuloSchemaHandlerDBID = BigDawgConfigProperties.INSTANCE.getAccumuloSchemaServerDBID(); 
+	public static final String AccumuloCreateTableCommandPrefix = "accumulocreate ";
 	
 	private static final Pattern predicatePattern = Pattern.compile("(?<=\\()([^\\(^\\)]+)(?=\\))");
 	
@@ -686,7 +687,9 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case STREAM:
 			throw new BigDawgException("STREAM Island does not allow you to create new tables; getCreationQueryForCast");
 		case TEXT:
-			throw new BigDawgException("TEXT Island does not allow you to create new tables; getCreationQueryForCast");
+			AccumuloExecutionEngine.addExecutionTree(AccumuloCreateTableCommandPrefix+name, null);
+			return name;
+//			throw new BigDawgException("TEXT Island does not allow you to create new tables; getCreationQueryForCast");
 		case MYRIA:
 			throw new BigDawgException("MYRIA Island does not allow you to create new tables; getCreationQueryForCast");	
 		default:
