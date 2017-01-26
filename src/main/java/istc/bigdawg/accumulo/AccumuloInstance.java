@@ -333,10 +333,16 @@ public class AccumuloInstance {
 
 	/**
 	 * @param args
+	 * @throws AccumuloBigDawgException
+	 * @throws AccumuloSecurityException
+	 * @throws AccumuloException
+	 * @throws TableNotFoundException
 	 */
-	public static void main(String[] args) {
-		// TODO Auto-generated method stub
-
+	public static void main(String[] args)
+			throws AccumuloException, AccumuloSecurityException,
+			AccumuloBigDawgException, TableNotFoundException {
+		AccumuloInstance acc = getInstance();
+		acc.readAllData("pythontable");
 	}
 
 }

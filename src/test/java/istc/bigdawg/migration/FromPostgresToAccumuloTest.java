@@ -68,10 +68,12 @@ public class FromPostgresToAccumuloTest {
 				+ "through the Migrator.");
 		preapreDataPostgres();
 		AccumuloConnectionInfo conTo = AccumuloInstance.getDefaultConnection();
+		logger.debug(conTo.toString());
 		AccumuloTest.recreateTable(conTo, toTable);
 		Migrator.migrate(conFrom, TABLE, conTo, TABLE);
 		AccumuloInstance acc = AccumuloInstance.getFullInstance(conTo);
 		long countAccumulo = acc.countRows(toTable);
+		logger.debug("Number of rows in Accumulo: " + countAccumulo);
 		assertEquals(numberOfRowsPostgres * numberOfColsPostgres,
 				countAccumulo);
 	}
