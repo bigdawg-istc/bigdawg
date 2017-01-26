@@ -1,7 +1,9 @@
 package istc.bigdawg.accumulo;
 
 import java.text.ParseException;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 import org.apache.accumulo.core.client.AccumuloException;
 import org.apache.accumulo.core.client.AccumuloSecurityException;
@@ -10,6 +12,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import istc.bigdawg.exceptions.BigDawgException;
 import istc.bigdawg.executor.ExecutorEngine;
 import istc.bigdawg.executor.ExecutorEngine.LocalQueryExecutionException;
+import istc.bigdawg.islands.TheObjectThatResolvesAllDifferencesAmongTheIslands;
 import istc.bigdawg.query.ConnectionInfo;
 
 public class AccumuloConnectionInfo implements ConnectionInfo {
@@ -23,19 +26,20 @@ public class AccumuloConnectionInfo implements ConnectionInfo {
 	String accumuloInstanceName; // this goes to database
 	String username;
 	String password;
-	
-	public AccumuloConnectionInfo(String zkHost, String zkPort, String accumuloInstanceDatabase, String usr, String pw) {
+
+	public AccumuloConnectionInfo(String zkHost, String zkPort,
+			String accumuloInstanceDatabase, String usr, String pw) {
 		this.username = usr;
 		this.password = pw;
 		this.zooKeeperHost = zkHost;
 		this.zooKeeperPort = zkPort;
 		this.accumuloInstanceName = accumuloInstanceDatabase;
 	}
-	
+
 	@Override
 	public String getUrl() {
 		// TODO Auto-generated method stub
-		return zooKeeperHost+':'+zooKeeperPort;
+		return zooKeeperHost + ':' + zooKeeperPort;
 	}
 
 	@Override
@@ -65,12 +69,19 @@ public class AccumuloConnectionInfo implements ConnectionInfo {
 
 	@Override
 	public Collection<String> getCleanupQuery(Collection<String> objects) {
-		return null;
+		List<String> cleanupStrings = new ArrayList<>();
+		for (String s : objects) {
+			cleanupStrings
+					.add(TheObjectThatResolvesAllDifferencesAmongTheIslands.AccumuloCreateTableCommandPrefix
+							+ s);
+		}
+		return cleanupStrings;
 	}
 
 	@Override
-	public long[] computeHistogram(String object, String attribute, double start, double end, int numBuckets)
-			throws LocalQueryExecutionException {
+	public long[] computeHistogram(String object, String attribute,
+			double start, double end, int numBuckets)
+					throws LocalQueryExecutionException {
 		return null;
 	}
 
@@ -81,16 +92,21 @@ public class AccumuloConnectionInfo implements ConnectionInfo {
 	}
 
 	@Override
-	public ExecutorEngine getLocalQueryExecutor() throws LocalQueryExecutorLookupException {
+	public ExecutorEngine getLocalQueryExecutor()
+			throws LocalQueryExecutorLookupException {
 		try {
 			return new AccumuloExecutionEngine(this);
-		} catch (BigDawgException | AccumuloException | AccumuloSecurityException e) {
+		} catch (BigDawgException | AccumuloException
+				| AccumuloSecurityException e) {
 			e.printStackTrace();
-			throw new LocalQueryExecutorLookupException("Cannot construct "+AccumuloExecutionEngine.class.getName());
+			throw new LocalQueryExecutorLookupException("Cannot construct "
+					+ AccumuloExecutionEngine.class.getName());
 		}
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#toString()
 	 */
 	@Override
@@ -100,7 +116,5 @@ public class AccumuloConnectionInfo implements ConnectionInfo {
 				+ accumuloInstanceName + ", username=" + username
 				+ ", password=" + "Sorry, I cannot show it" + "]";
 	}
-	
-	
 
 }
