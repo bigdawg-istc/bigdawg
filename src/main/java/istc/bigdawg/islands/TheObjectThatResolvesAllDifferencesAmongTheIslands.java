@@ -80,6 +80,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	public static final int  sstoreDBID = BigDawgConfigProperties.INSTANCE.getSStoreDBID();
 	public static final int  accumuloSchemaHandlerDBID = BigDawgConfigProperties.INSTANCE.getAccumuloSchemaServerDBID(); 
 	public static final String AccumuloCreateTableCommandPrefix = "accumulocreate ";
+	public static final String AccumuloDeleteTableCommandPrefix = "accumulodelete ";
 	
 	private static final Pattern predicatePattern = Pattern.compile("(?<=\\()([^\\(^\\)]+)(?=\\))");
 	

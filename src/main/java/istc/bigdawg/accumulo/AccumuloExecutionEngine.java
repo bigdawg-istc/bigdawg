@@ -100,7 +100,12 @@ public class AccumuloExecutionEngine implements ExecutorEngine, DBHandler {
 					assert(splits.length == 2);
 					conn.tableOperations().create(splits[1]);
 					return Optional.of(new IslandQueryResult(ci));
-				} else
+				} else if (query.startsWith(TheObjectThatResolvesAllDifferencesAmongTheIslands.AccumuloDeleteTableCommandPrefix)) {
+					String[] splits = query.split("[ ]");
+					assert(splits.length == 2);
+					conn.tableOperations().delete(splits[1]);
+					return Optional.of(new IslandQueryResult(ci));
+				} else 
 					throw new LocalQueryExecutionException("Unsupported TEXT island query: "+query);
 			}
 			
