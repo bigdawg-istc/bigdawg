@@ -291,8 +291,9 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	 * @throws AccumuloSecurityException 
 	 * @throws AccumuloException 
 	 * @throws TableExistsException 
+	 * @throws TableNotFoundException 
 	 */
-	public static DBHandler createTableForPlanning(Scope sourceScope, Set<String> children, Map<String, String> transitionSchemas) throws SQLException, BigDawgException, AccumuloException, AccumuloSecurityException, TableExistsException {
+	public static DBHandler createTableForPlanning(Scope sourceScope, Set<String> children, Map<String, String> transitionSchemas) throws SQLException, BigDawgException, AccumuloException, AccumuloSecurityException, TableExistsException, TableNotFoundException {
 
 		DBHandler dbSchemaHandler = null;
 		Set<String> createdTables = new HashSet<>();
@@ -344,9 +345,20 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case STREAM:
 			throw new BigDawgException("STREAM island does not support data immigration; createTableForPlanning");
 		case TEXT:
+			createdTables = new HashSet<>();
 			dbSchemaHandler = new AccumuloExecutionEngine(CatalogViewer.getConnectionInfo(accumuloSchemaHandlerDBID));
 			for (String key : transitionSchemas.keySet()) 
-				if (children.contains(key)) ((AccumuloExecutionEngine)dbSchemaHandler).createTable(key);
+				if (children.contains(key)) {
+					try {
+						createdTables.add(key);
+						((AccumuloExecutionEngine)dbSchemaHandler).createTable(key);
+					} catch (Exception e) {
+						for (String s : createdTables) {
+							((AccumuloExecutionEngine)dbSchemaHandler).deleteTable(s);
+						} 
+						throw e;
+					}
+				}
 			break;
 //			throw new BigDawgException("TEXT island does not support data immigration; createTableForPlanning");
 		case MYRIA:
@@ -435,7 +447,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case STREAM:
 			throw new BigDawgException("STREAM island does not have a default SchemaEngine, getSchemaEngineDBID");
 		case TEXT:
-			throw new BigDawgException("TEXT island does not have a default SchemaEngine, getSchemaEngineDBID");
+			return accumuloSchemaHandlerDBID;
 		case MYRIA:
 			throw new BigDawgException("MYRIA island does not have a default SchemaEngine, getSchemaEngineDBID");
 		default:
