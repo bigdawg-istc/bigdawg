@@ -76,5 +76,8 @@ RUN chown -R root:root /root/* && \
 EXPOSE 22
 EXPOSE 8083
 
+# Copy the middleware jar (build script should move this here)
+COPY istc.bigdawg-1.0-SNAPSHOT-jar-with-dependencies.jar /
+
 COPY start_services.sh /
 CMD /start_services.sh

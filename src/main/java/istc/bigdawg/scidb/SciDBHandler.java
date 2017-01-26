@@ -31,6 +31,7 @@ import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.exceptions.NoTargetArrayException;
 import istc.bigdawg.exceptions.SciDBException;
 import istc.bigdawg.exceptions.UnsupportedTypeException;
+import istc.bigdawg.executor.ConstructedQueryResult;
 import istc.bigdawg.executor.ExecutorEngine;
 import istc.bigdawg.executor.JdbcQueryResult;
 import istc.bigdawg.executor.QueryResult;
@@ -476,9 +477,15 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 
 				st.setQueryTimeout(30);
 				if (st.execute(query)) {
-					try (ResultSet rs = st.getResultSet()) {
+					connection.commit();
+					try {
+						ResultSet rs = st.getResultSet();
 						return Optional
 								.of(new JdbcQueryResult(rs, this.conInfo));
+					} catch (ArrayIndexOutOfBoundsException e) {
+						List<List<String>> results = new ArrayList<>();
+						results.add(new ArrayList<>());
+						return Optional.of(new ConstructedQueryResult(results, this.conInfo));
 					}
 				} else {
 					return Optional.empty();

@@ -32,7 +32,9 @@ import istc.bigdawg.database.ObjectMetaData;
 import istc.bigdawg.exceptions.BigDawgException;
 import istc.bigdawg.executor.ConstructedQueryResult;
 import istc.bigdawg.executor.ExecutorEngine;
+import istc.bigdawg.executor.IslandQueryResult;
 import istc.bigdawg.executor.QueryResult;
+import istc.bigdawg.islands.TheObjectThatResolvesAllDifferencesAmongTheIslands;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.text.operators.TextOperator;
 import istc.bigdawg.islands.text.operators.TextScan;
@@ -92,8 +94,15 @@ public class AccumuloExecutionEngine implements ExecutorEngine, DBHandler {
 			log.debug("AccumuloExecutionEngine is attempting to retrieve query: " + LogUtils.replace(query) );
 			
 			TextOperator op = (TextOperator) execution.get(query);
-			if (op == null) 
-				throw new LocalQueryExecutionException("Cannot find query: "+query);
+			if (op == null) {
+				if (query.startsWith(TheObjectThatResolvesAllDifferencesAmongTheIslands.AccumuloCreateTableCommandPrefix)) {
+					String[] splits = query.split("[ ]");
+					assert(splits.length == 2);
+					conn.tableOperations().create(splits[1]);
+					return Optional.of(new IslandQueryResult(ci));
+				} else
+					throw new LocalQueryExecutionException("Unsupported TEXT island query: "+query);
+			}
 			
 			log.debug("AccumuloExecutionEngine retrieved the following query: " + op.getTreeRepresentation(true));
 			log.debug("ConnectionInfo:\n" + this.ci.toString());
@@ -126,12 +135,9 @@ public class AccumuloExecutionEngine implements ExecutorEngine, DBHandler {
 				
 				row.add(entry.getValue().toString());
 				result.add(row);
-//				actual.put(entry.getKey(), entry.getValue());
-//				log.debug("Entry "+actual.size()+": -"+entry.getKey()+"-    -"+entry.getValue());
 			}
 			scanner.close();
-			
-//			SortedKeyValueIterator<Key,Value> source;
+			if (result.isEmpty()) result.add(new ArrayList<>());
 			
 			return Optional.of(new ConstructedQueryResult(result, ci));
 //			this.getConnection();

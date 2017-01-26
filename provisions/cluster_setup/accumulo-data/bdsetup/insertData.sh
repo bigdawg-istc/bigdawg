@@ -1,15 +1,16 @@
 #! /usr/bin/octave --traditional
 
-cd /bdsetup
-javaaddpath("./d4m_api/lib/graphulo-2.6.3-alldeps.jar")
-addpath('./d4m_api/matlab_src/');
+javaaddpath("/bdsetup/d4m_api/lib/graphulo-2.6.3-alldeps.jar")
+addpath('/bdsetup/d4m_api/matlab_src/');
+DBinit;
+Assoc('','','');
 
 %setup bindings to DB
 hostname='zookeeper.docker.local';
 port=':2181';
 dbname='accumulo';
-user='root';
-password='DOCKERDEFAULT';
+user='bigdawg';
+password='bigdawg';
 
 DB=DBserver([hostname port], 'Accumulo', dbname, user, password);
 
@@ -28,7 +29,7 @@ TedgeDeg = DB([myName 'TedgeDeg']);                     % Create database table 
 
 TedgeTxt = DB([myName 'TedgeTxt']);
 
-inDir='./data';
+inDir='/bdsetup/data';
 D=dir([inDir '/*.mat']);
 
 for i=1:numel(D);
@@ -42,27 +43,13 @@ for i=1:numel(D);
         disp(["loading " fileToLoad])
         load(fileToLoad);
 
-        [r,c,v] = find(Aout.A);
-        r = [regexprep(int2str(r), '\s*', ','),","];  % take a vector of integers [1,2,3] and convert to a comma-separated string: "1,2,3,"
-        c = [regexprep(int2str(c), '\s*', ','),","];
-        v = [regexprep(int2str(v), '\s*', ','),","];
-        put(Tedge, r, c, v);
-
-        [r,c,v] = find(sum(Aout.A,1));
-        r = [regexprep(int2str(r), '\s*', ','),","];
-        c = [regexprep(int2str(c), '\s*', ','),","];
-        v = [regexprep(int2str(v), '\s*', ','),","];
-        putTriple(TedgeDeg, r, c, v);
+        put(Tedge, num2str(Aout));
+	put(TedgeDeg,putCol(num2str(sum(Aout,1).'),['Degree' char(10)]));
 
     elseif(strfind(D(i).name, 'txt'))
         disp(["loading " fileToLoad])
         load(fileToLoad);
-        [r,c,v] = find(Atxtout.A);
-        r = [regexprep(int2str(r'), '\s*', ','),","];
-        c = [regexprep(int2str(c'), '\s*', ','),","];
-        v = [regexprep(int2str(v'), '\s*', ','),","];
-        putTriple(TedgeTxt, r, c, v);
-
+	put(TedgeTxt,Atxtout);	
     end
 
 end
