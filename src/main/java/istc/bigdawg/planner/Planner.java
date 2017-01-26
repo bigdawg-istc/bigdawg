@@ -1,5 +1,6 @@
 package istc.bigdawg.planner;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -38,6 +39,132 @@ public class Planner {
 
 	private static Logger logger = Logger.getLogger(Planner.class);
 
+	
+	private static Response processCatalogQuery(String input) throws Exception {
+		/*
+		 * catalog_command
+		 * |- Catalog table name followed, optionally, by column names
+		 * |- SQL commands -- SELECT, INSERT, UPDATE, DELETE
+		 * Usage: bdcatalog(catalog_command; ...)
+		 */
+		String trim = input;
+		if (input.startsWith("\"bdcatalog(")) {
+			trim = input.substring(1, input.length() - 1);
+		} else if (input.startsWith("bdcatalog(")) {
+			// do nothing
+		} else 
+			return null;
+		
+		return Response.status(200).entity(CatalogUtilities.catalogQueryResult(CatalogUtilities.parseCatalogQuery(trim))).build();
+	}
+	
+	
+	private static Set<CrossIslandPlanNode> processCrossIslandPlanNodes (
+			CrossIslandQueryPlan ciqp, 
+			Set<CrossIslandPlanNode> entryNodes,  
+			Map<CrossIslandPlanNode, ConnectionInfo> connectionInfoMap, 
+			Map<ConnectionInfo, Collection<String>> tempTableInfo, 
+			Set<Integer> objectsToDelete) throws Exception {
+		
+		Set<CrossIslandPlanNode> nextNodes = new HashSet<>();
+		for (CrossIslandPlanNode node : entryNodes) {
+
+			// If we arrive at a terminalNode, skip and process later
+			if (node == ciqp.getTerminalNode()) {
+				continue;
+			}
+
+			if (node instanceof CrossIslandCastNode) {
+				// Todo: move this code block to a function
+				// we make the assumption that there is no chain CASTing
+				// we also assume that the user does not directly cast an object 
+				// throw new Exception("Unimplemented feature: CAST");
+
+				CrossIslandQueryNode source = (CrossIslandQueryNode) ((CrossIslandCastNode) node).getSourceVertex(ciqp);
+				CrossIslandQueryNode target = (CrossIslandQueryNode) ((CrossIslandCastNode) node).getTargetVertex(ciqp);
+
+				int sourceDBID = 0;
+				int targetDBID = 0;
+
+				// get the target, and pick destination -- default location
+				if (target.getRemainderLoc() != null) {
+					targetDBID = Integer.parseInt(target.getRemainderLoc().get(0));
+				} else {
+					targetDBID = Integer.parseInt((new ArrayList<>(target.getQueryContainer().entrySet())).get(0).getValue().getDBID());
+				}
+
+				// get the source, and get the engine 
+				ConnectionInfo targetConnInfo = null;
+				if (targetDBID > 0) targetConnInfo = CatalogViewer.getConnectionInfo(targetDBID);
+				else
+					throw new Exception(String.format("\n\nNegative target loc: %s; requires resolution.\n\n", targetDBID));
+				String remoteName = processRemoteName(((CrossIslandCastNode) node).getSourceScope(), ((CrossIslandCastNode) node).getDestinationScope(), node.getName());
+
+				logger.debug(String.format("\n\nconnectionInfoMap: %s; source: %s\n\n", connectionInfoMap, source));
+
+				logger.debug(String.format("Interisland Migration from %s at %s (%s) to %s at %s (%s)"
+						, source.getName()
+						, connectionInfoMap.get(source).getHost() + ":" + connectionInfoMap.get(source).getPort()
+						, connectionInfoMap.get(source).getClass().getSimpleName()
+						, remoteName
+						, targetConnInfo.getHost() + ":" + targetConnInfo.getPort()
+						, targetConnInfo.getClass().getSimpleName()));
+
+				// Create schema before migration 
+//					remoteSchemaCreation((CrossIslandCastNode)node, ci);
+				logger.debug(String.format("CAST query string: %s", node.getQueryString()));
+
+				// migrate
+				Migrator.migrate(connectionInfoMap.get(source), source.getName(), targetConnInfo, remoteName, new MigrationParams(node.getQueryString()));
+
+				// add the temporary objects to be deleted
+				if (!tempTableInfo.containsKey(targetConnInfo)) {
+					tempTableInfo.put(targetConnInfo, new HashSet<>());
+				}
+				if (!tempTableInfo.containsKey(connectionInfoMap.get(source))) {
+					tempTableInfo.put(connectionInfoMap.get(source), new HashSet<>());
+				}
+				tempTableInfo.get(connectionInfoMap.get(source)).add(source.getName());
+				tempTableInfo.get(targetConnInfo).add(remoteName);
+
+
+				// add catalog entry of the temp table, add to catalog set of destruction
+				// unsafe use of ""
+				objectsToDelete.add(CatalogModifier.addObject(remoteName, "", sourceDBID, targetDBID)); // find the correct DBID for source
+
+				// add target to the next gen
+				nextNodes.add(target);
+
+				// remove source from connectionInfoMap
+				connectionInfoMap.remove(source);
+
+			} else if (node instanceof CrossIslandQueryNode) {
+
+				// Todo: move this block to a separate function
+				// business as usual
+				CrossIslandQueryNode ciqn = (CrossIslandQueryNode) node;
+
+				// int choice = getGetPerformanceAndPickTheBest(ciqn, isTrainingMode);
+				int choice = 0;
+
+				// currently there should be just one island, therefore one child, root.
+				QueryExecutionPlan qep = ((CrossIslandQueryNode) node).getQEP(choice, false);
+
+				// EXECUTE THE RESULT SUB RESULT
+				logger.debug("Executing query cross-island subquery " + node + "...");
+				connectionInfoMap.put(node, Executor.executePlan(qep, ciqn.getSignature(), choice).getConnectionInfo());
+
+			} else if (node instanceof CrossIslandNonOperatorNode) {
+				connectionInfoMap.put(node, TheObjectThatResolvesAllDifferencesAmongTheIslands.runOperatorFreeIslandQuery((CrossIslandNonOperatorNode) node).getConnectionInfo());
+			} else {
+				throw new BigDawgException("Planner::processQuery has unimplemented Cross Island Plan Node: " + node.getClass().getSimpleName());
+			}
+			// add the child node to nextGen
+			nextNodes.add(node.getTargetVertex(ciqp));
+		}
+		return nextNodes;
+	}
+	
 	public static Response processQuery(String userinput, boolean isTrainingMode) throws Exception {
 		
 		String input = userinput.replaceAll("[/\n/]", "").replaceAll("[ /\t/]+", " ");
@@ -45,135 +172,32 @@ public class Planner {
 		// UNROLLING
 		logger.debug("User query received. Parsing... " + input.replaceAll("[\"']", "*"));
 		
-		
-		/*
-		 * catalog_command
-		 * |- Catalog table name followed, optionally, by column names
-		 * |- SQL commands -- SELECT, INSERT, UPDATE, DELETE
-		 * Usage: bdcatalog(catalog_command; ...)
-		 */
-		String trim;
-		if (input.startsWith("\"bdcatalog(")) {
-			trim = input.substring(1, input.length() - 1);
-			return Response.status(200).entity(CatalogUtilities.catalogQueryResult(CatalogUtilities.parseCatalogQuery(trim))).build();
-		} else if (input.startsWith("bdcatalog(")) {
-			trim = input;
-			return Response.status(200).entity(CatalogUtilities.catalogQueryResult(CatalogUtilities.parseCatalogQuery(trim))).build();
-		}
+		// identify and process Catalog query
+		Response r = processCatalogQuery(input);
+		if (r != null) return r;
 
 		// Track the temporary objects and table info for later deletion
 		Set<Integer> objectsToDelete = new HashSet<>();
-		Map<ConnectionInfo, Collection<String>> tempTableInfo = new HashMap<>();
 
 		// Create cross island query plan (ciqp)
 		CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(input, objectsToDelete);
-		if (ciqp.getTerminalNode() == null) throw new Exception("Ill formed input: " + input + "\n");
+		if (ciqp.getTerminalNode() == null) {
+			throw new Exception("Ill formed input: " + input + "\n");
+		}
 		logger.info("CrossIslandQueryPlan: #nodes: " + ciqp.vertexSet().size() +
 				"; #edges: " + ciqp.edgeSet().size() + "\n" + ciqp.toString() + "\n\n");
 
 		// Traverse the graph and run the execution plans
 		Set<CrossIslandPlanNode> entryNodes = new HashSet<>(ciqp.getEntryNodes());
-		Set<CrossIslandPlanNode> nextNodes;
 		Map<CrossIslandPlanNode, ConnectionInfo> connectionInfoMap = new HashMap<>();
-		while (!entryNodes.isEmpty()) {
-			nextNodes = new HashSet<>();
-			for (CrossIslandPlanNode node : entryNodes) {
-
-				// If we arrive at a terminalNode, skip and process later
-				if (node == ciqp.getTerminalNode()) {
-					continue;
-				}
-
-				if (node instanceof CrossIslandCastNode) {
-					// Todo: move this code block to a function
-					// we make the assumption that there is no chain CASTing
-					// we also assume that the user does not directly cast an object 
-					// throw new Exception("Unimplemented feature: CAST");
-
-					CrossIslandQueryNode source = (CrossIslandQueryNode) ((CrossIslandCastNode) node).getSourceVertex(ciqp);
-					CrossIslandQueryNode target = (CrossIslandQueryNode) ((CrossIslandCastNode) node).getTargetVertex(ciqp);
-
-					int sourceDBID = 0;
-					int targetDBID = 0;
-
-					// get the target, and pick destination -- default location
-					if (target.getRemainderLoc() != null) {
-						targetDBID = Integer.parseInt(target.getRemainderLoc().get(0));
-					} else {
-						targetDBID = Integer.parseInt(target.getQueryContainer().entrySet().iterator().next().getValue().getDBID());
-					}
-
-					// get the source, and get the engine 
-					ConnectionInfo targetConnInfo = null;
-					if (targetDBID > 0) targetConnInfo = CatalogViewer.getConnectionInfo(targetDBID);
-					else
-						throw new Exception(String.format("\n\nNegative target loc: %s; requires resolution.\n\n", targetDBID));
-					String remoteName = processRemoteName(((CrossIslandCastNode) node).getSourceScope(), ((CrossIslandCastNode) node).getDestinationScope(), node.getName());
-
-					logger.debug(String.format("\n\nconnectionInfoMap: %s; source: %s\n\n", connectionInfoMap, source));
-
-					logger.debug(String.format("Interisland Migration from %s at %s (%s) to %s at %s (%s)"
-							, source.getName()
-							, connectionInfoMap.get(source).getHost() + ":" + connectionInfoMap.get(source).getPort()
-							, connectionInfoMap.get(source).getClass().getSimpleName()
-							, remoteName
-							, targetConnInfo.getHost() + ":" + targetConnInfo.getPort()
-							, targetConnInfo.getClass().getSimpleName()));
-
-					// Create schema before migration 
-//					remoteSchemaCreation((CrossIslandCastNode)node, ci);
-					logger.debug(String.format("CAST query string: %s", node.getQueryString()));
-
-					// migrate
-					Migrator.migrate(connectionInfoMap.get(source), source.getName(), targetConnInfo, remoteName, new MigrationParams(node.getQueryString()));
-
-					// add the temporary objects to be deleted
-					if (!tempTableInfo.containsKey(targetConnInfo)) {
-						tempTableInfo.put(targetConnInfo, new HashSet<>());
-					}
-					if (!tempTableInfo.containsKey(connectionInfoMap.get(source))) {
-						tempTableInfo.put(connectionInfoMap.get(source), new HashSet<>());
-					}
-					tempTableInfo.get(connectionInfoMap.get(source)).add(source.getName());
-					tempTableInfo.get(targetConnInfo).add(remoteName);
-
-
-					// add catalog entry of the temp table, add to catalog set of destruction
-					// unsafe use of ""
-					objectsToDelete.add(CatalogModifier.addObject(remoteName, "", sourceDBID, targetDBID)); //TODO find the correct DBID for source
-
-					// add target to the next gen
-					nextNodes.add(target);
-
-					// remove source from connectionInfoMap
-					connectionInfoMap.remove(source);
-
-				} else if (node instanceof CrossIslandQueryNode) {
-
-					// Todo: move this block to a separate function
-					// business as usual
-					CrossIslandQueryNode ciqn = (CrossIslandQueryNode) node;
-
-					// int choice = getGetPerformanceAndPickTheBest(ciqn, isTrainingMode);
-					int choice = 0;
-
-					// currently there should be just one island, therefore one child, root.
-					QueryExecutionPlan qep = ((CrossIslandQueryNode) node).getQEP(choice, false);
-
-					// EXECUTE THE RESULT SUB RESULT
-					logger.debug("Executing query cross-island subquery " + node + "...");
-					connectionInfoMap.put(node, Executor.executePlan(qep, ciqn.getSignature(), choice).getConnectionInfo());
-
-				} else if (node instanceof CrossIslandNonOperatorNode) {
-					connectionInfoMap.put(node, TheObjectThatResolvesAllDifferencesAmongTheIslands.runOperatorFreeIslandQuery((CrossIslandNonOperatorNode) node).getConnectionInfo());
-				} else {
-					throw new BigDawgException("Planner::processQuery has unimplemented Cross Island Plan Node: " + node.getClass().getSimpleName());
-				}
-				// add the child node to nextGen
-				nextNodes.add(node.getTargetVertex(ciqp));
+		Map<ConnectionInfo, Collection<String>> tempTableInfo = new HashMap<>();
+		try {
+			while (!entryNodes.isEmpty()) {
+				entryNodes = processCrossIslandPlanNodes(ciqp, entryNodes, connectionInfoMap, tempTableInfo, objectsToDelete);
 			}
-			entryNodes = nextNodes;
-		}
+		} finally {
+			cleanUpTemporaryTables(objectsToDelete, tempTableInfo);
+		} 
 
 		// we assume there is no lone CAST
 		// pass this to monitor, and pick your favorite
@@ -186,38 +210,37 @@ public class Planner {
 			// save for later
 			throw new Exception("Unimplemented feature: CASTing output");
 
-		} else if (cipn instanceof CrossIslandQueryNode) {
-
-			// business as usual
-			CrossIslandQueryNode ciqn = (CrossIslandQueryNode) cipn;
-
-			// Ask the Monitor for the best QueryExecutionPlan
-			int choice = getGetPerformanceAndPickTheBest(ciqn, isTrainingMode);
-			QueryExecutionPlan qep = ciqn.getQEP(choice, true);
-
-			// Execute the plan
-			logger.debug("Executing terminal node...");
-			QueryResult queryResult = Executor.executePlan(qep, ciqn.getSignature(), choice);
-			Response response = compileResults(ciqp.getSerial(), queryResult);
-
-			// Clean up temp tables
+		} 
+		
+		QueryResult queryResult = null;
+		try {
+			if (cipn instanceof CrossIslandQueryNode) {
+	
+				// business as usual
+				CrossIslandQueryNode ciqn = (CrossIslandQueryNode) cipn;
+	
+				// Ask the Monitor for the best QueryExecutionPlan
+				int choice = getGetPerformanceAndPickTheBest(ciqn, isTrainingMode);
+				QueryExecutionPlan qep = ciqn.getQEP(choice, true);
+	
+				// Execute the plan
+				logger.debug("Executing terminal node...");
+				queryResult = Executor.executePlan(qep, ciqn.getSignature(), choice);
+	
+			} else if (cipn instanceof CrossIslandNonOperatorNode) {
+				// EXECUTE THE RESULT
+				logger.debug("Executing CrossIslandNonOperatorNode exit node...");
+				queryResult = TheObjectThatResolvesAllDifferencesAmongTheIslands.runOperatorFreeIslandQuery((CrossIslandNonOperatorNode) cipn);
+	
+			} else {
+				throw new BigDawgException("Planner::processQuery has unimplemented Cross Island Plan Node: " + cipn.getClass().getSimpleName());
+			}
+		} finally {
 			cleanUpTemporaryTables(objectsToDelete, tempTableInfo);
-
-			return response ;
-
-		} else if (cipn instanceof CrossIslandNonOperatorNode) {
-			// EXECUTE THE RESULT
-			logger.debug("Executing CrossIslandNonOperatorNode exit node...");
-			QueryResult queryResult = TheObjectThatResolvesAllDifferencesAmongTheIslands.runOperatorFreeIslandQuery((CrossIslandNonOperatorNode) cipn);
-			Response responseHolder = compileResults(ciqp.getSerial(), queryResult);
-
-			cleanUpTemporaryTables(objectsToDelete, tempTableInfo);
-
-			return responseHolder;
-
-		} else {
-			throw new BigDawgException("Planner::processQuery has unimplemented Cross Island Plan Node: " + cipn.getClass().getSimpleName());
 		}
+		
+		Response response = compileResults(ciqp.getSerial(), queryResult);
+		return response ;
 	}
 
 
@@ -330,7 +353,10 @@ public class Planner {
 	 * @param result
 	 * @return 0 if no error; otherwise incomplete
 	 */
-	public static Response compileResults(int querySerial, QueryResult result) {
+	public static Response compileResults(int querySerial, QueryResult result) throws Exception {
+		if (result == null) {
+			throw new Exception("Unknown execution error; contact the administrator with query number " + querySerial + "\n");
+		}
 		logger.debug("[BigDAWG] PLANNER: Query "+querySerial+" is completed. Result:\n"+result.toPrettyString());
 		return Response.status(200).entity(result.toPrettyString()).build();
 	}

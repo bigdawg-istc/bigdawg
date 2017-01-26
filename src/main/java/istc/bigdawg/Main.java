@@ -9,7 +9,6 @@ import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
 import org.glassfish.jersey.server.ResourceConfig;
 
-import istc.bigdawg.accumulo.AccumuloHandler;
 import istc.bigdawg.catalog.CatalogInstance;
 import istc.bigdawg.migration.MigratorTask;
 import istc.bigdawg.monitoring.MonitoringTask;
@@ -63,7 +62,7 @@ public class Main {
 			System.err.println(msg);
 			System.exit(1);
 		}
-		new AccumuloHandler();
+//		new AccumuloHandler();
 		try {
 			new SciDBHandler();
 		} catch (SQLException e) {

@@ -34,7 +34,7 @@ import istc.bigdawg.database.ObjectMetaData;
 import istc.bigdawg.exceptions.AccumuloBigDawgException;
 import istc.bigdawg.exceptions.AccumuloShellScriptException;
 import istc.bigdawg.executor.QueryResult;
-import istc.bigdawg.islands.Accumulo.AccumuloD4MQueryResult;
+import istc.bigdawg.islands.text.AccumuloD4MQueryResult;
 import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.query.DBHandler;
 import istc.bigdawg.query.QueryResponseTupleString;

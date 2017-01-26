@@ -10,6 +10,11 @@ import istc.bigdawg.islands.operators.SeqScan;
 import istc.bigdawg.islands.relational.SQLOutItemResolver;
 import istc.bigdawg.islands.relational.SQLTableExpression;
 import istc.bigdawg.islands.relational.utils.SQLAttribute;
+import net.sf.jsqlparser.expression.BinaryExpression;
+import net.sf.jsqlparser.expression.CaseExpression;
+import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.expression.SignedExpression;
+import net.sf.jsqlparser.expression.operators.relational.OldOracleJoinBinaryExpression;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.create.table.CreateTable;
 
@@ -39,6 +44,7 @@ public class SQLIslandSeqScan extends SQLIslandScan implements SeqScan {
 		
 		
 		DataObject baseTable = new DataObject(create); 
+		boolean isComplexExpression = false;
 		
 		for(int i = 0; i < output.size(); ++i) {
 			
@@ -48,6 +54,11 @@ public class SQLIslandSeqScan extends SQLIslandScan implements SeqScan {
 			
 			SQLAttribute sa =  out.getAttribute();
 			String alias = sa.getName();
+			Expression e = sa.getSQLExpression();
+			if ((e instanceof BinaryExpression) 
+					|| (e instanceof OldOracleJoinBinaryExpression)
+					|| (e instanceof SignedExpression)
+					|| (e instanceof CaseExpression)) isComplexExpression = true;
 			
 			outSchema.put(alias, sa);
 			
@@ -57,7 +68,9 @@ public class SQLIslandSeqScan extends SQLIslandScan implements SeqScan {
 			setOperatorName("filter");
 		else if (children.size() != 0)
 			setOperatorName("project");
-		else 
+		else if (isComplexExpression)
+			setOperatorName("apply");
+		else
 			setOperatorName("scan");
 		
 	}

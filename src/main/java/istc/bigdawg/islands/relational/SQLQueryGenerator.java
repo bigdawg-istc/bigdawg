@@ -1844,14 +1844,14 @@ public class SQLQueryGenerator implements OperatorVisitor {
 			Column rightColumn = null;
 			
 			
-			List<String> ses = processLeftAndRightWithIndexCond((SQLIslandJoin) join, true, null);
+			List<String> ses = processLeftAndRightWithIndexCond((SQLIslandJoin) join, true, ret);
 			String s, s2; 
 			if (ses != null) {
 				s = ses.get(0);
 				s2 = ses.get(1);
 				extraction = ((SQLIslandOperator)join.getChildren().get(0)).getChildrenPredicates().get(s);
 			} else {
-				ses = processLeftAndRightWithIndexCond((SQLIslandJoin) join, false, null);
+				ses = processLeftAndRightWithIndexCond((SQLIslandJoin) join, false, ret);
 				if (ses == null) return ret;
 				s = ses.get(1);
 				s2 = ses.get(0);

@@ -24,7 +24,7 @@ public class QueryContainerForCommonDatabase {
 	}
 	
 	public String generateSelectIntoString(Scope scope) throws Exception {
-		OperatorVisitor gen = TheObjectThatResolvesAllDifferencesAmongTheIslands.getQueryGenerator(scope);
+		OperatorVisitor gen = TheObjectThatResolvesAllDifferencesAmongTheIslands.getQueryGenerator(scope, Integer.parseInt(dbid));
 		gen.configure(true, false);
 		rootOperator.accept(gen);
 		return gen.generateSelectIntoStatementForExecutionTree(pruneToken);

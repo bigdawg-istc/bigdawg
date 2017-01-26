@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -13,7 +14,13 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import istc.bigdawg.accumulo.AccumuloHandler;
+import org.apache.accumulo.core.client.AccumuloException;
+import org.apache.accumulo.core.client.AccumuloSecurityException;
+import org.apache.accumulo.core.client.TableExistsException;
+import org.apache.accumulo.core.client.TableNotFoundException;
+
+import istc.bigdawg.accumulo.AccumuloConnectionInfo;
+import istc.bigdawg.accumulo.AccumuloExecutionEngine;
 import istc.bigdawg.catalog.Catalog;
 import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.exceptions.BigDawgCatalogException;
@@ -22,7 +29,6 @@ import istc.bigdawg.exceptions.UnsupportedIslandException;
 import istc.bigdawg.executor.QueryResult;
 import istc.bigdawg.islands.IslandsAndCast.Scope;
 import istc.bigdawg.islands.Myria.MyriaQueryParser;
-import istc.bigdawg.islands.Accumulo.AccumuloD4MParser;
 import istc.bigdawg.islands.SStore.SStoreQueryParser;
 import istc.bigdawg.islands.SciDB.AFLPlanParser;
 import istc.bigdawg.islands.SciDB.AFLQueryGenerator;
@@ -31,10 +37,13 @@ import istc.bigdawg.islands.SciDB.operators.SciDBIslandJoin;
 import istc.bigdawg.islands.operators.Join;
 import istc.bigdawg.islands.operators.Join.JoinType;
 import istc.bigdawg.islands.operators.Operator;
+import istc.bigdawg.islands.relational.RelationalAFLQueryGenerator;
 import istc.bigdawg.islands.relational.SQLPlanParser;
 import istc.bigdawg.islands.relational.SQLQueryGenerator;
 import istc.bigdawg.islands.relational.SQLQueryPlan;
 import istc.bigdawg.islands.relational.operators.SQLIslandJoin;
+import istc.bigdawg.islands.text.AccumuloJSONQueryParser;
+import istc.bigdawg.islands.text.operators.TextScan;
 import istc.bigdawg.myria.MyriaHandler;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
@@ -62,11 +71,12 @@ import net.sf.jsqlparser.JSQLParserException;
  */
 public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	
-	public static enum Engine {PostgreSQL, SciDB, SStore};
+	public static enum Engine {PostgreSQL, SciDB, SStore, Accumulo};
 	
 	public static final int  psqlSchemaHandlerDBID = BigDawgConfigProperties.INSTANCE.getPostgresSchemaServerDBID();
 	public static final int  scidbSchemaHandlerDBID = BigDawgConfigProperties.INSTANCE.getSciDBSchemaServerDBID();
 	public static final int  sstoreDBID = BigDawgConfigProperties.INSTANCE.getSStoreDBID();
+	public static final int  accumuloSchemaHandlerDBID = BigDawgConfigProperties.INSTANCE.getAccumuloSchemaServerDBID(); 
 	
 	private static final Pattern predicatePattern = Pattern.compile("(?<=\\()([^\\(^\\)]+)(?=\\))");
 	
@@ -86,12 +96,12 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		switch (scope) {
 		case ARRAY:
 		case RELATIONAL:
+		case TEXT:
 			return true;
 		case DOCUMENT:
 		case GRAPH:
 		case KEYVALUE:
 		case STREAM:
-		case TEXT:
 		case MYRIA:
 			return false;
 		default:
@@ -112,6 +122,8 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 			return Engine.SciDB;
 		else if (engineString.startsWith(Engine.SStore.name()))
 			return Engine.SStore;
+		else if (engineString.startsWith(Engine.Accumulo.name()))
+			return Engine.Accumulo;
 		else {
 			throw new BigDawgException("Unsupported engine: "+ engineString);
 		}
@@ -129,52 +141,77 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	public static ConnectionInfo getQConnectionInfo(Catalog cc, Engine e, int dbid) throws SQLException, BigDawgCatalogException {
 		
 		ConnectionInfo extraction = null;
-		ResultSet rs2;
+		ResultSet rs2 = null;
 		
-		if (e.equals(Engine.PostgreSQL)) {
+		try {
+			if (e.equals(Engine.PostgreSQL)) {
+				
+				rs2 = cc.execRet("select dbid, eid, host, port, db.name as dbname, userid, password from catalog.databases db join catalog.engines e on db.engine_id = e.eid where dbid = "+dbid);
+				if (rs2.next())
+					extraction = new PostgreSQLConnectionInfo(rs2.getString("host"), rs2.getString("port"),rs2.getString("dbname"), rs2.getString("userid"), rs2.getString("password"));
+			} else if (e.equals(Engine.SciDB)) {
+				rs2 = cc.execRet("select dbid, db.engine_id, host, port, bin_path, userid, password "
+								+ "from catalog.databases db "
+								+ "join catalog.engines e on db.engine_id = e.eid "
+								+ "join catalog.scidbbinpaths sp on db.engine_id = sp.eid where dbid = "+dbid);
+				if (rs2.next())
+					extraction = new SciDBConnectionInfo(rs2.getString("host"), rs2.getString("port"), rs2.getString("userid"), rs2.getString("password"), rs2.getString("bin_path"));
+			} else if (e.equals(Engine.SStore)) {
+				
+				rs2 = cc.execRet("select dbid, eid, host, port, db.name as dbname, userid, password from catalog.databases db join catalog.engines e on db.engine_id = e.eid where dbid = "+dbid);
+				if (rs2.next())
+					extraction = new SStoreSQLConnectionInfo(rs2.getString("host"), rs2.getString("port"),rs2.getString("dbname"), rs2.getString("userid"), rs2.getString("password"));
+				
+			} else if (e.equals(Engine.Accumulo)) {
+				rs2 = cc.execRet("select dbid, eid, host, port, db.name as dbname, userid, password from catalog.databases db join catalog.engines e on db.engine_id = e.eid where dbid = "+dbid);
+				if (rs2.next())
+					extraction = new AccumuloConnectionInfo(rs2.getString("host"), rs2.getString("port"),rs2.getString("dbname"), rs2.getString("userid"), rs2.getString("password"));
+			} else 
+				throw new BigDawgCatalogException("This is not supposed to happen");
 			
-			rs2 = cc.execRet("select dbid, eid, host, port, db.name as dbname, userid, password from catalog.databases db join catalog.engines e on db.engine_id = e.eid where dbid = "+dbid);
-			if (rs2.next())
-				extraction = new PostgreSQLConnectionInfo(rs2.getString("host"), rs2.getString("port"),rs2.getString("dbname"), rs2.getString("userid"), rs2.getString("password"));
-		} else if (e.equals(Engine.SciDB)) {
-			rs2 = cc.execRet("select dbid, db.engine_id, host, port, bin_path, userid, password "
-							+ "from catalog.databases db "
-							+ "join catalog.engines e on db.engine_id = e.eid "
-							+ "join catalog.scidbbinpaths sp on db.engine_id = sp.eid where dbid = "+dbid);
-			if (rs2.next())
-				extraction = new SciDBConnectionInfo(rs2.getString("host"), rs2.getString("port"), rs2.getString("userid"), rs2.getString("password"), rs2.getString("bin_path"));
-		} else if (e.equals(Engine.SStore)) {
-			
-			rs2 = cc.execRet("select dbid, eid, host, port, db.name as dbname, userid, password from catalog.databases db join catalog.engines e on db.engine_id = e.eid where dbid = "+dbid);
-			if (rs2.next())
-				extraction = new SStoreSQLConnectionInfo(rs2.getString("host"), rs2.getString("port"),rs2.getString("dbname"), rs2.getString("userid"), rs2.getString("password"));
-			
-		} else 
-			throw new BigDawgCatalogException("This is not supposed to happen");
-		
-		if (extraction == null) {
-			rs2.close();
-			throw new BigDawgCatalogException("Connection Info Cannot Be Formulated: "+dbid);
+			if (extraction == null) {
+				rs2.close();
+				throw new BigDawgCatalogException("Connection Info Cannot Be Formulated: "+dbid);
+			}
+				
+			if (rs2.next()) {
+				throw new BigDawgCatalogException("Non-unique DBID: "+dbid);
+			}
+		} catch (SQLException ex) {
+			cc.rollback();
+			throw ex;
+		} finally {
+			if (rs2 != null) rs2.close();
 		}
-			
-		if (rs2.next()) {
-			throw new BigDawgCatalogException("Non-unique DBID: "+dbid);
-		}
 		
-		rs2.close();
+		
 		return extraction;
 	}
 	
 	/**
 	 * For Executor.
 	 * @param scope
+	 * @param remainderDBID 
 	 * @return Instance of a query generator
 	 * @throws BigDawgException 
+	 * @throws SQLException 
 	 */
-	public static OperatorVisitor getQueryGenerator(Scope scope) throws BigDawgException {
+	public static OperatorVisitor getQueryGenerator(Scope scope, int dbid) throws BigDawgException, SQLException {
+		
+		Engine e = CatalogViewer.getEngineOfDB(dbid);
+		
 		switch (scope) {
 		case ARRAY:
-			return new AFLQueryGenerator();
+			switch (e) {
+			case PostgreSQL: 
+			case SStore:
+				return new SQLQueryGenerator();
+			case SciDB:
+				return new AFLQueryGenerator();
+			default:
+				break;
+			}
+			throw new BigDawgException("getQueryGenerator fails for scope: "+scope.name()+" and dbid: "+dbid);
 		case CAST:
 			break;
 		case DOCUMENT:
@@ -184,17 +221,27 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case KEYVALUE:
 			break;
 		case RELATIONAL:
-			return new SQLQueryGenerator();
+			switch (e) {
+			case PostgreSQL: 
+			case SStore:
+				return new SQLQueryGenerator();
+			case SciDB:
+				return new RelationalAFLQueryGenerator();
+			default:
+				break;
+			}
+			throw new BigDawgException("getQueryGenerator fails for scope: "+scope.name()+" and dbid: "+dbid);
 		case STREAM:
 			break;
 		case TEXT:
-			throw new BigDawgException("TEXT island does not support the concept of generator; getQueryGenerator");
+			// returning null just to keep it going...
+			return null;
 		case MYRIA:
 			throw new BigDawgException("MYRIA island does not support the concept of generator; getQueryGenerator");
 		default:
 			break;
 		}
-		throw new UnsupportedIslandException(scope, "getQueryGenerator");
+		throw new BigDawgException("getQueryGenerator fails for scope: "+scope.name()+" and dbid: "+dbid);
 	}
 	
 	/**
@@ -238,8 +285,11 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	 * @return
 	 * @throws SQLException
 	 * @throws BigDawgException 
+	 * @throws AccumuloSecurityException 
+	 * @throws AccumuloException 
+	 * @throws TableExistsException 
 	 */
-	public static DBHandler createTableForPlanning(Scope sourceScope, Set<String> children, Map<String, String> transitionSchemas) throws SQLException, BigDawgException {
+	public static DBHandler createTableForPlanning(Scope sourceScope, Set<String> children, Map<String, String> transitionSchemas) throws SQLException, BigDawgException, AccumuloException, AccumuloSecurityException, TableExistsException {
 
 		DBHandler dbSchemaHandler = null;
 		
@@ -268,7 +318,11 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case STREAM:
 			throw new BigDawgException("STREAM island does not support data immigration; createTableForPlanning");
 		case TEXT:
-			throw new BigDawgException("TEXT island does not support data immigration; createTableForPlanning");
+			dbSchemaHandler = new AccumuloExecutionEngine(CatalogViewer.getConnectionInfo(accumuloSchemaHandlerDBID));
+			for (String key : transitionSchemas.keySet()) 
+				if (children.contains(key)) ((AccumuloExecutionEngine)dbSchemaHandler).createTable(key);
+			break;
+//			throw new BigDawgException("TEXT island does not support data immigration; createTableForPlanning");
 		case MYRIA:
 			throw new BigDawgException("MYRIA island does not support data immigration; createTableForPlanning");
 		default:
@@ -287,8 +341,11 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	 * @param transitionSchemas
 	 * @throws SQLException
 	 * @throws BigDawgException 
+	 * @throws AccumuloSecurityException 
+	 * @throws AccumuloException 
+	 * @throws TableNotFoundException 
 	 */
-	public static void removeTemporaryTableCreatedForPlanning(Scope sourceScope, DBHandler dbSchemaHandler, Set<String> children, Map<String, String> transitionSchemas) throws SQLException, BigDawgException {
+	public static void removeTemporaryTableCreatedForPlanning(Scope sourceScope, DBHandler dbSchemaHandler, Set<String> children, Map<String, String> transitionSchemas) throws SQLException, BigDawgException, AccumuloException, AccumuloSecurityException, TableNotFoundException {
 		
 		switch (sourceScope) {
 		case ARRAY:
@@ -315,7 +372,10 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case STREAM:
 			throw new BigDawgException("STREAM island does not support data immigration; removeTemporaryTableCreatedForPlanning");
 		case TEXT:
-			throw new BigDawgException("TEXT island does not support data immigration; removeTemporaryTableCreatedForPlanning");
+			dbSchemaHandler = new AccumuloExecutionEngine(CatalogViewer.getConnectionInfo(accumuloSchemaHandlerDBID));
+			for (String key : transitionSchemas.keySet()) 
+				if (children.contains(key)) ((AccumuloExecutionEngine)dbSchemaHandler).deleteTable(key);
+			return;
 		case MYRIA:
 			throw new BigDawgException("MYRIA island does not support data immigration; removeTemporaryTableCreatedForPlanning");
 		default:
@@ -439,7 +499,12 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case STREAM:
 			throw new BigDawgException("STREAM island does not support signature; generateOperatorTreesAndAddDataSetObjectsSignature");
 		case TEXT:
-			throw new BigDawgException("TEXT island does not support signature; generateOperatorTreesAndAddDataSetObjectsSignature");
+			root = (new AccumuloJSONQueryParser()).parse(queryString);
+			if (!(root instanceof TextScan))
+				throw new BigDawgException("TEXT island does not support operator "+root.getClass().getName()+"; generateOperatorTreesAndAddDataSetObjectsSignature");
+			AccumuloExecutionEngine.addExecutionTree(root.getSubTreeToken(), root);
+			objs.add(((TextScan)root).getSourceTableName());
+			break;
 		case MYRIA:
 			throw new BigDawgException("MYRIA island does not support signature; generateOperatorTreesAndAddDataSetObjectsSignature");
 		default:
@@ -525,7 +590,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case STREAM:
 			throw new BigDawgException("STREAM island does not support signature; getLiteralsAndConstantsSignature");
 		case TEXT:
-			throw new BigDawgException("TEXT island does not support signature; getLiteralsAndConstantsSignature");
+			return new ArrayList<>();
 		case MYRIA:
 			throw new BigDawgException("MYRIA island does not support signature; getLiteralsAndConstantsSignature");
 		default:
@@ -633,15 +698,8 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case KEYVALUE:
 			throw new UnsupportedIslandException(node.sourceScope, "runOperatorFreeIslandQuery");
 		case STREAM:
-			
 			List<String> ssparsed = (new SStoreQueryParser()).parse(node.getQueryString());
 			return (new SStoreSQLHandler(sstoreDBID)).executePreparedStatement((new SStoreSQLHandler(sstoreDBID)).getConnection(), ssparsed);
-			
-		case TEXT:
-			List<String> aparsed = (new AccumuloD4MParser()).parse(node.getQueryString());
-			System.out.printf("TEXT Island Accumulot query: %s; parsed arguments: %s\n", node.queryString, aparsed);
-			return AccumuloHandler.executeAccumuloShellScript(aparsed);
-			
 		case MYRIA:
 			String input = node.getQueryString();
 			List<String> mparsed = (new MyriaQueryParser()).parse(input);
@@ -651,6 +709,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 			return MyriaHandler.executeMyriaQuery(mparsed);
 		case RELATIONAL:
 		case ARRAY:
+		case TEXT:
 		default:
 			throw new BigDawgException("Unapplicable island for runOperatorFreeIslandQuery: "+node.sourceScope.name());
 		}

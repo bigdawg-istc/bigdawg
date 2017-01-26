@@ -33,6 +33,10 @@ public class Catalog {
 		connection.commit();
 	}
 	
+	public void rollback() throws SQLException {
+		connection.rollback();
+	}
+	
 	public void execNoRet(String str) throws SQLException{
 		stmt.executeUpdate(str);
 	}

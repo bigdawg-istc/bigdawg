@@ -25,7 +25,6 @@ fd = filesep;
 % Vice versa, if you will use cloudbase, list thrift-0.3.jar before libthrift-0.6.1.jar.
 if exist('OCTAVE_VERSION','builtin')
 % Add files included in LLONLY distribution.
-javaaddpath([d4m_home fd 'lib' fd 'graphulo-2.6.3.jar']);
 
 javaaddpath([d4m_home fd 'libext' fd 'accumulo-core-1.7.0.jar']);
 javaaddpath([d4m_home fd 'libext' fd 'accumulo-fate-1.7.0.jar']);
