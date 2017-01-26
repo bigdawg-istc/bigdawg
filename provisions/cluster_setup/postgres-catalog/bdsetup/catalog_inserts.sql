@@ -1,12 +1,14 @@
 -- catalog.islands: iid	scope_name	access_method
 insert into catalog.islands values (0, 'RELATIONAL', 'PSQL');
 insert into catalog.islands values (1, 'ARRAY', 'AFL');
+insert into catalog.islands values (2, 'TEXT', 'JSON');
 
 -- catalog.engines: engine_id, name, host, port, connection_properties
 insert into catalog.engines values(0,'postgres0','bigdawg-postgres-catalog',5400,'PostgreSQL 9.4.5');
 insert into catalog.engines values(1,'postgres1','bigdawg-postgres-data1',5401,'PostgreSQL 9.4.5');
 insert into catalog.engines values(2,'postgres2','bigdawg-postgres-data2',5402,'PostgreSQL 9.4.5');
 insert into catalog.engines values(3,'scidb_local','bigdawg-scidb-data',1239,'SciDB 14.12');
+insert into catalog.engines values (4, 'saw ZooKeeper', '128.30.76.163', 2181, 'Accumulo 1.6');
 
 -- catalog.databases: dbid, engine_id, name, userid, password
 insert into catalog.databases values(0,0,'bigdawg_catalog','pguser','test');
@@ -16,20 +18,14 @@ insert into catalog.databases values(3,2,'mimic2_copy','pguser','test');
 insert into catalog.databases values(4,0,'tpch','pguser','test');
 insert into catalog.databases values(5,1,'tpch','pguser','test');
 insert into catalog.databases values(6,3,'scidb_local','scidb','scidb123');
+insert into catalog.databases values (7, 4, 'accumulo', 'bigdawg', 'bigdawg');
 
 -- catalog.shims: shim_id	island_id	engine_id	access_method
 insert into catalog.shims values (0, 0, 0, 'N/A');
 insert into catalog.shims values (1, 0, 1, 'N/A');
 insert into catalog.shims values (2, 0, 2, 'N/A');
 insert into catalog.shims values (3, 1, 3, 'N/A');
-
--- new values for accumulo
-insert into catalog.islands values (2, 'TEXT', 'JSON');
-insert into catalog.engines values (4, 'saw ZooKeeper', '128.30.76.163', 2181, 'Accumulo 1.6');
 insert into catalog.shims values (4, 2, 4, 'N/A');
--- ALTER TABLE catalog.databases ALTER COLUMN password TYPE varchar(30);
-insert into catalog.databases values (7, 4, 'accumulo', 'bigdawg', 'bigdawg');
-insert into catalog.objects values (47, 'pythontest', '', 7, 7);
 
 -- catalog.scidbbinapath:
 -- binary path to scidb utilities: csv2scidb, iquery, etc.
@@ -88,7 +84,12 @@ insert into catalog.objects values(43,'customer','c_custkey,c_name,c_address,c_n
 insert into catalog.objects values(44,'orders','o_orderkey,o_custkey,o_orderstatus,o_totalprice,o_orderdate,o_orderpriority,o_clerk,o_shippriority,o_comment',4,4);
 insert into catalog.objects values(45,'lineitem','l_orderkey,l_partkey,l_suppkey,l_linenumber,l_quantity,l_extendedprice,l_discount,l_tax,l_returnflag,l_linestatus,l_shipdate,l_commitdate,l_receiptdate,l_shipinstruct,l_shipmode,l_comment',4,5);
 
-insert into catalog.objects values(46,'test_array','i,j,val',2,6);
+insert into catalog.objects values(46,'myarray','i,j,val',2,6);
+insert into catalog.objects values (47, 'note_events_Tedge', '', 7, 7);
+insert into catalog.objects values (48, 'note_events_TedgeT','', 7, 7);
+insert into catalog.objects values (49, 'note_events_TedgeDeg','', 7, 7);
+insert into catalog.objects values (49, 'note_events_TedgeTxt', '', 7, 7);
+
 -- insert into catalog.objects values(46,'go_matrix','geneid,goid,belongs',7,7);
 -- insert into catalog.objects values(47,'genes','id,target,pos,len,func',7,7);
 -- insert into catalog.objects values(48,'patients','id,age,gender,zipcode,disease,response',7,7);

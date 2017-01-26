@@ -29,7 +29,7 @@ TedgeDeg = DB([myName 'TedgeDeg']);                     % Create database table 
 
 TedgeTxt = DB([myName 'TedgeTxt']);
 
-inDir='./data';
+inDir='/bdsetup/data';
 D=dir([inDir '/*.mat']);
 
 for i=1:numel(D);
