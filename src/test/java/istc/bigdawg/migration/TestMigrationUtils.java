@@ -38,6 +38,9 @@ public class TestMigrationUtils {
 
 	/** Number of rows in the region table. */
 	final static long REGION_ROWS_NUMBER = 5L;
+	
+	/** Number of cols in the region table. */
+	final static long REGION_COLS_NUMBER = 3L;
 
 	/** Number of rows in the waveform table. */
 	final static long WAVEFORM_ROWS_NUMBER = 10L;
@@ -135,6 +138,37 @@ public class TestMigrationUtils {
 		handler.commit();
 		handler.close();
 	}
+	
+	/**
+	 * Return number of rows and columns for a loaded data.
+	 * 
+	 * @author Adam Dziedzic
+	 */
+	protected static class RowColNumber {
+		private long rowNumber;
+		private long colNumber;
+		
+		/**
+		 * @return the rowNumber
+		 */
+		public long getRowNumber() {
+			return rowNumber;
+		}
+
+		/**
+		 * @return the colNumber
+		 */
+		public long getColNumber() {
+			return colNumber;
+		}
+
+		public RowColNumber(long rowNumber, long colNumber) {
+			super();
+			this.rowNumber = rowNumber;
+			this.colNumber = colNumber;
+		}
+	
+	}
 
 	/**
 	 * Load region TPC-H data to PostgreSQL.
@@ -147,9 +181,11 @@ public class TestMigrationUtils {
 	 * @return number of loaded rows
 	 * 
 	 */
-	public static long loadDataToPostgresRegionTPCH(
+	public static RowColNumber loadDataToPostgresRegionTPCH(
 			PostgreSQLConnectionInfo conFrom, String fromTable)
 					throws SQLException, IOException {
+		log.debug("Load region data from TPC-H to PostgreSQL table: "
+				+ fromTable);
 		PostgreSQLHandler handler = new PostgreSQLHandler(conFrom);
 		handler.dropTableIfExists(fromTable);
 		handler.createTable(getCreateRegionTableStatement(fromTable));
@@ -173,7 +209,7 @@ public class TestMigrationUtils {
 		con.commit();
 		con.close();
 		assertEquals(REGION_ROWS_NUMBER, numberOfRowsPostgres);
-		return numberOfRowsPostgres;
+		return new RowColNumber(numberOfRowsPostgres, REGION_COLS_NUMBER);
 	}
 
 	/**
@@ -202,8 +238,8 @@ public class TestMigrationUtils {
 	 * @param fromTable
 	 *            the table to load the data to
 	 * @param CREATE_TABLE_SQL
-	 *            SQL statement to create a table with %s to fill it with the name
-	 *            of the table.
+	 *            SQL statement to create a table with %s to fill it with the
+	 *            name of the table.
 	 * @return number of loaded rows
 	 * @throws SQLException
 	 * @throws IOException
@@ -218,8 +254,7 @@ public class TestMigrationUtils {
 		Connection con = PostgreSQLHandler.getConnection(conFrom);
 		con.setAutoCommit(false);
 		CopyManager cpTo = new CopyManager((BaseConnection) con);
-		InputStream input = TestMigrationUtils.class
-				.getClassLoader()
+		InputStream input = TestMigrationUtils.class.getClassLoader()
 				.getResourceAsStream(dataFileName);
 		// CHECK IF THE INPUT STREAM CONTAINS THE REQUIRED DATA
 		// int size = 384;

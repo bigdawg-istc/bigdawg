@@ -90,4 +90,17 @@ public class AccumuloConnectionInfo implements ConnectionInfo {
 		}
 	}
 
+	/* (non-Javadoc)
+	 * @see java.lang.Object#toString()
+	 */
+	@Override
+	public String toString() {
+		return "AccumuloConnectionInfo [zooKeeperHost=" + zooKeeperHost
+				+ ", zooKeeperPort=" + zooKeeperPort + ", accumuloInstanceName="
+				+ accumuloInstanceName + ", username=" + username
+				+ ", password=" + "Sorry, I cannot show it" + "]";
+	}
+	
+	
+
 }

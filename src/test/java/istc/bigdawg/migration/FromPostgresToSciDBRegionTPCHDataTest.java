@@ -55,7 +55,8 @@ public class FromPostgresToSciDBRegionTPCHDataTest {
 	public void beforeLoadDataToPostgres() throws SQLException, IOException {
 		LoggerSetup.setLogging();
 		this.numberOfRowsPostgres = TestMigrationUtils
-				.loadDataToPostgresRegionTPCH(conFrom, fromTable);
+				.loadDataToPostgresRegionTPCH(conFrom, fromTable)
+				.getRowNumber();
 		/* this.migrator = = new FromPostgresToSciDB(); */
 		this.migrator = new FromDatabaseToDatabase(
 				ExportPostgres.ofFormat(FileFormat.CSV),

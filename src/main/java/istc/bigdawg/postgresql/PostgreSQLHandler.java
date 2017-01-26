@@ -346,7 +346,8 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 			throws LocalQueryExecutionException {
 		try {
 
-			log.debug("PostgreSQLHandler is attempting query: " + LogUtils.replace(query) + "");
+			log.debug("PostgreSQLHandler is attempting query: "
+					+ LogUtils.replace(query) + "");
 			log.debug("ConnectionInfo:\n" + this.conInfo.toString());
 
 			this.getConnection();
@@ -506,18 +507,18 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 		}
 	}
 
-	public List<Integer> getPrimaryColumns(final String table)
+	public List<Integer> getPrimaryColumnsNoRecourceCleaning(final String table)
 			throws SQLException {
-		List<Integer> primaryColNum = new ArrayList<Integer>();
-		String query = "SELECT pg_attribute.attnum "
-				+ "FROM pg_index, pg_class, pg_attribute, pg_namespace "
-				+ "WHERE " + "pg_class.oid = ?::regclass AND "
-				+ "indrelid = pg_class.oid AND nspname = 'public' AND "
-				+ "pg_class.relnamespace = pg_namespace.oid AND "
-				+ "pg_attribute.attrelid = pg_class.oid AND "
-				+ "pg_attribute.attnum = any(pg_index.indkey) AND indisprimary";
-		// System.out.println(query);
 		try {
+			List<Integer> primaryColNum = new ArrayList<Integer>();
+			String query = "SELECT pg_attribute.attnum "
+					+ "FROM pg_index, pg_class, pg_attribute, pg_namespace "
+					+ "WHERE " + "pg_class.oid = ?::regclass AND "
+					+ "indrelid = pg_class.oid AND nspname = 'public' AND "
+					+ "pg_class.relnamespace = pg_namespace.oid AND "
+					+ "pg_attribute.attrelid = pg_class.oid AND "
+					+ "pg_attribute.attnum = any(pg_index.indkey) AND indisprimary";
+			// System.out.println(query);
 			getConnection();
 			preparedSt = con.prepareStatement(query);
 			preparedSt.setString(1, table);
@@ -526,6 +527,18 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 				// System.out.println("Primary column number: "+rs.getInt(1));
 				primaryColNum.add(new Integer(rs.getInt(1)));
 			}
+			return primaryColNum;
+		} catch (SQLException ex) {
+			log.error("Problem with PostgreSQL.");
+			throw ex;
+		}
+	}
+
+	public List<Integer> getPrimaryColumns(final String table)
+			throws SQLException {
+		List<Integer> primaryColNum;
+		try {
+			primaryColNum = getPrimaryColumnsNoRecourceCleaning(table);
 		} finally {
 			cleanPostgreSQLResources();
 		}

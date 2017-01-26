@@ -71,7 +71,8 @@ public class FromPostgresToSciDBNetwork {
 		this.conFrom = new PostgreSQLConnectionInfo(remoteIPmadison, "5431",
 				"test", "pguser", remotePassword);
 		this.numberOfRowsPostgres = TestMigrationUtils
-				.loadDataToPostgresRegionTPCH(conFrom, fromTable);
+				.loadDataToPostgresRegionTPCH(conFrom, fromTable)
+				.getRowNumber();
 		this.migrator = new FromPostgresToSciDB();
 		/*
 		 * this.migrator = new FromDatabaseToDatabase(

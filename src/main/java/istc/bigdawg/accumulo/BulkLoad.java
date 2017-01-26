@@ -3,9 +3,7 @@ package istc.bigdawg.accumulo;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashSet;
 
 import org.apache.accumulo.core.cli.MapReduceClientOnRequiredTable;
 import org.apache.accumulo.core.client.Connector;

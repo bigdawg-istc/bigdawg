@@ -65,7 +65,8 @@ public class FromDatabaseToDatabaseTest {
 		 * Prepare the source table and delete the target array.
 		 */
 		this.numberOfRowsPostgres = TestMigrationUtils
-				.loadDataToPostgresRegionTPCH(conPostgres, table);
+				.loadDataToPostgresRegionTPCH(conPostgres, table)
+				.getRowNumber();
 		SciDBHandler.dropArrayIfExists(conSciDB, array);
 		TestMigrationUtils.prepareFlatTargetArray(conSciDB, array);
 
@@ -118,7 +119,8 @@ public class FromDatabaseToDatabaseTest {
 			 * SciDB.
 			 */
 			this.numberOfRowsPostgres = TestMigrationUtils
-					.loadDataToPostgresRegionTPCH(conPostgres, table);
+					.loadDataToPostgresRegionTPCH(conPostgres, table)
+					.getRowNumber();
 
 			TestMigrationUtils.prepareFlatTargetArray(conSciDB, array);
 
