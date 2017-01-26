@@ -126,12 +126,9 @@ public class AccumuloExecutionEngine implements ExecutorEngine, DBHandler {
 				
 				row.add(entry.getValue().toString());
 				result.add(row);
-//				actual.put(entry.getKey(), entry.getValue());
-//				log.debug("Entry "+actual.size()+": -"+entry.getKey()+"-    -"+entry.getValue());
 			}
 			scanner.close();
-			
-//			SortedKeyValueIterator<Key,Value> source;
+			if (result.isEmpty()) result.add(new ArrayList<>());
 			
 			return Optional.of(new ConstructedQueryResult(result, ci));
 //			this.getConnection();
