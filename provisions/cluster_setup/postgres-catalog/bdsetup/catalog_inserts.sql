@@ -8,7 +8,7 @@ insert into catalog.engines values(0,'postgres0','bigdawg-postgres-catalog',5400
 insert into catalog.engines values(1,'postgres1','bigdawg-postgres-data1',5401,'PostgreSQL 9.4.5');
 insert into catalog.engines values(2,'postgres2','bigdawg-postgres-data2',5402,'PostgreSQL 9.4.5');
 insert into catalog.engines values(3,'scidb_local','bigdawg-scidb-data',1239,'SciDB 14.12');
-insert into catalog.engines values (4, 'saw ZooKeeper', '128.30.76.163', 2181, 'Accumulo 1.6');
+insert into catalog.engines values (4, 'saw ZooKeeper', 'zookeeper.docker.local', 2181, 'Accumulo 1.6');
 
 -- catalog.databases: dbid, engine_id, name, userid, password
 insert into catalog.databases values(0,0,'bigdawg_catalog','pguser','test');
