@@ -2,7 +2,7 @@
 
 # Note about hostnames: Container hostnames must match those configured in "accumulo.conf/slaves" and "accumulo.conf/masters"
 
-tag=bigdawg/accumulo-data
+tag=bigdawg/accumulo
 container_name=bigdawg-accumulo
 network_name=bigdawg
 
