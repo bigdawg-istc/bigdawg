@@ -13,6 +13,8 @@ import javax.ws.rs.core.Response;
 import org.apache.log4j.Logger;
 import org.mortbay.log.Log;
 
+import istc.bigdawg.accumulo.AccumuloConnectionInfo;
+import istc.bigdawg.accumulo.AccumuloMigrationParams;
 import istc.bigdawg.catalog.CatalogModifier;
 import istc.bigdawg.catalog.CatalogUtilities;
 import istc.bigdawg.catalog.CatalogViewer;
@@ -27,6 +29,7 @@ import istc.bigdawg.islands.CrossIslandQueryNode;
 import istc.bigdawg.islands.CrossIslandQueryPlan;
 import istc.bigdawg.islands.IslandsAndCast.Scope;
 import istc.bigdawg.islands.TheObjectThatResolvesAllDifferencesAmongTheIslands;
+import istc.bigdawg.islands.text.operators.TextScan;
 import istc.bigdawg.migration.MigrationParams;
 import istc.bigdawg.migration.Migrator;
 import istc.bigdawg.monitoring.Monitor;
@@ -113,9 +116,15 @@ public class Planner {
 				// Create schema before migration 
 //					remoteSchemaCreation((CrossIslandCastNode)node, ci);
 				logger.debug(String.format("CAST query string: %s", node.getQueryString()));
-
+				
 				// migrate
-				Migrator.migrate(connectionInfoMap.get(source), source.getName(), targetConnInfo, remoteName, new MigrationParams(node.getQueryString()));
+				if (connectionInfoMap.get(source) instanceof AccumuloConnectionInfo) {
+					TextScan ts = ((TextScan) source.getRemainder(0));
+					Migrator.migrate(connectionInfoMap.get(source), ts.getSourceTableName(), //source.getName(), 
+							targetConnInfo, remoteName, new AccumuloMigrationParams(ts.getRange()));
+				} else {
+					Migrator.migrate(connectionInfoMap.get(source), source.getName(), targetConnInfo, remoteName, new MigrationParams(node.getQueryString()));
+				}
 
 				// add the temporary objects to be deleted
 				if (!tempTableInfo.containsKey(targetConnInfo)) {
