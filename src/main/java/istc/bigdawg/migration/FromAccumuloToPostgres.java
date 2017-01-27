@@ -136,6 +136,16 @@ public class FromAccumuloToPostgres extends FromDatabaseToDatabase {
 			this.con = PostgreSQLHandler.getConnection(conTo);
 			con.setAutoCommit(false);
 			con.setReadOnly(false);
+			/*
+			 * Check if there exists create table statement for PostgreSQL, if
+			 * so create it.
+			 */
+			String createStatement = MigrationUtils
+					.getUserCreateStatement(migrationInfo);
+			if (createStatement != null) {
+				PostgreSQLHandler.createTargetTableSchema(con,
+						migrationInfo.getObjectTo(), createStatement);
+			}
 		} catch (SQLException e) {
 			String msg = "Could not connect to PostgreSQL.";
 			logger.error(msg + StackTrace.getFullStackTrace(e), e);
@@ -223,14 +233,22 @@ public class FromAccumuloToPostgres extends FromDatabaseToDatabase {
 					rowId = thisRowId;
 					Text colq = e.getKey().getColumnQualifier();
 					String value = e.getValue().toString();
-					// System.out.println(value);
-					// list is numbered from 0 (columns in PostgreSQL numbered
-					// from 1)
-					Integer colIndex = mapNameCol.get(colq.toString());
+					/*
+					 * Column number (index) in PostgreSQL starts from 1.
+					 * 
+					 * All identifiers (including column names) that are not
+					 * double-quoted are folded to lower case in PostgreSQL, so
+					 * we have to change the column qualifier from Accumulo
+					 * (that denotes column name in PostgreSQL to lowercase.
+					 */
+					Integer colIndex = mapNameCol
+							.get(colq.toString().toLowerCase());
 					if (colIndex == null) {
 						throw new MigrationException(
 								"No such column in PostgreSQL: "
-										+ colq.toString());
+										+ colq.toString()
+										+ ". Current columns in PostgreSQL table are: "
+										+ mapNameCol.toString());
 					}
 					row[colIndex] = value;
 				}

@@ -40,10 +40,11 @@ public class FromAccumuloToPostgresTest {
 	private static final long COUNT_TUPLES_ACCUMULO = 2;
 	private static final long COUNT_TUPLES_POSTGRES = 1;
 	private static final String CREATE_TABLE;
-	
+
 	static {
 		CREATE_TABLE = "create table " + TABLE + " (a varchar, b varchar);";
 	}
+
 	/**
 	 * 
 	 */
@@ -52,25 +53,18 @@ public class FromAccumuloToPostgresTest {
 	}
 
 	@Test
-	public void fromAccumuloToPostgres()
-			throws TableNotFoundException, MigrationException {
+	public void fromAccumuloToPostgres() throws Exception {
 		// TableOperations tabOp = null;
 		// boolean tableAccumuloCreated = false;
 		Connection con = null; /* For PostgreSQL. */
 		try {
-			AccumuloInstance acc = null;
-			try {
-				acc = AccumuloInstance.getInstance();
-			} catch (AccumuloException | AccumuloSecurityException
-					| AccumuloBigDawgException e) {
-				logger.error("Could not create an accumulo instance.");
-				e.printStackTrace();
-				System.exit(1);
-			}
-			// tabOp = conn.tableOperations();
-			// AccumuloTest.loadData(conn, TABLE);
+			AccumuloConnectionInfo connectionFrom = AccumuloInstance
+					.getDefaultConnection();
+			AccumuloInstance acc = AccumuloInstance
+					.getFullInstance(connectionFrom);
 			long countAccumulo = acc.countRows(TABLE);
 			assertEquals(COUNT_TUPLES_ACCUMULO, countAccumulo);
+
 			// tableAccumuloCreated = true;
 			FromAccumuloToPostgres fromAccumuloToPostgres = null;
 			PostgreSQLConnectionInfo conInfoTo = new PostgreSQLConnectionInfoTest();
@@ -146,6 +140,7 @@ public class FromAccumuloToPostgresTest {
 		PostgreSQLConnectionInfo connectionTo = new PostgreSQLConnectionInfoTest();
 		AccumuloConnectionInfo connectionFrom = AccumuloInstance
 				.getDefaultConnection();
+		logger.debug("Accumulo connection: " + connectionFrom.toString());
 		AccumuloInstance acc = AccumuloInstance.getFullInstance(connectionFrom);
 		long countAccumulo = acc.countRows(TABLE);
 		assertEquals(COUNT_TUPLES_ACCUMULO, countAccumulo);
@@ -162,8 +157,7 @@ public class FromAccumuloToPostgresTest {
 		try {
 			PostgreSQLHandler.executeStatement(con,
 					"drop table if exists " + TABLE);
-			PostgreSQLHandler.createTargetTableSchema(con, TABLE,
-					CREATE_TABLE);
+			PostgreSQLHandler.createTargetTableSchema(con, TABLE, CREATE_TABLE);
 			con.commit();
 			con.close();
 		} catch (SQLException e1) {
@@ -177,6 +171,36 @@ public class FromAccumuloToPostgresTest {
 					(PostgreSQLConnectionInfo) connectionTo, TABLE);
 			logger.debug("Number of tuples in PostgreSQL: " + count);
 			assertEquals(COUNT_TUPLES_POSTGRES, count);
+		} catch (SQLException e) {
+			logger.error("Could not get count of tuples from PostgreSQL");
+			e.printStackTrace();
+		}
+	}
+
+	@Test
+	public void fromAccumuloToPostgresWithParamsMigrator() throws Exception {
+		PostgreSQLConnectionInfo connectionTo = new PostgreSQLConnectionInfoTest();
+		AccumuloConnectionInfo connectionFrom = AccumuloInstance
+				.getDefaultConnection();
+		String tableFrom = TABLE + "new_to_migrate";
+		String tableTo = TABLE + "new_from_migration";
+		AccumuloInstance acc = AccumuloInstance.getFullInstance(connectionFrom);
+		AccumuloTest.loadData(acc.getConn(), tableFrom);
+		long countAccumulo = acc.countRows(tableFrom);
+		long expectedTuples = 1;
+		assertEquals(expectedTuples, countAccumulo);
+		PostgreSQLHandler postgresHandler = new PostgreSQLHandler(connectionTo);
+		postgresHandler
+				.executeStatementPostgreSQL("drop table if exists " + tableTo);
+		MigrationParams params = new MigrationParams("create table " + tableTo
+				+ " (" + AccumuloTest.COL_QUAL + " varchar)");
+		Migrator.migrate(connectionFrom, tableFrom, connectionTo, tableTo,
+				params);
+		try {
+			long count = Utils.getPostgreSQLCountTuples(
+					(PostgreSQLConnectionInfo) connectionTo, tableTo);
+			logger.debug("Number of tuples in PostgreSQL: " + count);
+			assertEquals(expectedTuples, count);
 		} catch (SQLException e) {
 			logger.error("Could not get count of tuples from PostgreSQL");
 			e.printStackTrace();

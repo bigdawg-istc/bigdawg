@@ -44,12 +44,14 @@ import istc.bigdawg.exceptions.AccumuloBigDawgException;
 public class AccumuloTest {
 
 	protected static final String AUTHORIZATION = "public";
-	protected static final String COL_FAMILY = "myColFamily";
-	protected static final String TABLE = "testTable";
-	protected static final String VALUE = "myValue";
+	protected static final String COL_FAMILY = "mycolfamily";
+	protected static final String TABLE = "testtable";
+	protected static final String VALUE = "myvalue";
 	protected static final String ROW = "row1";
-	protected static final String COL_QUAL = "myColQual";
+	protected static final String COL_QUAL = "MyColQual";
 
+	private static long accumuloBatchWriterMaxMemory = 50 * 1024 * 1024L;
+	private static int accumuloBatchWriterMaxWriteThreads = 4;
 	/**
 	 * log
 	 */
@@ -97,25 +99,24 @@ public class AccumuloTest {
 	 * @param table
 	 */
 	protected static void loadData(Connector conn, String table) {
-		TableOperations tabOp = conn.tableOperations();
-		recreateTable(tabOp, table);
-		Text rowID = new Text(ROW);
-		Text colFam = new Text(COL_FAMILY);
-		Text colQual = new Text(COL_QUAL);
-		ColumnVisibility colVis = new ColumnVisibility(AUTHORIZATION);
-		long timestamp = System.currentTimeMillis();
-
-		Value value = new Value(VALUE.getBytes());
-
-		Mutation mutation = new Mutation(rowID);
-		mutation.put(colFam, colQual, colVis, timestamp, value);
-		/* BatchWriterConfig has reasonable defaults. */
-		BatchWriterConfig config = new BatchWriterConfig();
-		/* Bytes available to batchwriter for buffering mutations. */
-		config.setMaxMemory(10000L);
-		BatchWriter writer;
 		try {
+			BatchWriter writer;
+			TableOperations tabOp = conn.tableOperations();
+			recreateTable(tabOp, table);
+			/* BatchWriterConfig has reasonable defaults. */
+			BatchWriterConfig config = new BatchWriterConfig();
+			/* Bytes available to batchwriter for buffering mutations. */
+			config.setMaxMemory(accumuloBatchWriterMaxMemory);
+			config.setMaxWriteThreads(accumuloBatchWriterMaxWriteThreads);
 			writer = conn.createBatchWriter(table, config);
+
+			Text rowID = new Text(ROW);
+			Text colFam = new Text(COL_FAMILY);
+			Text colQual = new Text(COL_QUAL);
+			Value value = new Value(VALUE.getBytes());
+
+			Mutation mutation = new Mutation(rowID);
+			mutation.put(colFam, colQual, value);
 			writer.addMutation(mutation);
 			writer.flush();
 			writer.close();
