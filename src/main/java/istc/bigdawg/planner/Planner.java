@@ -121,7 +121,7 @@ public class Planner {
 				if (connectionInfoMap.get(source) instanceof AccumuloConnectionInfo) {
 					TextScan ts = ((TextScan) source.getRemainder(0));
 					Migrator.migrate(connectionInfoMap.get(source), ts.getSourceTableName(), //source.getName(), 
-							targetConnInfo, remoteName, new AccumuloMigrationParams(ts.getRange()));
+							targetConnInfo, remoteName, new AccumuloMigrationParams(node.getQueryString(), ts.getRange()));
 				} else {
 					Migrator.migrate(connectionInfoMap.get(source), source.getName(), targetConnInfo, remoteName, new MigrationParams(node.getQueryString()));
 				}
