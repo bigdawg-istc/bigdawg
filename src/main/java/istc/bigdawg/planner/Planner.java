@@ -124,16 +124,20 @@ public class Planner {
 							targetConnInfo, remoteName, new AccumuloMigrationParams(node.getQueryString(), ts.getRange()));
 				} else {
 					Migrator.migrate(connectionInfoMap.get(source), source.getName(), targetConnInfo, remoteName, new MigrationParams(node.getQueryString()));
+					if (!tempTableInfo.containsKey(connectionInfoMap.get(source))) {
+						tempTableInfo.put(connectionInfoMap.get(source), new HashSet<>());
+					}
+					tempTableInfo.get(connectionInfoMap.get(source)).add(source.getName());
 				}
 
 				// add the temporary objects to be deleted
+//				if (!tempTableInfo.containsKey(connectionInfoMap.get(source))) {
+//					tempTableInfo.put(connectionInfoMap.get(source), new HashSet<>());
+//				}
+//				tempTableInfo.get(connectionInfoMap.get(source)).add(source.getName());
 				if (!tempTableInfo.containsKey(targetConnInfo)) {
 					tempTableInfo.put(targetConnInfo, new HashSet<>());
 				}
-				if (!tempTableInfo.containsKey(connectionInfoMap.get(source))) {
-					tempTableInfo.put(connectionInfoMap.get(source), new HashSet<>());
-				}
-				tempTableInfo.get(connectionInfoMap.get(source)).add(source.getName());
 				tempTableInfo.get(targetConnInfo).add(remoteName);
 
 
