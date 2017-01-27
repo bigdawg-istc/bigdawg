@@ -113,7 +113,7 @@ public class ExportSciDB implements Export {
 	}
 
 	/**
-	 * Example of the binary format for SciDB: (string, int64, int64 null)
+	 * Example of the binary format for SciDB: "(string, int64, int64 null)"
 	 * 
 	 * @return the string representing a binary format for SciDB
 	 * @throws NoTargetArrayException
@@ -152,10 +152,8 @@ public class ExportSciDB implements Export {
 	 * Load the data to SciDB (identified by connectionTo): to a given array
 	 * from a given file.
 	 * 
-	 * @param connectionTo
-	 * @param arrays
-	 * @param outputFile
-	 * @return
+	 * @return null - SciDB does not return the information how many elements
+	 *         were exported.
 	 * @throws SQLException
 	 */
 	public Object call() throws MigrationException {

@@ -60,12 +60,11 @@ public class Migrator {
 		registeredMigrators.add(new FromPostgresToSciDB());
 
 		/* migrator from SciDB to Postgres */
-		/*
-		 * registeredMigrators.add(new FromDatabaseToDatabase(
-		 * ExportSciDB.ofFormat(FileFormat.CSV),
-		 * LoadPostgres.ofFormat(FileFormat.CSV)));
-		 */
-		registeredMigrators.add(new FromSciDBToPostgres());
+		registeredMigrators.add(
+				new FromDatabaseToDatabase(ExportSciDB.ofFormat(FileFormat.CSV),
+						LoadPostgres.ofFormat(FileFormat.CSV)));
+		// registeredMigrators.add(new FromSciDBToPostgres());
+
 		registeredMigrators.add(new FromAccumuloToPostgres());
 		registeredMigrators.add(new FromPostgresToAccumulo());
 	}
@@ -107,7 +106,7 @@ public class Migrator {
 	 *            identified by connectionTo; data should be loaded to this new
 	 *            object, the name of the target object in the create statement
 	 *            has to be the same as the migrate method parameter: objectTo
-	 *            
+	 * 
 	 * @return {@link MigrationResult} the result and information about the
 	 *         executed migration
 	 * 
@@ -118,8 +117,10 @@ public class Migrator {
 	public static MigrationResult migrate(ConnectionInfo connectionFrom,
 			String objectFrom, ConnectionInfo connectionTo, String objectTo,
 			MigrationParams migrationParams) throws MigrationException {
-		logger.debug(String.format("Migrator - main facade. From object: %s; To object: %s; From connection: %s; To connection: %s",
-				objectFrom, objectTo, connectionFrom.toSimpleString(), connectionTo.toSimpleString()));
+		logger.debug(String.format(
+				"Migrator - main facade. From object: %s; To object: %s; From connection: %s; To connection: %s",
+				objectFrom, objectTo, connectionFrom.toSimpleString(),
+				connectionTo.toSimpleString()));
 		for (FromDatabaseToDatabase migrator : registeredMigrators) {
 			MigrationResult result = migrator
 					.migrate(new MigrationInfo(connectionFrom, objectFrom,

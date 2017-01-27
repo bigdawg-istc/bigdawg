@@ -16,16 +16,18 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.accumulo.core.client.AccumuloException;
 import org.apache.accumulo.core.client.AccumuloSecurityException;
+import org.apache.accumulo.core.client.Scanner;
 import org.apache.accumulo.core.client.TableNotFoundException;
 import org.apache.accumulo.core.data.Key;
+import org.apache.accumulo.core.data.Range;
 import org.apache.accumulo.core.data.Value;
+import org.apache.accumulo.core.security.Authorizations;
 import org.apache.hadoop.io.Text;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -34,6 +36,7 @@ import org.postgresql.core.BaseConnection;
 
 import istc.bigdawg.accumulo.AccumuloConnectionInfo;
 import istc.bigdawg.accumulo.AccumuloInstance;
+import istc.bigdawg.accumulo.AccumuloMigrationParams;
 
 /**
  * @author Adam Dziedzic
@@ -94,6 +97,32 @@ public class FromAccumuloToPostgres extends FromDatabaseToDatabase {
 		}
 	}
 
+	/**
+	 * Extract table's meta data. This has to be in this class as after reading
+	 * the result set meta data, we have to clean the PostgreSQL's resources.
+	 * 
+	 * @param tableName
+	 *            The table for which we want the meta data.
+	 * @param con
+	 *            Connection to PostgreSQL.
+	 * @return result set meta data
+	 * @throws SQLException
+	 */
+	private ResultSetMetaData getMetaData(final String tableName)
+			throws SQLException {
+		/* We have to get to the meta data after querying the table. */
+		String query = "Select * from "
+				+ tableName.replace(";", "").replace(" ", "") + " limit 1";
+		logger.debug("Query to get meta data: " + query);
+		st = con.prepareStatement(query, ResultSet.TYPE_FORWARD_ONLY,
+				ResultSet.CONCUR_READ_ONLY);
+		rs = st.executeQuery();
+		if (rs == null) {
+			return null;
+		}
+		return rs.getMetaData();
+	}
+
 	public void createNewRowForPostgres(String[] row, StringBuilder sBuilder) {
 		// we finished a new row;
 		String rowString = ListConncatenator.joinList(row, delimiter, "\n");
@@ -110,15 +139,6 @@ public class FromAccumuloToPostgres extends FromDatabaseToDatabase {
 		sBuilder.delete(0, sBuilder.length());
 	}
 
-	private ResultSet getPostgreSQLResultSet(final String table)
-			throws SQLException {
-		String query = "Select * from "
-				+ table.replace(";", "").replace(" ", "") + " limit 1";
-		st = con.prepareStatement(query, ResultSet.TYPE_FORWARD_ONLY,
-				ResultSet.CONCUR_READ_ONLY);
-		return st.executeQuery();
-	}
-
 	@Override
 	public MigrationResult migrate(MigrationInfo migrationInfo)
 			throws MigrationException {
@@ -132,17 +152,19 @@ public class FromAccumuloToPostgres extends FromDatabaseToDatabase {
 				.getConnectionFrom();
 		PostgreSQLConnectionInfo conTo = (PostgreSQLConnectionInfo) migrationInfo
 				.getConnectionTo();
+		logger.debug(conTo);
 		try {
 			this.con = PostgreSQLHandler.getConnection(conTo);
 			con.setAutoCommit(false);
 			con.setReadOnly(false);
-			/*
-			 * Check if there exists create table statement for PostgreSQL, if
-			 * so create it.
-			 */
+			logger.debug("Check if there exists create table statement for "
+					+ "PostgreSQL, if so create it.");
 			String createStatement = MigrationUtils
 					.getUserCreateStatement(migrationInfo);
 			if (createStatement != null) {
+				logger.debug(
+						"The create table statement to be executed in PostgreSQL: "
+								+ createStatement);
 				PostgreSQLHandler.createTargetTableSchema(con,
 						migrationInfo.getObjectTo(), createStatement);
 			}
@@ -156,20 +178,32 @@ public class FromAccumuloToPostgres extends FromDatabaseToDatabase {
 		} catch (AccumuloSecurityException | AccumuloException e) {
 			throw new MigrationException("Problem with Accumulo", e);
 		}
+
+		/* Extract range for table scanning in Accumulo. */
+		Range range = null;
+		MigrationParams params = migrationInfo.getMigrationParams()
+				.orElse(null);
+		if (params != null) {
+			if (params instanceof AccumuloMigrationParams) {
+				AccumuloMigrationParams accParams = (AccumuloMigrationParams) params;
+				range = accParams.getSourceTableRange();
+			}
+		}
+
 		try {
 			return fromAccumuloToPostgres(migrationInfo.getObjectFrom(),
-					migrationInfo.getObjectTo());
+					migrationInfo.getObjectTo(), range);
 		} catch (AccumuloException | AccumuloSecurityException
-				| AccumuloBigDawgException | SQLException
-				| TableNotFoundException | IOException e) {
-			String msg = "Could not close the destination database connection.";
+				| AccumuloBigDawgException | TableNotFoundException
+				| SQLException | IOException e) {
+			String msg = e.getMessage();
 			logger.error(msg + StackTrace.getFullStackTrace(e), e);
 			throw new MigrationException(msg, e);
 		}
 	}
 
 	public MigrationResult fromAccumuloToPostgres(final String accumuloTable,
-			final String postgresTable)
+			final String postgresTable, Range accumuloRange)
 					throws AccumuloException, AccumuloSecurityException,
 					AccumuloBigDawgException, SQLException,
 					TableNotFoundException, IOException, MigrationException {
@@ -188,17 +222,12 @@ public class FromAccumuloToPostgres extends FromDatabaseToDatabase {
 		copyStringBuf.append(delimiter);
 		copyStringBuf.append("')");
 		String copyString = copyStringBuf.toString();
-		// System.out.println(copyString);
-		Iterator<Entry<Key, Value>> iter = accInst
-				.getTableIterator(accumuloTable);
 		try {
-			rs = getPostgreSQLResultSet(postgresTable);
-			if (rs == null) {
-				String message = "No results were fetched for the table: "
-						+ postgresTable;
+			ResultSetMetaData rsmd = getMetaData(postgresTable);
+			if (rsmd == null) {
+				String message = "There is no table: " + postgresTable;
 				logger.log(Level.INFO, message);
 			} else {
-				ResultSetMetaData rsmd = rs.getMetaData();
 				int numOfCol = rsmd.getColumnCount();
 				Map<String, Integer> mapNameCol = new HashMap<>();
 				for (int i = 0; i < numOfCol; ++i) {
@@ -215,8 +244,12 @@ public class FromAccumuloToPostgres extends FromDatabaseToDatabase {
 				// create a new row
 				String[] row = new String[numOfCol];
 				Text rowId = null;
-				while (iter.hasNext()) {
-					Entry<Key, Value> e = iter.next();
+				Scanner scan = accInst.getConn().createScanner(accumuloTable,
+						new Authorizations());
+				if (accumuloRange != null) {
+					scan.setRange(accumuloRange);
+				}
+				for (Entry<Key, Value> e : scan) {
 					Text thisRowId = e.getKey().getRow();
 					// System.out.println(thisRowId);
 					// omit first initialization of rowId
@@ -269,6 +302,15 @@ public class FromAccumuloToPostgres extends FromDatabaseToDatabase {
 		long durationMsec = endTimeMigration - startTimeMigration;
 		return new MigrationResult(accumuloCounter, postgresCounter,
 				startTimeMigration, endTimeMigration, durationMsec);
+
+	}
+
+	public MigrationResult fromAccumuloToPostgres(final String accumuloTable,
+			final String postgresTable)
+					throws MigrationException, AccumuloException,
+					AccumuloSecurityException, AccumuloBigDawgException,
+					SQLException, TableNotFoundException, IOException {
+		return fromAccumuloToPostgres(accumuloTable, postgresTable, null);
 	}
 
 	/**

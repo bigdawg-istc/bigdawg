@@ -65,8 +65,8 @@ public class FromPostgresToAccumulo extends FromDatabaseToDatabase {
 
 	// parameters
 	private long rowIdCounterForAccumuloFromPostgres = 0L;
-	private long accumuloBatchWriterMaxMemory = 50 * 1024 * 1024L;
-	private int accumuloBatchWriterMaxWriteThreads = 4;
+	private static long ACCUMULO_BATCH_WRITER_MAX_MEMORY = 50 * 1024 * 1024L;
+	private static int ACCUMULO_BATCH_WRITER_MAX_WRITE_THREADS = 4;
 	private int accumuloBatchWriteSize = 1000;
 	private int postgreSQLFetchSize = 50;
 
@@ -90,8 +90,8 @@ public class FromPostgresToAccumulo extends FromDatabaseToDatabase {
 			AccumuloBigDawgException, TableNotFoundException {
 		BatchWriterConfig config = new BatchWriterConfig();
 		// bytes available to batch-writer for buffering mutations
-		config.setMaxMemory(accumuloBatchWriterMaxMemory);
-		config.setMaxWriteThreads(accumuloBatchWriterMaxWriteThreads);
+		config.setMaxMemory(ACCUMULO_BATCH_WRITER_MAX_MEMORY);
+		config.setMaxWriteThreads(ACCUMULO_BATCH_WRITER_MAX_WRITE_THREADS);
 		try {
 			BatchWriter writer = accInst.getConnector().createBatchWriter(table,
 					config);
