@@ -52,8 +52,22 @@ public class AccumuloExecutionEngine implements ExecutorEngine, DBHandler {
 	private ZooKeeperInstance zkInstance;
 	private Connector conn;
 	
+//	private static final long MAX_MEMORY = 50 * 1024 * 1024L;
+//	private static final int MAX_THREADS = 4;
+	
+	public static TextScan getExecutionOperator(String s) {
+		return (TextScan)execution.get(s);
+	}
+	
 	private ConnectionInfo ci = null;
 	
+//	private static Pair<String, Range> allThatNeedsMigration = null;
+//	
+//	public static Pair<String, Range> getAllTablesThatNeedMigration() {
+//		Pair<String, Range> thingToMigrate = allThatNeedsMigration;
+//		allThatNeedsMigration = null;
+//		return thingToMigrate;
+//	}
 	
 //	public AccumuloExecutionEngine() throws AccumuloException, AccumuloSecurityException{
 //
@@ -104,6 +118,28 @@ public class AccumuloExecutionEngine implements ExecutorEngine, DBHandler {
 					String[] splits = query.split("[ ]");
 					assert(splits.length == 2);
 					conn.tableOperations().delete(splits[1]);
+					return Optional.of(new IslandQueryResult(ci));
+				} else if (query.startsWith(TheObjectThatResolvesAllDifferencesAmongTheIslands.AccumuloTempTableCommandPrefix)) {
+					
+					// don't do shit but
+//					// leave a note, saying that this specific thing needs to be migrated
+//					String[] splits = query.split("[ ]");
+//					assert(splits.length == 2);
+//					op = (TextOperator) execution.get(splits[1]);
+//					assert(op != null && op instanceof TextScan);
+//					allThatNeedsMigration = new ImmutablePair<>(splits[1], ((TextScan)op).getRange());
+					
+					// this scanner into writer thing don't work
+//					conn.tableOperations().create(splits[1]);
+//					BatchScanner scanner = conn.createBatchScanner(splits[1], Authorizations.EMPTY, 1);
+//					scanner.setRanges(Collections.singleton(scan.getRange()));
+//					scanner.addScanIterator(new IteratorSetting(0, query, null));
+//					BatchWriterConfig conf = new BatchWriterConfig();
+//					conf.setMaxMemory(MAX_MEMORY);
+//					conf.setMaxWriteThreads(MAX_THREADS);
+//					BatchWriter bw = conn.createBatchWriter(splits[1], conf);
+//					
+//					bw.addMutations(iterable);
 					return Optional.of(new IslandQueryResult(ci));
 				} else 
 					throw new LocalQueryExecutionException("Unsupported TEXT island query: "+query);
