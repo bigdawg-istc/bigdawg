@@ -4,11 +4,47 @@ docker run -ti ubuntu:14.04 /bin/bash
 apt-get update
 apt-get install wget apt-transport-https -y
 
+wget -O- https://downloads.paradigm4.com/key | sudo apt-key add -
+
+# you need to execute both of the commands below
 echo deb "https://downloads.paradigm4.com/ ubuntu14.04/14.12/" >> /etc/apt/sources.list.d/scidb.list
 echo "deb-src https://downloads.paradigm4.com/ ubuntu14.04/14.12/" >> /etc/apt/sources.list.d/scidb.list
 
 apt-get update
 apt-get install scidb-14.12-installer -y
+
+# now we have to make scidb running
+
+sudo apt-get install ssh
+in file: /etc/ssh/sshd_config
+change: PermitRootLogin without-password to PermitRootLogin yes
+ssh-keygen -t rsa -C "your_email@example.com"
+cat id_rsa.pub >> authorized_keys
+service ssh restart
+in file: /etc/hosts
+comment out the line: #::1    localhost ip6-localhost ip6-loopback  
+
+cd /opt/scidb/14.12/bin/
+./scidb.py initall single_server
+./scidb.py startall single_server
+
+
+#######
+if this still does not work for you
+
+emacs /etc/postgresql/9.3/main/postgresql.conf  
+change listen_addresses = 'localhost' to listen_addresses = '*'
+
+You can change the pg_hba.conf file:
+
+in: /etc/postgresql/9.3/main/pg_hba.conf add:
+host    all             postgres        127.0.0.1/32            md5
+host    all             postgres        ::1/128                 md5
+
+and then: service postgresql restart
+
+sudo su - scidb -c "/opt/scidb/14.12/bin/scidb.py startall single_server"
+
 
 
 #################################################################################################################################################################################################
