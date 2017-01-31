@@ -1,5 +1,0 @@
-auth=login
-ports=8083s
-scidbport=1239
-user=root
-tmp=/tmp

@@ -1,12 +1,14 @@
-#!/bin/bash
+# Modify etc/hosts so scidb starts. 
+python edit_etchosts.py
 
-/usr/sbin/sshd
-/etc/init.d/postgresql start
-su scidb <<'EOF'
-cd ~
-source .bashrc
-yes | scidb.py initall scidb_docker
-/home/scidb/./startScidb.sh
+# start postgres, ssh, scidb
+service postgresql restart
+service ssh restart
+cd /opt/scidb/14.12/bin
+echo y | ./scidb.py initall single_server
+./scidb.py startall single_server
 
-echo "Services are running..."
+echo "Scidb is ready..."
+
+# Keep the container active and running
 tail -f /dev/null
