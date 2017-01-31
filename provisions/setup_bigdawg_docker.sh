@@ -67,7 +67,6 @@ docker run -d --net=${network_name} \
 
 echo "hdfs needs a moment to become available"
 sleep 10
-
 echo "initializing Accumulo instance"
 docker exec ${container_name}-namenode /usr/lib/accumulo/bin/init_accumulo.sh
 
@@ -154,7 +153,6 @@ echo "======================================="
 echo "===== Starting BigDAWG Middleware ====="
 echo "======================================="
 docker exec -d bigdawg-scidb-data java -classpath "istc.bigdawg-1.0-SNAPSHOT-jar-with-dependencies.jar" istc.bigdawg.Main bigdawg-scidb-data
-
 docker exec bigdawg-postgres-catalog java -classpath "istc.bigdawg-1.0-SNAPSHOT-jar-with-dependencies.jar" istc.bigdawg.Main bigdawg-postgres-catalog
 
 echo
