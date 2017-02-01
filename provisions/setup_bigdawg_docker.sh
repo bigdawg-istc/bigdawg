@@ -38,7 +38,7 @@ docker rm -f bigdawg-postgres-data2
 docker run -d --net=bigdawg -h bigdawg-postgres-data2 -p 5402:5402 -e "PGPORT=5402" -e "BDHOST=bigdawg-postgres-data2" --name bigdawg-postgres-data2 bigdawg/postgres
 echo "==> scidb"
 docker pull bigdawg/scidb
-docker run -d --net=bigdawg -h bigdawg-scidb-data -p 9999:9999 -p 49901:22 -p 8000:8000 --expose=5432 -p 1239:1239 --name bigdawg-scidb-data bigdawg/scidb
+docker run -d --net=bigdawg -h bigdawg-scidb-data -p 1239:1239 --name bigdawg-scidb-data bigdawg/scidb
 echo "==> accumulo"
 docker pull bigdawg/accumulo
 
@@ -114,21 +114,21 @@ echo "========================"
 echo "===== Loading data ====="
 echo "========================"
 
+# Download the mimic2 dataset
+if [ -f "mimic2_flatfiles.tar.gz" ]
+then
+       echo "Mimic data already exists. Skipping download"
+else
+       echo "Downloading the mimic2 dataset"
+       curl -o mimic2_flatfiles.tar.gz --create-dirs https://physionet.org/mimic2/demo/mimic2_flatfiles.tar.gz
+fi
+
 # postgres-catalog
 docker exec -u root bigdawg-postgres-catalog mkdir -p /src/main/resources
 docker cp ../src/main/resources/PostgresParserTerms.csv bigdawg-postgres-catalog:/src/main/resources
 docker cp ../src/main/resources/SciDBParserTerms.csv bigdawg-postgres-catalog:/src/main/resources
 docker cp cluster_setup/postgres-catalog/bdsetup bigdawg-postgres-catalog:/
 docker exec bigdawg-postgres-catalog /bdsetup/setup.sh
-
-# Download the mimic2 dataset
-if [ -f "mimic2_flatfiles.tar.gz" ]
-then
-	echo "Mimic data already exists. Skipping download"
-else
-	echo "Downloading the mimic2 dataset"
-	curl -o mimic2_flatfiles.tar.gz --create-dirs https://physionet.org/mimic2/demo/mimic2_flatfiles.tar.gz
-fi
 
 # postgres-data1
 docker cp cluster_setup/postgres-data1/bdsetup bigdawg-postgres-data1:/
@@ -153,6 +153,7 @@ echo "======================================="
 echo "===== Starting BigDAWG Middleware ====="
 echo "======================================="
 docker exec -d bigdawg-scidb-data java -classpath "istc.bigdawg-1.0-SNAPSHOT-jar-with-dependencies.jar" istc.bigdawg.Main bigdawg-scidb-data
+docker exec -d bigdawg-accumulo-zookeeper java -classpath "istc.bigdawg-1.0-SNAPSHOT-jar-with-dependencies.jar" istc.bigdawg.Main bigdawg-accumulo-zookeeper
 docker exec bigdawg-postgres-catalog java -classpath "istc.bigdawg-1.0-SNAPSHOT-jar-with-dependencies.jar" istc.bigdawg.Main bigdawg-postgres-catalog
 
 echo

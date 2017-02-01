@@ -13,6 +13,7 @@ echo "========================================"
 mvn package -P mit -DskipTests -f ../pom.xml
 cp ../target/istc.bigdawg-1.0-SNAPSHOT-jar-with-dependencies.jar postgres
 cp ../target/istc.bigdawg-1.0-SNAPSHOT-jar-with-dependencies.jar scidb
+cp ../target/istc.bigdawg-1.0-SNAPSHOT-jar-with-dependencies.jar accumulo
 
 echo
 echo "===================================================="
