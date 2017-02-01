@@ -311,8 +311,9 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 						((SciDBHandler)dbSchemaHandler).commit();	
 					} catch (Exception e) {
 						for (String s : createdTables) {
-							((SciDBHandler)dbSchemaHandler).executeStatement("remove("+s+")");
-							((SciDBHandler)dbSchemaHandler).commit();	
+							((SciDBHandler)dbSchemaHandler).dropDataSetIfExists(s);
+//							((SciDBHandler)dbSchemaHandler).executeStatement("remove("+s+")");
+//							((SciDBHandler)dbSchemaHandler).commit();	
 						}
 						throw e;
 					}
@@ -336,7 +337,8 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 						((PostgreSQLHandler)dbSchemaHandler).executeStatementPostgreSQL(transitionSchemas.get(key));
 					} catch (Exception e) {
 						for (String s : createdTables) {
-							((PostgreSQLHandler)dbSchemaHandler).executeStatementPostgreSQL("drop table "+s);
+							((PostgreSQLHandler)dbSchemaHandler).dropDataSetIfExists(s);
+//							((PostgreSQLHandler)dbSchemaHandler).executeStatementPostgreSQL("drop table "+s);
 						}
 						throw e;
 					}
@@ -356,7 +358,8 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 						((AccumuloExecutionEngine)dbSchemaHandler).createTable(key);
 					} catch (Exception e) {
 						for (String s : createdTables) {
-							((AccumuloExecutionEngine)dbSchemaHandler).deleteTable(s);
+							((AccumuloExecutionEngine)dbSchemaHandler).dropDataSetIfExists(s);
+//							((AccumuloExecutionEngine)dbSchemaHandler).deleteTable(s);
 						} 
 						throw e;
 					}
@@ -392,8 +395,9 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 			for (String key : transitionSchemas.keySet()) 
 				if (children.contains(key)) {
 					dbSchemaHandler = new SciDBHandler(scidbSchemaHandlerDBID); // because now the code closes the connection forcefully each time
-					((SciDBHandler)dbSchemaHandler).executeStatementAFL("remove("+key+")");
-					((SciDBHandler)dbSchemaHandler).commit();
+					((SciDBHandler)dbSchemaHandler).dropDataSetIfExists(key);
+//					((SciDBHandler)dbSchemaHandler).executeStatementAFL("remove("+key+")");
+//					((SciDBHandler)dbSchemaHandler).commit();
 				}
 			return;
 		case CAST:
@@ -407,14 +411,18 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case RELATIONAL:
 			for (String key : transitionSchemas.keySet()) 
 				if (children.contains(key)) 
-					((PostgreSQLHandler)dbSchemaHandler).executeStatementPostgreSQL("drop table "+key);
+					((PostgreSQLHandler)dbSchemaHandler).dropDataSetIfExists(key);
+//					((PostgreSQLHandler)dbSchemaHandler).executeStatementPostgreSQL("drop table "+key);
 			return;
 		case STREAM:
 			throw new BigDawgException("STREAM island does not support data immigration; removeTemporaryTableCreatedForPlanning");
 		case TEXT:
 			dbSchemaHandler = new AccumuloExecutionEngine(CatalogViewer.getConnectionInfo(accumuloSchemaHandlerDBID));
 			for (String key : transitionSchemas.keySet()) 
-				if (children.contains(key)) ((AccumuloExecutionEngine)dbSchemaHandler).deleteTable(key);
+				if (children.contains(key)) {
+					((AccumuloExecutionEngine)dbSchemaHandler).dropDataSetIfExists(key);
+//					((AccumuloExecutionEngine)dbSchemaHandler).deleteTable(key);
+				}
 			return;
 		case MYRIA:
 			throw new BigDawgException("MYRIA island does not support data immigration; removeTemporaryTableCreatedForPlanning");

@@ -94,7 +94,7 @@ public class WaveformTest {
 		PostgreSQLConnectionInfo conTo = new PostgreSQLConnectionInfo(
 				"localhost", "5430", "test", "pguser", "test");
 		PostgreSQLHandler handlerTo = new PostgreSQLHandler(conTo);
-		handlerTo.dropTableIfExists(table);
+		handlerTo.dropDataSetIfExists(table);
 		new FromPostgresToPostgres()
 				.migrate(new MigrationInfo(conFrom, table, conTo, table));
 
@@ -104,7 +104,7 @@ public class WaveformTest {
 		assertEquals(TestMigrationUtils.WAVEFORM_ROWS_NUMBER,
 				numberOfRowsPostgresTo);
 		/* remove the destination table */
-		handlerTo.dropTableIfExists(table);
+		handlerTo.dropDataSetIfExists(table);
 		/* remove the source table */
 		PostgreSQLHandler handlerFrom = new PostgreSQLHandler(conFrom);
 		handlerFrom.dropSchemaIfExists(table);

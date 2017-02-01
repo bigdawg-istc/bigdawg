@@ -187,7 +187,7 @@ public class TestMigrationUtils {
 		log.debug("Load region data from TPC-H to PostgreSQL table: "
 				+ fromTable);
 		PostgreSQLHandler handler = new PostgreSQLHandler(conFrom);
-		handler.dropTableIfExists(fromTable);
+		handler.dropDataSetIfExists(fromTable);
 		handler.createTable(getCreateRegionTableStatement(fromTable));
 		Connection con = PostgreSQLHandler.getConnection(conFrom);
 		con.setAutoCommit(false);
@@ -249,7 +249,7 @@ public class TestMigrationUtils {
 					throws SQLException, IOException {
 		log.info("Preparing the PostgreSQL source table.");
 		PostgreSQLHandler handler = new PostgreSQLHandler(conFrom);
-		handler.dropTableIfExists(fromTable);
+		handler.dropDataSetIfExists(fromTable);
 		handler.createTable(String.format(CREATE_TABLE_SQL, fromTable));
 		Connection con = PostgreSQLHandler.getConnection(conFrom);
 		con.setAutoCommit(false);

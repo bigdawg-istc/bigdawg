@@ -80,13 +80,13 @@ public class FromSciDBToPostgresNetworkTest {
 		// make sure that the target array does not exist
 
 		PostgreSQLHandler handler = new PostgreSQLHandler(conTo);
-		handler.dropTableIfExists(toTable);
+		handler.dropDataSetIfExists(toTable);
 		migrator.migrate(new MigrationInfo(conFrom, fromArray, conTo, toTable));
 		long postgresCountTuples = Utils.getPostgreSQLCountTuples(conTo,
 				toTable);
 		assertEquals(numberOfCellsSciDB, postgresCountTuples);
 		// drop the created table
-		handler.dropTableIfExists(toTable);
+		handler.dropDataSetIfExists(toTable);
 	}
 
 	@After

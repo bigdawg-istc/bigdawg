@@ -66,7 +66,7 @@ public class FromSciDBToPostgresImplementationTest {
 			throws MigrationException, SQLException {
 		// make sure that the target array does not exist
 		PostgreSQLHandler handler = new PostgreSQLHandler(conTo);
-		handler.dropTableIfExists(toTable);
+		handler.dropDataSetIfExists(toTable);
 		FromSciDBToPostgres migrator = new FromSciDBToPostgres(
 				new MigrationInfo(conFrom, multiDimArray, conTo, toTable));
 		migrator.migrateBin();
@@ -74,7 +74,7 @@ public class FromSciDBToPostgresImplementationTest {
 				toTable);
 		assertEquals(numberOfCellsSciDBMultiDim, postgresCountTuples);
 		// drop the created table
-		handler.dropTableIfExists(toTable);
+		handler.dropDataSetIfExists(toTable);
 	}
 
 	@Test
@@ -82,7 +82,7 @@ public class FromSciDBToPostgresImplementationTest {
 			throws MigrationException, SQLException {
 		// make sure that the target array does not exist
 		PostgreSQLHandler handler = new PostgreSQLHandler(conTo);
-		handler.dropTableIfExists(toTable);
+		handler.dropDataSetIfExists(toTable);
 		handler.createTable("create table " + toTable
 				+ " (r_regionkey BIGINT NOT NULL, r_name CHAR(25) NOT NULL, r_comment VARCHAR(152) NOT NULL);");
 		FromSciDBToPostgres migrator = new FromSciDBToPostgres(
@@ -92,7 +92,7 @@ public class FromSciDBToPostgresImplementationTest {
 				toTable);
 		assertEquals(numberOfCellsSciDBMultiDim, postgresCountTuples);
 		// drop the created table
-		handler.dropTableIfExists(toTable);
+		handler.dropDataSetIfExists(toTable);
 		System.out.println(
 				"The end of the test with prepared table in PosgreSQL.");
 	}
@@ -102,7 +102,7 @@ public class FromSciDBToPostgresImplementationTest {
 			throws MigrationException, SQLException {
 		// make sure that the target array does not exist
 		PostgreSQLHandler handler = new PostgreSQLHandler(conTo);
-		handler.dropTableIfExists(toTable);
+		handler.dropDataSetIfExists(toTable);
 		FromSciDBToPostgres migrator = new FromSciDBToPostgres(
 				new MigrationInfo(conFrom, flatArray, conTo, toTable));
 		migrator.migrateBin();
@@ -110,7 +110,7 @@ public class FromSciDBToPostgresImplementationTest {
 				toTable);
 		assertEquals(numberOfCellsSciDBFlat, postgresCountTuples);
 		// drop the created table
-		handler.dropTableIfExists(toTable);
+		handler.dropDataSetIfExists(toTable);
 	}
 
 	@Test
@@ -118,7 +118,7 @@ public class FromSciDBToPostgresImplementationTest {
 			throws MigrationException, SQLException {
 		// make sure that the target array does not exist
 		PostgreSQLHandler handler = new PostgreSQLHandler(conTo);
-		handler.dropTableIfExists(toTable);
+		handler.dropDataSetIfExists(toTable);
 		handler.createTable("create table " + toTable
 				+ " (r_regionkey BIGINT NOT NULL, r_name CHAR(25) NOT NULL, r_comment VARCHAR(152) NOT NULL);");
 		FromSciDBToPostgres migrator = new FromSciDBToPostgres(
@@ -128,7 +128,7 @@ public class FromSciDBToPostgresImplementationTest {
 				toTable);
 		assertEquals(numberOfCellsSciDBFlat, postgresCountTuples);
 		// drop the created table
-		handler.dropTableIfExists(toTable);
+		handler.dropDataSetIfExists(toTable);
 		System.out.println(
 				"The end of the test with prepared table in PosgreSQL.");
 	}
@@ -138,7 +138,7 @@ public class FromSciDBToPostgresImplementationTest {
 			throws MigrationException, SQLException {
 		// make sure that the target array does not exist
 		PostgreSQLHandler handler = new PostgreSQLHandler(conTo);
-		handler.dropTableIfExists(toTable);
+		handler.dropDataSetIfExists(toTable);
 		handler.createTable("create table " + toTable
 				+ " (r_name CHAR(25) NOT NULL, r_comment VARCHAR(152) NOT NULL);");
 		FromSciDBToPostgres migrator = new FromSciDBToPostgres(
@@ -148,7 +148,7 @@ public class FromSciDBToPostgresImplementationTest {
 				toTable);
 		assertEquals(numberOfCellsSciDBMultiDim, postgresCountTuples);
 		// drop the created table
-		handler.dropTableIfExists(toTable);
+		handler.dropDataSetIfExists(toTable);
 		System.out.println(
 				"The end of the test with prepared table in PosgreSQL.");
 	}
@@ -158,7 +158,7 @@ public class FromSciDBToPostgresImplementationTest {
 			throws MigrationException, SQLException {
 		// make sure that the target array does not exist
 		PostgreSQLHandler handler = new PostgreSQLHandler(conTo);
-		handler.dropTableIfExists(toTable);
+		handler.dropDataSetIfExists(toTable);
 		handler.createTable(
 				TestMigrationUtils.getCreateRegionTableStatement(toTable));
 		FromSciDBToPostgres migrator = new FromSciDBToPostgres(
@@ -168,7 +168,7 @@ public class FromSciDBToPostgresImplementationTest {
 				toTable);
 		assertEquals(numberOfCellsSciDBMultiDim, postgresCountTuples);
 		// drop the created table
-		handler.dropTableIfExists(toTable);
+		handler.dropDataSetIfExists(toTable);
 		System.out.println(
 				"The end of the test with prepared table in PosgreSQL.");
 	}
@@ -178,7 +178,7 @@ public class FromSciDBToPostgresImplementationTest {
 			throws MigrationException, SQLException {
 		// make sure that the target array does not exist
 		PostgreSQLHandler handler = new PostgreSQLHandler(conTo);
-		handler.dropTableIfExists(toTable);
+		handler.dropDataSetIfExists(toTable);
 		handler.createTable("create table " + toTable
 				+ " (r_regionkey BIGINT NOT NULL, r_name CHAR(25) NOT NULL, r_comment VARCHAR(152) NOT NULL);");
 		FromSciDBToPostgres migrator = new FromSciDBToPostgres(
@@ -188,7 +188,7 @@ public class FromSciDBToPostgresImplementationTest {
 				toTable);
 		assertEquals(numberOfCellsSciDBMultiDim, postgresCountTuples);
 		// drop the created table
-		handler.dropTableIfExists(toTable);
+		handler.dropDataSetIfExists(toTable);
 		System.out.println(
 				"The end of the test with prepared table in PosgreSQL.");
 	}

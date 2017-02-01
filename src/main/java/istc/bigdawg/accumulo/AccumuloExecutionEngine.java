@@ -103,6 +103,14 @@ public class AccumuloExecutionEngine implements ExecutorEngine, DBHandler {
 		execution.put(queryIdentifier, queryRootOperator);
 	}
 	
+	public void dropDataSetIfExists(String dataSetName) throws AccumuloException, AccumuloSecurityException, TableNotFoundException {
+		if (conn.tableOperations().exists(dataSetName)) {
+			conn.tableOperations().delete(dataSetName);	
+		} else {
+			log.debug("Accumulo Table "+dataSetName+" does not exist; skip dropping."); 
+		}
+	}
+	
 	public Optional<QueryResult> execute(final String query) throws LocalQueryExecutionException {
 		try {
 			log.debug("AccumuloExecutionEngine is attempting to retrieve query: " + LogUtils.replace(query) );
@@ -117,7 +125,8 @@ public class AccumuloExecutionEngine implements ExecutorEngine, DBHandler {
 				} else if (query.startsWith(TheObjectThatResolvesAllDifferencesAmongTheIslands.AccumuloDeleteTableCommandPrefix)) {
 					String[] splits = query.split("[ ]");
 					assert(splits.length == 2);
-					conn.tableOperations().delete(splits[1]);
+					dropDataSetIfExists(splits[1]);
+//					conn.tableOperations().delete(splits[1]);
 					return Optional.of(new IslandQueryResult(ci));
 				} else if (query.startsWith(TheObjectThatResolvesAllDifferencesAmongTheIslands.AccumuloTempTableCommandPrefix)) {
 					
@@ -215,7 +224,8 @@ public class AccumuloExecutionEngine implements ExecutorEngine, DBHandler {
 	};
 	
 	public void deleteTable(String tableName) throws AccumuloException, AccumuloSecurityException, TableNotFoundException {
-		conn.tableOperations().delete(tableName);
+		this.dropDataSetIfExists(tableName);
+//		conn.tableOperations().delete(tableName);
 	}
 
 	@Override

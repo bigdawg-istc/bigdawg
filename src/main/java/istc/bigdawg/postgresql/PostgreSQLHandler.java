@@ -852,7 +852,7 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 	 *            the name of the table
 	 * @throws SQLException
 	 */
-	public void dropTableIfExists(String tableName) throws SQLException {
+	public void dropDataSetIfExists(String tableName) throws SQLException {
 		executeStatementPostgreSQL("drop table if exists " + tableName);
 	}
 

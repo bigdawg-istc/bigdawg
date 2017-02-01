@@ -63,13 +63,13 @@ public class FromSciDBToPostgresTest {
 			throws MigrationException, SQLException {
 		// make sure that the target array does not exist
 		PostgreSQLHandler handler = new PostgreSQLHandler(conTo);
-		handler.dropTableIfExists(toTable);
+		handler.dropDataSetIfExists(toTable);
 		migrator.migrate(new MigrationInfo(conFrom, fromArray, conTo, toTable));
 		long postgresCountTuples = Utils.getPostgreSQLCountTuples(conTo,
 				toTable);
 		assertEquals(numberOfCellsSciDB, postgresCountTuples);
 		// drop the created table
-		handler.dropTableIfExists(toTable);
+		handler.dropDataSetIfExists(toTable);
 	}
 
 	@Test
@@ -77,7 +77,7 @@ public class FromSciDBToPostgresTest {
 			throws MigrationException, SQLException {
 		// make sure that the target array does not exist
 		PostgreSQLHandler handler = new PostgreSQLHandler(conTo);
-		handler.dropTableIfExists(toTable);
+		handler.dropDataSetIfExists(toTable);
 		handler.createTable(
 				TestMigrationUtils.getCreateRegionTableStatement(toTable));
 		migrator.migrate(new MigrationInfo(conFrom, fromArray, conTo, toTable));
@@ -85,7 +85,7 @@ public class FromSciDBToPostgresTest {
 				toTable);
 		assertEquals(numberOfCellsSciDB, postgresCountTuples);
 		// drop the created table
-		handler.dropTableIfExists(toTable);
+		handler.dropDataSetIfExists(toTable);
 		System.out.println(
 				"The end of the test with prepared table in PosgreSQL.");
 	}
@@ -97,7 +97,7 @@ public class FromSciDBToPostgresTest {
 				+ "with a given parameter: craete target table");
 
 		PostgreSQLHandler handler = new PostgreSQLHandler(conTo);
-		handler.dropTableIfExists(toTable);
+		handler.dropDataSetIfExists(toTable);
 		MigrationParams migrationParams = new MigrationParams(
 				TestMigrationUtils.getCreateRegionTableStatement(toTable));
 		/* We migrate from the multi-dimensional array so drop to flat one. */

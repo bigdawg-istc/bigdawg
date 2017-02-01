@@ -92,14 +92,14 @@ public class FromDatabaseToDatabaseTest {
 				flatArray, array);
 		// make sure that the target array does not exist
 		PostgreSQLHandler handler = new PostgreSQLHandler(conPostgres);
-		handler.dropTableIfExists(table);
+		handler.dropDataSetIfExists(table);
 		MigrationResult migrationResult = migrator.executeMigrationLocally();
 		logger.debug("Migration result: " + migrationResult);
 		long postgresCountTuples = Utils.getPostgreSQLCountTuples(conPostgres,
 				table);
 		assertEquals(numberOfCellsSciDB, postgresCountTuples);
 		// drop the created table
-		handler.dropTableIfExists(table);
+		handler.dropDataSetIfExists(table);
 	}
 
 	@Test
@@ -155,7 +155,7 @@ public class FromDatabaseToDatabaseTest {
 					.loadRegionDataToSciDB(conSciDB, flatArray, array);
 			// make sure that the target array does not exist
 			PostgreSQLHandler handler = new PostgreSQLHandler(conPostgres);
-			handler.dropTableIfExists(table);
+			handler.dropDataSetIfExists(table);
 			handler.close();
 			MigrationResult result = migrator.executeMigrationLocalRemote();
 			logger.debug("Result of data migration: " + result.toString());
@@ -164,7 +164,7 @@ public class FromDatabaseToDatabaseTest {
 			assertEquals(numberOfCellsSciDB, postgresCountTuples);
 			// drop the created table
 			handler = new PostgreSQLHandler(conPostgres);
-			handler.dropTableIfExists(table);
+			handler.dropDataSetIfExists(table);
 			handler.close();
 		} finally {
 			if (migratorTask != null) {

@@ -742,6 +742,11 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 		}
 		return String.copyValueOf(scidbTypesPattern);
 	}
+	
+	public void dropDataSetIfExists(String array) throws SQLException {
+		dropArrayIfExists(this.conInfo, array);
+	}
+	
 
 	/**
 	 * This is similar to dropArrayIfExists. The array is removed if it exists.

@@ -175,7 +175,7 @@ public class FromPostgresToSStoreImplementation implements MigrationImplementati
 	    	try {
 	    		PostgreSQLHandler postgresH = new PostgreSQLHandler(connectionFrom);
 	    		if (!caching) {
-	    			postgresH.dropTableIfExists(fromTable);
+	    			postgresH.dropDataSetIfExists(fromTable);
 	    			connectionPostgres.commit();
 	    		}
 	    	} catch (SQLException sqle) {

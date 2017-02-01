@@ -155,7 +155,7 @@ public class FromPostgresToSciDBRegionTPCHDataTest {
 	 */
 	public void afterRemovePostgreSQLTestTable() throws SQLException {
 		PostgreSQLHandler handler = new PostgreSQLHandler(conFrom);
-		handler.dropTableIfExists(fromTable);
+		handler.dropDataSetIfExists(fromTable);
 	}
 
 }
