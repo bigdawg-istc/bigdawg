@@ -118,16 +118,20 @@ public class Planner {
 				logger.debug(String.format("CAST query string: %s", node.getQueryString()));
 				
 				// migrate
+				if (!tempTableInfo.containsKey(targetConnInfo)) {
+					tempTableInfo.put(targetConnInfo, new HashSet<>());
+				}
+				tempTableInfo.get(targetConnInfo).add(remoteName);
 				if (connectionInfoMap.get(source) instanceof AccumuloConnectionInfo) {
 					TextScan ts = ((TextScan) source.getRemainder(0));
 					Migrator.migrate(connectionInfoMap.get(source), ts.getSourceTableName(), //source.getName(), 
 							targetConnInfo, remoteName, new AccumuloMigrationParams(node.getQueryString(), ts.getRange()));
 				} else {
-					Migrator.migrate(connectionInfoMap.get(source), source.getName(), targetConnInfo, remoteName, new MigrationParams(node.getQueryString()));
 					if (!tempTableInfo.containsKey(connectionInfoMap.get(source))) {
 						tempTableInfo.put(connectionInfoMap.get(source), new HashSet<>());
 					}
 					tempTableInfo.get(connectionInfoMap.get(source)).add(source.getName());
+					Migrator.migrate(connectionInfoMap.get(source), source.getName(), targetConnInfo, remoteName, new MigrationParams(node.getQueryString()));
 				}
 
 				// add the temporary objects to be deleted
@@ -135,10 +139,10 @@ public class Planner {
 //					tempTableInfo.put(connectionInfoMap.get(source), new HashSet<>());
 //				}
 //				tempTableInfo.get(connectionInfoMap.get(source)).add(source.getName());
-				if (!tempTableInfo.containsKey(targetConnInfo)) {
-					tempTableInfo.put(targetConnInfo, new HashSet<>());
-				}
-				tempTableInfo.get(targetConnInfo).add(remoteName);
+//				if (!tempTableInfo.containsKey(targetConnInfo)) {
+//					tempTableInfo.put(targetConnInfo, new HashSet<>());
+//				}
+//				tempTableInfo.get(targetConnInfo).add(remoteName);
 
 
 				// add catalog entry of the temp table, add to catalog set of destruction
