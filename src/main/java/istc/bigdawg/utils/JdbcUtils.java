@@ -60,6 +60,9 @@ public class JdbcUtils {
                 		case "int64":
                 			value = rs.getLong(i);
                 			break;
+                		case "int32":
+                			value = rs.getInt(i);
+                			break;
                 		case "string":
                 			value = rs.getString(i);
                 			break;

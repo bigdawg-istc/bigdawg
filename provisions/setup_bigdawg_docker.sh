@@ -37,6 +37,7 @@ echo "==> postgres-data2"
 docker rm -f bigdawg-postgres-data2
 docker run -d --net=bigdawg -h bigdawg-postgres-data2 -p 5402:5402 -e "PGPORT=5402" -e "BDHOST=bigdawg-postgres-data2" --name bigdawg-postgres-data2 bigdawg/postgres
 echo "==> scidb"
+docker rm -f bigdawg-scidb-data
 docker pull bigdawg/scidb
 docker run -d --net=bigdawg -h bigdawg-scidb-data -p 1239:1239 --name bigdawg-scidb-data bigdawg/scidb
 echo "==> accumulo"
