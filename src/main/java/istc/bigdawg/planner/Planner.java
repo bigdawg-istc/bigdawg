@@ -272,9 +272,12 @@ public class Planner {
             final Collection<String> tables = tempTableMOD.get(c);
             Log.debug(String.format("removing %s on %s...", tables, c.getDatabase()));
             try {
-            	Collection<String> cs = c.getCleanupQuery(tables);
-            	for (String cleanupQuery : cs)
-            		c.getLocalQueryExecutor().execute(cleanupQuery);
+            	for (String s : tables) {
+            		c.getLocalQueryExecutor().dropDataSetIfExists(s);
+            	}
+//            	Collection<String> cs = c.getCleanupQuery(tables);
+//            	for (String cleanupQuery : cs)
+//            		c.getLocalQueryExecutor().execute(cleanupQuery);
             } catch (ConnectionInfo.LocalQueryExecutorLookupException e) {
                 e.printStackTrace();
             }
