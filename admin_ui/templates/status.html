@@ -1,0 +1,42 @@
+{% extends "layout.html" %}
+
+{% set active_page = "status" %}
+
+{% block content %}
+<div class="row col-xs-10 col-xs-offset-1">
+  <h1 align="center">Cluster Status</h1>
+  <table class="table table-hover">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Status</th>
+        <th></th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for container in containers %}
+      <tr>
+        <td>{{ container.name }}</td>
+        <td>{{ container.status }}</td>
+        <td>
+          <form method="POST" action="startContainer">
+            <input type="hidden" name="container" value="{{ container.name }}">
+            <input type="hidden" name="action" value="start">
+            <button class="button btn-success">Start</button>
+          </form>
+        </td>
+        <td>
+          <form method="POST" action="stopContainer">
+            <input type="hidden" name="container" value="{{ container.name }}">
+            <input type="hidden" name="action" value="stop">
+            <button class="button btn-danger">Stop</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+  
