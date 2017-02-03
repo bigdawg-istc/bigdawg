@@ -25,7 +25,6 @@ echo "===== accumulo-data-*: Stopping and removing containers ====="
 echo "============================================================="
 docker rm -f bigdawg-accumulo-zookeeper
 docker rm -f bigdawg-accumulo-tserver0
-docker rm -f bigdawg-accumulo-tserver1
 docker rm -f bigdawg-accumulo-master
 docker rm -f bigdawg-accumulo-proxy
 docker rm -f bigdawg-accumulo-namenode

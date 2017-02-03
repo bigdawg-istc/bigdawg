@@ -34,11 +34,10 @@ RUN /etc/init.d/postgresql start &&\
 	/etc/init.d/postgresql stop
 
 COPY start_services.sh /
+
+# Copy over build artifacts
 COPY PostgresParserTerms.csv /src/main/resources/PostgresParserTerms.csv
 COPY SciDBParserTerms.csv /src/main/resources/SciDBParserTerms.csv
-
-
-# Copy the middleware jar (build script should move this here)
 COPY istc.bigdawg-1.0-SNAPSHOT-jar-with-dependencies.jar /
 
 CMD /start_services.sh

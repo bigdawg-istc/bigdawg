@@ -42,6 +42,8 @@ RUN echo "listen_addresses = '*'" >> /etc/postgresql/9.3/main/postgresql.conf &&
 
 
 # Copy the middleware jar (build script should move this here)
+COPY PostgresParserTerms.csv /src/main/resources/PostgresParserTerms.csv
+COPY SciDBParserTerms.csv /src/main/resources/SciDBParserTerms.csv
 COPY istc.bigdawg-1.0-SNAPSHOT-jar-with-dependencies.jar /
 
 COPY edit_etchosts.py /
