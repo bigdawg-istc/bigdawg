@@ -484,7 +484,8 @@ public class ExecutionNodeFactory {
 		qep.setTerminalTableName(destinationName);
 
 		if (remainder instanceof TextOperator) {
-			remainderSelectIntoString = TheObjectThatResolvesAllDifferencesAmongTheIslands.AccumuloTempTableCommandPrefix
+			if (isSelect) remainderSelectIntoString = ((TextScan)remainder).getSubTreeToken();
+			else remainderSelectIntoString = TheObjectThatResolvesAllDifferencesAmongTheIslands.AccumuloTempTableCommandPrefix
 					+ ((TextScan)remainder).getSubTreeToken();
 		} else {
 			remainder.accept(gen);

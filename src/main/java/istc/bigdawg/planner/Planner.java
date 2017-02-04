@@ -124,6 +124,8 @@ public class Planner {
 				tempTableInfo.get(targetConnInfo).add(remoteName);
 				if (connectionInfoMap.get(source) instanceof AccumuloConnectionInfo) {
 					TextScan ts = ((TextScan) source.getRemainder(0));
+					logger.debug(String.format("Migrate from Accumulo: srcTbl: %s, rmtNm: %s, queryStr: %s, range: %s", 
+							ts.getSourceTableName(), remoteName, node.getQueryString(), ts.getRange()));
 					Migrator.migrate(connectionInfoMap.get(source), ts.getSourceTableName(), //source.getName(), 
 							targetConnInfo, remoteName, new AccumuloMigrationParams(node.getQueryString(), ts.getRange()));
 				} else {
