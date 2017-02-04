@@ -18,28 +18,18 @@ echo
 echo "========================================"
 echo "===== Pulling images from Dockerhub====="
 echo "========================================"
-echo "==> postgres"
 docker pull bigdawg/postgres
-echo "==> scidb"
 docker pull bigdawg/scidb
-echo "==> accumulo"
 docker pull bigdawg/accumulo
 
 echo
 echo "============================="
 echo "===== Running containers====="
 echo "============================="
-echo "==> postgres-catalog"
-docker run -d --net=bigdawg -h bigdawg-postgres-catalog -p 5400:5400 -p 8080:8080 -e "PGPORT=5400" -e "BDHOST=bigdawg-postgres-catalog" --name bigdawg-postgres-catalog bigdawg/postgres
-echo "==> postgres-data1"
-docker run -d --net=bigdawg -h bigdawg-postgres-data1 -p 5401:5401 -e "PGPORT=5401" -e "BDHOST=bigdawg-postgres-data1" --name bigdawg-postgres-data1 bigdawg/postgres
-echo "==> postgres-data2"
-docker run -d --net=bigdawg -h bigdawg-postgres-data2 -p 5402:5402 -e "PGPORT=5402" -e "BDHOST=bigdawg-postgres-data2" --name bigdawg-postgres-data2 bigdawg/postgres
-echo "==> scidb"
-docker pull bigdawg/scidb
-docker run -d --net=bigdawg -h bigdawg-scidb-data -p 1239:1239 --name bigdawg-scidb-data bigdawg/scidb
-echo "==> accumulo"
-docker pull bigdawg/accumulo
+docker run -d -h bigdawg-postgres-catalog --net=bigdawg -p 5400:5400 -p 8080:8080 -e "PGPORT=5400" -e "BDHOST=bigdawg-postgres-catalog" --name bigdawg-postgres-catalog bigdawg/postgres
+docker run -d -h bigdawg-postgres-data1 --net=bigdawg -p 5401:5401 -e "PGPORT=5401" -e "BDHOST=bigdawg-postgres-data1" --name bigdawg-postgres-data1 bigdawg/postgres
+docker run -d -h bigdawg-postgres-data2 --net=bigdawg -p 5402:5402 -e "PGPORT=5402" -e "BDHOST=bigdawg-postgres-data2" --name bigdawg-postgres-data2 bigdawg/postgres
+docker run -d -h bigdawg-scidb-data --net=bigdawg -p 1239:1239 --name bigdawg-scidb-data bigdawg/scidb
 
 # Note about accumulo hostnames: 
 # Container hostnames must match those configured in docker-builds/accumulo/accumulo.conf/ "slaves" and "masters"
@@ -153,6 +143,8 @@ echo "===== Starting BigDAWG Middleware ====="
 echo "======================================="
 docker exec -d bigdawg-scidb-data java -classpath "istc.bigdawg-1.0-SNAPSHOT-jar-with-dependencies.jar" istc.bigdawg.Main bigdawg-scidb-data
 docker exec -d bigdawg-accumulo-zookeeper java -classpath "istc.bigdawg-1.0-SNAPSHOT-jar-with-dependencies.jar" istc.bigdawg.Main bigdawg-accumulo-zookeeper
+docker exec -d bigdawg-postgres-data1 java -classpath "istc.bigdawg-1.0-SNAPSHOT-jar-with-dependencies.jar" istc.bigdawg.Main bigdawg-postgres-data1
+docker exec -d bigdawg-postgres-data2 java -classpath "istc.bigdawg-1.0-SNAPSHOT-jar-with-dependencies.jar" istc.bigdawg.Main bigdawg-postgres-data2
 docker exec bigdawg-postgres-catalog java -classpath "istc.bigdawg-1.0-SNAPSHOT-jar-with-dependencies.jar" istc.bigdawg.Main bigdawg-postgres-catalog
 
 echo
