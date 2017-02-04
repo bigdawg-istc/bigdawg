@@ -10,7 +10,7 @@ whoami
 cd /var/lib/postgresql
 tar -xvf /bdsetup/mimic2_flatfiles.tar.gz --directory /var/lib/postgresql
 cd MIMIC-Importer-2.6
-./import.sh -s 0 -e 499
+./import.sh -s 0 -e 99
 psql -c "ALTER DATABASE \"MIMIC2\" RENAME TO mimic2"
 psql -c "create database test owner pguser"
 EOF

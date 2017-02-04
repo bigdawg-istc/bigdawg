@@ -25,12 +25,19 @@ RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ trusty-pgdg main" > /etc/
 	chmod -R 0700 /etc/ssl/private && \
 	chown -R postgres /etc/ssl/private
 
-# Configure postgres with user "pguser" and password "test"
+
+RUN rm /etc/postgresql/9.4/main/pg_hba.conf && \
+	echo "host all all all trust" >> /etc/postgresql/9.4/main/pg_hba.conf && \
+	echo "local all all trust" >> /etc/postgresql/9.4/main/pg_hba.conf && \
+	chmod 777 /etc/postgresql/9.4/main/pg_hba.conf && \
+	ls -l /etc/postgresql/9.4/main/pg_hba.conf
+
+# Configure postgres
 USER postgres
 RUN /etc/init.d/postgresql start &&\
-	echo "host all  all    0.0.0.0/0  md5" >> /etc/postgresql/9.4/main/pg_hba.conf && \
+	psql -c "ALTER USER postgres PASSWORD 'test';" && \
 	echo "listen_addresses='*'" >> /etc/postgresql/9.4/main/postgresql.conf && \
-	psql -c "CREATE USER pguser WITH SUPERUSER PASSWORD 'test';" && \
+	psql -c "CREATE USER pguser WITH SUPERUSER CREATEDB LOGIN REPLICATION PASSWORD 'test';" && \
 	/etc/init.d/postgresql stop
 
 COPY start_services.sh /

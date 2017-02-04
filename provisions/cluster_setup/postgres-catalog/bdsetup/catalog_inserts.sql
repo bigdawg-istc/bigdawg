@@ -11,12 +11,12 @@ insert into catalog.engines values(3,'scidb_local','bigdawg-scidb-data',1239,'Sc
 insert into catalog.engines values (4, 'saw ZooKeeper', 'zookeeper.docker.local', 2181, 'Accumulo 1.6');
 
 -- catalog.databases: dbid, engine_id, name, userid, password
-insert into catalog.databases values(0,0,'bigdawg_catalog','pguser','test');
-insert into catalog.databases values(1,0,'bigdawg_schemas','pguser','test');
-insert into catalog.databases values(2,1,'mimic2','pguser','test');
-insert into catalog.databases values(3,2,'mimic2_copy','pguser','test');
-insert into catalog.databases values(4,0,'tpch','pguser','test');
-insert into catalog.databases values(5,1,'tpch','pguser','test');
+insert into catalog.databases values(0,0,'bigdawg_catalog','postgres','test');
+insert into catalog.databases values(1,0,'bigdawg_schemas','postgres','test');
+insert into catalog.databases values(2,1,'mimic2','pguser','postgres');
+insert into catalog.databases values(3,2,'mimic2_copy','postgres','test');
+insert into catalog.databases values(4,0,'tpch','postgres','test');
+insert into catalog.databases values(5,1,'tpch','postgres','test');
 insert into catalog.databases values(6,3,'scidb_local','scidb','scidb123');
 insert into catalog.databases values (7, 4, 'accumulo', 'bigdawg', 'bigdawg');
 
