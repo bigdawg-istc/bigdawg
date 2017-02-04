@@ -18,6 +18,15 @@ RUN apt-get install -y curl && \
 RUN apt-get update && \
 	apt-get install wget apt-transport-https -y
 
+# Install and setup ssh
+RUN apt-get install -y ssh && \
+	cp /etc/ssh/sshd_config ~/sshd_config.new && \
+	/bin/sed -i 's/without-password/yes/g' ~/sshd_config.new && \
+	cp -f ~/sshd_config.new /etc/ssh/sshd_config && \
+	ssh-keygen -t rsa -N "" -C "your_email@example.com" -f /root/.ssh/id_rsa && \
+	cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys && \
+	service ssh restart
+
 # Install scidb
 RUN wget -O- https://downloads.paradigm4.com/key | sudo apt-key add - && \
 	echo deb "https://downloads.paradigm4.com/ ubuntu14.04/14.12/" >> /etc/apt/sources.list.d/scidb.list && \
@@ -25,21 +34,12 @@ RUN wget -O- https://downloads.paradigm4.com/key | sudo apt-key add - && \
 	apt-get update && \
 	apt-get install scidb-14.12-installer -y
 
-# Install and setup ssh
-RUN apt-get install -y ssh && \
-	sed -i 's/PermitRootLogin without-password/PermitRootLogin yes/g' /etc/ssh/sshd_config && \
-	ssh-keygen -t rsa -N "" -C "your_email@example.com" -f /root/.ssh/id_rsa && \
-	cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys && \
-	sed -i 's/::1     localhost ip6-localhost ip6-loopback/#::1     localhost ip6-localhost ip6-loopback/g' /etc/ssh/sshd_config && \
-	service ssh restart
-
 # Setup postgres (included in scidb installer)
 RUN echo "listen_addresses = '*'" >> /etc/postgresql/9.3/main/postgresql.conf && \
 	echo "hostssl all all ::1/128 trust" >> /etc/postgresql/9.3/main/pg_hba.conf && \
 	echo "host    all             postgres        127.0.0.1/32            md5" >> /etc/postgresql/9.3/main/pg_hba.conf && \
 	echo "host    all             postgres        ::1/128                 md5" >> /etc/postgresql/9.3/main/pg_hba.conf && \
 	service postgresql restart
-
 
 # Copy the middleware jar (build script should move this here)
 COPY PostgresParserTerms.csv /src/main/resources/PostgresParserTerms.csv
