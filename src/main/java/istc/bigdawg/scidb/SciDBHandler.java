@@ -147,11 +147,12 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 
 	public SciDBHandler(int dbid) {
 		try {
-			this.conInfo = (SciDBConnectionInfo) CatalogViewer.getConnectionInfo(dbid);
+			this.conInfo = (SciDBConnectionInfo) CatalogViewer
+					.getConnectionInfo(dbid);
 			this.connection = getConnection(conInfo);
 		} catch (Exception e) {
-			log.error("Attempted to get connection info for dbid " + String.valueOf(dbid) +
-					". Check properties file.");
+			log.error("Attempted to get connection info for dbid "
+					+ String.valueOf(dbid) + ". Check properties file.");
 			log.error(StackTrace.getFullStackTrace(e));
 		}
 	}
@@ -230,6 +231,29 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 		}
 		if (conInfo != null) {
 			conInfo = null;
+		}
+	}
+
+	/**
+	 * Wrapper for execute statement. Create the handler only when needed and
+	 * destroy it after the operation.
+	 * 
+	 * @param conTo
+	 *            Connection info to SciDB.
+	 * @param statement
+	 *            AFL statement to be executed in SciDB.
+	 * @throws SQLException
+	 */
+	public static void executeStatement(ConnectionInfo conTo, String statement)
+			throws SQLException {
+		SciDBHandler handler = null;
+		try {
+			handler = new SciDBHandler(conTo);
+			handler.executeStatement(statement);
+		} finally {
+			if (handler != null) {
+				handler.close();
+			}
 		}
 	}
 
@@ -464,6 +488,31 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 		return BDConstants.Shim.PSQLARRAY;
 	}
 
+	/**
+	 * Wrapper for execute. Create the handler only when needed and destroy it
+	 * after the operation.
+	 * 
+	 * @param conTo
+	 *            connection info for SciDB
+	 * @param query
+	 *            query to be executed
+	 * @return
+	 * @throws SQLException
+	 * @throws LocalQueryExecutionException
+	 */
+	public static Optional<QueryResult> execute(ConnectionInfo conTo,
+			String query) throws SQLException, LocalQueryExecutionException {
+		SciDBHandler handler = null;
+		try {
+			handler = new SciDBHandler(conTo);
+			return handler.execute(query);
+		} finally {
+			if (handler != null) {
+				handler.close();
+			}
+		}
+	}
+
 	public Optional<QueryResult> execute(String query)
 			throws LocalQueryExecutionException {
 		try (Connection connection = getConnection()) {
@@ -485,7 +534,8 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 					} catch (ArrayIndexOutOfBoundsException e) {
 						List<List<String>> results = new ArrayList<>();
 						results.add(new ArrayList<>());
-						return Optional.of(new ConstructedQueryResult(results, this.conInfo));
+						return Optional.of(new ConstructedQueryResult(results,
+								this.conInfo));
 					}
 				} else {
 					return Optional.empty();
@@ -742,11 +792,10 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 		}
 		return String.copyValueOf(scidbTypesPattern);
 	}
-	
+
 	public void dropDataSetIfExists(String array) throws SQLException {
 		dropArrayIfExists(this.conInfo, array);
 	}
-	
 
 	/**
 	 * This is similar to dropArrayIfExists. The array is removed if it exists.
