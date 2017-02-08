@@ -344,8 +344,8 @@ public class MigrationUtils {
 			SciDBHandler localHandler = new SciDBHandler(
 					migrationInfo.getConnectionTo());
 			localHandler.execute(createArrayStatement);
-			localHandler.commit();
-			localHandler.close();
+//			localHandler.commit();
+//			localHandler.close();
 			return toArray;
 		}
 		return null;

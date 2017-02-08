@@ -331,6 +331,7 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 					+ arrayName + "'";
 			log.debug("Statement to be executed in SciDB: " + statementString);
 			rs = statement.executeQuery(statementString);
+			con.commit();
 			if (rs == null || rs.isAfterLast()) {
 				return false;
 			}
@@ -466,8 +467,14 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 
 	public Optional<QueryResult> execute(String query)
 			throws LocalQueryExecutionException {
-		try (Connection connection = getConnection()) {
-			try (Statement st = connection.createStatement()) {
+		Connection connection = null;
+		Statement st = null;
+		ResultSet rs = null;
+		try {
+			connection = getConnection();
+			
+			try {
+				st = connection.createStatement();
 				IStatementWrapper statementWrapper = st
 						.unwrap(IStatementWrapper.class);
 				statementWrapper.setAfl(true);
@@ -479,7 +486,7 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 				if (st.execute(query)) {
 					connection.commit();
 					try {
-						ResultSet rs = st.getResultSet();
+						rs = st.getResultSet();
 						return Optional
 								.of(new JdbcQueryResult(rs, this.conInfo));
 					} catch (ArrayIndexOutOfBoundsException e) {
@@ -501,6 +508,26 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 					+ "Could not open connection to SciDB. ; query: "
 					+ LogUtils.replace(query), ex);
 			throw new LocalQueryExecutionException(ex);
+		} finally {
+			try {
+				closeResultSet(rs);
+			} catch (SQLException ex) {
+				log.error("Could not close open result set for SciDB. "
+						+ ex.getMessage());
+			}
+			try {
+				closeStatement(st);
+			} catch (SQLException ex) {
+				log.error("Could not close open statement for SciDB. "
+						+ ex.getMessage());
+			}
+			try {
+				closeConnection(connection);
+			} catch (SQLException ex) {
+				log.error("Could not close open connection for SciDB. "
+						+ ex.getMessage());
+			}
+			connection = null;
 		}
 	}
 
@@ -631,9 +658,24 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 					ex);
 			throw ex;
 		} finally {
-			closeResultSet(resultSetDimensions);
-			closeResultSet(resultSetAttributes);
-			closeStatement(statement);
+			try {
+				closeResultSet(resultSetDimensions);
+			} catch (SQLException ex) {
+				log.error("Could not close open result set for SciDB. "
+						+ ex.getMessage());
+			}
+			try {
+				closeResultSet(resultSetAttributes);
+			} catch (SQLException ex) {
+				log.error("Could not close open result set for SciDB. "
+						+ ex.getMessage());
+			}
+			try {
+				closeStatement(statement);
+			} catch (SQLException ex) {
+				log.error("Could not close open statement for SciDB. "
+						+ ex.getMessage());
+			}
 		}
 	}
 
@@ -778,9 +820,21 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 				throw ex;
 			}
 		} finally {
-			closeStatement(statement);
-			closeConnection(con);
+			try {
+				closeStatement(statement);
+			} catch (SQLException ex) {
+				log.error("Could not close open statement for SciDB. "
+						+ ex.getMessage());
+			}
+			try {
+				closeConnection(con);
+			} catch (SQLException ex) {
+				log.error("Could not close open connection for SciDB. "
+						+ ex.getMessage());
+			}
+			con = null;
 		}
+		
 	}
 
 	/*
