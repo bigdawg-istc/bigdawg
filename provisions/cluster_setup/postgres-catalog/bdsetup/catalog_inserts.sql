@@ -13,7 +13,7 @@ insert into catalog.engines values (4, 'saw ZooKeeper', 'zookeeper.docker.local'
 -- catalog.databases: dbid, engine_id, name, userid, password
 insert into catalog.databases values(0,0,'bigdawg_catalog','postgres','test');
 insert into catalog.databases values(1,0,'bigdawg_schemas','postgres','test');
-insert into catalog.databases values(2,1,'mimic2','pguser','postgres');
+insert into catalog.databases values(2,1,'mimic2','postgres','test');
 insert into catalog.databases values(3,2,'mimic2_copy','postgres','test');
 insert into catalog.databases values(4,0,'tpch','postgres','test');
 insert into catalog.databases values(5,1,'tpch','postgres','test');
