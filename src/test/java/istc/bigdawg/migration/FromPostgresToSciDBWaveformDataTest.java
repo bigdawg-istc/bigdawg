@@ -79,10 +79,10 @@ public class FromPostgresToSciDBWaveformDataTest {
 		SciDBHandler.dropArrayIfExists(conTo, toArray);
 		SciDBHandler handler = new SciDBHandler(conTo);
 
-		handler.executeStatement("create array " + toArray
+		handler.executeStatementAQL("create array " + toArray
 				+ " <id:int64,time:int64,value:double> [i=0:*,1000000,0]");
-		handler.commit();
-		handler.close();
+//		handler.commit();
+//		handler.close();
 		/*
 		 * test of the main method
 		 */
@@ -101,10 +101,10 @@ public class FromPostgresToSciDBWaveformDataTest {
 		// prepare the target array
 		SciDBHandler.dropArrayIfExists(conTo, toArray);
 		SciDBHandler handler = new SciDBHandler(conTo);
-		handler.executeStatement("create array " + toArray
+		handler.executeStatementAQL("create array " + toArray
 				+ " <value:double> [id=0:*,1000,0,time=0:*,1000,0]");
-		handler.commit();
-		handler.close();
+//		handler.commit();
+//		handler.close();
 		/*
 		 * test of the main method
 		 */
@@ -127,10 +127,10 @@ public class FromPostgresToSciDBWaveformDataTest {
 		// prepare the target array
 		SciDBHandler.dropArrayIfExists(conTo, toArray);
 		SciDBHandler handler = new SciDBHandler(conTo);
-		handler.executeStatement("create array " + toArray
+		handler.executeStatementAQL("create array " + toArray
 				+ " <value:double> [id=0:*,1000,0,time=0:*,1000,0]");
-		handler.commit();
-		handler.close();
+//		handler.commit();
+//		handler.close();
 		/*
 		 * test of the main method
 		 */
@@ -148,10 +148,10 @@ public class FromPostgresToSciDBWaveformDataTest {
 		// prepare the target array
 		SciDBHandler.dropArrayIfExists(conTo, toArray);
 		SciDBHandler handler = new SciDBHandler(conTo);
-		handler.executeStatement("create array " + toArray
+		handler.executeStatementAQL("create array " + toArray
 				+ " <id:int64,time:int64,value:double> [i=0:*,1000000,0]");
-		handler.commit();
-		handler.close();
+//		handler.commit();
+//		handler.close();
 		/*
 		 * test of the main method
 		 */
@@ -169,10 +169,10 @@ public class FromPostgresToSciDBWaveformDataTest {
 		// prepare the target array
 		SciDBHandler.dropArrayIfExists(conTo, toArray);
 		SciDBHandler handler = new SciDBHandler(conTo);
-		handler.executeStatement("create array " + toArray
+		handler.executeStatementAQL("create array " + toArray
 				+ " <value:double> [id=0:*,1000,0,time=0:*,1000,0]");
-		handler.commit();
-		handler.close();
+//		handler.commit();
+//		handler.close();
 		/*
 		 * test of the main method
 		 */

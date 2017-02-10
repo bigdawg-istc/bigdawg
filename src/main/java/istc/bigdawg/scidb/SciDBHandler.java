@@ -83,7 +83,7 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 	private SciDBConnectionInfo conInfo = null;
 
 	/** Physical connection to SciDB. */
-	private Connection connection = null;
+//	private Connection connection = null;
 
 	/**
 	 * Types of languages for SciDB.
@@ -103,7 +103,8 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 	public SciDBHandler() throws SQLException {
 		this.conInfo = new SciDBConnectionInfo();
 		try {
-			this.connection = getConnection(conInfo);
+//			this.connection = 
+					getConnection(conInfo);
 		} catch (Exception e) {
 			log.debug(
 					"getConnection throws Exception from default SciDBHandler(); "
@@ -130,7 +131,7 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 	 */
 	public SciDBHandler(SciDBConnectionInfo conInfo) throws SQLException {
 		this.conInfo = conInfo;
-		this.connection = getConnection(conInfo);
+//		this.connection = getConnection(conInfo);
 	}
 
 	/**
@@ -142,14 +143,14 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 					+ SciDBConnectionInfo.class.getCanonicalName());
 		}
 		this.conInfo = (SciDBConnectionInfo) conInfo;
-		this.connection = getConnection(this.conInfo);
+//		this.connection = getConnection(this.conInfo);
 	}
 
 	public SciDBHandler(int dbid) {
 		try {
 			this.conInfo = (SciDBConnectionInfo) CatalogViewer
 					.getConnectionInfo(dbid);
-			this.connection = getConnection(conInfo);
+//			this.connection = getConnection(conInfo);
 		} catch (Exception e) {
 			log.error("Attempted to get connection info for dbid "
 					+ String.valueOf(dbid) + ". Check properties file.");
@@ -157,23 +158,23 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 		}
 	}
 
-	/**
-	 * see: {@link #getConnection(SciDBConnectionInfo)}
-	 * 
-	 * @param conInfo
-	 *            Information on the conection (host,port,etc.).
-	 * @return the JDBC connection to SciDB
-	 * @throws SQLException
-	 */
-	public static Connection getConnection(ConnectionInfo conInfo)
-			throws SQLException {
-		if (conInfo instanceof SciDBConnectionInfo) {
-			return getConnection((SciDBConnectionInfo) conInfo);
-		}
-		throw new IllegalArgumentException(
-				"The conInfo parameter should represent a connection to SciDB and be of type: "
-						+ SciDBConnectionInfo.class.getCanonicalName());
-	}
+//	/**
+//	 * see: {@link #getConnection(SciDBConnectionInfo)}
+//	 * 
+//	 * @param conInfo
+//	 *            Information on the conection (host,port,etc.).
+//	 * @return the JDBC connection to SciDB
+//	 * @throws SQLException
+//	 */
+//	public static Connection getConnection(ConnectionInfo conInfo)
+//			throws SQLException {
+//		if (conInfo instanceof SciDBConnectionInfo) {
+//			return getConnection((SciDBConnectionInfo) conInfo);
+//		}
+//		throw new IllegalArgumentException(
+//				"The conInfo parameter should represent a connection to SciDB and be of type: "
+//						+ SciDBConnectionInfo.class.getCanonicalName());
+//	}
 
 	/**
 	 * Create a JDBC connectin to SciDB based on the conInfo (host,port,etc.).
@@ -185,8 +186,16 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 	 * @throws SQLException
 	 * @throws MigrationException
 	 */
-	public static Connection getConnection(SciDBConnectionInfo conInfo)
+	public static Connection getConnection(ConnectionInfo connectionInfo)
 			throws SQLException {
+		SciDBConnectionInfo conInfo = null;
+		if (!(conInfo instanceof SciDBConnectionInfo)) {
+			throw new IllegalArgumentException(
+					"The conInfo parameter should represent a connection to SciDB and be of type: "
+							+ SciDBConnectionInfo.class.getCanonicalName());
+		} else {
+			conInfo = (SciDBConnectionInfo) connectionInfo;
+		}
 		try {
 			Class.forName("org.scidb.jdbc.Driver");
 		} catch (ClassNotFoundException ex) {
@@ -207,33 +216,82 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 		}
 	}
 
+	/**
+	 * Commit the transaction in SciDB.
+	 * 
+	 * @throws SQLException
+	 */
+	@Deprecated
+	public void commit() throws SQLException {
+//		try {
+//			if (connection != null && !connection.isClosed()) {
+//				connection.commit();
+//			}
+//		} catch (SQLException ex) {
+//			ex.printStackTrace();
+//			log.error("Could not commit for a connection to a SciDB database. "
+//					+ conInfo.toString() + " " + ex.getMessage()
+//					+ StackTrace.getFullStackTrace(ex), ex);
+//			throw ex;
+//		}
+	}
+	
 	@Override
 	/**
 	 * You have to close the handler at the end to release the resources.
 	 * 
 	 * @throws SQLException
 	 */
+	@Deprecated
 	public void close() throws SQLException {
-		if (connection != null) {
-			try {
-				commit();
-				if (!connection.isClosed()) {
-					connection.close();
-				}
-				connection = null;
-			} catch (SQLException e) {
-				e.printStackTrace();
-				log.error("Could not close the connection to a SciDB database. "
-						+ conInfo.toString() + " " + e.getMessage()
-						+ StackTrace.getFullStackTrace(e), e);
-				throw e;
-			}
-		}
-		if (conInfo != null) {
-			conInfo = null;
-		}
+//		if (connection != null) {
+//			try {
+//				commit();
+//				if (!connection.isClosed()) {
+//					connection.close();
+//				}
+//				connection = null;
+//			} catch (SQLException e) {
+//				e.printStackTrace();
+//				log.error("Could not close the connection to a SciDB database. "
+//						+ conInfo.toString() + " " + e.getMessage()
+//						+ StackTrace.getFullStackTrace(e), e);
+//				throw e;
+//			}
+//		}
+//		if (conInfo != null) {
+//			conInfo = null;
+//		}
 	}
 
+	@Override
+	@Deprecated
+	public Connection getConnection() throws SQLException {
+		throw new SQLException("SciDBHandler does not support getConnection.");
+	}
+	
+	/**
+	 * The query executed via iquery (not JDBC).
+	 * 
+	 * @see istc.bigdawg.query.DBHandler#executeQuery(java.lang.String)
+	 */
+	@Override
+	@Deprecated
+	public Response executeQuery(String queryString) {
+		log.debug("run query for SciDB. SciDB queryString: " + queryString);
+		String resultSciDB;
+		try {
+			resultSciDB = executeQueryScidb(queryString);
+			return Response.status(200).entity(resultSciDB).build();
+		} catch (IOException | InterruptedException | SciDBException e) {
+			e.printStackTrace();
+			String messageSciDB = "Problem with SciDB: " + e.getMessage();
+			log.error(messageSciDB);
+			return Response.status(200).entity(messageSciDB).build();
+		}
+	}
+	
+	
 	/**
 	 * Wrapper for execute statement. Create the handler only when needed and
 	 * destroy it after the operation.
@@ -244,17 +302,10 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 	 *            AFL statement to be executed in SciDB.
 	 * @throws SQLException
 	 */
-	public static void executeStatement(ConnectionInfo conTo, String statement)
+	public static void executeStatementAQL(ConnectionInfo conTo, String statement)
 			throws SQLException {
-		SciDBHandler handler = null;
-		try {
-			handler = new SciDBHandler(conTo);
-			handler.executeStatement(statement);
-		} finally {
-			if (handler != null) {
-				handler.close();
-			}
-		}
+		SciDBHandler handler = new SciDBHandler(conTo);
+		handler.executeStatementAQL(statement);
 	}
 
 	/**
@@ -276,28 +327,30 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 	 *            scidb statement
 	 * @throws SQLException
 	 */
-	public void executeStatement(String stringStatement) throws SQLException {
+	public void executeStatementAQL(String stringStatement) throws SQLException {
 		executeStatementSciDB(stringStatement, Lang.AQL);
 	}
 
-	/**
-	 * Check if the current object has a connectionInfo and open the connection
-	 * based on the connectionInfo (if not connectionInfo then throw an
-	 * exception).
-	 * 
-	 * @return connection to SciDB
-	 * @throws SQLException
-	 */
-	public Connection getConnection() throws SQLException {
-		if (connection == null) {
-			if (conInfo == null) {
-				throw new IllegalStateException(
-						"Unkonwn information about connection to SciDB.");
-			}
-			connection = getConnection(conInfo);
-		}
-		return connection;
-	}
+//	/**
+//	 * Check if the current object has a connectionInfo and open the connection
+//	 * based on the connectionInfo (if not connectionInfo then throw an
+//	 * exception).
+//	 * 
+//	 * @return connection to SciDB
+//	 * @throws SQLException
+//	 */
+//	@Deprecated
+//	public Connection getConnection() throws SQLException {
+////		if (connection == null) {
+////			if (conInfo == null) {
+////				throw new IllegalStateException(
+////						"Unkonwn information about connection to SciDB.");
+////			}
+////			connection = getConnection(conInfo);
+////		}
+////		return connection;
+//		return null;
+//	}
 
 	/**
 	 * Execute the statement in SciDB in the given language (AFL or AQL).
@@ -308,10 +361,10 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 	 */
 	private void executeStatementSciDB(String stringStatement, Lang lang)
 			throws SQLException {
-		Connection connection = getConnection();
+		Connection connection = null; 
 		Statement statement = null;
 		try {
-
+			connection = getConnection(this.conInfo);
 			statement = connection.createStatement();
 			IStatementWrapper statementWrapper = statement
 					.unwrap(IStatementWrapper.class);
@@ -384,45 +437,75 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 		}
 
 	}
+	
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see istc.bigdawg.query.DBHandler#existsObject(java.lang.String)
+	 */
+	@Override
+	public boolean existsObject(String name) throws Exception {
+		if (this.conInfo == null) {
+			throw new IllegalStateException(
+					"SciDB Handler was not initialized with "
+							+ "a connection information.");
+		}
+		return existsArray(conInfo, name);
+	}
+	
+	@Override
+	public void dropDataSetIfExists(String array) throws SQLException {
+		dropArrayIfExists(this.conInfo, array);
+	}
 
 	/**
-	 * Commit the transaction in SciDB.
+	 * This is similar to dropArrayIfExists. The array is removed if it exists.
+	 * Otherwise, no exception is thrown.
 	 * 
 	 * @throws SQLException
 	 */
-	public void commit() throws SQLException {
+	public static void dropArrayIfExists(ConnectionInfo conTo, String array)
+			throws SQLException {
+		Connection con = null;
+		Statement statement = null;
 		try {
-			if (connection != null && !connection.isClosed()) {
-				connection.commit();
-			}
+			con = SciDBHandler.getConnection(conTo);
+			statement = con.createStatement();
+			String statementString = "drop array " + array;
+			log.debug("Statement to be executed in SciDB: " + statementString);
+			statement.execute(statementString);
+			con.commit();
 		} catch (SQLException ex) {
-			ex.printStackTrace();
-			log.error("Could not commit for a connection to a SciDB database. "
-					+ conInfo.toString() + " " + ex.getMessage()
-					+ StackTrace.getFullStackTrace(ex), ex);
-			throw ex;
+			/*
+			 * it can be thrown when the target array did not exists which
+			 * should be a default behavior';
+			 */
+			if (ex.getMessage()
+					.contains("Array '" + array + "' does not exist.")) {
+				/* the array did not exist in the SciDB database */
+				return;
+			} else {
+				throw ex;
+			}
+		} finally {
+			try {
+				closeStatement(statement);
+			} catch (SQLException ex) {
+				log.error("Could not close open statement for SciDB. "
+						+ ex.getMessage());
+			}
+			try {
+				closeConnection(con);
+			} catch (SQLException ex) {
+				log.error("Could not close open connection for SciDB. "
+						+ ex.getMessage());
+			}
 		}
+		
 	}
 
-	/**
-	 * The query executed via iquery (not JDBC).
-	 * 
-	 * @see istc.bigdawg.query.DBHandler#executeQuery(java.lang.String)
-	 */
-	@Override
-	public Response executeQuery(String queryString) {
-		log.debug("run query for SciDB. SciDB queryString: " + queryString);
-		String resultSciDB;
-		try {
-			resultSciDB = executeQueryScidb(queryString);
-			return Response.status(200).entity(resultSciDB).build();
-		} catch (IOException | InterruptedException | SciDBException e) {
-			e.printStackTrace();
-			String messageSciDB = "Problem with SciDB: " + e.getMessage();
-			log.error(messageSciDB);
-			return Response.status(200).entity(messageSciDB).build();
-		}
-	}
+
+
 
 	/**
 	 * For generating XML query plans, which is used to construct Operator tree,
@@ -503,15 +586,8 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 	 */
 	public static Optional<QueryResult> execute(ConnectionInfo conTo,
 			String query) throws SQLException, LocalQueryExecutionException {
-		SciDBHandler handler = null;
-		try {
-			handler = new SciDBHandler(conTo);
-			return handler.execute(query);
-		} finally {
-			if (handler != null) {
-				handler.close();
-			}
-		}
+		SciDBHandler handler = new SciDBHandler(conTo);
+		return handler.execute(query);
 	}
 
 	public Optional<QueryResult> execute(String query)
@@ -520,7 +596,7 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 		Statement st = null;
 		ResultSet rs = null;
 		try {
-			connection = getConnection();
+			connection = getConnection(this.conInfo);
 			
 			try {
 				st = connection.createStatement();
@@ -532,8 +608,9 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 				log.debug("ConnectionInfo: " + this.conInfo.toString() + "\n");
 
 				st.setQueryTimeout(30);
-				if (st.execute(query)) {
-					connection.commit();
+				boolean ret = st.execute(query);
+				connection.commit();
+				if (ret) {
 					try {
 						rs = st.getResultSet();
 						return Optional
@@ -577,7 +654,6 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 				log.error("Could not close open connection for SciDB. "
 						+ ex.getMessage());
 			}
-			connection = null;
 		}
 	}
 
@@ -659,16 +735,22 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 		List<AttributeMetaData> dimensionsOrdered = new ArrayList<>();
 		Map<String, AttributeMetaData> attributesMap = new HashMap<>();
 		List<AttributeMetaData> attributesOrdered = new ArrayList<>();
-		Statement statement = connection.createStatement();
+		Connection connection = null;
+		Statement statement = null;
 		ResultSet resultSetDimensions = null;
 		ResultSet resultSetAttributes = null;
 		try {
+			connection = getConnection(this.conInfo);
+			statement = connection.createStatement();
 			/*
 			 * query which fetches dimensions of the array with name arrayName
 			 */
 			String getDimsQuery = "select * from dimensions(" + arrayName + ")";
 			log.debug("Get dimensions query to SciDB: " + getDimsQuery);
 			resultSetDimensions = statement.executeQuery(getDimsQuery);
+			connection.commit();
+			closeStatement(statement);
+			statement = connection.createStatement();
 			while (!resultSetDimensions.isAfterLast()) {
 				AttributeMetaData columnMetaData = new AttributeMetaData(
 						resultSetDimensions.getString(2),
@@ -680,9 +762,11 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 				dimensionsOrdered.add(columnMetaData);
 				resultSetDimensions.next();
 			}
+			
 			String getAttrQuery = "select * from attributes(" + arrayName + ")";
 			log.debug(getAttrQuery);
 			resultSetAttributes = statement.executeQuery(getAttrQuery);
+			connection.commit();
 			while (!resultSetAttributes.isAfterLast()) {
 				AttributeMetaData columnMetaData = new AttributeMetaData(
 						resultSetAttributes.getString(2),
@@ -722,6 +806,12 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 			}
 			try {
 				closeStatement(statement);
+			} catch (SQLException ex) {
+				log.error("Could not close open statement for SciDB. "
+						+ ex.getMessage());
+			}
+			try {
+				closeConnection(connection);
 			} catch (SQLException ex) {
 				log.error("Could not close open statement for SciDB. "
 						+ ex.getMessage());
@@ -835,71 +925,6 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 		return String.copyValueOf(scidbTypesPattern);
 	}
 
-	public void dropDataSetIfExists(String array) throws SQLException {
-		dropArrayIfExists(this.conInfo, array);
-	}
-
-	/**
-	 * This is similar to dropArrayIfExists. The array is removed if it exists.
-	 * Otherwise, no exception is thrown.
-	 * 
-	 * @throws SQLException
-	 */
-	public static void dropArrayIfExists(ConnectionInfo conTo, String array)
-			throws SQLException {
-		Connection con = null;
-		Statement statement = null;
-		try {
-			con = SciDBHandler.getConnection(conTo);
-			statement = con.createStatement();
-			String statementString = "drop array " + array;
-			log.debug("Statement to be executed in SciDB: " + statementString);
-			statement.execute(statementString);
-			con.commit();
-		} catch (SQLException ex) {
-			/*
-			 * it can be thrown when the target array did not exists which
-			 * should be a default behavior';
-			 */
-			if (ex.getMessage()
-					.contains("Array '" + array + "' does not exist.")) {
-				/* the array did not exist in the SciDB database */
-				return;
-			} else {
-				throw ex;
-			}
-		} finally {
-			try {
-				closeStatement(statement);
-			} catch (SQLException ex) {
-				log.error("Could not close open statement for SciDB. "
-						+ ex.getMessage());
-			}
-			try {
-				closeConnection(con);
-			} catch (SQLException ex) {
-				log.error("Could not close open connection for SciDB. "
-						+ ex.getMessage());
-			}
-			con = null;
-		}
-		
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see istc.bigdawg.query.DBHandler#existsObject(java.lang.String)
-	 */
-	@Override
-	public boolean existsObject(String name) throws Exception {
-		if (this.conInfo == null) {
-			throw new IllegalStateException(
-					"SciDB Handler was not initialized with "
-							+ "a connection information.");
-		}
-		return existsArray(conInfo, name);
-	}
 
 	@Override
 	public boolean isCsvExportHeader() {
@@ -950,7 +975,7 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 				log.error(message + StackTrace.getFullStackTrace(e));
 				throw new Exception(message, e);
 			} finally {
-				handler.close();
+//				handler.close();
 			}
 		} catch (SQLException scidbException) {
 			String msg = scidbException.getMessage()
@@ -999,10 +1024,12 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 		createArrayStringBuf
 				.append("> [_flat_dimension_=0:*," + Long.MAX_VALUE + ",0]");
 		SciDBHandler handler = new SciDBHandler(connectionFrom);
-		handler.executeStatement(createArrayStringBuf.toString());
-		handler.commit();
-		handler.close();
+		handler.executeStatementAQL(createArrayStringBuf.toString());
+//		handler.commit();
+//		handler.close();
 	}
+
+
 
 	// /**
 	// * @param args

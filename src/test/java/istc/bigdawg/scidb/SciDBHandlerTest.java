@@ -53,13 +53,13 @@ public class SciDBHandlerTest {
 		SciDBHandler handler = null;
 		try {
 			handler = new SciDBHandler();
-			handler.executeStatement(
+			handler.executeStatementAQL(
 					"create array " + arrayName + "<v:string> [i=0:10,1,0]");
-			handler.close();
+	//		handler.close();
 		} finally {
 			handler = new SciDBHandler();
-			handler.executeStatement("drop array " + arrayName);
-			handler.close();
+			handler.executeStatementAQL("drop array " + arrayName);
+	//		handler.close();
 		}
 	}
 
@@ -73,9 +73,9 @@ public class SciDBHandlerTest {
 		assertEquals(false, existsFalse);
 		try {
 			SciDBHandler handler = new SciDBHandler();
-			handler.executeStatement(
+			handler.executeStatementAQL(
 					"create array " + arrayName + "<v:string> [i=0:10,1,0]");
-			handler.close();
+	//		handler.close();
 
 			boolean existsTrue = SciDBHandler.existsArray(conTo, arrayName);
 			assertEquals(true, existsTrue);
@@ -93,7 +93,7 @@ public class SciDBHandlerTest {
 	public void testExecuteStatementAFL() throws SQLException {
 		SciDBHandler handler = new SciDBHandler();
 		handler.executeStatementAFL("list('arrays')");
-		handler.close();
+//		handler.close();
 	}
 
 	@Test
@@ -103,9 +103,9 @@ public class SciDBHandlerTest {
 		// if the test fails, first do in iquery for SciDB: drop array
 		// adam_test_scidb_011;
 		SciDBHandler handler = new SciDBHandler();
-		handler.executeStatement(
+		handler.executeStatementAQL(
 				"create array " + arrayName + "<v:string> [i=0:10,1,0]");
-		handler.close();
+//		handler.close();
 		handler = new SciDBHandler();
 		Connection connection = null;
 		Statement statement = null;
@@ -132,12 +132,12 @@ public class SciDBHandlerTest {
 				connection.close();
 			}
 			if (handler != null) {
-				handler.close();
+		//		handler.close();
 			}
 		}
 		handler = new SciDBHandler();
-		handler.executeStatement("drop array " + arrayName);
-		handler.close();
+		handler.executeStatementAQL("drop array " + arrayName);
+//		handler.close();
 	}
 
 	@Test
@@ -154,9 +154,9 @@ public class SciDBHandlerTest {
 		String arrayName2 = "adam_test_scidb_011_2";
 		SciDBHandler handler = new SciDBHandler();
 		// create array
-		handler.executeStatement("create array " + arrayName2
+		handler.executeStatementAQL("create array " + arrayName2
 				+ "<v:string,d:double> [i=0:10,1,0,j=0:100,1,0]");
-		handler.close();
+//		handler.close();
 		handler = new SciDBHandler();
 		SciDBArrayMetaData meta = null;
 		try {
@@ -165,7 +165,7 @@ public class SciDBHandlerTest {
 			log.error(e.getMessage() + StackTrace.getFullStackTrace(e), e);
 			throw new MigrationException(e.getMessage(), e);
 		} finally {
-			handler.close();
+	//		handler.close();
 		}
 
 		List<AttributeMetaData> dimensionsOrdered = meta.getDimensionsOrdered();
@@ -212,11 +212,11 @@ public class SciDBHandlerTest {
 		assertEquals("d", secondAttributeMap.getName());
 		assertEquals("double", secondAttributeMap.getSqlDataType());
 
-		handler.close();
+//		handler.close();
 
 		handler = new SciDBHandler();
-		handler.executeStatement("drop array " + arrayName2);
-		handler.close();
+		handler.executeStatementAQL("drop array " + arrayName2);
+//		handler.close();
 	}
 
 }

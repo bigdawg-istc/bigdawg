@@ -308,9 +308,9 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 					try {
 						createdTables.add(key);
 						dbSchemaHandler = new SciDBHandler(connectionInfo);
-						((SciDBHandler)dbSchemaHandler).executeStatement(transitionSchemas.get(key));
-						((SciDBHandler)dbSchemaHandler).commit();
-						((SciDBHandler)dbSchemaHandler).close();
+						((SciDBHandler)dbSchemaHandler).executeStatementAQL(transitionSchemas.get(key));
+//						((SciDBHandler)dbSchemaHandler).commit();
+//						((SciDBHandler)dbSchemaHandler).close();
 					} catch (Exception e) {
 						for (String s : createdTables) {
 							SciDBHandler.dropArrayIfExists(connectionInfo, s);
