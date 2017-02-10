@@ -189,7 +189,7 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 	public static Connection getConnection(ConnectionInfo connectionInfo)
 			throws SQLException {
 		SciDBConnectionInfo conInfo = null;
-		if (!(conInfo instanceof SciDBConnectionInfo)) {
+		if (!(connectionInfo instanceof SciDBConnectionInfo)) {
 			throw new IllegalArgumentException(
 					"The conInfo parameter should represent a connection to SciDB and be of type: "
 							+ SciDBConnectionInfo.class.getCanonicalName());
