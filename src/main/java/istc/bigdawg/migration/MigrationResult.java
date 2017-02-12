@@ -29,6 +29,7 @@ public class MigrationResult implements Serializable {
 	private Long durationMsec;
 	private String message;
 	private boolean isError;
+	private Long earliestTimestamp; // used to record the timestamp for the earliest tuple in this migration
 
 	public static MigrationResult getEmptyInstance(String message) {
 		return new MigrationResult(message, true);
@@ -42,6 +43,19 @@ public class MigrationResult implements Serializable {
 		this.countExtractedElements = countExtractedRows;
 		this.countLoadedElements = countLoadedRows;
 		this.isError = false;
+	}
+
+	public MigrationResult(Long countExtractedRows, Long countLoadedRows,
+			Long startTimeMigration, Long endTimeMigration, Long durationMsec,
+			String message, boolean isError, Long earliestTimestamp) {
+		this.countExtractedElements = countExtractedRows;
+		this.countLoadedElements = countLoadedRows;
+		this.startTimeMigration = startTimeMigration;
+		this.endTimeMigration = endTimeMigration;
+		this.durationMsec = durationMsec;
+		this.message = message;
+		this.isError = isError;
+		this.earliestTimestamp = earliestTimestamp;
 	}
 
 	public MigrationResult(Long countExtractedRows, Long countLoadedRows,
@@ -114,6 +128,13 @@ public class MigrationResult implements Serializable {
 	 */
 	public Long getDurationMsec() {
 		return durationMsec;
+	}
+
+	/**
+	 * @return the earliestTimestamp
+	 */
+	public Long getEarliestTimestamp() {
+		return earliestTimestamp;
 	}
 
 	/**

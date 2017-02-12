@@ -127,11 +127,12 @@ public class FromPostgresToSStoreImplementation implements MigrationImplementati
 		    + ",countExtractedElements," + countLoadedElements + ",countLoadedElements," + "N/A"
 		    + ",durationMsec," + durationMsec + ","
 		    + Thread.currentThread().getStackTrace()[1].getMethodName());
-	    return new MigrationResult(countLoadedElements, countexportElements, " No information about number of loaded rows.", false);
+	    return new MigrationResult(countLoadedElements, countexportElements, 
+	    		startTimeMigration, endTimeMigration, durationMsec, 
+	    		"Migration was executed correctly.", false, 0L);
 //	    return null;
-//	} catch (SQLException | InterruptedException
-//		| ExecutionException | IOException | RunShellException exception) {
 	} catch (SQLException | InterruptedException
+//		| ExecutionException | IOException | RunShellException exception) {
 			| ExecutionException exception) {
 //	     MigrationException migrationException =
 //	     handleException(exception, "Migration in CSV format failed. ");
@@ -169,13 +170,16 @@ public class FromPostgresToSStoreImplementation implements MigrationImplementati
 			Long countLoadedElements, boolean caching) throws SQLException, MigrationException {
 		if (!countexportElements.equals(countLoadedElements)) { // failed
 	    	connectionPostgres.rollback();
-	    	throw new MigrationException(errMessage + " " + "number of rows do not match");
+	    	throw new MigrationException(errMessage + " " + "number of rows do not match" + 
+	    			"\ntable: " + fromTable +
+	    			"\nexported rows: " + countexportElements + 
+	    			"\nloaded rows: " + countLoadedElements);
 	    } else {
 	    	// Drop table in Postgres
 	    	try {
 	    		PostgreSQLHandler postgresH = new PostgreSQLHandler(connectionFrom);
 	    		if (!caching) {
-	    			postgresH.dropDataSetIfExists(fromTable);
+	    			postgresH.dropTableIfExists(fromTable);
 	    			connectionPostgres.commit();
 	    		}
 	    	} catch (SQLException sqle) {

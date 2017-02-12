@@ -5,9 +5,11 @@ package istc.bigdawg.migration;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -28,7 +30,6 @@ public class CopyToSStoreExecutor implements Callable<Long> {
 
 	private static Logger log = Logger.getLogger(CopyToSStoreExecutor.class);
 
-//	private CopyManager cpTo;
 	private String copyToString;
 	private InputStream input;
 	private String inputFile;
@@ -76,7 +77,7 @@ public class CopyToSStoreExecutor implements Callable<Long> {
 				return -1L;
 			}
 		}
-		Long countLoadedRows = 0L;
+		Long countLoadedRows = -2L;
 		try {
 			countLoadedRows = 
 					SStoreSQLHandler.executePreparedImportStatement(connection, copyToString, tableName, input, trim, inputFile);

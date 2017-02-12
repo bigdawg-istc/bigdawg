@@ -1,7 +1,14 @@
 package istc.bigdawg.migration;
 
+import java.io.BufferedReader;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.PrintWriter;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -10,10 +17,15 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Vector;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.FutureTask;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.log4j.Logger;
 
@@ -36,6 +48,7 @@ import istc.bigdawg.utils.Pipe;
 public class FromSStoreToPostgresImplementation implements MigrationImplementation {
 
     private static Logger log = Logger.getLogger(FromSStoreToPostgresImplementation.class.getName());
+	private AtomicLong globalCounter = new AtomicLong(0);
 
     /* General message about the action in the class. */
     private String generalMessage = "Data migration from SStore to PostgreSQL";
@@ -55,31 +68,36 @@ public class FromSStoreToPostgresImplementation implements MigrationImplementati
     private ExecutorService executor = null;
     private Connection connectionSStore = null;
     private Connection connectionPostgres = null;
+    private SStoreSQLHandler sstorehandler = null;
+    
+    String serverAddress;
+    int serverPort;
 
     public FromSStoreToPostgresImplementation(SStoreSQLConnectionInfo connectionFrom, String fromTable,
-	    PostgreSQLConnectionInfo connectionTo, String toTable) throws MigrationException {
-	this.connectionFrom = connectionFrom;
-	this.fromTable = fromTable;
-	this.connectionTo = connectionTo;
-	this.toTable = toTable;
-	try {
-	    SStoreSQLHandler handler = new SStoreSQLHandler(connectionFrom);
-	    connectionSStore = SStoreSQLHandler.getConnection(connectionFrom);
-	    this.sStoreSQLTableMetaData = handler.getColumnsMetaData(fromTable);
-	    connectionPostgres = PostgreSQLHandler.getConnection(connectionTo);
-	    connectionPostgres.setAutoCommit(false);
-	} catch (SQLException sStoreException) {
-//	     MigrationException migrateException = handleException(sStoreException, "Extraction of meta data on the array: " 
-//		     + fromTable + " in SciDB failed. ");
-//	     throw migrateException;
-	}
+	    PostgreSQLConnectionInfo connectionTo, String toTable, String serverAddress, int serverPort) throws MigrationException {
+    	this.connectionFrom = connectionFrom;
+    	this.fromTable = fromTable;
+    	this.connectionTo = connectionTo;
+    	this.toTable = toTable;
+    	this.serverAddress = serverAddress;
+    	this.serverPort = serverPort;
+
+    	try {
+    		this.sstorehandler = new SStoreSQLHandler(connectionFrom);
+    		connectionSStore = SStoreSQLHandler.getConnection(connectionFrom);
+    		this.sStoreSQLTableMetaData = sstorehandler.getColumnsMetaData(fromTable);
+    		connectionPostgres = PostgreSQLHandler.getConnection(connectionTo);
+    		connectionPostgres.setAutoCommit(false);
+    	} catch (SQLException sStoreException) {
+    	}
     }
 
     @Override
     public MigrationResult migrate() throws MigrationException {
-	return migrateSingleThreadCSV();
+    	return migrateBin();
     }
-    
+
+/*
     private MigrationResult migrateSingleThreadCSV() throws MigrationException {
     	return migrateSingleThreadCSV(false);
     }
@@ -90,20 +108,19 @@ public class FromSStoreToPostgresImplementation implements MigrationImplementati
 	
 	try {
 	    sStorePipe = Pipe.INSTANCE.createAndGetFullName("sstore.out");
-//	    postgresPipe = Pipe.INSTANCE.createAndGetFullName(this.getClass().getName() + "_toPostgres_" + toTable);
 	    executor = Executors.newFixedThreadPool(2);
 	    
+	    String returnedRowCount = Long.toString(-1);
 	    String copyFromString = SStoreSQLHandler.getExportCommand();
-	    CopyFromSStoreExecutor exportExecutor = new CopyFromSStoreExecutor(connectionSStore, copyFromString, fromTable, "csv",  sStorePipe);
+	    String serverAddress = "localhost";
+	    int port = 18001;
+	    CopyFromSStoreExecutor exportExecutor = new CopyFromSStoreExecutor(
+	    		connectionSStore, copyFromString, fromTable, "csv",  sStorePipe, caching, serverAddress, port);
 	    FutureTask<Long> exportTask = new FutureTask<Long>(exportExecutor);
 	    executor.submit(exportTask);
 
-//	    String createTableStatement = null;
-//	    createTableStatement = getCreatePostgreSQLTableStatementFromSStoreTable();
-//	    System.out.print(createTableStatement);
 	    connectionPostgres = PostgreSQLHandler.getConnection(connectionTo);
 	    connectionPostgres.setAutoCommit(false);
-//	    createTargetTableSchema(connectionPostgres, createTableStatement);
 	    
 	    CopyToPostgresExecutor loadExecutor = new CopyToPostgresExecutor(connectionPostgres,
 			getCopyToPostgreSQLCsvCommand(toTable), sStorePipe);
@@ -140,20 +157,16 @@ public class FromSStoreToPostgresImplementation implements MigrationImplementati
 	}
 
     }
-
+*/
+    
 	private void finishTransaction(Long countexportElements,
 			Long countLoadedElements, boolean caching) throws SQLException, MigrationException {
 		if (!countexportElements.equals(countLoadedElements)) { // failed
 	    	connectionPostgres.rollback();
-	    	throw new MigrationException(errMessage + " " + "number of rows do not match");
+	    	throw new MigrationException(errMessage + " " + "number of rows do not match: " +
+	    			"Exported (" + countexportElements + ") vs. Loaded (" + countLoadedElements + ")");
 	    } else {
-	    	// Delete all tuples from S-Store
-	    	String rmTupleStatement = "DELETE FROM " + fromTable;
-	    	SStoreSQLHandler sstoreH = new SStoreSQLHandler(connectionFrom);
 	    	try {
-	    		if (!caching) {
-	    			sstoreH.executeUpdateQuery(rmTupleStatement);
-	    		}
 	    		connectionPostgres.commit();
 	    	} catch (SQLException sqle) {
 	    		connectionPostgres.rollback();
@@ -170,16 +183,10 @@ public class FromSStoreToPostgresImplementation implements MigrationImplementati
 	long startTimeMigration = System.currentTimeMillis();
 	
 	try {
-	    sStorePipe = Pipe.INSTANCE.createAndGetFullName("sstore.out");
+//	    sStorePipe = Pipe.INSTANCE.createAndGetFullName("sstore.out");
+	    sStorePipe = "/tmp/sstore_" + globalCounter.incrementAndGet() + ".out";
 	    executor = Executors.newFixedThreadPool(2);
 	    
-	    String copyFromString = SStoreSQLHandler.getExportCommand();
-//	    System.out.println("pipe path is " + sStorePipe);
-	    CopyFromSStoreExecutor exportExecutor = new CopyFromSStoreExecutor(
-	    		connectionSStore, copyFromString, fromTable, "psql",  sStorePipe);
-	    FutureTask<Long> exportTask = new FutureTask<Long>(exportExecutor);
-	    executor.submit(exportTask);
-
 	    connectionPostgres = PostgreSQLHandler.getConnection(connectionTo);
 	    connectionPostgres.setAutoCommit(false);
 
@@ -187,31 +194,73 @@ public class FromSStoreToPostgresImplementation implements MigrationImplementati
 	    createTableStatement = getCreatePostgreSQLTableStatementFromSStoreTable();
 	    createTargetTableSchema(connectionPostgres, createTableStatement);
 	    
-	    CopyToPostgresExecutor loadExecutor = new CopyToPostgresExecutor(connectionPostgres,
-			PostgreSQLHandler.getLoadBinCommand(toTable), sStorePipe);
-	    FutureTask<Long> loadTask = new FutureTask<Long>(loadExecutor);
-	    executor.submit(loadTask);
+	    String copyFromString = SStoreSQLHandler.getExportCommand();
+
+	    Long exportedRowCount = -1L;
+	    Long loadedRowCount = -1L;
+	    Long earliestTimestamp = 0L;
 	    
-	    Long countexportElements = exportTask.get();
-	    Long countLoadedElements = loadTask.get();
-	    
-	    finishTransaction(countexportElements, countLoadedElements, caching);
+	    try {
+		    ServerSocket servSock = null;
+		    Socket servSocket = null;
+
+		    String sstoreCmd = "SELECT min(batchid) FROM " + fromTable;
+		    earliestTimestamp = sstorehandler.getEarliestTimestamp(sstoreCmd);
+		    
+		    CopyFromSStoreExecutor exportExecutor = new CopyFromSStoreExecutor(
+		   			connectionSStore, copyFromString, fromTable, "psql",  sStorePipe, 
+		   			caching, serverAddress, serverPort);
+		    FutureTask<Long> exportTask = new FutureTask<Long>(exportExecutor);
+		    executor.submit(exportTask);
+
+	    	servSock = new ServerSocket(serverPort);
+	    	servSocket = servSock.accept();
+	    	BufferedReader in  = new BufferedReader(new InputStreamReader(servSocket.getInputStream()));
+	    	PrintWriter out = new PrintWriter(servSocket.getOutputStream(), true);
+
+	    	String inputLine;
+	    	
+	    	while ((inputLine = in.readLine()) != null) {
+	    		exportedRowCount = Long.parseLong(inputLine);
+	    		break;
+	    	}
+
+		    CopyToPostgresExecutor loadExecutor = new CopyToPostgresExecutor(connectionPostgres,
+		    		PostgreSQLHandler.getLoadBinCommand(toTable), sStorePipe);
+		    FutureTask<Long> loadTask = new FutureTask<Long>(loadExecutor);
+		    executor.submit(loadTask);
+		    loadedRowCount = loadTask.get();
+
+	    	Boolean commit = exportedRowCount.equals(loadedRowCount) ? true : false;
+	    	out.println(commit);
+	    	
+	    	out.close();
+		    in.close();
+    		servSocket.close();
+    		servSock.close();
+	    } catch (IOException e) {
+	    }
+
+	    finishTransaction(exportedRowCount, loadedRowCount, caching);
 
 	    long endTimeMigration = System.currentTimeMillis();
 	    long durationMsec = endTimeMigration - startTimeMigration;
 	    MigrationStatistics stats = new MigrationStatistics(connectionFrom, connectionTo, fromTable, toTable,
-		    startTimeMigration, endTimeMigration, countexportElements, countLoadedElements, this.getClass().getName());
+		    startTimeMigration, endTimeMigration, exportedRowCount, loadedRowCount, this.getClass().getName());
 //	    Monitor.addMigrationStats(stats);
 	    log.debug("Migration result,connectionFrom," + connectionFrom.toSimpleString() + ",connectionTo,"
 		    + connectionTo.toString() + ",fromTable," + fromTable + ",toArray," + toTable
 		    + ",startTimeMigration," + startTimeMigration + ",endTimeMigration," + endTimeMigration
-		    + ",countExtractedElements," + countLoadedElements + ",countLoadedElements," + "N/A"
+		    + ",countExtractedElements," + loadedRowCount + ",countLoadedElements," + "N/A"
 		    + ",durationMsec," + durationMsec + ","
 		    + Thread.currentThread().getStackTrace()[1].getMethodName());
-	    return new MigrationResult(countLoadedElements, countexportElements, " No information about number of loaded rows.", false);
-//	    return null;
+	    return new MigrationResult(loadedRowCount, exportedRowCount, 
+	    		startTimeMigration, endTimeMigration, durationMsec, 
+	    		"Migration was executed correctly.", 
+	    		false, earliestTimestamp);
 	} catch (SQLException | InterruptedException | UnsupportedTypeException
-		| ExecutionException | IOException | RunShellException exception) {
+//			| ExecutionException | IOException | RunShellException exception) {
+		| ExecutionException exception) {
 //	     MigrationException migrationException =
 //	     handleException(exception, "Migration in CSV format failed. ");
 	     throw new MigrationException(errMessage + " " + exception.getMessage());
@@ -220,6 +269,7 @@ public class FromSStoreToPostgresImplementation implements MigrationImplementati
 	}
 
     }
+    
     
     /**
 	 * Clean resources of this instance of the migrator at the end of migration.

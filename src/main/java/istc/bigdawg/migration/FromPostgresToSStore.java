@@ -91,59 +91,18 @@ public class FromPostgresToSStore
 	 * @throws Exception
 	 */
 	public static void main(String[] args) throws Exception {
-//		LoggerSetup.setLogging();
+		LoggerSetup.setLogging();
 		FromPostgresToSStore migrator = new FromPostgresToSStore();
 		PostgreSQLConnectionInfo conFrom = new PostgreSQLConnectionInfo(
-				"localhost", "5431", "tpcc", "pguser", "");
-		String tableFrom = "item";
+				"localhost", "5431", "tpch", "pguser", "");
+		String tableFrom = "orders";
 		SStoreSQLConnectionInfo conTo = new SStoreSQLConnectionInfo("localhost",
 				"21212", "", "user", "password");
-		String tableTo = "item";
-		long startTime = System.currentTimeMillis();
+		String tableTo = "orders";
 		boolean caching = false;
 		MigrationResult result = migrator.migrate(conFrom, tableFrom, conTo, tableTo, caching);
-		long endTime = System.currentTimeMillis();
-		System.out.println("time duration is: " + (endTime - startTime));
 		System.out.println(result);
 		
-//		Properties props = new Properties();
-//		props.setProperty("user","pguser");
-//		props.setProperty("password","test");
-//		Connection conn = DriverManager.getConnection("jdbc:postgresql://localhost:5430/tpch", props);
-//		startTime = System.currentTimeMillis();
-//		String sql1 = "select count(*) from customer";
-//		Statement stmt1 = conn.createStatement();
-//		ResultSet results1 = stmt1.executeQuery(sql1);
-//		while (results1.next()) {
-//			System.out.println(results1.getInt(1));
-//		}
-//		stmt1.close();
-//		results1.close();
-//		conn.close();
-//		endTime = System.currentTimeMillis();
-//		System.out.println("time duration is: " + (endTime - startTime));
-
-//		Class.forName("org.voltdb.jdbc.Driver");
-//		conn = DriverManager.getConnection("jdbc:voltdb://localhost:21212");
-//		String sql = "Select count(*) from orders;";
-//		Statement stmt = conn.createStatement();
-//		ResultSet results = stmt.executeQuery(sql);
-//		while(results.next()) {	
-//			System.out.println(results.getInt(1));
-//		}
-		
-		
-		
-//		Properties props = new Properties();
-//		props.setProperty("user","pguser");
-//		props.setProperty("password","test");
-//		Connection conn = DriverManager.getConnection("jdbc:postgresql://localhost:5432/test_db", props);
-//		long startTime = System.currentTimeMillis();
-//        String sql1 = "select * from orders union select * from orders1";
-//        Statement stmt1 = conn.createStatement();
-//        ResultSet results1 = stmt1.executeQuery(sql1);
-//        long endTime = System.currentTimeMillis();
-//        System.out.println("time duration is: " + (endTime - startTime));
 	}
 
 }

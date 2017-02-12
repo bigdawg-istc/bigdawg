@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.BlockingQueue;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -59,7 +60,7 @@ public class SStoreSQLHandler implements DBHandler {
 	}
     }
 
-    public SStoreSQLHandler(SStoreSQLConnectionInfo conInfo) {
+    public SStoreSQLHandler(ConnectionInfo conInfo) {
 	try {
 		Class.forName("org.voltdb.jdbc.Driver");
 	} catch (ClassNotFoundException ex) {
@@ -113,8 +114,6 @@ public class SStoreSQLHandler implements DBHandler {
 	String user = conInfo.getUser();
 	String password = conInfo.getPassword();
 	log.info("url: " + url);
-//	Log.info("user: " + user);
-//	Log.info("password" + password);
 	try {
             Class.forName("org.voltdb.jdbc.Driver");
 	} catch (ClassNotFoundException ex) {
@@ -122,14 +121,8 @@ public class SStoreSQLHandler implements DBHandler {
 		log.info("SStore jdbc driver is not in the CLASSPATH -> "
 				+ ex.getMessage() + " " + StackTrace.getFullStackTrace(ex),
 				ex);
-	//	throw new RuntimeException(ex.getMessage());
-//	} catch (Exception ex) {
-//            ex.printStackTrace();
-//            log.error("Other exceptions that we don't know.");
 	}
-//	this.conInfo = conInfo;
 	try {
-//	    con = DriverManager.getConnection(url, user, password);
 	    con = DriverManager.getConnection(url);
 	} catch (SQLException e) {
 	    String msg = "Could not connect to the SStoreSQL instance: Url: " + url + " User: " + user + " Password: "
@@ -217,28 +210,31 @@ public class SStoreSQLHandler implements DBHandler {
 		sb.append(']');
 		return sb.toString();
 	}
-	/*public String toPrettyString() {
-		StringBuilder sb = new StringBuilder();
-		
-		for (String s : colNames) sb.append(s).append('\t');
-		if (sb.length() > 0) sb.deleteCharAt(sb.length()-1);
-		sb.append('\n');
-		
-		for (List<String> r : rows) {
-			for (String s : r) 
-				sb.append(s).append('\t');
-			if (sb.length() > 0) 
-				sb.deleteCharAt(sb.length()-1).append('\n');
-		}
-		
-		return sb.toString();
-	}*/
 
 	@Override
 	public ConnectionInfo getConnectionInfo() {
 		return this.connInfo;
 	}
 
+    }
+    
+    public Long getEarliestTimestamp(String queryString) {
+    	SStoreQueryResult queryResult = null;
+    	Long earliestTimestamp = 0L;
+    	try {
+    	    queryResult = (SStoreQueryResult)executeQuerySStoreSQL(queryString);
+    	} catch (SQLException e) {
+    	    // return "Problem with query execution in SStoreSQL: " +
+    	    // queryString;
+    	}
+
+    	Integer rowCounter = 1;
+    	for (List<String> row : queryResult.getRows()) {
+    	    for (String s : row) {
+    	    	earliestTimestamp = Long.parseLong(s);
+    	    }
+    	}
+    	return earliestTimestamp;
     }
 
     @Override
@@ -613,7 +609,7 @@ public class SStoreSQLHandler implements DBHandler {
 	
 	    
     public static Long executePreparedStatement(Connection connection, String copyFromString, String tableName,
-	    String trim, String outputFile) throws SQLException {
+	    String trim, String outputFile, boolean caching, String serverAddress, int port) throws SQLException {
 	
 	PreparedStatement statement = null;
 	Long countExtractedRows = 0L;
@@ -623,7 +619,12 @@ public class SStoreSQLHandler implements DBHandler {
 		statement.setString(2, tableName);
 		statement.setString(3, trim);
 		statement.setString(4, outputFile);
-		ResultSet rs = statement.executeQuery();
+		statement.setString(5, String.valueOf(caching));
+		statement.setString(6, serverAddress);
+		statement.setInt(7, port);
+		statement.setQueryTimeout(600);
+		ResultSet rs;
+		rs = statement.executeQuery();
 		rs.next();
 		countExtractedRows = rs.getLong(1);
 		rs.close();
@@ -644,7 +645,7 @@ public class SStoreSQLHandler implements DBHandler {
     }
     
     public static String getExportCommand() {
-	return "{call @ExtractionRemote(?, ?, ?, ?)}";
+	return "{call @ExtractionRemote(?, ?, ?, ?, ?, ?, ?)}";
     }
     
     public static Long executePreparedImportStatement(
@@ -652,7 +653,7 @@ public class SStoreSQLHandler implements DBHandler {
     		String tableName, InputStream inStream, String trim, String inputFile) throws SQLException {
 
     	PreparedStatement statement = null;
-    	Long countExtractedRows = 0L;
+    	Long countExtractedRows = null;
     	try {
     		statement = connection.prepareCall(copyToString);
     		statement.setInt(1, 0);
