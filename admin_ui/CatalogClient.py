@@ -59,26 +59,27 @@ class CatalogClient:
         :return: rows: an iterable of tuples, where each element is a value of the row
         """
         cur = self.conn.cursor()
-        cur.execute("SELECT * from catalog.databases")
+        cur.execute("SELECT * from catalog.islands")
         rows = cur.fetchall()
         cur.close()
         return rows
 
+if __name__ == "__main__":
 
-# Examples:
-cc = CatalogClient()  # get catalog client instance
+    # Examples:
+    cc = CatalogClient()  # get catalog client instance
 
-# Read objects table
-rows = cc.get_objects()
-for row in rows:
-    print row
+    # Read objects table
+    rows = cc.get_objects()
+    for row in rows:
+        print row
 
-# Read databases table
-rows = cc.get_databases()
-for row in rows:
-    print row
+    # Read databases table
+    rows = cc.get_databases()
+    for row in rows:
+        print row
 
-# Read islands table
-rows = cc.get_islands()
-for row in rows:
-    print row
+    # Read islands table
+    rows = cc.get_islands()
+    for row in rows:
+        print row
