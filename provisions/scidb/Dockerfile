@@ -24,8 +24,7 @@ RUN apt-get install -y ssh && \
 	/bin/sed -i 's/without-password/yes/g' ~/sshd_config.new && \
 	cp -f ~/sshd_config.new /etc/ssh/sshd_config && \
 	ssh-keygen -t rsa -N "" -C "your_email@example.com" -f /root/.ssh/id_rsa && \
-	cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys && \
-	service ssh restart
+	cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys
 
 # Install scidb
 RUN wget -O- https://downloads.paradigm4.com/key | sudo apt-key add - && \
@@ -36,10 +35,9 @@ RUN wget -O- https://downloads.paradigm4.com/key | sudo apt-key add - && \
 
 # Setup postgres (included in scidb installer)
 RUN echo "listen_addresses = '*'" >> /etc/postgresql/9.3/main/postgresql.conf && \
-	echo "hostssl all all ::1/128 trust" >> /etc/postgresql/9.3/main/pg_hba.conf && \
-	echo "host    all             postgres        127.0.0.1/32            md5" >> /etc/postgresql/9.3/main/pg_hba.conf && \
-	echo "host    all             postgres        ::1/128                 md5" >> /etc/postgresql/9.3/main/pg_hba.conf && \
-	service postgresql restart
+	echo "host all all all trust" >> /etc/postgresql/9.3/main/pg_hba.conf && \
+	echo "local all all trust" >> /etc/postgresql/9.3/main/pg_hba.conf && \
+	chmod 777 /etc/postgresql/9.3/main/pg_hba.conf
 
 # Copy the middleware jar (build script should move this here)
 COPY PostgresParserTerms.csv /src/main/resources/PostgresParserTerms.csv

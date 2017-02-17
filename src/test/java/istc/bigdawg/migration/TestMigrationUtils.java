@@ -116,9 +116,9 @@ public class TestMigrationUtils {
 		// prepare the target array
 		SciDBHandler.dropArrayIfExists(conTo, toArray);
 		SciDBHandler handler = new SciDBHandler(conTo);
-		handler.executeStatement(getCreateFlatArrayForRegion(toArray));
-		handler.commit();
-		handler.close();
+		handler.executeStatementAQL(getCreateFlatArrayForRegion(toArray));
+//		handler.commit();
+//		handler.close();
 	}
 
 	/**
@@ -133,10 +133,10 @@ public class TestMigrationUtils {
 		// prepare the target array
 		SciDBHandler.dropArrayIfExists(conTo, toArray);
 		SciDBHandler handler = new SciDBHandler(conTo);
-		handler.executeStatement(
+		handler.executeStatementAQL(
 				getCreateMultiDimensionalArrayForRegion(toArray));
-		handler.commit();
-		handler.close();
+//		handler.commit();
+//		handler.close();
 	}
 	
 	/**
@@ -292,7 +292,7 @@ public class TestMigrationUtils {
 
 		SciDBHandler handler = new SciDBHandler(conFrom);
 		handler.executeStatementAFL(getCreateFlatArrayForRegion(flatArray));
-		handler.close();
+//		handler.close();
 
 		File source = new File("src/test/resources/region.scidb");
 		File target = new File("/tmp/region.scidb");
@@ -310,8 +310,8 @@ public class TestMigrationUtils {
 
 		handler = new SciDBHandler(conFrom);
 		handler.executeStatementAFL(loadCommand);
-		handler.commit();
-		handler.close();
+//		handler.commit();
+//		handler.close();
 
 		long numberOfCellsSciDBFlat = Utils.getNumberOfCellsSciDB(conFrom,
 				flatArray);
@@ -321,19 +321,19 @@ public class TestMigrationUtils {
 		SciDBHandler.dropArrayIfExists(conFrom, multiDimArray);
 
 		handler = new SciDBHandler(conFrom);
-		handler.executeStatement("create array " + multiDimArray + " "
+		handler.executeStatementAQL("create array " + multiDimArray + " "
 				+ "<r_name:string,r_comment:string> "
 				+ "[r_regionkey=0:*,1000000,0]");
-		handler.commit();
-		handler.close();
+//		handler.commit();
+//		handler.close();
 
 		handler = new SciDBHandler(conFrom);
 		String command = "store(redimension(" + flatArray + "," + multiDimArray
 				+ ")," + multiDimArray + ")";
 		log.debug(command);
 		handler.executeStatementAFL(command);
-		handler.commit();
-		handler.close();
+//		handler.commit();
+//		handler.close();
 
 		long numberOfCellsSciDBMultiDim = Utils.getNumberOfCellsSciDB(conFrom,
 				multiDimArray);

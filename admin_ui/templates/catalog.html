@@ -1,0 +1,27 @@
+{% extends "layout.html" %}
+
+{% set active_page = "catalog" %}
+
+{% block content %}
+<div class="row col-xs-10 col-xs-offset-1">
+  <h1 align="center">Data Catalog</h1>
+  <table class="table table-hover">
+    <thead>
+      <tr>
+        <th>Object ID</th>
+        <th>Table Name</th>
+        <th>Contents / Schema</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for object in objects %}
+      <tr>
+        <td>{{ object[0] }}</td>
+        <td>{{ object[1] }}</td>
+        <td>{{ object[2] }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

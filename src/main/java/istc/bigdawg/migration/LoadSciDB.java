@@ -269,8 +269,8 @@ public class LoadSciDB implements Load, Serializable {
 			SciDBHandler handler = new SciDBHandler(
 					migrationInfo.getConnectionTo());
 			handler.executeStatementAFL(finalLoadCommand);
-			handler.commit();
-			handler.close();
+//			handler.commit();
+//			handler.close();
 		} catch (InterruptedException ex) {
 			log.info(ex.getMessage() + StackTrace.getFullStackTrace(ex), ex);
 			MigrationUtils.removeIntermediateArrays(arrays, migrationInfo);

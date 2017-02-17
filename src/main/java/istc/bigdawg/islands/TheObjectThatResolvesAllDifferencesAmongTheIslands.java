@@ -19,8 +19,6 @@ import org.apache.accumulo.core.client.AccumuloSecurityException;
 import org.apache.accumulo.core.client.TableExistsException;
 import org.apache.accumulo.core.client.TableNotFoundException;
 
-import com.beust.jcommander.internal.Lists;
-
 import istc.bigdawg.accumulo.AccumuloConnectionInfo;
 import istc.bigdawg.accumulo.AccumuloExecutionEngine;
 import istc.bigdawg.catalog.Catalog;
@@ -298,26 +296,30 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	public static DBHandler createTableForPlanning(Scope sourceScope, Set<String> children, Map<String, String> transitionSchemas) throws SQLException, BigDawgException, AccumuloException, AccumuloSecurityException, TableExistsException, TableNotFoundException {
 
 		DBHandler dbSchemaHandler = null;
+		ConnectionInfo connectionInfo = null;
 		Set<String> createdTables = new HashSet<>();
 		switch (sourceScope) {
 		case ARRAY:
-			dbSchemaHandler = new SciDBHandler(scidbSchemaHandlerDBID);
 			createdTables = new HashSet<>();
+			connectionInfo = CatalogViewer.getConnectionInfo(scidbSchemaHandlerDBID);
+			
 			for (String key : transitionSchemas.keySet()) 
 				if (children.contains(key)) {
 					try {
 						createdTables.add(key);
-						((SciDBHandler)dbSchemaHandler).executeStatement(transitionSchemas.get(key));
-						((SciDBHandler)dbSchemaHandler).commit();	
+						dbSchemaHandler = new SciDBHandler(connectionInfo);
+						((SciDBHandler)dbSchemaHandler).executeStatementAQL(transitionSchemas.get(key));
+//						((SciDBHandler)dbSchemaHandler).commit();
+//						((SciDBHandler)dbSchemaHandler).close();
 					} catch (Exception e) {
 						for (String s : createdTables) {
-							((SciDBHandler)dbSchemaHandler).dropDataSetIfExists(s);
-//							((SciDBHandler)dbSchemaHandler).executeStatement("remove("+s+")");
-//							((SciDBHandler)dbSchemaHandler).commit();	
+							SciDBHandler.dropArrayIfExists(connectionInfo, s);
 						}
 						throw e;
 					}
 				}
+			if (dbSchemaHandler == null)
+				dbSchemaHandler = new SciDBHandler(connectionInfo);
 			break;
 		case CAST:
 			break;
@@ -338,7 +340,6 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 					} catch (Exception e) {
 						for (String s : createdTables) {
 							((PostgreSQLHandler)dbSchemaHandler).dropDataSetIfExists(s);
-//							((PostgreSQLHandler)dbSchemaHandler).executeStatementPostgreSQL("drop table "+s);
 						}
 						throw e;
 					}
@@ -359,7 +360,6 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 					} catch (Exception e) {
 						for (String s : createdTables) {
 							((AccumuloExecutionEngine)dbSchemaHandler).dropDataSetIfExists(s);
-//							((AccumuloExecutionEngine)dbSchemaHandler).deleteTable(s);
 						} 
 						throw e;
 					}
@@ -392,12 +392,14 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		
 		switch (sourceScope) {
 		case ARRAY:
+			ConnectionInfo sciDBconnectionInfo = CatalogViewer.getConnectionInfo(scidbSchemaHandlerDBID);
 			for (String key : transitionSchemas.keySet()) 
 				if (children.contains(key)) {
-					dbSchemaHandler = new SciDBHandler(scidbSchemaHandlerDBID); // because now the code closes the connection forcefully each time
-					((SciDBHandler)dbSchemaHandler).dropDataSetIfExists(key);
-//					((SciDBHandler)dbSchemaHandler).executeStatementAFL("remove("+key+")");
-//					((SciDBHandler)dbSchemaHandler).commit();
+//					dbSchemaHandler = new SciDBHandler(scidbSchemaHandlerDBID); // because now the code closes the connection forcefully each time
+					SciDBHandler.dropArrayIfExists(sciDBconnectionInfo, key);
+//					((SciDBHandler)dbSchemaHandler).dropDataSetIfExists(key);
+//					//((SciDBHandler)dbSchemaHandler).executeStatementAFL("remove("+key+")");
+//					//((SciDBHandler)dbSchemaHandler).commit();
 				}
 			return;
 		case CAST:
@@ -412,7 +414,6 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 			for (String key : transitionSchemas.keySet()) 
 				if (children.contains(key)) 
 					((PostgreSQLHandler)dbSchemaHandler).dropDataSetIfExists(key);
-//					((PostgreSQLHandler)dbSchemaHandler).executeStatementPostgreSQL("drop table "+key);
 			return;
 		case STREAM:
 			throw new BigDawgException("STREAM island does not support data immigration; removeTemporaryTableCreatedForPlanning");
@@ -421,7 +422,6 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 			for (String key : transitionSchemas.keySet()) 
 				if (children.contains(key)) {
 					((AccumuloExecutionEngine)dbSchemaHandler).dropDataSetIfExists(key);
-//					((AccumuloExecutionEngine)dbSchemaHandler).deleteTable(key);
 				}
 			return;
 		case MYRIA:

@@ -131,7 +131,7 @@ public class ExportSciDB implements Export {
 		} catch (Exception e) {
 			throw new MigrationException(e.getMessage(), e);
 		} finally {
-			handler.close();
+//			handler.close();
 		}
 		List<AttributeMetaData> attributes = arrayMetaData
 				.getAttributesOrdered();
@@ -233,8 +233,8 @@ public class ExportSciDB implements Export {
 		try {
 			handler = new SciDBHandler(migrationInfo.getConnectionFrom());
 			handler.executeStatementAFL(saveCommandFinal);
-			handler.commit();
-			handler.close();
+//			handler.commit();
+//			handler.close();
 		} catch (SQLException e) {
 			log.error(e.getMessage() + StackTrace.getFullStackTrace(e));
 			throw new MigrationException(e.getMessage(), e);
