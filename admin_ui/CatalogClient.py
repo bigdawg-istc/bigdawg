@@ -10,7 +10,7 @@ class CatalogClient:
     """
     Handles interaction with the Catalog database
     """
-    def __init__(self, database="bigdawg_catalog", user="pguser", password="test", host="saw.csail.mit.edu", port="5400"):
+    def __init__(self, database="bigdawg_catalog", user="pguser", password="test", host="192.168.99.100", port="5400"):
         """
         Establishes connection to Catalog database
 
