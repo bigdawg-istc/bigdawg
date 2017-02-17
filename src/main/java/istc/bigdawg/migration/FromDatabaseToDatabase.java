@@ -510,8 +510,8 @@ public class FromDatabaseToDatabase implements MigrationNetworkRequest {
 		log.debug(debugMessage);
 		try {
 			// Todo: fix this check so that docker works
-//			if (!isThisMyIpAddress(InetAddress.getByName(hostnameFrom))) {
-			if (isThisMyIpAddress(InetAddress.getByName(hostnameFrom))) {
+			if (!isThisMyIpAddress(InetAddress.getByName(hostnameFrom))) {
+//			if (isThisMyIpAddress(InetAddress.getByName(hostnameFrom))) {
 				log.debug("Source and target hosts are on different IPs. Migration will be executed remotely (this node: "
 						+ BigDawgConfigProperties.INSTANCE.getGrizzlyIpAddress()
 						+ " only coordinates the migration).");

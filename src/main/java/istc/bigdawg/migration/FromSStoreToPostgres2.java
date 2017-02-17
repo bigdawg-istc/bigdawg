@@ -3,8 +3,14 @@
  */
 package istc.bigdawg.migration;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.io.PrintWriter;
@@ -150,9 +156,6 @@ public class FromSStoreToPostgres2 extends FromDatabaseToDatabase {
 		if (createTableStatement == null) {
 			logger.debug(
 					"Get the create statement for target table from S-Store.");
-//			createTableStatement = PostgreSQLHandler.getCreateTable(
-//					connectionFrom, migrationInfo.getObjectFrom(),
-//					migrationInfo.getObjectTo());
 			try {
 				createTableStatement = getCreatePostgreSQLTableStatementFromSStoreTable();
 			} catch (UnsupportedTypeException e) {
@@ -192,68 +195,46 @@ public class FromSStoreToPostgres2 extends FromDatabaseToDatabase {
 		Connection conTo = null;
 		ExecutorService executor = Executors.newFixedThreadPool(2);
 		try {
-			System.out.println("Step 1.");
 			conFrom = SStoreSQLHandler.getConnection(getConnectionFrom());
 			conTo = PostgreSQLHandler.getConnection(getConnectionTo());
+			conTo.setAutoCommit(false);
 
-//			conTo.setAutoCommit(false);
 			createTargetTableSchema(conTo);
 			
-			final PipedOutputStream output = new PipedOutputStream();
-			final PipedInputStream input = new PipedInputStream(output);
-
 		    Long countExtractedElements = -1L;
 		    Long countLoadedElements = -1L;
-//		    Long earliestTimestamp = 0L;
 		    ServerSocket servSock = null;
 		    Socket servSocket = null;
-//		    String sstoreCmd = "SELECT min(batchid) FROM " + migrationInfo.getObjectFrom();
-//		    earliestTimestamp = sstorehandler.getEarliestTimestamp(sstoreCmd);
 		    
-//			List<Callable<Object>> tasks = new ArrayList<>();
 			ExportSStore exportSStore = new ExportSStore();
 			exportSStore.setMigrationInfo(migrationInfo);
 			exportSStore.setAdditionalParams("psql", false, serverAddress, serverPort);
 			exportSStore.setHandlerTo(new PostgreSQLHandler());
-			exportSStore.setExportTo(output);
 			exportSStore.setFileFormat(FileFormat.BIN_POSTGRES);
-//		    String sStorePipe = "/tmp/sstore_" + globalCounter.incrementAndGet() + ".out";
-//			exportSStore.setExportTo(sStorePipe);
-//			tasks.add(exportSStore);
+			// We cannot set an OutputStream for S-Store, 
+			// because S-Store currently only takes a file, and write to the file in the db engine.
+		    String sStorePipe = "/tmp/sstore_" + globalCounter.incrementAndGet() + ".out";
+			exportSStore.setExportTo(sStorePipe);
 			FutureTask exportTask = new FutureTask(exportSStore);
 			executor.submit(exportTask);
 
-			System.out.println("Finished submitting export task.");
 	    	servSock = new ServerSocket(serverPort);
-	    	System.out.println("Step 0.");
 	    	servSocket = servSock.accept();
-	    	System.out.println("Step 1.");
 	    	BufferedReader in  = new BufferedReader(new InputStreamReader(servSocket.getInputStream()));
-	    	System.out.println("Step 2.");
 	    	PrintWriter out = new PrintWriter(servSocket.getOutputStream(), true);
-	    	System.out.println("Step 3.");
 
 	    	String inputLine;
 	    	
-			System.out.println("Waiting response from S-Store...");
 	    	while ((inputLine = in.readLine()) != null) {
 	    		countExtractedElements = Long.parseLong(inputLine);
 	    		break;
 	    	}
-	    	System.out.println("CountExtractedElements: " + countExtractedElements);
 			
+	    	InputStream input = new BufferedInputStream(new FileInputStream(sStorePipe));
 			LoadPostgres loadPostgres = new LoadPostgres(conTo, migrationInfo, copyToCommand, input);
 			FutureTask loadTask = new FutureTask(loadPostgres);
-//			tasks.add(loadPostgres);
 		    executor.submit(loadTask);
 		    countLoadedElements = (Long) loadTask.get();
-
-//			List<Future<Object>> results = TaskExecutor.execute(executor,
-//					tasks);
-//			countExtractedElements = (Long) results.get(EXPORT_INDEX)
-//					.get();
-//			countLoadedElements = (Long) results.get(LOAD_INDEX).get();
-			System.out.println("CountLoadedElements: " + countLoadedElements);
 
 			Boolean commit = countExtractedElements.equals(countLoadedElements) ? true : false;
 	    	out.println(commit);
