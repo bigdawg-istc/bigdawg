@@ -53,6 +53,17 @@ class CatalogClient:
         cur.close()
         return rows
 
+    def get_engines(self):
+        """
+        Reads engines table and returns all rows.
+        :return: rows: an iterable of tuples, where each element is a value of the row
+        """
+        cur = self.conn.cursor()
+        cur.execute("SELECT * from catalog.engines")
+        rows = cur.fetchall()
+        cur.close()
+        return rows
+
     def get_islands(self):
         """
         Reads islands table and returns all rows.

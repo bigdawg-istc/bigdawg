@@ -33,7 +33,8 @@ def catalog():
     #     (9, 'mimic2v26.d_careunits', 'cuid,label', 2, 2), 
     #     (10, 'mimic2v26.d_chartitems', 'itemid,label,category,description', 2, 2), 
     # ]
-    return render_template('catalog.html', objects=objects)
+    engines = CatalogClient().get_engines()
+    return render_template('catalog.html', objects=objects, engines=engines)
 
 
 # Important Links
@@ -42,15 +43,15 @@ def links():
     links = [
         {
             "name": "Documentation",
-            "href": "#"
+            "href": "http://bigdawg-documentation.readthedocs.io/en/latest/index.html"
         },
         {
             "name": "Code",
-            "href": "#"
+            "href": "https://bitbucket.org/aelmore/bigdawgmiddle"
         },
         {
-            "name": "Setup",
-            "href": "#"
+            "name": "Installation and Setup",
+            "href": "http://bigdawg-documentation.readthedocs.io/en/latest/getting-started.html"
         },
     ]
     return render_template('links.html', links=links)
