@@ -364,7 +364,7 @@ public class FromSStoreToPostgres2 extends FromDatabaseToDatabase {
 	 */
 	public static void main(String[] args) throws Exception {
 		LoggerSetup.setLogging();
-		System.out.println("Migrating data from S-Store to PostgreSQL");
+		logger.debug("Migrating data from S-Store to PostgreSQL");
 		ConnectionInfo conInfoFrom = new SStoreSQLConnectionInfo("localhost",
 				"21212", "", "user", "password");
 		ConnectionInfo conInfoTo = new PostgreSQLConnectionInfo(

@@ -650,19 +650,23 @@ public class SStoreSQLHandler implements DBHandler {
     
     public static Long executePreparedImportStatement(
     		Connection connection, String copyToString, 
-    		String tableName, InputStream inStream, String trim, String inputFile) throws SQLException {
+    		String tableName, InputStream inStream, String trim, String inputFile,
+    		String serverAddress, int port) throws SQLException {
 
     	PreparedStatement statement = null;
-    	Long countExtractedRows = null;
+    	Long countLoadedRows = 0L;
     	try {
     		statement = connection.prepareCall(copyToString);
     		statement.setInt(1, 0);
     		statement.setString(2, tableName);
     		statement.setString(3, trim);
     		statement.setString(4, inputFile);
+    		statement.setString(5, serverAddress);
+    		statement.setInt(6, port);
+    		statement.setQueryTimeout(600);
     		ResultSet rs = statement.executeQuery();
     		rs.next();
-    		countExtractedRows = rs.getLong(1);
+    		countLoadedRows = rs.getLong(1);
     		rs.close();
     		statement.close();
     	} catch (SQLException ex) {
@@ -677,11 +681,11 @@ public class SStoreSQLHandler implements DBHandler {
     			statement.close();
     		}
     	}
-    	return countExtractedRows;
+    	return countLoadedRows;
     }
         
    public static String getImportCommand() {
-    	return "{call @LoadTableFromFile(?, ?, ?, ?)}";
+    	return "{call @LoadTableFromFile(?, ?, ?, ?, ?, ?)}";
     }
 
    public boolean existsObject(String name) throws Exception {
