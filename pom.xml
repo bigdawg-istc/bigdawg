@@ -532,7 +532,8 @@
 		<!-- <bigDawg.main.class>istc.bigdawg.migration.TestTpchPostgresAccumulo</bigDawg.main.class> -->
 		<!-- <bigDawg.main.class>istc.bigdawg.migration.FromPostgresToPostgres</bigDawg.main.class> -->
 		<!-- <bigDawg.main.class>istc.bigdawg.migration.FromSStoreToPostgres</bigDawg.main.class> -->
-		<bigDawg.main.class>istc.bigdawg.migration.FromSStoreToPostgres2</bigDawg.main.class>
+		<!-- <bigDawg.main.class>istc.bigdawg.migration.FromSStoreToPostgres2</bigDawg.main.class> -->
+		<bigDawg.main.class>istc.bigdawg.migration.FromPostgresToSStore2</bigDawg.main.class>
 		<!-- <bigDawg.main.class>istc.bigdawg.migration.FromPostgresToSStore</bigDawg.main.class> -->
 		<!--<bigDawg.main.class>istc.bigdawg.accumulo.DataLoader</bigDawg.main.class> -->
 	</properties>
