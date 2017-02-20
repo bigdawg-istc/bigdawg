@@ -35,7 +35,6 @@ import org.apache.log4j.Logger;
 import istc.bigdawg.LoggerSetup;
 import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.exceptions.UnsupportedTypeException;
-import istc.bigdawg.migration.FromSStoreToPostgresImplementation.SStoreSQLColumnMetaDataComparator;
 import istc.bigdawg.migration.datatypes.DataTypesFromSStoreSQLToPostgreSQL;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
@@ -186,25 +185,21 @@ public class FromPostgresToSStore extends FromDatabaseToDatabase {
 	    	servSock = new ServerSocket(serverPort);
 	    	servSocket = servSock.accept();
 	    	BufferedReader in  = new BufferedReader(new InputStreamReader(servSocket.getInputStream()));
-	    	PrintWriter out = new PrintWriter(servSocket.getOutputStream(), true);
 
-	    	System.out.println("job submitted. Waiting for response from S-Store.");
 	    	String inputLine;
 	    	while ((inputLine = in.readLine()) != null) {
 	    		countLoadedElements = Long.parseLong(inputLine);
 	    		break;
 	    	}
-			
-	    	System.out.println("Response from S-Store: " + countLoadedElements);
+	    	
 			Boolean commit = countExtractedElements.equals(countLoadedElements) ? true : false;
+	    	PrintWriter out = new PrintWriter(servSocket.getOutputStream(), true);
 	    	out.println(commit);
-	    	System.out.println("Sending commit commands to S-Store: " + commit);
 	    	
 	    	out.close();
 		    in.close();
     		servSocket.close();
     		servSock.close();
-    		System.out.println("Finished migration.");
 
     		long endTimeMigration = System.currentTimeMillis();
 			long durationMsec = endTimeMigration - startTimeMigration;
