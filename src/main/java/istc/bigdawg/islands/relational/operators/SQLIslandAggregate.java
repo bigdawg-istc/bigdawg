@@ -9,13 +9,13 @@ import java.util.Set;
 
 import org.apache.jcp.xml.dsig.internal.dom.Utils;
 
-import istc.bigdawg.islands.OperatorVisitor;
 import istc.bigdawg.islands.operators.Aggregate;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.relational.SQLOutItemResolver;
 import istc.bigdawg.islands.relational.SQLTableExpression;
 import istc.bigdawg.islands.relational.utils.SQLAttribute;
 import istc.bigdawg.islands.relational.utils.SQLExpressionUtils;
+import istc.bigdawg.shims.OperatorQueryGenerator;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Parenthesis;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
@@ -231,8 +231,8 @@ public class SQLIslandAggregate extends SQLIslandOperator implements Aggregate {
 	}
 	
 	@Override
-	public void accept(OperatorVisitor operatorVisitor) throws Exception {
-		operatorVisitor.visit(this);
+	public void accept(OperatorQueryGenerator operatorQueryGenerator) throws Exception {
+		operatorQueryGenerator.visit(this);
 	}
 
 	@Override

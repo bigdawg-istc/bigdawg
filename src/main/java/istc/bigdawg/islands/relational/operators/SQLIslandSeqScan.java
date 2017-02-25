@@ -4,12 +4,12 @@ import java.util.List;
 import java.util.Map;
 
 import istc.bigdawg.islands.DataObject;
-import istc.bigdawg.islands.OperatorVisitor;
 import istc.bigdawg.islands.TheObjectThatResolvesAllDifferencesAmongTheIslands;
 import istc.bigdawg.islands.operators.SeqScan;
 import istc.bigdawg.islands.relational.SQLOutItemResolver;
 import istc.bigdawg.islands.relational.SQLTableExpression;
 import istc.bigdawg.islands.relational.utils.SQLAttribute;
+import istc.bigdawg.shims.OperatorQueryGenerator;
 import net.sf.jsqlparser.expression.BinaryExpression;
 import net.sf.jsqlparser.expression.CaseExpression;
 import net.sf.jsqlparser.expression.Expression;
@@ -81,8 +81,8 @@ public class SQLIslandSeqScan extends SQLIslandScan implements SeqScan {
 	}
 
 	@Override
-	public void accept(OperatorVisitor operatorVisitor) throws Exception {
-		operatorVisitor.visit(this);
+	public void accept(OperatorQueryGenerator operatorQueryGenerator) throws Exception {
+		operatorQueryGenerator.visit(this);
 	}
 	
 	

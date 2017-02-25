@@ -8,23 +8,22 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.log4j.Logger;
 import org.jgrapht.Graphs;
 
 import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.exceptions.BigDawgException;
 import istc.bigdawg.islands.IslandsAndCast.Scope;
-import istc.bigdawg.islands.OperatorVisitor;
 import istc.bigdawg.islands.QueryContainerForCommonDatabase;
 import istc.bigdawg.islands.TheObjectThatResolvesAllDifferencesAmongTheIslands;
 import istc.bigdawg.islands.operators.CommonTableExpressionScan;
 import istc.bigdawg.islands.operators.Join;
 import istc.bigdawg.islands.operators.Merge;
 import istc.bigdawg.islands.operators.Operator;
-import istc.bigdawg.islands.text.operators.TextOperator;
-import istc.bigdawg.islands.text.operators.TextScan;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.query.ConnectionInfoParser;
+import istc.bigdawg.shims.Shim;
 
 public class ExecutionNodeFactory {
 	static final Logger log = Logger.getLogger(ExecutionNodeFactory.class.getName());
@@ -170,12 +169,12 @@ public class ExecutionNodeFactory {
 	 */
 	private static ExecutionNode createJoinNode(String broadcastQuery, ConnectionInfo engine, int dbid, String joinDestinationTable, Join joinOp, Scope island) throws Exception {
 
-		OperatorVisitor gen = TheObjectThatResolvesAllDifferencesAmongTheIslands.getQueryGenerator(island, dbid);
+		Shim gen = TheObjectThatResolvesAllDifferencesAmongTheIslands.getShim(island, dbid);
 
 		// Break apart Join Predicate Objects into usable Strings
 		// It used to be just 3 items list: comparator string, table-column string for left, table-column string for right
 		// currently, we employ a 5 item list, breaking the tables and columns apart. 
-		List<String> predicateObjects = gen.getJoinPredicateObjectsForBinaryExecutionNode(joinOp);
+		List<String> predicateObjects = gen.getJoinPredicate(joinOp);
 
 		if (predicateObjects.isEmpty()) {
 			return new LocalQueryExecutionNode(broadcastQuery, engine, joinDestinationTable);
@@ -187,11 +186,8 @@ public class ExecutionNodeFactory {
 		String rightTable = predicateObjects.get(3);
 		String rightAttribute = predicateObjects.get(4);
 
-		joinOp.accept(gen);
-		String shuffleLeftJoinQuery = gen.generateSelectIntoStatementForExecutionTree(joinDestinationTable + "_LEFTRESULTS")
-				.replace(rightTable, joinDestinationTable + "_RIGHTPARTIAL");
-		String shuffleRightJoinQuery = gen.generateSelectIntoStatementForExecutionTree(joinDestinationTable + "_RIGHTRESULTS")
-				.replace(leftTable, joinDestinationTable + "_LEFTPARTIAL");
+		String shuffleLeftJoinQuery = gen.getSelectIntoQuery(joinOp, joinDestinationTable + "_LEFTRESULTS", false).replace(rightTable, joinDestinationTable + "_RIGHTPARTIAL");
+		String shuffleRightJoinQuery = gen.getSelectIntoQuery(joinOp, joinDestinationTable + "_RIGHTRESULTS", false).replace(leftTable, joinDestinationTable + "_LEFTPARTIAL");
 
 		BinaryJoinExecutionNode.JoinOperand leftOp = new BinaryJoinExecutionNode.JoinOperand(engine, leftTable, leftAttribute, shuffleLeftJoinQuery);
 		BinaryJoinExecutionNode.JoinOperand rightOp = new BinaryJoinExecutionNode.JoinOperand(engine, rightTable, rightAttribute, shuffleRightJoinQuery);
@@ -199,162 +195,9 @@ public class ExecutionNodeFactory {
 		return new BinaryJoinExecutionNode(broadcastQuery, engine, joinDestinationTable, leftOp, rightOp, comparator);
 	}
 
-	/**
-	 * Creating a execution plan sub-graph base on an operator. 
-	 * This will break any join nodes that require shuffle-join etc. into sub plans, and then merge everything.  
-	 * @param op
-	 * @param engine
-	 * @param dest
-	 * @param containerNodes
-	 * @param isSelect
-	 * @param island
-	 * @return
-	 * @throws Exception
-	 */
-	@Deprecated
-	private static ExecutionNodeSubgraph buildOperatorSubgraph(Operator op, ConnectionInfo engine, int dbid, String dest, Map<String, LocalQueryExecutionNode> containerNodes, boolean isSelect, Scope island) throws Exception {
-		StringBuilder sb = new StringBuilder();
-
-		OperatorVisitor gen = TheObjectThatResolvesAllDifferencesAmongTheIslands.getQueryGenerator(island, dbid);
-
-		Operator joinOp = gen.generateStatementForPresentNonMigratingSegment(op, sb, isSelect);
-		final String sqlStatementForPresentNonJoinSegment = sb.toString();
-
-		System.out.printf("\njoinOp: %s; statement: %s\n", joinOp, sqlStatementForPresentNonJoinSegment.length() > 0 ? sqlStatementForPresentNonJoinSegment : "(no content)");
-		
-		ExecutionNodeSubgraph result = new ExecutionNodeSubgraph();
-
-		LocalQueryExecutionNode lqn = null;
-		if (sqlStatementForPresentNonJoinSegment.length() > 0) {
-			// this and joinOp == null will not happen at the same time
-			lqn = new LocalQueryExecutionNode(sqlStatementForPresentNonJoinSegment, engine, dest);
-			result.addVertex(lqn);
-			result.exitPoint = lqn;
-		}
-
-		if (joinOp != null) {
-			String joinDestinationTable = joinOp.getSubTreeToken();
-
-			String broadcastQuery;
-			if (sqlStatementForPresentNonJoinSegment.length() == 0 && isSelect) {
-				gen.configure(true, false);
-				joinOp.accept(gen);
-				broadcastQuery = gen.generateStatementString();
-			} else {
-				gen.configure(true, true);
-				joinOp.accept(gen);
-				broadcastQuery = gen.generateSelectIntoStatementForExecutionTree(joinDestinationTable);
-			}
-
-			ExecutionNode joinNode = null;
-			
-			// we want to know the destination DBID
-			if (joinOp instanceof Join) joinNode = ExecutionNodeFactory.createJoinNode(broadcastQuery, engine, dbid, joinDestinationTable, (Join)joinOp, island);
-			else if (joinOp instanceof Merge) joinNode = new LocalQueryExecutionNode(broadcastQuery, engine, joinDestinationTable);
-
-			result.addVertex(joinNode);
-
-			if (sqlStatementForPresentNonJoinSegment.length() == 0) {
-				result.exitPoint = joinNode;
-			} else {
-				result.addEdge(joinNode, result.exitPoint);
-			}
-
-			for (Operator child : joinOp.getChildren()) {
-				if (child.isPruned()) {
-					ExecutionNode containerNode = containerNodes.get(child.getPruneToken());
-					result.addVertex(containerNode);
-					result.addEdge(containerNode, joinNode);
-				} else {
-					String token = child.isSubTree() ? child.getSubTreeToken() : null;
-					ExecutionNodeSubgraph subgraph = buildOperatorSubgraph(child, engine, dbid, token, containerNodes, false, island);
-					Graphs.addGraph(result, subgraph);
-					result.addEdge(subgraph.exitPoint, joinNode);
-				}
-			}
-		}
-
-		return result;
-	}
-
-	/**
-	 * Given a remainder operator tree, populate the query execution plan with the tree that starts from the tree.
-	 * 
-	 * @param qep
-	 * @param remainder
-	 * @param remainderLoc
-	 * @param containers
-	 * @param isSelect
-	 * @throws Exception
-	 */
-	@Deprecated
-	public static void addNodesAndEdges(QueryExecutionPlan qep, Operator remainder, List<String> remainderLoc, Map<String,
-			QueryContainerForCommonDatabase> containers, boolean isSelect, String destinationName) throws Exception {
-		log.debug(String.format("Creating QEP %s...", qep.getSerializedName()));
-
-		int remainderDBID;
-		if (remainderLoc != null) {
-			remainderDBID = Integer.parseInt(remainderLoc.get(0));
-		} else {
-			remainderDBID = Integer.parseInt(containers.values().iterator().next().getDBID());
-		}
-
-		String remainderSelectIntoString;
-		ConnectionInfo remainderCI = CatalogViewer.getConnectionInfo(remainderDBID);
-		OperatorVisitor gen = TheObjectThatResolvesAllDifferencesAmongTheIslands.getQueryGenerator(qep.getIsland(), remainderDBID);
-		
-		Map<String, LocalQueryExecutionNode> containerNodes = new HashMap<>();
-		for (Map.Entry<String, QueryContainerForCommonDatabase> entry : containers.entrySet()) {
-			String table = entry.getKey();
-			QueryContainerForCommonDatabase container = entry.getValue();
-			String selectIntoString = container.generateSelectIntoString(qep.getIsland());
-			LocalQueryExecutionNode localQueryNode = new LocalQueryExecutionNode(selectIntoString, container.getConnectionInfo(), table);
-
-			containerNodes.put(table, localQueryNode);
-			
-//			System.out.printf("<><><> Container query string: %s; QEP: %s;\n" , selectIntoString, qep.getSerializedName());
-		}
-//		System.out.println();
-
-		remainder.setSubTree(true);
-//		String remainderInto = remainder.getSubTreeToken();
-		qep.setTerminalTableName(destinationName);
-
-		remainder.accept(gen);
-		if (isSelect) remainderSelectIntoString = gen.generateStatementString();
-		else remainderSelectIntoString = gen.generateSelectIntoStatementForExecutionTree(destinationName);
-		
-		String logStr = String.format("\n<><><> Remainder class: %s; QEP: %s; children count: %s; query string: %s\n"
-				, remainder.getClass().getSimpleName()
-				, qep.getSerializedName()
-				, remainder.getChildren().size()
-				, remainderSelectIntoString);
-		log.info(logStr);
-		
-		if (remainderLoc != null) {
-			LocalQueryExecutionNode lqn = new LocalQueryExecutionNode(remainderSelectIntoString, remainderCI, destinationName);
-			qep.addNode(lqn);
-			qep.setTerminalTableNode(lqn);
-			String lStr = String.format("\n<><><> Loc non null QEP terminal: %s; isSelect?: %s; remainder into: %s\n", qep.getTerminalTableNode().getQueryString(), isSelect, destinationName);
-			log.info(lStr);
-		} else {
-			ExecutionNodeSubgraph subgraph = buildOperatorSubgraph(remainder, remainderCI, remainderDBID, destinationName, containerNodes, isSelect, qep.getIsland());
-			Graphs.addGraph(qep, subgraph);
-			qep.setTerminalTableNode(subgraph.exitPoint);
-			String lStr = String.format("\n\n<><><><><><><> Loc null QEP terminal: %s; isSelect?: %s; remainder into: %s <><><><><><><> \n\n\n", qep.getTerminalTableNode().getQueryString(), isSelect, destinationName);
-			log.info(lStr);
-		}
-
-		log.debug(String.format("Finished creating QEP %s.", qep.getSerializedName()));
-	}
 	
 	
-	
-	
-	
-	
-	
-	public static int getLeftDeepDBID(Operator o, Map<String, Integer> containers) throws NumberFormatException, Exception {
+	private static int getLeftDeepDBID(Operator o, Map<String, Integer> containers) throws NumberFormatException, Exception {
 		Operator leftDeepChild = o;
 		while (!leftDeepChild.getChildren().isEmpty() && !leftDeepChild.isPruned()) leftDeepChild = leftDeepChild.getChildren().get(0);
 		if (leftDeepChild.getChildren().isEmpty() && !leftDeepChild.isPruned()) throw new BigDawgException("Leave child encountered; should observe pruned child.");
@@ -366,31 +209,30 @@ public class ExecutionNodeFactory {
 	
 	private static ExecutionNodeSubgraph buildOperatorSubgraphNew(Operator op, String dest, Map<String, Integer> containerDBID,
 			Map<String, LocalQueryExecutionNode> containerNodes, boolean isSelect, Scope island) throws Exception {
-		StringBuilder sb = new StringBuilder();
 		
 		// need to first check if it is a join. 
-		
 		int dbid = getLeftDeepDBID(op, containerDBID);
 		ConnectionInfo engine = CatalogViewer.getConnectionInfo(dbid);
 
-		OperatorVisitor gen = TheObjectThatResolvesAllDifferencesAmongTheIslands.getQueryGenerator(island, dbid);
+		Shim gen = TheObjectThatResolvesAllDifferencesAmongTheIslands.getShim(island, dbid);
 
 		Operator joinOp = null;
-		final String sqlStatementForPresentNonJoinSegment;
+		String sqlStatementForPresentNonJoinSegment = null;
 		
 		if (gen != null) {
-			joinOp = gen.generateStatementForPresentNonMigratingSegment(op, sb, isSelect);
-			sqlStatementForPresentNonJoinSegment = sb.toString();
+			Pair<Operator, String> ret = gen.getQueryForNonMigratingSegment(op, isSelect);
+			joinOp = ret.getLeft();
+			sqlStatementForPresentNonJoinSegment = ret.getRight();
 		} else {
 			sqlStatementForPresentNonJoinSegment = op.getSubTreeToken();
 		}
 
-		System.out.printf("\njoinOp: %s; statement: %s\n", joinOp, sqlStatementForPresentNonJoinSegment.length() > 0 ? sqlStatementForPresentNonJoinSegment : "(no content)");
+		System.out.printf("\njoinOp: %s; statement: %s\n", joinOp, sqlStatementForPresentNonJoinSegment);
 		
 		ExecutionNodeSubgraph result = new ExecutionNodeSubgraph();
 
 		LocalQueryExecutionNode lqn = null;
-		if (sqlStatementForPresentNonJoinSegment.length() > 0) {
+		if (sqlStatementForPresentNonJoinSegment != null) {
 			// this and joinOp == null will not happen at the same time
 			lqn = new LocalQueryExecutionNode(sqlStatementForPresentNonJoinSegment, engine, dest);
 			result.addVertex(lqn);
@@ -401,14 +243,10 @@ public class ExecutionNodeFactory {
 			String joinDestinationTable = joinOp.getSubTreeToken();
 			
 			String broadcastQuery;
-			if (sqlStatementForPresentNonJoinSegment.length() == 0 && isSelect) {
-				gen.configure(true, false);
-				joinOp.accept(gen);
-				broadcastQuery = gen.generateStatementString();
+			if (sqlStatementForPresentNonJoinSegment == null && isSelect) {
+				broadcastQuery = gen.getSelectQuery(joinOp);
 			} else {
-				gen.configure(true, true);
-				joinOp.accept(gen);
-				broadcastQuery = gen.generateSelectIntoStatementForExecutionTree(joinDestinationTable);
+				broadcastQuery = gen.getSelectIntoQuery(joinOp, joinDestinationTable, true);
 			}
 
 			ExecutionNode joinNode = null;
@@ -419,7 +257,7 @@ public class ExecutionNodeFactory {
 
 			result.addVertex(joinNode);
 
-			if (sqlStatementForPresentNonJoinSegment.length() == 0) {
+			if (sqlStatementForPresentNonJoinSegment == null) {
 				result.exitPoint = joinNode;
 			} else {
 				result.addEdge(joinNode, result.exitPoint);
@@ -475,30 +313,23 @@ public class ExecutionNodeFactory {
 
 		String remainderSelectIntoString;
 		ConnectionInfo remainderCI = CatalogViewer.getConnectionInfo(remainderDBID);
-		OperatorVisitor gen = TheObjectThatResolvesAllDifferencesAmongTheIslands.getQueryGenerator(qep.getIsland(), remainderDBID);
 		
+		Shim gen = TheObjectThatResolvesAllDifferencesAmongTheIslands.getShim(qep.getIsland(), remainderDBID);
 		
 		
 		remainder.setSubTree(true);
 //		String remainderInto = remainder.getSubTreeToken();
 		qep.setTerminalTableName(destinationName);
 
-		if (remainder instanceof TextOperator) {
-			if (isSelect) remainderSelectIntoString = ((TextScan)remainder).getSubTreeToken();
-			else remainderSelectIntoString = TheObjectThatResolvesAllDifferencesAmongTheIslands.AccumuloTempTableCommandPrefix
-					+ ((TextScan)remainder).getSubTreeToken();
-		} else {
-			remainder.accept(gen);
-			if (isSelect) remainderSelectIntoString = gen.generateStatementString();
-			else remainderSelectIntoString = gen.generateSelectIntoStatementForExecutionTree(destinationName);
-		}
 		
-		String logStr = String.format("\n\n<><><> Remainder class: %s; QEP: %s; children count: %s; query string: %s\n"
+		if (isSelect) remainderSelectIntoString = gen.getSelectQuery(remainder);
+		else remainderSelectIntoString = gen.getSelectIntoQuery(remainder, destinationName, false); // FIXME verify this behaves correctly for Accumulo
+		
+		log.info(String.format("\n\n<><><> Remainder class: %s; QEP: %s; children count: %s; query string: %s\n"
 				, remainder.getClass().getSimpleName()
 				, qep.getSerializedName()
 				, remainder.getChildren().size()
-				, remainderSelectIntoString);
-		log.info(logStr);
+				, remainderSelectIntoString));
 		
 		if (remainderLoc != null) {
 			LocalQueryExecutionNode lqn = new LocalQueryExecutionNode(remainderSelectIntoString, remainderCI, destinationName);

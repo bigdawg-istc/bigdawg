@@ -4,10 +4,10 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import istc.bigdawg.islands.DataObjectAttribute;
-import istc.bigdawg.islands.OperatorVisitor;
 import istc.bigdawg.islands.SciDB.SciDBArray;
 import istc.bigdawg.islands.operators.Distinct;
 import istc.bigdawg.islands.operators.Operator;
+import istc.bigdawg.shims.OperatorQueryGenerator;
 
 public class SciDBIslandDistinct extends SciDBIslandOperator implements Distinct {
 
@@ -35,8 +35,8 @@ public class SciDBIslandDistinct extends SciDBIslandOperator implements Distinct
 
 
 	@Override
-	public void accept(OperatorVisitor operatorVisitor) throws Exception {
-		operatorVisitor.visit(this);
+	public void accept(OperatorQueryGenerator operatorQueryGenerator) throws Exception {
+		operatorQueryGenerator.visit(this);
 	}
 	
 	public String toString() {

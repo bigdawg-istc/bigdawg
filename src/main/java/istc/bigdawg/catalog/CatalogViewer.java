@@ -156,7 +156,9 @@ public class CatalogViewer {
 									+ "from catalog.objects o "
 									+ "join catalog.databases d on o.physical_db = d.dbid "
 									+ "join catalog.shims s on d.engine_id = s.engine_id "
-									+ "join catalog.islands i on s.island_id = i.iid where " + wherePred + islandName + " group by o.name, island;");
+									+ "join catalog.islands i on s.island_id = i.iid where " + wherePred 
+									+ " AND scope_name = \'" + islandName + "\' "
+									+ " group by o.name, island;");
 			
 			if (rs.next()) extraction.put(rs.getString("obj"), new ArrayList<String>(Arrays.asList(rs.getString("db").split(","))));
 			while (rs.next()) {

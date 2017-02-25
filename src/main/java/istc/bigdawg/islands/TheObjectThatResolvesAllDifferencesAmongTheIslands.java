@@ -31,15 +31,12 @@ import istc.bigdawg.islands.IslandsAndCast.Scope;
 import istc.bigdawg.islands.Myria.MyriaQueryParser;
 import istc.bigdawg.islands.SStore.SStoreQueryParser;
 import istc.bigdawg.islands.SciDB.AFLPlanParser;
-import istc.bigdawg.islands.SciDB.AFLQueryGenerator;
 import istc.bigdawg.islands.SciDB.AFLQueryPlan;
 import istc.bigdawg.islands.SciDB.operators.SciDBIslandJoin;
 import istc.bigdawg.islands.operators.Join;
 import istc.bigdawg.islands.operators.Join.JoinType;
 import istc.bigdawg.islands.operators.Operator;
-import istc.bigdawg.islands.relational.RelationalAFLQueryGenerator;
 import istc.bigdawg.islands.relational.SQLPlanParser;
-import istc.bigdawg.islands.relational.SQLQueryGenerator;
 import istc.bigdawg.islands.relational.SQLQueryPlan;
 import istc.bigdawg.islands.relational.operators.SQLIslandJoin;
 import istc.bigdawg.islands.text.AccumuloJSONQueryParser;
@@ -52,6 +49,11 @@ import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.query.DBHandler;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
 import istc.bigdawg.scidb.SciDBHandler;
+import istc.bigdawg.shims.ArrayToSciDBShim;
+import istc.bigdawg.shims.RelationalToPostgresShim;
+import istc.bigdawg.shims.RelationalToSciDBShim;
+import istc.bigdawg.shims.Shim;
+import istc.bigdawg.shims.TextToAccumuloShim;
 import istc.bigdawg.signature.builder.ArraySignatureBuilder;
 import istc.bigdawg.signature.builder.RelationalSignatureBuilder;
 import istc.bigdawg.sstore.SStoreSQLConnectionInfo;
@@ -77,9 +79,6 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	public static final int  scidbSchemaHandlerDBID = BigDawgConfigProperties.INSTANCE.getSciDBSchemaServerDBID();
 	public static final int  sstoreDBID = BigDawgConfigProperties.INSTANCE.getSStoreDBID();
 	public static final int  accumuloSchemaHandlerDBID = BigDawgConfigProperties.INSTANCE.getAccumuloSchemaServerDBID(); 
-	public static final String AccumuloCreateTableCommandPrefix = "accumulocreate ";
-	public static final String AccumuloDeleteTableCommandPrefix = "accumulodelete ";
-	public static final String AccumuloTempTableCommandPrefix = "accumulotemp ";
 	
 	private static final Pattern predicatePattern = Pattern.compile("(?<=\\()([^\\(^\\)]+)(?=\\))");
 	
@@ -147,46 +146,47 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		ResultSet rs2 = null;
 		
 		try {
-			if (e.equals(Engine.PostgreSQL)) {
-				
+			switch (e) {
+			case PostgreSQL:
 				rs2 = cc.execRet("select dbid, eid, host, port, db.name as dbname, userid, password from catalog.databases db join catalog.engines e on db.engine_id = e.eid where dbid = "+dbid);
 				if (rs2.next())
 					extraction = new PostgreSQLConnectionInfo(rs2.getString("host"), rs2.getString("port"),rs2.getString("dbname"), rs2.getString("userid"), rs2.getString("password"));
-			} else if (e.equals(Engine.SciDB)) {
+				break;
+			case SciDB:
 				rs2 = cc.execRet("select dbid, db.engine_id, host, port, bin_path, userid, password "
-								+ "from catalog.databases db "
-								+ "join catalog.engines e on db.engine_id = e.eid "
-								+ "join catalog.scidbbinpaths sp on db.engine_id = sp.eid where dbid = "+dbid);
+						+ "from catalog.databases db "
+						+ "join catalog.engines e on db.engine_id = e.eid "
+						+ "join catalog.scidbbinpaths sp on db.engine_id = sp.eid where dbid = "+dbid);
 				if (rs2.next())
 					extraction = new SciDBConnectionInfo(rs2.getString("host"), rs2.getString("port"), rs2.getString("userid"), rs2.getString("password"), rs2.getString("bin_path"));
-			} else if (e.equals(Engine.SStore)) {
-				
+					break;
+			case SStore:
 				rs2 = cc.execRet("select dbid, eid, host, port, db.name as dbname, userid, password from catalog.databases db join catalog.engines e on db.engine_id = e.eid where dbid = "+dbid);
 				if (rs2.next())
 					extraction = new SStoreSQLConnectionInfo(rs2.getString("host"), rs2.getString("port"),rs2.getString("dbname"), rs2.getString("userid"), rs2.getString("password"));
-				
-			} else if (e.equals(Engine.Accumulo)) {
+				break;
+			case Accumulo:
 				rs2 = cc.execRet("select dbid, eid, host, port, db.name as dbname, userid, password from catalog.databases db join catalog.engines e on db.engine_id = e.eid where dbid = "+dbid);
 				if (rs2.next())
 					extraction = new AccumuloConnectionInfo(rs2.getString("host"), rs2.getString("port"),rs2.getString("dbname"), rs2.getString("userid"), rs2.getString("password"));
-			} else 
+				break;
+			default:
 				throw new BigDawgCatalogException("This is not supposed to happen");
+			}
 			
 			if (extraction == null) {
 				rs2.close();
 				throw new BigDawgCatalogException("Connection Info Cannot Be Formulated: "+dbid);
 			}
 				
-			if (rs2.next()) {
-				throw new BigDawgCatalogException("Non-unique DBID: "+dbid);
-			}
 		} catch (SQLException ex) {
 			cc.rollback();
 			throw ex;
 		} finally {
-			if (rs2 != null) rs2.close();
+			if (rs2 != null) {
+				rs2.close();
+			}
 		}
-		
 		
 		return extraction;
 	}
@@ -199,18 +199,15 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	 * @throws BigDawgException 
 	 * @throws SQLException 
 	 */
-	public static OperatorVisitor getQueryGenerator(Scope scope, int dbid) throws BigDawgException, SQLException {
+	public static Shim getShim(Scope scope, int dbid) throws BigDawgException, SQLException {
 		
 		Engine e = CatalogViewer.getEngineOfDB(dbid);
 		
 		switch (scope) {
 		case ARRAY:
 			switch (e) {
-			case PostgreSQL: 
-			case SStore:
-				return new SQLQueryGenerator();
 			case SciDB:
-				return new AFLQueryGenerator();
+				return new ArrayToSciDBShim();
 			default:
 				break;
 			}
@@ -225,11 +222,10 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 			break;
 		case RELATIONAL:
 			switch (e) {
-			case PostgreSQL: 
-			case SStore:
-				return new SQLQueryGenerator();
+			case PostgreSQL:
+				return new RelationalToPostgresShim();
 			case SciDB:
-				return new RelationalAFLQueryGenerator();
+				return new RelationalToSciDBShim();
 			default:
 				break;
 			}
@@ -237,8 +233,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case STREAM:
 			break;
 		case TEXT:
-			// returning null just to keep it going...
-			return null;
+			return new TextToAccumuloShim();
 		case MYRIA:
 			throw new BigDawgException("MYRIA island does not support the concept of generator; getQueryGenerator");
 		default:
@@ -256,7 +251,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	public static String getCatalogIslandSelectionPredicate(Scope scope) throws UnsupportedIslandException {
 		switch (scope) {
 		case ARRAY:
-			return " AND scope_name = \'ARRAY\' ";
+			return "ARRAY";
 		case CAST:
 			break;
 		case DOCUMENT:
@@ -266,13 +261,13 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case KEYVALUE:
 			break;
 		case RELATIONAL:
-			return " AND scope_name = \'RELATIONAL\' ";
+			return "RELATIONAL";
 		case STREAM:
-			return " AND scope_name = \'STREAM\' ";
+			return "STREAM";
 		case TEXT:
-			return " AND scope_name = \'TEXT\' ";
+			return "TEXT";
 		case MYRIA:
-			return " AND scope_name = \'MYRIA\' ";
+			return "MYRIA";
 		default:
 			break;
 		}
@@ -295,6 +290,8 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	 */
 	public static DBHandler createTableForPlanning(Scope sourceScope, Set<String> children, Map<String, String> transitionSchemas) throws SQLException, BigDawgException, AccumuloException, AccumuloSecurityException, TableExistsException, TableNotFoundException {
 
+		// FIXME integrate into Shim
+		
 		DBHandler dbSchemaHandler = null;
 		ConnectionInfo connectionInfo = null;
 		Set<String> createdTables = new HashSet<>();
@@ -389,6 +386,8 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	 * @throws TableNotFoundException 
 	 */
 	public static void removeTemporaryTableCreatedForPlanning(Scope sourceScope, DBHandler dbSchemaHandler, Set<String> children, Map<String, String> transitionSchemas) throws SQLException, BigDawgException, AccumuloException, AccumuloSecurityException, TableNotFoundException {
+		
+		// FIXME this is confusing
 		
 		switch (sourceScope) {
 		case ARRAY:
@@ -569,6 +568,9 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	 * @throws BigDawgException 
 	 */
 	public static Set<String> splitPredicates(Scope scope, String predicates) throws BigDawgException {
+		
+		// TODO This is not robust
+		
 		Set<String> results = new HashSet<>();
 
 		String joinDelim = null;
@@ -638,7 +640,9 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case STREAM:
 			throw new BigDawgException("STREAM island does not support signature; getLiteralsAndConstantsSignature");
 		case TEXT:
-			return new ArrayList<>();
+			List<String> ret = new ArrayList<>();
+			ret.add(query);
+			return ret;
 		case MYRIA:
 			throw new BigDawgException("MYRIA island does not support signature; getLiteralsAndConstantsSignature");
 		default:
@@ -693,6 +697,8 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	 */
 	public static String getCreationQueryForCast(Scope scope, String name, String schemaCreationQuery) throws BigDawgException {
 		
+		// FIXME create an update for this
+		
 		switch (scope) {
 		case ARRAY:
 			return String.format("CREATE ARRAY %s %s", name, schemaCreationQuery);
@@ -709,7 +715,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case STREAM:
 			throw new BigDawgException("STREAM Island does not allow you to create new tables; getCreationQueryForCast");
 		case TEXT:
-			AccumuloExecutionEngine.addExecutionTree(AccumuloCreateTableCommandPrefix+name, null);
+			AccumuloExecutionEngine.addExecutionTree(AccumuloExecutionEngine.AccumuloCreateTableCommandPrefix+name, null);
 			return name;
 //			throw new BigDawgException("TEXT Island does not allow you to create new tables; getCreationQueryForCast");
 		case MYRIA:

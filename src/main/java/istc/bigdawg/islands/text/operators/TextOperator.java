@@ -9,8 +9,8 @@ import java.util.Set;
 
 import istc.bigdawg.exceptions.BigDawgException;
 import istc.bigdawg.islands.DataObjectAttribute;
-import istc.bigdawg.islands.OperatorVisitor;
 import istc.bigdawg.islands.operators.Operator;
+import istc.bigdawg.shims.OperatorQueryGenerator;
 
 public class TextOperator implements Operator {
 
@@ -175,7 +175,7 @@ public class TextOperator implements Operator {
 	}
 
 	@Override
-	public void accept(OperatorVisitor operatorVisitor) throws Exception {
+	public void accept(OperatorQueryGenerator operatorQueryGenerator) throws Exception {
 		throw new BigDawgException("TextOperator: accept not implemented; class: "+this.getClass());
 	}
 	

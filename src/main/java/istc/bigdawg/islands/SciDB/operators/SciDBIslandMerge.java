@@ -6,10 +6,10 @@ import java.util.Map;
 import java.util.Set;
 
 import istc.bigdawg.islands.DataObjectAttribute;
-import istc.bigdawg.islands.OperatorVisitor;
 import istc.bigdawg.islands.SciDB.SciDBArray;
 import istc.bigdawg.islands.operators.Merge;
 import istc.bigdawg.islands.operators.Operator;
+import istc.bigdawg.shims.OperatorQueryGenerator;
 
 public class SciDBIslandMerge extends SciDBIslandOperator implements Merge {
 
@@ -42,8 +42,8 @@ public class SciDBIslandMerge extends SciDBIslandOperator implements Merge {
 	
 	
 	@Override
-	public void accept(OperatorVisitor operatorVisitor) throws Exception {
-		operatorVisitor.visit(this);
+	public void accept(OperatorQueryGenerator operatorQueryGenerator) throws Exception {
+		operatorQueryGenerator.visit(this);
 	}
 	
 	@Override

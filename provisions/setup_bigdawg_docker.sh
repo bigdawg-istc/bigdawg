@@ -112,6 +112,7 @@ else
        curl -o mimic2_flatfiles.tar.gz --create-dirs https://physionet.org/mimic2/demo/mimic2_flatfiles.tar.gz
 fi
 
+
 # postgres-catalog
 docker exec -u root bigdawg-postgres-catalog mkdir -p /src/main/resources
 docker cp ../src/main/resources/PostgresParserTerms.csv bigdawg-postgres-catalog:/src/main/resources

@@ -6,9 +6,9 @@ import java.util.Set;
 
 import org.apache.accumulo.core.data.Range;
 
-import istc.bigdawg.islands.OperatorVisitor;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.operators.SeqScan;
+import istc.bigdawg.shims.OperatorQueryGenerator;
 
 public class TextScan extends TextOperator implements SeqScan {
 	
@@ -59,8 +59,8 @@ public class TextScan extends TextOperator implements SeqScan {
 	}
 
 	@Override
-	public void accept(OperatorVisitor operatorVisitor) throws Exception {
-		operatorVisitor.visit(this);
+	public void accept(OperatorQueryGenerator operatorQueryGenerator) throws Exception {
+		operatorQueryGenerator.visit(this);
 	}
 
 	@Override

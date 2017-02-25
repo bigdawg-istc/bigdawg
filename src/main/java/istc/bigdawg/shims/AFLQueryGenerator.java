@@ -1,4 +1,4 @@
-package istc.bigdawg.islands.SciDB;
+package istc.bigdawg.shims;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -7,8 +7,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
 
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
+
 import istc.bigdawg.islands.DataObjectAttribute;
-import istc.bigdawg.islands.OperatorVisitor;
 import istc.bigdawg.islands.SciDB.operators.SciDBIslandAggregate;
 import istc.bigdawg.islands.SciDB.operators.SciDBIslandJoin;
 import istc.bigdawg.islands.SciDB.operators.SciDBIslandOperator;
@@ -53,7 +55,7 @@ import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.statement.select.OrderByElement;
 
-public class AFLQueryGenerator implements OperatorVisitor {
+public class AFLQueryGenerator implements OperatorQueryGenerator {
 
 //	StringBuilder sb = new StringBuilder();
 	
@@ -319,10 +321,10 @@ public class AFLQueryGenerator implements OperatorVisitor {
 	}
 
 	@Override
-	public Operator generateStatementForPresentNonMigratingSegment(Operator operator, StringBuilder sb, boolean isSelect)
+	public Pair<Operator, String> generateStatementForPresentNonMigratingSegment(Operator operator, boolean isSelect)
 			throws Exception {
 		
-//		if (true) throw new Exception("AFL generator Not updated for Merge");
+		StringBuilder sb = new StringBuilder();
 		
 		// find the join		
 		Operator child = operator;
@@ -345,10 +347,10 @@ public class AFLQueryGenerator implements OperatorVisitor {
 			}
 		} 
 		
-		if (child instanceof Join)
-			return (Join) child;
-		else 
-			return null;
+		return new ImmutablePair<>(
+				(child instanceof Join) ? child : null, 
+				sb.length() > 0 ? sb.toString() : null
+				);
 		
 	}
 

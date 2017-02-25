@@ -6,6 +6,7 @@ import java.util.Set;
 import istc.bigdawg.islands.IslandsAndCast.Scope;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.query.ConnectionInfo;
+import istc.bigdawg.shims.Shim;
 
 public class QueryContainerForCommonDatabase {
 	
@@ -24,10 +25,8 @@ public class QueryContainerForCommonDatabase {
 	}
 	
 	public String generateSelectIntoString(Scope scope) throws Exception {
-		OperatorVisitor gen = TheObjectThatResolvesAllDifferencesAmongTheIslands.getQueryGenerator(scope, Integer.parseInt(dbid));
-		gen.configure(true, false);
-		rootOperator.accept(gen);
-		return gen.generateSelectIntoStatementForExecutionTree(pruneToken);
+		Shim gen = TheObjectThatResolvesAllDifferencesAmongTheIslands.getShim(scope, Integer.parseInt(dbid));
+		return gen.getSelectIntoQuery(rootOperator, pruneToken, false);
 	}
 	
 	public Map<String, Set<String>> generateObjectToExpressionMapping() throws Exception {

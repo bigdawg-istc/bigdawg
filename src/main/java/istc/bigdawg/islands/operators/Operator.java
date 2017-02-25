@@ -6,7 +6,7 @@ import java.util.Map;
 import java.util.Set;
 
 import istc.bigdawg.islands.DataObjectAttribute;
-import istc.bigdawg.islands.OperatorVisitor;
+import istc.bigdawg.shims.OperatorQueryGenerator;
 
 public interface Operator {
 	
@@ -87,9 +87,9 @@ public interface Operator {
 	
 	/**
 	 * Part of the visitor pattern that allows the generators to translate the operator tree into executable queries
-	 * @param operatorVisitor
+	 * @param OperatorQueryGenerator
 	 * @throws Exception
 	 */
-	public void accept(OperatorVisitor operatorVisitor) throws Exception;
+	public void accept(OperatorQueryGenerator generator) throws Exception;
 	
 }

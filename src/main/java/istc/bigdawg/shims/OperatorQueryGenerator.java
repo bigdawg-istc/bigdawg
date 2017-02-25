@@ -1,6 +1,8 @@
-package istc.bigdawg.islands;
+package istc.bigdawg.shims;
 
 import java.util.List;
+
+import org.apache.commons.lang3.tuple.Pair;
 
 import istc.bigdawg.islands.operators.Aggregate;
 import istc.bigdawg.islands.operators.CommonTableExpressionScan;
@@ -14,7 +16,7 @@ import istc.bigdawg.islands.operators.SeqScan;
 import istc.bigdawg.islands.operators.Sort;
 import istc.bigdawg.islands.operators.WindowAggregate;
 
-public interface OperatorVisitor {
+public interface OperatorQueryGenerator {
 	public void configure(boolean isRoot, boolean stopAtJoin);
 	public void reset(boolean isRoot, boolean stopAtJoin);
 	public void visit(Operator operator) throws Exception;
@@ -42,7 +44,7 @@ public interface OperatorVisitor {
 	 * @return null or the first Join Operator down the tree
 	 * @throws Exception
 	 */
-	public Operator generateStatementForPresentNonMigratingSegment(Operator operator, StringBuilder sb, boolean isSelect) throws Exception;
+	public Pair<Operator, String> generateStatementForPresentNonMigratingSegment(Operator operator, boolean isSelect) throws Exception;
 	public String generateSelectIntoStatementForExecutionTree(String destinationTable) throws Exception;
 	
 	/**

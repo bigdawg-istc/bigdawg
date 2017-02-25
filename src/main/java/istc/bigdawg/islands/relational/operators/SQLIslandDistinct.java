@@ -4,11 +4,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import istc.bigdawg.islands.OperatorVisitor;
 import istc.bigdawg.islands.operators.Distinct;
 import istc.bigdawg.islands.relational.SQLOutItemResolver;
 import istc.bigdawg.islands.relational.SQLTableExpression;
 import istc.bigdawg.islands.relational.utils.SQLAttribute;
+import istc.bigdawg.shims.OperatorQueryGenerator;
 
 public class SQLIslandDistinct extends SQLIslandOperator implements Distinct {
 
@@ -46,8 +46,8 @@ public class SQLIslandDistinct extends SQLIslandOperator implements Distinct {
 
 
 	@Override
-	public void accept(OperatorVisitor operatorVisitor) throws Exception {
-		operatorVisitor.visit(this);
+	public void accept(OperatorQueryGenerator operatorQueryGenerator) throws Exception {
+		operatorQueryGenerator.visit(this);
 	}
 	
 	public String toString() {

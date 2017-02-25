@@ -6,10 +6,10 @@ import java.util.List;
 import java.util.Map;
 
 import istc.bigdawg.islands.DataObjectAttribute;
-import istc.bigdawg.islands.OperatorVisitor;
 import istc.bigdawg.islands.SciDB.SciDBArray;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.operators.SeqScan;
+import istc.bigdawg.shims.OperatorQueryGenerator;
 
 public class SciDBIslandSeqScan extends SciDBIslandScan implements SeqScan {
 
@@ -67,8 +67,8 @@ public class SciDBIslandSeqScan extends SciDBIslandScan implements SeqScan {
 	}
 
 	@Override
-	public void accept(OperatorVisitor operatorVisitor) throws Exception {
-		operatorVisitor.visit(this);
+	public void accept(OperatorQueryGenerator operatorQueryGenerator) throws Exception {
+		operatorQueryGenerator.visit(this);
 	}
 	
 	

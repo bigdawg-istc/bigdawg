@@ -308,6 +308,12 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 		handler.executeStatementAQL(statement);
 	}
 
+	public static void executeStatementAFL(ConnectionInfo conTo, String stringStatement)
+			throws SQLException {
+		SciDBHandler handler = new SciDBHandler(conTo);
+		handler.executeStatementSciDB(stringStatement, Lang.AFL);
+	}
+	
 	/**
 	 * This statement will be executed via jdbc in AFL language.
 	 * 

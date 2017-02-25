@@ -7,14 +7,14 @@ import org.junit.Test;
 
 import convenience.RTED;
 import istc.bigdawg.catalog.CatalogViewer;
-import istc.bigdawg.islands.OperatorVisitor;
 import istc.bigdawg.islands.SciDB.AFLPlanParser;
-import istc.bigdawg.islands.SciDB.AFLQueryGenerator;
 import istc.bigdawg.islands.SciDB.AFLQueryPlan;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.planner.Planner;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
 import istc.bigdawg.scidb.SciDBHandler;
+import istc.bigdawg.shims.AFLQueryGenerator;
+import istc.bigdawg.shims.OperatorQueryGenerator;
 import junit.framework.TestCase;
 
 
@@ -117,7 +117,7 @@ public class AFLParserTest extends TestCase {
 		AFLQueryPlan queryPlan = AFLPlanParser.extractDirect(new SciDBHandler((SciDBConnectionInfo)CatalogViewer.getConnectionInfo(8)), expectedOutputs.get(testname));
 		Operator root = queryPlan.getRootNode();
 		
-		OperatorVisitor gen = new AFLQueryGenerator();
+		OperatorQueryGenerator gen = new AFLQueryGenerator();
 		gen.configure(true, false);
 		root.accept(gen);
 		System.out.println(gen.generateStatementString()+"\n");

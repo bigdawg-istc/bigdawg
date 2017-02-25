@@ -309,7 +309,7 @@ public class CrossIslandQueryNodes {
 //			// for debugging
 //			System.out.println("\n\n\nResult of Permutation: ");
 //			int i = 1;
-//			OperatorVisitor gen;
+//			OperatorQueryGenerator gen;
 //			for (Operator o : permResult) {
 //				gen = TheObjectThatResolvesAllDifferencesAmongTheIslands.getQueryGenerator(sourceScope);
 //				gen.configure(true, false);
@@ -352,7 +352,7 @@ public class CrossIslandQueryNodes {
 		
 		if (root.isBlocking() ) {
 //			// DEBUG ONLY
-//			OperatorVisitor gen = null;
+//			OperatorQueryGenerator gen = null;
 //			if (getSourceScope().equals(Scope.RELATIONAL)) {
 //				gen = new SQLQueryGenerator();
 //				((SQLQueryGenerator)gen).setSrcStatement(select);

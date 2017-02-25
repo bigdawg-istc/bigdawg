@@ -71,7 +71,7 @@ public class AccumuloConnectionInfo implements ConnectionInfo {
 	public Collection<String> getCleanupQuery(Collection<String> objects) {
 		List<String> cleanupStrings = new ArrayList<>();
 		for (String s : objects) {
-			cleanupStrings.add(TheObjectThatResolvesAllDifferencesAmongTheIslands.AccumuloDeleteTableCommandPrefix + s);
+			cleanupStrings.add(AccumuloExecutionEngine.AccumuloDeleteTableCommandPrefix + s);
 		}
 		return cleanupStrings;
 	}
