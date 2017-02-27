@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
+import istc.bigdawg.exceptions.QueryParsingException;
 import istc.bigdawg.islands.CommonOutItemResolver;
 import istc.bigdawg.islands.DataObjectAttribute;
 import istc.bigdawg.islands.relational.utils.SQLAttribute;
@@ -38,7 +39,7 @@ public class SQLOutItemResolver extends CommonOutItemResolver {
 	private List<AnalyticExpression> windowedAggregates;
 	
 	public SQLOutItemResolver(String expr,  Map<String, DataObjectAttribute> srcSchema, 
-			SQLTableExpression supplement) throws Exception {
+			SQLTableExpression supplement) throws QueryParsingException, JSQLParserException {
 		super();
 		
 		String typeStr = null;
@@ -76,7 +77,7 @@ public class SQLOutItemResolver extends CommonOutItemResolver {
 						for (String s : srcSchema.keySet()) {
 							System.out.println("-- "+s+"; "+srcSchema.get(s).getSQLExpression());
 						}
-						throw new Exception("cannot find: "+expr+"; finder: "+finder+"; srcSchema: "+srcSchema.toString());
+						throw new QueryParsingException("cannot find: "+expr+"; finder: "+finder+"; srcSchema: "+srcSchema.toString());
 					}
 				}
 				doa = srcSchema.get(finder);

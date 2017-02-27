@@ -56,29 +56,6 @@ public class CatalogViewer {
 	 * @throws Exception
 	 */
 	public static ConnectionInfo getConnectionInfo(int dbid) throws BigDawgCatalogException, SQLException {
-//		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
-//		// input check
-//		CatalogUtilities.checkConnection(cc);
-//
-//		// NEW ADDITION
-//		ResultSet rs1 = cc.execRet("select connection_properties from catalog.databases db join catalog.engines e on db.engine_id = e.eid where dbid = "+dbid);
-//		
-//		Engine e = null;
-//		
-//		if (rs1.next()) {
-//			String engineString = rs1.getString("connection_properties");
-//			try {
-//				e = TheObjectThatResolvesAllDifferencesAmongTheIslands.getEngineEnum(engineString);
-//			} catch (BigDawgException ex) {
-//				ex.printStackTrace();
-//				rs1.close();
-//				throw new BigDawgCatalogException("Unsupported engine: "+ engineString);
-//			}
-//		} else {
-//			rs1.close();
-//			throw new BigDawgCatalogException(dbid);
-//		}
-//		rs1.close();
 		
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		Engine e = getEngineOfDB(dbid);

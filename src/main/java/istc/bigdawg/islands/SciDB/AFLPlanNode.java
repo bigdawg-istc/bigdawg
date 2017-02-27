@@ -5,6 +5,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import istc.bigdawg.exceptions.QueryParsingException;
+
 public class AFLPlanNode {
 	
 	/**
@@ -36,10 +38,10 @@ public class AFLPlanNode {
 		childrenReceived = 0;
 	}
 	
-	public void extractAliases() throws Exception {
+	public void extractAliases() throws QueryParsingException {
 		
 		if (schema == null)
-			throw new Exception("NULL schema from AFLPlanNode.");
+			throw new QueryParsingException("NULL schema from AFLPlanNode.");
 		
 		for (AFLPlanNode c : children) {
 			c.extractAliases();
@@ -50,10 +52,10 @@ public class AFLPlanNode {
 		
 	}
 	
-	public void fixDimensionStrings() throws Exception {
+	public void fixDimensionStrings() throws QueryParsingException {
 		
 		if (schema == null)
-			throw new Exception("NULL schema from AFLPlanNode.");
+			throw new QueryParsingException("NULL schema from AFLPlanNode.");
 		
 		schema.fixDimensionStrings();
 		

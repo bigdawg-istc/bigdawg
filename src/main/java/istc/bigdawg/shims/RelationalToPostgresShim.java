@@ -6,6 +6,7 @@ import java.util.Optional;
 
 import org.apache.commons.lang3.tuple.Pair;
 
+import istc.bigdawg.exceptions.ShimException;
 import istc.bigdawg.executor.ExecutorEngine.LocalQueryExecutionException;
 import istc.bigdawg.executor.QueryResult;
 import istc.bigdawg.islands.operators.Join;

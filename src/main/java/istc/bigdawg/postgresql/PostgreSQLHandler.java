@@ -104,11 +104,11 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 		}
 	}
 
-	public PostgreSQLHandler(int dbId) throws Exception {
+	public PostgreSQLHandler(int dbId) throws SQLException, BigDawgCatalogException {
 		try {
 			this.conInfo = (PostgreSQLConnectionInfo) CatalogViewer
 					.getConnectionInfo(dbId);
-		} catch (Exception e) {
+		} catch (SQLException | BigDawgCatalogException e) {
 			String msg = "Catalog chosen connection: " + conInfo.getHost() + " "
 					+ conInfo.getPort() + " " + conInfo.getDatabase() + " "
 					+ conInfo.getUser() + " " + conInfo.getPassword() + ".";
@@ -247,7 +247,7 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 		return Response.status(200).entity(out).build();
 	}
 
-	public String computeDateArithmetic(String s) throws Exception {
+	public String computeDateArithmetic(String s) throws SQLException {
 		JdbcQueryResult qr = executeQueryPostgreSQL("select date(" + s + ");");
 		return qr.getRows().get(0).get(0);
 	}

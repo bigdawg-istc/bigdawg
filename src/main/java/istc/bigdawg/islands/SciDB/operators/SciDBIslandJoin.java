@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import istc.bigdawg.exceptions.IslandException;
 import istc.bigdawg.islands.DataObjectAttribute;
 import istc.bigdawg.islands.SciDB.SciDBArray;
 import istc.bigdawg.islands.operators.Join;
@@ -35,7 +36,7 @@ public class SciDBIslandJoin extends SciDBIslandOperator implements Join {
 	
 	
 	// for AFL
-	public SciDBIslandJoin(Map<String, String> parameters, SciDBArray output, Operator lhs, Operator rhs) throws Exception  {
+	public SciDBIslandJoin(Map<String, String> parameters, SciDBArray output, Operator lhs, Operator rhs) {
 		super(parameters, output, lhs, rhs);
 
 		maxJoinSerial++;
@@ -78,7 +79,7 @@ public class SciDBIslandJoin extends SciDBIslandOperator implements Join {
 		}
 	}
 	
- 	public SciDBIslandJoin (SciDBIslandOperator o, boolean addChild) throws Exception {
+ 	public SciDBIslandJoin (SciDBIslandOperator o, boolean addChild) throws IslandException, JSQLParserException {
 		super(o, addChild);
 		SciDBIslandJoin j = (SciDBIslandJoin) o;
 		
@@ -173,7 +174,7 @@ public class SciDBIslandJoin extends SciDBIslandOperator implements Join {
 	}
 	
 	@Override
-	public String getTreeRepresentation(boolean isRoot) throws Exception{
+	public String getTreeRepresentation(boolean isRoot) throws IslandException{
 		if (isPruned() && (!isRoot)) return "{PRUNED}";
 		else {
 			StringBuilder sb = new StringBuilder();
@@ -198,7 +199,7 @@ public class SciDBIslandJoin extends SciDBIslandOperator implements Join {
 	
 	
 	@Override
-	public Map<String, Set<String>> getObjectToExpressionMappingForSignature() throws Exception{
+	public Map<String, Set<String>> getObjectToExpressionMappingForSignature() throws IslandException {
 		
 		Operator parent = this;
 		while (!parent.isBlocking() && parent.getParent() != null ) parent = parent.getParent();
@@ -214,10 +215,14 @@ public class SciDBIslandJoin extends SciDBIslandOperator implements Join {
 				out.put(s, temp.get(s));
 		}
 		// joinPredicate
-		if (joinPredicate != null) { 
-			Expression e = CCJSqlParserUtil.parseCondExpression(joinPredicate);
-			if (!SQLExpressionUtils.containsArtificiallyConstructedTables(e))
-				addToOut(e, out, aliasMapping);
+		try {
+			if (joinPredicate != null) { 
+				Expression e = CCJSqlParserUtil.parseCondExpression(joinPredicate);
+				if (!SQLExpressionUtils.containsArtificiallyConstructedTables(e))
+					addToOut(e, out, aliasMapping);
+			}
+		} catch (JSQLParserException ex) {
+			throw new IslandException(ex.getMessage(), ex);
 		}
 		
 		return out;
@@ -245,13 +250,13 @@ public class SciDBIslandJoin extends SciDBIslandOperator implements Join {
 	}
 
 	@Override
-	public String generateJoinPredicate() throws Exception {
+	public String generateJoinPredicate() throws IslandException {
 		// TODO ensure correctness
 		return new String(joinPredicate);
 	}
 
 	@Override
-	public String generateJoinFilter() throws Exception {
+	public String generateJoinFilter() throws IslandException {
 		return null;
 	}
 

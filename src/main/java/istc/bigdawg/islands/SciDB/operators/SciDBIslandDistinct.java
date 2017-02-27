@@ -3,6 +3,7 @@ package istc.bigdawg.islands.SciDB.operators;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import istc.bigdawg.exceptions.IslandException;
 import istc.bigdawg.islands.DataObjectAttribute;
 import istc.bigdawg.islands.SciDB.SciDBArray;
 import istc.bigdawg.islands.operators.Distinct;
@@ -29,7 +30,7 @@ public class SciDBIslandDistinct extends SciDBIslandOperator implements Distinct
 		outSchema = new LinkedHashMap<String, DataObjectAttribute>(((SciDBIslandOperator)child).outSchema);
 	}
 	
-	public SciDBIslandDistinct(SciDBIslandOperator o, boolean addChild) throws Exception {
+	public SciDBIslandDistinct(SciDBIslandOperator o, boolean addChild) throws IslandException {
 		super(o, addChild);
 	}
 
@@ -44,7 +45,7 @@ public class SciDBIslandDistinct extends SciDBIslandOperator implements Distinct
 	}
 	
 	@Override
-	public String getTreeRepresentation(boolean isRoot) throws Exception{
+	public String getTreeRepresentation(boolean isRoot) throws IslandException{
 		return "{distinct" + this.getChildren().get(0).getTreeRepresentation(isRoot)+"}";
 	}
 };

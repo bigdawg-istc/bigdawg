@@ -10,6 +10,7 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import istc.bigdawg.catalog.CatalogViewer;
+import istc.bigdawg.exceptions.IslandException;
 import istc.bigdawg.executor.plan.ExecutionNodeFactory;
 import istc.bigdawg.executor.plan.QueryExecutionPlan;
 import istc.bigdawg.islands.IslandsAndCast.Scope;
@@ -26,7 +27,6 @@ import istc.bigdawg.islands.operators.WindowAggregate;
 import istc.bigdawg.islands.relational.operators.SQLIslandOperator;
 import istc.bigdawg.islands.relational.operators.SQLIslandScan;
 import istc.bigdawg.query.ConnectionInfo;
-import istc.bigdawg.query.DBHandler;
 import istc.bigdawg.signature.Signature;
 import net.sf.jsqlparser.statement.select.Select;
 
@@ -37,7 +37,6 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 	
 	private Select select;
 	private Signature signature;
-	private DBHandler dbSchemaHandler = null;
 	
 	private Map<String, QueryContainerForCommonDatabase> queryContainer;
 
@@ -53,7 +52,7 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 
 	private Operator initialRoot;
 	
-	public CrossIslandQueryNode (IslandsAndCast.Scope scope, String islandQuery, String name, Map<String, String> transitionSchemas) throws Exception {
+	public CrossIslandQueryNode (Scope scope, String islandQuery, String name, Map<String, String> transitionSchemas) throws Exception {
 		super(scope, islandQuery, name);
 		
 		queryContainer = new HashMap<>();
@@ -70,8 +69,11 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 		logger.info(String.format("--> CrossIsland children: %s;",children.toString()));
 		logger.info(String.format("--> Transition schemas: %s;",transitionSchemas.toString()));
 		
+		Island thisIsland = TheObjectThatResolvesAllDifferencesAmongTheIslands.getIsland(scope);
+		
 		// create temporary tables that are used for as schemas
-		dbSchemaHandler = TheObjectThatResolvesAllDifferencesAmongTheIslands.createTableForPlanning(sourceScope, children, transitionSchemas);
+		thisIsland.setupForQueryPlanning(children, transitionSchemas);
+//		dbSchemaHandler = TheObjectThatResolvesAllDifferencesAmongTheIslands.createTableForPlanning(sourceScope, children, transitionSchemas);
 		
 		populateQueryContainer(scope, transitionSchemas);
 		
@@ -85,7 +87,8 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 		initialRoot = null;
 		
 		// removing temporary schema plates
-		TheObjectThatResolvesAllDifferencesAmongTheIslands.removeTemporaryTableCreatedForPlanning(sourceScope, dbSchemaHandler, children, transitionSchemas);
+		thisIsland.teardownForQueryPlanning(children, transitionSchemas);
+//		TheObjectThatResolvesAllDifferencesAmongTheIslands.removeTemporaryTableCreatedForPlanning(sourceScope, dbSchemaHandler, children, transitionSchemas);
 		
 		
 	}
@@ -97,7 +100,9 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 	private void populateQueryContainer(Scope scope, Map<String, String> transitionSchemas) throws Exception {
 		
 		List<String> objs = new ArrayList<>();
-		initialRoot = TheObjectThatResolvesAllDifferencesAmongTheIslands.generateOperatorTreesAndAddDataSetObjectsSignature(sourceScope, dbSchemaHandler, queryString, objs);
+		Island thisIsland = TheObjectThatResolvesAllDifferencesAmongTheIslands.getIsland(scope);
+//		initialRoot = TheObjectThatResolvesAllDifferencesAmongTheIslands.generateOperatorTreesAndAddDataSetObjectsSignature(sourceScope, dbSchemaHandler, queryString, objs);
+		initialRoot = thisIsland.parseQueryAndExtractAllTableNames(queryString, objs);
 		
 		originalJoinPredicates.addAll(getOriginalJoinPredicates(initialRoot));
 		originalMap = CatalogViewer.getDBMappingByObj(objs, getSourceScope());
@@ -160,21 +165,23 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 		return qepl;
 	}
 
-	private Set<String> getOriginalJoinPredicates(Operator root) throws Exception{
+	private Set<String> getOriginalJoinPredicates(Operator root) throws IslandException {
 		
 		Set<String> predicates = new HashSet<>();
 
 		if (root == null) return predicates;
-
+		
+		Island srcIsland = TheObjectThatResolvesAllDifferencesAmongTheIslands.getIsland(sourceScope);
+		
 		String predicate = null;
 		if (root instanceof Join){
 			predicate = ((Join) root).generateJoinPredicate();
-			if (predicate != null) predicates.addAll(TheObjectThatResolvesAllDifferencesAmongTheIslands.splitPredicates(sourceScope, predicate));
+			if (predicate != null) predicates.addAll(srcIsland.splitJoinPredicate(predicate));
 			predicate = ((Join) root).generateJoinFilter();
 		} else if (root instanceof  Scan)
 			predicate = ((Scan) root).generateRelevantJoinPredicate();
 		
-		if (predicate != null) predicates.addAll(TheObjectThatResolvesAllDifferencesAmongTheIslands.splitPredicates(sourceScope, predicate));
+		if (predicate != null) predicates.addAll(srcIsland.splitJoinPredicate(predicate));
 
 		for (Operator child: root.getChildren())
 			predicates.addAll(getOriginalJoinPredicates(child));
@@ -223,7 +230,8 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 				logger.info(String.format("--> transitionSchema marked: %s\n", ((SeqScan) node).getFullyQualifiedName()));
 				
 				ret = new ArrayList<String>();
-				ret.add(String.valueOf(TheObjectThatResolvesAllDifferencesAmongTheIslands.getSchemaEngineDBID(sourceScope)));
+//				ret.add(String.valueOf( TheObjectThatResolvesAllDifferencesAmongTheIslands.getSchemaEngineDBID(sourceScope)));
+				ret.add(String.valueOf( TheObjectThatResolvesAllDifferencesAmongTheIslands.getIsland(sourceScope).getDefaultCastReceptionDBID()));
 			} else if (node.getChildren().size() > 0) {
 				List<String> result = traverse(node.getChildren().get(0), transitionSchemas);
 				if (result != null) ret = new ArrayList<String>(result); 
@@ -393,7 +401,7 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 			}
 		}
 		
-		// performance tip: allow multiple destination choices TODO 
+		// TODO performance tip: allow multiple destination choices  
 		
 		String maxString = null;
 		Set<Operator> set = null;

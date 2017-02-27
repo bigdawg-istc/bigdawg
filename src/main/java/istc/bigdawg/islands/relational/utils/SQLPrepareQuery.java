@@ -4,13 +4,11 @@ import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.util.Arrays;
+import java.sql.SQLException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.commons.lang3.StringUtils;
-
+import istc.bigdawg.exceptions.BigDawgCatalogException;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.properties.BigDawgConfigProperties;
 
@@ -19,7 +17,6 @@ import istc.bigdawg.properties.BigDawgConfigProperties;
 
 public class SQLPrepareQuery {
 
-	static int xmlCounter = 0; // TODO CREATE A CLEARNER TO DELETE ALL THESE TEMP FILES
 	private static Pattern pdate = Pattern.compile("(?i)(date '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]')");
 	private static Pattern pinterval = Pattern.compile("(?i)(date '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]' +[+] +interval '[0-9]+' ((days)|(day)|(months)|(month)|(years)|(year)))");
 	
@@ -41,15 +38,15 @@ public class SQLPrepareQuery {
 	}
 	
 
-	public static String generateExplainQueryString(String query) throws IOException {
+	public static String generateExplainQueryString(String query) {
 		return "EXPLAIN (VERBOSE ON, COSTS OFF, FORMAT XML) " + query;
 	}
 	
-	public static String generateExplainQueryStringWithPerformance(String query) throws IOException {
+	public static String generateExplainQueryStringWithPerformance(String query) {
 		return "EXPLAIN (VERBOSE ON, ANALYZE, FORMAT XML) " + query;
 	}
 	
-	public static String preprocessDateAndTime(String query) throws Exception {
+	public static String preprocessDateAndTime(String query) throws SQLException, BigDawgCatalogException {
 		
 		StringBuilder sb = new StringBuilder();
 		
@@ -70,28 +67,7 @@ public class SQLPrepareQuery {
 			mdate.reset(sb);
 		}
 		
-		
-		
-		
 		return sb.toString();
 	}
-	
-	private static String generateExplainFile(String srcFilename) throws IOException {
-		String[] pathTokens = srcFilename.split("\\/");
-		String filename = "explain_" + pathTokens[pathTokens.length-1];
-		String[] pathArray = Arrays.copyOf(pathTokens, pathTokens.length - 1);
-		String path = StringUtils.join(pathArray, '/');
-
-		String explainFilename =  path + "/" + filename;
-		
-		
-		PrintWriter explain = new PrintWriter(explainFilename, "UTF-8");
-		explain.println("EXPLAIN (VERBOSE ON, COSTS OFF, FORMAT XML)");
-		explain.println(readSQL(srcFilename));
-		explain.close();
-		
-		return explainFilename;
-	}
-	
 	
 }

@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import istc.bigdawg.exceptions.IslandException;
 import istc.bigdawg.islands.DataObjectAttribute;
 import istc.bigdawg.islands.SciDB.SciDBArray;
 import istc.bigdawg.islands.operators.Merge;
@@ -26,7 +27,7 @@ public class SciDBIslandMerge extends SciDBIslandOperator implements Merge {
 		outSchema = new LinkedHashMap<String, DataObjectAttribute>(((SciDBIslandOperator)childs.get(0)).outSchema);
 	}
 	
-	public SciDBIslandMerge(SciDBIslandOperator o, boolean addChild) throws Exception {
+	public SciDBIslandMerge(SciDBIslandOperator o, boolean addChild) throws IslandException {
 		super(o, addChild);
 		SciDBIslandMerge s = (SciDBIslandMerge) o;
 		
@@ -47,7 +48,7 @@ public class SciDBIslandMerge extends SciDBIslandOperator implements Merge {
 	}
 	
 	@Override
-	public String getTreeRepresentation(boolean isRoot) throws Exception{
+	public String getTreeRepresentation(boolean isRoot) throws IslandException{
 		
 		StringBuilder sb = new StringBuilder();
 		sb.append('{').append("union");
@@ -61,7 +62,7 @@ public class SciDBIslandMerge extends SciDBIslandOperator implements Merge {
 	}
 	
 	@Override
-	public Map<String, Set<String>> getObjectToExpressionMappingForSignature() throws Exception{
+	public Map<String, Set<String>> getObjectToExpressionMappingForSignature() throws IslandException{
 
 		Map<String, Set<String>> out = children.get(0).getObjectToExpressionMappingForSignature();
 		

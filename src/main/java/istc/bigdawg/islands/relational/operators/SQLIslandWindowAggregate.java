@@ -4,11 +4,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import istc.bigdawg.exceptions.QueryParsingException;
 import istc.bigdawg.islands.DataObjectAttribute;
 import istc.bigdawg.islands.operators.WindowAggregate;
 import istc.bigdawg.islands.relational.SQLOutItemResolver;
 import istc.bigdawg.islands.relational.SQLTableExpression;
 import istc.bigdawg.shims.OperatorQueryGenerator;
+import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.AnalyticExpression;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 import net.sf.jsqlparser.statement.select.OrderByElement;
@@ -24,7 +26,8 @@ public class SQLIslandWindowAggregate extends SQLIslandOperator implements Windo
 	
 	List<AnalyticExpression> parsedAggregates;
 	
-	SQLIslandWindowAggregate(Map<String, String> parameters, List<String> output, SQLIslandOperator child, SQLTableExpression supplement) throws Exception  {
+	SQLIslandWindowAggregate(Map<String, String> parameters, List<String> output, SQLIslandOperator child, SQLTableExpression supplement)
+		throws QueryParsingException, JSQLParserException {
 		super(parameters, output, child, supplement);
 
 		isBlocking = true;

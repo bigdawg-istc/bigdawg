@@ -23,7 +23,7 @@ public class CommonOutItemResolver {
 	protected DataObjectAttribute outAttribute;
 	
 	
-	public CommonOutItemResolver(String alias, String type, boolean hidden, Map<String, DataObjectAttribute> srcSchema) throws Exception {
+	public CommonOutItemResolver(String alias, String type, boolean hidden, Map<String, DataObjectAttribute> srcSchema) {
 		
 		outAttribute = new DataObjectAttribute();
 		

@@ -9,6 +9,8 @@ import java.util.Set;
 
 import org.apache.jcp.xml.dsig.internal.dom.Utils;
 
+import istc.bigdawg.exceptions.IslandException;
+import istc.bigdawg.exceptions.QueryParsingException;
 import istc.bigdawg.islands.operators.Aggregate;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.relational.SQLOutItemResolver;
@@ -16,6 +18,7 @@ import istc.bigdawg.islands.relational.SQLTableExpression;
 import istc.bigdawg.islands.relational.utils.SQLAttribute;
 import istc.bigdawg.islands.relational.utils.SQLExpressionUtils;
 import istc.bigdawg.shims.OperatorQueryGenerator;
+import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Parenthesis;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
@@ -38,7 +41,7 @@ public class SQLIslandAggregate extends SQLIslandOperator implements Aggregate {
 	private static final String BigDAWGSQLAggregatePrefix = "BIGDAWGSQLAGGREGATE_";
 	private Integer aggregateID = null;
 	
-	SQLIslandAggregate(Map<String, String> parameters, List<String> output, SQLIslandOperator child, SQLTableExpression supplement) throws Exception  {
+	SQLIslandAggregate(Map<String, String> parameters, List<String> output, SQLIslandOperator child, SQLTableExpression supplement) throws QueryParsingException, JSQLParserException  {
 		super(parameters, output, child, supplement);
 
 		
@@ -103,7 +106,7 @@ public class SQLIslandAggregate extends SQLIslandOperator implements Aggregate {
 
 	}
 	
-	public SQLIslandAggregate(SQLIslandOperator o, boolean addChild) throws Exception {
+	public SQLIslandAggregate(SQLIslandOperator o, boolean addChild) throws IslandException {
 		super(o, addChild);
 		
 		this.blockerID = o.blockerID;
@@ -198,7 +201,7 @@ public class SQLIslandAggregate extends SQLIslandOperator implements Aggregate {
 	
 	
 	@Override
-	public String getTreeRepresentation(boolean isRoot) throws Exception{
+	public String getTreeRepresentation(boolean isRoot) throws IslandException {
 		if (isPruned() && (!isRoot)) return "{PRUNED}";
 		else {
 			StringBuilder sb = new StringBuilder();
@@ -210,7 +213,7 @@ public class SQLIslandAggregate extends SQLIslandOperator implements Aggregate {
 	}
 	
 	@Override
-	public Map<String, Set<String>> getObjectToExpressionMappingForSignature() throws Exception{
+	public Map<String, Set<String>> getObjectToExpressionMappingForSignature() throws IslandException {
 		
 		Operator parent = this;
 		while (!parent.isBlocking() && parent.getParent() != null ) parent = parent.getParent();
@@ -221,7 +224,11 @@ public class SQLIslandAggregate extends SQLIslandOperator implements Aggregate {
 		// having
 		Expression e;
 		if (getAggregateFilter() != null) {
-			e = CCJSqlParserUtil.parseCondExpression(getAggregateFilter());
+			try {
+				e = CCJSqlParserUtil.parseCondExpression(getAggregateFilter());
+			} catch (JSQLParserException ex) {
+				throw new IslandException(ex.getMessage(), ex);
+			}
 			if (!SQLExpressionUtils.containsArtificiallyConstructedTables(e)) {
 				addToOut(e, out, aliasMapping);
 			}
@@ -236,7 +243,7 @@ public class SQLIslandAggregate extends SQLIslandOperator implements Aggregate {
 	}
 
 	@Override
-	public Expression resolveAggregatesInFilter(String e, boolean goParent, SQLIslandOperator lastHopOp, Set<String> names, StringBuilder sb) throws Exception {
+	public Expression resolveAggregatesInFilter(String e, boolean goParent, SQLIslandOperator lastHopOp, Set<String> names, StringBuilder sb) throws IslandException {
 		
 		for (String s: outSchema.keySet()) {
 			Expression exp = outSchema.get(s).getSQLExpression();

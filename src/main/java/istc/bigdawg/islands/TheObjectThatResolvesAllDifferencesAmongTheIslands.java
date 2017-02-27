@@ -25,6 +25,7 @@ import istc.bigdawg.catalog.Catalog;
 import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.exceptions.BigDawgCatalogException;
 import istc.bigdawg.exceptions.BigDawgException;
+import istc.bigdawg.exceptions.IslandException;
 import istc.bigdawg.exceptions.UnsupportedIslandException;
 import istc.bigdawg.executor.QueryResult;
 import istc.bigdawg.islands.IslandsAndCast.Scope;
@@ -32,14 +33,17 @@ import istc.bigdawg.islands.Myria.MyriaQueryParser;
 import istc.bigdawg.islands.SStore.SStoreQueryParser;
 import istc.bigdawg.islands.SciDB.AFLPlanParser;
 import istc.bigdawg.islands.SciDB.AFLQueryPlan;
+import istc.bigdawg.islands.SciDB.ArrayIsland;
 import istc.bigdawg.islands.SciDB.operators.SciDBIslandJoin;
 import istc.bigdawg.islands.operators.Join;
 import istc.bigdawg.islands.operators.Join.JoinType;
 import istc.bigdawg.islands.operators.Operator;
+import istc.bigdawg.islands.relational.RelationalIsland;
 import istc.bigdawg.islands.relational.SQLPlanParser;
 import istc.bigdawg.islands.relational.SQLQueryPlan;
 import istc.bigdawg.islands.relational.operators.SQLIslandJoin;
 import istc.bigdawg.islands.text.AccumuloJSONQueryParser;
+import istc.bigdawg.islands.text.TextIsland;
 import istc.bigdawg.islands.text.operators.TextScan;
 import istc.bigdawg.myria.MyriaHandler;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
@@ -148,7 +152,10 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		try {
 			switch (e) {
 			case PostgreSQL:
-				rs2 = cc.execRet("select dbid, eid, host, port, db.name as dbname, userid, password from catalog.databases db join catalog.engines e on db.engine_id = e.eid where dbid = "+dbid);
+				rs2 = cc.execRet("select dbid, eid, host, port, db.name as dbname, userid, password "
+						+ "from catalog.databases db "
+						+ "join catalog.engines e on db.engine_id = e.eid "
+						+ "where dbid = "+dbid);
 				if (rs2.next())
 					extraction = new PostgreSQLConnectionInfo(rs2.getString("host"), rs2.getString("port"),rs2.getString("dbname"), rs2.getString("userid"), rs2.getString("password"));
 				break;
@@ -161,12 +168,18 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 					extraction = new SciDBConnectionInfo(rs2.getString("host"), rs2.getString("port"), rs2.getString("userid"), rs2.getString("password"), rs2.getString("bin_path"));
 					break;
 			case SStore:
-				rs2 = cc.execRet("select dbid, eid, host, port, db.name as dbname, userid, password from catalog.databases db join catalog.engines e on db.engine_id = e.eid where dbid = "+dbid);
+				rs2 = cc.execRet("select dbid, eid, host, port, db.name as dbname, userid, password "
+						+ "from catalog.databases db "
+						+ "join catalog.engines e on db.engine_id = e.eid "
+						+ "where dbid = "+dbid);
 				if (rs2.next())
 					extraction = new SStoreSQLConnectionInfo(rs2.getString("host"), rs2.getString("port"),rs2.getString("dbname"), rs2.getString("userid"), rs2.getString("password"));
 				break;
 			case Accumulo:
-				rs2 = cc.execRet("select dbid, eid, host, port, db.name as dbname, userid, password from catalog.databases db join catalog.engines e on db.engine_id = e.eid where dbid = "+dbid);
+				rs2 = cc.execRet("select dbid, eid, host, port, db.name as dbname, userid, password "
+						+ "from catalog.databases db "
+						+ "join catalog.engines e on db.engine_id = e.eid "
+						+ "where dbid = "+dbid);
 				if (rs2.next())
 					extraction = new AccumuloConnectionInfo(rs2.getString("host"), rs2.getString("port"),rs2.getString("dbname"), rs2.getString("userid"), rs2.getString("password"));
 				break;
@@ -288,10 +301,9 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	 * @throws TableExistsException 
 	 * @throws TableNotFoundException 
 	 */
+	@Deprecated
 	public static DBHandler createTableForPlanning(Scope sourceScope, Set<String> children, Map<String, String> transitionSchemas) throws SQLException, BigDawgException, AccumuloException, AccumuloSecurityException, TableExistsException, TableNotFoundException {
 
-		// FIXME integrate into Shim
-		
 		DBHandler dbSchemaHandler = null;
 		ConnectionInfo connectionInfo = null;
 		Set<String> createdTables = new HashSet<>();
@@ -385,9 +397,8 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	 * @throws AccumuloException 
 	 * @throws TableNotFoundException 
 	 */
+	@Deprecated
 	public static void removeTemporaryTableCreatedForPlanning(Scope sourceScope, DBHandler dbSchemaHandler, Set<String> children, Map<String, String> transitionSchemas) throws SQLException, BigDawgException, AccumuloException, AccumuloSecurityException, TableNotFoundException {
-		
-		// FIXME this is confusing
 		
 		switch (sourceScope) {
 		case ARRAY:
@@ -438,6 +449,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	 * @return
 	 * @throws BigDawgException 
 	 */
+	@Deprecated
 	public static Integer getSchemaEngineDBID(Scope scope) throws BigDawgException {
 		
 		switch (scope) {
@@ -480,6 +492,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	 * @throws BigDawgException 
 	 * @throws Exception
 	 */
+	@Deprecated
 	public static Join constructJoin (Scope scope, Operator o1, Operator o2, JoinType jt, List<String> joinPred, boolean isFilter) throws JSQLParserException, BigDawgException {
 		
 		switch (scope) {
@@ -520,6 +533,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	 * @return
 	 * @throws Exception
 	 */
+	@Deprecated
 	public static Operator generateOperatorTreesAndAddDataSetObjectsSignature(Scope scope, DBHandler dbSchemaHandler, String queryString, List<String> objs) throws Exception {
 		
 		Operator root = null;
@@ -567,9 +581,8 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	 * @return
 	 * @throws BigDawgException 
 	 */
-	public static Set<String> splitPredicates(Scope scope, String predicates) throws BigDawgException {
-		
-		// TODO This is not robust
+	@Deprecated
+	public static Set<String> splitPredicates(Scope scope, String predicates) throws IslandException {
 		
 		Set<String> results = new HashSet<>();
 
@@ -591,11 +604,11 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 			joinDelim = "[=<>]+";
 			break;
 		case STREAM:
-			throw new BigDawgException("STREAM island does not participate in splitPredicates function; splitPredicates");
+			throw new IslandException("STREAM island does not participate in splitPredicates function; splitPredicates");
 		case TEXT:
-			throw new BigDawgException("TEXT island does not participate in splitPredicates function; splitPredicates");
+			throw new IslandException("TEXT island does not participate in splitPredicates function; splitPredicates");
 		case MYRIA:
-			throw new BigDawgException("MYRIA island does not participate in splitPredicates function; splitPredicates");
+			throw new IslandException("MYRIA island does not participate in splitPredicates function; splitPredicates");
 		default:
 			break;
 		}
@@ -622,6 +635,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	 * @throws IOException
 	 * @throws BigDawgException 
 	 */
+	@Deprecated
 	public static List<String> getLiteralsAndConstantsSignature(Scope scope, String query) throws IOException, BigDawgException {
 		
 		switch (scope) {
@@ -659,6 +673,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	 * @return
 	 * @throws UnsupportedIslandException
 	 */
+	@Deprecated
 	public static String getIslandStyleQuery(Scope scope, String query) throws UnsupportedIslandException {
 		
 		switch (scope) {
@@ -695,9 +710,8 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	 * @return
 	 * @throws BigDawgException 
 	 */
+	@Deprecated
 	public static String getCreationQueryForCast(Scope scope, String name, String schemaCreationQuery) throws BigDawgException {
-		
-		// FIXME create an update for this
 		
 		switch (scope) {
 		case ARRAY:
@@ -727,6 +741,35 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		throw new UnsupportedIslandException(scope, "getCreationQuery");
 	}
 	
+	public static Island getIsland(Scope scope) throws IslandException {
+		switch (scope) {
+		case ARRAY:
+			return new ArrayIsland();
+		case CAST:
+			break;
+		case DOCUMENT:
+			break;
+		case GRAPH:
+			break;
+		case KEYVALUE:
+			break;
+		case RELATIONAL:
+			return new RelationalIsland();
+		case STREAM:
+			break;
+		case TEXT:
+			return new TextIsland(); 
+//			AccumuloExecutionEngine.addExecutionTree(AccumuloExecutionEngine.AccumuloCreateTableCommandPrefix+name, null);
+//			return name;
+		case MYRIA:
+			break;	
+		default:
+			break;
+		}
+		
+		throw new UnsupportedIslandException(scope, "getCreationQuery");
+	}
+	
 	
 	//// island specific
 	
@@ -736,9 +779,11 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	 * @param tableName
 	 * @return
 	 * @throws SQLException
+	 * @throws BigDawgCatalogException 
 	 * @throws BigDawgException
 	 */
-	public static String getRelationalIslandCreateTableString(String tableName) throws SQLException, BigDawgException  {
+	@Deprecated
+	public static String getRelationalIslandCreateTableString(String tableName) throws SQLException, BigDawgCatalogException  {
 		Connection con = PostgreSQLHandler.getConnection((PostgreSQLConnectionInfo)CatalogViewer.getConnectionInfo(psqlSchemaHandlerDBID));
 		return PostgreSQLHandler.getCreateTable(con, tableName).replaceAll("\\scharacter[\\(]", " char(");
 	}
@@ -767,7 +812,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case ARRAY:
 		case TEXT:
 		default:
-			throw new BigDawgException("Unapplicable island for runOperatorFreeIslandQuery: "+node.sourceScope.name());
+			throw new IslandException("Unapplicable island for runOperatorFreeIslandQuery: "+node.sourceScope.name());
 		}
 		
 	}

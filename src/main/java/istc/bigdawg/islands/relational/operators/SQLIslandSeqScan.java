@@ -1,15 +1,20 @@
 package istc.bigdawg.islands.relational.operators;
 
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 
+import istc.bigdawg.exceptions.BigDawgCatalogException;
+import istc.bigdawg.exceptions.IslandException;
+import istc.bigdawg.exceptions.QueryParsingException;
 import istc.bigdawg.islands.DataObject;
-import istc.bigdawg.islands.TheObjectThatResolvesAllDifferencesAmongTheIslands;
 import istc.bigdawg.islands.operators.SeqScan;
+import istc.bigdawg.islands.relational.RelationalIsland;
 import istc.bigdawg.islands.relational.SQLOutItemResolver;
 import istc.bigdawg.islands.relational.SQLTableExpression;
 import istc.bigdawg.islands.relational.utils.SQLAttribute;
 import istc.bigdawg.shims.OperatorQueryGenerator;
+import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.BinaryExpression;
 import net.sf.jsqlparser.expression.CaseExpression;
 import net.sf.jsqlparser.expression.Expression;
@@ -21,7 +26,8 @@ import net.sf.jsqlparser.statement.create.table.CreateTable;
 public class SQLIslandSeqScan extends SQLIslandScan implements SeqScan {
 
 	// this is another difference from regular sql processing where the inclination is to keep the rows whole until otherwise needed
-	public SQLIslandSeqScan (Map<String, String> parameters, List<String> output, SQLIslandOperator child, SQLTableExpression supplement) throws Exception  {
+	public SQLIslandSeqScan (Map<String, String> parameters, List<String> output, SQLIslandOperator child, SQLTableExpression supplement) 
+			throws JSQLParserException, SQLException, QueryParsingException, BigDawgCatalogException {
 		super(parameters, output, child, supplement);
 		
 		// match output to base relation
@@ -32,7 +38,8 @@ public class SQLIslandSeqScan extends SQLIslandScan implements SeqScan {
 		
 		this.dataObjects.add(schemaAndName);
 		
-		String createTableString = TheObjectThatResolvesAllDifferencesAmongTheIslands.getRelationalIslandCreateTableString(schemaAndName);
+//		String createTableString = TheObjectThatResolvesAllDifferencesAmongTheIslands.getRelationalIslandCreateTableString(schemaAndName);
+		String createTableString = (new RelationalIsland()).getCreateTableString(schemaAndName);
 		
 		CreateTable create = null;
 		try {
@@ -75,7 +82,7 @@ public class SQLIslandSeqScan extends SQLIslandScan implements SeqScan {
 		
 	}
 	
-	public SQLIslandSeqScan(SQLIslandOperator o, boolean addChild) throws Exception {
+	public SQLIslandSeqScan(SQLIslandOperator o, boolean addChild) throws IslandException  {
 		super(o, addChild);
 		this.setOperatorName(((SQLIslandSeqScan)o).getOperatorName());
 	}
@@ -92,7 +99,7 @@ public class SQLIslandSeqScan extends SQLIslandScan implements SeqScan {
 	
 	
 	@Override
-	public String getTreeRepresentation(boolean isRoot) throws Exception{
+	public String getTreeRepresentation(boolean isRoot) throws IslandException {
 		
 		if (isPruned() && (!isRoot)) {
 			return "{PRUNED}";

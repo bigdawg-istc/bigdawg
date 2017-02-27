@@ -5,16 +5,18 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import istc.bigdawg.exceptions.IslandException;
 import istc.bigdawg.islands.DataObjectAttribute;
 import istc.bigdawg.islands.SciDB.SciDBArray;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.operators.SeqScan;
 import istc.bigdawg.shims.OperatorQueryGenerator;
+import net.sf.jsqlparser.JSQLParserException;
 
 public class SciDBIslandSeqScan extends SciDBIslandScan implements SeqScan {
 
 	// for AFL
-	public SciDBIslandSeqScan (Map<String, String> parameters, SciDBArray output, Operator child) throws Exception  {
+	public SciDBIslandSeqScan (Map<String, String> parameters, SciDBArray output, Operator child) throws JSQLParserException {
 		super(parameters, output, child);
 		
 		setOperatorName(parameters.get("OperatorName"));
@@ -61,7 +63,7 @@ public class SciDBIslandSeqScan extends SciDBIslandScan implements SeqScan {
 		
 	}
 		
-	public SciDBIslandSeqScan(SciDBIslandOperator o, boolean addChild) throws Exception {
+	public SciDBIslandSeqScan(SciDBIslandOperator o, boolean addChild) throws IslandException {
 		super(o, addChild);
 		this.setOperatorName(((SciDBIslandSeqScan)o).getOperatorName());
 	}
@@ -78,7 +80,7 @@ public class SciDBIslandSeqScan extends SciDBIslandScan implements SeqScan {
 	
 	
 	@Override
-	public String getTreeRepresentation(boolean isRoot) throws Exception{
+	public String getTreeRepresentation(boolean isRoot) throws IslandException{
 		
 		if (isPruned() && (!isRoot)) {
 			return "{PRUNED}";

@@ -4,11 +4,14 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import istc.bigdawg.exceptions.IslandException;
+import istc.bigdawg.exceptions.QueryParsingException;
 import istc.bigdawg.islands.operators.Limit;
 import istc.bigdawg.islands.relational.SQLOutItemResolver;
 import istc.bigdawg.islands.relational.SQLTableExpression;
 import istc.bigdawg.islands.relational.utils.SQLAttribute;
 import istc.bigdawg.shims.OperatorQueryGenerator;
+import net.sf.jsqlparser.JSQLParserException;
 
 
 public class SQLIslandLimit extends SQLIslandOperator implements Limit {
@@ -19,7 +22,8 @@ public class SQLIslandLimit extends SQLIslandOperator implements Limit {
 	private long limitCount = 0;
 	private long limitOffset = 0;
 	
-	SQLIslandLimit(Map<String, String> parameters, List<String> output, SQLIslandOperator child, SQLTableExpression supplement) throws Exception  {
+	SQLIslandLimit(Map<String, String> parameters, List<String> output, SQLIslandOperator child, SQLTableExpression supplement) 
+			throws QueryParsingException, JSQLParserException {
 		super(parameters, output, child, supplement);
 
 		
@@ -52,7 +56,7 @@ public class SQLIslandLimit extends SQLIslandOperator implements Limit {
 
 	}
 	
-	public SQLIslandLimit(SQLIslandOperator o, boolean addChild) throws Exception {
+	public SQLIslandLimit(SQLIslandOperator o, boolean addChild) throws IslandException {
 		super(o, addChild);
 		SQLIslandLimit lim = (SQLIslandLimit) o;
 		this.blockerID = o.blockerID;
@@ -100,7 +104,7 @@ public class SQLIslandLimit extends SQLIslandOperator implements Limit {
 	}
 	
 	@Override
-	public String getTreeRepresentation(boolean isRoot) throws Exception{
+	public String getTreeRepresentation(boolean isRoot) throws IslandException {
 		if (isPruned() && (!isRoot)) return "{PRUNED}";
 		else return "{limit"+children.get(0).getTreeRepresentation(false)+"}";
 	}

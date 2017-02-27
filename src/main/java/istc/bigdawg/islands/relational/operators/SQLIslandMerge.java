@@ -5,12 +5,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import istc.bigdawg.exceptions.IslandException;
+import istc.bigdawg.exceptions.QueryParsingException;
 import istc.bigdawg.islands.operators.Merge;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.relational.SQLOutItemResolver;
 import istc.bigdawg.islands.relational.SQLTableExpression;
 import istc.bigdawg.islands.relational.utils.SQLAttribute;
 import istc.bigdawg.shims.OperatorQueryGenerator;
+import net.sf.jsqlparser.JSQLParserException;
 
 public class SQLIslandMerge extends SQLIslandOperator implements Merge {
 
@@ -20,7 +23,8 @@ public class SQLIslandMerge extends SQLIslandOperator implements Merge {
 	
 	
 	
-	public SQLIslandMerge(Map<String, String> parameters, List<String> output, List<SQLIslandOperator> childs, SQLTableExpression supplement) throws Exception  {
+	public SQLIslandMerge(Map<String, String> parameters, List<String> output, List<SQLIslandOperator> childs, SQLTableExpression supplement) 
+			throws QueryParsingException, JSQLParserException {
 		super(parameters, output, childs, supplement);
 
 		isBlocking = true;
@@ -44,7 +48,7 @@ public class SQLIslandMerge extends SQLIslandOperator implements Merge {
 		
 	}
 	
-	public SQLIslandMerge(SQLIslandOperator o, boolean addChild) throws Exception {
+	public SQLIslandMerge(SQLIslandOperator o, boolean addChild) throws IslandException {
 		super(o, addChild);
 		SQLIslandMerge s = (SQLIslandMerge) o;
 		
@@ -70,7 +74,7 @@ public class SQLIslandMerge extends SQLIslandOperator implements Merge {
 	}
 	
 	@Override
-	public String getTreeRepresentation(boolean isRoot) throws Exception{
+	public String getTreeRepresentation(boolean isRoot) throws IslandException{
 		
 		StringBuilder sb = new StringBuilder();
 		sb.append('{').append("union");
@@ -84,7 +88,7 @@ public class SQLIslandMerge extends SQLIslandOperator implements Merge {
 	}
 	
 	@Override
-	public Map<String, Set<String>> getObjectToExpressionMappingForSignature() throws Exception{
+	public Map<String, Set<String>> getObjectToExpressionMappingForSignature() throws IslandException{
 
 		Map<String, Set<String>> out = children.get(0).getObjectToExpressionMappingForSignature();
 		

@@ -200,12 +200,12 @@ public class DataObjectAttribute {
 			this.expression= new String (expr.toString());
 	}
 	
-	public void setExpression(String exprString) throws JSQLParserException {
+	public void setExpression(String exprString) {
 		if (exprString != null)
 			this.expression= new String (exprString);
 	}
 	
-	public String getExpressionString() throws Exception {
+	public String getExpressionString() {
 		if (expression == null) return null;
 		return expression.toString();
 	}

@@ -12,7 +12,7 @@ import org.apache.log4j.Logger;
 
 import convenience.RTED;
 import istc.bigdawg.exceptions.BigDawgException;
-import istc.bigdawg.exceptions.UnsupportedIslandException;
+import istc.bigdawg.exceptions.IslandException;
 import istc.bigdawg.islands.IslandsAndCast.Scope;
 import istc.bigdawg.islands.QueryContainerForCommonDatabase;
 import istc.bigdawg.islands.TheObjectThatResolvesAllDifferencesAmongTheIslands;
@@ -53,7 +53,8 @@ public class Signature {
 	 */
 	public Signature(String query, Scope island, Operator root, Map<String, QueryContainerForCommonDatabase> container, Set<String> joinPredicates) throws Exception {
 
-		setSig3(TheObjectThatResolvesAllDifferencesAmongTheIslands.getLiteralsAndConstantsSignature(island, query));
+//		setSig3(TheObjectThatResolvesAllDifferencesAmongTheIslands.getLiteralsAndConstantsSignature(island, query));
+		setSig3(TheObjectThatResolvesAllDifferencesAmongTheIslands.getIsland(island).getLiteralsAndConstantsSignature(query));
 		
 		objectExpressionMapping = new ArrayList<>();
 		if (container.isEmpty() ) {
@@ -147,8 +148,8 @@ public class Signature {
 		this.sig3 = sig3;
 	}
 
-	public String getQuery() throws UnsupportedIslandException {
-		return TheObjectThatResolvesAllDifferencesAmongTheIslands.getIslandStyleQuery(this.getIsland(), query);
+	public String getQuery() throws IslandException {
+		return TheObjectThatResolvesAllDifferencesAmongTheIslands.getIsland(island).wrapQueryInIslandIdentifier(query);
 	}
 
 	public void setQuery(String query) {

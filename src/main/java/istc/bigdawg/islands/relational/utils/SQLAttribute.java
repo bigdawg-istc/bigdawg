@@ -5,8 +5,6 @@ package istc.bigdawg.islands.relational.utils;
 import istc.bigdawg.islands.DataObject;
 import istc.bigdawg.islands.DataObjectAttribute;
 import net.sf.jsqlparser.JSQLParserException;
-import net.sf.jsqlparser.expression.Expression;
-import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.create.table.ColDataType;
 import net.sf.jsqlparser.statement.create.table.ColumnDefinition;
 
@@ -28,7 +26,7 @@ public class SQLAttribute extends DataObjectAttribute {
 			typeString = type.getDataType();
 		}
 		
-		public SQLAttribute(ColumnDefinition a, String table) throws Exception {
+		public SQLAttribute(ColumnDefinition a, String table) throws JSQLParserException {
 			super(new DataObject(table), a.getColumnName());
 			
 			type = a.getColDataType();

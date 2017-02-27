@@ -11,6 +11,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import istc.bigdawg.accumulo.AccumuloConnectionInfo;
 import istc.bigdawg.accumulo.AccumuloExecutionEngine;
 import istc.bigdawg.exceptions.BigDawgException;
+import istc.bigdawg.exceptions.ShimException;
 import istc.bigdawg.executor.ExecutorEngine.LocalQueryExecutionException;
 import istc.bigdawg.executor.QueryResult;
 import istc.bigdawg.islands.operators.Join;

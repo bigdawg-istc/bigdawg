@@ -13,7 +13,6 @@ import java.util.regex.Pattern;
 import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
 import org.jgrapht.graph.DefaultEdge;
 
-import istc.bigdawg.catalog.CatalogModifier;
 import istc.bigdawg.islands.IslandsAndCast.Scope;
 import istc.bigdawg.islands.operators.Merge;
 
@@ -196,13 +195,17 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 					((CrossIslandCastNode)newNode).setDestinationScope(IslandsAndCast.convertDestinationScope(islandQuery.substring(castSourceScopeMatcher.start(), castSourceScopeMatcher.end())));
 				} 
 				
-				transitionSchemas.pop();
-				transitionSchemas.peek().put(newNode.getName(), TheObjectThatResolvesAllDifferencesAmongTheIslands.getCreationQueryForCast(outterScope, newNode.getName(), islandQuery.substring(castSchemaMatcher.start(), castSchemaMatcher.end())));
+				Island destIsland = TheObjectThatResolvesAllDifferencesAmongTheIslands.getIsland(((CrossIslandCastNode)newNode).getDestinationScope());
 				
+				transitionSchemas.pop();
+				transitionSchemas.peek().put(newNode.getName(), 
+						destIsland.getCreateStatementForTransitionTable(newNode.getName(), islandQuery.substring(castSchemaMatcher.start(), castSchemaMatcher.end())));
+//						TheObjectThatResolvesAllDifferencesAmongTheIslands.getCreationQueryForCast(outterScope, newNode.getName(), islandQuery.substring(castSchemaMatcher.start(), castSchemaMatcher.end())));
 				
 				// add catalog entires
-				int dbid = TheObjectThatResolvesAllDifferencesAmongTheIslands.getSchemaEngineDBID(((CrossIslandCastNode)newNode).getDestinationScope());
-				catalogSOD.add(CatalogModifier.addObject(newNode.getName(), "TEMPORARY", dbid, dbid));
+				catalogSOD.add(destIsland.addCatalogObjectEntryForTemporaryTable(newNode.getName()));
+//				int dbid = TheObjectThatResolvesAllDifferencesAmongTheIslands.getSchemaEngineDBID(((CrossIslandCastNode)newNode).getDestinationScope());
+//				catalogSOD.add(CatalogModifier.addObject(newNode.getName(), "TEMPORARY", dbid, dbid));
 				
 			} else if (TheObjectThatResolvesAllDifferencesAmongTheIslands.isOperatorBasedIsland(thisScope)) {
 				newNode = new CrossIslandQueryNode(thisScope, islandQuery, name, transitionSchemas.pop());

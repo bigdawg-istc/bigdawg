@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import istc.bigdawg.exceptions.IslandException;
+import istc.bigdawg.exceptions.QueryParsingException;
 import istc.bigdawg.islands.DataObjectAttribute;
 import istc.bigdawg.islands.operators.Join;
 import istc.bigdawg.islands.operators.Operator;
@@ -36,7 +38,8 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
 	protected Integer joinID = null;
 	
 	// for SQL
-	public SQLIslandJoin (Map<String, String> parameters, List<String> output, SQLIslandOperator lhs, SQLIslandOperator rhs, SQLTableExpression supplement) throws Exception  {
+	public SQLIslandJoin (Map<String, String> parameters, List<String> output, SQLIslandOperator lhs, SQLIslandOperator rhs, SQLTableExpression supplement) 
+			throws QueryParsingException, JSQLParserException  {
 		super(parameters, output, lhs, rhs, supplement);
 
 		// mending non-canoncial ordering
@@ -105,7 +108,7 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
  	// if a predicate references data that is not public, move it to the filter
  	// collect equality predicates over public attributes in joinPredicate
  	// only supports AND in predicates, not OR or NOT
- 	private void inferJoinParameters() throws Exception {
+ 	private void inferJoinParameters() throws QueryParsingException, JSQLParserException {
  		
  		if(joinFilter == null && joinPredicate == null) return;
  		if (joinPredicate != null && joinPredicate.length() > 0) { 
@@ -120,7 +123,7 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
  		}
  	}
     
- 	public SQLIslandJoin (SQLIslandOperator o, boolean addChild) throws Exception {
+ 	public SQLIslandJoin (SQLIslandOperator o, boolean addChild) throws IslandException {
 		super(o, addChild);
 		SQLIslandJoin j = (SQLIslandJoin) o;
 		
@@ -136,9 +139,13 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
 		else this.joinFilter = new String(j.joinFilter);
 
 		this.srcSchema = new HashMap<>();
-		for (String s : j.srcSchema.keySet()) {
-			if (j.srcSchema.get(s) != null) 
-				this.srcSchema.put(new String(s), new DataObjectAttribute(j.srcSchema.get(s)));
+		try {
+			for (String s : j.srcSchema.keySet()) {
+				if (j.srcSchema.get(s) != null) 
+					this.srcSchema.put(new String(s), new DataObjectAttribute(j.srcSchema.get(s)));
+			}
+		} catch (JSQLParserException e) {
+			 throw new IslandException (e.getMessage(), e);
 		}
 		
 		this.setAliases(new ArrayList<>());
@@ -251,7 +258,7 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
     
 	
 	@Override
-	public String getTreeRepresentation(boolean isRoot) throws Exception{
+	public String getTreeRepresentation(boolean isRoot) throws IslandException {
 		if (isPruned() && (!isRoot)) return "{PRUNED}";
 		else {
 			StringBuilder sb = new StringBuilder();
@@ -276,7 +283,7 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
 	
 	
 	@Override
-	public Map<String, Set<String>> getObjectToExpressionMappingForSignature() throws Exception{
+	public Map<String, Set<String>> getObjectToExpressionMappingForSignature() throws IslandException {
 		
 		Operator parent = this;
 		while (!parent.isBlocking() && parent.getParent() != null ) parent = parent.getParent();
@@ -294,17 +301,21 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
 
 		// joinFilter
 		Expression e;
-		if (joinFilter != null) { 
-			e = CCJSqlParserUtil.parseCondExpression(joinFilter);
-			if (!SQLExpressionUtils.containsArtificiallyConstructedTables(e))
-				addToOut(e, out, aliasMapping);
-		}
-		
-		// joinPredicate
-		if (joinPredicate != null) { 
-			e = CCJSqlParserUtil.parseCondExpression(joinPredicate);
-			if (!SQLExpressionUtils.containsArtificiallyConstructedTables(e))
-				addToOut(e, out, aliasMapping);
+		try {
+			if (joinFilter != null) { 
+				e = CCJSqlParserUtil.parseCondExpression(joinFilter);
+				if (!SQLExpressionUtils.containsArtificiallyConstructedTables(e))
+					addToOut(e, out, aliasMapping);
+			}
+			
+			// joinPredicate
+			if (joinPredicate != null) { 
+				e = CCJSqlParserUtil.parseCondExpression(joinPredicate);
+				if (!SQLExpressionUtils.containsArtificiallyConstructedTables(e))
+					addToOut(e, out, aliasMapping);
+			}
+		} catch (JSQLParserException ex) {
+			throw new IslandException(ex.getMessage(), ex);
 		}
 		
 		return out;
@@ -351,7 +362,7 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
 	}
 	
 	@Override
-	public Expression resolveAggregatesInFilter(String e, boolean goParent, SQLIslandOperator lastHopOp, Set<String> names, StringBuilder sb) throws Exception {
+	public Expression resolveAggregatesInFilter(String e, boolean goParent, SQLIslandOperator lastHopOp, Set<String> names, StringBuilder sb) throws IslandException {
 		
 		Expression exp = null;
 		if (parent != null && lastHopOp != parent && (exp = ((SQLIslandOperator) parent).resolveAggregatesInFilter(e, true, this, names, sb)) != null) 
@@ -428,12 +439,12 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
 
 
 	@Override
-	public String generateJoinPredicate() throws Exception {
+	public String generateJoinPredicate() throws IslandException {
 		return joinPredicate != null ? new String(joinPredicate) : null;
 	}
 
 	@Override
-	public String generateJoinFilter() throws Exception {
+	public String generateJoinFilter() throws IslandException {
 		return joinFilter != null ? new String(joinFilter): null;
 	}
 };

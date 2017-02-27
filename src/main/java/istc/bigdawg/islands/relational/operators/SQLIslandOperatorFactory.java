@@ -1,17 +1,22 @@
 package istc.bigdawg.islands.relational.operators;
 
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import istc.bigdawg.exceptions.BigDawgCatalogException;
+import istc.bigdawg.exceptions.QueryParsingException;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.relational.SQLQueryPlan;
 import istc.bigdawg.islands.relational.SQLTableExpression;
+import net.sf.jsqlparser.JSQLParserException;
 
 public class SQLIslandOperatorFactory {
 
-	public static Operator get(String opType, Map<String, String> parameters, List<String> output,  List<String> sortKeys, List<Operator> children, SQLQueryPlan plan, SQLTableExpression supplement) throws Exception {
+	public static Operator get(String opType, Map<String, String> parameters, List<String> output,  List<String> sortKeys, List<Operator> children, SQLQueryPlan plan, SQLTableExpression supplement) 
+			throws JSQLParserException, SQLException, QueryParsingException, BigDawgCatalogException {
 	
 		switch (opType) {
 			case "Unique":

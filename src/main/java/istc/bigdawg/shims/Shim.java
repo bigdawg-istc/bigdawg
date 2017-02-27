@@ -5,7 +5,7 @@ import java.util.Optional;
 
 import org.apache.commons.lang3.tuple.Pair;
 
-import istc.bigdawg.exceptions.BigDawgException;
+import istc.bigdawg.exceptions.ShimException;
 import istc.bigdawg.executor.QueryResult;
 import istc.bigdawg.islands.operators.Join;
 import istc.bigdawg.islands.operators.Operator;
@@ -31,14 +31,4 @@ public interface Shim {
 	public void executeNoResult(String query) throws ShimException;
 	public void dropTableIfExists(String name) throws ShimException;
 	
-	
-	public class ShimException extends BigDawgException {
-		private static final long serialVersionUID = -4855015340564053008L;
-		public ShimException(String msg) {
-			super(msg);
-		};
-		public ShimException(String msg, Exception e) {
-			super(msg, e);
-		}
-	}
 }

@@ -6,10 +6,12 @@ import java.util.Map;
 import istc.bigdawg.islands.SciDB.AFLQueryPlan;
 import istc.bigdawg.islands.SciDB.SciDBArray;
 import istc.bigdawg.islands.operators.Operator;
+import net.sf.jsqlparser.JSQLParserException;
 
 public class SciDBIslandOperatorFactory {
 
-	public static Operator get(String opType, Map<String, String> parameters, SciDBArray output,  List<String> sortKeys, List<Operator> children, AFLQueryPlan plan) throws Exception {
+	public static Operator get(String opType, Map<String, String> parameters, SciDBArray output,  List<String> sortKeys, List<Operator> children, AFLQueryPlan plan) 
+			throws JSQLParserException {
 		
 		switch (opType) {
 			case "Aggregate":

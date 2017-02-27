@@ -5,6 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import istc.bigdawg.exceptions.QueryParsingException;
 import istc.bigdawg.islands.SciDB.SciDBArray;
 import istc.bigdawg.islands.relational.utils.SQLAttribute;
 import net.sf.jsqlparser.JSQLParserException;
@@ -41,20 +42,25 @@ public class DataObject {
 		}
 	}
 	
-	public DataObject(CreateTable aTable) throws Exception {
+	public DataObject(CreateTable aTable) throws QueryParsingException{
 		name = aTable.getTable().getName();
 		schema = aTable.getTable().getSchemaName();
 
 		attributes = new LinkedHashMap<String, DataObjectAttribute>();
 		
-		for(ColumnDefinition aCol : aTable.getColumnDefinitions()) {
-			
-			SQLAttribute sa = new SQLAttribute(aCol, name);
-			attributes.put(sa.getName(), sa);
+		try {
+			for(ColumnDefinition aCol : aTable.getColumnDefinitions()) {
+				
+				SQLAttribute sa = new SQLAttribute(aCol, name);
+				attributes.put(sa.getName(), sa);
+			}
+		} catch (JSQLParserException e) {
+			throw new QueryParsingException(e.getMessage(), e);
 		}
+		
 	}
 	
-	public DataObject(SciDBArray aArray) throws Exception {
+	public DataObject(SciDBArray aArray) {
 		name = aArray.getAlias();
 		schema = aArray.getSchemaString();
 

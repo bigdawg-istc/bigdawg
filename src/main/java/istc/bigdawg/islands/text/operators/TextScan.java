@@ -6,6 +6,7 @@ import java.util.Set;
 
 import org.apache.accumulo.core.data.Range;
 
+import istc.bigdawg.exceptions.IslandException;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.operators.SeqScan;
 import istc.bigdawg.shims.OperatorQueryGenerator;
@@ -26,23 +27,24 @@ public class TextScan extends TextOperator implements SeqScan {
 	}
 	
 	@Override
-	public Operator duplicate(boolean addChild) throws Exception {
+	public Operator duplicate(boolean addChild) throws IslandException {
 		return new TextScan(tableName, range);
 	}
 
 	@Override
-	public Map<String, String> getDataObjectAliasesOrNames() throws Exception {
+	public Map<String, String> getDataObjectAliasesOrNames() throws IslandException {
 		Map<String, String> result = new HashMap<>();
 		result.put(tableName, tableName);
 		return result;
 	}
 
 	@Override
-	public void removeCTEEntriesFromObjectToExpressionMapping(Map<String, Set<String>> entry) throws Exception {
+	public void removeCTEEntriesFromObjectToExpressionMapping(Map<String, Set<String>> entry) throws IslandException {
+		// intentionally left blank
 	}
 
 	@Override
-	public String getTreeRepresentation(boolean isRoot) throws Exception {
+	public String getTreeRepresentation(boolean isRoot) throws IslandException {
 		if (range.getStartKey() == null && range.getEndKey() == null)
 			return String.format("(TextScan, %s, FULL_RANGE)", tableName);
 		else 
@@ -54,7 +56,7 @@ public class TextScan extends TextOperator implements SeqScan {
 	}
 
 	@Override
-	public Map<String, Set<String>> getObjectToExpressionMappingForSignature() throws Exception {
+	public Map<String, Set<String>> getObjectToExpressionMappingForSignature() throws IslandException {
 		return new HashMap<>();
 	}
 
@@ -74,7 +76,7 @@ public class TextScan extends TextOperator implements SeqScan {
 	}
 
 	@Override
-	public String generateRelevantJoinPredicate() throws Exception {
+	public String generateRelevantJoinPredicate() throws IslandException {
 		return null;
 	}
 

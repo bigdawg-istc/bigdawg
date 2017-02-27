@@ -5,6 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import istc.bigdawg.exceptions.IslandException;
 import istc.bigdawg.islands.DataObjectAttribute;
 import istc.bigdawg.islands.SciDB.SciDBArray;
 import istc.bigdawg.islands.operators.Operator;
@@ -26,7 +27,7 @@ public class SciDBIslandSort extends SciDBIslandOperator implements Sort {
 	private boolean isWinAgg = false; // is it part of a windowed aggregate or an ORDER BY clause?
 	
 	// for AFL
-	public SciDBIslandSort(Map<String, String> parameters, SciDBArray output,  List<String> keys, Operator child) throws Exception  {
+	public SciDBIslandSort(Map<String, String> parameters, SciDBArray output,  List<String> keys, Operator child) {
 		super(parameters, output, child);
 
 		isBlocking = true;
@@ -45,7 +46,7 @@ public class SciDBIslandSort extends SciDBIslandOperator implements Sort {
 		
 	}
 	
-	public SciDBIslandSort(SciDBIslandOperator o, boolean addChild) throws Exception {
+	public SciDBIslandSort(SciDBIslandOperator o, boolean addChild) throws IslandException {
 		super(o, addChild);
 		SciDBIslandSort s = (SciDBIslandSort) o;
 		
@@ -118,7 +119,7 @@ public class SciDBIslandSort extends SciDBIslandOperator implements Sort {
 	}
 	
 	@Override
-	public String getTreeRepresentation(boolean isRoot) throws Exception{
+	public String getTreeRepresentation(boolean isRoot) throws IslandException{
 		return "{sort"+children.get(0).getTreeRepresentation(false)+"}";
 	}
 

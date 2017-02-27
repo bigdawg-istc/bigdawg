@@ -7,12 +7,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import istc.bigdawg.exceptions.IslandException;
 import istc.bigdawg.islands.DataObjectAttribute;
 import istc.bigdawg.islands.SciDB.SciDBArray;
 import istc.bigdawg.islands.operators.Aggregate;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.relational.utils.SQLExpressionUtils;
 import istc.bigdawg.shims.OperatorQueryGenerator;
+import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Function;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
@@ -32,7 +34,7 @@ public class SciDBIslandAggregate extends SciDBIslandOperator implements Aggrega
 	
 	
 	
-	public SciDBIslandAggregate(SciDBIslandOperator o, boolean addChild) throws Exception {
+	public SciDBIslandAggregate(SciDBIslandOperator o, boolean addChild) throws IslandException {
 		super(o, addChild);
 		SciDBIslandAggregate a = (SciDBIslandAggregate) o;
 		
@@ -51,7 +53,7 @@ public class SciDBIslandAggregate extends SciDBIslandOperator implements Aggrega
 	
 	
 	// for AFL
-	SciDBIslandAggregate(Map<String, String> parameters, SciDBArray output, Operator child) throws Exception  {
+	SciDBIslandAggregate(Map<String, String> parameters, SciDBArray output, Operator child) throws JSQLParserException {
 		super(parameters, output, child);
 
 		
@@ -212,7 +214,7 @@ public class SciDBIslandAggregate extends SciDBIslandOperator implements Aggrega
 	
 	
 	@Override
-	public String getTreeRepresentation(boolean isRoot) throws Exception{
+	public String getTreeRepresentation(boolean isRoot) throws IslandException{
 		if (isPruned() && (!isRoot)) return "{PRUNED}";
 		else {
 			StringBuilder sb = new StringBuilder();
@@ -224,7 +226,7 @@ public class SciDBIslandAggregate extends SciDBIslandOperator implements Aggrega
 	}
 	
 	@Override
-	public Map<String, Set<String>> getObjectToExpressionMappingForSignature() throws Exception{
+	public Map<String, Set<String>> getObjectToExpressionMappingForSignature() throws IslandException{
 		
 		Operator parent = this;
 		while (!parent.isBlocking() && parent.getParent() != null ) parent = parent.getParent();
@@ -235,12 +237,16 @@ public class SciDBIslandAggregate extends SciDBIslandOperator implements Aggrega
 		
 		// having
 		Expression e;
-		if (getAggregateFilter() != null) {
-			e = CCJSqlParserUtil.parseCondExpression(getAggregateFilter());
-			if (!SQLExpressionUtils.containsArtificiallyConstructedTables(e)) {
-				addToOut(e, out, aliasMapping);
-			}
-		} 
+		try {
+			if (getAggregateFilter() != null) {
+				e = CCJSqlParserUtil.parseCondExpression(getAggregateFilter());
+				if (!SQLExpressionUtils.containsArtificiallyConstructedTables(e)) {
+					addToOut(e, out, aliasMapping);
+				}
+			} 
+		} catch (JSQLParserException ex) {
+			throw new IslandException(ex.getMessage(), ex);
+		}
 		
 		return out;
 	}

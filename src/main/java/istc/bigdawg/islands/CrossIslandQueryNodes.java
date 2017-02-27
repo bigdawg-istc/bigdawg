@@ -766,7 +766,8 @@ public class CrossIslandQueryNodes {
 					else break;
 				}
 //				System.out.printf("-------> jp: %s, s: %s, key: %s; pred: %s\n\n", jp, s, key, pred);
-				return TheObjectThatResolvesAllDifferencesAmongTheIslands.constructJoin(scope, o1Temp, o2Temp, jt, pred, isFilter);
+//				return TheObjectThatResolvesAllDifferencesAmongTheIslands.constructJoin(scope, o1Temp, o2Temp, jt, pred, isFilter);
+				return TheObjectThatResolvesAllDifferencesAmongTheIslands.getIsland(scope).constructJoin(o1Temp, o2Temp, jt, pred, isFilter);
 			}
 			
 			o2ns = new HashSet<>(o2nsOriginal);
@@ -777,7 +778,8 @@ public class CrossIslandQueryNodes {
 //			System.out.printf("\nCross island query node: raw cross join:\n  o1 class: %s; o1Temp tree: %s;\n  o2 class: %s, o2Temp tree: %s\n\n\n"
 //					, o1Temp.getClass().getSimpleName(), o1Temp.getTreeRepresentation(true)
 //					, o2Temp.getClass().getSimpleName(), o2Temp.getTreeRepresentation(true));
-			return TheObjectThatResolvesAllDifferencesAmongTheIslands.constructJoin(scope, o1Temp, o2Temp, jt, null, false);
+//			return TheObjectThatResolvesAllDifferencesAmongTheIslands.constructJoin(scope, o1Temp, o2Temp, jt, null, false);
+			return TheObjectThatResolvesAllDifferencesAmongTheIslands.getIsland(scope).constructJoin(o1Temp, o2Temp, jt, null, false);
 		}
 	}
 	

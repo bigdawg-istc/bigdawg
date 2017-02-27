@@ -171,15 +171,15 @@ public class SciDBArray {
 	
 	
 	
-	public Map<String, String> getDimensions() throws Exception {
+	public Map<String, String> getDimensions() {
 		return dimensions;
 	}
 	
-	public Map<String, String> getAttributes() throws Exception {
+	public Map<String, String> getAttributes() {
 		return attributes;
 	}
 	
-	public Map<String, String> getDimensionMembership() throws Exception {
+	public Map<String, String> getDimensionMembership() {
 		return dimensionMembership;
 	}
 	
