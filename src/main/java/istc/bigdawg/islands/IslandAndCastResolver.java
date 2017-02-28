@@ -22,6 +22,7 @@ import istc.bigdawg.myria.MyriaHandler;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.query.ConnectionInfo;
+import istc.bigdawg.islands.relational.*;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
 import istc.bigdawg.shims.ArrayToSciDBShim;
 import istc.bigdawg.shims.RelationalToPostgresShim;
@@ -45,12 +46,13 @@ import istc.bigdawg.sstore.SStoreSQLHandler;
 public class IslandAndCastResolver {
 	
 	public static enum Engine {
-		PostgreSQL, SciDB, SStore, Accumulo, Myria
+		PostgreSQL, SciDB, SStore, Accumulo, Myria, MySQL, Vertica
 	};
 	
 	public enum Scope {
 		RELATIONAL, ARRAY, KEYVALUE, TEXT, GRAPH, DOCUMENT, STREAM, CAST, MYRIA 
 	}
+
 
 	public static final int  sstoreDBID = BigDawgConfigProperties.INSTANCE.getSStoreDBID();
 	
@@ -100,6 +102,10 @@ public class IslandAndCastResolver {
 			return IslandAndCastResolver.Engine.SStore;
 		else if (engineString.startsWith(IslandAndCastResolver.Engine.Accumulo.name()))
 			return IslandAndCastResolver.Engine.Accumulo;
+		else if (engineString.startsWith(IslandAndCastResolver.Engine.MySQL.name()))
+			return IslandAndCastResolver.Engine.MySQL;
+		else if (engineString.startsWith(IslandAndCastResolver.Engine.Vertica.name()))
+			return IslandAndCastResolver.Engine.Vertica;
 		else {
 			throw new BigDawgException("Unsupported engine: "+ engineString);
 		}

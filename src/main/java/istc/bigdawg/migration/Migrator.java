@@ -67,6 +67,8 @@ public class Migrator {
 
 		registeredMigrators.add(new FromAccumuloToPostgres());
 		registeredMigrators.add(new FromPostgresToAccumulo());
+		registeredMigrators.add(new FromMySQLToPostgres());
+		registeredMigrators.add(new FromPostgresToMySQL());
 	}
 
 	/**
