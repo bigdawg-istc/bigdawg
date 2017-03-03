@@ -87,10 +87,12 @@ insert into catalog.objects values(45,'lineitem','l_orderkey,l_partkey,l_suppkey
 insert into catalog.objects values(46,'myarray','dim1, dim2',2,6);
 insert into catalog.objects values(47,'test_array','i,j,val',2,6);
 
-insert into catalog.objects values (48, 'note_events_Tedge', '', 7, 7);
-insert into catalog.objects values (49, 'note_events_TedgeT','', 7, 7);
-insert into catalog.objects values (50, 'note_events_TedgeDeg','', 7, 7);
-insert into catalog.objects values (51, 'note_events_TedgeTxt', '', 7, 7);
+insert into catalog.objects values (48, 'mimic_logs', '', 7, 7);
+
+-- insert into catalog.objects values (48, 'note_events_Tedge', '', 7, 7);
+-- insert into catalog.objects values (49, 'note_events_TedgeT','', 7, 7);
+-- insert into catalog.objects values (50, 'note_events_TedgeDeg','', 7, 7);
+-- insert into catalog.objects values (51, 'note_events_TedgeTxt', '', 7, 7);
 
 -- insert into catalog.objects values(46,'go_matrix','geneid,goid,belongs',7,7);
 -- insert into catalog.objects values(47,'genes','id,target,pos,len,func',7,7);
