@@ -24,8 +24,9 @@ for i in range(250):
     line = f.readline().rstrip()
     label = '%04d'%i
     mut = Mutation('r_%s'%label)
-    mut.put(cf='cf_%s'%label, cq='cq1', val=line)
-    mut.put(cf='cf_%s'%label, cq='cq2', val=line)
+    mut.put(cq='cq1', val=line)
+    #mut.put(cf='cf_%s'%label, cq='cq1', val=line)
+    #mut.put(cf='cf_%s'%label, cq='cq2', val=line)
     wr.add_mutation(mut)
     i += 1
 wr.close()
