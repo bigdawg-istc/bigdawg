@@ -9,29 +9,29 @@
 class Postgres: public Format {
 
 public:
-	virtual ~Postgres();
+    virtual ~Postgres();
 
-	/**
-	 * Initialize the PostgreSQL formatter.
-	 *
-	 * @mode read or write (mode how to open the file)
-	 * @fileName the name of the file
-	 * @fileMode "r" read, "w" write
-	 */
-	Postgres(const std::string & fileName, const char* fileMode);
+    /**
+     * Initialize the PostgreSQL formatter.
+     *
+     * @mode read or write (mode how to open the file)
+     * @fileName the name of the file
+     * @fileMode "r" read, "w" write
+     */
+    Postgres(const std::string & fileName, const char* fileMode);
 
-	Postgres();
+    Postgres();
 
-	virtual void setTypeAttributeMap();
+    virtual void setTypeAttributeMap();
 
-	void readFileHeader();
-	void writeFileHeader();
+    void readFileHeader();
+    void writeFileHeader();
 
-	void writeFileFooter();
+    void writeFileFooter();
 
-	void writeRowHeader();
+    void writeRowHeader();
 
-	virtual bool isTheEnd();
+    virtual bool isTheEnd();
 };
 
 #endif // POSTGRES_H

@@ -98,12 +98,13 @@ public class TransformBinExecutor implements Callable<Long> {
 			 * The attributes from the format have to enclosed in a quotation
 			 * marks to be read as a single argument.
 			 */
-			log.debug("transformation command: " + path + "data-migrator-exe"
-					+ " -t " + type.toString() + " -i " + inputBinPath + " -o "
-					+ outputBinPath + " -f " + binFormat);
+			log.debug("transformation command: " + path
+					+ "src/main/data-migrator-exe" + " -t " + type.toString()
+					+ " -i " + inputBinPath + " -o " + outputBinPath + " -f "
+					+ binFormat);
 			return (long) RunShell.runShellReturnExitValue(new ProcessBuilder(
-					path + "data-migrator-exe", "-t", type.toString(), "-i",
-					inputBinPath, "-o", outputBinPath, "-f", binFormat));
+					path + "src/main/data-migrator-exe", "-t", type.toString(),
+					"-i", inputBinPath, "-o", outputBinPath, "-f", binFormat));
 		} catch (IOException | InterruptedException ex) {
 			ex.printStackTrace();
 			log.error("The binary transformation " + type.name() + " failed: "

@@ -24,13 +24,12 @@ const char SEPARATOR = '2';
  * scidb2postgres: make; ./data-migrator-exe -tscidb2postgres -i /home/${USER}/data/int_scidb.bin -o /home/${USER}/data/int_postgres2.bin  -f int32_t
  *
  * postgres2scidb:
-
  *
  * scidb to postgres for string: ./data-migrator-exe -t scidb2postgres -i /home/${USER}/data/names_scidb.bin -o /home/${USER}/data/names_postgres.bin -f string
  */
 void printUsage() {
 	fprintf(stderr, "%s\n",
-			"usage: -t<migrationType> -i<input> -o<output> -f<format>");
+			"usage: -t<type of migration> -i<input> -o<output> -f<format>");
 	fprintf(stderr, "%s\n",
 			"format: (<type> [null]), for example: -fint32_t,int32_t null,double,double null,string,string null");
 	fprintf(stderr, "%s\n",
@@ -53,6 +52,11 @@ void printMapKeys(const char * message, std::map<std::string, Format *> map) {
 	sortPrintVector(message, keys);
 }
 
+/*
+ * The main function for the migrator.
+ *
+ * return: 0 is everything went OKAY, another number otherwise.
+ */
 int main(int argc, char *argv[]) {
 
 	/* direct to stdout to a file */
@@ -61,12 +65,12 @@ int main(int argc, char *argv[]) {
 	int out_file = open(coutFile, O_RDWR | O_CREAT | O_APPEND, 0600);
 	if (-1 == out_file) {
 		perror("opening file for redirecting stdout");
-		return 255;
+		exit(EXIT_FAILURE);
 	}
 	int save_out = dup(fileno(stdout));
 	if (-1 == dup2(out_file, fileno(stdout))) {
 		perror("cannot redirect stdout");
-		return 254;
+		exit(EXIT_FAILURE);
 	}
 	/* the end of redirecting stdout */
 
@@ -138,7 +142,7 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "%s\n",
 				"Migration should be from one format to another.");
 		printUsage();
-		return 1; // something went wrong
+		exit(EXIT_FAILURE); // something went wrong
 	}
 	/* set source and destination formatters */
 	const char * knownFormatters = "Known formats: ";
@@ -149,7 +153,7 @@ int main(int argc, char *argv[]) {
 				migrators[0].c_str());
 		printMapKeys(knownFormatters, nameFormatMap);
 		printUsage();
-		return 1; //something went wrong
+		return 1;
 	}
 	Format & source = (*sourceIterator->second);
 	source.setFormat(in, "r");
@@ -221,4 +225,5 @@ int main(int argc, char *argv[]) {
 	dup2(save_out, fileno(stdout));
 	close(save_out);
 	/* The end of going to standard stdout. */
+        return 0;
 }
