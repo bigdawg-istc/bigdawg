@@ -112,7 +112,7 @@ else
        curl -o mimic2_flatfiles.tar.gz --create-dirs https://physionet.org/mimic2/demo/mimic2_flatfiles.tar.gz
 fi
 
-# Download some mimic2 waveform data
+# Download mimic2 waveform data
 if [ -f "a40001_000001.dat" ]
 then
        echo "Mimic waveform data already exists. Skipping download"
@@ -120,6 +120,16 @@ else
        echo "Downloading the mimic2 waveform data"
        curl -o a40001_000001.dat --create-dirs https://physionet.org/physiobank/database/mimic2db/a40001/a40001_000001.dat
        curl -o a40001_000001.hea --create-dirs https://physionet.org/physiobank/database/mimic2db/a40001/a40001_000001.hea
+fi
+
+# Download mimic2 logs
+# https://physionet.org/physiobank/database/mimic2cdb-ps/
+if [ -f "s00318.txt" ]
+then
+       echo "Mimic log data already exists. Skipping download"
+else
+       echo "Downloading the mimic2 log data"
+       curl -o s00318.txt --create-dirs https://physionet.org/physiobank/database/mimic2cdb-ps/s00318/s00318.txt
 fi
 
 # postgres-catalog
@@ -147,7 +157,8 @@ docker exec bigdawg-scidb-data /home/scidb/bdsetup/setup.sh
 
 # accumulo
 docker cp cluster_setup/accumulo-data/bdsetup bigdawg-accumulo-zookeeper:/
-docker exec bigdawg-accumulo-zookeeper /bdsetup/insertData.sh
+docker cp s00318.txt bigdawg-accumulo-zookeeper:/bdsetup/
+docker exec bigdawg-accumulo-zookeeper python /bdsetup/setup.py
 
 echo
 echo "======================================="
