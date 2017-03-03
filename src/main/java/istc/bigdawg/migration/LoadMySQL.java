@@ -2,6 +2,8 @@ package istc.bigdawg.migration;
 
 import istc.bigdawg.LoggerSetup;
 import istc.bigdawg.exceptions.MigrationException;
+import istc.bigdawg.mysql.MySQLConnectionInfo;
+import istc.bigdawg.mysql.MySQLHandler;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.query.ConnectionInfo;
@@ -111,7 +113,7 @@ public class LoadMySQL implements Load {
      */
     @Override
     public boolean isSupportedConnector(ConnectionInfo connection) {
-       return (connection instanceof PostgreSQLConnectionInfo);
+       return (connection instanceof MySQLConnectionInfo);
     }
 
     /*
@@ -199,8 +201,8 @@ public class LoadMySQL implements Load {
         String password = "test";
         String file = "/Users/kateyu/Research/bigdawgmiddle/tmp.txt";
         try {
-            ConnectionInfo ci = new PostgreSQLConnectionInfo("localhost", "3306", "test", "mysqluser", "test","mysql");
-            DBHandler dbh = new PostgreSQLHandler();
+            ConnectionInfo ci = new MySQLConnectionInfo("localhost", "3306", "test", "mysqluser", "test");
+            DBHandler dbh = new MySQLHandler();
             MigrationInfo mi = new MigrationInfo(ci, "test", null, "patients2");
             c = new PostgreSQLHandler(ci).getConnection();
             LoadMySQL load = new LoadMySQL(c, mi, file);

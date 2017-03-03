@@ -1,13 +1,7 @@
 /**
  * 
  */
-package istc.bigdawg.postgresql;
-
-import java.text.NumberFormat;
-import java.text.ParseException;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
+package istc.bigdawg.mysql;
 
 import istc.bigdawg.executor.ExecutorEngine;
 import istc.bigdawg.executor.JdbcQueryResult;
@@ -15,19 +9,18 @@ import istc.bigdawg.relational.RelationalConnectionInfo;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 
-import istc.bigdawg.query.ConnectionInfo;
+import java.text.NumberFormat;
+import java.text.ParseException;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 
 /**
- * Information about connection to an instance of PostgreSQL.
+ * Information about connection to an instance of MySQL.
  * 
- * @author Adam Dziedzic
+ * @author Kate Yu
  */
-public class PostgreSQLConnectionInfo implements RelationalConnectionInfo {
-
-	/**
-	 * Determines if a de-serialized file is compatible with this class.
-	 */
-	private static final long serialVersionUID = 6771445537229188287L;
+public class MySQLConnectionInfo implements RelationalConnectionInfo {
 
 	private static final String CLEANUP_STRING = "DROP TABLE %s;";
 
@@ -37,8 +30,8 @@ public class PostgreSQLConnectionInfo implements RelationalConnectionInfo {
 	private String user;
 	private String password;
 
-	public PostgreSQLConnectionInfo(String host, String port, String database,
-			String user, String password) {
+	public MySQLConnectionInfo(String host, String port, String database,
+                               String user, String password) {
 		this.host = host;
 		this.port = port;
 		this.database = database;
@@ -47,12 +40,12 @@ public class PostgreSQLConnectionInfo implements RelationalConnectionInfo {
 	}
 
 	public String getUrl() {
-		return "jdbc:postgresql://" + getHost() + ":" + getPort() + "/"
+		return "jdbc:mysql://" + getHost() + ":" + getPort() + "/"
 				+ getDatabase();
 	}
 
 	public static String getUrl(String host, String port, String database) {
-		return "jdbc:postgresql://" + host + ":" + port + "/" + database;
+		return "jdbc:mysql://" + host + ":" + port + "/" + database;
 	}
 
 	public void setHost(String host) {
@@ -76,7 +69,7 @@ public class PostgreSQLConnectionInfo implements RelationalConnectionInfo {
 	}
 
 	/**
-	 * This is a specific property for PostgreSQL database.
+	 * This is a specific property for MySQL database.
 	 * 
 	 * @return the database name to which the connection should be established
 	 */
@@ -154,7 +147,7 @@ public class PostgreSQLConnectionInfo implements RelationalConnectionInfo {
 		long[] result = new long[numBuckets];
 
 		String query = "SELECT width_bucket(%s, %s, %s, %s), COUNT(*) FROM %s GROUP BY 1 ORDER BY 1;";
-		List<List<String>> raw = ((JdbcQueryResult) new PostgreSQLHandler(this)
+		List<List<String>> raw = ((JdbcQueryResult) new MySQLHandler(this)
 				.execute(String.format(query, attribute, start, end, numBuckets,
 						object))
 				.get()).getRows();
@@ -171,7 +164,7 @@ public class PostgreSQLConnectionInfo implements RelationalConnectionInfo {
 	public Pair<Number, Number> getMinMax(String object, String attribute)
 			throws ExecutorEngine.LocalQueryExecutionException, ParseException {
 		String query = "SELECT min(%s), max(%s) FROM %s;";
-		List<String> raw = ((JdbcQueryResult) new PostgreSQLHandler(this)
+		List<String> raw = ((JdbcQueryResult) new MySQLHandler(this)
 				.execute(String.format(query, attribute, attribute, object))
 				.get()).getRows().get(0);
 		NumberFormat nf = NumberFormat.getInstance();
@@ -179,7 +172,7 @@ public class PostgreSQLConnectionInfo implements RelationalConnectionInfo {
 	}
 
 	public ExecutorEngine getLocalQueryExecutor() {
-		return new PostgreSQLHandler(this);
+		return new MySQLHandler(this);
 	}
 
 	@Override
@@ -202,9 +195,9 @@ public class PostgreSQLConnectionInfo implements RelationalConnectionInfo {
 			return true;
 		if (obj == null)
 			return false;
-		if (!(obj instanceof PostgreSQLConnectionInfo))
+		if (!(obj instanceof MySQLConnectionInfo))
 			return false;
-		PostgreSQLConnectionInfo other = (PostgreSQLConnectionInfo) obj;
+		MySQLConnectionInfo other = (MySQLConnectionInfo) obj;
 		if (database == null) {
 			if (other.database != null)
 				return false;

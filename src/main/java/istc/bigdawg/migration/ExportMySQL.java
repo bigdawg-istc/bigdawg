@@ -2,6 +2,7 @@ package istc.bigdawg.migration;
 
 import istc.bigdawg.LoggerSetup;
 import istc.bigdawg.exceptions.MigrationException;
+import istc.bigdawg.mysql.MySQLConnectionInfo;
 import istc.bigdawg.mysql.MySQLHandler;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
@@ -97,7 +98,7 @@ public class ExportMySQL implements Export {
 
     @Override
     public boolean isSupportedConnector(ConnectionInfo connection) {
-        return (connection instanceof PostgreSQLConnectionInfo);
+        return (connection instanceof MySQLConnectionInfo);
     }
 
     /*
@@ -120,7 +121,7 @@ public class ExportMySQL implements Export {
         String user = "mysqluser";
         String password = "test";
         String file = "/Users/kateyu/Research/bigdawgmiddle/tmp.txt";
-        ConnectionInfo ci = new PostgreSQLConnectionInfo("localhost", "3306", "test", "mysqluser", "test","mysql");
+        ConnectionInfo ci = new MySQLConnectionInfo("localhost", "3306", "test", "mysqluser", "test");
         DBHandler dbh = new PostgreSQLHandler();
         try {
             c = new PostgreSQLHandler(ci).getConnection();

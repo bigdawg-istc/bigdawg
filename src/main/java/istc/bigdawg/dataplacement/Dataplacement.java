@@ -204,7 +204,7 @@ public class Dataplacement implements Serializable {
 				*/
 	    		PostgreSQLHandler postgresH = new PostgreSQLHandler(psqlConnInfo);
 	    		try {
-					postgresH.executeStatementPostgreSQL(queryStr);
+					postgresH.executeStatementOnConnection(queryStr);
 				} catch (SQLException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();//			System.out.println("workload time: " + String.valueOf(workloadTime));

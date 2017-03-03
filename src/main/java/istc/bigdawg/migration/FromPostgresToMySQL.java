@@ -3,6 +3,8 @@ package istc.bigdawg.migration;
 import istc.bigdawg.LoggerSetup;
 import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.islands.relational.utils.SQLTranslationUtils;
+import istc.bigdawg.mysql.MySQLConnectionInfo;
+import istc.bigdawg.mysql.MySQLHandler;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.postgresql.PostgreSQLSchemaTableName;
@@ -66,11 +68,7 @@ public class FromPostgresToMySQL extends FromDatabaseToDatabase {
     public MigrationResult migrate(MigrationInfo migrationInfo)	throws MigrationException {
         logger.debug("General data migration: " + this.getClass().getName());
         if (migrationInfo.getConnectionFrom() instanceof PostgreSQLConnectionInfo
-                && migrationInfo.getConnectionTo() instanceof PostgreSQLConnectionInfo) {
-            PostgreSQLConnectionInfo psqlci = (PostgreSQLConnectionInfo) migrationInfo.getConnectionTo();
-            if (!psqlci.getEngine().equalsIgnoreCase("MySQL")) {
-                return null;
-            }
+                && migrationInfo.getConnectionTo() instanceof MySQLConnectionInfo) {
             try {
                 this.migrationInfo = migrationInfo;
                 return this.dispatch();
@@ -104,7 +102,7 @@ public class FromPostgresToMySQL extends FromDatabaseToDatabase {
         PostgreSQLSchemaTableName schemaTable = new PostgreSQLSchemaTableName(
                 migrationInfo.getObjectTo());
 		/* create the target schema if it is not already there */
-        PostgreSQLHandler.executeStatement(connectionTo,
+        MySQLHandler.executeStatement(connectionTo,
                 "create schema if not exists " + schemaTable.getSchemaName());
 
         String createTableStatement = MigrationUtils
@@ -123,7 +121,7 @@ public class FromPostgresToMySQL extends FromDatabaseToDatabase {
             createTableStatement = SQLTranslationUtils.convertToMySQL(postgresCreateTable);
             logger.debug("postgresCreateTable statement converted to MySQL: " + createTableStatement);
         }
-        PostgreSQLHandler.executeStatement(connectionTo, createTableStatement);
+        MySQLHandler.executeStatement(connectionTo, createTableStatement);
         return schemaTable;
     }
 
@@ -148,7 +146,7 @@ public class FromPostgresToMySQL extends FromDatabaseToDatabase {
         ExecutorService executor = null;
         try {
             conFrom = PostgreSQLHandler.getConnection(getConnectionFrom());
-            conTo = PostgreSQLHandler.getConnection(getConnectionTo());
+            conTo = MySQLHandler.getConnection(getConnectionTo());
 
             conFrom.setReadOnly(true);
             conFrom.setAutoCommit(false);
@@ -163,7 +161,7 @@ public class FromPostgresToMySQL extends FromDatabaseToDatabase {
 
             List<Callable<Object>> tasks = new ArrayList<>();
             tasks.add(new ExportPostgres(migrationInfo.getConnectionFrom(), copyFromCommand,
-                    mysqlPipe, new PostgreSQLHandler(getConnectionTo())));
+                    mysqlPipe, new MySQLHandler(getConnectionTo())));
             tasks.add(new LoadMySQL(conTo, migrationInfo, mysqlPipe));
 
             executor = Executors.newFixedThreadPool(tasks.size());
@@ -252,8 +250,8 @@ public class FromPostgresToMySQL extends FromDatabaseToDatabase {
     public static void main (String[] args) {
         LoggerSetup.setLogging();
         System.out.println("Migrating data from Postgres to MySQL");
-        ConnectionInfo conInfoTo = new PostgreSQLConnectionInfo("localhost",
-                "3306", "test", "mysqluser", "test","mysql");
+        ConnectionInfo conInfoTo = new MySQLConnectionInfo("localhost",
+                "3306", "test", "mysqluser", "test");
         ConnectionInfo conInfoFrom = new PostgreSQLConnectionInfo("localhost",
                 "5432", "test", "pguser", "test");
         MigrationResult result;

@@ -3,6 +3,8 @@ package istc.bigdawg.migration;
 import istc.bigdawg.LoggerSetup;
 import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.islands.relational.utils.SQLTranslationUtils;
+import istc.bigdawg.mysql.MySQLConnectionInfo;
+import istc.bigdawg.mysql.MySQLHandler;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.postgresql.PostgreSQLSchemaTableName;
@@ -35,7 +37,6 @@ public class FromMySQLToPostgres extends FromDatabaseToDatabase {
     private static Logger logger = Logger
             .getLogger(FromMySQLToPostgres.class);
 
-    private String tmpFilePath = "tmp_mysql_postgres.txt";
     private String mysqlPipe;
 
     /**
@@ -69,12 +70,8 @@ public class FromMySQLToPostgres extends FromDatabaseToDatabase {
      */
     public MigrationResult migrate(MigrationInfo migrationInfo)	throws MigrationException {
         logger.debug("General data migration: " + this.getClass().getName());
-        if (migrationInfo.getConnectionFrom() instanceof PostgreSQLConnectionInfo
+        if (migrationInfo.getConnectionFrom() instanceof MySQLConnectionInfo
                 && migrationInfo.getConnectionTo() instanceof PostgreSQLConnectionInfo) {
-            PostgreSQLConnectionInfo psqlci = (PostgreSQLConnectionInfo) migrationInfo.getConnectionFrom();
-            if (!psqlci.getEngine().equalsIgnoreCase("MySQL")) {
-                return null;
-            }
             try {
                 this.migrationInfo = migrationInfo;
                 return this.dispatch();
@@ -120,7 +117,7 @@ public class FromMySQLToPostgres extends FromDatabaseToDatabase {
         if (createTableStatement == null) {
             logger.debug(
                     "Get the create statement for target table from the source database.");
-            String mysqlCreateTable = PostgreSQLHandler.getCreateTableMySQL(
+            String mysqlCreateTable = MySQLHandler.getCreateTable(
                     connectionFrom, migrationInfo.getObjectFrom(),
                     migrationInfo.getObjectTo());
             logger.debug("mysqlCreateTable statement: " + mysqlCreateTable);
@@ -151,7 +148,7 @@ public class FromMySQLToPostgres extends FromDatabaseToDatabase {
         Connection conTo = null;
         ExecutorService executor = null;
         try {
-            conFrom = PostgreSQLHandler.getConnection(getConnectionFrom());
+            conFrom = MySQLHandler.getConnection(getConnectionFrom());
             conTo = PostgreSQLHandler.getConnection(getConnectionTo());
 
             conFrom.setReadOnly(true);
@@ -254,8 +251,8 @@ public class FromMySQLToPostgres extends FromDatabaseToDatabase {
     public static void main (String[] args) {
         LoggerSetup.setLogging();
         System.out.println("Migrating data from MySQL to PostgreSQL");
-        ConnectionInfo conInfoFrom = new PostgreSQLConnectionInfo("localhost",
-                "3306", "test", "mysqluser", "test","mysql");
+        ConnectionInfo conInfoFrom = new MySQLConnectionInfo("localhost",
+                "3306", "test", "mysqluser", "test");
         ConnectionInfo conInfoTo = new PostgreSQLConnectionInfo("localhost",
                 "5432", "test", "pguser", "test");
         MigrationResult result;

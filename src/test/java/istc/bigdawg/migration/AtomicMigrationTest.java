@@ -75,7 +75,7 @@ public class AtomicMigrationTest {
 	private int getRowNumber(PostgreSQLHandler handler, String table)
 			throws SQLException {
 		JdbcQueryResult result = handler
-				.executeQueryPostgreSQL("select count(*) from " + table);
+				.executeQueryOnEngine("select count(*) from " + table);
 		int rowCount = Integer.valueOf(result.getRows().get(0).get(0));
 		logger.debug("row count: " + rowCount);
 		return rowCount;

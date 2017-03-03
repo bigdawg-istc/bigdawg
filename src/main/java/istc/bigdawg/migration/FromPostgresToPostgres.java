@@ -84,12 +84,6 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 		logger.debug("General data migration: " + this.getClass().getName());
 		if (migrationInfo.getConnectionFrom() instanceof PostgreSQLConnectionInfo
 				&& migrationInfo.getConnectionTo() instanceof PostgreSQLConnectionInfo) {
-			PostgreSQLConnectionInfo psqlciFrom = (PostgreSQLConnectionInfo) migrationInfo.getConnectionFrom();
-			PostgreSQLConnectionInfo psqlciTo = (PostgreSQLConnectionInfo) migrationInfo.getConnectionTo();
-			if (psqlciFrom.getEngine().equalsIgnoreCase("MySQL")
-					|| psqlciTo.getEngine().equalsIgnoreCase("MySQL")) {
-				return null;
-			}
 			try {
 				this.migrationInfo = migrationInfo;
 				return this.dispatch();
