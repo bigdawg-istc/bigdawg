@@ -40,6 +40,7 @@ import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.postgresql.PostgreSQLSchemaTableName;
 import istc.bigdawg.query.ConnectionInfo;
+import istc.bigdawg.query.DBHandler;
 import istc.bigdawg.sstore.SStoreSQLColumnMetaData;
 import istc.bigdawg.sstore.SStoreSQLConnectionInfo;
 import istc.bigdawg.sstore.SStoreSQLHandler;
@@ -88,14 +89,17 @@ public class FromSStoreToPostgres extends FromDatabaseToDatabase {
 	
 	private String serverAddress;
 	private int serverPort;
+	private FileFormat fileFormat;
 
 	public FromSStoreToPostgres(SStoreSQLConnectionInfo connectionFrom,
 			String fromTable, PostgreSQLConnectionInfo connectionTo,
 			String toTable,
+			FileFormat fileFormat,
 			String serverAddress, int serverPort) {
 		this.migrationInfo = new MigrationInfo(connectionFrom, fromTable,
 				connectionTo, toTable, null);
 		this.sstorehandler = new SStoreSQLHandler(connectionFrom);
+		this.fileFormat = fileFormat;
 		this.serverAddress = serverAddress;
 		this.serverPort = serverPort;
 	}
@@ -188,8 +192,21 @@ public class FromSStoreToPostgres extends FromDatabaseToDatabase {
 
 		long startTimeMigration = System.currentTimeMillis();
 		String copyFromCommand = SStoreSQLHandler.getExportCommand();
-		String copyToCommand = PostgreSQLHandler
-				.getLoadBinCommand(getObjectTo());
+		String copyToCommand;
+		
+		if (fileFormat == FileFormat.BIN_POSTGRES) {
+			copyToCommand = PostgreSQLHandler
+					.getLoadBinCommand(getObjectTo());
+		} else if (fileFormat == FileFormat.CSV){
+			DBHandler toHandler = new PostgreSQLHandler(migrationInfo.getConnectionTo());
+			copyToCommand = PostgreSQLHandler.getLoadCsvCommand(getObjectTo(), 
+					toHandler.getCsvExportDelimiter(),
+					FileFormat.getQuoteCharacter(),
+					toHandler.isCsvExportHeader());
+		} else {
+			throw (new MigrationException("Unsupported file format"));
+		}
+		
 		Connection conFrom = null;
 		Connection conTo = null;
 		ExecutorService executor = Executors.newFixedThreadPool(2);
@@ -207,9 +224,15 @@ public class FromSStoreToPostgres extends FromDatabaseToDatabase {
 		    
 			ExportSStore exportSStore = new ExportSStore();
 			exportSStore.setMigrationInfo(migrationInfo);
-			exportSStore.setAdditionalParams("psql", false, serverAddress, serverPort);
+			String trim;
+			if (fileFormat == FileFormat.BIN_POSTGRES) {
+				trim = "psql";
+			} else {
+				trim = "csv";
+			}
+			exportSStore.setAdditionalParams(trim, false, serverAddress, serverPort);
 			exportSStore.setHandlerTo(new PostgreSQLHandler());
-			exportSStore.setFileFormat(FileFormat.BIN_POSTGRES);
+			exportSStore.setFileFormat(fileFormat);
 			// We cannot set an OutputStream for S-Store, 
 			// because S-Store currently only takes a file, and write to the file in the db engine.
 		    String sStorePipe = "/tmp/sstore_" + globalCounter.incrementAndGet() + ".out";
@@ -371,6 +394,8 @@ public class FromSStoreToPostgres extends FromDatabaseToDatabase {
 		FromDatabaseToDatabase migrator = new FromSStoreToPostgres(
 				(SStoreSQLConnectionInfo)conInfoFrom, "orders", 
 				(PostgreSQLConnectionInfo)conInfoTo, "orders",
+//				FileFormat.BIN_POSTGRES,
+				FileFormat.CSV,
 				"localhost", 18001);
 		MigrationResult result;
 		try {
