@@ -4,7 +4,33 @@
 
 {% block content %}
 <div class="row col-xs-10 col-xs-offset-1">
-  <h1 align="center">Data Catalog</h1>
+  <h1 align="center">Engines</h1>
+  <table class="table table-hover">
+    <thead>
+      <tr>
+        <th>Engine ID</th>
+        <th>Name</th>
+        <th>Host</th>
+        <th>Port</th>
+        <th>Connection Properties</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for engine in engines %}
+      <tr>
+        <td>{{ engine[0] }}</td>
+        <td>{{ engine[1] }}</td>
+        <td>{{ engine[2] }}</td>
+        <td>{{ engine[3] }}</td>
+        <td>{{ engine[4] }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="row col-xs-10 col-xs-offset-1">
+  <h1 align="center">Data Objects</h1>
   <table class="table table-hover">
     <thead>
       <tr>

@@ -10,7 +10,7 @@ class CatalogClient:
     """
     Handles interaction with the Catalog database
     """
-    def __init__(self, database="bigdawg_catalog", user="pguser", password="test", host="saw.csail.mit.edu", port="5400"):
+    def __init__(self, database="bigdawg_catalog", user="pguser", password="test", host="192.168.99.100", port="5400"):
         """
         Establishes connection to Catalog database
 
@@ -49,6 +49,17 @@ class CatalogClient:
         """
         cur = self.conn.cursor()
         cur.execute("SELECT * from catalog.databases")
+        rows = cur.fetchall()
+        cur.close()
+        return rows
+
+    def get_engines(self):
+        """
+        Reads engines table and returns all rows.
+        :return: rows: an iterable of tuples, where each element is a value of the row
+        """
+        cur = self.conn.cursor()
+        cur.execute("SELECT * from catalog.engines")
         rows = cur.fetchall()
         cur.close()
         return rows

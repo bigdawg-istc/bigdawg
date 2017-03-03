@@ -5,8 +5,31 @@
 from flask import Flask, redirect, render_template, request, url_for
 from DockerClient import DockerClient
 from CatalogClient import CatalogClient
+import os
 app = Flask(__name__)
 
+def read_catalog_credentials():
+    catalog_config_fn = "catalog_config.txt"
+    try:
+        assert(os.path.exists(catalog_config_fn))
+    except:
+        print "Catalog config file does not exist."
+        print """Example: catalog_config.txt:
+        database=bigdawg_catalog
+        user=pguser
+        password=test
+        host=192.168.99.100
+        port=5400
+        """
+    catalog_cred = {}
+    with open(catalog_config_fn, "rb") as f:
+        for line in f:
+            key,val = line.split("=")
+            catalog_cred[key.strip()] = val.strip()
+    return catalog_cred
+
+# Get catalog credentials for the CatalogClient
+catalog_cred = read_catalog_credentials()
 
 # Cluster Status
 @app.route('/')
@@ -18,7 +41,12 @@ def status():
 # Data Catalog
 @app.route('/catalog')
 def catalog():
-    objects = CatalogClient().get_objects()
+    objects = CatalogClient(
+        database=catalog_cred['database'],
+        user=catalog_cred['user'],
+        password=catalog_cred['password'],
+        host=catalog_cred['host'],
+        port=catalog_cred['port']).get_objects()
     # Template expects results like:
     # objects = [
     #     (0, 'mimic2v26.a_chartdurations', 'subject_id,icustay_id,itemid,elemid,starttime,startrealtime,endtime,cuid,duration', 2, 3), 
@@ -33,7 +61,13 @@ def catalog():
     #     (9, 'mimic2v26.d_careunits', 'cuid,label', 2, 2), 
     #     (10, 'mimic2v26.d_chartitems', 'itemid,label,category,description', 2, 2), 
     # ]
-    return render_template('catalog.html', objects=objects)
+    engines = CatalogClient(
+        database=catalog_cred['database'],
+        user=catalog_cred['user'],
+        password=catalog_cred['password'],
+        host=catalog_cred['host'],
+        port=catalog_cred['port']).get_engines()
+    return render_template('catalog.html', objects=objects, engines=engines)
 
 
 # Important Links
@@ -42,15 +76,15 @@ def links():
     links = [
         {
             "name": "Documentation",
-            "href": "#"
+            "href": "http://bigdawg-documentation.readthedocs.io/en/latest/index.html"
         },
         {
             "name": "Code",
-            "href": "#"
+            "href": "https://bitbucket.org/aelmore/bigdawgmiddle"
         },
         {
-            "name": "Setup",
-            "href": "#"
+            "name": "Installation and Setup",
+            "href": "http://bigdawg-documentation.readthedocs.io/en/latest/getting-started.html"
         },
     ]
     return render_template('links.html', links=links)

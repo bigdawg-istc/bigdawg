@@ -1,0 +1,5 @@
+database=bigdawg_catalog
+user=pguser
+password=test
+host=saw.csail.mit.edu
+port=5400
