@@ -25,7 +25,7 @@ import istc.bigdawg.executor.plan.QueryExecutionPlan;
 import istc.bigdawg.islands.CrossIslandCastNode;
 import istc.bigdawg.islands.CrossIslandNonOperatorNode;
 import istc.bigdawg.islands.CrossIslandPlanNode;
-import istc.bigdawg.islands.CrossIslandQueryNode;
+import istc.bigdawg.islands.IntraIslandQuery;
 import istc.bigdawg.islands.CrossIslandQueryPlan;
 import istc.bigdawg.islands.IslandsAndCast.Scope;
 import istc.bigdawg.islands.TheObjectThatResolvesAllDifferencesAmongTheIslands;
@@ -83,8 +83,8 @@ public class Planner {
 				// we also assume that the user does not directly cast an object 
 				// throw new Exception("Unimplemented feature: CAST");
 
-				CrossIslandQueryNode source = (CrossIslandQueryNode) ((CrossIslandCastNode) node).getSourceVertex(ciqp);
-				CrossIslandQueryNode target = (CrossIslandQueryNode) ((CrossIslandCastNode) node).getTargetVertex(ciqp);
+				IntraIslandQuery source = (IntraIslandQuery) ((CrossIslandCastNode) node).getSourceVertex(ciqp);
+				IntraIslandQuery target = (IntraIslandQuery) ((CrossIslandCastNode) node).getTargetVertex(ciqp);
 
 				int sourceDBID = 0;
 				int targetDBID = 0;
@@ -157,17 +157,17 @@ public class Planner {
 				// remove source from connectionInfoMap
 				connectionInfoMap.remove(source);
 
-			} else if (node instanceof CrossIslandQueryNode) {
+			} else if (node instanceof IntraIslandQuery) {
 
 				// Todo: move this block to a separate function
 				// business as usual
-				CrossIslandQueryNode ciqn = (CrossIslandQueryNode) node;
+				IntraIslandQuery ciqn = (IntraIslandQuery) node;
 
 				// int choice = getGetPerformanceAndPickTheBest(ciqn, isTrainingMode);
 				int choice = 0;
 
 				// currently there should be just one island, therefore one child, root.
-				QueryExecutionPlan qep = ((CrossIslandQueryNode) node).getQEP(choice, false);
+				QueryExecutionPlan qep = ((IntraIslandQuery) node).getQEP(choice, false);
 
 				// EXECUTE THE RESULT SUB RESULT
 				logger.debug("Executing query cross-island subquery " + node + "...");
@@ -234,10 +234,10 @@ public class Planner {
 		
 		QueryResult queryResult = null;
 		try {
-			if (cipn instanceof CrossIslandQueryNode) {
+			if (cipn instanceof IntraIslandQuery) {
 	
 				// business as usual
-				CrossIslandQueryNode ciqn = (CrossIslandQueryNode) cipn;
+				IntraIslandQuery ciqn = (IntraIslandQuery) cipn;
 	
 				// Ask the Monitor for the best QueryExecutionPlan
 				int choice = getGetPerformanceAndPickTheBest(ciqn, isTrainingMode);
@@ -305,7 +305,7 @@ public class Planner {
 	 * 
 	 * @param
 	 */
-	public static int getGetPerformanceAndPickTheBest(CrossIslandQueryNode ciqn, boolean isTrainingMode) throws Exception {
+	public static int getGetPerformanceAndPickTheBest(IntraIslandQuery ciqn, boolean isTrainingMode) throws Exception {
 		int choice = 0;
 		Signature signature = ciqn.getSignature();
 

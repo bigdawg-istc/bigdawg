@@ -13,6 +13,7 @@ import java.util.regex.Pattern;
 import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
 import org.jgrapht.graph.DefaultEdge;
 
+import istc.bigdawg.exceptions.IslandException;
 import istc.bigdawg.islands.IslandsAndCast.Scope;
 import istc.bigdawg.islands.operators.Merge;
 
@@ -153,15 +154,16 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 	
 	private void checkAndProcessUnionTerminalOperators() {
 		// TODO check the last operator and process it
-		if (terminalNode instanceof CrossIslandQueryNode 
-				&& ((CrossIslandQueryNode)terminalNode).getRemainderLoc() == null
-				&& ((CrossIslandQueryNode)terminalNode).getRemainder(0) instanceof Merge) {
-//			CrossIslandQueryNode node = (CrossIslandQueryNode) terminalNode;
+		if (terminalNode instanceof IntraIslandQuery 
+				&& ((IntraIslandQuery)terminalNode).getRemainderLoc() == null
+				&& ((IntraIslandQuery)terminalNode).getRemainder(0) instanceof Merge) {
+//			IntraIslandQuery node = (IntraIslandQuery) terminalNode;
 			
 		}
 	}
 	
-	private CrossIslandPlanNode createVertex(String name, String rawQueryString, Scope thisScope, Scope innerScope, Scope outterScope, Set<Integer> catalogSOD) throws Exception{
+	private CrossIslandPlanNode createVertex(String name, String rawQueryString, 
+			Scope thisScope, Scope innerScope, Scope outterScope, Set<Integer> catalogSOD) throws IslandException{
 		
 		// IDENTIFY ISLAND AND STRIP
 		Matcher islandMatcher	= IslandsAndCast.ScopeStartPattern.matcher(rawQueryString);
@@ -180,14 +182,14 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 				if (castSchemaMatcher.find()) {
 					
 					Matcher castNameMatcher = IslandsAndCast.CastNamePattern.matcher(islandQuery);
-					if (!castNameMatcher.find()) throw new Exception("Cannot find name for cast result: "+ islandQuery);
+					if (!castNameMatcher.find()) throw new IslandException("Cannot find name for cast result: "+ islandQuery);
 					
 					// dummy scopes; source need to be changed below or when Edges happen
 					newNode = new CrossIslandCastNode(innerScope, outterScope, 
 							islandQuery.substring(castSchemaMatcher.start(), castSchemaMatcher.end()), 
 							islandQuery.substring(castNameMatcher.start(), castNameMatcher.end()));
 				} else 
-					throw new Exception("Invalid Schema for CAST: "+ islandQuery);
+					throw new IslandException("Invalid Schema for CAST: "+ islandQuery);
 				
 				Matcher castSourceScopeMatcher = IslandsAndCast.CastScopePattern.matcher(islandQuery);
 				// if not found then we rely on edge to make it happen
@@ -200,21 +202,19 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 				transitionSchemas.pop();
 				transitionSchemas.peek().put(newNode.getName(), 
 						destIsland.getCreateStatementForTransitionTable(newNode.getName(), islandQuery.substring(castSchemaMatcher.start(), castSchemaMatcher.end())));
-//						TheObjectThatResolvesAllDifferencesAmongTheIslands.getCreationQueryForCast(outterScope, newNode.getName(), islandQuery.substring(castSchemaMatcher.start(), castSchemaMatcher.end())));
 				
 				// add catalog entires
 				catalogSOD.add(destIsland.addCatalogObjectEntryForTemporaryTable(newNode.getName()));
-//				int dbid = TheObjectThatResolvesAllDifferencesAmongTheIslands.getSchemaEngineDBID(((CrossIslandCastNode)newNode).getDestinationScope());
-//				catalogSOD.add(CatalogModifier.addObject(newNode.getName(), "TEMPORARY", dbid, dbid));
 				
 			} else if (TheObjectThatResolvesAllDifferencesAmongTheIslands.isOperatorBasedIsland(thisScope)) {
-				newNode = new CrossIslandQueryNode(thisScope, islandQuery, name, transitionSchemas.pop());
+				newNode = TheObjectThatResolvesAllDifferencesAmongTheIslands.getIsland(thisScope)
+						.getIntraIslandQuery(islandQuery, name, transitionSchemas.pop());
 			} else {
 				newNode = new CrossIslandNonOperatorNode(thisScope, islandQuery, name);
 			}
 			
 		} else 
-			throw new Exception("Matcher cannot find token");
+			throw new IslandException("Matcher cannot find token");
 		
 		return newNode;
 	}; 

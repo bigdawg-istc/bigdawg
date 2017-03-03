@@ -30,37 +30,29 @@ import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.signature.Signature;
 import net.sf.jsqlparser.statement.select.Select;
 
-public class CrossIslandQueryNode extends CrossIslandPlanNode {
-	
-	private static Logger logger = Logger.getLogger(CrossIslandQueryNode.class);
+public class RelationalIslandQuery extends IntraIslandQuery {
+
 	public static final String tokenOfIndecision = "0";
+	private static Logger logger = Logger.getLogger(RelationalIslandQuery.class);
 	
 	private Select select;
-	private Signature signature;
-	
-	private Map<String, QueryContainerForCommonDatabase> queryContainer;
-
-	private List<Operator> remainderPermutations;
-	private List<String> remainderLoc; // if null then we need to look into the container
 	
 	private Map<String, List<String>> originalMap;
-	private Set<String> children;
 	
 	private Set<String> originalJoinPredicates;
 	private Set<String> joinPredicates;
 	private Set<String> joinFilters;
-
-	private Operator initialRoot;
 	
-	public CrossIslandQueryNode (Scope scope, String islandQuery, String name, Map<String, String> transitionSchemas) throws Exception {
-		super(scope, islandQuery, name);
+//	private Operator initialRoot;
+	
+	public RelationalIslandQuery(String islandQuery, String name, Map<String, String> transitionSchemas)
+			throws Exception {
+		super(Scope.RELATIONAL, islandQuery, name, transitionSchemas);
 		
-		queryContainer = new HashMap<>();
-		remainderPermutations = new ArrayList<>();
-		remainderLoc = new ArrayList<>();
 		joinPredicates = new HashSet<>();
 		joinFilters = new HashSet<>();
 		originalJoinPredicates = new HashSet<>();
+		
 		
 		// collect the cross island children
 		children = getCrossIslandChildrenReferences(transitionSchemas);
@@ -69,16 +61,15 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 		logger.info(String.format("--> CrossIsland children: %s;",children.toString()));
 		logger.info(String.format("--> Transition schemas: %s;",transitionSchemas.toString()));
 		
-		Island thisIsland = TheObjectThatResolvesAllDifferencesAmongTheIslands.getIsland(scope);
+		Island thisIsland = TheObjectThatResolvesAllDifferencesAmongTheIslands.getIsland(Scope.RELATIONAL);
 		
 		// create temporary tables that are used for as schemas
 		thisIsland.setupForQueryPlanning(children, transitionSchemas);
-//		dbSchemaHandler = TheObjectThatResolvesAllDifferencesAmongTheIslands.createTableForPlanning(sourceScope, children, transitionSchemas);
 		
-		populateQueryContainer(scope, transitionSchemas);
+		populateQueryContainer(thisIsland, transitionSchemas);
 		
-		// OPTIMIZE
-		CrossIslandQueryNodes.optimize(this);
+		//
+		RelationalIslandPermuter.optimize(this);
 		
 		// create signature
 		this.signature = new Signature(getQueryString(), getSourceScope(), getRemainder(0), getQueryContainer(), originalJoinPredicates);
@@ -88,19 +79,16 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 		
 		// removing temporary schema plates
 		thisIsland.teardownForQueryPlanning(children, transitionSchemas);
-//		TheObjectThatResolvesAllDifferencesAmongTheIslands.removeTemporaryTableCreatedForPlanning(sourceScope, dbSchemaHandler, children, transitionSchemas);
-		
-		
 	}
 	
+
 	/** Setup. 
 	 * 
 	 * @throws Exception
 	 */
-	private void populateQueryContainer(Scope scope, Map<String, String> transitionSchemas) throws Exception {
+	private void populateQueryContainer(Island thisIsland, Map<String, String> transitionSchemas) throws Exception {
 		
 		List<String> objs = new ArrayList<>();
-		Island thisIsland = TheObjectThatResolvesAllDifferencesAmongTheIslands.getIsland(scope);
 //		initialRoot = TheObjectThatResolvesAllDifferencesAmongTheIslands.generateOperatorTreesAndAddDataSetObjectsSignature(sourceScope, dbSchemaHandler, queryString, objs);
 		initialRoot = thisIsland.parseQueryAndExtractAllTableNames(queryString, objs);
 		
@@ -116,80 +104,7 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 		logger.debug(String.format("Resulting remainder loc: %s", remainderLoc));
 		
 	}
-	
-	/**
-	 * This is only used for optimization.
-	 * Evoked elsewhere and it will return null
-	 * @return
-	 */
-	public Operator getInitialRoot() {
-		return initialRoot;
-	}
-	
-	public void setInitialRoot(Operator newRoot) {
-		initialRoot = newRoot;
-	}
-	
-	public Set<String> getCrossIslandChildrenReferences(Map<String, String> transitionSchemas) {
 
-		// NEW METHOD
-		Set<String> offsprings = new HashSet<>(transitionSchemas.keySet());
-		return offsprings;
-		// NEW METHOD END
-		
-	}
-	
-	public QueryExecutionPlan getQEP(int perm, boolean isSelect) throws Exception {
-		
-		// use perm to pick a specific permutation
-		if (perm >= remainderPermutations.size()) throw new Exception ("Permutation reference index out of bound");
-		
-		QueryExecutionPlan qep = new QueryExecutionPlan(sourceScope); 
-		ExecutionNodeFactory.addNodesAndEdgesNew(qep, remainderPermutations.get(perm), remainderLoc, queryContainer, isSelect, name);
-		
-		return qep;
-	}
-	
-	public List<QueryExecutionPlan> getAllQEPs(boolean isSelect) throws Exception {
-		
-		List<QueryExecutionPlan> qepl = new ArrayList<>();
-		
-		logger.info(String.format("RemainderPermuations, from getAllQEPs: %s\n", remainderPermutations));
-		
-		for (int i = 0; i < remainderPermutations.size(); i++ ){
-			QueryExecutionPlan qep = new QueryExecutionPlan(getSourceScope()); 
-			ExecutionNodeFactory.addNodesAndEdgesNew(qep, remainderPermutations.get(i), remainderLoc, queryContainer, isSelect, name);
-			qepl.add(qep);
-		}
-		
-		return qepl;
-	}
-
-	private Set<String> getOriginalJoinPredicates(Operator root) throws IslandException {
-		
-		Set<String> predicates = new HashSet<>();
-
-		if (root == null) return predicates;
-		
-		Island srcIsland = TheObjectThatResolvesAllDifferencesAmongTheIslands.getIsland(sourceScope);
-		
-		String predicate = null;
-		if (root instanceof Join){
-			predicate = ((Join) root).generateJoinPredicate();
-			if (predicate != null) predicates.addAll(srcIsland.splitJoinPredicate(predicate));
-			predicate = ((Join) root).generateJoinFilter();
-		} else if (root instanceof  Scan)
-			predicate = ((Scan) root).generateRelevantJoinPredicate();
-		
-		if (predicate != null) predicates.addAll(srcIsland.splitJoinPredicate(predicate));
-
-		for (Operator child: root.getChildren())
-			predicates.addAll(getOriginalJoinPredicates(child));
-
-		return predicates;
-	}
-
-	
 	/**
 	 * This function recursively traverse the original Operator Tree and determines if all the data sets are collocated.
 	 * If it notices that two sub-trees locate on different engines, it will prune the two sub-trees and package 
@@ -199,7 +114,7 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 	 * @return a list of locations (DBID in Catalog) where all data sets could be found, or null if at least two data sets reside on different engines 
 	 * @throws Exception
 	 */
-	private List<String> traverse(Operator node, Map<String, String> transitionSchemas) throws Exception {
+	protected List<String> traverse(Operator node, Map<String, String> transitionSchemas) throws Exception {
 		// now traverse nodes and group things together
 		// So the remainders should be some things that does not contain individual nodes?
 		// what about mimic2v26.d_patients join d?
@@ -361,7 +276,7 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 		return ret;
 	}
 	
-	private void pruneChild(Operator c, List<String> traverseResult) throws Exception {
+	protected void pruneChild(Operator c, List<String> traverseResult) throws Exception {
 		// prune c
 		c.prune(true);
 		
@@ -384,7 +299,43 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 		queryContainer.put(c.getPruneToken(), new QueryContainerForCommonDatabase(ci, dbid, c, c.getPruneToken()));
 	}
 	
-	private Map<String, Set<Operator>> findIntersectionsSortByLargest(Map<Operator, Set<String>> traverseResults) {
+	@Override
+	public QueryExecutionPlan getQEP(int perm, boolean isSelect) throws Exception {
+		
+		// use perm to pick a specific permutation
+		if (perm >= remainderPermutations.size()) throw new Exception ("Permutation reference index out of bound");
+		
+		QueryExecutionPlan qep = new QueryExecutionPlan(sourceScope); 
+		ExecutionNodeFactory.addNodesAndEdgesNew(qep, remainderPermutations.get(perm), remainderLoc, queryContainer, isSelect, name);
+		
+		return qep;
+	}
+	
+	@Override
+	public List<QueryExecutionPlan> getAllQEPs(boolean isSelect) throws Exception {
+		
+		List<QueryExecutionPlan> qepl = new ArrayList<>();
+		
+		logger.info(String.format("RemainderPermuations, from getAllQEPs: %s\n", remainderPermutations));
+		
+		for (int i = 0; i < remainderPermutations.size(); i++ ){
+			QueryExecutionPlan qep = new QueryExecutionPlan(getSourceScope()); 
+			ExecutionNodeFactory.addNodesAndEdgesNew(qep, remainderPermutations.get(i), remainderLoc, queryContainer, isSelect, name);
+			qepl.add(qep);
+		}
+		
+		return qepl;
+	}
+	
+	public Set<String> getJoinPredicates(){
+		return joinPredicates;
+	}
+	
+	public Set<String> getJoinFilters() {
+		return joinFilters;
+	}
+	
+	protected Map<String, Set<Operator>> findIntersectionsSortByLargest(Map<Operator, Set<String>> traverseResults) {
 		
 		Map<String, Set<Operator>> result = new HashMap<>();
 		Map<String, Set<Operator>> dbids = new HashMap<>();
@@ -433,73 +384,46 @@ public class CrossIslandQueryNode extends CrossIslandPlanNode {
 		return result;
 	}
 	
-	public Set<String> getJoinPredicates(){
-		return joinPredicates;
+	private Set<String> getOriginalJoinPredicates(Operator root) throws IslandException {
+		
+		Set<String> predicates = new HashSet<>();
+
+		if (root == null) return predicates;
+		
+		Island srcIsland = TheObjectThatResolvesAllDifferencesAmongTheIslands.getIsland(sourceScope);
+		
+		String predicate = null;
+		if (root instanceof Join){
+			predicate = ((Join) root).generateJoinPredicate();
+			if (predicate != null) predicates.addAll(srcIsland.splitJoinPredicate(predicate));
+			predicate = ((Join) root).generateJoinFilter();
+		} else if (root instanceof  Scan)
+			predicate = ((Scan) root).generateRelevantJoinPredicate();
+		
+		if (predicate != null) predicates.addAll(srcIsland.splitJoinPredicate(predicate));
+
+		for (Operator child: root.getChildren())
+			predicates.addAll(getOriginalJoinPredicates(child));
+
+		return predicates;
 	}
 	
-	public Set<String> getJoinFilters() {
-		return joinFilters;
+	/**
+	 * This is only used for optimization.
+	 * Evoked elsewhere and it will return null
+	 * @return
+	 */
+	public Operator getInitialRoot() {
+		return initialRoot;
 	}
 	
-	public Set<String> getChildren() {
-		return this.children;
-	};
-	
-	public Operator getRemainder(int index) {
-		return remainderPermutations.get(index);
-	}
-	
-	public List<Operator> getAllRemainders() {
-		return remainderPermutations;
-	}
-	
-	public void setRemainders(List<Operator> remainderPermutations) {
-		this.remainderPermutations = remainderPermutations;
-	}
-	
-	public List<String> getRemainderLoc() {
-		return remainderLoc;
-	}
-	
-	public Map<String, QueryContainerForCommonDatabase> getQueryContainer(){
-		return queryContainer;
-	}
-	
-	public void setQueryContainer(Map<String, QueryContainerForCommonDatabase> queryContainer) {
-		this.queryContainer = queryContainer;
+	public void setInitialRoot(Operator newRoot) {
+		initialRoot = newRoot;
 	}
 	
 	public Select getOriginalSQLSelect() {
 		return select;
 	}
 	
-	public String getCrossIslandQueryNodeName() {
-		return this.name;
-	}
 	
-	public Signature getSignature() {
-		return signature;
-	}
-	
-	public void printSignature() {
-		int i = 1;
-		System.out.println("Signature Items: ");
-		System.out.println("- "+i+++". remainder: "+signature.getSig1());
-		System.out.println("- "+i+++". objects: "+signature.getSig2());
-		System.out.println("- "+i+++". literals: "+signature.getSig3());
-		for (String str : signature.getSig4k()) {
-			System.out.println("- "+i+++". Container object: "+str);
-		}
-	}
-	
-
-	
-	@Override
-	public String toString() {
-		return String.format("(CIQN %s (children %s))", name, children);
-	}
-	
-	public List<CrossIslandPlanNode> getSourceVertices(CrossIslandQueryPlan ciqp) throws Exception {
-		return getSourceOrTarget(ciqp, true);
-	}
 }

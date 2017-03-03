@@ -1,13 +1,11 @@
 package istc.bigdawg.islands;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.Stack;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
@@ -17,272 +15,26 @@ import org.jgrapht.graph.SimpleGraph;
 
 import com.google.common.collect.Sets;
 
-import istc.bigdawg.exceptions.BigDawgException;
 import istc.bigdawg.islands.IslandsAndCast.Scope;
-import istc.bigdawg.islands.operators.Aggregate;
 import istc.bigdawg.islands.operators.Join;
 import istc.bigdawg.islands.operators.Join.JoinType;
 import istc.bigdawg.islands.operators.Merge;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.operators.Scan;
-import istc.bigdawg.islands.relational.operators.SQLIslandAggregate;
-import istc.bigdawg.islands.relational.operators.SQLIslandJoin;
+import istc.bigdawg.islands.relational.RelationalIsland;
 import istc.bigdawg.islands.relational.operators.SQLIslandOperator;
-import istc.bigdawg.islands.relational.operators.SQLIslandScan;
 import istc.bigdawg.islands.relational.utils.SQLExpressionUtils;
-import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
 
-public class CrossIslandQueryNodes {
+public class RelationalIslandPermuter {
 	
-	public static void optimize(CrossIslandQueryNode ciqn) throws Exception {
-		rewrite(ciqn);
+	public static void optimize(RelationalIslandQuery ciqn) throws Exception {
 		permute(ciqn);
 	}
 	
-	/**
-	 * The rewrite is a set of optimizations that occurs after the pruning. 
-	 * @param ciqn
-	 * @throws Exception
-	 */
-	public static void rewrite(CrossIslandQueryNode ciqn) throws Exception{
-//		trimSchemas(ciqn);
-		if (ciqn.getRemainderLoc() != null) return;
-		
-//		debugPrinting(ciqn);
-//		minimumMigrationMutation(ciqn);
-		debugPrinting(ciqn);
-	}
-	
-	private static void debugPrinting(CrossIslandQueryNode ciqn) throws Exception {
-		
-		System.out.println("\nRemainder Printing: ");
-		debugPrintOperator(ciqn.getInitialRoot(), 0);
-		
-		for (String s : ciqn.getQueryContainer().keySet()) {
-			System.out.printf("\nContainer %s: \n", s);
-			debugPrintOperator(ciqn.getQueryContainer().get(s).getRootOperator(), 0);
-		}
-		
-	}
-	
-	private static void debugPrintOperator(Operator o, int indent) throws Exception {
-		for (int i = 1; i <= indent; i++) System.out.print('\t');
-		System.out.printf("%s %s\n", o.getClass().getSimpleName(), o.isPruned() ? o.getPruneToken() : (o instanceof Scan ? ((Scan)o).getSourceTableName() : o.getSubTreeToken()));
-		for (Operator c : o.getChildren()) debugPrintOperator(c, indent+1);
-	} 
-	
-	private static void trimSchemas(CrossIslandQueryNode ciqn) throws Exception {
-		trimSchemaForSQL(ciqn.getInitialRoot(), ciqn.getInitialRoot().getOutSchema().values());
-	}
-	
-	private static void trimSchemaForSQL(Operator operator, Collection<DataObjectAttribute> mentionedAttributes) throws JSQLParserException, Exception {
-		Set<String> end_result = new HashSet<>();
-		
-		System.out.printf("\ntrimSchemaForSQL; mentioendAttributes = %s;\n", mentionedAttributes);
-		
-		for (String name : operator.getOutSchema().keySet()) {
-			
-			DataObjectAttribute doa = operator.getOutSchema().get(name);
-			String doaname = CCJSqlParserUtil.parseExpression(doa.name).toString();
-			
-			System.out.printf("trimSchemaForSQL; doa.name = %s;\n", doa.name);
-			
-			if (mentionedAttributes.contains(doa)) 
-				continue;
-			else if (operator instanceof Join) {
-				SQLIslandJoin j = (SQLIslandJoin) operator;
-				if (j.generateJoinFilter() != null && j.generateJoinFilter().contains(doaname)) continue;
-				if (j.generateJoinPredicate() != null && j.generateJoinPredicate().contains(doaname)) continue;
-			} else if (operator instanceof Scan) {
-				SQLIslandScan s = (SQLIslandScan) operator;
-				if (s.getFilterExpression() != null && s.getFilterExpression().toString().contains(doaname)) continue;
-				if (s.getIndexCond() != null && s.getIndexCond().toString().contains(doaname)) continue;
-			} else if (operator instanceof Aggregate) {
-				SQLIslandAggregate a = (SQLIslandAggregate) operator;
-				if (a.getAggregateFilter() != null && a.getAggregateFilter().contains(doaname)) continue;
-			}
-			end_result.add(name);
-		}
-		System.out.printf("trimSchemaForSQL; end_result = %s; original = %s\n", end_result, operator.getOutSchema().keySet());
-		
-		for (String s : end_result)
-			operator.getOutSchema().remove(s);
-		for (Operator o : operator.getChildren()) {
-			trimSchemaForSQL(o, mentionedAttributes);
-		}
-	}
-	
-	private static void minimumMigrationMutation(CrossIslandQueryNode ciqn) throws Exception {
-		
-		Operator initialRemainder = ciqn.getInitialRoot();
-		Map<String, DataObjectAttribute> initialOutSchema = initialRemainder.getOutSchema();
-		Map<String, QueryContainerForCommonDatabase> containerStarters = ciqn.getQueryContainer();
-		Map<String, QueryContainerForCommonDatabase> resultContainers = new HashMap<>();
-		
-		Map<Pair<String, String>, String> jp = processJoinPredicates(ciqn.getJoinPredicates()); 
-		Map<Pair<String, String>, String> jf = processJoinPredicates(ciqn.getJoinFilters());
-		List<Set<String>> predicateConnections = populatePredicateConnectionSets(jp, jf);
-		
-		/*
-		 *  scrape for the whole reachable layer to see if anything could be combined
-		 *  - if no, then enqueue each blocker for scanning, and collect each container involved
-		 *  - otherwise, extract the subtree root schema, make a few joins, then re-apply the schema
-		 *  Repeat until there is none left in the processing queue
-		 */
-		
-		// data structure for the main loop flow
-		Stack<Operator> processQueue = new Stack<>();
-		Set<Operator> currentPrunedSet = new HashSet<>();
-
-		// for rewriting the subtree
-		List<Operator> currentLeavesSet = new ArrayList<>();
-		Operator lastStop = null;
-		
-		// initialize
-		processQueue.add(initialRemainder);
-		
-		/*
-		 * MAIN LOOP
-		 * Want: 
-		 * for each blocked, mark as a root to traverse and keep going 
-		 * for each join, expand all you can 
-		 */
-		while (!processQueue.isEmpty()) {
-			
-			Operator o = processQueue.pop();
-			
-			if (o.isBlocking()) {
-				
-				lastStop = o;
-				
-				for (Operator c : o.getChildren()) {
-					if (c.isBlocking() ) {
-						// add to the back
-						processQueue.add(o.getChildren().get(0));
-					} else if ( c instanceof Join) {
-						// push to the front
-						processQueue.push(c);
-					} else 
-						throw new BigDawgException ("shouldn't be here; "+o.getChildren().get(0).getClass().getSimpleName()
-													+"; isPruned: "+o.getChildren().get(0).isPruned());
-				}
-				continue;
-					
-			} else if (o instanceof Join) {
-				
-				normalizeCurrentOperator(o);
-				
-				// it is a join unpruned
-				Stack<Operator> tempStack = new Stack<>();
-				tempStack.add(o);
-				
-				while (!tempStack.isEmpty()) {
-					Operator t = tempStack.pop();
-					for (Operator c : t.getChildren()) 
-						if (c.isPruned()) {
-							currentPrunedSet.add(c);
-						} else if (c.isBlocking()) {
-							processQueue.add(c);
-							currentLeavesSet.add(o.getChildren().get(0));
-						} else // c is instanceof unpruned Join
-							tempStack.push(c);
-				}
-			} else 
-				throw new BigDawgException ("Impossible scenario: "+o.getClass().getSimpleName()+"; isPruned: "+o.isPruned());
-			
-			
-			// batch done -- this is only reached if o is Join
-			
-			// grouping
-			Map<String, List<QueryContainerForCommonDatabase>> locationToContainer = new HashMap<>();
-			for (Operator p : currentPrunedSet) {
-				QueryContainerForCommonDatabase con = containerStarters.get(p.getPruneToken());
-				if (locationToContainer.get(con.getDBID()) == null) locationToContainer.put(con.getDBID(), new ArrayList<>());
-				locationToContainer.get(con.getDBID()).add(con);
-			}
-			
-			// combining
-			for (String dbid : locationToContainer.keySet()) {
-				QueryContainerForCommonDatabase con;
-				if (locationToContainer.get(dbid).size() > 1) 
-					con = mergeContainers(ciqn.getSourceScope(), locationToContainer.get(dbid), jp, jf, predicateConnections);
-				else 
-					con = locationToContainer.get(dbid).get(0);
-				resultContainers.put(con.getName(), con);
-				currentLeavesSet.add(con.getRootOperator());
-			}
-			
-			// restructuring 
-			Operator a = currentLeavesSet.remove(0);
-			while (!currentLeavesSet.isEmpty()) {
-				Operator d = currentLeavesSet.remove(0);
-				if (isNormalizationRequired(a, d)) {
-					Operator temp = a;
-					a = d;
-					d = temp;
-				}
-				
-				a = makeJoin(ciqn.getSourceScope(), a, d, null, jp, jf, a.getDataObjectAliasesOrNames().keySet(), predicateConnections, false);
-			}
-			if (lastStop != null) {
-				a.setParent(lastStop);
-				lastStop.getChildren().clear();
-				lastStop.addChild(a);
-			} else {
-				initialRemainder = a;
-				initialRemainder.getOutSchema().clear();
-				initialRemainder.getOutSchema().putAll(initialOutSchema);
-			}
-			
-			// resetting after a Join head expansion run
-			currentPrunedSet = new HashSet<>();
-			currentLeavesSet = new ArrayList<>();
-		}
-
-		// finished mutation; add the winning set
-		ciqn.setInitialRoot(initialRemainder);
-		ciqn.setQueryContainer(resultContainers);
-	}
-	
-	private static QueryContainerForCommonDatabase mergeContainers(Scope scope, List<QueryContainerForCommonDatabase> containers, 
-			Map<Pair<String, String>, String> joinPredConnection, Map<Pair<String, String>, String> joinFilterConnection, 
-			List<Set<String>> predicateConnections) throws Exception {
-		
-		QueryContainerForCommonDatabase con1 = containers.remove(0);  // all of them share the same DBID and therefore the same CI
-		Operator o1 = con1.getRootOperator();
-		o1.prune(false);
-		while (!containers.isEmpty()) {
-			Operator o2 = containers.remove(0).getRootOperator();
-			o2.prune(false);
-			if (isNormalizationRequired(o1, o2)) {
-				Operator temp = o1;
-				o1 = o2;
-				o2 = temp;
-			}
-			o1 = makeJoin(scope, o1, o2, null, joinPredConnection, joinFilterConnection, o1.getDataObjectAliasesOrNames().keySet(), predicateConnections, false);
-		}
-		o1.prune(true);
-		return new QueryContainerForCommonDatabase(con1.getConnectionInfo(), con1.getDBID(), o1, o1.getPruneToken());
-	}
-	
-	private static void normalizeCurrentOperator(Operator o) {
-		if (!(o instanceof Join)) return;
-		
-		if (isNormalizationRequired(o.getChildren().get(0), o.getChildren().get(1))){ 
-			Operator temp = o.getChildren().get(0);
-			o.getChildren().remove(0);
-			o.addChild(temp);
-		};
-	} 
-	
-	private static boolean isNormalizationRequired(Operator o1, Operator o2) {
-		return (o2 instanceof Join && !o2.isPruned() && o1.isPruned() || !(o1 instanceof Join));
-	}
-	
-	public static void permute(CrossIslandQueryNode ciqn) throws Exception {
+	private static void permute(RelationalIslandQuery ciqn) throws Exception {
 		
 		List<Operator> remainderPermutations = new ArrayList<>();
 		
@@ -309,7 +61,7 @@ public class CrossIslandQueryNodes {
 //			// for debugging
 //			System.out.println("\n\n\nResult of Permutation: ");
 //			int i = 1;
-//			OperatorQueryGenerator gen;
+//			OperatorVisitor gen;
 //			for (Operator o : permResult) {
 //				gen = TheObjectThatResolvesAllDifferencesAmongTheIslands.getQueryGenerator(sourceScope);
 //				gen.configure(true, false);
@@ -352,7 +104,7 @@ public class CrossIslandQueryNodes {
 		
 		if (root.isBlocking() ) {
 //			// DEBUG ONLY
-//			OperatorQueryGenerator gen = null;
+//			OperatorVisitor gen = null;
 //			if (getSourceScope().equals(Scope.RELATIONAL)) {
 //				gen = new SQLQueryGenerator();
 //				((SQLQueryGenerator)gen).setSrcStatement(select);
@@ -766,8 +518,8 @@ public class CrossIslandQueryNodes {
 					else break;
 				}
 //				System.out.printf("-------> jp: %s, s: %s, key: %s; pred: %s\n\n", jp, s, key, pred);
+				return (new RelationalIsland()).constructJoin(o1Temp, o2Temp, jt, pred, isFilter);
 //				return TheObjectThatResolvesAllDifferencesAmongTheIslands.constructJoin(scope, o1Temp, o2Temp, jt, pred, isFilter);
-				return TheObjectThatResolvesAllDifferencesAmongTheIslands.getIsland(scope).constructJoin(o1Temp, o2Temp, jt, pred, isFilter);
 			}
 			
 			o2ns = new HashSet<>(o2nsOriginal);
@@ -775,11 +527,7 @@ public class CrossIslandQueryNodes {
 		if (isTablesConnectedViaPredicates(o1Temp, o2Temp, predicateConnections) && isUsedByPermutation) {
 			return null;
 		} else {
-//			System.out.printf("\nCross island query node: raw cross join:\n  o1 class: %s; o1Temp tree: %s;\n  o2 class: %s, o2Temp tree: %s\n\n\n"
-//					, o1Temp.getClass().getSimpleName(), o1Temp.getTreeRepresentation(true)
-//					, o2Temp.getClass().getSimpleName(), o2Temp.getTreeRepresentation(true));
-//			return TheObjectThatResolvesAllDifferencesAmongTheIslands.constructJoin(scope, o1Temp, o2Temp, jt, null, false);
-			return TheObjectThatResolvesAllDifferencesAmongTheIslands.getIsland(scope).constructJoin(o1Temp, o2Temp, jt, null, false);
+			return (new RelationalIsland()).constructJoin(o1Temp, o2Temp, jt, null, false);
 		}
 	}
 	

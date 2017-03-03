@@ -15,6 +15,7 @@ import istc.bigdawg.catalog.CatalogModifier;
 import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.exceptions.BigDawgCatalogException;
 import istc.bigdawg.exceptions.IslandException;
+import istc.bigdawg.islands.IntraIslandQuery;
 import istc.bigdawg.islands.Island;
 import istc.bigdawg.islands.SciDB.operators.SciDBIslandJoin;
 import istc.bigdawg.islands.operators.Join;
@@ -44,6 +45,15 @@ public class ArrayIsland implements Island {
 	public ArrayIsland() {
 		
 	}
+	
+	@Override 
+	public IntraIslandQuery getIntraIslandQuery(String islandQuery, String name, Map<String, String> transitionSchemas) throws IslandException {
+		try {
+			return new ArrayIslandQuery(islandQuery, name, transitionSchemas);
+		} catch (Exception e) {
+			throw new IslandException(e.getMessage(), e);
+		}
+	};
 	
 	@Override
 	public void setupForQueryPlanning(Set<String> outputChildren, Map<String, String> outputTransitionSchemas)

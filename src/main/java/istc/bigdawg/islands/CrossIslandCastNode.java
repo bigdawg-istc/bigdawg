@@ -2,6 +2,7 @@ package istc.bigdawg.islands;
 
 import java.util.List;
 
+import istc.bigdawg.exceptions.IslandException;
 import istc.bigdawg.islands.IslandsAndCast.Scope;
 
 public class CrossIslandCastNode extends CrossIslandPlanNode {
@@ -10,13 +11,13 @@ public class CrossIslandCastNode extends CrossIslandPlanNode {
 	protected int serial; 
 	protected Scope destinationScope;
 	
-	public CrossIslandCastNode(Scope sourceScope, Scope destinationScope, String schemaFilling, String name) throws Exception {
+	public CrossIslandCastNode(Scope sourceScope, Scope destinationScope, String schemaFilling, String name) throws IslandException {
 		super(sourceScope, schemaFilling, name);
 		maxSerial++;
 		serial = maxSerial;
 		this.destinationScope = destinationScope;
-		setQueryString(TheObjectThatResolvesAllDifferencesAmongTheIslands.getIsland(destinationScope).getCreateStatementForTransitionTable(name, schemaFilling));
-//				getCreationQueryForCast(destinationScope, name, schemaFilling));
+		setQueryString(TheObjectThatResolvesAllDifferencesAmongTheIslands.getIsland(destinationScope)
+				.getCreateStatementForTransitionTable(name, schemaFilling));
 	}
 
 	public Scope getDestinationScope() {

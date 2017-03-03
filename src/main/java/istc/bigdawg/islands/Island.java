@@ -11,6 +11,8 @@ import istc.bigdawg.islands.operators.Operator;
 
 public interface Island {
 	
+	public IntraIslandQuery getIntraIslandQuery(String islandQuery, String name, Map<String, String> transitionSchemas) throws IslandException;
+	
 	public void setupForQueryPlanning(Set<String> outputChildren, Map<String, String> outputTransitionSchemas) throws IslandException;
 	public void teardownForQueryPlanning(Set<String> outputChildren, Map<String, String> outputTransitionSchemas) throws IslandException;
 	public String getCreateStatementForTransitionTable(String tableName, String attributes);
