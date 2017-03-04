@@ -7,12 +7,12 @@ import java.util.Map;
 import istc.bigdawg.exceptions.BigDawgCatalogException;
 import istc.bigdawg.exceptions.IslandException;
 import istc.bigdawg.exceptions.QueryParsingException;
-import istc.bigdawg.islands.DataObject;
 import istc.bigdawg.islands.operators.SeqScan;
 import istc.bigdawg.islands.relational.RelationalIsland;
 import istc.bigdawg.islands.relational.SQLOutItemResolver;
 import istc.bigdawg.islands.relational.SQLTableExpression;
 import istc.bigdawg.islands.relational.utils.SQLAttribute;
+import istc.bigdawg.islands.relational.utils.SQLTable;
 import istc.bigdawg.shims.OperatorQueryGenerator;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.BinaryExpression;
@@ -50,7 +50,7 @@ public class SQLIslandSeqScan extends SQLIslandScan implements SeqScan {
 		}
 		
 		
-		DataObject baseTable = new DataObject(create); 
+		SQLTable baseTable = new SQLTable(create); 
 		boolean isComplexExpression = false;
 		
 		for(int i = 0; i < output.size(); ++i) {

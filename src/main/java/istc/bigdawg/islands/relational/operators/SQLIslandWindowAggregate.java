@@ -5,10 +5,10 @@ import java.util.List;
 import java.util.Map;
 
 import istc.bigdawg.exceptions.QueryParsingException;
-import istc.bigdawg.islands.DataObjectAttribute;
 import istc.bigdawg.islands.operators.WindowAggregate;
 import istc.bigdawg.islands.relational.SQLOutItemResolver;
 import istc.bigdawg.islands.relational.SQLTableExpression;
+import istc.bigdawg.islands.relational.utils.SQLAttribute;
 import istc.bigdawg.shims.OperatorQueryGenerator;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.AnalyticExpression;
@@ -45,7 +45,7 @@ public class SQLIslandWindowAggregate extends SQLIslandOperator implements Windo
 			String expr = output.get(i);
 				
 			SQLOutItemResolver out = new SQLOutItemResolver(expr, child.outSchema, supplement);
-			DataObjectAttribute attr = out.getAttribute();
+			SQLAttribute attr = out.getAttribute();
 			String alias = attr.getName();
 			
 			outSchema.put(alias, attr);

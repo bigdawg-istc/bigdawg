@@ -6,8 +6,8 @@ import java.util.Map;
 import java.util.Set;
 
 import istc.bigdawg.exceptions.IslandException;
-import istc.bigdawg.islands.DataObjectAttribute;
-import istc.bigdawg.islands.SciDB.SciDBArray;
+import istc.bigdawg.islands.SciDB.SciDBAttributeOrDimension;
+import istc.bigdawg.islands.SciDB.SciDBParsedArray;
 import istc.bigdawg.islands.operators.Merge;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.shims.OperatorQueryGenerator;
@@ -17,14 +17,14 @@ public class SciDBIslandMerge extends SciDBIslandOperator implements Merge {
 	private boolean isUnionAll = true; 
 	
 	// for AFL
-	public SciDBIslandMerge(Map<String, String> parameters, SciDBArray output, List<Operator> childs) throws Exception  {
+	public SciDBIslandMerge(Map<String, String> parameters, SciDBParsedArray output, List<Operator> childs) throws Exception  {
 		super(parameters, output, childs);
 
 		isBlocking = true;
 		blockerCount++;
 		this.blockerID = blockerCount;
 
-		outSchema = new LinkedHashMap<String, DataObjectAttribute>(((SciDBIslandOperator)childs.get(0)).outSchema);
+		outSchema = new LinkedHashMap<String, SciDBAttributeOrDimension>(((SciDBIslandOperator)childs.get(0)).outSchema);
 	}
 	
 	public SciDBIslandMerge(SciDBIslandOperator o, boolean addChild) throws IslandException {

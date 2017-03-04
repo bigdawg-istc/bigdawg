@@ -6,8 +6,8 @@ import java.util.List;
 import java.util.Map;
 
 import istc.bigdawg.exceptions.IslandException;
-import istc.bigdawg.islands.DataObjectAttribute;
-import istc.bigdawg.islands.SciDB.SciDBArray;
+import istc.bigdawg.islands.SciDB.SciDBAttributeOrDimension;
+import istc.bigdawg.islands.SciDB.SciDBParsedArray;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.operators.Sort;
 import istc.bigdawg.shims.OperatorQueryGenerator;
@@ -27,7 +27,7 @@ public class SciDBIslandSort extends SciDBIslandOperator implements Sort {
 	private boolean isWinAgg = false; // is it part of a windowed aggregate or an ORDER BY clause?
 	
 	// for AFL
-	public SciDBIslandSort(Map<String, String> parameters, SciDBArray output,  List<String> keys, Operator child) {
+	public SciDBIslandSort(Map<String, String> parameters, SciDBParsedArray output,  List<String> keys, Operator child) {
 		super(parameters, output, child);
 
 		isBlocking = true;
@@ -42,7 +42,7 @@ public class SciDBIslandSort extends SciDBIslandOperator implements Sort {
 
 		setSortKeys(keys);
 		
-		outSchema = new LinkedHashMap<String, DataObjectAttribute>(((SciDBIslandOperator)child).outSchema);
+		outSchema = new LinkedHashMap<String, SciDBAttributeOrDimension>(((SciDBIslandOperator)child).outSchema);
 		
 	}
 	

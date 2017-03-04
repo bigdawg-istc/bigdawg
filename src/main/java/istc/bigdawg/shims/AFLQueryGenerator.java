@@ -10,7 +10,7 @@ import java.util.Stack;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 
-import istc.bigdawg.islands.DataObjectAttribute;
+import istc.bigdawg.islands.SciDB.SciDBAttributeOrDimension;
 import istc.bigdawg.islands.SciDB.operators.SciDBIslandAggregate;
 import istc.bigdawg.islands.SciDB.operators.SciDBIslandJoin;
 import istc.bigdawg.islands.SciDB.operators.SciDBIslandOperator;
@@ -184,7 +184,7 @@ public class AFLQueryGenerator implements OperatorQueryGenerator {
 				if (scan.getOutSchema().get(s).getName().equals(scan.getOutSchema().get(s).getExpressionString())) continue;
 				
 				expressions.add(new SciDBColumn(s, null, null, false, null, null));
-				DataObjectAttribute doa = scan.getOutSchema().get(s);
+				SciDBAttributeOrDimension doa = scan.getOutSchema().get(s);
 				expressions.add(convertSQLExpressionIntoSciDBApplyExpression(doa.getSQLExpression(), doa.getTypeString()));
 			}
 			
@@ -192,7 +192,7 @@ public class AFLQueryGenerator implements OperatorQueryGenerator {
 		case "project":
 			for (String s : scan.getOutSchema().keySet()){
 				if (scan.getOutSchema().get(s).isHidden()) continue;
-				DataObjectAttribute doa = scan.getOutSchema().get(s);
+				SciDBAttributeOrDimension doa = scan.getOutSchema().get(s);
 				expressions.add(convertSQLExpressionIntoSciDBApplyExpression(doa.getSQLExpression(), doa.getTypeString()));
 			}
 			break;
@@ -238,7 +238,7 @@ public class AFLQueryGenerator implements OperatorQueryGenerator {
 		expressions.add(lastFunction.pop());
 
 		for (String s : aggregate.getOutSchema().keySet()) {
-			DataObjectAttribute doa = aggregate.getOutSchema().get(s);
+			SciDBAttributeOrDimension doa = aggregate.getOutSchema().get(s);
 			
 			System.out.printf("doa expression string from aggregate: %s, %s\n", doa.getExpressionString(), doa.getSQLExpression());
 			
@@ -282,7 +282,7 @@ public class AFLQueryGenerator implements OperatorQueryGenerator {
 			expressions.add(new SciDBConstant(i));
 		
 		for (String s : window.getOutSchema().keySet()) {
-			DataObjectAttribute doa = window.getOutSchema().get(s);
+			SciDBAttributeOrDimension doa = window.getOutSchema().get(s);
 			if (!doa.getName().equalsIgnoreCase(doa.getExpressionString()) && doa.getExpressionString().contains("(")) {
 				
 				System.out.printf("\ndoa expression string: %s; alias: %s\n\n", doa.getExpressionString(), doa.getName());
@@ -370,10 +370,10 @@ public class AFLQueryGenerator implements OperatorQueryGenerator {
 	public String generateCreateStatementLocally(Operator op, String name) throws Exception {
 		StringBuilder sb = new StringBuilder();
 		
-		List<DataObjectAttribute> attribs = new ArrayList<>();
-		List<DataObjectAttribute> dims = new ArrayList<>();
+		List<SciDBAttributeOrDimension> attribs = new ArrayList<>();
+		List<SciDBAttributeOrDimension> dims = new ArrayList<>();
 		
-		for (DataObjectAttribute doa : ((SciDBIslandOperator) op).getOutSchema().values()) {
+		for (SciDBAttributeOrDimension doa : ((SciDBIslandOperator) op).getOutSchema().values()) {
 			if (doa.isHidden()) dims.add(doa);
 			else attribs.add(doa);
 		}
@@ -381,7 +381,7 @@ public class AFLQueryGenerator implements OperatorQueryGenerator {
 		sb.append("CREATE ARRAY ").append(name).append(' ').append('<');
 		
 		boolean started = false;
-		for (DataObjectAttribute doa : attribs) {
+		for (SciDBAttributeOrDimension doa : attribs) {
 			if (started == true) sb.append(',');
 			else started = true;
 			
@@ -393,7 +393,7 @@ public class AFLQueryGenerator implements OperatorQueryGenerator {
 			sb.append("i=0:*,1000000,0");
 		} else {
 			started = false;
-			for (DataObjectAttribute doa : dims) {
+			for (SciDBAttributeOrDimension doa : dims) {
 				if (started == true) sb.append(',');
 				else started = true;
 				
@@ -405,7 +405,7 @@ public class AFLQueryGenerator implements OperatorQueryGenerator {
 		return sb.toString();
 	}
 	
-	public String generateAFLTypeString(DataObjectAttribute doa) {
+	public String generateAFLTypeString(SciDBAttributeOrDimension doa) {
 		
 		char token = ':';
 		if (doa.isHidden())
@@ -415,7 +415,7 @@ public class AFLQueryGenerator implements OperatorQueryGenerator {
 		
 	}
 	
-	public String convertTypeStringToAFLTyped(DataObjectAttribute doa) {
+	public String convertTypeStringToAFLTyped(SciDBAttributeOrDimension doa) {
 		
 		if (doa.getTypeString() == null) {
 			System.out.println("Missing typeString: "+ doa.getName());
@@ -703,7 +703,7 @@ public class AFLQueryGenerator implements OperatorQueryGenerator {
 		List<SciDBColumn> attributes = new ArrayList<>();
 		List<SciDBColumn> dimensions = new ArrayList<>();
 		
-		protected SciDBSchema(Map<String, DataObjectAttribute> outSchema) {
+		protected SciDBSchema(Map<String, SciDBAttributeOrDimension> outSchema) {
 			super (null, null);
 			
 			for (String s : outSchema.keySet()) {

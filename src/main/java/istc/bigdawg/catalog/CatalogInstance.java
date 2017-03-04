@@ -4,9 +4,8 @@
 package istc.bigdawg.catalog;
 
 import org.apache.log4j.Logger;
-//import java.util.concurrent.TimeUnit;
+
 import istc.bigdawg.postgresql.PostgreSQLInstance;
-import istc.bigdawg.postgresql.PostgresCatalogInstance;
 
 /**
  * @author Adam Dziedzic

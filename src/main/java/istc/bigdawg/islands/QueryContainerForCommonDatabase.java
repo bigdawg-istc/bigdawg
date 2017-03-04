@@ -3,7 +3,7 @@ package istc.bigdawg.islands;
 import java.util.Map;
 import java.util.Set;
 
-import istc.bigdawg.islands.IslandsAndCast.Scope;
+import istc.bigdawg.islands.IslandAndCastResolver.Scope;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.shims.Shim;
@@ -25,7 +25,7 @@ public class QueryContainerForCommonDatabase {
 	}
 	
 	public String generateSelectIntoString(Scope scope) throws Exception {
-		Shim gen = TheObjectThatResolvesAllDifferencesAmongTheIslands.getShim(scope, Integer.parseInt(dbid));
+		Shim gen = IslandAndCastResolver.getShim(scope, Integer.parseInt(dbid));
 		return gen.getSelectIntoQuery(rootOperator, pruneToken, false);
 	}
 	

@@ -10,10 +10,9 @@ import java.util.Map;
 import java.util.Set;
 
 import istc.bigdawg.exceptions.IslandException;
-import istc.bigdawg.islands.DataObjectAttribute;
-import istc.bigdawg.islands.SciDB.SciDBArray;
+import istc.bigdawg.islands.SciDB.SciDBAttributeOrDimension;
+import istc.bigdawg.islands.SciDB.SciDBParsedArray;
 import istc.bigdawg.islands.operators.Operator;
-import istc.bigdawg.islands.relational.utils.SQLAttribute;
 import istc.bigdawg.islands.relational.utils.SQLExpressionUtils;
 import istc.bigdawg.shims.OperatorQueryGenerator;
 import net.sf.jsqlparser.JSQLParserException;
@@ -45,7 +44,7 @@ public class SciDBIslandOperator implements Operator {
 	protected Integer subTreeID = null;
 	
 	
-	protected Map<String, DataObjectAttribute> outSchema;
+	protected Map<String, SciDBAttributeOrDimension> outSchema;
 	
 	// direct descendants
 	protected List<Operator> children;
@@ -58,11 +57,11 @@ public class SciDBIslandOperator implements Operator {
 	
 
 	// for AFL
-	public SciDBIslandOperator(Map<String, String> parameters, SciDBArray output,  
+	public SciDBIslandOperator(Map<String, String> parameters, SciDBParsedArray output,  
 			Operator child) {
 
 		// order preserving
-		outSchema = new LinkedHashMap<String, DataObjectAttribute>();
+		outSchema = new LinkedHashMap<String, SciDBAttributeOrDimension>();
 		children  = new ArrayList<Operator>();
 		
 		if(child != null) { // check for leaf nodes
@@ -75,10 +74,10 @@ public class SciDBIslandOperator implements Operator {
 	
 	
 	// for AFL
-	public SciDBIslandOperator(Map<String, String> parameters, SciDBArray output, 
+	public SciDBIslandOperator(Map<String, String> parameters, SciDBParsedArray output, 
 			Operator lhs, Operator rhs) {
 		
-		outSchema = new LinkedHashMap<String, DataObjectAttribute>();
+		outSchema = new LinkedHashMap<String, SciDBAttributeOrDimension>();
 		children  = new ArrayList<Operator>();
 		
 		children.add(lhs);
@@ -90,11 +89,11 @@ public class SciDBIslandOperator implements Operator {
 	}
 	
 	// for AFL UNION
-	public SciDBIslandOperator(Map<String, String> parameters, SciDBArray output,  
+	public SciDBIslandOperator(Map<String, String> parameters, SciDBParsedArray output,  
 			List<Operator> childs) {
 
 		// order preserving
-		outSchema = new LinkedHashMap<String, DataObjectAttribute>();
+		outSchema = new LinkedHashMap<String, SciDBAttributeOrDimension>();
 		children  = new ArrayList<Operator>();
 		
 		for (Operator o : childs) { // check for leaf nodes
@@ -121,12 +120,7 @@ public class SciDBIslandOperator implements Operator {
 		this.outSchema = new LinkedHashMap<>();
 		try {
 			for (String s : o.outSchema.keySet()) {
-				
-				if (o.outSchema.get(s) instanceof SQLAttribute) {
-					this.outSchema.put(new String(s), new SQLAttribute((SQLAttribute)o.outSchema.get(s)));
-				} else {
-					this.outSchema.put(new String(s), new DataObjectAttribute(o.outSchema.get(s)));
-				}
+				this.outSchema.put(new String(s), new SciDBAttributeOrDimension(o.outSchema.get(s)));
 			}
 		} catch (JSQLParserException e) {
 			throw new IslandException(e.getMessage(), e);
@@ -195,8 +189,7 @@ public class SciDBIslandOperator implements Operator {
 		else return ((SciDBIslandOperator) children.get(0)).isAnyProgenyPruned();
 	}
 	
-	@Override
-	public Map<String, DataObjectAttribute>  getOutSchema() {
+	public Map<String, SciDBAttributeOrDimension>  getOutSchema() {
 		return outSchema;
 	}
 	
@@ -444,11 +437,10 @@ public class SciDBIslandOperator implements Operator {
 		}
 	}
 	
-	public void updateOutSchema(Map<String, DataObjectAttribute> schema) throws JSQLParserException {
-		Map<String, DataObjectAttribute> update = new HashMap<>();
+	public void updateOutSchema(Map<String, SciDBAttributeOrDimension> schema) throws JSQLParserException {
+		Map<String, SciDBAttributeOrDimension> update = new HashMap<>();
 		for (String s: schema.keySet()) {
-			if (schema.get(s) instanceof SQLAttribute) update.put(new String(s), new SQLAttribute((SQLAttribute)schema.get(s)));
-			else update.put(new String(s), new DataObjectAttribute(schema.get(s)));
+			update.put(new String(s), new SciDBAttributeOrDimension(schema.get(s)));
 		}
 		this.outSchema = update;
 	}

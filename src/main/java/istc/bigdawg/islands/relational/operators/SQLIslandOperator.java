@@ -10,7 +10,6 @@ import java.util.Map;
 import java.util.Set;
 
 import istc.bigdawg.exceptions.IslandException;
-import istc.bigdawg.islands.DataObjectAttribute;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.relational.SQLTableExpression;
 import istc.bigdawg.islands.relational.utils.SQLAttribute;
@@ -53,7 +52,7 @@ public class SQLIslandOperator implements Operator {
 	protected Operator parent = null;
 	protected boolean isCopy = false;
 	
-	protected Map<String, DataObjectAttribute> outSchema;
+	protected Map<String, SQLAttribute> outSchema;
 	
 	private Map<String, String> complexOutItemFromProgeny;
 	
@@ -110,7 +109,7 @@ public class SQLIslandOperator implements Operator {
 	
 	
 	public SQLIslandOperator() {
-		outSchema = new LinkedHashMap<String, DataObjectAttribute>();
+		outSchema = new LinkedHashMap<String, SQLAttribute>();
 		setComplexOutItemFromProgeny(new LinkedHashMap<>());
 		children  = new ArrayList<Operator>();
 		dataObjects = new HashSet<>();
@@ -131,11 +130,7 @@ public class SQLIslandOperator implements Operator {
 		this.outSchema = new LinkedHashMap<>();
 		try {
 			for (String s : o.outSchema.keySet()) {
-				if (o.outSchema.get(s) instanceof SQLAttribute) {
-					this.outSchema.put(new String(s), new SQLAttribute((SQLAttribute)o.outSchema.get(s)));
-				} else {
-					this.outSchema.put(new String(s), new DataObjectAttribute(o.outSchema.get(s)));
-				}
+				this.outSchema.put(new String(s), new SQLAttribute((SQLAttribute)o.outSchema.get(s)));
 			}
 		} catch (JSQLParserException e) {
 			throw new IslandException (e.getMessage(), e);
@@ -236,8 +231,8 @@ public class SQLIslandOperator implements Operator {
 		else return ((SQLIslandOperator)children.get(0)).isAnyProgenyPruned();
 	}
 	
-	@Override
-	public Map<String, DataObjectAttribute>  getOutSchema() {
+//	@Override
+	public Map<String, SQLAttribute>  getOutSchema() {
 		return outSchema;
 	}
 	
@@ -516,11 +511,10 @@ public class SQLIslandOperator implements Operator {
 		return dstStatement;
     }
 	
-	public void updateOutSchema(Map<String, DataObjectAttribute> schema) throws JSQLParserException {
-		Map<String, DataObjectAttribute> update = new HashMap<>();
+	public void updateOutSchema(Map<String, SQLAttribute> schema) throws JSQLParserException {
+		Map<String, SQLAttribute> update = new HashMap<>();
 		for (String s: schema.keySet()) {
-			if (schema.get(s) instanceof SQLAttribute) update.put(new String(s), new SQLAttribute((SQLAttribute)schema.get(s)));
-			else update.put(new String(s), new DataObjectAttribute(schema.get(s)));
+			update.put(new String(s), new SQLAttribute((SQLAttribute)schema.get(s)));
 		}
 		this.outSchema = update;
 	}

@@ -15,14 +15,14 @@ import org.jgrapht.graph.SimpleGraph;
 
 import com.google.common.collect.Sets;
 
-import istc.bigdawg.islands.DataObjectAttribute;
-import istc.bigdawg.islands.IslandsAndCast.Scope;
+import istc.bigdawg.islands.IslandAndCastResolver;
+import istc.bigdawg.islands.IslandAndCastResolver.Scope;
+import istc.bigdawg.islands.SciDB.operators.SciDBIslandOperator;
 import istc.bigdawg.islands.operators.Join;
 import istc.bigdawg.islands.operators.Join.JoinType;
 import istc.bigdawg.islands.operators.Merge;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.operators.Scan;
-import istc.bigdawg.islands.relational.operators.SQLIslandOperator;
 import istc.bigdawg.islands.relational.utils.SQLExpressionUtils;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
@@ -43,21 +43,12 @@ public class ArrayIslandPermuter {
 		Map<Pair<String, String>, String> jf = processJoinPredicates(ciqn.getJoinFilters());
 		
 		List<Set<String>> predicateConnections = populatePredicateConnectionSets(jp, jf);
-		Operator root = ciqn.getInitialRoot(); 
+		assert(ciqn.getInitialRoot() instanceof SciDBIslandOperator);
+		SciDBIslandOperator root = (SciDBIslandOperator)ciqn.getInitialRoot(); 
 		
 		if (ciqn.getRemainderLoc() == null && root.getDataObjectAliasesOrNames().size() > 1) {
-			Map<String, DataObjectAttribute> rootOutSchema = root.getOutSchema();
 			List<Operator> permResult = getPermutatedOperatorsWithBlock(ciqn.getSourceScope(), root, jp, jf, predicateConnections);
 			
-			// if root is join then the constructed out schema might get messed up; adjust it here
-			if (root instanceof SQLIslandOperator) {
-				for (Operator op : permResult) {
-					SQLIslandOperator o = (SQLIslandOperator) op;
-					if (o.getOutSchema().size() != rootOutSchema.size()) {
-						o.updateOutSchema(rootOutSchema);
-					}
-				}
-			}
 			
 //			// for debugging
 //			System.out.println("\n\n\nResult of Permutation: ");

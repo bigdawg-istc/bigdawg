@@ -16,7 +16,7 @@ import istc.bigdawg.executor.Executor;
 import istc.bigdawg.executor.ExecutorEngine;
 import istc.bigdawg.executor.JdbcQueryResult;
 import istc.bigdawg.executor.plan.QueryExecutionPlan;
-import istc.bigdawg.islands.CrossIslandPlanNode;
+import istc.bigdawg.islands.CrossIslandQueryNode;
 import istc.bigdawg.islands.IntraIslandQuery;
 import istc.bigdawg.islands.CrossIslandQueryPlan;
 import istc.bigdawg.migration.MigrationStatistics;
@@ -64,7 +64,7 @@ public class Monitor {
         
         Set<IntraIslandQuery> qnSet = new HashSet<>();
         
-        for (CrossIslandPlanNode cipn : ciqp.vertexSet())
+        for (CrossIslandQueryNode cipn : ciqp.vertexSet())
         	if (cipn instanceof IntraIslandQuery) 
         		qnSet.add((IntraIslandQuery)cipn);
         

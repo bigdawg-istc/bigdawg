@@ -4,8 +4,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import istc.bigdawg.exceptions.IslandException;
-import istc.bigdawg.islands.DataObjectAttribute;
-import istc.bigdawg.islands.SciDB.SciDBArray;
+import istc.bigdawg.islands.SciDB.SciDBAttributeOrDimension;
+import istc.bigdawg.islands.SciDB.SciDBParsedArray;
 import istc.bigdawg.islands.operators.Distinct;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.shims.OperatorQueryGenerator;
@@ -20,14 +20,14 @@ public class SciDBIslandDistinct extends SciDBIslandOperator implements Distinct
 	 * @param child
 	 */
 	
-	public SciDBIslandDistinct(Map<String, String> parameters, SciDBArray output, Operator child) {
+	public SciDBIslandDistinct(Map<String, String> parameters, SciDBParsedArray output, Operator child) {
 		super(parameters, output, child);
 		
 		isBlocking = true;
 		blockerCount++;
 		this.blockerID = blockerCount;
 
-		outSchema = new LinkedHashMap<String, DataObjectAttribute>(((SciDBIslandOperator)child).outSchema);
+		outSchema = new LinkedHashMap<String, SciDBAttributeOrDimension>(((SciDBIslandOperator)child).outSchema);
 	}
 	
 	public SciDBIslandDistinct(SciDBIslandOperator o, boolean addChild) throws IslandException {

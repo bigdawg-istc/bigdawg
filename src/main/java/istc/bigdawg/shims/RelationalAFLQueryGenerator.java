@@ -10,7 +10,7 @@ import java.util.Stack;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 
-import istc.bigdawg.islands.DataObjectAttribute;
+import istc.bigdawg.islands.SciDB.SciDBAttributeOrDimension;
 import istc.bigdawg.islands.SciDB.operators.SciDBIslandOperator;
 import istc.bigdawg.islands.operators.Aggregate;
 import istc.bigdawg.islands.operators.CommonTableExpressionScan;
@@ -28,6 +28,7 @@ import istc.bigdawg.islands.relational.operators.SQLIslandAggregate;
 import istc.bigdawg.islands.relational.operators.SQLIslandJoin;
 import istc.bigdawg.islands.relational.operators.SQLIslandScan;
 import istc.bigdawg.islands.relational.operators.SQLIslandSort;
+import istc.bigdawg.islands.relational.utils.SQLAttribute;
 import istc.bigdawg.islands.relational.utils.SQLExpressionUtils;
 import net.sf.jsqlparser.expression.AnalyticExpression;
 import net.sf.jsqlparser.expression.BinaryExpression;
@@ -126,7 +127,7 @@ public class RelationalAFLQueryGenerator implements OperatorQueryGenerator {
 		}
 		
 		lastFunction.push(new SciDBFunction(cross_join_token, null, expressions, join.isPruned() ? join.getPruneToken() : null
-				, join.getJoinToken(), isRootOriginal, new SciDBSchema(join.getOutSchema())));
+				, join.getJoinToken(), isRootOriginal, new SciDBSchema(join.getOutSchema(), null)));
 		
 	}
 
@@ -150,7 +151,7 @@ public class RelationalAFLQueryGenerator implements OperatorQueryGenerator {
 		}
 		
 		lastFunction.push(new SciDBFunction("sort", null, expressions, sort.isPruned() ? sort.getPruneToken() : null
-				, sort.getSubTreeToken(), isRootOriginal, new SciDBSchema(sort.getOutSchema())));
+				, sort.getSubTreeToken(), isRootOriginal, new SciDBSchema(sort.getOutSchema(), null)));
 	}
 
 	@Override
@@ -179,19 +180,19 @@ public class RelationalAFLQueryGenerator implements OperatorQueryGenerator {
 		switch (scan.getOperatorName()) {
 		case "apply":
 			for (String s : scan.getOutSchema().keySet()){
-				if (scan.getOutSchema().get(s).isHidden()) continue;
+//				if (scan.getOutSchema().get(s).isHidden()) continue;
 				if (scan.getOutSchema().get(s).getName().equals(scan.getOutSchema().get(s).getExpressionString())) continue;
 				
 				expressions.add(new SciDBColumn(s, null, null, false, null, null));
-				DataObjectAttribute doa = scan.getOutSchema().get(s);
+				SQLAttribute doa = scan.getOutSchema().get(s);
 				expressions.add(convertSQLExpressionIntoSciDBApplyExpression(doa.getSQLExpression(), doa.getTypeString()));
 			}
 			
 			break;
 		case "project":
 			for (String s : scan.getOutSchema().keySet()){
-				if (scan.getOutSchema().get(s).isHidden()) continue;
-				DataObjectAttribute doa = scan.getOutSchema().get(s);
+//				if (scan.getOutSchema().get(s).isHidden()) continue;
+				SQLAttribute doa = scan.getOutSchema().get(s);
 				expressions.add(convertSQLExpressionIntoSciDBApplyExpression(doa.getSQLExpression(), doa.getTypeString()));
 			}
 			break;
@@ -209,7 +210,7 @@ public class RelationalAFLQueryGenerator implements OperatorQueryGenerator {
 		}
 		
 		lastFunction.push(new SciDBFunction(scan.getOperatorName(), scan.isPruned() ? null : scan.getTableAlias(), expressions, scan.isPruned() ? scan.getPruneToken() : null
-				, scan.getSubTreeToken(), isRootOriginal, new SciDBSchema(scan.getOutSchema())));
+				, scan.getSubTreeToken(), isRootOriginal, new SciDBSchema(scan.getOutSchema(), null)));
 		
 
 	}
@@ -237,7 +238,7 @@ public class RelationalAFLQueryGenerator implements OperatorQueryGenerator {
 		expressions.add(lastFunction.pop());
 
 		for (String s : aggregate.getOutSchema().keySet()) {
-			DataObjectAttribute doa = aggregate.getOutSchema().get(s);
+			SQLAttribute doa = aggregate.getOutSchema().get(s);
 			
 			System.out.printf("doa expression string from aggregate: %s, %s\n", doa.getExpressionString(), doa.getSQLExpression());
 			
@@ -261,7 +262,7 @@ public class RelationalAFLQueryGenerator implements OperatorQueryGenerator {
 		}
 		
 		lastFunction.push(new SciDBFunction("aggregate", null, expressions, aggregate.isPruned() ? aggregate.getPruneToken() : null
-				, aggregate.getAggregateID() == null ? null : aggregate.getAggregateToken(), isRootOriginal, new SciDBSchema(aggregate.getOutSchema())));
+				, aggregate.getAggregateID() == null ? null : aggregate.getAggregateToken(), isRootOriginal, new SciDBSchema(aggregate.getOutSchema(), null)));
 		
 	}
 
@@ -369,10 +370,10 @@ public class RelationalAFLQueryGenerator implements OperatorQueryGenerator {
 	public String generateCreateStatementLocally(Operator op, String name) throws Exception {
 		StringBuilder sb = new StringBuilder();
 		
-		List<DataObjectAttribute> attribs = new ArrayList<>();
-		List<DataObjectAttribute> dims = new ArrayList<>();
+		List<SciDBAttributeOrDimension> attribs = new ArrayList<>();
+		List<SciDBAttributeOrDimension> dims = new ArrayList<>();
 		
-		for (DataObjectAttribute doa : ((SciDBIslandOperator) op).getOutSchema().values()) {
+		for (SciDBAttributeOrDimension doa : ((SciDBIslandOperator) op).getOutSchema().values()) {
 			if (doa.isHidden()) dims.add(doa);
 			else attribs.add(doa);
 		}
@@ -380,7 +381,7 @@ public class RelationalAFLQueryGenerator implements OperatorQueryGenerator {
 		sb.append("CREATE ARRAY ").append(name).append(' ').append('<');
 		
 		boolean started = false;
-		for (DataObjectAttribute doa : attribs) {
+		for (SciDBAttributeOrDimension doa : attribs) {
 			if (started == true) sb.append(',');
 			else started = true;
 			
@@ -392,7 +393,7 @@ public class RelationalAFLQueryGenerator implements OperatorQueryGenerator {
 			sb.append("i=0:*,1000000,0");
 		} else {
 			started = false;
-			for (DataObjectAttribute doa : dims) {
+			for (SciDBAttributeOrDimension doa : dims) {
 				if (started == true) sb.append(',');
 				else started = true;
 				
@@ -404,7 +405,7 @@ public class RelationalAFLQueryGenerator implements OperatorQueryGenerator {
 		return sb.toString();
 	}
 	
-	public String generateAFLTypeString(DataObjectAttribute doa) {
+	public String generateAFLTypeString(SciDBAttributeOrDimension doa) {
 		
 		char token = ':';
 		if (doa.isHidden())
@@ -414,7 +415,7 @@ public class RelationalAFLQueryGenerator implements OperatorQueryGenerator {
 		
 	}
 	
-	public String convertTypeStringToAFLTyped(DataObjectAttribute doa) {
+	public String convertTypeStringToAFLTyped(SciDBAttributeOrDimension doa) {
 		
 		if (doa.getTypeString() == null) {
 			System.out.println("Missing typeString: "+ doa.getName());
@@ -702,7 +703,7 @@ public class RelationalAFLQueryGenerator implements OperatorQueryGenerator {
 		List<SciDBColumn> attributes = new ArrayList<>();
 		List<SciDBColumn> dimensions = new ArrayList<>();
 		
-		protected SciDBSchema(Map<String, DataObjectAttribute> outSchema) {
+		protected SciDBSchema(Map<String, SciDBAttributeOrDimension> outSchema) {
 			super (null, null);
 			
 			for (String s : outSchema.keySet()) {
@@ -711,6 +712,14 @@ public class RelationalAFLQueryGenerator implements OperatorQueryGenerator {
 				} else {
 					attributes.add(new SciDBColumn(outSchema.get(s).getName(), null, null, false, null, outSchema.get(s).getTypeString()));
 				}
+			}
+		};
+		
+		protected SciDBSchema(Map<String, SQLAttribute> outSchema, String additionalInfo) {
+			super (null, null);
+			
+			for (String s : outSchema.keySet()) {
+				attributes.add(new SciDBColumn(outSchema.get(s).getName(), null, null, false, null, outSchema.get(s).getTypeString()));
 			}
 		};
 		

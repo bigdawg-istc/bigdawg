@@ -7,8 +7,6 @@ import java.util.Map;
 import java.util.Random;
 
 import istc.bigdawg.exceptions.QueryParsingException;
-import istc.bigdawg.islands.CommonOutItemResolver;
-import istc.bigdawg.islands.DataObjectAttribute;
 import istc.bigdawg.islands.relational.utils.SQLAttribute;
 import istc.bigdawg.islands.relational.utils.SQLExpressionUtils;
 import net.sf.jsqlparser.JSQLParserException;
@@ -21,7 +19,8 @@ import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.create.table.ColDataType;
 import net.sf.jsqlparser.util.deparser.ExpressionDeParser;
 
-public class SQLOutItemResolver extends CommonOutItemResolver {
+//public class SQLOutItemResolver extends CommonOutItemResolver {
+public class SQLOutItemResolver {
 
 	// takes in the content of a <Item> field in EXPLAIN xml 
 	// keeps track of fields referenced in expression for security level 
@@ -38,7 +37,12 @@ public class SQLOutItemResolver extends CommonOutItemResolver {
 	private List<Function> aggregates;
 	private List<AnalyticExpression> windowedAggregates;
 	
-	public SQLOutItemResolver(String expr,  Map<String, DataObjectAttribute> srcSchema, 
+//	private List<String> commonAggregates;
+//	private List<String> commonWindowedAggregates;
+	private String alias = null; // attr alias
+	private SQLAttribute outAttribute;
+	
+	public SQLOutItemResolver(String expr,  Map<String, SQLAttribute> srcSchema, 
 			SQLTableExpression supplement) throws QueryParsingException, JSQLParserException {
 		super();
 		
@@ -49,7 +53,7 @@ public class SQLOutItemResolver extends CommonOutItemResolver {
 			String finder = expr;
 			finder = finder.replaceAll("::[ \\w]+", "");
 			
-			DataObjectAttribute doa = srcSchema.get(finder);
+			SQLAttribute doa = srcSchema.get(finder);
 			while (doa == null) {
 				
 				String before = new String(finder);
@@ -193,7 +197,7 @@ public class SQLOutItemResolver extends CommonOutItemResolver {
 				
 				if (lookup == null){
 					
-					for (DataObjectAttribute doa : srcSchema.values()) {
+					for (SQLAttribute doa : srcSchema.values()) {
 						try {
 							if (doa.getSQLExpression() != null) {
 								
@@ -202,9 +206,9 @@ public class SQLOutItemResolver extends CommonOutItemResolver {
 								for (Column c : lc) ls.add(c.toString());
 								if (!ls.contains(name)) continue;
 								
-								for (DataObjectAttribute doa2: doa.getSourceAttributes()) {
+								for (SQLAttribute doa2: doa.getSourceAttributes()) {
 									if (name.contains(doa2.getName())){
-										lookup = (SQLAttribute) doa2;
+										lookup = doa2;
 										break;
 									}
 								}
@@ -280,7 +284,7 @@ public class SQLOutItemResolver extends CommonOutItemResolver {
 	
 	// takes in alias src, determines if it has a match in src schema
 	// if so, it prefixes the column reference with the src table
-	public String fullyQualify(String expr, Map<String, DataObjectAttribute> srcSchema) throws JSQLParserException {
+	public String fullyQualify(String expr, Map<String, SQLAttribute> srcSchema) throws JSQLParserException {
 		
 		ExpressionDeParser deparser = new ExpressionDeParser() {
 		
@@ -317,12 +321,12 @@ public class SQLOutItemResolver extends CommonOutItemResolver {
 
 	
 	
-	static void setUpAggregateAllColumns(Map<String, DataObjectAttribute> srcSchema, SQLAttribute out) {
+	static void setUpAggregateAllColumns(Map<String, SQLAttribute> srcSchema, SQLAttribute out) {
 		ColDataType intAttrType = new ColDataType();
 		intAttrType.setDataType("integer");
 		out.setType(intAttrType);
 		
-		for(DataObjectAttribute src : srcSchema.values()) {
+		for(SQLAttribute src : srcSchema.values()) {
 			out.addSourceAttribute(src);
 		}
 		

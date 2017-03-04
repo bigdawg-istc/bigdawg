@@ -4,7 +4,6 @@ import java.util.List;
 
 import org.apache.commons.lang3.tuple.Pair;
 
-import istc.bigdawg.exceptions.ShimException;
 import istc.bigdawg.islands.operators.Aggregate;
 import istc.bigdawg.islands.operators.CommonTableExpressionScan;
 import istc.bigdawg.islands.operators.Distinct;

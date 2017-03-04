@@ -5,7 +5,7 @@ import java.util.Map;
 import java.util.Set;
 
 import istc.bigdawg.exceptions.IslandException;
-import istc.bigdawg.islands.SciDB.SciDBArray;
+import istc.bigdawg.islands.SciDB.SciDBParsedArray;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.operators.Scan;
 import istc.bigdawg.islands.relational.utils.SQLExpressionUtils;
@@ -22,7 +22,7 @@ public class SciDBIslandScan extends SciDBIslandOperator implements Scan {
 	private String arrayAlias;  //may be query-specific, need to derive it here
 	
 	// for AFL
-	public SciDBIslandScan(Map<String, String> parameters, SciDBArray output, Operator child) throws JSQLParserException {
+	public SciDBIslandScan(Map<String, String> parameters, SciDBParsedArray output, Operator child) throws JSQLParserException {
 		super(parameters, output, child);
 
 		isBlocking = false;

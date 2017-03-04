@@ -6,7 +6,6 @@ import java.util.Map;
 import java.util.Set;
 
 import istc.bigdawg.exceptions.IslandException;
-import istc.bigdawg.islands.DataObjectAttribute;
 import istc.bigdawg.shims.OperatorQueryGenerator;
 
 public interface Operator {
@@ -40,7 +39,8 @@ public interface Operator {
 	public void addChild(Operator aChild);
 	public void addChilds(Collection<Operator> childs);
 	
-	public Map<String, DataObjectAttribute>  getOutSchema();
+	// FIXME consider this
+//	public Map<String, SQLAttribute>  getOutSchema();
 	
 	/**
 	 * get a list of all blocking operators among the offsprings of this operator  

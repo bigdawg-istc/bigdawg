@@ -25,7 +25,7 @@ import org.apache.log4j.Logger;
 import org.jgrapht.graph.DefaultEdge;
 
 import istc.bigdawg.executor.plan.QueryExecutionPlan;
-import istc.bigdawg.islands.CrossIslandCastNode;
+import istc.bigdawg.islands.CrossIslandCast;
 import istc.bigdawg.islands.IntraIslandQuery;
 import istc.bigdawg.islands.CrossIslandQueryPlan;
 import istc.bigdawg.postgresql.PostgreSQLInstance;
@@ -109,7 +109,7 @@ class Task implements Runnable {
                     else {
                     	ciqp.edgesOf(ciqp.getTerminalNode());
                     	for (DefaultEdge e : ciqp.edgeSet()) {
-                    		if (ciqp.getEdgeTarget(e) instanceof CrossIslandCastNode) {
+                    		if (ciqp.getEdgeTarget(e) instanceof CrossIslandCast) {
                     			ciqn = (IntraIslandQuery)(ciqp.getEdgeSource(e));
                     			break;
                     		};

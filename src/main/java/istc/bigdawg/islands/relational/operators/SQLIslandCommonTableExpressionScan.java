@@ -10,7 +10,6 @@ import java.util.Set;
 
 import istc.bigdawg.exceptions.IslandException;
 import istc.bigdawg.exceptions.QueryParsingException;
-import istc.bigdawg.islands.DataObjectAttribute;
 import istc.bigdawg.islands.operators.CommonTableExpressionScan;
 import istc.bigdawg.islands.relational.SQLOutItemResolver;
 import istc.bigdawg.islands.relational.SQLQueryPlan;
@@ -39,15 +38,15 @@ public class SQLIslandCommonTableExpressionScan extends SQLIslandScan implements
 		this.dataObjects.add(getSourceTableName());
 		
 		// match output to base relation
-		Map<String, DataObjectAttribute> cteSchema = new HashMap<String, DataObjectAttribute>();
+		Map<String, SQLAttribute> cteSchema = new HashMap<>();
 		// insert cte alias for schema resolution
 		// delete everything before the first dot and replace it with the tableAlias
 		sourceStatement = (SQLIslandOperator) plan.getPlanRoot(getSourceTableName());
 		
-		Iterator<Map.Entry<String, DataObjectAttribute>  > schemaItr = sourceStatement.outSchema.entrySet().iterator();
+		Iterator<Map.Entry<String, SQLAttribute>  > schemaItr = sourceStatement.outSchema.entrySet().iterator();
 
 		while(schemaItr.hasNext()) {
-			Map.Entry<String, DataObjectAttribute> pair = schemaItr.next();
+			Map.Entry<String, SQLAttribute> pair = schemaItr.next();
 			String name = pair.getKey();
 			String[] names = name.split("\\.");
 			

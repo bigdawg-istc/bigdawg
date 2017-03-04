@@ -9,11 +9,11 @@ import java.util.Set;
 
 import istc.bigdawg.executor.plan.ExecutionNodeFactory;
 import istc.bigdawg.executor.plan.QueryExecutionPlan;
-import istc.bigdawg.islands.IslandsAndCast.Scope;
+import istc.bigdawg.islands.IslandAndCastResolver.Scope;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.signature.Signature;
 
-public abstract class IntraIslandQuery extends CrossIslandPlanNode {
+public abstract class IntraIslandQuery extends CrossIslandQueryNode {
 	
 	protected Signature signature;
 	

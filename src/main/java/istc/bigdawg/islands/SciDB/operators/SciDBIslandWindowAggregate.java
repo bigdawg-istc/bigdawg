@@ -7,9 +7,9 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import istc.bigdawg.exceptions.IslandException;
-import istc.bigdawg.islands.CommonOutItemResolver;
-import istc.bigdawg.islands.DataObjectAttribute;
-import istc.bigdawg.islands.SciDB.SciDBArray;
+import istc.bigdawg.islands.SciDB.SciDBAttributeOrDimension;
+import istc.bigdawg.islands.SciDB.SciDBParsedArray;
+import istc.bigdawg.islands.SciDB.SciDBOutItemResolver;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.operators.WindowAggregate;
 import istc.bigdawg.shims.OperatorQueryGenerator;
@@ -26,7 +26,7 @@ public class SciDBIslandWindowAggregate extends SciDBIslandOperator implements W
 	private List<String> functions;
 	
 	// for AFL
-	SciDBIslandWindowAggregate(Map<String, String> parameters, SciDBArray output, Operator child) throws JSQLParserException {
+	SciDBIslandWindowAggregate(Map<String, String> parameters, SciDBParsedArray output, Operator child) throws JSQLParserException {
 		super(parameters, output, child);
 
 		isBlocking = true;
@@ -68,8 +68,8 @@ public class SciDBIslandWindowAggregate extends SciDBIslandOperator implements W
 		// classify each term as aggregate func or group by
 		for (String expr : output.getAttributes().keySet()) {
 			
-			CommonOutItemResolver out = new CommonOutItemResolver(expr, output.getAttributes().get(expr), false, null); // TODO CHECK THIS TODO
-			DataObjectAttribute attr = out.getAttribute();
+			SciDBOutItemResolver out = new SciDBOutItemResolver(expr, output.getAttributes().get(expr), false, null); // TODO CHECK THIS TODO
+			SciDBAttributeOrDimension attr = out.getAttribute();
 			
 			if (aggFuns.get(expr) != null) attr.setExpression(aggFuns.get(expr));
 			else attr.setExpression(expr);
@@ -83,8 +83,8 @@ public class SciDBIslandWindowAggregate extends SciDBIslandOperator implements W
 		// dimensions
 		for (String expr : output.getDimensions().keySet()) {
 			
-			CommonOutItemResolver out = new CommonOutItemResolver(expr, "Dimension", true, null);
-			DataObjectAttribute dim = out.getAttribute();
+			SciDBOutItemResolver out = new SciDBOutItemResolver(expr, "Dimension", true, null);
+			SciDBAttributeOrDimension dim = out.getAttribute();
 			
 			Column e = (Column) CCJSqlParserUtil.parseExpression(expr);
 			String arrayName = output.getDimensionMembership().get(expr);

@@ -10,7 +10,6 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 
-import istc.bigdawg.islands.DataObjectAttribute;
 import istc.bigdawg.islands.operators.Aggregate;
 import istc.bigdawg.islands.operators.CommonTableExpressionScan;
 import istc.bigdawg.islands.operators.Distinct;
@@ -1984,7 +1983,7 @@ public class PostgreSQLQueryGenerator implements OperatorQueryGenerator {
 
 		boolean started = false;
 
-		for (DataObjectAttribute doa : ((SQLIslandOperator) op).getOutSchema().values()) {
+		for (SQLAttribute doa : ((SQLIslandOperator) op).getOutSchema().values()) {
 			if (started == true)
 				sb.append(',');
 			else
@@ -1998,11 +1997,11 @@ public class PostgreSQLQueryGenerator implements OperatorQueryGenerator {
 		return sb.toString();
 	}
 
-	public String generateSQLTypedString(DataObjectAttribute doa) {
+	public String generateSQLTypedString(SQLAttribute doa) {
 		return doa.getName().replaceAll(".+\\.(?=[\\w]+$)", "") + " " + convertTypeStringToSQLTyped(doa);
 	}
 
-	public String convertTypeStringToSQLTyped(DataObjectAttribute doa) {
+	public String convertTypeStringToSQLTyped(SQLAttribute doa) {
 
 		if (doa.getTypeString() == null || doa.getTypeString().charAt(0) == '*'
 				|| (doa.getTypeString().charAt(0) >= '0' && doa.getTypeString().charAt(0) <= '9'))

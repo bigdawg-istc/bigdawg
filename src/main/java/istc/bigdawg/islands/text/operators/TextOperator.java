@@ -2,14 +2,12 @@ package istc.bigdawg.islands.text.operators;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import istc.bigdawg.exceptions.IslandException;
 import istc.bigdawg.exceptions.ShimException;
-import istc.bigdawg.islands.DataObjectAttribute;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.shims.OperatorQueryGenerator;
 
@@ -30,11 +28,11 @@ public class TextOperator implements Operator {
 	List<Operator> children;
 	Operator parent; 
 	
-	Map<String, DataObjectAttribute> outSchema;
+//	Map<String, DataObjectAttribute> outSchema;
 	
 	public TextOperator () {
 		this.children = new ArrayList<>();
-		this.outSchema = new HashMap<>(); 
+//		this.outSchema = new HashMap<>(); 
 		this.operatorID = nextOperatorID++;
 	}
 	
@@ -133,10 +131,9 @@ public class TextOperator implements Operator {
 		this.children.addAll(childs);
 	}
 
-	@Override
-	public Map<String, DataObjectAttribute> getOutSchema() {
-		return outSchema;
-	}
+//	public Map<String, DataObjectAttribute> getOutSchema() {
+//		return outSchema;
+//	}
 
 	@Override
 	public List<Operator> getAllBlockers() {

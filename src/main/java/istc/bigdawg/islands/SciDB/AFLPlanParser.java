@@ -182,7 +182,7 @@ public class AFLPlanParser {
 					throw new QueryParsingException("Error parsing mSchema: "+temp);
 				}
 				
-				currentNode.schema = new SciDBArray(temp.substring(mSchemaName.end()));
+				currentNode.schema = new SciDBParsedArray(temp.substring(mSchemaName.end()));
 				currentNode.schema.setAlias(temp.substring(mSchemaName.start(),mSchemaName.end()));
 				currentNode.schemaAlias.add(currentNode.schema.getAlias());
 				

@@ -23,7 +23,7 @@ public class AFLPlanNode {
 	
 	public String name = null;
 	public List<AFLPlanAttribute> attributes;
-	public SciDBArray schema = null;
+	public SciDBParsedArray schema = null;
 	public Set<String> schemaAlias = null;
 	public AFLPlanNode parent = null;
 	public List<AFLPlanNode> children = null;

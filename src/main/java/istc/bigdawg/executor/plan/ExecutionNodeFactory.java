@@ -14,9 +14,9 @@ import org.jgrapht.Graphs;
 
 import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.exceptions.BigDawgException;
-import istc.bigdawg.islands.IslandsAndCast.Scope;
 import istc.bigdawg.islands.QueryContainerForCommonDatabase;
-import istc.bigdawg.islands.TheObjectThatResolvesAllDifferencesAmongTheIslands;
+import istc.bigdawg.islands.IslandAndCastResolver;
+import istc.bigdawg.islands.IslandAndCastResolver.Scope;
 import istc.bigdawg.islands.operators.CommonTableExpressionScan;
 import istc.bigdawg.islands.operators.Join;
 import istc.bigdawg.islands.operators.Merge;
@@ -169,7 +169,7 @@ public class ExecutionNodeFactory {
 	 */
 	private static ExecutionNode createJoinNode(String broadcastQuery, ConnectionInfo engine, int dbid, String joinDestinationTable, Join joinOp, Scope island) throws Exception {
 
-		Shim gen = TheObjectThatResolvesAllDifferencesAmongTheIslands.getShim(island, dbid);
+		Shim gen = IslandAndCastResolver.getShim(island, dbid);
 
 		// Break apart Join Predicate Objects into usable Strings
 		// It used to be just 3 items list: comparator string, table-column string for left, table-column string for right
@@ -214,7 +214,7 @@ public class ExecutionNodeFactory {
 		int dbid = getLeftDeepDBID(op, containerDBID);
 		ConnectionInfo engine = CatalogViewer.getConnectionInfo(dbid);
 
-		Shim gen = TheObjectThatResolvesAllDifferencesAmongTheIslands.getShim(island, dbid);
+		Shim gen = IslandAndCastResolver.getShim(island, dbid);
 
 		Operator joinOp = null;
 		String sqlStatementForPresentNonJoinSegment = null;
@@ -314,7 +314,7 @@ public class ExecutionNodeFactory {
 		String remainderSelectIntoString;
 		ConnectionInfo remainderCI = CatalogViewer.getConnectionInfo(remainderDBID);
 		
-		Shim gen = TheObjectThatResolvesAllDifferencesAmongTheIslands.getShim(qep.getIsland(), remainderDBID);
+		Shim gen = IslandAndCastResolver.getShim(qep.getIsland(), remainderDBID);
 		
 		
 		remainder.setSubTree(true);

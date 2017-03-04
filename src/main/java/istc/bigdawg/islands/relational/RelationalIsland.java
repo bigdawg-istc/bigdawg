@@ -17,7 +17,6 @@ import istc.bigdawg.exceptions.BigDawgCatalogException;
 import istc.bigdawg.exceptions.IslandException;
 import istc.bigdawg.islands.IntraIslandQuery;
 import istc.bigdawg.islands.Island;
-import istc.bigdawg.islands.RelationalIslandQuery;
 import istc.bigdawg.islands.operators.Join;
 import istc.bigdawg.islands.operators.Join.JoinType;
 import istc.bigdawg.islands.operators.Operator;

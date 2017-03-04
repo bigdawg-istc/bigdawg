@@ -10,11 +10,11 @@ import java.util.Set;
 
 import istc.bigdawg.exceptions.IslandException;
 import istc.bigdawg.exceptions.QueryParsingException;
-import istc.bigdawg.islands.DataObjectAttribute;
 import istc.bigdawg.islands.operators.Join;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.relational.SQLOutItemResolver;
 import istc.bigdawg.islands.relational.SQLTableExpression;
+import istc.bigdawg.islands.relational.utils.SQLAttribute;
 import istc.bigdawg.islands.relational.utils.SQLExpressionUtils;
 import istc.bigdawg.shims.OperatorQueryGenerator;
 import net.sf.jsqlparser.JSQLParserException;
@@ -31,7 +31,7 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
 	private String joinFilter = null; 
 	private List<String> aliases;
 	
-	protected Map<String, DataObjectAttribute> srcSchema;
+	protected Map<String, SQLAttribute> srcSchema;
 
 	protected static final String BigDAWGSQLJoinPrefix = "BIGDAWGSQLJOIN_";
 	protected static int maxJoinSerial = 0;
@@ -57,7 +57,7 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
 		maxJoinSerial++;
 		this.setJoinID(maxJoinSerial);
 	
-		srcSchema = new LinkedHashMap<String, DataObjectAttribute>(lhs.outSchema);
+		srcSchema = new LinkedHashMap<>(lhs.outSchema);
 		srcSchema.putAll(rhs.outSchema);
 		
 		for(int i = 0; i < output.size(); ++i) {
@@ -65,7 +65,7 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
 			
 			SQLOutItemResolver out = new SQLOutItemResolver(expr, srcSchema, supplement);
 
-			DataObjectAttribute attr = out.getAttribute();
+			SQLAttribute attr = out.getAttribute();
 			
 			String attrName = attr.getFullyQualifiedName();		
 			outSchema.put(attrName, attr);
@@ -142,7 +142,7 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
 		try {
 			for (String s : j.srcSchema.keySet()) {
 				if (j.srcSchema.get(s) != null) 
-					this.srcSchema.put(new String(s), new DataObjectAttribute(j.srcSchema.get(s)));
+					this.srcSchema.put(new String(s), new SQLAttribute(j.srcSchema.get(s)));
 			}
 		} catch (JSQLParserException e) {
 			 throw new IslandException (e.getMessage(), e);
@@ -179,10 +179,10 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
 		
 		this.dataObjects = new HashSet<>();
 		
-		this.srcSchema = new LinkedHashMap<String, DataObjectAttribute>(((SQLIslandOperator) child0).outSchema);
+		this.srcSchema = new LinkedHashMap<String, SQLAttribute>(((SQLIslandOperator) child0).outSchema);
 		srcSchema.putAll(((SQLIslandOperator)child1).outSchema);
 		
-		this.outSchema = new LinkedHashMap<String, DataObjectAttribute>(((SQLIslandOperator) child0).outSchema);
+		this.outSchema = new LinkedHashMap<String, SQLAttribute>(((SQLIslandOperator) child0).outSchema);
 		outSchema.putAll(((SQLIslandOperator) child1).outSchema);
 		
 		
@@ -204,7 +204,7 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
 		this.isBlocking = false;
 		this.isPruned = false;
 		this.setAliases(new ArrayList<>());
-		srcSchema = new LinkedHashMap<String, DataObjectAttribute>();
+		srcSchema = new LinkedHashMap<String, SQLAttribute>();
 		
 		maxJoinSerial++;
 		this.setJoinID(maxJoinSerial);
@@ -226,10 +226,10 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
 		
 		this.dataObjects = new HashSet<>();
 		
-		this.srcSchema = new LinkedHashMap<String, DataObjectAttribute>(((SQLIslandOperator) child0).outSchema);
+		this.srcSchema = new LinkedHashMap<>(((SQLIslandOperator) child0).outSchema);
 		srcSchema.putAll(((SQLIslandOperator)child1).outSchema);
 		
-		this.outSchema = new LinkedHashMap<String, DataObjectAttribute>(((SQLIslandOperator) child0).outSchema);
+		this.outSchema = new LinkedHashMap<>(((SQLIslandOperator) child0).outSchema);
 		outSchema.putAll(((SQLIslandOperator) child1).outSchema);
 		
 		this.children.add(child0);

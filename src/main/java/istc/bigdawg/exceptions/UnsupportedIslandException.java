@@ -1,6 +1,6 @@
 package istc.bigdawg.exceptions;
 
-import istc.bigdawg.islands.IslandsAndCast.Scope;
+import istc.bigdawg.islands.IslandAndCastResolver.Scope;
 
 public class UnsupportedIslandException extends IslandException {
 

@@ -6,15 +6,15 @@ import java.util.Set;
 
 import org.jgrapht.graph.DefaultEdge;
 
-import istc.bigdawg.islands.IslandsAndCast.Scope;
+import istc.bigdawg.islands.IslandAndCastResolver.Scope;
 
-public class CrossIslandPlanNode {
+public class CrossIslandQueryNode {
 
 	protected Scope sourceScope = null;
 	protected String queryString = null;
 	protected String name = null;
 	
-	public CrossIslandPlanNode (Scope sourceScope, String islandQuery, String name) {
+	public CrossIslandQueryNode (Scope sourceScope, String islandQuery, String name) {
 		setSourceScope(sourceScope);
 		setQueryString(islandQuery);
 		setName(name);
@@ -45,21 +45,21 @@ public class CrossIslandPlanNode {
 	}
 	
 	
-	public CrossIslandPlanNode getTargetVertex(CrossIslandQueryPlan ciqp) throws Exception {
-		List<CrossIslandPlanNode> target = getSourceOrTarget(ciqp, false);
+	public CrossIslandQueryNode getTargetVertex(CrossIslandQueryPlan ciqp) throws Exception {
+		List<CrossIslandQueryNode> target = getSourceOrTarget(ciqp, false);
 		if (target.isEmpty()) return null;
 		else return target.get(0);
 	}
 	
-	protected List<CrossIslandPlanNode> getSourceOrTarget(CrossIslandQueryPlan ciqp, boolean isSource) throws Exception {
+	protected List<CrossIslandQueryNode> getSourceOrTarget(CrossIslandQueryPlan ciqp, boolean isSource) throws Exception {
 		
 		if (!ciqp.containsVertex(this)) throw new Exception("CrossIslandQueryPlan does not contain cast node: "+this.getQueryString());
 		
-		List<CrossIslandPlanNode> output = new ArrayList<>();
+		List<CrossIslandQueryNode> output = new ArrayList<>();
 		Set<DefaultEdge> edges = ciqp.edgesOf(this);
 		for (DefaultEdge e : edges) {
 			
-			CrossIslandPlanNode node;
+			CrossIslandQueryNode node;
 			if (isSource) node = ciqp.getEdgeSource(e);
 			else node = ciqp.getEdgeTarget(e);
 			

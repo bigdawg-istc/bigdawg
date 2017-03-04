@@ -1,4 +1,4 @@
-package istc.bigdawg.islands;
+package istc.bigdawg.islands.relational;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -13,7 +13,11 @@ import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.exceptions.IslandException;
 import istc.bigdawg.executor.plan.ExecutionNodeFactory;
 import istc.bigdawg.executor.plan.QueryExecutionPlan;
-import istc.bigdawg.islands.IslandsAndCast.Scope;
+import istc.bigdawg.islands.IntraIslandQuery;
+import istc.bigdawg.islands.Island;
+import istc.bigdawg.islands.QueryContainerForCommonDatabase;
+import istc.bigdawg.islands.IslandAndCastResolver;
+import istc.bigdawg.islands.IslandAndCastResolver.Scope;
 import istc.bigdawg.islands.operators.Aggregate;
 import istc.bigdawg.islands.operators.Distinct;
 import istc.bigdawg.islands.operators.Join;
@@ -61,7 +65,7 @@ public class RelationalIslandQuery extends IntraIslandQuery {
 		logger.info(String.format("--> CrossIsland children: %s;",children.toString()));
 		logger.info(String.format("--> Transition schemas: %s;",transitionSchemas.toString()));
 		
-		Island thisIsland = TheObjectThatResolvesAllDifferencesAmongTheIslands.getIsland(Scope.RELATIONAL);
+		Island thisIsland = IslandAndCastResolver.getIsland(Scope.RELATIONAL);
 		
 		// create temporary tables that are used for as schemas
 		thisIsland.setupForQueryPlanning(children, transitionSchemas);
@@ -146,7 +150,7 @@ public class RelationalIslandQuery extends IntraIslandQuery {
 				
 				ret = new ArrayList<String>();
 //				ret.add(String.valueOf( TheObjectThatResolvesAllDifferencesAmongTheIslands.getSchemaEngineDBID(sourceScope)));
-				ret.add(String.valueOf( TheObjectThatResolvesAllDifferencesAmongTheIslands.getIsland(sourceScope).getDefaultCastReceptionDBID()));
+				ret.add(String.valueOf( IslandAndCastResolver.getIsland(sourceScope).getDefaultCastReceptionDBID()));
 			} else if (node.getChildren().size() > 0) {
 				List<String> result = traverse(node.getChildren().get(0), transitionSchemas);
 				if (result != null) ret = new ArrayList<String>(result); 
@@ -390,7 +394,7 @@ public class RelationalIslandQuery extends IntraIslandQuery {
 
 		if (root == null) return predicates;
 		
-		Island srcIsland = TheObjectThatResolvesAllDifferencesAmongTheIslands.getIsland(sourceScope);
+		Island srcIsland = IslandAndCastResolver.getIsland(sourceScope);
 		
 		String predicate = null;
 		if (root instanceof Join){

@@ -28,7 +28,6 @@ import istc.bigdawg.exceptions.BigDawgException;
 import istc.bigdawg.exceptions.IslandException;
 import istc.bigdawg.exceptions.UnsupportedIslandException;
 import istc.bigdawg.executor.QueryResult;
-import istc.bigdawg.islands.IslandsAndCast.Scope;
 import istc.bigdawg.islands.Myria.MyriaQueryParser;
 import istc.bigdawg.islands.SStore.SStoreQueryParser;
 import istc.bigdawg.islands.SciDB.AFLPlanParser;
@@ -75,16 +74,30 @@ import net.sf.jsqlparser.JSQLParserException;
  *       This assumption needs to change as new engines join Relational Island 
  *
  */
-public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
+public class IslandAndCastResolver {
 	
-	public static enum Engine {PostgreSQL, SciDB, SStore, Accumulo};
+	public static enum Engine {
+		PostgreSQL, SciDB, SStore, Accumulo, Myria
+	};
 	
+	public enum Scope {
+		RELATIONAL, ARRAY, KEYVALUE, TEXT, GRAPH, DOCUMENT, STREAM, CAST, MYRIA 
+	}
+
 	public static final int  psqlSchemaHandlerDBID = BigDawgConfigProperties.INSTANCE.getPostgresSchemaServerDBID();
 	public static final int  scidbSchemaHandlerDBID = BigDawgConfigProperties.INSTANCE.getSciDBSchemaServerDBID();
 	public static final int  sstoreDBID = BigDawgConfigProperties.INSTANCE.getSStoreDBID();
 	public static final int  accumuloSchemaHandlerDBID = BigDawgConfigProperties.INSTANCE.getAccumuloSchemaServerDBID(); 
 	
 	private static final Pattern predicatePattern = Pattern.compile("(?<=\\()([^\\(^\\)]+)(?=\\))");
+	
+	public static Pattern QueryParsingPattern	= Pattern.compile("(?i)(bdrel\\(|bdarray\\(|bdkv\\(|bdtext\\(|bdgraph\\(|bddoc\\(|bdstream\\(|bdmyria\\(|bdcast\\(|\\(|\\))");
+	public static Pattern ScopeStartPattern		= Pattern.compile("^((bdrel\\()|(bdarray\\()|(bdkv\\()|(bdtext\\()|(bdgraph\\()|(bddoc\\()|(bdstream\\()|(bdmyria\\()|(bdcast\\())");
+	public static Pattern ScopeEndPattern		= Pattern.compile("\\) *;? *$");
+	public static Pattern CastScopePattern		= Pattern.compile("(?i)(relational|array|keyvalue|text|graph|document|stream|myria)\\) *;? *$");
+	public static Pattern CastSchemaPattern		= Pattern.compile("(?<=([_a-z0-9, ]+')).*(?=(' *, *(relational|array|keyvalue|text|graph|document|stream|myria)))");
+	public static Pattern CastNamePattern		= Pattern.compile("(?<=(, ))([_@0-9a-zA-Z]+)(?=, *')");
+	
 	
 //	public static List<String> sqlEngineTokenList = new ArrayList<>();
 //	
@@ -121,15 +134,15 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	 * @return
 	 * @throws BigDawgException
 	 */
-	public static Engine getEngineEnum(String engineString) throws BigDawgException {
-		if (engineString.startsWith(Engine.PostgreSQL.name()))
-			return Engine.PostgreSQL;
-		else if (engineString.startsWith(Engine.SciDB.name()))
-			return Engine.SciDB;
-		else if (engineString.startsWith(Engine.SStore.name()))
-			return Engine.SStore;
-		else if (engineString.startsWith(Engine.Accumulo.name()))
-			return Engine.Accumulo;
+	public static IslandAndCastResolver.Engine getEngineEnum(String engineString) throws BigDawgException {
+		if (engineString.startsWith(IslandAndCastResolver.Engine.PostgreSQL.name()))
+			return IslandAndCastResolver.Engine.PostgreSQL;
+		else if (engineString.startsWith(IslandAndCastResolver.Engine.SciDB.name()))
+			return IslandAndCastResolver.Engine.SciDB;
+		else if (engineString.startsWith(IslandAndCastResolver.Engine.SStore.name()))
+			return IslandAndCastResolver.Engine.SStore;
+		else if (engineString.startsWith(IslandAndCastResolver.Engine.Accumulo.name()))
+			return IslandAndCastResolver.Engine.Accumulo;
 		else {
 			throw new BigDawgException("Unsupported engine: "+ engineString);
 		}
@@ -144,7 +157,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	 * @throws SQLException
 	 * @throws BigDawgCatalogException
 	 */
-	public static ConnectionInfo getQConnectionInfo(Catalog cc, Engine e, int dbid) throws SQLException, BigDawgCatalogException {
+	public static ConnectionInfo getQConnectionInfo(Catalog cc, IslandAndCastResolver.Engine e, int dbid) throws SQLException, BigDawgCatalogException {
 		
 		ConnectionInfo extraction = null;
 		ResultSet rs2 = null;
@@ -214,7 +227,7 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 	 */
 	public static Shim getShim(Scope scope, int dbid) throws BigDawgException, SQLException {
 		
-		Engine e = CatalogViewer.getEngineOfDB(dbid);
+		IslandAndCastResolver.Engine e = CatalogViewer.getEngineOfDB(dbid);
 		
 		switch (scope) {
 		case ARRAY:
@@ -813,6 +826,68 @@ public class TheObjectThatResolvesAllDifferencesAmongTheIslands {
 		case TEXT:
 		default:
 			throw new IslandException("Unapplicable island for runOperatorFreeIslandQuery: "+node.sourceScope.name());
+		}
+		
+	}
+	
+	
+	public static Scope convertFunctionScope (String prefix) throws UnsupportedIslandException {
+		switch (prefix) {
+		case "bdrel(":
+		case "bdrel":
+			return Scope.RELATIONAL;
+		case "bdarray(":
+		case "bdarray":
+			return Scope.ARRAY;
+		case "bdkv(":
+		case "bdkv":
+			return Scope.KEYVALUE;
+		case "bdtext(":
+		case "bdtext":
+			return Scope.TEXT;
+		case "bdgraph(":
+		case "bdgraph":
+			return Scope.GRAPH;
+		case "bddoc(":
+		case "bddoc":
+			return Scope.DOCUMENT;
+		case "bdstream(":
+		case "bdstream":
+			return Scope.STREAM;
+		case "bdcast(":
+		case "bdcast":
+			return Scope.CAST;
+		case "bdmyria(":
+		case "bdmyria":
+			return Scope.MYRIA;
+		default:
+			throw new UnsupportedIslandException(prefix);
+		}
+		
+	}
+	
+	public static Scope convertDestinationScope (String prefix) throws UnsupportedIslandException {
+		switch (prefix.toLowerCase()) {
+		case "relational":
+			return Scope.RELATIONAL;
+		case "array":
+			return Scope.ARRAY;
+		case "keyvalue":
+			return Scope.KEYVALUE;
+		case "text":
+			return Scope.TEXT;
+		case "graph":
+			return Scope.GRAPH;
+		case "document":
+			return Scope.DOCUMENT;
+		case "stream":
+			return Scope.STREAM;
+		case "cast":
+			return Scope.CAST;
+		case "myria":
+			return Scope.MYRIA;
+		default:
+			throw new UnsupportedIslandException(prefix);
 		}
 		
 	}

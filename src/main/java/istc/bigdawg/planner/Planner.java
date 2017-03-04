@@ -1,6 +1,5 @@
 package istc.bigdawg.planner;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -13,25 +12,19 @@ import javax.ws.rs.core.Response;
 import org.apache.log4j.Logger;
 import org.mortbay.log.Log;
 
-import istc.bigdawg.accumulo.AccumuloConnectionInfo;
-import istc.bigdawg.accumulo.AccumuloMigrationParams;
+import istc.bigdawg.cast.CastOverseer;
 import istc.bigdawg.catalog.CatalogModifier;
 import istc.bigdawg.catalog.CatalogUtilities;
-import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.exceptions.BigDawgException;
 import istc.bigdawg.executor.Executor;
 import istc.bigdawg.executor.QueryResult;
 import istc.bigdawg.executor.plan.QueryExecutionPlan;
-import istc.bigdawg.islands.CrossIslandCastNode;
+import istc.bigdawg.islands.CrossIslandCast;
 import istc.bigdawg.islands.CrossIslandNonOperatorNode;
-import istc.bigdawg.islands.CrossIslandPlanNode;
-import istc.bigdawg.islands.IntraIslandQuery;
+import istc.bigdawg.islands.CrossIslandQueryNode;
 import istc.bigdawg.islands.CrossIslandQueryPlan;
-import istc.bigdawg.islands.IslandsAndCast.Scope;
-import istc.bigdawg.islands.TheObjectThatResolvesAllDifferencesAmongTheIslands;
-import istc.bigdawg.islands.text.operators.TextScan;
-import istc.bigdawg.migration.MigrationParams;
-import istc.bigdawg.migration.Migrator;
+import istc.bigdawg.islands.IntraIslandQuery;
+import istc.bigdawg.islands.IslandAndCastResolver;
 import istc.bigdawg.monitoring.Monitor;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.signature.Signature;
@@ -61,80 +54,43 @@ public class Planner {
 		return Response.status(200).entity(CatalogUtilities.catalogQueryResult(CatalogUtilities.parseCatalogQuery(trim))).build();
 	}
 	
+
 	
-	private static Set<CrossIslandPlanNode> processCrossIslandPlanNodes (
+	private static Set<CrossIslandQueryNode> processCrossIslandPlanNodes (
 			CrossIslandQueryPlan ciqp, 
-			Set<CrossIslandPlanNode> entryNodes,  
-			Map<CrossIslandPlanNode, ConnectionInfo> connectionInfoMap, 
+			Set<CrossIslandQueryNode> entryNodes,  
+			Map<CrossIslandQueryNode, ConnectionInfo> connectionInfoMap, 
 			Map<ConnectionInfo, Collection<String>> tempTableInfo, 
 			Set<Integer> objectsToDelete) throws Exception {
 		
-		Set<CrossIslandPlanNode> nextNodes = new HashSet<>();
-		for (CrossIslandPlanNode node : entryNodes) {
+		Set<CrossIslandQueryNode> nextNodes = new HashSet<>();
+		for (CrossIslandQueryNode node : entryNodes) {
 
 			// If we arrive at a terminalNode, skip and process later
 			if (node == ciqp.getTerminalNode()) {
 				continue;
 			}
 
-			if (node instanceof CrossIslandCastNode) {
+			if (node instanceof CrossIslandCast) {
 				// Todo: move this code block to a function
 				// we make the assumption that there is no chain CASTing
 				// we also assume that the user does not directly cast an object 
 				// throw new Exception("Unimplemented feature: CAST");
+				
+				CrossIslandCast castNode = ((CrossIslandCast) node);
 
-				IntraIslandQuery source = (IntraIslandQuery) ((CrossIslandCastNode) node).getSourceVertex(ciqp);
-				IntraIslandQuery target = (IntraIslandQuery) ((CrossIslandCastNode) node).getTargetVertex(ciqp);
+				IntraIslandQuery source = (IntraIslandQuery) castNode.getSourceVertex(ciqp);
+				IntraIslandQuery target = (IntraIslandQuery) castNode.getTargetVertex(ciqp);
 
-				int sourceDBID = 0;
-				int targetDBID = 0;
 
 				// get the target, and pick destination -- default location
-				if (target.getRemainderLoc() != null) {
-					targetDBID = Integer.parseInt(target.getRemainderLoc().get(0));
-				} else {
-					targetDBID = Integer.parseInt((new ArrayList<>(target.getQueryContainer().entrySet())).get(0).getValue().getDBID());
-				}
-
-				// get the source, and get the engine 
-				ConnectionInfo targetConnInfo = null;
-				if (targetDBID > 0) targetConnInfo = CatalogViewer.getConnectionInfo(targetDBID);
-				else
-					throw new Exception(String.format("\n\nNegative target loc: %s; requires resolution.\n\n", targetDBID));
-				String remoteName = processRemoteName(((CrossIslandCastNode) node).getSourceScope(), ((CrossIslandCastNode) node).getDestinationScope(), node.getName());
-
-				logger.debug(String.format("\n\nconnectionInfoMap: %s; source: %s\n\n", connectionInfoMap, source));
-
-				logger.debug(String.format("Interisland Migration from %s at %s (%s) to %s at %s (%s)"
-						, source.getName()
-						, connectionInfoMap.get(source).getHost() + ":" + connectionInfoMap.get(source).getPort()
-						, connectionInfoMap.get(source).getClass().getSimpleName()
-						, remoteName
-						, targetConnInfo.getHost() + ":" + targetConnInfo.getPort()
-						, targetConnInfo.getClass().getSimpleName()));
-
-				// Create schema before migration 
-//					remoteSchemaCreation((CrossIslandCastNode)node, ci);
-				logger.debug(String.format("CAST query string: %s", node.getQueryString()));
 				
-				// migrate
-				if (!tempTableInfo.containsKey(targetConnInfo)) {
-					tempTableInfo.put(targetConnInfo, new HashSet<>());
-				}
-				tempTableInfo.get(targetConnInfo).add(remoteName);
-				if (connectionInfoMap.get(source) instanceof AccumuloConnectionInfo) {
-					TextScan ts = ((TextScan) source.getRemainder(0));
-					logger.debug(String.format("Migrate from Accumulo: srcTbl: %s, rmtNm: %s, queryStr: %s, range: %s", 
-							ts.getSourceTableName(), remoteName, node.getQueryString(), ts.getRange()));
-					Migrator.migrate(connectionInfoMap.get(source), ts.getSourceTableName(), //source.getName(), 
-							targetConnInfo, remoteName, new AccumuloMigrationParams(node.getQueryString(), ts.getRange()));
-				} else {
-					if (!tempTableInfo.containsKey(connectionInfoMap.get(source))) {
-						tempTableInfo.put(connectionInfoMap.get(source), new HashSet<>());
-					}
-					tempTableInfo.get(connectionInfoMap.get(source)).add(source.getName());
-					Migrator.migrate(connectionInfoMap.get(source), source.getName(), targetConnInfo, remoteName, new MigrationParams(node.getQueryString()));
-				}
+				
+				
+				int oid = CastOverseer.cast(castNode, source, target, connectionInfoMap, tempTableInfo);
+				
+				
+				
 
 				// add the temporary objects to be deleted
 //				if (!tempTableInfo.containsKey(connectionInfoMap.get(source))) {
@@ -149,7 +105,7 @@ public class Planner {
 
 				// add catalog entry of the temp table, add to catalog set of destruction
 				// unsafe use of ""
-				objectsToDelete.add(CatalogModifier.addObject(remoteName, "", sourceDBID, targetDBID)); // find the correct DBID for source
+				objectsToDelete.add(oid); // find the correct DBID for source
 
 				// add target to the next gen
 				nextNodes.add(target);
@@ -163,6 +119,7 @@ public class Planner {
 				// business as usual
 				IntraIslandQuery ciqn = (IntraIslandQuery) node;
 
+				// TODO make hte best choice of permutation. We postpone this to the next release, 0.2 
 				// int choice = getGetPerformanceAndPickTheBest(ciqn, isTrainingMode);
 				int choice = 0;
 
@@ -174,7 +131,7 @@ public class Planner {
 				connectionInfoMap.put(node, Executor.executePlan(qep, ciqn.getSignature(), choice).getConnectionInfo());
 
 			} else if (node instanceof CrossIslandNonOperatorNode) {
-				connectionInfoMap.put(node, TheObjectThatResolvesAllDifferencesAmongTheIslands.runOperatorFreeIslandQuery((CrossIslandNonOperatorNode) node).getConnectionInfo());
+				connectionInfoMap.put(node, IslandAndCastResolver.runOperatorFreeIslandQuery((CrossIslandNonOperatorNode) node).getConnectionInfo());
 			} else {
 				throw new BigDawgException("Planner::processQuery has unimplemented Cross Island Plan Node: " + node.getClass().getSimpleName());
 			}
@@ -207,8 +164,8 @@ public class Planner {
 				"; #edges: " + ciqp.edgeSet().size() + "\n" + ciqp.toString() + "\n\n");
 
 		// Traverse the graph and run the execution plans
-		Set<CrossIslandPlanNode> entryNodes = new HashSet<>(ciqp.getEntryNodes());
-		Map<CrossIslandPlanNode, ConnectionInfo> connectionInfoMap = new HashMap<>();
+		Set<CrossIslandQueryNode> entryNodes = new HashSet<>(ciqp.getEntryNodes());
+		Map<CrossIslandQueryNode, ConnectionInfo> connectionInfoMap = new HashMap<>();
 		Map<ConnectionInfo, Collection<String>> tempTableInfo = new HashMap<>();
 		try {
 			while (!entryNodes.isEmpty()) {
@@ -223,8 +180,8 @@ public class Planner {
 		// pass this to monitor, and pick your favorite
 
 		// Execute terminal node
-		CrossIslandPlanNode cipn = ciqp.getTerminalNode();
-		if (cipn instanceof CrossIslandCastNode) {
+		CrossIslandQueryNode cipn = ciqp.getTerminalNode();
+		if (cipn instanceof CrossIslandCast) {
 
 			// pick the first engine in the database and migrate everything over
 			// save for later
@@ -250,7 +207,7 @@ public class Planner {
 			} else if (cipn instanceof CrossIslandNonOperatorNode) {
 				// EXECUTE THE RESULT
 				logger.debug("Executing CrossIslandNonOperatorNode exit node...");
-				queryResult = TheObjectThatResolvesAllDifferencesAmongTheIslands.runOperatorFreeIslandQuery((CrossIslandNonOperatorNode) cipn);
+				queryResult = IslandAndCastResolver.runOperatorFreeIslandQuery((CrossIslandNonOperatorNode) cipn);
 	
 			} else {
 				throw new BigDawgException("Planner::processQuery has unimplemented Cross Island Plan Node: " + cipn.getClass().getSimpleName());
@@ -287,17 +244,7 @@ public class Planner {
 		Log.debug(String.format("Temp tables cleaned, time passed: %s; clean up finished", System.currentTimeMillis() - time));
 	}
 
-	private static String processRemoteName(Scope sourceScope, Scope destinationScope, String originalString) {
-		
-		if (sourceScope.equals(destinationScope)) 
-			return originalString;
-		if (sourceScope.equals(Scope.ARRAY)) 
-			return originalString.replaceAll("___", ".");
-		if (destinationScope.equals(Scope.ARRAY))
-			return originalString.replaceAll("[.]", "___");
-		
-		return originalString;
-	}
+	
 	
 	/**
 	 * CALL MONITOR: Parses the userinput, generate alternative join plans, and

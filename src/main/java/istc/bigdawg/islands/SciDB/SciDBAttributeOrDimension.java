@@ -1,4 +1,4 @@
-package istc.bigdawg.islands;
+package istc.bigdawg.islands.SciDB;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -7,36 +7,36 @@ import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 
-public class DataObjectAttribute {
+public class SciDBAttributeOrDimension {
 
 	protected String name = null;
-	protected Set<DataObjectAttribute> sources = null; //  the provenance of each DataObjectAttribute, map to prevent duplicates
-	protected DataObject srcDataObject = null;
+	protected Set<SciDBAttributeOrDimension> sources = null; //  the provenance of each DataObjectAttribute, map to prevent duplicates
+	protected SciDBArray srcDataObject = null;
 	protected String typeString = null;
 	protected boolean hidden = false;
 	protected String expression = null;
 	
-	public DataObjectAttribute(String n) {
+	public SciDBAttributeOrDimension(String n) {
 		name = new String(n);
 		// sources left null;
 		// srcDataObject left null;
 	}
 	
-	public DataObjectAttribute(DataObject o, String n) throws JSQLParserException {
+	public SciDBAttributeOrDimension(SciDBArray o, String n) throws JSQLParserException {
 		this(n);
-		srcDataObject = new DataObject(o);
+		srcDataObject = new SciDBArray(o);
 	}
 	
-	public DataObjectAttribute(DataObjectAttribute sa) throws JSQLParserException {
+	public SciDBAttributeOrDimension(SciDBAttributeOrDimension sa) throws JSQLParserException {
 		this.name = new String(sa.name);
 		if (sa.srcDataObject != null)
-			this.srcDataObject = new DataObject(sa.srcDataObject);
+			this.srcDataObject = new SciDBArray(sa.srcDataObject);
 		
 		
 		if (sa.sources != null) {
 			this.sources = new HashSet<>();
-			for (DataObjectAttribute a : sa.sources) {
-				this.sources.add(new DataObjectAttribute(a));
+			for (SciDBAttributeOrDimension a : sa.sources) {
+				this.sources.add(new SciDBAttributeOrDimension(a));
 			}
 		}
 		
@@ -45,12 +45,12 @@ public class DataObjectAttribute {
 	}
 
 
-	public DataObjectAttribute() {}
+	public SciDBAttributeOrDimension() {}
 
 	
-	public void copy(DataObjectAttribute r) throws JSQLParserException {
+	public void copy(SciDBAttributeOrDimension r) throws JSQLParserException {
 		this.name = r.name;
-		this.srcDataObject = new DataObject(r.srcDataObject);
+		this.srcDataObject = new SciDBArray(r.srcDataObject);
 		this.hidden = r.hidden;
 		this.typeString = new String(r.typeString);
 		this.sources = null;
@@ -61,9 +61,9 @@ public class DataObjectAttribute {
 
 	}
 	
-	public void addSourceAttribute(DataObjectAttribute s) {
+	public void addSourceAttribute(SciDBAttributeOrDimension s) {
 		if(sources == null) {
-			sources = new HashSet<DataObjectAttribute>();
+			sources = new HashSet<SciDBAttributeOrDimension>();
 		}
 		
 		if(s.getSourceAttributes() == null) {
@@ -74,7 +74,7 @@ public class DataObjectAttribute {
 		}
 	}
 	
-	public Set<DataObjectAttribute> getSourceAttributes() {
+	public Set<SciDBAttributeOrDimension> getSourceAttributes() {
 		return sources;
 	}
 	
@@ -87,11 +87,11 @@ public class DataObjectAttribute {
 		name = n;
 	}
 	
-	public DataObject getDataObject() {
+	public SciDBArray getDataObject() {
 		return srcDataObject;
 	}
 	
-	public void setDataObject(DataObject o) {
+	public void setDataObject(SciDBArray o) {
 		srcDataObject = o;
 	}
 	

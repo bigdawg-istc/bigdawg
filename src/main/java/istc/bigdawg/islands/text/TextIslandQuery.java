@@ -14,11 +14,11 @@ import istc.bigdawg.executor.plan.ExecutionNodeFactory;
 import istc.bigdawg.executor.plan.QueryExecutionPlan;
 import istc.bigdawg.islands.IntraIslandQuery;
 import istc.bigdawg.islands.Island;
-import istc.bigdawg.islands.IslandsAndCast.Scope;
-import istc.bigdawg.islands.RelationalIslandQuery;
-import istc.bigdawg.islands.TheObjectThatResolvesAllDifferencesAmongTheIslands;
+import istc.bigdawg.islands.IslandAndCastResolver;
+import istc.bigdawg.islands.IslandAndCastResolver.Scope;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.operators.SeqScan;
+import istc.bigdawg.islands.relational.RelationalIslandQuery;
 import istc.bigdawg.islands.relational.operators.SQLIslandScan;
 import istc.bigdawg.signature.Signature;
 
@@ -51,7 +51,7 @@ public class TextIslandQuery extends IntraIslandQuery {
 		logger.info(String.format("--> CrossIsland children: %s;",children.toString()));
 		logger.info(String.format("--> Transition schemas: %s;",transitionSchemas.toString()));
 		
-		Island thisIsland = TheObjectThatResolvesAllDifferencesAmongTheIslands.getIsland(Scope.TEXT);
+		Island thisIsland = IslandAndCastResolver.getIsland(Scope.TEXT);
 		
 		// create temporary tables that are used for as schemas
 		thisIsland.setupForQueryPlanning(children, transitionSchemas);
@@ -135,7 +135,7 @@ public class TextIslandQuery extends IntraIslandQuery {
 				
 				ret = new ArrayList<String>();
 //				ret.add(String.valueOf( TheObjectThatResolvesAllDifferencesAmongTheIslands.getSchemaEngineDBID(sourceScope)));
-				ret.add(String.valueOf( TheObjectThatResolvesAllDifferencesAmongTheIslands.getIsland(sourceScope).getDefaultCastReceptionDBID()));
+				ret.add(String.valueOf( IslandAndCastResolver.getIsland(sourceScope).getDefaultCastReceptionDBID()));
 			} else if (node.getChildren().size() > 0) {
 				List<String> result = traverse(node.getChildren().get(0), transitionSchemas);
 				if (result != null) ret = new ArrayList<String>(result); 

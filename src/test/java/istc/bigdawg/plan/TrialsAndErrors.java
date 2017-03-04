@@ -16,7 +16,7 @@ import org.junit.Test;
 import istc.bigdawg.catalog.CatalogInstance;
 import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.exceptions.BigDawgException;
-import istc.bigdawg.islands.TheObjectThatResolvesAllDifferencesAmongTheIslands;
+import istc.bigdawg.islands.IslandAndCastResolver;
 import istc.bigdawg.islands.Myria.MyriaQueryParser;
 import istc.bigdawg.islands.SciDB.AFLPlanParser;
 import istc.bigdawg.islands.SciDB.AFLQueryPlan;
@@ -105,7 +105,7 @@ public class TrialsAndErrors {
 		
 		if ( !runExplainer ) return;
 			
-		PostgreSQLHandler psqlh = new PostgreSQLHandler(TheObjectThatResolvesAllDifferencesAmongTheIslands.psqlSchemaHandlerDBID);
+		PostgreSQLHandler psqlh = new PostgreSQLHandler(IslandAndCastResolver.psqlSchemaHandlerDBID);
 //		System.out.println("Explainer -- Type query or \"quit\" to exit: ");
 //		Scanner scanner = new Scanner(System.in);
 //		String query = scanner.nextLine();

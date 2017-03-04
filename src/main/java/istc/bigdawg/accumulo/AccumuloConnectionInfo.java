@@ -12,7 +12,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import istc.bigdawg.exceptions.BigDawgException;
 import istc.bigdawg.executor.ExecutorEngine;
 import istc.bigdawg.executor.ExecutorEngine.LocalQueryExecutionException;
-import istc.bigdawg.islands.TheObjectThatResolvesAllDifferencesAmongTheIslands;
+import istc.bigdawg.islands.IslandAndCastResolver;
 import istc.bigdawg.query.ConnectionInfo;
 
 public class AccumuloConnectionInfo implements ConnectionInfo {

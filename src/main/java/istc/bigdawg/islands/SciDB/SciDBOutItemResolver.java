@@ -1,9 +1,9 @@
-package istc.bigdawg.islands;
+package istc.bigdawg.islands.SciDB;
 
 import java.util.List;
 import java.util.Map;
 
-public class CommonOutItemResolver {
+public class SciDBOutItemResolver {
 
 	// takes in the content of a <Item> field in EXPLAIN xml 
 	// keeps track of fields referenced in expression for security level 
@@ -20,12 +20,12 @@ public class CommonOutItemResolver {
 	protected List<String> commonAggregates;
 	protected List<String> commonWindowedAggregates;
 	protected String alias = null; // attr alias
-	protected DataObjectAttribute outAttribute;
+	protected SciDBAttributeOrDimension outAttribute;
 	
 	
-	public CommonOutItemResolver(String alias, String type, boolean hidden, Map<String, DataObjectAttribute> srcSchema) {
+	public SciDBOutItemResolver(String alias, String type, boolean hidden, Map<String, SciDBAttributeOrDimension> srcSchema) {
 		
-		outAttribute = new DataObjectAttribute();
+		outAttribute = new SciDBAttributeOrDimension();
 		
 		
 //		aggregates = new ArrayList<Function>();
@@ -59,7 +59,7 @@ public class CommonOutItemResolver {
 		
 	}
 	
-	public CommonOutItemResolver() {
+	public SciDBOutItemResolver() {
 		
 	}
 	
@@ -103,7 +103,7 @@ public class CommonOutItemResolver {
 
 	
 	
-	public DataObjectAttribute getAttribute() {
+	public SciDBAttributeOrDimension getAttribute() {
 		return outAttribute;
 	}
 	
