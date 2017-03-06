@@ -670,12 +670,20 @@ public class SStoreSQLHandler implements DBHandler {
     		rs.close();
     		statement.close();
     	} catch (SQLException ex) {
-    		ex.printStackTrace();
-    		// remove ' from the statement - otherwise it won't be inserted into
-    		// log table in Postgres
-    		log.error(ex.getMessage() + "; statement to be executed: " + LogUtils.replace(copyToString) + " "
-    				+ ex.getStackTrace(), ex);
-    		throw ex;
+    		if (ex.getMessage().startsWith("Connection failure: 'Interrupted while waiting for response'")) {
+    			// Temporary solution:
+    			// This exception is thrown because we use socket communication for migration 
+    			//     from Postgres and S-Store, and S-Store doesn't like it. 
+    			//     But it doesn't seem to affect the loading process.
+    			;
+    		} else {
+    			ex.printStackTrace();
+    			// remove ' from the statement - otherwise it won't be inserted into
+    			// log table in Postgres
+    			log.error(ex.getMessage() + "; statement to be executed: " + LogUtils.replace(copyToString) + " "
+    					+ ex.getStackTrace(), ex);
+    			throw ex;
+    		}
     	} finally {
     		if (statement != null) {
     			statement.close();

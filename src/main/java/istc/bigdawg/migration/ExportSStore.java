@@ -370,7 +370,8 @@ public class ExportSStore implements Export {
 	public static void main(String[] args) throws Exception {
 		LoggerSetup.setLogging();
 		ExportSStore export = new ExportSStore(FileFormat.CSV);
-		export.setAdditionalParams("psql", false, "localhost", 18001);
+//		export.setAdditionalParams("psql", false, "localhost", 18001);
+		export.setAdditionalParams("csv", false, "localhost", 18001);
 		export.setHandlerTo(new PostgreSQLHandler());
 		ConnectionInfo connectionFrom = new SStoreSQLConnectionInfo("localhost",
 				"21212", "", "user", "password");
