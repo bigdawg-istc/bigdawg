@@ -16,7 +16,8 @@ RUN apt-get install -y curl && \
 
 # Install necessary utilities
 RUN apt-get update && \
-	apt-get install wget apt-transport-https -y
+	apt-get install wget apt-transport-https -y && \
+	apt-get install python-numpy -y
 
 # Install and setup ssh
 RUN apt-get install -y ssh && \
