@@ -90,7 +90,7 @@ public class ExportMySQL implements Export {
 
     @Override
     public DBHandler getHandler() throws MigrationException {
-        return new PostgreSQLHandler(migrationInfo.getConnectionFrom());
+        return new MySQLHandler(migrationInfo.getConnectionFrom());
     }
 
     @Override

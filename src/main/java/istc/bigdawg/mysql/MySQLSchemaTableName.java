@@ -6,11 +6,8 @@ package istc.bigdawg.mysql;
 import istc.bigdawg.relational.RelationalSchemaTableName;
 
 /**
- * @author Adam Dziedzic
- * 
- *         Jan 13, 2016 6:39:30 PM
- * 
- *         Deal with the name of a table and schema.
+ * @author Kate Yu
+ * Deal with the name of a table and schema.
  */
 public class MySQLSchemaTableName implements RelationalSchemaTableName {
 

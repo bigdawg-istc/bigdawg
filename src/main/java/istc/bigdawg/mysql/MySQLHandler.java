@@ -383,17 +383,6 @@ public class MySQLHandler implements RelationalHandler {
 			}
 		}
 	}
-	/**
-	 * see: {@link #getObjectMetaData(String)}
-	 *
-	 * @param tableNameInitial
-	 * @return
-	 * @throws SQLException
-	 */
-	public RelationalTableMetaData getTableMetaData(String tableNameInitial)
-			throws SQLException {
-		return getObjectMetaData(tableNameInitial);
-	}
 
 	/**
 	 * Get metadata about columns (column name, position, data type, etc) for a

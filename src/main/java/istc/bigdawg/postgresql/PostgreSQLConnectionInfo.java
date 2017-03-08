@@ -11,7 +11,6 @@ import java.util.List;
 
 import istc.bigdawg.executor.ExecutorEngine;
 import istc.bigdawg.executor.JdbcQueryResult;
-import istc.bigdawg.relational.RelationalConnectionInfo;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -22,7 +21,7 @@ import istc.bigdawg.query.ConnectionInfo;
  * 
  * @author Adam Dziedzic
  */
-public class PostgreSQLConnectionInfo implements RelationalConnectionInfo {
+public class PostgreSQLConnectionInfo implements ConnectionInfo {
 
 	/**
 	 * Determines if a de-serialized file is compatible with this class.

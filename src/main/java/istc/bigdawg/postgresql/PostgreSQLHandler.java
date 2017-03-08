@@ -17,7 +17,6 @@ import java.util.Optional;
 
 import javax.ws.rs.core.Response;
 
-import istc.bigdawg.relational.RelationalConnectionInfo;
 import istc.bigdawg.relational.RelationalHandler;
 import istc.bigdawg.relational.RelationalSchemaTableName;
 import istc.bigdawg.relational.RelationalTableMetaData;
@@ -73,20 +72,6 @@ public class PostgreSQLHandler implements RelationalHandler {
 	 */
 	public PostgreSQLHandler(PostgreSQLConnectionInfo conInfo) {
 		this.conInfo = conInfo;
-	}
-
-	/**
-	 * Initialize the PostgreSQL handler with only the connection information.
-	 *
-	 * @param conInfo
-	 *            information about connection to an instance of PostgreSQL
-	 *            database
-	 */
-	public PostgreSQLHandler(RelationalConnectionInfo conInfo) {
-		if (conInfo instanceof PostgreSQLConnectionInfo) {
-			this.conInfo = (PostgreSQLConnectionInfo) conInfo;
-		}
-		throw new IllegalArgumentException("conInfo must be of type PostgreSQLConnectionInfo");
 	}
 
 	/**

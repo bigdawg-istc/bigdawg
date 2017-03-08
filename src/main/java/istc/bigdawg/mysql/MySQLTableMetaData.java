@@ -11,8 +11,6 @@ import java.util.Map;
 
 /**
  * Meta data about a table in MySQL.
- * 
- * @author Adam Dziedzic
  */
 public class MySQLTableMetaData implements RelationalTableMetaData {
 

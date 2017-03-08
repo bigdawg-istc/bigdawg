@@ -5,7 +5,7 @@ package istc.bigdawg.mysql;
 
 import istc.bigdawg.executor.ExecutorEngine;
 import istc.bigdawg.executor.JdbcQueryResult;
-import istc.bigdawg.relational.RelationalConnectionInfo;
+import istc.bigdawg.query.ConnectionInfo;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -20,7 +20,7 @@ import java.util.List;
  * 
  * @author Kate Yu
  */
-public class MySQLConnectionInfo implements RelationalConnectionInfo {
+public class MySQLConnectionInfo implements ConnectionInfo {
 
 	private static final String CLEANUP_STRING = "DROP TABLE %s;";
 
