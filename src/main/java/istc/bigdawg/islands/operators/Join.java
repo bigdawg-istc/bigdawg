@@ -1,5 +1,7 @@
 package istc.bigdawg.islands.operators;
 
+import istc.bigdawg.exceptions.IslandException;
+
 public interface Join extends Operator {
 
 	public enum JoinType  {Left, Natural, Right, Cross};
@@ -12,14 +14,14 @@ public interface Join extends Operator {
 	 * @return 
 	 * @throws Exception
 	 */
-	public String generateJoinPredicate() throws Exception;
+	public String generateJoinPredicate() throws IslandException;
 	
 	/**
 	 * Must be in SQL-style predicate, such as "(a >= b) AND ((c = d) OR (e <> f)) AND ..."
 	 * @return 
 	 * @throws Exception
 	 */
-	public String generateJoinFilter() throws Exception;
+	public String generateJoinFilter() throws IslandException;
     
 	public String getJoinToken();	
 	public Integer getJoinID();

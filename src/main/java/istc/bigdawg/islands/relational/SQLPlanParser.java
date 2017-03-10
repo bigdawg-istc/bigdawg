@@ -1,6 +1,8 @@
 package istc.bigdawg.islands.relational;
 
+import java.io.IOException;
 import java.io.StringReader;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -8,18 +10,23 @@ import java.util.Map;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 
 import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
 
+import istc.bigdawg.exceptions.BigDawgCatalogException;
+import istc.bigdawg.exceptions.QueryParsingException;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.relational.operators.SQLIslandOperatorFactory;
 import istc.bigdawg.islands.relational.utils.SQLPrepareQuery;
 import istc.bigdawg.islands.relational.utils.SQLUtilities;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
+import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.Select;
@@ -50,11 +57,15 @@ public class SQLPlanParser {
 
     
 	// sqlPlan passes in supplement info
-	public SQLPlanParser(String xmlString, SQLQueryPlan sqlPlan, String q) throws Exception {
+	public SQLPlanParser(String xmlString, SQLQueryPlan sqlPlan, String q) throws SQLException, JSQLParserException, QueryParsingException, BigDawgCatalogException {
 	   //catalog = DatabaseSingleton.getInstance();
 		
 		String qprocessed = SQLPrepareQuery.preprocessDateAndTime(q);
-		this.query = (Select) CCJSqlParserUtil.parse(qprocessed);
+		try {
+			this.query = (Select) CCJSqlParserUtil.parse(qprocessed);
+		} catch (JSQLParserException e) {
+			throw new QueryParsingException(e.getMessage(), e);
+		}
 		queryPlan = sqlPlan;
 		
 //		Map<String, String> extraInformation = new HashMap<>();
@@ -67,14 +78,22 @@ public class SQLPlanParser {
 //			
 //		}
 		
-		DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
-		InputSource is = new InputSource();
-		is.setCharacterStream(new StringReader(xmlString));
-		Document document = builder.parse(is);
-		  
-	    //Iterating through the nodes and extracting the data.
-        NodeList nodeList = document.getDocumentElement().getChildNodes();
-      
+		DocumentBuilder builder;
+		InputSource is;
+		Document document;
+		NodeList nodeList = null;
+		
+		try {
+			builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+			is = new InputSource();
+			is.setCharacterStream(new StringReader(xmlString));
+			document = builder.parse(is);
+			//Iterating through the nodes and extracting the data.
+	        nodeList = document.getDocumentElement().getChildNodes();
+		} catch (IOException | SAXException | ParserConfigurationException e) {
+			throw new QueryParsingException(e.getMessage(), e);
+		}  
+		
 		// <explain>
         
 	    for (int i = 0; i < nodeList.getLength(); i++) {
@@ -106,7 +125,8 @@ public class SQLPlanParser {
 	}
 	
 	
-	public static SQLQueryPlan extractDirectFromPostgreSQL(PostgreSQLHandler psqlh, String query) throws Exception  {
+	public static SQLQueryPlan extractDirectFromPostgreSQL(PostgreSQLHandler psqlh, String query) 
+			throws SQLException, JSQLParserException, BigDawgCatalogException, QueryParsingException {
 
 		String explainQuery = SQLPrepareQuery.generateExplainQueryString(query);
 		
@@ -128,10 +148,10 @@ public class SQLPlanParser {
 	}
 	
 	// parse a single <Plan>
-	Operator parsePlanTail(String planName, Node node, int recursionLevel, boolean skipSort) throws Exception {
+	Operator parsePlanTail(String planName, Node node, int recursionLevel, boolean skipSort) throws JSQLParserException, SQLException, QueryParsingException, BigDawgCatalogException {
 		
 		if(node.getNodeName() != "Plan") {
-			throw new Exception("Not parsing a valid plan node!");
+			throw new QueryParsingException("Not parsing a valid plan node!");
 		}
 
 		boolean localSkipSort = false;
@@ -262,7 +282,7 @@ public class SQLPlanParser {
 	}
 	
 	// handle a <Plans> op, might return a list
-	List<Operator> parsePlansTail(String planName, Node node, int recursionLevel, boolean skipSort) throws Exception {
+	List<Operator> parsePlansTail(String planName, Node node, int recursionLevel, boolean skipSort) throws QueryParsingException, JSQLParserException, SQLException, BigDawgCatalogException {
 		NodeList children = node.getChildNodes();
 		List<Operator> childNodes = new ArrayList<Operator>();
 		

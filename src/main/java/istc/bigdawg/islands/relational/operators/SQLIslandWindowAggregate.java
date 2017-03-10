@@ -4,11 +4,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import istc.bigdawg.islands.DataObjectAttribute;
-import istc.bigdawg.islands.OperatorVisitor;
+import istc.bigdawg.exceptions.QueryParsingException;
 import istc.bigdawg.islands.operators.WindowAggregate;
 import istc.bigdawg.islands.relational.SQLOutItemResolver;
 import istc.bigdawg.islands.relational.SQLTableExpression;
+import istc.bigdawg.islands.relational.utils.SQLAttribute;
+import istc.bigdawg.shims.OperatorQueryGenerator;
+import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.AnalyticExpression;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
 import net.sf.jsqlparser.statement.select.OrderByElement;
@@ -24,7 +26,8 @@ public class SQLIslandWindowAggregate extends SQLIslandOperator implements Windo
 	
 	List<AnalyticExpression> parsedAggregates;
 	
-	SQLIslandWindowAggregate(Map<String, String> parameters, List<String> output, SQLIslandOperator child, SQLTableExpression supplement) throws Exception  {
+	SQLIslandWindowAggregate(Map<String, String> parameters, List<String> output, SQLIslandOperator child, SQLTableExpression supplement)
+		throws QueryParsingException, JSQLParserException {
 		super(parameters, output, child, supplement);
 
 		isBlocking = true;
@@ -42,7 +45,7 @@ public class SQLIslandWindowAggregate extends SQLIslandOperator implements Windo
 			String expr = output.get(i);
 				
 			SQLOutItemResolver out = new SQLOutItemResolver(expr, child.outSchema, supplement);
-			DataObjectAttribute attr = out.getAttribute();
+			SQLAttribute attr = out.getAttribute();
 			String alias = attr.getName();
 			
 			outSchema.put(alias, attr);
@@ -83,8 +86,8 @@ public class SQLIslandWindowAggregate extends SQLIslandOperator implements Windo
 	
 	
 	@Override
-	public void accept(OperatorVisitor operatorVisitor) throws Exception {
-		operatorVisitor.visit(this);
+	public void accept(OperatorQueryGenerator operatorQueryGenerator) throws Exception {
+		operatorQueryGenerator.visit(this);
 	}
 	
 	

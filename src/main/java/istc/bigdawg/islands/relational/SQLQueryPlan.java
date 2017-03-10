@@ -4,8 +4,9 @@ package istc.bigdawg.islands.relational;
 import java.util.HashMap;
 import java.util.Map;
 
-import istc.bigdawg.islands.OperatorVisitor;
 import istc.bigdawg.islands.operators.Operator;
+import istc.bigdawg.shims.OperatorQueryGenerator;
+import istc.bigdawg.shims.PostgreSQLQueryGenerator;
 import net.sf.jsqlparser.statement.select.Select;
 import net.sf.jsqlparser.statement.select.WithItem;
 
@@ -49,7 +50,7 @@ public class SQLQueryPlan {
 	public String printPlan() throws Exception {
 		String plan = new String();
 		
-		OperatorVisitor gen = new SQLQueryGenerator();
+		OperatorQueryGenerator gen = new PostgreSQLQueryGenerator();
 		
 		// prepend plans for chronological order
 		for(String s : planRoots.keySet()) {

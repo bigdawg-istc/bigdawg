@@ -6,11 +6,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import istc.bigdawg.islands.OperatorVisitor;
+import istc.bigdawg.exceptions.IslandException;
+import istc.bigdawg.exceptions.QueryParsingException;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.operators.Scan;
 import istc.bigdawg.islands.relational.SQLTableExpression;
 import istc.bigdawg.islands.relational.utils.SQLExpressionUtils;
+import istc.bigdawg.shims.OperatorQueryGenerator;
+import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Alias;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
@@ -28,7 +31,8 @@ public class SQLIslandScan extends SQLIslandOperator implements Scan {
 	protected Table table;
 	private boolean hasFunctionInFilterExpression = false;
 
-	public SQLIslandScan(Map<String, String> parameters, List<String> output, SQLIslandOperator child, SQLTableExpression supplement) throws Exception {
+	public SQLIslandScan(Map<String, String> parameters, List<String> output, SQLIslandOperator child, SQLTableExpression supplement) 
+			throws QueryParsingException, JSQLParserException {
 		super(parameters, output, child, supplement);
 
 		isBlocking = false;
@@ -83,12 +87,17 @@ public class SQLIslandScan extends SQLIslandOperator implements Scan {
 		}
 	}
 	
-	public SQLIslandScan(SQLIslandOperator o, boolean addChild) throws Exception {
+	public SQLIslandScan(SQLIslandOperator o, boolean addChild) throws IslandException {
 		super(o, addChild);
 		SQLIslandScan sc = (SQLIslandScan) o;
 		
-		if (sc.getFilterExpression() != null) 
-			this.setFilterExpression(CCJSqlParserUtil.parseCondExpression(sc.getFilterExpression().toString()));
+		if (sc.getFilterExpression() != null) {
+			try {
+				this.setFilterExpression(CCJSqlParserUtil.parseCondExpression(sc.getFilterExpression().toString()));
+			} catch (JSQLParserException e) {
+				throw new IslandException (e.getMessage(), e);
+			}
+		}
 		this.setSrcTable(new String(sc.getSrcTable()));
 		this.setTableAlias(new String(sc.getTableAlias()));
 		this.setHasFunctionInFilterExpression(sc.isHasFunctionInFilterExpression());
@@ -134,7 +143,7 @@ public class SQLIslandScan extends SQLIslandOperator implements Scan {
 	
 	
 	@Override
-	public Map<String, Set<String>> getObjectToExpressionMappingForSignature() throws Exception{
+	public Map<String, Set<String>> getObjectToExpressionMappingForSignature() throws IslandException {
 		
 		Operator parent = this;
 		while (!parent.isBlocking() && parent.getParent() != null ) parent = parent.getParent();
@@ -143,15 +152,18 @@ public class SQLIslandScan extends SQLIslandOperator implements Scan {
 		Map<String, Set<String>> out = new HashMap<>();
 		
 		// filter
-		if (getFilterExpression() != null && !SQLExpressionUtils.containsArtificiallyConstructedTables(getFilterExpression())) {
-			addToOut(CCJSqlParserUtil.parseCondExpression(getFilterExpression().toString()), out, aliasMapping);
+		try {
+			if (getFilterExpression() != null && !SQLExpressionUtils.containsArtificiallyConstructedTables(getFilterExpression())) {
+				addToOut(CCJSqlParserUtil.parseCondExpression(getFilterExpression().toString()), out, aliasMapping);
+			}
+			
+			// join condition
+			if (getIndexCond() != null && !SQLExpressionUtils.containsArtificiallyConstructedTables(getIndexCond())) {
+				addToOut(CCJSqlParserUtil.parseCondExpression(getIndexCond().toString()), out, aliasMapping);
+			}
+		} catch (JSQLParserException e) {
+			throw new IslandException(e.getMessage(), e);
 		}
-		
-		// join condition
-		if (getIndexCond() != null && !SQLExpressionUtils.containsArtificiallyConstructedTables(getIndexCond())) {
-			addToOut(CCJSqlParserUtil.parseCondExpression(getIndexCond().toString()), out, aliasMapping);
-		}
-		
 		return out;
 	}
 	
@@ -181,8 +193,8 @@ public class SQLIslandScan extends SQLIslandOperator implements Scan {
 	}
 
 	@Override
-	public void accept(OperatorVisitor operatorVisitor) throws Exception {
-		operatorVisitor.visit(this);
+	public void accept(OperatorQueryGenerator operatorQueryGenerator) throws Exception {
+		operatorQueryGenerator.visit(this);
 	}
 
 	public Expression getFilterExpression() {

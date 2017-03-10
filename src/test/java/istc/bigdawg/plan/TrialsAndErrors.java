@@ -16,16 +16,13 @@ import org.junit.Test;
 import istc.bigdawg.catalog.CatalogInstance;
 import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.exceptions.BigDawgException;
-import istc.bigdawg.islands.OperatorVisitor;
-import istc.bigdawg.islands.TheObjectThatResolvesAllDifferencesAmongTheIslands;
+import istc.bigdawg.islands.IslandAndCastResolver;
 import istc.bigdawg.islands.Myria.MyriaQueryParser;
 import istc.bigdawg.islands.SciDB.AFLPlanParser;
-import istc.bigdawg.islands.SciDB.AFLQueryGenerator;
 import istc.bigdawg.islands.SciDB.AFLQueryPlan;
 import istc.bigdawg.islands.operators.Join;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.relational.SQLPlanParser;
-import istc.bigdawg.islands.relational.SQLQueryGenerator;
 import istc.bigdawg.islands.relational.SQLQueryPlan;
 import istc.bigdawg.migration.MigrationParams;
 import istc.bigdawg.migration.Migrator;
@@ -33,6 +30,9 @@ import istc.bigdawg.planner.Planner;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.scidb.SciDBHandler;
+import istc.bigdawg.shims.AFLQueryGenerator;
+import istc.bigdawg.shims.OperatorQueryGenerator;
+import istc.bigdawg.shims.PostgreSQLQueryGenerator;
 import istc.bigdawg.signature.Signature;
 
 public class TrialsAndErrors {
@@ -105,7 +105,7 @@ public class TrialsAndErrors {
 		
 		if ( !runExplainer ) return;
 			
-		PostgreSQLHandler psqlh = new PostgreSQLHandler(TheObjectThatResolvesAllDifferencesAmongTheIslands.psqlSchemaHandlerDBID);
+		PostgreSQLHandler psqlh = new PostgreSQLHandler(IslandAndCastResolver.psqlSchemaHandlerDBID);
 //		System.out.println("Explainer -- Type query or \"quit\" to exit: ");
 //		Scanner scanner = new Scanner(System.in);
 //		String query = scanner.nextLine();
@@ -118,7 +118,7 @@ public class TrialsAndErrors {
 			SQLQueryPlan aqp = SQLPlanParser.extractDirectFromPostgreSQL(psqlh, query);
 //			Select explainQuery = aqp.getStatement();
 //			System.out.println(explainQuery + "\n");
-			OperatorVisitor gen = new SQLQueryGenerator(); 
+			OperatorQueryGenerator gen = new PostgreSQLQueryGenerator(); 
 			aqp.getRootNode().accept(gen);
 			System.out.println(gen.generateStatementString());
 			
@@ -151,7 +151,7 @@ public class TrialsAndErrors {
 			
 			Operator root = queryPlan.getRootNode();
 			
-			OperatorVisitor gen = new AFLQueryGenerator();
+			OperatorQueryGenerator gen = new AFLQueryGenerator();
 			gen.configure(true, false);
 			root.accept(gen);
 			
@@ -214,7 +214,7 @@ public class TrialsAndErrors {
 
 		PostgreSQLHandler psqlh = new PostgreSQLHandler(3);
 		SQLQueryPlan queryPlan = SQLPlanParser.extractDirectFromPostgreSQL(psqlh, query);
-		SQLQueryGenerator gen = new SQLQueryGenerator();
+		PostgreSQLQueryGenerator gen = new PostgreSQLQueryGenerator();
 		
 		Operator root = queryPlan.getRootNode();
 		root.accept(gen);

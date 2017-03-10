@@ -13,17 +13,20 @@ import java.util.regex.Pattern;
 import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
 import org.jgrapht.graph.DefaultEdge;
 
-import istc.bigdawg.catalog.CatalogModifier;
-import istc.bigdawg.islands.IslandsAndCast.Scope;
+import istc.bigdawg.cast.CastOverseer;
+import istc.bigdawg.exceptions.BigDawgException;
+import istc.bigdawg.exceptions.CastException;
+import istc.bigdawg.exceptions.QueryParsingException;
+import istc.bigdawg.islands.IslandAndCastResolver.Scope;
 import istc.bigdawg.islands.operators.Merge;
 
-public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNode, DefaultEdge> 
-	implements Iterable<CrossIslandPlanNode> {
+public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandQueryNode, DefaultEdge> 
+	implements Iterable<CrossIslandQueryNode> {
 
 	private static final long serialVersionUID = -3609729432970736589L;
 	private Stack<Map<String, String>> transitionSchemas;
-	private Set<CrossIslandPlanNode> entryNode;
-	private CrossIslandPlanNode terminalNode;
+	private Set<CrossIslandQueryNode> entryNode;
+	private CrossIslandQueryNode terminalNode;
 	private static final String outputToken  = "BIGDAWG_OUTPUT";
 	private static final String extractTitle = "BIGDAWGTAG_";
 	private static final String castTitle = "BIGDAWGCAST_";
@@ -48,7 +51,7 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 	
 	public void addNodes(String userinput, Set<Integer> objectsToDelete) throws Exception {
 
-		Pattern mark								= IslandsAndCast.QueryParsingPattern;
+		Pattern mark								= IslandAndCastResolver.QueryParsingPattern;
 		Matcher matcher								= mark.matcher(userinput);
 		
 	    Stack<String> stkwrite						= new Stack<>();
@@ -56,7 +59,7 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 	    Stack<Scope> lastScopes						= new Stack<>();
 	    
 	    // nodes in the last level
-	    Stack<List<CrossIslandPlanNode>> nodeStack	= new Stack<>();
+	    Stack<List<CrossIslandQueryNode>> nodeStack	= new Stack<>();
 	    int lastLevel								= 0; 
 	    Scope thisScope								= null;
 	    Scope innerScope							= null;
@@ -75,7 +78,7 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 	    		lastStop = matcher.end(); 
 	    		stkwrite.push(userinput.substring(matcher.start(), lastStop));
 	    		
-	    		lastScopes.push(IslandsAndCast.convertFunctionScope(userinput.substring(matcher.start(), matcher.end())));
+	    		lastScopes.push(IslandAndCastResolver.convertFunctionScope(userinput.substring(matcher.start(), matcher.end())));
 	    		innerScope = null;
 //	    		System.out.printf("Last scope: %s\n", lastScopes.peek());
 	    		
@@ -108,7 +111,7 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 		    		// NEW
 		    		Scope outterScope = lastScopes.isEmpty() ? null : lastScopes.peek();
 //		    		System.out.printf("This Scope: %s; Outter Scope: %s\n", thisScope, outterScope);
-		    		CrossIslandPlanNode newNode = createVertex(name, stkwrite.pop() + userinput.substring(lastStop, matcher.end()), thisScope, innerScope, outterScope, objectsToDelete);
+		    		CrossIslandQueryNode newNode = createVertex(name, stkwrite.pop() + userinput.substring(lastStop, matcher.end()), thisScope, innerScope, outterScope, objectsToDelete);
 		    		
 		    		innerScope = thisScope;
 		    		
@@ -121,12 +124,12 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 		    		if (name.equals(getOutputToken()))
 		    			terminalNode = newNode;
 		    		
-		    		List<CrossIslandPlanNode> temp = nodeStack.pop();
+		    		List<CrossIslandQueryNode> temp = nodeStack.pop();
 		    		if (lastLevel <= parenLevel) {
 		    			if (!nodeStack.isEmpty()) 
 		    				nodeStack.peek().add(newNode);
 		    		} else if (lastLevel > parenLevel ) {//+ 1) {
-		    			for (CrossIslandPlanNode p : temp) {
+		    			for (CrossIslandQueryNode p : temp) {
 	    					// create new edge
 							this.addDagEdge(p, newNode);
 		    			}
@@ -154,21 +157,22 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 	
 	private void checkAndProcessUnionTerminalOperators() {
 		// TODO check the last operator and process it
-		if (terminalNode instanceof CrossIslandQueryNode 
-				&& ((CrossIslandQueryNode)terminalNode).getRemainderLoc() == null
-				&& ((CrossIslandQueryNode)terminalNode).getRemainder(0) instanceof Merge) {
-//			CrossIslandQueryNode node = (CrossIslandQueryNode) terminalNode;
+		if (terminalNode instanceof IntraIslandQuery 
+				&& ((IntraIslandQuery)terminalNode).getRemainderLoc() == null
+				&& ((IntraIslandQuery)terminalNode).getRemainder(0) instanceof Merge) {
+//			IntraIslandQuery node = (IntraIslandQuery) terminalNode;
 			
 		}
 	}
 	
-	private CrossIslandPlanNode createVertex(String name, String rawQueryString, Scope thisScope, Scope innerScope, Scope outterScope, Set<Integer> catalogSOD) throws Exception{
+	private CrossIslandQueryNode createVertex(String name, String rawQueryString, 
+			Scope thisScope, Scope innerScope, Scope outerScope, Set<Integer> catalogSOD) throws BigDawgException {
 		
 		// IDENTIFY ISLAND AND STRIP
-		Matcher islandMatcher	= IslandsAndCast.ScopeStartPattern.matcher(rawQueryString);
-		Matcher queryEndMatcher = IslandsAndCast.ScopeEndPattern.matcher(rawQueryString);
+		Matcher islandMatcher	= IslandAndCastResolver.ScopeStartPattern.matcher(rawQueryString);
+		Matcher queryEndMatcher = IslandAndCastResolver.ScopeEndPattern.matcher(rawQueryString);
 		
-		CrossIslandPlanNode newNode;
+		CrossIslandQueryNode newNode;
 		
 		if (islandMatcher.find() && queryEndMatcher.find()) {
 			
@@ -177,41 +181,50 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 			// check scope and direct traffic
 			if (thisScope.equals(Scope.CAST)) {
 
-				Matcher castSchemaMatcher = IslandsAndCast.CastSchemaPattern.matcher(islandQuery);
+				CrossIslandCast castNode = null;
+				
+				Matcher castSchemaMatcher = IslandAndCastResolver.CastSchemaPattern.matcher(islandQuery);
 				if (castSchemaMatcher.find()) {
 					
-					Matcher castNameMatcher = IslandsAndCast.CastNamePattern.matcher(islandQuery);
-					if (!castNameMatcher.find()) throw new Exception("Cannot find name for cast result: "+ islandQuery);
+					Matcher castNameMatcher = IslandAndCastResolver.CastNamePattern.matcher(islandQuery);
+					if (!castNameMatcher.find()) throw new CastException("Cannot find name for Cast result: "+ islandQuery);
 					
-					// dummy scopes; source need to be changed below or when Edges happen
-					newNode = new CrossIslandCastNode(innerScope, outterScope, 
+					// check if CAST exists
+					if (!CastOverseer.isCastAllowed(innerScope, outerScope)) {
+						throw new CastException(String.format("Cast from %s island to %s island is not allowed", innerScope.name(), outerScope.name()));
+					};
+					castNode = new CrossIslandCast(innerScope, outerScope, 
 							islandQuery.substring(castSchemaMatcher.start(), castSchemaMatcher.end()), 
 							islandQuery.substring(castNameMatcher.start(), castNameMatcher.end()));
 				} else 
-					throw new Exception("Invalid Schema for CAST: "+ islandQuery);
+					throw new CastException("Invalid Schema for Cast: "+ islandQuery);
 				
-				Matcher castSourceScopeMatcher = IslandsAndCast.CastScopePattern.matcher(islandQuery);
+				Matcher castSourceScopeMatcher = IslandAndCastResolver.CastScopePattern.matcher(islandQuery);
 				// if not found then we rely on edge to make it happen
 				if (castSourceScopeMatcher.find()) {
-					((CrossIslandCastNode)newNode).setDestinationScope(IslandsAndCast.convertDestinationScope(islandQuery.substring(castSourceScopeMatcher.start(), castSourceScopeMatcher.end())));
+					castNode.setDestinationScope(IslandAndCastResolver.convertDestinationScope(islandQuery.substring(castSourceScopeMatcher.start(), castSourceScopeMatcher.end())));
 				} 
 				
-				transitionSchemas.pop();
-				transitionSchemas.peek().put(newNode.getName(), TheObjectThatResolvesAllDifferencesAmongTheIslands.getCreationQueryForCast(outterScope, newNode.getName(), islandQuery.substring(castSchemaMatcher.start(), castSchemaMatcher.end())));
+				Island destIsland = IslandAndCastResolver.getIsland(castNode.getDestinationScope());
 				
+				transitionSchemas.pop();
+				transitionSchemas.peek().put(castNode.getName(), 
+						destIsland.getCreateStatementForTransitionTable(castNode.getName(), islandQuery.substring(castSchemaMatcher.start(), castSchemaMatcher.end())));
 				
 				// add catalog entires
-				int dbid = TheObjectThatResolvesAllDifferencesAmongTheIslands.getSchemaEngineDBID(((CrossIslandCastNode)newNode).getDestinationScope());
-				catalogSOD.add(CatalogModifier.addObject(newNode.getName(), "TEMPORARY", dbid, dbid));
+				catalogSOD.add(destIsland.addCatalogObjectEntryForTemporaryTable(castNode.getName()));
 				
-			} else if (TheObjectThatResolvesAllDifferencesAmongTheIslands.isOperatorBasedIsland(thisScope)) {
-				newNode = new CrossIslandQueryNode(thisScope, islandQuery, name, transitionSchemas.pop());
+				newNode = castNode;
+				
+			} else if (IslandAndCastResolver.isOperatorBasedIsland(thisScope)) {
+				newNode = IslandAndCastResolver.getIsland(thisScope)
+						.getIntraIslandQuery(islandQuery, name, transitionSchemas.pop());
 			} else {
 				newNode = new CrossIslandNonOperatorNode(thisScope, islandQuery, name);
 			}
 			
 		} else 
-			throw new Exception("Matcher cannot find token");
+			throw new QueryParsingException("Matcher cannot find token; query string: "+ rawQueryString);
 		
 		return newNode;
 	}; 
@@ -219,7 +232,7 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 	// NEW METHOD END
 	
 	
-	public CrossIslandPlanNode getTerminalNode() {
+	public CrossIslandQueryNode getTerminalNode() {
 		return terminalNode;
 	}
 	
@@ -231,7 +244,7 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 		return serial;
 	}
 	
-	public Set<CrossIslandPlanNode> getEntryNodes() {
+	public Set<CrossIslandQueryNode> getEntryNodes() {
 		return entryNode;
 	} 
 	
@@ -242,11 +255,11 @@ public class CrossIslandQueryPlan extends DirectedAcyclicGraph<CrossIslandPlanNo
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
-		Set<CrossIslandPlanNode> nodeList = new HashSet<>();
+		Set<CrossIslandQueryNode> nodeList = new HashSet<>();
 		nodeList.addAll(this.getEntryNodes());
 		while (!nodeList.isEmpty()) {
-			Set<CrossIslandPlanNode> nextGen = new HashSet<>();
-			for (CrossIslandPlanNode n : nodeList) {
+			Set<CrossIslandQueryNode> nextGen = new HashSet<>();
+			for (CrossIslandQueryNode n : nodeList) {
 				for (DefaultEdge e : this.edgesOf(n)) {
 					if (this.getEdgeTarget(e) == n)  continue;
 					sb.append('(').append(this.getEdgeSource(e)).append(" -> ").append(this.getEdgeTarget(e)).append(")\n");

@@ -133,10 +133,10 @@ public class FromPostgresToSciDBRegionTPCHDataTest {
 		// prepare the target array
 		SciDBHandler.dropArrayIfExists(conTo, toArray);
 		SciDBHandler handler = new SciDBHandler(conTo);
-		handler.executeStatement(TestMigrationUtils
+		handler.executeStatementAQL(TestMigrationUtils
 				.getCreateMultiDimensionalArrayForRegion(toArray));
-		handler.commit();
-		handler.close();
+//		handler.commit();
+//		handler.close();
 		/*
 		 * test of the main method
 		 */

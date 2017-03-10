@@ -9,12 +9,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import istc.bigdawg.islands.DataObjectAttribute;
-import istc.bigdawg.islands.OperatorVisitor;
+import istc.bigdawg.exceptions.IslandException;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.relational.SQLTableExpression;
 import istc.bigdawg.islands.relational.utils.SQLAttribute;
 import istc.bigdawg.islands.relational.utils.SQLExpressionUtils;
+import istc.bigdawg.shims.OperatorQueryGenerator;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Parenthesis;
@@ -52,7 +52,7 @@ public class SQLIslandOperator implements Operator {
 	protected Operator parent = null;
 	protected boolean isCopy = false;
 	
-	protected Map<String, DataObjectAttribute> outSchema;
+	protected Map<String, SQLAttribute> outSchema;
 	
 	private Map<String, String> complexOutItemFromProgeny;
 	
@@ -109,13 +109,13 @@ public class SQLIslandOperator implements Operator {
 	
 	
 	public SQLIslandOperator() {
-		outSchema = new LinkedHashMap<String, DataObjectAttribute>();
+		outSchema = new LinkedHashMap<String, SQLAttribute>();
 		setComplexOutItemFromProgeny(new LinkedHashMap<>());
 		children  = new ArrayList<Operator>();
 		dataObjects = new HashSet<>();
 	}
 	
-	public SQLIslandOperator(SQLIslandOperator o, boolean addChild) throws Exception {
+	public SQLIslandOperator(SQLIslandOperator o, boolean addChild) throws IslandException  {
 		
 		this.isCTERoot = o.isCTERoot;
 		this.isBlocking = o.isBlocking; 
@@ -128,13 +128,12 @@ public class SQLIslandOperator implements Operator {
 		this.setComplexOutItemFromProgeny(new LinkedHashMap<>());
 		
 		this.outSchema = new LinkedHashMap<>();
-		for (String s : o.outSchema.keySet()) {
-			
-			if (o.outSchema.get(s) instanceof SQLAttribute) {
+		try {
+			for (String s : o.outSchema.keySet()) {
 				this.outSchema.put(new String(s), new SQLAttribute((SQLAttribute)o.outSchema.get(s)));
-			} else {
-				this.outSchema.put(new String(s), new DataObjectAttribute(o.outSchema.get(s)));
 			}
+		} catch (JSQLParserException e) {
+			throw new IslandException (e.getMessage(), e);
 		}
 		
 		this.children = new ArrayList<>();
@@ -175,7 +174,7 @@ public class SQLIslandOperator implements Operator {
 		}
 	}
 	
-	protected String rewriteComplextOutItem(String expr) throws Exception {
+	protected String rewriteComplextOutItem(String expr) throws JSQLParserException {
 		// simplify
 		expr = CCJSqlParserUtil.parseExpression(expr).toString();
 		for (String alias : getComplexOutItemFromProgeny().keySet()) {
@@ -184,7 +183,7 @@ public class SQLIslandOperator implements Operator {
 		return expr;
 	}
 	
-	protected String rewriteComplextOutItem(Expression e) throws Exception {
+	protected String rewriteComplextOutItem(Expression e) throws JSQLParserException {
 		// simplify
 		String expr = e.toString();
 		for (String alias : getComplexOutItemFromProgeny().keySet()) {
@@ -232,8 +231,8 @@ public class SQLIslandOperator implements Operator {
 		else return ((SQLIslandOperator)children.get(0)).isAnyProgenyPruned();
 	}
 	
-	@Override
-	public Map<String, DataObjectAttribute>  getOutSchema() {
+//	@Override
+	public Map<String, SQLAttribute>  getOutSchema() {
 		return outSchema;
 	}
 	
@@ -268,7 +267,7 @@ public class SQLIslandOperator implements Operator {
 		isPruned = p;
 	}
 	
-	public String getPruneToken() throws Exception {
+	public String getPruneToken() throws IslandException {
 		if (!isPruned) return null;
 		return BigDAWGSQLPrunePrefix + this.pruneID;
 	}
@@ -286,7 +285,7 @@ public class SQLIslandOperator implements Operator {
 		isSubTree = t;
 	}
 	
-	public String getSubTreeToken() throws Exception {
+	public String getSubTreeToken() throws IslandException {
 		if (!isSubTree && !(this instanceof SQLIslandJoin)) return null;
 		if (this instanceof SQLIslandJoin) return ((SQLIslandJoin)this).getJoinToken(); 
 		else if (this instanceof SQLIslandAggregate && ((SQLIslandAggregate)this).getAggregateID() != null) return ((SQLIslandAggregate)this).getAggregateToken();
@@ -301,7 +300,7 @@ public class SQLIslandOperator implements Operator {
 		return this.isQueryRoot;
 	}
 	
-	public Map<String, String> getDataObjectAliasesOrNames() throws Exception {
+	public Map<String, String> getDataObjectAliasesOrNames() throws IslandException  {
 		
 		Map<String, String> aliasOrString = new LinkedHashMap<>();
 		
@@ -385,15 +384,15 @@ public class SQLIslandOperator implements Operator {
 		return this.isCopy;
 	};
 	
-	
-	public Integer getBlockerID() throws Exception {
+	@Override
+	public Integer getBlockerID() throws IslandException {
 		if (!isBlocking)
-			throw new Exception("SQLIslandOperator Not blocking: "+this.toString());
+			throw new IslandException("SQLIslandOperator Not blocking: "+this.toString());
 		return blockerID;
 	}
 	
 	@Override
-	public Operator duplicate(boolean addChild) throws Exception {
+	public Operator duplicate(boolean addChild) throws IslandException {
 		if (this instanceof SQLIslandJoin) {
 			return new SQLIslandJoin(this, addChild);
 		} else if (this instanceof SQLIslandSeqScan) {
@@ -411,7 +410,7 @@ public class SQLIslandOperator implements Operator {
 		} else if (this instanceof SQLIslandMerge) {
 			return new SQLIslandMerge (this, addChild);
 		} else {
-			throw new Exception("Unsupported SQLIslandOperator Copy: "+this.getClass().toString());
+			throw new IslandException("Unsupported SQLIslandOperator Copy: "+this.getClass().toString());
 		}
 	}
 	
@@ -434,16 +433,16 @@ public class SQLIslandOperator implements Operator {
 	
 	
 	// will likely get overridden
-	public String getTreeRepresentation(boolean isRoot) throws Exception{
-		throw new Exception("Unimplemented: "+this.getClass().toString());
+	public String getTreeRepresentation(boolean isRoot) throws IslandException {
+		throw new IslandException("Unimplemented: "+this.getClass().toString());
 	}
 	
 	// half will be overriden
-	public Map<String, Set<String>> getObjectToExpressionMappingForSignature() throws Exception{
+	public Map<String, Set<String>> getObjectToExpressionMappingForSignature() throws IslandException {
 		return children.get(0).getObjectToExpressionMappingForSignature();
 	}
 	
-	public void removeCTEEntriesFromObjectToExpressionMapping(Map<String, Set<String>> entry) throws Exception {
+	public void removeCTEEntriesFromObjectToExpressionMapping(Map<String, Set<String>> entry) throws IslandException  {
 		for (Operator o: children)
 			o.removeCTEEntriesFromObjectToExpressionMapping(entry);
 	}
@@ -454,7 +453,7 @@ public class SQLIslandOperator implements Operator {
 	 * @param out
 	 * @throws Exception 
 	 */
-	protected void addToOut(Expression e, Map<String, Set<String>> out, Map<String, String> aliasMapping) throws Exception {
+	protected void addToOut(Expression e, Map<String, Set<String>> out, Map<String, String> aliasMapping) {
 		
 		while (e instanceof Parenthesis) e = ((Parenthesis)e).getExpression();
 		SQLExpressionUtils.restoreTableNamesFromAliasForSignature(e, aliasMapping);
@@ -473,7 +472,7 @@ public class SQLIslandOperator implements Operator {
 		}
 	}
 	
-	public Expression resolveAggregatesInFilter(String e, boolean goParent, SQLIslandOperator lastHopOp, Set<String> names, StringBuilder sb) throws Exception {
+	public Expression resolveAggregatesInFilter(String e, boolean goParent, SQLIslandOperator lastHopOp, Set<String> names, StringBuilder sb) throws IslandException {
 		
 		if (goParent && parent != null) 
 			return ((SQLIslandOperator)parent).resolveAggregatesInFilter(e, goParent, this, names, sb);
@@ -512,18 +511,17 @@ public class SQLIslandOperator implements Operator {
 		return dstStatement;
     }
 	
-	public void updateOutSchema(Map<String, DataObjectAttribute> schema) throws JSQLParserException {
-		Map<String, DataObjectAttribute> update = new HashMap<>();
+	public void updateOutSchema(Map<String, SQLAttribute> schema) throws JSQLParserException {
+		Map<String, SQLAttribute> update = new HashMap<>();
 		for (String s: schema.keySet()) {
-			if (schema.get(s) instanceof SQLAttribute) update.put(new String(s), new SQLAttribute((SQLAttribute)schema.get(s)));
-			else update.put(new String(s), new DataObjectAttribute(schema.get(s)));
+			update.put(new String(s), new SQLAttribute((SQLAttribute)schema.get(s)));
 		}
 		this.outSchema = update;
 	}
 
 	@Override
-	public void accept(OperatorVisitor operatorVisitor) throws Exception {
-		operatorVisitor.visit(this);
+	public void accept(OperatorQueryGenerator operatorQueryGenerator) throws Exception {
+		operatorQueryGenerator.visit(this);
 	}
 
 	public Set<String> getObjectAliases() {

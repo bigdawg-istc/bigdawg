@@ -1,8 +1,11 @@
 package istc.bigdawg.catalog;
 
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.Objects;
 import java.util.Set;
+
+import istc.bigdawg.exceptions.BigDawgCatalogException;
 
 /**
  * 
@@ -201,7 +204,7 @@ public class CatalogModifier {
 		cc.commit();
 	}
 	
-	public static int addObject(String newName, String newFields, int newLogDB, int newPhyDB) throws Exception {
+	public static int addObject(String newName, String newFields, int newLogDB, int newPhyDB) throws SQLException, BigDawgCatalogException {
 		
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		

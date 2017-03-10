@@ -3,11 +3,12 @@ package istc.bigdawg.islands.SciDB.operators;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import istc.bigdawg.islands.DataObjectAttribute;
-import istc.bigdawg.islands.OperatorVisitor;
-import istc.bigdawg.islands.SciDB.SciDBArray;
+import istc.bigdawg.exceptions.IslandException;
+import istc.bigdawg.islands.SciDB.SciDBAttributeOrDimension;
+import istc.bigdawg.islands.SciDB.SciDBParsedArray;
 import istc.bigdawg.islands.operators.Distinct;
 import istc.bigdawg.islands.operators.Operator;
+import istc.bigdawg.shims.OperatorQueryGenerator;
 
 public class SciDBIslandDistinct extends SciDBIslandOperator implements Distinct {
 
@@ -19,24 +20,24 @@ public class SciDBIslandDistinct extends SciDBIslandOperator implements Distinct
 	 * @param child
 	 */
 	
-	public SciDBIslandDistinct(Map<String, String> parameters, SciDBArray output, Operator child) {
+	public SciDBIslandDistinct(Map<String, String> parameters, SciDBParsedArray output, Operator child) {
 		super(parameters, output, child);
 		
 		isBlocking = true;
 		blockerCount++;
 		this.blockerID = blockerCount;
 
-		outSchema = new LinkedHashMap<String, DataObjectAttribute>(((SciDBIslandOperator)child).outSchema);
+		outSchema = new LinkedHashMap<String, SciDBAttributeOrDimension>(((SciDBIslandOperator)child).outSchema);
 	}
 	
-	public SciDBIslandDistinct(SciDBIslandOperator o, boolean addChild) throws Exception {
+	public SciDBIslandDistinct(SciDBIslandOperator o, boolean addChild) throws IslandException {
 		super(o, addChild);
 	}
 
 
 	@Override
-	public void accept(OperatorVisitor operatorVisitor) throws Exception {
-		operatorVisitor.visit(this);
+	public void accept(OperatorQueryGenerator operatorQueryGenerator) throws Exception {
+		operatorQueryGenerator.visit(this);
 	}
 	
 	public String toString() {
@@ -44,7 +45,7 @@ public class SciDBIslandDistinct extends SciDBIslandOperator implements Distinct
 	}
 	
 	@Override
-	public String getTreeRepresentation(boolean isRoot) throws Exception{
+	public String getTreeRepresentation(boolean isRoot) throws IslandException{
 		return "{distinct" + this.getChildren().get(0).getTreeRepresentation(isRoot)+"}";
 	}
 };

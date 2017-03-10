@@ -41,4 +41,5 @@ provisions/**/istc.bigdawg-1.0-SNAPSHOT-jar-with-dependencies.jar
 provisions/**/mimic2_flatfiles.tar.gz
 provisions/**/PostgresParserTerms.csv
 provisions/**/SciDBParserTerms.csv
+provisions/s00318.txt
 /bin/

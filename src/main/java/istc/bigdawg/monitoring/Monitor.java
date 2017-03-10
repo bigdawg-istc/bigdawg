@@ -16,8 +16,8 @@ import istc.bigdawg.executor.Executor;
 import istc.bigdawg.executor.ExecutorEngine;
 import istc.bigdawg.executor.JdbcQueryResult;
 import istc.bigdawg.executor.plan.QueryExecutionPlan;
-import istc.bigdawg.islands.CrossIslandPlanNode;
 import istc.bigdawg.islands.CrossIslandQueryNode;
+import istc.bigdawg.islands.IntraIslandQuery;
 import istc.bigdawg.islands.CrossIslandQueryPlan;
 import istc.bigdawg.migration.MigrationStatistics;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
@@ -59,17 +59,17 @@ public class Monitor {
     public static boolean addBenchmarks(Signature signature, boolean lean, BDConstants.Shim[] shims) throws Exception {
         logger.debug("Query for signature: " + signature.getQuery());
 //        CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(crossIslandQuery);
-//        CrossIslandQueryNode ciqn = ciqp.getTerminalNode();
+//        IntraIslandQuery ciqn = ciqp.getTerminalNode();
         CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(signature.getQuery(), new HashSet<>());
         
-        Set<CrossIslandQueryNode> qnSet = new HashSet<>();
+        Set<IntraIslandQuery> qnSet = new HashSet<>();
         
-        for (CrossIslandPlanNode cipn : ciqp.vertexSet())
-        	if (cipn instanceof CrossIslandQueryNode) 
-        		qnSet.add((CrossIslandQueryNode)cipn);
+        for (CrossIslandQueryNode cipn : ciqp.vertexSet())
+        	if (cipn instanceof IntraIslandQuery) 
+        		qnSet.add((IntraIslandQuery)cipn);
         
         boolean exitBoolean = true;
-        for (CrossIslandQueryNode ciqn : qnSet) {
+        for (IntraIslandQuery ciqn : qnSet) {
 	        List<QueryExecutionPlan> qeps = ciqn.getAllQEPs(true);
 	        boolean isContinue = false;
 	        for (int i = 0; i < qeps.size(); i++){

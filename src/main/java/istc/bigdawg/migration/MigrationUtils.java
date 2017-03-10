@@ -214,8 +214,8 @@ public class MigrationUtils {
 	public static void removeArray(ConnectionInfo connectionTo,
 			String arrayName) throws SQLException {
 		SciDBHandler handler = new SciDBHandler(connectionTo);
-		handler.executeStatement("drop array " + arrayName);
-		handler.close();
+		handler.executeStatementAFL("remove(" + arrayName + ")");
+//		handler.close();
 	}
 
 	/**
@@ -295,9 +295,9 @@ public class MigrationUtils {
 		createArrayStringBuf.append("> [_flat_dimension_=0:*,1000000,0]");
 		SciDBHandler handler = new SciDBHandler(
 				migrationInfo.getConnectionTo());
-		handler.executeStatement(createArrayStringBuf.toString());
-		handler.commit();
-		handler.close();
+		handler.executeStatementAQL(createArrayStringBuf.toString());
+//		handler.commit();
+//		handler.close();
 	}
 
 	/**
@@ -344,8 +344,8 @@ public class MigrationUtils {
 			SciDBHandler localHandler = new SciDBHandler(
 					migrationInfo.getConnectionTo());
 			localHandler.execute(createArrayStatement);
-			localHandler.commit();
-			localHandler.close();
+//			localHandler.commit();
+//			localHandler.close();
 			return toArray;
 		}
 		return null;
@@ -375,7 +375,7 @@ public class MigrationUtils {
 						migrationInfo.getConnectionTo());
 				createdArrayMetaData = handler
 						.getObjectMetaData(createdArrayName);
-				handler.close();
+//				handler.close();
 			} catch (NoTargetArrayException e) {
 				String message = "It should not happen - the migrator could not create "
 						+ "a target array using the statment provided by user. "
@@ -406,9 +406,9 @@ public class MigrationUtils {
 			/* the data should be loaded to the default flat array */
 			return new SciDBArrays(flatArray, null);
 		} finally {
-			if (handler != null) {
-				handler.close();
-			}
+//			if (handler != null) {
+//				handler.close();
+//			}
 		}
 		if (MigrationUtils.isFlatArray(arrayMetaData, fromObjectMetaData)) {
 			return new SciDBArrays(new SciDBArray(toArray, false, false), null);
@@ -513,15 +513,15 @@ public class MigrationUtils {
 					+ ex.getMessage();
 			throw new MigrationException(message);
 		} finally {
-			if (fromHandler != null) {
-				try {
-					fromHandler.close();
-				} catch (SQLException e) {
-					log.error("Could not close the handler for SciDB. "
-							+ e.getMessage() + " "
-							+ StackTrace.getFullStackTrace(e), e);
-				}
-			}
+//			if (fromHandler != null) {
+//				try {
+//					fromHandler.close();
+//				} catch (SQLException e) {
+//					log.error("Could not close the handler for SciDB. "
+//							+ e.getMessage() + " "
+//							+ StackTrace.getFullStackTrace(e), e);
+//				}
+//			}
 		}
 	}
 }

@@ -1,8 +1,8 @@
 package istc.bigdawg.islands;
 
-import istc.bigdawg.islands.IslandsAndCast.Scope;
+import istc.bigdawg.islands.IslandAndCastResolver.Scope;
 
-public class CrossIslandNonOperatorNode extends CrossIslandPlanNode {
+public class CrossIslandNonOperatorNode extends CrossIslandQueryNode {
 	
 	public CrossIslandNonOperatorNode (Scope sourceScope, String islandQuery, String name) {
 		super(sourceScope, islandQuery, name);

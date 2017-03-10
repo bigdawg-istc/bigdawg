@@ -5,28 +5,29 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import istc.bigdawg.islands.DataObjectAttribute;
-import istc.bigdawg.islands.OperatorVisitor;
-import istc.bigdawg.islands.SciDB.SciDBArray;
+import istc.bigdawg.exceptions.IslandException;
+import istc.bigdawg.islands.SciDB.SciDBAttributeOrDimension;
+import istc.bigdawg.islands.SciDB.SciDBParsedArray;
 import istc.bigdawg.islands.operators.Merge;
 import istc.bigdawg.islands.operators.Operator;
+import istc.bigdawg.shims.OperatorQueryGenerator;
 
 public class SciDBIslandMerge extends SciDBIslandOperator implements Merge {
 
 	private boolean isUnionAll = true; 
 	
 	// for AFL
-	public SciDBIslandMerge(Map<String, String> parameters, SciDBArray output, List<Operator> childs) throws Exception  {
+	public SciDBIslandMerge(Map<String, String> parameters, SciDBParsedArray output, List<Operator> childs) throws Exception  {
 		super(parameters, output, childs);
 
 		isBlocking = true;
 		blockerCount++;
 		this.blockerID = blockerCount;
 
-		outSchema = new LinkedHashMap<String, DataObjectAttribute>(((SciDBIslandOperator)childs.get(0)).outSchema);
+		outSchema = new LinkedHashMap<String, SciDBAttributeOrDimension>(((SciDBIslandOperator)childs.get(0)).outSchema);
 	}
 	
-	public SciDBIslandMerge(SciDBIslandOperator o, boolean addChild) throws Exception {
+	public SciDBIslandMerge(SciDBIslandOperator o, boolean addChild) throws IslandException {
 		super(o, addChild);
 		SciDBIslandMerge s = (SciDBIslandMerge) o;
 		
@@ -42,12 +43,12 @@ public class SciDBIslandMerge extends SciDBIslandOperator implements Merge {
 	
 	
 	@Override
-	public void accept(OperatorVisitor operatorVisitor) throws Exception {
-		operatorVisitor.visit(this);
+	public void accept(OperatorQueryGenerator operatorQueryGenerator) throws Exception {
+		operatorQueryGenerator.visit(this);
 	}
 	
 	@Override
-	public String getTreeRepresentation(boolean isRoot) throws Exception{
+	public String getTreeRepresentation(boolean isRoot) throws IslandException{
 		
 		StringBuilder sb = new StringBuilder();
 		sb.append('{').append("union");
@@ -61,7 +62,7 @@ public class SciDBIslandMerge extends SciDBIslandOperator implements Merge {
 	}
 	
 	@Override
-	public Map<String, Set<String>> getObjectToExpressionMappingForSignature() throws Exception{
+	public Map<String, Set<String>> getObjectToExpressionMappingForSignature() throws IslandException{
 
 		Map<String, Set<String>> out = children.get(0).getObjectToExpressionMappingForSignature();
 		

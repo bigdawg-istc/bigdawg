@@ -1,201 +1,116 @@
 package istc.bigdawg.islands.SciDB;
 
-import java.util.Arrays;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.Map.Entry;
+
+import net.sf.jsqlparser.JSQLParserException;
 
 public class SciDBArray {
-	
-	private static Pattern lSchemaAttributes = Pattern.compile("<[-:,.@\\w_ ]+>");
-	private static Pattern lDimensions = Pattern.compile("=[*-0-9]+:[*0-9]+,[0-9]+,[0-9]+,?");
-	private static Pattern lSchemaDimensions = Pattern.compile("\\[[-:,@*=\\w_ ]+\\]$");
-	
-	private Map<String, String> attributes;
-	private Map<String, String> dimensions;
-	private Map<String, String> dimensionMembership;
-	private Set<String> schemaAliases;
-	private String schemaAlias = null;
+	private String database = null;
+	private String schema = null;
+	private String name = null;
+	private LinkedHashMap<String, SciDBAttributeOrDimension> attributes;
 	
 	
-	public SciDBArray (String schema) {
-		this();
-		
-		attributes.putAll(parseAttributes(schema));
-		dimensions.putAll(parseDimensions(schema));
-	
+	public SciDBArray(String e, String s, String n) {
+		this.database = e;
+		this.schema = s;
+		this.name = n;
+		this.attributes = new LinkedHashMap<String, SciDBAttributeOrDimension>();
 	}
 	
-	public SciDBArray() {
+	public SciDBArray(String n) {
+		this.name = n;
+		this.attributes = new LinkedHashMap<String, SciDBAttributeOrDimension>();
+	}
+	
+	public SciDBArray(SciDBArray o) throws JSQLParserException {
+		if (o.database != null) this.database = new String(o.database);
+		if (o.schema != null) this.schema = new String(o.schema);
+		if (o.name != null) this.name = new String(o.name);
+		
+		this.attributes = new LinkedHashMap<String, SciDBAttributeOrDimension>();
+		for (String s : o.attributes.keySet()) {
+			this.attributes.put(s, new SciDBAttributeOrDimension(o.attributes.get(s)));
+		}
+	}
+	
+	public SciDBArray(SciDBParsedArray aArray) {
+		name = aArray.getAlias();
+		schema = aArray.getSchemaString();
+
+		attributes = new LinkedHashMap<String, SciDBAttributeOrDimension>();
+		
+		for(String att : aArray.getAttributes().keySet()) {
+			SciDBAttributeOrDimension sa = new SciDBAttributeOrDimension(att);
+			sa.setTypeString(aArray.getAttributes().get(att));
+			attributes.put(sa.getName(), sa);
+		}
+		
+		for(String dims : aArray.getDimensions().keySet()) {
+			SciDBAttributeOrDimension sa = new SciDBAttributeOrDimension(dims);
+			sa.setTypeString(aArray.getDimensions().get(dims).toString());
+			attributes.put(sa.getName(), sa);
+		}
+	}
+	
+	public SciDBArray(){
 		attributes = new LinkedHashMap<>();
-		dimensions = new LinkedHashMap<>();
-		dimensionMembership = new LinkedHashMap<>();
-		schemaAliases = new LinkedHashSet<>();
 	}
 	
-	public static Map<String, String> parseAttributes(String wholeSchema) {
-		Matcher a = lSchemaAttributes.matcher(wholeSchema);
-		if (a.find()) {
-			Map<String, String> outputs = new LinkedHashMap<>();
-			List<String> attribs = Arrays.asList(wholeSchema.substring(a.start()+1, a.end()-1).split(","));
-			
-			for (String s : attribs) {
-				String[] l = s.split(":");
-				outputs.put(l[0], l[1]);
-			}
-			
-			return outputs;
-		} else {
-			System.out.println ("parseAttribute: Not a valid schema: " + wholeSchema);
-			return null;
-		}
-	}
-	
-	public static Map<String, String> parseDimensions(String wholeSchema) {
-		Matcher di = lSchemaDimensions.matcher(wholeSchema);
-		if (di.find()) {
-			Map<String, String> outputs = new LinkedHashMap<>();
-			
-			String dims = wholeSchema.substring(di.start(), di.end());
-			dims = dims.substring(1, dims.length()-1);
-			Matcher d = lDimensions.matcher(dims);
-			
-			int lastStop = 0;
-			
-			while (d.find()) {
-				
-				int end = d.end();
-				if (dims.charAt(d.end()-1) == ',')
-					end--;
-				
-				outputs.put(dims.substring(lastStop, d.start()), 
-						dims.substring(d.start()+1, end));
-				
-				
-				lastStop = d.end();
-			}
-			
-			return outputs;
-					
-		} else {
-			System.out.println ("parseDimension: Not a valid schema: " + wholeSchema);
-			return null;
-		}
-	}
-	
-	public String getSchemaString() {
-		
-		if (attributes.isEmpty() || dimensions.isEmpty()) return "";
-		
+	public String getFullyQualifiedName() {
 		StringBuilder sb = new StringBuilder();
-		
-		sb.append("<");
-		boolean started = false;
-		for (String aName : attributes.keySet()) {
-			if (started) 
-				sb.append(',').append(aName).append(':').append(attributes.get(aName));
-			else {
-				sb.append(aName).append(':').append(attributes.get(aName));
-				started = true;
-			}
+		if (database != null)
+			sb.append(database);
+		if (sb.length() > 0)
+			sb.append('.');
+		if (schema != null)
+			sb.append(schema);
+		if (sb.length() > 0)
+			sb.append('.');
+		return sb.append(name).toString();
+	}
+	
+	public String getName() {
+		return name;
+	}
+	
+	public void setName(String name) {
+		this.name = new String(name);
+	}
+	
+	public void addAttribute(SciDBAttributeOrDimension a) throws Exception {
+		if(attributes.containsKey(a.getName())) {
+			throw new Exception("Duplicate attribute name not permitted");
 		}
-		sb.append('>').append('[');
-		started = false;
-		for (String aName : dimensions.keySet()) {
-//			List<String> props = dimensions.get(aName);
-			if (started) sb.append(',');
-			else started = true;
-			sb.append(aName).append('=').append(dimensions.get(aName));
-		}
-		sb.append(']');
 		
-		return sb.toString();
-		
+		attributes.put(a.getName(), a);
+	}
+	
+	public SciDBAttributeOrDimension getAttributes(String colname) {
+    	return attributes.get(colname);
+    }
+	
+	
+	String getAttributeName(int idx) {
+		Map.Entry<String, SciDBAttributeOrDimension> kv = getColAtIdx(idx);
+		return kv.getValue().getName();
 	}
 	
 	
-	public void fixDimensionStrings() {
+	private Map.Entry<String, SciDBAttributeOrDimension> getColAtIdx(int idx) {
+		Iterator<Entry<String, SciDBAttributeOrDimension>> itr = attributes.entrySet().iterator();
 		
-		
-//		if (schemaAliases.isEmpty()) {
-//			System.out.println("\n\n\nname: "+this.schemaAlias+"\n\n\n");
-//			return;
-//		}
-		
-		StringBuilder sb = new StringBuilder();
-		
-		sb.append("((, )?(");
-		
-		boolean started = false;
-		for (String s : schemaAliases) {
-			if (started) sb.append('|');
-			else started = true;
-			
-			sb.append(s);
-			
+		for (int i = 1; i < idx; ++i) {
+			itr.next();
 		}
-		
-		sb.append("))*$");
-		
-		Pattern p = Pattern.compile(sb.toString());
-//		System.out.printf("SciDBArray dim: sb: %s\n", sb.toString());
-		
-		Map<String, String> substitute = new LinkedHashMap<>();
-		
-		for (String s : dimensions.keySet()) {
-			
-			Matcher d = p.matcher(s);
-			
-			if (d.find()) {
-				substitute.put(s.substring(0,d.start()), dimensions.get(s));
-				dimensionMembership.put(s.substring(0,d.start()), s.substring(d.start(), d.end()));
-				
-//				System.out.println("Substituded String:: "+s.substring(d.start(), d.end())+"; dimensions.get(s): "+dimensions.get(s));
-//				System.out.println("Whole string:: "+s);
-			} else {
-				System.out.println("Cannot find: "+s);
-				break;
-			}
-		}
-		
-		dimensions.clear();
-		dimensions.putAll(substitute);
-		
-//		System.out.println("Pattern string: "+sb.toString());
-		
+
+		return (Map.Entry<String, SciDBAttributeOrDimension>) itr.next();
 	}
-	
-	
-	
-	public Map<String, String> getDimensions() throws Exception {
-		return dimensions;
-	}
-	
-	public Map<String, String> getAttributes() throws Exception {
+
+	public LinkedHashMap<String, SciDBAttributeOrDimension>  getAttributes() {
 		return attributes;
 	}
-	
-	public Map<String, String> getDimensionMembership() throws Exception {
-		return dimensionMembership;
-	}
-	
-	public Set<String> getAllSchemaAliases() {
-		return schemaAliases;
-	}
-	
-	public String getAlias() {
-		return schemaAlias;
-	}
-	
-	public void setAlias(String alias) {
-		schemaAlias = new String (alias);
-	}
-	
-	public void addSchemaAliases(Set<String> aliases) {
-		schemaAliases.addAll(aliases)
-;	}
 }

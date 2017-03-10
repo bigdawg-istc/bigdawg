@@ -9,12 +9,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import istc.bigdawg.islands.DataObjectAttribute;
-import istc.bigdawg.islands.OperatorVisitor;
-import istc.bigdawg.islands.SciDB.SciDBArray;
+import istc.bigdawg.exceptions.IslandException;
+import istc.bigdawg.islands.SciDB.SciDBAttributeOrDimension;
+import istc.bigdawg.islands.SciDB.SciDBParsedArray;
 import istc.bigdawg.islands.operators.Operator;
-import istc.bigdawg.islands.relational.utils.SQLAttribute;
 import istc.bigdawg.islands.relational.utils.SQLExpressionUtils;
+import istc.bigdawg.shims.OperatorQueryGenerator;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Parenthesis;
@@ -44,7 +44,7 @@ public class SciDBIslandOperator implements Operator {
 	protected Integer subTreeID = null;
 	
 	
-	protected Map<String, DataObjectAttribute> outSchema;
+	protected Map<String, SciDBAttributeOrDimension> outSchema;
 	
 	// direct descendants
 	protected List<Operator> children;
@@ -57,11 +57,11 @@ public class SciDBIslandOperator implements Operator {
 	
 
 	// for AFL
-	public SciDBIslandOperator(Map<String, String> parameters, SciDBArray output,  
+	public SciDBIslandOperator(Map<String, String> parameters, SciDBParsedArray output,  
 			Operator child) {
 
 		// order preserving
-		outSchema = new LinkedHashMap<String, DataObjectAttribute>();
+		outSchema = new LinkedHashMap<String, SciDBAttributeOrDimension>();
 		children  = new ArrayList<Operator>();
 		
 		if(child != null) { // check for leaf nodes
@@ -74,10 +74,10 @@ public class SciDBIslandOperator implements Operator {
 	
 	
 	// for AFL
-	public SciDBIslandOperator(Map<String, String> parameters, SciDBArray output, 
+	public SciDBIslandOperator(Map<String, String> parameters, SciDBParsedArray output, 
 			Operator lhs, Operator rhs) {
 		
-		outSchema = new LinkedHashMap<String, DataObjectAttribute>();
+		outSchema = new LinkedHashMap<String, SciDBAttributeOrDimension>();
 		children  = new ArrayList<Operator>();
 		
 		children.add(lhs);
@@ -89,11 +89,11 @@ public class SciDBIslandOperator implements Operator {
 	}
 	
 	// for AFL UNION
-	public SciDBIslandOperator(Map<String, String> parameters, SciDBArray output,  
+	public SciDBIslandOperator(Map<String, String> parameters, SciDBParsedArray output,  
 			List<Operator> childs) {
 
 		// order preserving
-		outSchema = new LinkedHashMap<String, DataObjectAttribute>();
+		outSchema = new LinkedHashMap<String, SciDBAttributeOrDimension>();
 		children  = new ArrayList<Operator>();
 		
 		for (Operator o : childs) { // check for leaf nodes
@@ -108,7 +108,7 @@ public class SciDBIslandOperator implements Operator {
 		
 	}
 	
-	public SciDBIslandOperator(SciDBIslandOperator o, boolean addChild) throws Exception {
+	public SciDBIslandOperator(SciDBIslandOperator o, boolean addChild) throws IslandException {
 		
 		this.isCTERoot = o.isCTERoot;
 		this.isBlocking = o.isBlocking; 
@@ -118,13 +118,12 @@ public class SciDBIslandOperator implements Operator {
 		this.isQueryRoot = o.isQueryRoot;
 		
 		this.outSchema = new LinkedHashMap<>();
-		for (String s : o.outSchema.keySet()) {
-			
-			if (o.outSchema.get(s) instanceof SQLAttribute) {
-				this.outSchema.put(new String(s), new SQLAttribute((SQLAttribute)o.outSchema.get(s)));
-			} else {
-				this.outSchema.put(new String(s), new DataObjectAttribute(o.outSchema.get(s)));
+		try {
+			for (String s : o.outSchema.keySet()) {
+				this.outSchema.put(new String(s), new SciDBAttributeOrDimension(o.outSchema.get(s)));
 			}
+		} catch (JSQLParserException e) {
+			throw new IslandException(e.getMessage(), e);
 		}
 		
 		this.children = new ArrayList<>();
@@ -190,8 +189,7 @@ public class SciDBIslandOperator implements Operator {
 		else return ((SciDBIslandOperator) children.get(0)).isAnyProgenyPruned();
 	}
 	
-	@Override
-	public Map<String, DataObjectAttribute>  getOutSchema() {
+	public Map<String, SciDBAttributeOrDimension>  getOutSchema() {
 		return outSchema;
 	}
 	
@@ -220,9 +218,9 @@ public class SciDBIslandOperator implements Operator {
 	}
 	
 	@Override
-	public String getPruneToken() throws Exception {
+	public String getPruneToken() throws IslandException {
 		if (!isPruned) 
-			throw new Exception("\n\n\n----> unpruned token: "+this.outSchema+"\n\n");
+			throw new IslandException("\n\n\n----> unpruned token: "+this.outSchema+"\n\n");
 		return BigDAWGSciDBPrunePrefix + this.pruneID;
 	}
 	
@@ -242,7 +240,7 @@ public class SciDBIslandOperator implements Operator {
 	}
 	
 	@Override
-	public String getSubTreeToken() throws Exception {
+	public String getSubTreeToken() throws IslandException {
 		if (!isSubTree && !(this instanceof SciDBIslandJoin)) return null;
 		if (this instanceof SciDBIslandJoin) return ((SciDBIslandJoin)this).getJoinToken(); 
 		else if (this instanceof SciDBIslandAggregate && ((SciDBIslandAggregate)this).getAggregateID() != null) return ((SciDBIslandAggregate)this).getAggregateToken();
@@ -260,7 +258,7 @@ public class SciDBIslandOperator implements Operator {
 	}
 	
 	@Override
-	public Map<String, String> getDataObjectAliasesOrNames() throws Exception {
+	public Map<String, String> getDataObjectAliasesOrNames() throws IslandException {
 		
 		Map<String, String> aliasOrString = new LinkedHashMap<>();
 		
@@ -345,30 +343,34 @@ public class SciDBIslandOperator implements Operator {
 	};
 	
 	@Override
-	public Integer getBlockerID() throws Exception {
+	public Integer getBlockerID() throws IslandException {
 		if (!isBlocking)
-			throw new Exception("SciDBIslandOperator Not blocking: "+this.toString());
+			throw new IslandException("SciDBIslandOperator Not blocking: "+this.toString());
 		return blockerID;
 	}
 	
 	@Override
-	public Operator duplicate(boolean addChild) throws Exception {
-		if (this instanceof SciDBIslandJoin) {
-			return new SciDBIslandJoin(this, addChild);
-		} else if (this instanceof SciDBIslandSeqScan) {
-			return new SciDBIslandSeqScan(this, addChild);
-		} else if (this instanceof SciDBIslandSort) {
-			return new SciDBIslandSort(this, addChild);
-		} else if (this instanceof SciDBIslandAggregate) {
-			return new SciDBIslandAggregate(this, addChild);
-//		} else if (this instanceof SciDBIslandLimit) {
-//			return new SciDBIslandLimit(this, addChild);
-		} else if (this instanceof SciDBIslandDistinct) {
-			return new SciDBIslandDistinct(this, addChild);
-		} else if (this instanceof SciDBIslandMerge) {
-			return new SciDBIslandMerge (this, addChild);
-		} else {
-			throw new Exception("Unsupported SciDBIslandOperator Copy: "+this.getClass().toString());
+	public Operator duplicate(boolean addChild) throws IslandException {
+		try {
+			if (this instanceof SciDBIslandJoin) {
+				return new SciDBIslandJoin(this, addChild);
+			} else if (this instanceof SciDBIslandSeqScan) {
+				return new SciDBIslandSeqScan(this, addChild);
+			} else if (this instanceof SciDBIslandSort) {
+				return new SciDBIslandSort(this, addChild);
+			} else if (this instanceof SciDBIslandAggregate) {
+				return new SciDBIslandAggregate(this, addChild);
+	//		} else if (this instanceof SciDBIslandLimit) {
+	//			return new SciDBIslandLimit(this, addChild);
+			} else if (this instanceof SciDBIslandDistinct) {
+				return new SciDBIslandDistinct(this, addChild);
+			} else if (this instanceof SciDBIslandMerge) {
+				return new SciDBIslandMerge (this, addChild);
+			} else {
+				throw new IslandException("Unsupported SciDBIslandOperator Copy: "+this.getClass().toString());
+			}
+		} catch (JSQLParserException e) {
+			throw new IslandException(e.getMessage(), e);
 		}
 	}
 	
@@ -395,12 +397,12 @@ public class SciDBIslandOperator implements Operator {
 	
 	// will likely get overridden
 	@Override
-	public String getTreeRepresentation(boolean isRoot) throws Exception{
-		throw new Exception("Unimplemented: "+this.getClass().toString());
+	public String getTreeRepresentation(boolean isRoot) throws IslandException{
+		throw new IslandException("Unimplemented: "+this.getClass().toString());
 	}
 	
 	// half will be overriden
-	public Map<String, Set<String>> getObjectToExpressionMappingForSignature() throws Exception{
+	public Map<String, Set<String>> getObjectToExpressionMappingForSignature() throws IslandException{
 		System.out.printf("SciDBIslandOperator calling default getObjectToExpressionMappingForSignature; class: %s;\n", this.getClass().getSimpleName());
 		return children.get(0).getObjectToExpressionMappingForSignature();
 	}
@@ -416,7 +418,7 @@ public class SciDBIslandOperator implements Operator {
 	 * @param out
 	 * @throws Exception 
 	 */
-	protected void addToOut(Expression e, Map<String, Set<String>> out, Map<String, String> aliasMapping) throws Exception {
+	protected void addToOut(Expression e, Map<String, Set<String>> out, Map<String, String> aliasMapping) throws IslandException {
 		
 		while (e instanceof Parenthesis) e = ((Parenthesis)e).getExpression();
 		SQLExpressionUtils.restoreTableNamesFromAliasForSignature(e, aliasMapping);
@@ -435,18 +437,17 @@ public class SciDBIslandOperator implements Operator {
 		}
 	}
 	
-	public void updateOutSchema(Map<String, DataObjectAttribute> schema) throws JSQLParserException {
-		Map<String, DataObjectAttribute> update = new HashMap<>();
+	public void updateOutSchema(Map<String, SciDBAttributeOrDimension> schema) throws JSQLParserException {
+		Map<String, SciDBAttributeOrDimension> update = new HashMap<>();
 		for (String s: schema.keySet()) {
-			if (schema.get(s) instanceof SQLAttribute) update.put(new String(s), new SQLAttribute((SQLAttribute)schema.get(s)));
-			else update.put(new String(s), new DataObjectAttribute(schema.get(s)));
+			update.put(new String(s), new SciDBAttributeOrDimension(schema.get(s)));
 		}
 		this.outSchema = update;
 	}
 
 	@Override
-	public void accept(OperatorVisitor operatorVisitor) throws Exception {
-		operatorVisitor.visit(this);
+	public void accept(OperatorQueryGenerator operatorQueryGenerator) throws Exception {
+		operatorQueryGenerator.visit(this);
 	}
 
 	public Set<String> getObjectAliases() {

@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import istc.bigdawg.exceptions.QueryParsingException;
 import istc.bigdawg.islands.operators.Sort.SortOrder;
 import istc.bigdawg.islands.relational.operators.SQLIslandSort;
 import net.sf.jsqlparser.expression.Alias;
@@ -195,7 +196,7 @@ public class SQLTableExpression {
     
     // have a sort from the query execution plan
     // need to resolve it to OrderByElement to get ASC or DESC clause
-    public SQLIslandSort.SortOrder getSortOrder(List<String> sortKeys, String sectionName) throws Exception {
+    public SQLIslandSort.SortOrder getSortOrder(List<String> sortKeys, String sectionName) throws QueryParsingException {
     	
     	if(sortList == null) {
     		createSortList(sectionName);
@@ -205,7 +206,7 @@ public class SQLTableExpression {
     	
     	// make sure they match
     	if(sort.size() != sortKeys.size()) {
-    		throw new Exception("Sort keys don't have the same length! " + sort + " " + sortKeys+" "+sortList.toString());
+    		throw new QueryParsingException("Sort keys don't have the same length! " + sort + " " + sortKeys+" "+sortList.toString());
     	}
     	
     	for(int i = 0; i < sort.size(); ++i) {
@@ -216,7 +217,7 @@ public class SQLTableExpression {
     		
     		if(!expr.equals(psqlExpr) && (aliasedExpr != null && 
     		    !aliasedExpr.equals(psqlExpr))) {
-    			throw new Exception("Sort lookup had mismatched keys! Aliased: " + aliasedExpr + ", expression input: " + expr + "!=" + psqlExpr + " (psql expr)");
+    			throw new QueryParsingException("Sort lookup had mismatched keys! Aliased: " + aliasedExpr + ", expression input: " + expr + "!=" + psqlExpr + " (psql expr)");
     		}
     	}
     	

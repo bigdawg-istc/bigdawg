@@ -34,7 +34,6 @@ import istc.bigdawg.executor.ConstructedQueryResult;
 import istc.bigdawg.executor.ExecutorEngine;
 import istc.bigdawg.executor.IslandQueryResult;
 import istc.bigdawg.executor.QueryResult;
-import istc.bigdawg.islands.TheObjectThatResolvesAllDifferencesAmongTheIslands;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.text.operators.TextOperator;
 import istc.bigdawg.islands.text.operators.TextScan;
@@ -60,6 +59,10 @@ public class AccumuloExecutionEngine implements ExecutorEngine, DBHandler {
 	}
 	
 	private ConnectionInfo ci = null;
+	
+	public static final String AccumuloCreateTableCommandPrefix = "accumulocreate ";
+	public static final String AccumuloDeleteTableCommandPrefix = "accumulodelete ";
+	public static final String AccumuloTempTableCommandPrefix = "accumulotemp ";
 	
 //	private static Pair<String, Range> allThatNeedsMigration = null;
 //	
@@ -117,38 +120,19 @@ public class AccumuloExecutionEngine implements ExecutorEngine, DBHandler {
 			
 			TextOperator op = (TextOperator) execution.get(query);
 			if (op == null) {
-				if (query.startsWith(TheObjectThatResolvesAllDifferencesAmongTheIslands.AccumuloCreateTableCommandPrefix)) {
+				if (query.startsWith(AccumuloCreateTableCommandPrefix)) {
 					String[] splits = query.split("[ ]");
 					assert(splits.length == 2);
 					conn.tableOperations().create(splits[1]);
 					return Optional.of(new IslandQueryResult(ci));
-				} else if (query.startsWith(TheObjectThatResolvesAllDifferencesAmongTheIslands.AccumuloDeleteTableCommandPrefix)) {
+				} else if (query.startsWith(AccumuloDeleteTableCommandPrefix)) {
 					String[] splits = query.split("[ ]");
 					assert(splits.length == 2);
 					dropDataSetIfExists(splits[1]);
 //					conn.tableOperations().delete(splits[1]);
 					return Optional.of(new IslandQueryResult(ci));
-				} else if (query.startsWith(TheObjectThatResolvesAllDifferencesAmongTheIslands.AccumuloTempTableCommandPrefix)) {
-					
-					// don't do shit but
-//					// leave a note, saying that this specific thing needs to be migrated
-//					String[] splits = query.split("[ ]");
-//					assert(splits.length == 2);
-//					op = (TextOperator) execution.get(splits[1]);
-//					assert(op != null && op instanceof TextScan);
-//					allThatNeedsMigration = new ImmutablePair<>(splits[1], ((TextScan)op).getRange());
-					
-					// this scanner into writer thing don't work
-//					conn.tableOperations().create(splits[1]);
-//					BatchScanner scanner = conn.createBatchScanner(splits[1], Authorizations.EMPTY, 1);
-//					scanner.setRanges(Collections.singleton(scan.getRange()));
-//					scanner.addScanIterator(new IteratorSetting(0, query, null));
-//					BatchWriterConfig conf = new BatchWriterConfig();
-//					conf.setMaxMemory(MAX_MEMORY);
-//					conf.setMaxWriteThreads(MAX_THREADS);
-//					BatchWriter bw = conn.createBatchWriter(splits[1], conf);
-//					
-//					bw.addMutations(iterable);
+				} else if (query.startsWith(AccumuloTempTableCommandPrefix)) {
+					// leave a note, saying that this specific table is ready to execute and be migrated
 					return Optional.of(new IslandQueryResult(ci));
 				} else 
 					throw new LocalQueryExecutionException("Unsupported TEXT island query: "+query);

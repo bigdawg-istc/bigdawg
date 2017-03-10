@@ -5,11 +5,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import istc.bigdawg.islands.DataObjectAttribute;
-import istc.bigdawg.islands.OperatorVisitor;
-import istc.bigdawg.islands.SciDB.SciDBArray;
+import istc.bigdawg.exceptions.IslandException;
+import istc.bigdawg.islands.SciDB.SciDBAttributeOrDimension;
+import istc.bigdawg.islands.SciDB.SciDBParsedArray;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.operators.Sort;
+import istc.bigdawg.shims.OperatorQueryGenerator;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.OrderByElement;
@@ -26,7 +27,7 @@ public class SciDBIslandSort extends SciDBIslandOperator implements Sort {
 	private boolean isWinAgg = false; // is it part of a windowed aggregate or an ORDER BY clause?
 	
 	// for AFL
-	public SciDBIslandSort(Map<String, String> parameters, SciDBArray output,  List<String> keys, Operator child) throws Exception  {
+	public SciDBIslandSort(Map<String, String> parameters, SciDBParsedArray output,  List<String> keys, Operator child) {
 		super(parameters, output, child);
 
 		isBlocking = true;
@@ -41,11 +42,11 @@ public class SciDBIslandSort extends SciDBIslandOperator implements Sort {
 
 		setSortKeys(keys);
 		
-		outSchema = new LinkedHashMap<String, DataObjectAttribute>(((SciDBIslandOperator)child).outSchema);
+		outSchema = new LinkedHashMap<String, SciDBAttributeOrDimension>(((SciDBIslandOperator)child).outSchema);
 		
 	}
 	
-	public SciDBIslandSort(SciDBIslandOperator o, boolean addChild) throws Exception {
+	public SciDBIslandSort(SciDBIslandOperator o, boolean addChild) throws IslandException {
 		super(o, addChild);
 		SciDBIslandSort s = (SciDBIslandSort) o;
 		
@@ -113,12 +114,12 @@ public class SciDBIslandSort extends SciDBIslandOperator implements Sort {
 	}
 	
 	@Override
-	public void accept(OperatorVisitor operatorVisitor) throws Exception {
-		operatorVisitor.visit(this);
+	public void accept(OperatorQueryGenerator operatorQueryGenerator) throws Exception {
+		operatorQueryGenerator.visit(this);
 	}
 	
 	@Override
-	public String getTreeRepresentation(boolean isRoot) throws Exception{
+	public String getTreeRepresentation(boolean isRoot) throws IslandException{
 		return "{sort"+children.get(0).getTreeRepresentation(false)+"}";
 	}
 
