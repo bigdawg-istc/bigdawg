@@ -37,13 +37,10 @@ import istc.bigdawg.utils.StackTrace;
 /**
  * Test the external interface of BigDAWG.
  * 
- * Run the quries from CURL and compare the obtained result with the expected
+ * Run the queries from CURL and compare the obtained result with the expected
  * one.
  * 
- * 
  * @author Adam Dziedzic
- * 
- *
  */
 public class CurlTest {
 
@@ -66,7 +63,7 @@ public class CurlTest {
 
 	private final static String truthPath = "src/test/resources/SystemTests/";
 
-	/* Path to the curl to issue the bigdawg query. */
+	/* Path to the curl to issue the BigDAWG query. */
 	private final static String path = BigDawgConfigProperties.INSTANCE
 			.getBaseURI() + "query/";
 
