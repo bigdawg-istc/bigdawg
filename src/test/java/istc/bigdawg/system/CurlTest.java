@@ -9,6 +9,7 @@ import static org.junit.Assert.fail;
 import static org.junit.Assert.assertEquals;
 
 import java.io.BufferedReader;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -61,15 +62,36 @@ public class CurlTest {
 	private final static String POST = "POST";
 	private final static String D = "-d";
 
-	private final static String truthPath = "src/test/resources/SystemTests/";
+	private final static String TRUTH_PATH = "src/test/resources/SystemTests/";
 
 	/* Path to the curl to issue the BigDAWG query. */
-	private final static String path = BigDawgConfigProperties.INSTANCE
+	private final static String PATH = BigDawgConfigProperties.INSTANCE
 			.getBaseURI() + "query/";
 
-	/* Queries. */
-	private static final String relationalPatients = "'bdrel(select subject_id, "
+	/* Queries and "ground-truth" file with correct answers. */
+
+	/* Query from a single PostgreSQL's instance - for patients. */
+	private static final String RELATIONAL_PATIENTS = "'bdrel(select subject_id, "
 			+ "sex, dob from mimic2v26.d_patients order by subject_id limit 5;)'";
+	/*
+	 * The name of the file where the correct result for the query for patients
+	 * is stored.
+	 */
+	private static final String PATIENTS_FILE = "d_patients.txt";
+
+	/*
+	 * Query spanning two instance of PostgreSQL.
+	 * 
+	 */
+	private static final String POSTGRES_POSTGRES_QUERY = "'bdrel(select hadm_id, mimic2v26.admissions.subject_id, icustay_id, itemid, ioitemid, charttime, elemid from mimic2v26.additives, mimic2v26.admissions where mimic2v26.additives.subject_id = mimic2v26.admissions.subject_id order by hadm_id, mimic2v26.admissions.subject_id, icustay_id, itemid, ioitemid, charttime, elemid limit 10;)'";
+	private static final String POSTGGRES_POSTGRES_FILE = "postgres_postgres_migration.txt";
+
+	/*
+	 * Query going from PostgreSQL to SciDB.
+	 * 
+	 */
+	private static final String POSTGRES_SCIDB_QUERY = "'bdarray(scan(bdcast(bdrel(SELECT poe_id, subject_id FROM mimic2v26.poe_order order by poe_id, subject_id LIMIT 5), poe_order_copy, '<subject_id:int32>[poe_id=0:*,100000,0]', array)));'";
+	private static final String POSTGGRES_SCIDB_FILE = "postgres_scidb_cast.txt";
 
 	/**
 	 * Initialize the curl queries. Run before any tests in this class.
@@ -116,14 +138,58 @@ public class CurlTest {
 	 */
 	public void testRelationalPatients()
 			throws IOException, InterruptedException, RunShellException {
-		InputStream curl = runCurl(relationalPatients);
+		compareOrdered(RELATIONAL_PATIENTS, PATIENTS_FILE);
+	}
+
+	@Test
+	/**
+	 * Test the query which migrates data between two instances of PostgreSQL.
+	 * 
+	 * @throws IOException
+	 * @throws InterruptedException
+	 * @throws RunShellException
+	 */
+	public void testPostgresPostgres()
+			throws IOException, InterruptedException, RunShellException {
+		compareOrdered(POSTGRES_POSTGRES_QUERY, POSTGGRES_POSTGRES_FILE);
+	}
+
+	@Test
+	/**
+	 * Test the query which casts data between PostgreSQL and SciDB.
+	 * 
+	 * @throws IOException
+	 * @throws InterruptedException
+	 * @throws RunShellException
+	 */
+	public void testPostgresSciDB()
+			throws IOException, InterruptedException, RunShellException {
+		compareOrdered(POSTGRES_SCIDB_QUERY, POSTGGRES_SCIDB_FILE);
+	}
+
+	/**
+	 * Compare results given by the query (from CURL) with the correct results
+	 * stored in the file.
+	 * 
+	 * @param query
+	 *            The query to be run via CURL.
+	 * @param truthFile
+	 *            The correct results stored in a file.
+	 * 
+	 * @throws IOException
+	 * @throws InterruptedException
+	 * @throws RunShellException
+	 */
+	private void compareOrdered(String query, String truthFile)
+			throws IOException, InterruptedException, RunShellException {
+		InputStream curl = runCurl(query);
 		BufferedReader curlReader = new BufferedReader(
 				new InputStreamReader(curl));
 
 		BufferedReader fileReader = new BufferedReader(
-				new FileReader(truthPath + "d_patients.txt"));
+				new FileReader(TRUTH_PATH + truthFile));
 
-		compareOrdered(curlReader, fileReader, relationalPatients);
+		compareOrdered(curlReader, fileReader, query);
 	}
 
 	/**
@@ -196,7 +262,7 @@ public class CurlTest {
 	public static InputStream runCurl(String query)
 			throws IOException, InterruptedException, RunShellException {
 		try {
-			String[] command = { CURL, X, POST, D, query, path };
+			String[] command = { CURL, X, POST, D, query, PATH };
 			return runShell(new ProcessBuilder(command));
 		} catch (RunShellException e) {
 			String msg = "Running the CURL command from the shell with query: "
@@ -209,7 +275,8 @@ public class CurlTest {
 	/**
 	 * Read lines from the given reader.
 	 * 
-	 * @param reader - the stream of lines.
+	 * @param reader
+	 *            - the stream of lines.
 	 * 
 	 * @returns a set of lines (each line consists of list of strings).
 	 */
@@ -272,12 +339,12 @@ public class CurlTest {
 		log.debug("Run the main() in CurlTest.");
 		CurlTest test = new CurlTest();
 		test.setUp();
-		log.debug("The path is: " + path);
+		log.debug("The path is: " + PATH);
 		InputStream inStream = null;
 		String result = null;
 
 		try {
-			inStream = runCurl(relationalPatients);
+			inStream = runCurl(RELATIONAL_PATIENTS);
 		} catch (IOException | InterruptedException | RunShellException e1) {
 			log.error("Problem with running curl.");
 			e1.printStackTrace();
@@ -290,7 +357,7 @@ public class CurlTest {
 			e.printStackTrace();
 			System.exit(1);
 		}
-		System.out.println(result);
+		log.debug(result);
 		test.tearDown();
 	}
 
