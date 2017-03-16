@@ -108,6 +108,7 @@ public class Signature {
 	}
 	
 	public static double getTreeEditDistance(String s1, String s2) {
+		
 	    BracketStringInputParser parser = new BracketStringInputParser();
 	    Node<StringNodeData> t1 = parser.fromString(s1);
 	    Node<StringNodeData> t2 = parser.fromString(s2);
@@ -119,7 +120,7 @@ public class Signature {
 	    // Get TED value corresponding to the computed mapping.
 	    LinkedList<int[]> mapping = apted.computeEditMapping();
 	    // This cast is safe due to unit cost.
-	    return apted.mappingCost(mapping);		
+	    return apted.mappingCost(mapping);
 	}
 	
 	@Override
