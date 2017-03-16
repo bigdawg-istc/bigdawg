@@ -163,11 +163,6 @@
 			<type>test-jar</type>
 		</dependency>
 
-		<dependency>
-			<groupId>rted</groupId>
-			<artifactId>rted</artifactId>
-			<version>1.2</version>
-		</dependency>
 
 		<!-- JeroMQ Pure Java implementation of libzmq (https://github.com/zeromq/jeromq) -->
 		<dependency>
