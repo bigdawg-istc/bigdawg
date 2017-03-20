@@ -12,7 +12,7 @@ import java.util.regex.Pattern;
 public class SciDBParsedArray {
 	
 	private static Pattern lSchemaAttributes = Pattern.compile("<[-:,.@\\w_ ]+>");
-	private static Pattern lDimensions = Pattern.compile("=[*-0-9]+:[*0-9]+,[0-9]+,[0-9]+,?");
+	private static Pattern lDimensions = Pattern.compile("=[- ]*[*0-9]+[:][- ]*[*0-9]+[,][0-9]+[,][0-9]+[,]?");
 	private static Pattern lSchemaDimensions = Pattern.compile("\\[[-:,@*=\\w_ ]+\\]$");
 	
 	private Map<String, String> attributes;
@@ -196,6 +196,7 @@ public class SciDBParsedArray {
 	}
 	
 	public void addSchemaAliases(Set<String> aliases) {
-		schemaAliases.addAll(aliases)
-;	}
+		schemaAliases.addAll(aliases);	
+	}
+	
 }

@@ -6,10 +6,14 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.log4j.Logger;
+
 /**
  * Created by ankush on 4/23/16.
  */
 public class JdbcUtils {
+	
+	private static Logger logger = Logger.getLogger(JdbcUtils.class);
 	
 	/**
 	 * For SciDB, use getRowsSciDB instead
@@ -88,10 +92,12 @@ public class JdbcUtils {
                     }
                 }
                 rows.add(current_row);
+                
                 rs.next();
             }
             return rows;
         } catch (SQLException e) {
+        	logger.debug(String.format("Last rows before exception: \n%s\n", rows));
             throw e;
         }
     }
