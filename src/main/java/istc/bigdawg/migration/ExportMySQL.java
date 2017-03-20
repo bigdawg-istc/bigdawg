@@ -124,7 +124,7 @@ public class ExportMySQL implements Export {
         ConnectionInfo ci = new MySQLConnectionInfo("localhost", "3306", "test", "mysqluser", "test");
         DBHandler dbh = new PostgreSQLHandler();
         try {
-            c = new PostgreSQLHandler(ci).getConnection();
+            c = new MySQLHandler(ci).getConnection();
             MigrationInfo mi = new MigrationInfo(ci, "test", null, "test");
             ExportMySQL export = new ExportMySQL(c, file, dbh, mi);
             try {

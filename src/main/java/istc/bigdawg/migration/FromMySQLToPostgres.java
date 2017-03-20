@@ -2,7 +2,7 @@ package istc.bigdawg.migration;
 
 import istc.bigdawg.LoggerSetup;
 import istc.bigdawg.exceptions.MigrationException;
-import istc.bigdawg.islands.relational.utils.SQLTranslationUtils;
+import istc.bigdawg.migration.datatypes.MySQLPostgresTranslation;
 import istc.bigdawg.mysql.MySQLConnectionInfo;
 import istc.bigdawg.mysql.MySQLHandler;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
@@ -27,7 +27,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 /**
- * Created by kateyu on 2/16/17.
+ * @author kateyu
  */
 public class FromMySQLToPostgres extends FromDatabaseToDatabase {
 
@@ -121,7 +121,7 @@ public class FromMySQLToPostgres extends FromDatabaseToDatabase {
                     connectionFrom, migrationInfo.getObjectFrom(),
                     migrationInfo.getObjectTo());
             logger.debug("mysqlCreateTable statement: " + mysqlCreateTable);
-            createTableStatement = SQLTranslationUtils.convertToPostgres(mysqlCreateTable);
+            createTableStatement = MySQLPostgresTranslation.convertToPostgres(mysqlCreateTable);
             logger.debug("mysqlCreateTable statement converted to PostgreSQL: " + createTableStatement);
         }
         PostgreSQLHandler.executeStatement(connectionTo, createTableStatement);

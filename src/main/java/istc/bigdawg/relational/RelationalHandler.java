@@ -52,10 +52,11 @@ public interface RelationalHandler extends DBHandler, ExecutorEngine {
 		String password = conInfo.getPassword();
 		try {
 			try {
-				Class.forName("com.mysql.jdbc.Driver");
+				Class.forName("com.mysql.cj.jdbc.Driver");
+				Class.forName("com.vertica.jdbc.Driver");
 			} catch (ClassNotFoundException e) {
 				e.printStackTrace();
-				log.error("Could not find mysql driver");
+				log.error("Could not find mysql or vertica drivers");
 			}
 			con = DriverManager.getConnection(url, user, password);
 		} catch (SQLException e) {
