@@ -19,14 +19,14 @@ class CatalogClient(object):
         self.host = catalog_cred["host"]
         self.port = catalog_cred["port"]
         self.conn = psycopg2.connect(database=database, user=self.user, password=self.password, host=self.host, port=self.port)
-        print "Opened database successfully"
+        print ("Opened database successfully")
 
     def __del__(self):
         """
         Destructor to close the connection
         """
         self.conn.close()
-        print "Connection closed"
+        print ("Connection closed")
 
     def exec_sql_script(self, fn):
         """
@@ -42,7 +42,7 @@ class CatalogClient(object):
         cur.execute(sql)
         cur.close()
         self.conn.commit()
-        print "Inserted data"
+        print ("Inserted data")
 
     def insert_database_info(self, catalog_db_params):
         """
@@ -52,7 +52,7 @@ class CatalogClient(object):
         cur.execute("INSERT INTO catalog.databases values(%s, %s, %s, %s, %s);", (catalog_db_params['dbid'], catalog_db_params['engine_id'], catalog_db_params['name'], catalog_db_params['userid'], catalog_db_params['password']))
         cur.close()
         self.conn.commit()
-        print "Inserted database info into catalog"
+        print ("Inserted database info into catalog")
 
     def insert_object_info(self, catalog_object_params):
         """
@@ -62,7 +62,7 @@ class CatalogClient(object):
         cur.execute("INSERT INTO catalog.objects values(%s, %s, %s, %s, %s);", (catalog_object_params['oid'], catalog_object_params['name'], catalog_object_params['fields'], catalog_object_params['logical_db'], catalog_object_params['physical_db']))
         cur.close()
         self.conn.commit()
-        print "Inserted object info into catalog"
+        print ("Inserted object info into catalog")
 
 if __name__ == "__main__":
 
@@ -105,7 +105,7 @@ if __name__ == "__main__":
     cur = cc.conn.cursor()
     cur.execute("CREATE DATABASE " + db_params["new_db"] + ";")
     cur.close()
-    print "Created new database"
+    print ("Created new database")
 
     # Step 2: Create new table on the newly created database
     cc = CatalogClient(catalog_cred, database=db_params["new_db"])
@@ -116,13 +116,13 @@ if __name__ == "__main__":
     cur.execute(sql_str)
     cur.close()
     cc.conn.commit()
-    print "Created new table"
+    print ("Created new table")
 
     # Step 3: Insert data into new table from an existing sql script
     cc = CatalogClient(catalog_cred, database=db_params["new_db"])
     cc.exec_sql_script(db_params["sql_script_fn"])
     cc.conn.close()
-    print "Inserted data into new table"
+    print ("Inserted data into new table")
 
     # Step 4: Connect to the "bigdawg_catalog" database and update the "databases" table
     cc = CatalogClient(catalog_cred, database="bigdawg_catalog")
@@ -138,4 +138,4 @@ if __name__ == "__main__":
     cur.execute(sql_str)
     cur.close()
     cc.conn.commit()
-    print "Updated bigdawg_schemas"
+    print ("Updated bigdawg_schemas")

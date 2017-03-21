@@ -89,8 +89,8 @@ class DockerClient(object):
 #     if ctr_name in run_cmd:        
 #         # quick check to see if already running
 #         if is_container_running(ctr_name):
-#             print "Container %s is already running. Aborting." % ctr_name
-#             print "Use rm(%s) to stop"
+#             print ("Container %s is already running. Aborting." % ctr_name)
+#             print ("Use rm(%s) to stop")
 #             raise RuntimeError("Container is already running.")
 #         else:
 #             this_run_cmd = run_cmd[ctr_name]
@@ -100,7 +100,7 @@ class DockerClient(object):
 #                 raise RuntimeError(p.stderr.read())
 #             return out.rstrip()
 #     else:
-#         print "invalid container name. Must be one of:", run_cmd.keys()
+#         print ("invalid container name. Must be one of:", run_cmd.keys())
 
 
 # """
