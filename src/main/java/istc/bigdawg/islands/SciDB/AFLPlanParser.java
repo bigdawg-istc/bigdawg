@@ -91,9 +91,6 @@ public class AFLPlanParser {
 			mInstance = lInstance.matcher(line);
 			if (mInstance.find()) {
 				temp = line.substring(mInstance.end());
-//				System.out.println("Instance: "+temp);
-				
-				
 				
 				currentNode = new AFLPlanNode();
 				if (root == null) root = currentNode;
@@ -146,19 +143,6 @@ public class AFLPlanParser {
 				
 				temp = line.substring(mField.start(),mField.end());
 				currentNode.attributes.get(currentNode.attributes.size()-1).properties.add(temp);
-//				System.out.printf("^^^^^^^^^^^^^^^^^^^^^^^^^ found; [%s]\nprior attributes: %s\n\n\n", temp,  currentNode.attributes);
-				
-//				int indent = temp.indexOf(temp.trim());
-//				temp = temp.trim();
-//				temp = temp.substring(1,temp.length()-1);
-//				
-//				
-//				AFLPlanAttribute pa = new AFLPlanAttribute();
-//				pa.name = temp;
-//				pa.indent = indent;
-//				pa.properties.addAll(Arrays.asList(line.substring(mField.end()).split(" ")));
-//				
-//				addAttribute(priorAttributes, currentNode, pa);
 				
 				continue;
 			}
@@ -255,9 +239,6 @@ public class AFLPlanParser {
 		case "project":
 		case "scan":
 			nodeType = "Seq Scan";
-//			Iterator<String> it = node.schemaAlias.iterator();
-//			String name = it.next();
-//			if (it.hasNext()) name = it.next();
 			
 			String name = node.attributes.get(0).properties.get(1);
 			
@@ -286,12 +267,6 @@ public class AFLPlanParser {
 			boolean started = false;
 			boolean left = true;
 			
-//			AFLPlanNode c = node.children.get(0);
-//			while (c.name.equals("cross_join")) {
-//				c = c.children.get(0);
-//			}
-//			node.schema.setAlias(c.schema.getAlias());
-			
 			for(int k = 0; k < joinAttributes.size(); ++k) {
 				
 				
@@ -308,11 +283,9 @@ public class AFLPlanParser {
 					AFLPlanNode c;
 					if (left) {
 						c = node.children.get(0);
-//						joinFilterSB.append(node.children.get(0).schema.getAlias()).append('.');
 					}
 					else {
 						c = node.children.get(1);
-//						joinFilterSB.append(node.children.get(1).schema.getAlias()).append('.');
 					}
 					while (c.name.equals("cross_join")) {
 						c = c.children.get(0);
@@ -346,8 +319,6 @@ public class AFLPlanParser {
 			List<AFLPlanAttribute> aggAttributes = node.attributes;
 			
 			System.out.printf("aggregate attribute: %s\n", aggAttributes);
-			
-//			System.out.printf("afl parser, agg, outExpr prop: %s\n", node);
 			
 			Stack<StringBuilder> stk = new Stack<>();
 			List<String> aggFuns = new ArrayList<>();

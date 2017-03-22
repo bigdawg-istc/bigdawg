@@ -161,7 +161,7 @@ public class Planner {
 			throw new Exception("Ill formed input: " + input + "\n");
 		}
 		logger.info("CrossIslandQueryPlan: #nodes: " + ciqp.vertexSet().size() +
-				"; #edges: " + ciqp.edgeSet().size() + "\n" + ciqp.toString() + "\n\n");
+				"; #edges: " + ciqp.edgeSet().size() + "; ciqp: " + ciqp.toString());
 
 		// Traverse the graph and run the execution plans
 		Set<CrossIslandQueryNode> entryNodes = new HashSet<>(ciqp.getEntryNodes());

@@ -316,27 +316,25 @@ public class ExecutionNodeFactory {
 		
 		Shim gen = IslandAndCastResolver.getShim(qep.getIsland(), remainderDBID);
 		
-		
 		remainder.setSubTree(true);
-//		String remainderInto = remainder.getSubTreeToken();
 		qep.setTerminalTableName(destinationName);
 
 		
 		if (isSelect) remainderSelectIntoString = gen.getSelectQuery(remainder);
 		else remainderSelectIntoString = gen.getSelectIntoQuery(remainder, destinationName, false); // FIXME verify this behaves correctly for Accumulo
 		
-		log.info(String.format("\n\n<><><> Remainder class: %s; QEP: %s; children count: %s; query string: %s\n"
-				, remainder.getClass().getSimpleName()
-				, qep.getSerializedName()
-				, remainder.getChildren().size()
-				, remainderSelectIntoString));
+//		log.info(String.format("\n\n<><><> Remainder class: %s; QEP: %s; children count: %s; query string: %s\n"
+//				, remainder.getClass().getSimpleName()
+//				, qep.getSerializedName()
+//				, remainder.getChildren().size()
+//				, remainderSelectIntoString));
 		
 		if (remainderLoc != null) {
 			LocalQueryExecutionNode lqn = new LocalQueryExecutionNode(remainderSelectIntoString, remainderCI, destinationName);
 			qep.addNode(lqn);
 			qep.setTerminalTableNode(lqn);
-			String lStr = String.format("\n\n<><><><><> Loc non null QEP terminal: %s; isSelect?: %s; remainder into: %s <><><><><><><> \n\n\n", qep.getTerminalTableNode().getQueryString(), isSelect, destinationName);
-			log.info(lStr);
+//			String lStr = String.format("\n\n<><><><><> Loc non null QEP terminal: %s; isSelect?: %s; remainder into: %s <><><><><><><> \n\n\n", qep.getTerminalTableNode().getQueryString(), isSelect, destinationName);
+//			log.info(lStr);
 		} else {
 			ExecutionNodeSubgraph subgraph = buildOperatorSubgraphNew(remainder, destinationName, containerDBID, containerNodes, isSelect, qep.getIsland());
 			Graphs.addGraph(qep, subgraph);

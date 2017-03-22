@@ -9,6 +9,7 @@ import java.util.Set;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.log4j.Logger;
 import org.jgrapht.alg.ConnectivityInspector;
 import org.jgrapht.graph.DefaultEdge;
 import org.jgrapht.graph.SimpleGraph;
@@ -30,6 +31,8 @@ import net.sf.jsqlparser.schema.Column;
 
 public class RelationalIslandPermuter {
 	
+	private static Logger logger = Logger.getLogger(RelationalIslandPermuter.class);
+	
 	public static void optimize(RelationalIslandQuery ciqn) throws Exception {
 		permute(ciqn);
 	}
@@ -37,11 +40,10 @@ public class RelationalIslandPermuter {
 	private static void permute(RelationalIslandQuery ciqn) throws Exception {
 		
 		List<Operator> remainderPermutations = new ArrayList<>();
-		
 		Map<Pair<String, String>, String> jp = processJoinPredicates(ciqn.getJoinPredicates());
 		Map<Pair<String, String>, String> jf = processJoinPredicates(ciqn.getJoinFilters());
-		
 		List<Set<String>> predicateConnections = populatePredicateConnectionSets(jp, jf);
+		
 		assert(ciqn.getInitialRoot() instanceof SQLIslandOperator);
 		SQLIslandOperator root = (SQLIslandOperator)ciqn.getInitialRoot(); 
 		
@@ -81,7 +83,6 @@ public class RelationalIslandPermuter {
 		else {
 			remainderPermutations.add(root);
 		}
-		
 		ciqn.setRemainders( remainderPermutations);
 	}
 	

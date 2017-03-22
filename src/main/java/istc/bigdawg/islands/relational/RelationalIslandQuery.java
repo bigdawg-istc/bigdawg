@@ -72,7 +72,7 @@ public class RelationalIslandQuery extends IntraIslandQuery {
 		
 		populateQueryContainer(thisIsland, transitionSchemas);
 		
-		//
+		// permute!
 		RelationalIslandPermuter.optimize(this);
 		
 		// create signature

@@ -1,11 +1,13 @@
 package istc.bigdawg.plan;
 
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Map;
 
 import org.junit.Test;
 
-import convenience.RTED;
+import costmodel.StringUnitCostModel;
+import distance.APTED;
 import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.islands.SciDB.AFLPlanParser;
 import istc.bigdawg.islands.SciDB.AFLQueryPlan;
@@ -16,6 +18,9 @@ import istc.bigdawg.scidb.SciDBHandler;
 import istc.bigdawg.shims.AFLQueryGenerator;
 import istc.bigdawg.shims.OperatorQueryGenerator;
 import junit.framework.TestCase;
+import node.Node;
+import node.StringNodeData;
+import parser.BracketStringInputParser;
 
 
 public class AFLParserTest extends TestCase {
@@ -108,7 +113,19 @@ public class AFLParserTest extends TestCase {
 		System.out.println("\nTree edit distnance: ");
 		System.out.println("Tree1: "+input1.get(testname));
 		System.out.println("Tree2: "+input2.get(testname));
-		System.out.println("Distance: "+ RTED.computeDistance(input1.get(testname), input2.get(testname)));
+		
+	    BracketStringInputParser parser = new BracketStringInputParser();
+	    Node<StringNodeData> t1 = parser.fromString(input1.get(testname));
+	    Node<StringNodeData> t2 = parser.fromString(input2.get(testname));
+	    // Initialise APTED.
+	    APTED<StringUnitCostModel, StringNodeData> apted = new APTED<>(new StringUnitCostModel());
+	    // Although we don't need TED value yet, TED must be computed before the
+	    // mapping. This cast is safe due to unit cost.
+	    apted.computeEditDistance(t1, t2);
+	    // Get TED value corresponding to the computed mapping.
+	    LinkedList<int[]> mapping = apted.computeEditMapping();
+	    // This cast is safe due to unit cost.
+		System.out.println("Distance: "+ apted.mappingCost(mapping));
 	}
 	
 	
