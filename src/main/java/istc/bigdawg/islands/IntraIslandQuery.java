@@ -77,8 +77,6 @@ public abstract class IntraIslandQuery extends CrossIslandQueryNode {
 	
 	protected abstract void pruneChild(Operator c, List<String> traverseResult) throws Exception;
 	
-	protected abstract Map<String, Set<Operator>> findIntersectionsSortByLargest(Map<Operator, Set<String>> traverseResults);
-
 	public Set<String> getChildren() {
 		return this.children;
 	};

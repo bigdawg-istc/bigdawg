@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.apache.log4j.Logger;
 
@@ -153,10 +152,4 @@ public class TextIslandQuery extends IntraIslandQuery {
 		return qepl;
 	}
 	
-	@Override
-	protected Map<String, Set<Operator>> findIntersectionsSortByLargest(Map<Operator, Set<String>> traverseResults) {
-		// intentionally left blank
-		return null;
-	}
-		
 }
