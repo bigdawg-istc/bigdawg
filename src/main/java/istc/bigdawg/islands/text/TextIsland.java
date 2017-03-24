@@ -33,6 +33,8 @@ import istc.bigdawg.properties.BigDawgConfigProperties;
 
 public class TextIsland implements Island {
 
+	public static TextIsland INSTANCE = new TextIsland();
+	
 	private static final int accumuloSchemaServerDBID = BigDawgConfigProperties.INSTANCE.getAccumuloSchemaServerDBID();
 	private static AccumuloConnectionInfo textSchemaServerConnectionInfo = null;
 	
@@ -45,7 +47,7 @@ public class TextIsland implements Island {
 		}
 	}
 	
-	public TextIsland() {
+	protected TextIsland() {
 		
 	}
 	

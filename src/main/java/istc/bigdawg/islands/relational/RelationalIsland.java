@@ -29,6 +29,8 @@ import net.sf.jsqlparser.JSQLParserException;
 
 public class RelationalIsland implements Island {
 
+	public static RelationalIsland INSTANCE = new RelationalIsland();
+	
 	private static final int psqlSchemaServerDBID = BigDawgConfigProperties.INSTANCE.getPostgresSchemaServerDBID();
 	private static PostgreSQLConnectionInfo relationalSchemaServerConnectionInfo = null;
 	private static final Pattern relationalIslandPredicatePattern = Pattern.compile("(?<=\\()([^\\(^\\)]+)(?=\\))");
@@ -42,7 +44,7 @@ public class RelationalIsland implements Island {
 		}
 	}
 	
-	public RelationalIsland() {
+	protected RelationalIsland() {
 		
 	}
 	

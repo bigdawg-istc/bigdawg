@@ -1,3 +1,0 @@
-curl  -H "Content-Type: application/json" -X POST -d '{"script":"/home/adam/Chicago/bigdawgmiddle/scripts/test_script/scidbLoad.sh","authorization":{},"dataLocation":"/home/gridsan/groups/istcdata/pipeline/scidb/data/ABP_0_1","flatArrayName":"ABP_0_1_flat","arrayName":"ABP_0"}' http://localhost:8080/bigdawg/load/scidb
-
-

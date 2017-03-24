@@ -29,6 +29,8 @@ import net.sf.jsqlparser.JSQLParserException;
 
 public class ArrayIsland implements Island {
 
+	public static ArrayIsland INSTANCE = new ArrayIsland();
+	
 	private static final int scidbSchemaServerDBID = BigDawgConfigProperties.INSTANCE.getSciDBSchemaServerDBID();
 	private static SciDBConnectionInfo arraySchemaServerConnectionInfo = null;
 	private static final Pattern arrayIslandPredicatePattern = Pattern.compile("(?<=\\()([^\\(^\\)]+)(?=\\))");
@@ -42,7 +44,7 @@ public class ArrayIsland implements Island {
 		}
 	}
 	
-	public ArrayIsland() {
+	protected ArrayIsland() {
 		
 	}
 	

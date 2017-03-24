@@ -61,22 +61,6 @@ public class RelationalIslandPermuter {
 				}
 			}
 			
-//			// for debugging
-//			System.out.println("\n\n\nResult of Permutation: ");
-//			int i = 1;
-//			OperatorVisitor gen;
-//			for (Operator o : permResult) {
-//				gen = TheObjectThatResolvesAllDifferencesAmongTheIslands.getQueryGenerator(sourceScope);
-//				gen.configure(true, false);
-//				o.accept(gen);
-//				System.out.printf("%d.  first formulation: %s\n", i, gen.generateStatementString());
-//				System.out.printf("%d. second formulation: %s\n", i, gen.generateStatementString()); // duplicate command to test modification of underlying structure
-//				System.out.printf("--> o schema after gens: %s;\n\n", ((SQLIslandOperator) o).getOutSchema());
-//				i++;
-//			}
-//			System.out.println("\n");
-//			// end of debug
-			
 			remainderPermutations.addAll(permResult);
 			
 		} // if remainderLoc is not null, then THERE IS NO NEED FOR PERMUTATIONS 
@@ -105,20 +89,6 @@ public class RelationalIslandPermuter {
 		List<Operator> leaves 	  = new ArrayList<>();
 		
 		if (root.isBlocking() ) {
-//			// DEBUG ONLY
-//			OperatorVisitor gen = null;
-//			if (getSourceScope().equals(Scope.RELATIONAL)) {
-//				gen = new SQLQueryGenerator();
-//				((SQLQueryGenerator)gen).setSrcStatement(select);
-//			}
-//			gen.configure(true, false);
-//			root.accept(gen);
-//			
-//			System.out.println("--> blocking root; class: "+root.getClass().getSimpleName()+"; ");
-//			System.out.println("--> tree rep: "+root.getTreeRepresentation(true)+"; ");
-//			System.out.println("--> SQL: "+gen.generateStatementString()+"; \n");
-//			// DEBUG OUTPUT END
-			
 			
 			boolean hasPermutation = false;
 			List<List<Operator>> combos = new ArrayList<>();	// holder of operators
@@ -474,8 +444,6 @@ public class RelationalIslandPermuter {
 		
 		o1ns.retainAll(Sets.union(jp.keySet(), jf.keySet()));
 		
-//		System.out.printf("\n--->>>>> makeJoin: \n\tjp: %s; \n\tjf: %s;\n\to1ns: %s;\n\to2ns: %s\n\n", jp, jf, o1ns, o2ns);
-		
 		Operator o1Temp = o1;
 		Operator o2Temp = o2;
 		
@@ -490,8 +458,6 @@ public class RelationalIslandPermuter {
 			
 			List<String> pred = new ArrayList<>();
 			for  (String key : o2ns) {
-				
-//				System.out.printf("s: ; key: %s; used: %s\n", s, key, used);
 				
 				if (used.contains(key)) {
 					continue;
@@ -519,9 +485,7 @@ public class RelationalIslandPermuter {
 					if (isUsedByPermutation) return null;
 					else break;
 				}
-//				System.out.printf("-------> jp: %s, s: %s, key: %s; pred: %s\n\n", jp, s, key, pred);
-				return (new RelationalIsland()).constructJoin(o1Temp, o2Temp, jt, pred, isFilter);
-//				return TheObjectThatResolvesAllDifferencesAmongTheIslands.constructJoin(scope, o1Temp, o2Temp, jt, pred, isFilter);
+				return RelationalIsland.INSTANCE.constructJoin(o1Temp, o2Temp, jt, pred, isFilter);
 			}
 			
 			o2ns = new HashSet<>(o2nsOriginal);
@@ -529,7 +493,7 @@ public class RelationalIslandPermuter {
 		if (isTablesConnectedViaPredicates(o1Temp, o2Temp, predicateConnections) && isUsedByPermutation) {
 			return null;
 		} else {
-			return (new RelationalIsland()).constructJoin(o1Temp, o2Temp, jt, null, false);
+			return RelationalIsland.INSTANCE.constructJoin(o1Temp, o2Temp, jt, null, false);
 		}
 	}
 	
@@ -620,8 +584,6 @@ public class RelationalIslandPermuter {
 	private static boolean isTablesConnectedViaPredicates(Operator left, Operator right, List<Set<String>> predicateConnections) throws Exception {
 		Set<String> sl = left.getDataObjectAliasesOrNames().keySet();
 		Set<String> sr = right.getDataObjectAliasesOrNames().keySet();
-		
-//		System.out.printf("\n-----------> table connectivity called; sl: %s; sr: %s; predicateConnections: %s;\n", sl, sr, predicateConnections);
 		
 		if (sr.removeAll(sl)) return true; 
 		

@@ -38,8 +38,7 @@ public class SQLIslandSeqScan extends SQLIslandScan implements SeqScan {
 		
 		this.dataObjects.add(schemaAndName);
 		
-//		String createTableString = TheObjectThatResolvesAllDifferencesAmongTheIslands.getRelationalIslandCreateTableString(schemaAndName);
-		String createTableString = (new RelationalIsland()).getCreateTableString(schemaAndName);
+		String createTableString = RelationalIsland.INSTANCE.getCreateTableString(schemaAndName);
 		
 		CreateTable create = null;
 		try {

@@ -1,11 +1,9 @@
 package istc.bigdawg.islands.text;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.apache.log4j.Logger;
 
@@ -19,7 +17,6 @@ import istc.bigdawg.islands.IslandAndCastResolver.Scope;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.operators.SeqScan;
 import istc.bigdawg.islands.relational.RelationalIslandQuery;
-import istc.bigdawg.islands.relational.operators.SQLIslandScan;
 import istc.bigdawg.signature.Signature;
 
 public class TextIslandQuery extends IntraIslandQuery {
@@ -29,20 +26,9 @@ public class TextIslandQuery extends IntraIslandQuery {
 	
 	private Map<String, List<String>> originalMap;
 	
-	private Set<String> originalJoinPredicates;
-	private Set<String> joinPredicates;
-	private Set<String> joinFilters;
-	
-//	private Operator initialRoot;
-	
 	public TextIslandQuery(String islandQuery, String name, Map<String, String> transitionSchemas)
 			throws Exception {
 		super(Scope.TEXT, islandQuery, name, transitionSchemas);
-		
-		joinPredicates = new HashSet<>();
-		joinFilters = new HashSet<>();
-		originalJoinPredicates = new HashSet<>();
-		
 		
 		// collect the cross island children
 		children = getCrossIslandChildrenReferences(transitionSchemas);
@@ -55,7 +41,6 @@ public class TextIslandQuery extends IntraIslandQuery {
 		
 		// create temporary tables that are used for as schemas
 		thisIsland.setupForQueryPlanning(children, transitionSchemas);
-//		dbSchemaHandler = TheObjectThatResolvesAllDifferencesAmongTheIslands.createTableForPlanning(sourceScope, children, transitionSchemas);
 		
 		populateQueryContainer(thisIsland, transitionSchemas);
 		
@@ -65,15 +50,13 @@ public class TextIslandQuery extends IntraIslandQuery {
 		setRemainders(theOnlyPermuation);
 		
 		// create signature
-		this.signature = new Signature(getQueryString(), getSourceScope(), getRemainder(0), getQueryContainer(), originalJoinPredicates);
+		this.signature = new Signature(getQueryString(), getSourceScope(), getRemainder(0), getQueryContainer(), new HashSet<>());
 		
 		// deactivate initialRoot pointer
 		initialRoot = null;
 		
 		// removing temporary schema plates
 		thisIsland.teardownForQueryPlanning(children, transitionSchemas);
-//		TheObjectThatResolvesAllDifferencesAmongTheIslands.removeTemporaryTableCreatedForPlanning(sourceScope, dbSchemaHandler, children, transitionSchemas);
-		
 	}
 	
 
@@ -104,26 +87,6 @@ public class TextIslandQuery extends IntraIslandQuery {
 	 * @throws Exception
 	 */
 	protected List<String> traverse(Operator node, Map<String, String> transitionSchemas) throws Exception {
-		// now traverse nodes and group things together
-		// So the remainders should be some things that does not contain individual nodes?
-		// what about mimic2v26.d_patients join d?
-		// what about. If d's associated queries are from a different database, then we give mimic2v26.d_patients a name,
-		//   and store the skeleton that doesn't have any reference into the remainder?
-		
-		// seqscan: must be in the same server
-		// join: if both from the same node then yes; otherwise part of the stem
-		// sort: BLOCKING
-		// aggregate: BLOCKING
-		// xx distinct, aggregate, window aggregate: BLOCKING, if they are on the same node, then give as is; otherwise it's on the stem
-		// xx With: check the parent node
-		
-		// for blocking: permutation must treat blocked branch as if it is pruned, but not actually prune it
-		// 				 need to generate all possible permutations
-		
-		// for blocking: if child is on the same node, then check parent
-		//                                             if on the same node, then all on the same node
-		//											   otherwise, this operator on a node, parent is on the stem
-		//       if child not on the same node, then all parent branches separated
 
 		List<String> ret = null;
 		
@@ -134,15 +97,8 @@ public class TextIslandQuery extends IntraIslandQuery {
 				logger.info(String.format("--> transitionSchema marked: %s\n", ((SeqScan) node).getFullyQualifiedName()));
 				
 				ret = new ArrayList<String>();
-//				ret.add(String.valueOf( TheObjectThatResolvesAllDifferencesAmongTheIslands.getSchemaEngineDBID(sourceScope)));
 				ret.add(String.valueOf( IslandAndCastResolver.getIsland(sourceScope).getDefaultCastReceptionDBID()));
-			} else if (node.getChildren().size() > 0) {
-				List<String> result = traverse(node.getChildren().get(0), transitionSchemas);
-				if (result != null) ret = new ArrayList<String>(result); 
 			} else {
-				if (node instanceof SQLIslandScan && ((SQLIslandScan)node).getIndexCond() != null) {
-					joinPredicates.add(((SQLIslandScan)node).getIndexCond().toString());
-				}
 				
 				logger.info(String.format("--> printing qualified name: %s; originalMap: %s;", ((SeqScan) node).getFullyQualifiedName(), originalMap));
 				
@@ -160,110 +116,6 @@ public class TextIslandQuery extends IntraIslandQuery {
 		} else {
 			throw new Exception("Unsupported node: "+node.getClass().getName());
 		}
-//		if (node instanceof Join) {
-//			
-//			
-//			Join joinNode = (Join) node;
-//			Operator child0 = joinNode.getChildren().get(0);
-//			Operator child1 = joinNode.getChildren().get(1);
-//			
-//			List <String> c0 = traverse(child0, transitionSchemas);
-//			List <String> c1 = traverse(child1, transitionSchemas);
-//			
-//			
-//			if (c0 != null && c1 != null) {
-//				
-//				Set <String> intersection = new HashSet<> (c0);
-//				intersection.retainAll(c1);
-//				
-//				if (intersection.isEmpty()) {
-//					
-//					if (c0.contains(tokenOfIndecision) ) {
-//						ret = new ArrayList<>(c1);
-//					} else if (c1.contains(tokenOfIndecision)) {
-//						ret = new ArrayList<>(c0);
-//					} else {
-//						pruneChild(child1, c1);
-//						pruneChild(child0, c0);
-//					}
-//					
-//				} else {
-//					ret = new ArrayList<>(intersection);
-//				}
-//			}
-//			
-//			
-//			if (c0 == null && c1 != null) {
-//				pruneChild(child1, c1);
-//			}
-//			
-//			if (c1 == null && c0 != null) {
-//				pruneChild(child0, c0);
-//			} 
-//			
-//			// do nothing if both are pruned before enter here, thus saving it for the remainder 
-//			
-//			if (joinNode.generateJoinPredicate() != null)
-//				joinPredicates.add(joinNode.generateJoinPredicate());//, child0, child1, new Table(), new Table(), true));
-//			if (joinNode.generateJoinFilter() != null)
-//				joinFilters.add(joinNode.generateJoinFilter());//, child0, child1, new Table(), new Table(), true));
-//			
-//		} else if (node instanceof Sort || node instanceof Aggregate || node instanceof Limit || node instanceof Distinct || node instanceof WindowAggregate) {
-//			
-//			// blocking come into effect
-//			List<String> result = traverse(node.getChildren().get(0), transitionSchemas);
-//			if (result != null) ret = new ArrayList<String>(result); 
-//		
-//		} else if (node instanceof Merge) {
-//			
-//			Merge mergeNode = (Merge) node;
-//			
-//			Map<Operator, Set<String>> traverseResults = new HashMap<>();
-//			List<Operator> nulled = new ArrayList<>();
-//			
-//			for (Operator o: mergeNode.getChildren()) {
-//				List <String> c = traverse(o, transitionSchemas);
-//				if (c == null) nulled.add(o);
-//				else traverseResults.put(o, new HashSet<>(c));
-//			}
-//			
-//			if (traverseResults.size() > 0) {
-//				// now the fancy largest sets problem...
-//				Map<String, Set<Operator>> intersections = findIntersectionsSortByLargest(traverseResults);
-//				
-//				// if there are more than one Entry, then break all of them into groups, make new Merges, prune
-//				if (intersections.size() == 1) {
-//					ret = new ArrayList<>((intersections.keySet()));
-//				} else {
-//					
-//					for (String s : intersections.keySet()) {
-//						List<String> ls = new ArrayList<>();
-//						ls.add(s);
-//						
-//						if (intersections.get(s).size() == 1) {
-//							pruneChild(intersections.get(s).iterator().next(), ls);
-//						} else {
-//							// for each group, make a new union; reset children and make parents 
-//							Set<Operator> so = intersections.get(s);
-//							Merge merge = (Merge) node.duplicate(false);
-//							for (Operator o : so) {
-//								node.getChildren().remove(o);
-//								o.setParent(merge);
-//							}
-//							merge.addChilds(so);
-//							node.addChild(merge);
-//							merge.setParent(node);
-//							
-//							pruneChild(merge, ls);
-//						}
-//					}
-//				}
-//				
-//			}
-//			
-//		} else {
-//			 throw new Exception("unsupported Operator in CrossIslandQueryNode");
-//		}
 		
 		return ret;
 	}
@@ -298,32 +150,6 @@ public class TextIslandQuery extends IntraIslandQuery {
 		}
 		
 		return qepl;
-	}
-	
-	public Set<String> getJoinPredicates(){
-		return joinPredicates;
-	}
-	
-	public Set<String> getJoinFilters() {
-		return joinFilters;
-	}
-	
-	protected Map<String, Set<Operator>> findIntersectionsSortByLargest(Map<Operator, Set<String>> traverseResults) {
-		// intentionally left blank
-		return new HashMap<>();
-	}
-	
-	/**
-	 * This is only used for optimization.
-	 * Evoked elsewhere and it will return null
-	 * @return
-	 */
-	public Operator getInitialRoot() {
-		return initialRoot;
-	}
-	
-	public void setInitialRoot(Operator newRoot) {
-		initialRoot = newRoot;
 	}
 	
 }
