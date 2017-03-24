@@ -1,1 +1,0 @@
-java -classpath "bigdawg-conf/:istc.bigdawg-1.0-SNAPSHOT-jar-with-dependencies.jar" istc.bigdawg.Main
