@@ -287,10 +287,6 @@ public class RelationalIslandQuery extends IntraIslandQuery {
 		ConnectionInfo ci = null;
 		String dbid = null;
 		
-//		if (traverseResult.size() > 1) {
-//			throw new Exception("traverseResult size greater than 1: "+traverseResult);
-//		}
-		
 		for (String s : traverseResult) {
 			
 			ci = CatalogViewer.getConnectionInfo(Integer.parseInt(s));
@@ -382,8 +378,6 @@ public class RelationalIslandQuery extends IntraIslandQuery {
 				}
 			}
 		}
-		
-//		System.out.printf("----> findIntersectionsSortByLargest result: %s\n", result);
 		
 		return result;
 	}

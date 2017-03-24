@@ -16,12 +16,12 @@ import org.junit.Test;
 import istc.bigdawg.catalog.CatalogInstance;
 import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.exceptions.BigDawgException;
-import istc.bigdawg.islands.IslandAndCastResolver;
 import istc.bigdawg.islands.Myria.MyriaQueryParser;
 import istc.bigdawg.islands.SciDB.AFLPlanParser;
 import istc.bigdawg.islands.SciDB.AFLQueryPlan;
 import istc.bigdawg.islands.operators.Join;
 import istc.bigdawg.islands.operators.Operator;
+import istc.bigdawg.islands.relational.RelationalIsland;
 import istc.bigdawg.islands.relational.SQLPlanParser;
 import istc.bigdawg.islands.relational.SQLQueryPlan;
 import istc.bigdawg.migration.MigrationParams;
@@ -105,14 +105,14 @@ public class TrialsAndErrors {
 		
 		if ( !runExplainer ) return;
 			
-		PostgreSQLHandler psqlh = new PostgreSQLHandler(IslandAndCastResolver.psqlSchemaHandlerDBID);
+		PostgreSQLHandler psqlh = new PostgreSQLHandler(RelationalIsland.INSTANCE.getDefaultCastReceptionDBID());
 //		System.out.println("Explainer -- Type query or \"quit\" to exit: ");
 //		Scanner scanner = new Scanner(System.in);
 //		String query = scanner.nextLine();
 		String query = "SELECT s.bodc_station, s.longitude, s.latitude, s.bot_depth, count(m.bodc_station) AS sample_count "
 				+ "FROM sampledata.station_info AS s, sampledata.main AS m WHERE s.bodc_station = m.bodc_station GROUP BY s.bodc_station "
 				+ "limit 3 offset 1";
-		boolean started = false;
+//		boolean started = false;
 		while (!query.toLowerCase().equals("quit")) {
 			
 			SQLQueryPlan aqp = SQLPlanParser.extractDirectFromPostgreSQL(psqlh, query);
