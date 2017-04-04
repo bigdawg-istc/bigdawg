@@ -34,7 +34,7 @@ public class FromVerticaToPostgres extends FromDatabaseToDatabase {
      * log
      */
     private static Logger logger = Logger
-            .getLogger(FromMySQLToPostgres.class);
+            .getLogger(FromVerticaToPostgres.class);
 
     private String verticaPipe;
 
@@ -46,7 +46,7 @@ public class FromVerticaToPostgres extends FromDatabaseToDatabase {
 
     /**
      * Always put loader as the second task to be executed (while migrating data
-     * from MySQL to PostgreSQL)
+     * from Vertica to PostgreSQL)
      */
     private static final int LOAD_INDEX = 1;
 

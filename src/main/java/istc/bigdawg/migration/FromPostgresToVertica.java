@@ -40,13 +40,13 @@ public class FromPostgresToVertica extends FromDatabaseToDatabase {
 
     /**
      * Always put extractor as the first task to be executed (while migrating
-     * data from Vertica to PostgreSQL).
+     * data from PostgreSQL to Vertica).
      */
     private static final int EXPORT_INDEX = 0;
 
     /**
      * Always put loader as the second task to be executed (while migrating data
-     * from Vertica to PostgreSQL)
+     * from PostgreSQL to Vertica)
      */
     private static final int LOAD_INDEX = 1;
 
@@ -65,7 +65,7 @@ public class FromPostgresToVertica extends FromDatabaseToDatabase {
     }
 
     /**
-     * Migrate data from MySQL instance to Postgres.
+     * Migrate data from Postgres instance to Vertica.
      */
     public MigrationResult migrate(MigrationInfo migrationInfo)	throws MigrationException {
         logger.debug("General data migration: " + this.getClass().getName());

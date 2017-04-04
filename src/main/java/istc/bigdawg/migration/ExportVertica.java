@@ -30,10 +30,9 @@ public class ExportVertica implements Export {
     private transient OutputStream output;
 
     /**
-     * @param connectionVertica the connection to MySQL to export from
+     * @param connectionVertica the connection to Vertica to export from
      * @param handlerTo handler for the target engine for import
      */
-    //public ExportMySQL(Connection connectionMySQL, String outputFile, DBHandler handlerTo) {
     public ExportVertica(Connection connectionVertica, String outputFile, DBHandler handlerTo, MigrationInfo mi) {
         this.connection = connectionVertica;
         this.handlerTo = handlerTo;
@@ -111,7 +110,7 @@ public class ExportVertica implements Export {
      */
     @Override
     public String toString() {
-        return "ExportMySQL [outputFile=" + outputFile + ", connection="
+        return "ExportVertica [outputFile=" + outputFile + ", connection="
                 + connection + ", migrationInfo=" + migrationInfo
                 + ", handlerTo=" + handlerTo + "]";
     }

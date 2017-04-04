@@ -38,13 +38,13 @@ public class FromPostgresToMySQL extends FromDatabaseToDatabase {
 
     /**
      * Always put extractor as the first task to be executed (while migrating
-     * data from MySQL to PostgreSQL).
+     * data from PostgreSQL to MySQL).
      */
     private static final int EXPORT_INDEX = 0;
 
     /**
      * Always put loader as the second task to be executed (while migrating data
-     * from MySQL to PostgreSQL)
+     * from PostgreSQL to MySQL)
      */
     private static final int LOAD_INDEX = 1;
 

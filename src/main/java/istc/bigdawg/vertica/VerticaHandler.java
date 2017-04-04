@@ -374,7 +374,7 @@ public class VerticaHandler implements RelationalHandler {
     }
     /**
      * Get metadata about columns (column name, position, data type, etc) for a
-     * table in MySQL.
+     * table in Vertica.
      *
      * @param tableNameInitial the name of the table
      * @return map column name to column meta data
@@ -399,11 +399,11 @@ public class VerticaHandler implements RelationalHandler {
                 preparedSt.setString(2, schemaTable.getTableName());
                 // postgresql logger cannot accept single quotes
                 log.debug("replace double quotes (\") with signle quotes "
-                        + "in the query to log it in MySQL: "
+                        + "in the query to log it in Vertica: "
                         + preparedSt.toString().replace("'", "\""));
             } catch (SQLException e) {
                 e.printStackTrace();
-                log.error("MySQLHandler, the query preparation failed. "
+                log.error("VerticaHandler, the query preparation failed. "
                         + e.getMessage() + " "
                         + StackTrace.getFullStackTrace(e));
                 throw e;
@@ -422,7 +422,7 @@ public class VerticaHandler implements RelationalHandler {
             }
             while (resultSet.next()) {
                 /**
-                 * ordinal position in MySQL starts from 1 but we want it
+                 * ordinal position in Vertica starts from 1 but we want it
                  * to start from 0.
                  */
                 AttributeMetaData columnMetaData = new AttributeMetaData(
@@ -481,7 +481,7 @@ public class VerticaHandler implements RelationalHandler {
             } catch (SQLException e) {
                 e.printStackTrace();
                 log.error(e.getMessage()
-                        + " MySQLHandler, the query preparation for checking if a schema exists failed.");
+                        + " VerticaHandler, the query preparation for checking if a schema exists failed.");
                 throw e;
             }
             try {

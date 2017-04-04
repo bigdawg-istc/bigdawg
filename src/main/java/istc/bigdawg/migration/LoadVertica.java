@@ -19,7 +19,7 @@ import java.sql.Statement;
 public class LoadVertica implements Load {
 
     /** For internal logging in the class. */
-    private static Logger log = Logger.getLogger(LoadMySQL.class);
+    private static Logger log = Logger.getLogger(LoadVertica.class);
 
     /** The name of the input file from where the data should be loaded. */
     private String inputFile;
@@ -71,7 +71,7 @@ public class LoadVertica implements Load {
      * @throws Exception
      */
     public Long call() throws Exception {
-        log.debug("Start loading data to MySQL "
+        log.debug("Start loading data to Vertica "
                 + this.getClass().getCanonicalName() + ". ");
         try {
             String copyToString = "COPY " + migrationInfo.getObjectTo() + " FROM LOCAL '"
@@ -156,7 +156,7 @@ public class LoadVertica implements Load {
                     connection.commit();
                 } catch (SQLException e) {
                     log.info("Could not commit any sql statement for "
-                            + "the connection in LoadMySQL. "
+                            + "the connection in LoadVertica. "
                             + e.getMessage());
                 }
                 connection.close();
