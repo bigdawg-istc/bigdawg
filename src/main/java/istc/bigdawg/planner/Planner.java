@@ -140,9 +140,9 @@ public class Planner {
 		}
 		return nextNodes;
 	}
-	
+
 	public static Response processQuery(String userinput, boolean isTrainingMode) throws Exception {
-		
+
 		String input = userinput.replaceAll("[\n]", "").replaceAll("[ \t]+", " ");
 		
 		// UNROLLING
