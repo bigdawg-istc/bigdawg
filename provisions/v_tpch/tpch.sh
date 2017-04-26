@@ -9,7 +9,7 @@ USER='dbadmin'
 mkdir -p $RESULTS
 
 # wait for the vertica instance to get ready
-sleep 10
+while !(/opt/vertica/bin/vsql -U dbadmin -l 2>/dev/null); do sleep 3 && echo "Trying to connect..."; done
 
 /opt/vertica/bin/vsql -U dbadmin -c 'ALTER DATABASE docker SET StandardConformingStrings = 0;'
 
