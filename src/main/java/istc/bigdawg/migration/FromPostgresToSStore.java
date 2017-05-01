@@ -86,19 +86,14 @@ public class FromPostgresToSStore extends FromDatabaseToDatabase {
 	private AtomicLong globalCounter = new AtomicLong(0);
 	private SStoreSQLHandler sstorehandler = null;
 	private Boolean caching = false;
-	private String serverAddress;
-	private int serverPort;
 
 	public FromPostgresToSStore(PostgreSQLConnectionInfo connectionFrom,
 			String fromTable, SStoreSQLConnectionInfo connectionTo,
-			String toTable, Boolean caching,
-			String serverAddress, int serverPort) {
+			String toTable, Boolean caching) {
 		this.migrationInfo = new MigrationInfo(connectionFrom, fromTable,
 				connectionTo, toTable, null);
 		this.sstorehandler = new SStoreSQLHandler(connectionFrom);
 		this.caching = caching;
-		this.serverAddress = serverAddress;
-		this.serverPort = serverPort;
 	}
 
 	/**
@@ -174,32 +169,13 @@ public class FromPostgresToSStore extends FromDatabaseToDatabase {
 		    
 		    LoadSStore loadSStore = new LoadSStore();
 			loadSStore.setMigrationInfo(migrationInfo);
-			loadSStore.setAdditionalParams("psql", false, serverAddress, serverPort);
+			loadSStore.setAdditionalParams("psql", false);
 			loadSStore.setHandlerFrom(new PostgreSQLHandler());
 			loadSStore.setFileFormat(FileFormat.CSV);
 			loadSStore.setLoadFrom(postgresPipe);
 			FutureTask loadTask = new FutureTask(loadSStore);
 			executor.submit(loadTask);
-//			countLoadedElements = (Long) loadTask.get();
-
-	    	servSock = new ServerSocket(serverPort);
-	    	servSocket = servSock.accept();
-	    	BufferedReader in  = new BufferedReader(new InputStreamReader(servSocket.getInputStream()));
-
-	    	String inputLine;
-	    	while ((inputLine = in.readLine()) != null) {
-	    		countLoadedElements = Long.parseLong(inputLine);
-	    		break;
-	    	}
-	    	
-			Boolean commit = countExtractedElements.equals(countLoadedElements) ? true : false;
-	    	PrintWriter out = new PrintWriter(servSocket.getOutputStream(), true);
-	    	out.println(commit);
-	    	
-	    	out.close();
-		    in.close();
-    		servSocket.close();
-    		servSock.close();
+			countLoadedElements = (Long) loadTask.get();
 
     		long endTimeMigration = System.currentTimeMillis();
 			long durationMsec = endTimeMigration - startTimeMigration;
@@ -289,8 +265,7 @@ public class FromPostgresToSStore extends FromDatabaseToDatabase {
 				"21212", "", "user", "password");
 		FromDatabaseToDatabase migrator = new FromPostgresToSStore(
 				(PostgreSQLConnectionInfo)conInfoFrom, "orders", 
-				(SStoreSQLConnectionInfo)conInfoTo, "orders", true, 
-				"localhost", 18002);
+				(SStoreSQLConnectionInfo)conInfoTo, "orders", false);
 		MigrationResult result;
 		try {
 			result = migrator.migrate(migrator.migrationInfo);

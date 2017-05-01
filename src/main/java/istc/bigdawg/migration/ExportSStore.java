@@ -93,8 +93,6 @@ public class ExportSStore implements Export {
 
 	private String trim;
 	private boolean caching;	// Whether caching in S-Store is turned on
-	private String serverAddress; // Communicate between S-Store and the other DB for rollback/commit of S-Store
-	private int port; // Communicate between S-Store and the other DB for rollback/commit of S-Store
 	
 	public ExportSStore() {
 
@@ -111,11 +109,9 @@ public class ExportSStore implements Export {
 		this.fileFormat = fileFormat;
 	}
 	
-	public void setAdditionalParams(String trim, Boolean caching, String serverAddress, Integer port) {
+	public void setAdditionalParams(String trim, Boolean caching) {
 		this.trim = trim;
 		this.caching = caching;
-		this.serverAddress = serverAddress;
-		this.port = port;
 	}
 	
 
@@ -267,7 +263,7 @@ public class ExportSStore implements Export {
 			log.debug("S-Store copy statement: " + copyFromString);
 			countExtractedRows = SStoreSQLHandler.executePreparedStatement(
 					connection, copyFromString, migrationInfo.getObjectFrom(), 
-					trim, outputFile, caching, serverAddress, port);
+					trim, outputFile, caching);
 			output.close();
 		} catch (IOException | SQLException e) {
 			String msg = e.getMessage()
@@ -371,7 +367,7 @@ public class ExportSStore implements Export {
 		LoggerSetup.setLogging();
 		ExportSStore export = new ExportSStore(FileFormat.CSV);
 //		export.setAdditionalParams("psql", false, "localhost", 18001);
-		export.setAdditionalParams("csv", false, "localhost", 18001);
+		export.setAdditionalParams("csv", false);
 		export.setHandlerTo(new PostgreSQLHandler());
 		ConnectionInfo connectionFrom = new SStoreSQLConnectionInfo("localhost",
 				"21212", "", "user", "password");

@@ -78,8 +78,6 @@ public class LoadSStore implements Load {
 	
 	private String trim;
 	private boolean caching;	// Whether caching in S-Store is turned on
-	private String serverAddress; // Communicate between S-Store and the other DB for rollback/commit of S-Store
-	private int port; // Communicate between S-Store and the other DB for rollback/commit of S-Store
 	
 	public LoadSStore() {
 		
@@ -107,11 +105,9 @@ public class LoadSStore implements Load {
 		return new LoadSStore(fileFormat);
 	}
 
-	public void setAdditionalParams(String trim, Boolean caching, String serverAddress, Integer port) {
+	public void setAdditionalParams(String trim, Boolean caching) {
 		this.trim = trim;
 		this.caching = caching;
-		this.serverAddress = serverAddress;
-		this.port = port;
 	}
 	
 	/**
@@ -232,8 +228,7 @@ public class LoadSStore implements Load {
 			countLoadedRows = 
 					SStoreSQLHandler.executePreparedImportStatement(
 							connection, copyToString, migrationInfo.getObjectTo(), 
-							input, "csv", inputFile,
-							serverAddress, port);
+							input, "csv", inputFile);
 			input.close();
 		} catch (IOException | SQLException e) {
 			String msg = e.getMessage()

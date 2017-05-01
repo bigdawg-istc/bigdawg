@@ -87,21 +87,16 @@ public class FromSStoreToPostgres extends FromDatabaseToDatabase {
 	private AtomicLong globalCounter = new AtomicLong(0);
 	private SStoreSQLHandler sstorehandler = null;
 	
-	private String serverAddress;
-	private int serverPort;
 	private FileFormat fileFormat;
 
 	public FromSStoreToPostgres(SStoreSQLConnectionInfo connectionFrom,
 			String fromTable, PostgreSQLConnectionInfo connectionTo,
 			String toTable,
-			FileFormat fileFormat,
-			String serverAddress, int serverPort) {
+			FileFormat fileFormat) {
 		this.migrationInfo = new MigrationInfo(connectionFrom, fromTable,
 				connectionTo, toTable, null);
 		this.sstorehandler = new SStoreSQLHandler(connectionFrom);
 		this.fileFormat = fileFormat;
-		this.serverAddress = serverAddress;
-		this.serverPort = serverPort;
 	}
 
 	/**
@@ -219,8 +214,6 @@ public class FromSStoreToPostgres extends FromDatabaseToDatabase {
 			
 		    Long countExtractedElements = -1L;
 		    Long countLoadedElements = -1L;
-		    ServerSocket servSock = null;
-		    Socket servSocket = null;
 		    
 			ExportSStore exportSStore = new ExportSStore();
 			exportSStore.setMigrationInfo(migrationInfo);
@@ -230,41 +223,22 @@ public class FromSStoreToPostgres extends FromDatabaseToDatabase {
 			} else {
 				trim = "csv";
 			}
-			exportSStore.setAdditionalParams(trim, false, serverAddress, serverPort);
+			exportSStore.setAdditionalParams(trim, false);
 			exportSStore.setHandlerTo(new PostgreSQLHandler());
 			exportSStore.setFileFormat(fileFormat);
 			// We cannot set an OutputStream for S-Store, 
-			// because S-Store currently only takes a file, and write to the file in the db engine.
+			// because S-Store currently only takes a file, and write to the file in the engine.
 		    String sStorePipe = "/tmp/sstore_" + globalCounter.incrementAndGet() + ".out";
 			exportSStore.setExportTo(sStorePipe);
 			FutureTask exportTask = new FutureTask(exportSStore);
 			executor.submit(exportTask);
-
-	    	servSock = new ServerSocket(serverPort);
-	    	servSocket = servSock.accept();
-	    	BufferedReader in  = new BufferedReader(new InputStreamReader(servSocket.getInputStream()));
-	    	PrintWriter out = new PrintWriter(servSocket.getOutputStream(), true);
-
-	    	String inputLine;
-	    	
-	    	while ((inputLine = in.readLine()) != null) {
-	    		countExtractedElements = Long.parseLong(inputLine);
-	    		break;
-	    	}
+			countExtractedElements = (Long) exportTask.get();
 			
 	    	InputStream input = new BufferedInputStream(new FileInputStream(sStorePipe));
 			LoadPostgres loadPostgres = new LoadPostgres(conTo, migrationInfo, copyToCommand, input);
 			FutureTask loadTask = new FutureTask(loadPostgres);
 		    executor.submit(loadTask);
 		    countLoadedElements = (Long) loadTask.get();
-
-			Boolean commit = countExtractedElements.equals(countLoadedElements) ? true : false;
-	    	out.println(commit);
-	    	
-	    	out.close();
-		    in.close();
-    		servSocket.close();
-    		servSock.close();
 
     		long endTimeMigration = System.currentTimeMillis();
 			long durationMsec = endTimeMigration - startTimeMigration;
@@ -395,8 +369,7 @@ public class FromSStoreToPostgres extends FromDatabaseToDatabase {
 				(SStoreSQLConnectionInfo)conInfoFrom, "orders", 
 				(PostgreSQLConnectionInfo)conInfoTo, "orders",
 //				FileFormat.BIN_POSTGRES,
-				FileFormat.CSV,
-				"localhost", 18001);
+				FileFormat.CSV);
 		MigrationResult result;
 		try {
 			result = migrator.migrate(migrator.migrationInfo);

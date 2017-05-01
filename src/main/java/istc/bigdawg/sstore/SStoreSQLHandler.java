@@ -609,7 +609,7 @@ public class SStoreSQLHandler implements DBHandler {
 	
 	    
     public static Long executePreparedStatement(Connection connection, String copyFromString, String tableName,
-	    String trim, String outputFile, boolean caching, String serverAddress, int port) throws SQLException {
+	    String trim, String outputFile, boolean caching) throws SQLException {
 	
 	PreparedStatement statement = null;
 	Long countExtractedRows = 0L;
@@ -620,8 +620,6 @@ public class SStoreSQLHandler implements DBHandler {
 		statement.setString(3, trim);
 		statement.setString(4, outputFile);
 		statement.setString(5, String.valueOf(caching));
-		statement.setString(6, serverAddress);
-		statement.setInt(7, port);
 		statement.setQueryTimeout(600);
 		ResultSet rs;
 		rs = statement.executeQuery();
@@ -645,13 +643,12 @@ public class SStoreSQLHandler implements DBHandler {
     }
     
     public static String getExportCommand() {
-	return "{call @ExtractionRemote(?, ?, ?, ?, ?, ?, ?)}";
+	return "{call @ExtractionRemote(?, ?, ?, ?, ?)}";
     }
     
     public static Long executePreparedImportStatement(
     		Connection connection, String copyToString, 
-    		String tableName, InputStream inStream, String trim, String inputFile,
-    		String serverAddress, int port) throws SQLException {
+    		String tableName, InputStream inStream, String trim, String inputFile) throws SQLException {
 
     	PreparedStatement statement = null;
     	Long countLoadedRows = 0L;
@@ -661,8 +658,6 @@ public class SStoreSQLHandler implements DBHandler {
     		statement.setString(2, tableName);
     		statement.setString(3, trim);
     		statement.setString(4, inputFile);
-    		statement.setString(5, serverAddress);
-    		statement.setInt(6, port);
     		statement.setQueryTimeout(600);
     		ResultSet rs = statement.executeQuery();
     		rs.next();
@@ -693,7 +688,7 @@ public class SStoreSQLHandler implements DBHandler {
     }
         
    public static String getImportCommand() {
-    	return "{call @LoadTableFromFile(?, ?, ?, ?, ?, ?)}";
+    	return "{call @LoadTableFromFile(?, ?, ?, ?)}";
     }
 
    public boolean existsObject(String name) throws Exception {
