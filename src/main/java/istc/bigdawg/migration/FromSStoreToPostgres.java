@@ -366,8 +366,8 @@ public class FromSStoreToPostgres extends FromDatabaseToDatabase {
 		ConnectionInfo conInfoTo = new PostgreSQLConnectionInfo(
 				"localhost", "5431", "test", "pguser", "");
 		FromDatabaseToDatabase migrator = new FromSStoreToPostgres(
-				(SStoreSQLConnectionInfo)conInfoFrom, "orders", 
-				(PostgreSQLConnectionInfo)conInfoTo, "orders",
+				(SStoreSQLConnectionInfo)conInfoFrom, "medevents", 
+				(PostgreSQLConnectionInfo)conInfoTo, "medevents",
 //				FileFormat.BIN_POSTGRES,
 				FileFormat.CSV);
 		MigrationResult result;

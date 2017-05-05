@@ -46,7 +46,10 @@ public enum BigDawgConfigProperties {
 	private int sstoreDBID;
 	private String sStoreURL;
 	private int seaflowDBID;
+	private int mimic2DBID;
 	private String accumuloShellScript;
+	
+	private long sstoreInjectionMigrationGap;
 
 	private int tpccDBID;
 
@@ -115,6 +118,8 @@ public enum BigDawgConfigProperties {
 
 		this.sstoreDBID =Integer.parseInt(prop.getProperty("main.sstore.dbid"));
 		this.sStoreURL = prop.getProperty("main.sstore.alerturl");
+		this.sstoreInjectionMigrationGap = Long.parseLong(prop.getProperty("main.sstore.injection.migrationGap"));
+		this.mimic2DBID =Integer.parseInt(prop.getProperty("main.postgresql.dbid.mimic2"));
 		// this.seaflowDBID =
 		// Integer.parseInt(prop.getProperty("main.seaflow.dbid"));
 		// this.postgreSQLOceanDBURL =
@@ -393,14 +398,22 @@ public enum BigDawgConfigProperties {
 		return sstoreDBID;
 	}
 
-	public Integer getSeaflowDBID() {
-		return seaflowDBID;
+	public Integer getMimic2DBID() {
+		return mimic2DBID;
 	}
+	
+//	public Integer getSeaflowDBID() {
+//		return seaflowDBID;
+//	}
 
 	public Integer getTpccDBID() {
 		return tpccDBID;
 	}
 
+	public Long getSStoreMigrationGap() {
+		return sstoreInjectionMigrationGap;
+	}
+	
 	/**
 	 * @return the networkMessagePort
 	 */
