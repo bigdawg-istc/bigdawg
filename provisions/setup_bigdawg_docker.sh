@@ -138,6 +138,7 @@ docker cp ../src/main/resources/PostgresParserTerms.csv bigdawg-postgres-catalog
 docker cp ../src/main/resources/SciDBParserTerms.csv bigdawg-postgres-catalog:/src/main/resources
 docker cp cluster_setup/postgres-catalog/bdsetup bigdawg-postgres-catalog:/
 docker exec bigdawg-postgres-catalog /bdsetup/setup.sh
+docker exec bigdawg-postgres-catalog /bdsetup/setup_sstore.sh
 
 # postgres-data1
 docker cp cluster_setup/postgres-data1/bdsetup bigdawg-postgres-data1:/
