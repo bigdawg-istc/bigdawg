@@ -12,11 +12,11 @@ import org.glassfish.jersey.server.ResourceConfig;
 import istc.bigdawg.LoggerSetup;
 import istc.bigdawg.catalog.CatalogInstance;
 import istc.bigdawg.migration.MigratorTask;
-import istc.bigdawg.migration.SStoreMigratorTask;
 import istc.bigdawg.monitoring.MonitoringTask;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.scidb.SciDBHandler;
+import istc.bigdawg.sstore.SStoreMigratorTask;
 
 public class Injection {
 
@@ -103,14 +103,11 @@ public class Injection {
 
 
 
-		//	        // ZooKeeperUtils.registerNodeInZooKeeper();
+		// ZooKeeperUtils.registerNodeInZooKeeper();
 		//
-		//	        // S-Store migration task
-		//	        // SStoreMigrationTask sstoreMigration = new SStoreMigrationTask();
+		// S-Store migration task: pushing data to Postgres
 		BigDawgConfigProperties.INSTANCE.getBaseURI();
 		Long migrationGap = BigDawgConfigProperties.INSTANCE.getSStoreMigrationGap();
-		System.out.println("sstore dbid: " + BigDawgConfigProperties.INSTANCE.getSStoreDBID());
-		System.out.println("psql dbid: " + BigDawgConfigProperties.INSTANCE.getMimic2DBID());
 		SStoreMigratorTask sstoreMigratorTask = new SStoreMigratorTask(
 				new String[]{"medevents"},
 				BigDawgConfigProperties.INSTANCE.getSStoreDBID(),
@@ -118,7 +115,7 @@ public class Injection {
 				migrationGap);
 		Thread migratorT = new Thread(sstoreMigratorTask);
 		migratorT.start();
-		System.out.println("sstore migrator started.");
+		logger.info("sstore migrator started.");
 
 
 		// Assign the IP address for the HTTP server to listen on

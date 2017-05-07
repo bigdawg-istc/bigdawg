@@ -1,4 +1,4 @@
-package istc.bigdawg.migration;
+package istc.bigdawg.sstore;
 
 import static istc.bigdawg.utils.JdbcUtils.getColumnNames;
 import static istc.bigdawg.utils.JdbcUtils.getRows;
@@ -41,6 +41,10 @@ import istc.bigdawg.injection.Injection;
 import istc.bigdawg.islands.CrossIslandCastNode;
 import istc.bigdawg.islands.CrossIslandQueryNode;
 import istc.bigdawg.islands.CrossIslandQueryPlan;
+import istc.bigdawg.migration.FileFormat;
+import istc.bigdawg.migration.FromDatabaseToDatabase;
+import istc.bigdawg.migration.FromSStoreToPostgres;
+import istc.bigdawg.migration.MigrationResult;
 import istc.bigdawg.monitoring.Monitor;
 import istc.bigdawg.monitoring.MonitoringTask;
 import istc.bigdawg.network.NetworkIn;
@@ -332,7 +336,6 @@ class Task implements Runnable {
     			String tableTo = table;
     			try {
     				long startTimeMigration = System.currentTimeMillis();
-    		    	System.out.println("Start migration...");
     				FromDatabaseToDatabase migrator = new FromSStoreToPostgres(
     						(SStoreSQLConnectionInfo)sstoreConnInfo, tableFrom, 
     						(PostgreSQLConnectionInfo)psqlConnInfo, tableTo,
@@ -340,7 +343,7 @@ class Task implements Runnable {
     						FileFormat.CSV);
     				MigrationResult migrationResult;
     				try {
-    					migrationResult = migrator.migrate(migrator.migrationInfo);
+    					migrationResult = migrator.migrate(migrator.getMigrationInfo());
     				} catch (MigrationException e) {
     					e.printStackTrace();
     					logger.error(e.getMessage());
