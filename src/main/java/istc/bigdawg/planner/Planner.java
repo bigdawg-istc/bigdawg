@@ -143,7 +143,7 @@ public class Planner {
 	
 	public static Response processQuery(String userinput, boolean isTrainingMode) throws Exception {
 		
-		String input = userinput.replaceAll("[/\n/]", "").replaceAll("[ /\t/]+", " ");
+		String input = userinput.replaceAll("[\n]", "").replaceAll("[ \t]+", " ");
 		
 		// UNROLLING
 		logger.debug("User query received. Parsing... " + input.replaceAll("[\"']", "*"));

@@ -285,4 +285,15 @@ public class SQLIslandAggregate extends SQLIslandOperator implements Aggregate {
 	public void setAggregateFilter(String aggregateFilter) {
 		this.aggregateFilter = aggregateFilter;
 	}
+	
+	@Override
+	public String toString() {
+		StringBuilder sb = new StringBuilder();
+		sb.append("(Aggregate ");
+		sb.append(this.parsedGroupBys).append(' ');
+		sb.append(this.getOutSchema()).append(' ');
+		if (children.get(0) != null) sb.append(' ').append(children.get(0));
+		sb.append(')');
+		return sb.toString();
+	}
 };
