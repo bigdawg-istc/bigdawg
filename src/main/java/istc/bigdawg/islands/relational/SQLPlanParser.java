@@ -3,8 +3,12 @@ package istc.bigdawg.islands.relational;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -126,6 +130,31 @@ public class SQLPlanParser {
 		
 		return queryPlan;
 	}
+	
+	
+	public static ArrayList<String> extractTablesFromPostgresSQL(PostgreSQLHandler psqlh, String query) throws Exception  {
+		String explainQuery = SQLPrepareQuery.generateSimpleExplainQueryString(query);
+		String xmlString = psqlh.generatePostgreSQLQueryXML(explainQuery);
+		return getTableNamesFromXML(xmlString);
+	}
+	
+	
+	private static ArrayList<String> getTableNamesFromXML(String xmlString) {
+		ArrayList<String> tableNames = new ArrayList<String>();
+		Pattern tableNamePattern = Pattern.compile("<Relation-Name>(\\w+)<\\/Relation-Name>");
+		Matcher tableNameMatcher = tableNamePattern.matcher(xmlString);
+		while (tableNameMatcher.find()) {
+			tableNames.add(tableNameMatcher.group(1));
+		}
+
+		// De-duplicate
+		Set<String> hs = new HashSet<>();
+		hs.addAll(tableNames);
+		tableNames.clear();
+		tableNames.addAll(hs);
+		return tableNames;
+	}
+	
 	
 	// parse a single <Plan>
 	Operator parsePlanTail(String planName, Node node, int recursionLevel, boolean skipSort) throws Exception {

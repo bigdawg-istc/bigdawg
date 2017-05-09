@@ -71,6 +71,7 @@ public class SStoreMigratorTask implements Runnable {
     private ScheduledExecutorService scheduledExecutor;
     public static long MIGRATION_RATE;	// In milliseconds
     private static String[] tables;
+    private static String psqlSchema;
     public static int sstoreDBID;
     public static int postgresDBID;
     private Long executedTime = null; // In milliseconds
@@ -85,6 +86,7 @@ public class SStoreMigratorTask implements Runnable {
 		executor.submit(new NetworkIn());
 		scheduledExecutor = Executors.newScheduledThreadPool(1);
 		this.tables = new String[]{"medevents"};
+		this.psqlSchema = "mimic2v26";
 		sstoreDBID = BigDawgConfigProperties.INSTANCE.getSStoreDBID();
 		postgresDBID = BigDawgConfigProperties.INSTANCE.getMimic2DBID();
 		MIGRATION_RATE = 60000;
@@ -95,12 +97,13 @@ public class SStoreMigratorTask implements Runnable {
 	 * Run the service for migrator - this network task accepts remote request
 	 * for data migration.
 	 */
-	public SStoreMigratorTask(String[] tables, Integer sstoreDBID, Integer postgresDBID, Long migration_rate) {
+	public SStoreMigratorTask(String[] tables, String psqlSchema, Integer sstoreDBID, Integer postgresDBID, Long migration_rate) {
 		int numberOfThreads = 1;
 		executor = Executors.newFixedThreadPool(numberOfThreads);
 		executor.submit(new NetworkIn());
 		scheduledExecutor = Executors.newScheduledThreadPool(1);
 		this.tables = tables;
+		this.psqlSchema = psqlSchema;
 		this.sstoreDBID = sstoreDBID;
 		this.postgresDBID = postgresDBID;
 		this.MIGRATION_RATE = migration_rate;
@@ -110,13 +113,14 @@ public class SStoreMigratorTask implements Runnable {
 	 * Run the service for migrator - this network task accepts remote request
 	 * for data migration.
 	 */
-	public SStoreMigratorTask(String[] tables, Integer sstoreDBID, Integer postgresDBID, Long migration_rate,
+	public SStoreMigratorTask(String[] tables, String psqlSchema, Integer sstoreDBID, Integer postgresDBID, Long migration_rate,
 			Long executedTime) {
 		int numberOfThreads = 1;
 		executor = Executors.newFixedThreadPool(numberOfThreads);
 		executor.submit(new NetworkIn());
 		scheduledExecutor = Executors.newScheduledThreadPool(1);
 		this.tables = tables;
+		this.psqlSchema = psqlSchema;
 		this.sstoreDBID = sstoreDBID;
 		this.postgresDBID = postgresDBID;
 		this.MIGRATION_RATE = migration_rate;
@@ -163,24 +167,32 @@ public class SStoreMigratorTask implements Runnable {
 	
 
 	public void waitForSStore() {
+		while (!isSStoreAlive()) {
+    		try {
+				Thread.sleep(1000); // sleep 1 second
+			} catch (InterruptedException e) {
+				;
+			}
+    	}
+		
+		return;
+	}
+	
+	
+	public static boolean isSStoreAlive() {
 		try {
 			SStoreSQLConnectionInfo sstoreConnInfo = 
 					(SStoreSQLConnectionInfo) CatalogViewer.getConnectionInfo(sstoreDBID);
 			String host = sstoreConnInfo.getHost();
 	    	int port = Integer.parseInt(sstoreConnInfo.getPort());
-	    	while (!serverListening(host, port)) {
-	    		try {
-					Thread.sleep(1000); // sleep 1 second
-				} catch (InterruptedException e) {
-					;
-				}
-	    	}
+	    	return serverListening(host, port);
 		} catch (BigDawgCatalogException | SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		
-		return;
+		return false;
+		
 	}
 	
 	
@@ -188,7 +200,7 @@ public class SStoreMigratorTask implements Runnable {
     public void run() {
 //		cleanHistoricalData();
 		waitForSStore();
-		Task migrateTask = new Task(tables, migratedTupleCount, migrationTime, startedTime, earliestTimestamp);
+		Task migrateTask = new Task(tables, psqlSchema, migratedTupleCount, migrationTime, startedTime, earliestTimestamp);
 	    ScheduledFuture futureTask = 
 	    		this.scheduledExecutor.scheduleAtFixedRate(migrateTask, 0, MIGRATION_RATE, TimeUnit.MILLISECONDS);
 	    if (executedTime != null) {
@@ -205,7 +217,7 @@ public class SStoreMigratorTask implements Runnable {
     
     
     public void runOnce() {
-    	Task migrateTask = new Task(tables, migratedTupleCount, migrationTime, startedTime, earliestTimestamp);
+    	Task migrateTask = new Task(tables, psqlSchema, migratedTupleCount, migrationTime, startedTime, earliestTimestamp);
     	Thread t = new Thread(migrateTask);
     	t.start();
     	try {
@@ -294,6 +306,7 @@ class Task implements Runnable {
     private static SStoreSQLConnectionInfo sstoreConnInfo;
     private static PostgreSQLConnectionInfo psqlConnInfo;
     private static String[] tables;
+    private static String psqlSchema;
     private Long executedTimes = 0L;
     private Long totalExecTime = 0L; // in milliseconds
     private Long totalMigratedTuples = 0L;
@@ -303,12 +316,13 @@ class Task implements Runnable {
     private Stack<Long> earliestTimestamp;
     static boolean isRunning = false;
 
-    Task(String[] tables, Stack<Long> migratedTupleCount, Stack<Long> migrationTime, 
+    Task(String[] tables, String psqlSchema, Stack<Long> migratedTupleCount, Stack<Long> migrationTime, 
     		Stack<Long> startedTime, Stack<Long> earliestTimestamp){
 		LoggerSetup.setLogging();
 		logger = Logger.getLogger(Injection.class);
 		
     	this.tables = tables;
+    	this.psqlSchema = psqlSchema;
     	this.migratedTupleCount = migratedTupleCount;
     	this.migrationTime = migrationTime;
     	this.startedTime = startedTime;
@@ -333,7 +347,7 @@ class Task implements Runnable {
     		isRunning = true;
     		for (String table : tables) {
     			String tableFrom = table;
-    			String tableTo = table;
+    			String tableTo = psqlSchema + "." + table;
     			try {
     				long startTimeMigration = System.currentTimeMillis();
     				FromDatabaseToDatabase migrator = new FromSStoreToPostgres(

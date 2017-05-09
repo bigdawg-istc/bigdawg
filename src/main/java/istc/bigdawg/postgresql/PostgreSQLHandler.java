@@ -25,16 +25,24 @@ import istc.bigdawg.BDConstants.Shim;
 import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.database.AttributeMetaData;
 import istc.bigdawg.exceptions.BigDawgCatalogException;
+import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.exceptions.NoTargetArrayException;
 import istc.bigdawg.exceptions.UnsupportedTypeException;
 import istc.bigdawg.executor.ExecutorEngine;
 import istc.bigdawg.executor.IslandQueryResult;
 import istc.bigdawg.executor.JdbcQueryResult;
 import istc.bigdawg.executor.QueryResult;
+import istc.bigdawg.islands.relational.SQLPlanParser;
+import istc.bigdawg.migration.FileFormat;
+import istc.bigdawg.migration.FromDatabaseToDatabase;
+import istc.bigdawg.migration.FromSStoreToPostgres;
+import istc.bigdawg.migration.MigrationResult;
 import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.query.DBHandler;
 import istc.bigdawg.query.QueryClient;
+import istc.bigdawg.sstore.SStoreMigratorTask;
+import istc.bigdawg.sstore.SStoreSQLConnectionInfo;
 import istc.bigdawg.utils.LogUtils;
 import istc.bigdawg.utils.StackTrace;
 
@@ -347,6 +355,27 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 			throws LocalQueryExecutionException {
 		try {
 
+			// Check if S-Store is available
+			if (SStoreMigratorTask.isSStoreAlive()) {
+				ArrayList<String> tableNames;
+				try {
+					tableNames = SQLPlanParser.extractTablesFromPostgresSQL(this, query);
+				} catch (Exception e) {
+					tableNames = null;
+				}
+				if (tableNames != null) {
+					for (String tableName : tableNames) {
+						if (existsTableInSStore(new PostgreSQLSchemaTableName(tableName))) {
+							// Pull from S-Store
+							log.info("Pulling table: " + tableName + " S-Store.");
+							pullFromSStore(tableName, 
+									BigDawgConfigProperties.INSTANCE.getPostgreSQLDataSchema());
+						}
+					}
+				}
+			}
+			
+			
 			log.debug("PostgreSQLHandler is attempting query: "
 					+ LogUtils.replace(query) + "");
 			log.debug("ConnectionInfo:\n" + this.conInfo.toString());
@@ -379,7 +408,46 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 			}
 		}
 	}
-
+	
+	
+	private void pullFromSStore(String tableFrom, String psqlSchema) {
+		String tableTo = psqlSchema + "." + tableFrom;
+	    SStoreSQLConnectionInfo sstoreConnInfo;
+	    PostgreSQLConnectionInfo psqlConnInfo;
+    	try {
+			sstoreConnInfo = 
+					(SStoreSQLConnectionInfo) CatalogViewer.getConnectionInfo(
+							BigDawgConfigProperties.INSTANCE.getSStoreDBID());
+	    	psqlConnInfo =
+	        		(PostgreSQLConnectionInfo) CatalogViewer.getConnectionInfo(
+	        				BigDawgConfigProperties.INSTANCE.getMimic2DBID());
+		} catch (Exception e) {
+			return;
+		}
+		try {
+			long startTimeMigration = System.currentTimeMillis();
+			FromDatabaseToDatabase migrator = new FromSStoreToPostgres(
+					(SStoreSQLConnectionInfo)sstoreConnInfo, tableFrom, 
+					(PostgreSQLConnectionInfo)psqlConnInfo, tableTo,
+//					FileFormat.BIN_POSTGRES,
+					FileFormat.CSV);
+			MigrationResult migrationResult;
+			try {
+				migrationResult = migrator.migrate(migrator.getMigrationInfo());
+			} catch (MigrationException e) {
+				e.printStackTrace();
+				log.error(e.getMessage());
+				throw e;
+			}
+			long endTimeMigration = System.currentTimeMillis();
+			long durationMsec = endTimeMigration - startTimeMigration;
+		} catch (MigrationException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} finally {
+		}
+	}
+	
 	/**
 	 * It executes the query and releases the resources at the end.
 	 * 
@@ -389,6 +457,7 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 	 */
 	public JdbcQueryResult executeQueryPostgreSQL(final String query)
 			throws SQLException {
+		
 		try {
 			this.getConnection();
 
@@ -1055,6 +1124,49 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 			log.error(e.getMessage() + " Failed to check if a table exists.");
 			throw e;
 		}
+	}
+	
+	/**
+	 * Check if a table exists in S-Store.
+	 * 
+	 * @param conInfo
+	 * @param schemaTable
+	 *            names of a schema and a table
+	 * @return true if the table exists in S-Store, false if there is no such table in S-Store
+	 * @throws SQLException
+	 */
+	public boolean existsTableInSStore(PostgreSQLSchemaTableName schemaTable) throws SQLException {
+		PostgreSQLHandler catalogHandler = null;
+		try {
+			catalogHandler = new PostgreSQLHandler();
+		} catch (Exception e) {
+			e.printStackTrace();
+			log.error(e.getMessage()
+					+ " PostgreSQLHandler, the query preparation for checking if a table exists failed.");
+		}
+		
+		PreparedStatement preparedSt;
+		try {
+			if (catalogHandler != null) {
+				catalogHandler.getConnection();
+				preparedSt = catalogHandler.con.prepareStatement(
+					"select exists (select 1 from catalog.objects o, catalog.databases d "
+					+ "where o.name ilike ? and "
+					+ "o.logical_db = d.dbid and "
+					+ "d.name ilike 's-store')");
+				preparedSt.setString(1, schemaTable.getTableName());
+				ResultSet rs = preparedSt.executeQuery();
+				rs.next();
+				return rs.getBoolean(1);
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+			log.error(e.getMessage()
+					+ " PostgreSQLHandler, the query preparation for checking if a table exists failed.");
+			throw e;
+		}
+		
+		return false;
 	}
 
 	/**

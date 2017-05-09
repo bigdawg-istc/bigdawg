@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.net.URI;
 import java.sql.SQLException;
 
+import javax.ws.rs.core.Response;
+
 import org.apache.log4j.Logger;
 import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
@@ -15,6 +17,7 @@ import istc.bigdawg.migration.MigratorTask;
 import istc.bigdawg.monitoring.MonitoringTask;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.properties.BigDawgConfigProperties;
+import istc.bigdawg.query.QueryClient;
 import istc.bigdawg.scidb.SciDBHandler;
 import istc.bigdawg.sstore.SStoreMigratorTask;
 
@@ -110,13 +113,21 @@ public class Injection {
 		Long migrationGap = BigDawgConfigProperties.INSTANCE.getSStoreMigrationGap();
 		SStoreMigratorTask sstoreMigratorTask = new SStoreMigratorTask(
 				new String[]{"medevents"},
+				BigDawgConfigProperties.INSTANCE.getPostgreSQLDataSchema(),
 				BigDawgConfigProperties.INSTANCE.getSStoreDBID(),
 				BigDawgConfigProperties.INSTANCE.getMimic2DBID(),
 				migrationGap);
 		Thread migratorT = new Thread(sstoreMigratorTask);
 		migratorT.start();
 		logger.info("sstore migrator started.");
-
+		
+//		long lStartTime = System.currentTimeMillis();
+//		QueryClient qClient = new QueryClient();
+//		
+//		Response response1;
+//		System.out.println("Start query....");
+//		response1 = qClient.query("{\"query\":\"bdrel("+"select count(*) from mimic2v26.medevents"+")\"}");
+//		System.out.println("End query.");
 
 		// Assign the IP address for the HTTP server to listen on
 		String ipAddress = null;

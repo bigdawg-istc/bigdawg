@@ -49,6 +49,10 @@ public class SQLPrepareQuery {
 		return "EXPLAIN (VERBOSE ON, ANALYZE, FORMAT XML) " + query;
 	}
 	
+	public static String generateSimpleExplainQueryString(String query) throws IOException {
+		return "EXPLAIN (COSTS OFF, FORMAT XML) " + query;
+	}
+	
 	public static String preprocessDateAndTime(String query) throws Exception {
 		
 		StringBuilder sb = new StringBuilder();
