@@ -5,7 +5,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.regex.Pattern;
 
 import istc.bigdawg.exceptions.QueryParsingException;
 import istc.bigdawg.islands.relational.utils.SQLAttribute;
