@@ -25,8 +25,8 @@ import org.apache.log4j.Logger;
 import org.jgrapht.graph.DefaultEdge;
 
 import istc.bigdawg.executor.plan.QueryExecutionPlan;
-import istc.bigdawg.islands.CrossIslandCastNode;
-import istc.bigdawg.islands.CrossIslandQueryNode;
+import istc.bigdawg.islands.CrossIslandCast;
+import istc.bigdawg.islands.IntraIslandQuery;
 import istc.bigdawg.islands.CrossIslandQueryPlan;
 import istc.bigdawg.postgresql.PostgreSQLInstance;
 import istc.bigdawg.query.QueryClient;
@@ -101,16 +101,16 @@ class Task implements Runnable {
                 if (signature != null) {
 //                    Map<String, String> crossIslandQuery = UserQueryParser.getUnwrappedQueriesByIslands(signature.getQuery());
 //                    CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(crossIslandQuery);
-//                    CrossIslandQueryNode ciqn = (CrossIslandQueryNode)ciqp.getTerminalNode();
+//                    IntraIslandQuery ciqn = (IntraIslandQuery)ciqp.getTerminalNode();
                 	CrossIslandQueryPlan ciqp = new CrossIslandQueryPlan(signature.getQuery(), new HashSet<>());
-                	CrossIslandQueryNode ciqn = null;
-                    if (ciqp.getTerminalNode() instanceof CrossIslandQueryNode)
-                    	ciqn = (CrossIslandQueryNode)ciqp.getTerminalNode();
+                	IntraIslandQuery ciqn = null;
+                    if (ciqp.getTerminalNode() instanceof IntraIslandQuery)
+                    	ciqn = (IntraIslandQuery)ciqp.getTerminalNode();
                     else {
                     	ciqp.edgesOf(ciqp.getTerminalNode());
                     	for (DefaultEdge e : ciqp.edgeSet()) {
-                    		if (ciqp.getEdgeTarget(e) instanceof CrossIslandCastNode) {
-                    			ciqn = (CrossIslandQueryNode)(ciqp.getEdgeSource(e));
+                    		if (ciqp.getEdgeTarget(e) instanceof CrossIslandCast) {
+                    			ciqn = (IntraIslandQuery)(ciqp.getEdgeSource(e));
                     			break;
                     		};
                     	} 

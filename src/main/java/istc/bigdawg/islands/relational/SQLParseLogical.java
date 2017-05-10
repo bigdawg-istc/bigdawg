@@ -1,10 +1,13 @@
 package istc.bigdawg.islands.relational;
 
+import java.sql.SQLException;
 import java.util.Iterator;
 import java.util.List;
 
-import istc.bigdawg.exceptions.BigDawgException;
+import istc.bigdawg.exceptions.BigDawgCatalogException;
+import istc.bigdawg.exceptions.QueryParsingException;
 import istc.bigdawg.islands.relational.utils.SQLPrepareQuery;
+import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.Select;
@@ -21,11 +24,16 @@ public class SQLParseLogical {
     private SQLQueryPlan queryPlan;
     
 
-	public SQLParseLogical(String query) throws Exception {
+	public SQLParseLogical(String query) throws SQLException, BigDawgCatalogException, QueryParsingException {
 		
 		String q = SQLPrepareQuery.preprocessDateAndTime(query);
 		
-		Select select = (Select) CCJSqlParserUtil.parse(q);	
+		Select select;
+		try {
+			select = (Select) CCJSqlParserUtil.parse(q);
+		} catch (JSQLParserException e) {
+			throw new QueryParsingException(e.getMessage(), e); 
+		}
 		queryPlan = new SQLQueryPlan();
 		queryPlan.setLogicalStatement(select);
 		
@@ -40,7 +48,7 @@ public class SQLParseLogical {
 		else if (select.getSelectBody() instanceof SetOperationList)
 			supplement.setSelect((PlainSelect)(((SetOperationList)select.getSelectBody()).getSelects().get(0)));
 		else 
-			throw new BigDawgException("Unsupported selectBody type: "+select.getSelectBody().getClass().getSimpleName());
+			throw new QueryParsingException("Unsupported selectBody type: "+select.getSelectBody().getClass().getSimpleName());
 			
 		
 		SQLHandler deparser = new SQLHandler(expressionSupplement, buffer, supplement);

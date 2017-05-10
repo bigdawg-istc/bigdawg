@@ -1,6 +1,17 @@
 package istc.bigdawg.executor.shuffle;
 
+import java.text.ParseException;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
+
 import com.jcabi.log.Logger;
+
 import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.executor.Executor;
 import istc.bigdawg.executor.ExecutorEngine;
@@ -9,14 +20,8 @@ import istc.bigdawg.executor.plan.BinaryJoinExecutionNode;
 import istc.bigdawg.executor.plan.ExecutionNode;
 import istc.bigdawg.executor.plan.LocalQueryExecutionNode;
 import istc.bigdawg.executor.plan.QueryExecutionPlan;
-import istc.bigdawg.islands.IslandsAndCast;
+import istc.bigdawg.islands.IslandAndCastResolver.Scope;
 import istc.bigdawg.query.ConnectionInfo;
-
-import org.jgrapht.experimental.dag.DirectedAcyclicGraph;
-
-import java.text.ParseException;
-import java.util.*;
-import java.util.stream.Collectors;
 
 public class ShuffleJoinExecutor {
 
@@ -36,7 +41,7 @@ public class ShuffleJoinExecutor {
 
     private QueryExecutionPlan createQueryExecutionPlan(Assignments assignments) {
         // TODO: get the proper island instead of assuming relational
-        QueryExecutionPlan plan = new QueryExecutionPlan(IslandsAndCast.Scope.RELATIONAL);
+        QueryExecutionPlan plan = new QueryExecutionPlan(Scope.RELATIONAL);
 
         String sendToRightDestination = this.node.getTableName().get() + "_LEFTPARTIAL";
         String sendToRightQuery = getPartitionQuery(node.getLeft(), sendToRightDestination, assignments.getRangesForJoinOperand(node.getRight()),
@@ -77,7 +82,7 @@ public class ShuffleJoinExecutor {
 
     private QueryExecutionPlan generateQEP(Assignments assignments) throws DirectedAcyclicGraph.CycleFoundException {
         // TODO: implement this in the future for non-binary joins!
-        QueryExecutionPlan plan = new QueryExecutionPlan(IslandsAndCast.Scope.RELATIONAL);
+        QueryExecutionPlan plan = new QueryExecutionPlan(Scope.RELATIONAL);
 
         Map<ConnectionInfo, ExecutionNode> localJoins = new HashMap<>();
 

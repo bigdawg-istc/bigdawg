@@ -8,12 +8,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import istc.bigdawg.islands.DataObjectAttribute;
-import istc.bigdawg.islands.OperatorVisitor;
-import istc.bigdawg.islands.SciDB.SciDBArray;
+import istc.bigdawg.exceptions.IslandException;
+import istc.bigdawg.islands.SciDB.SciDBAttributeOrDimension;
+import istc.bigdawg.islands.SciDB.SciDBParsedArray;
 import istc.bigdawg.islands.operators.Join;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.relational.utils.SQLExpressionUtils;
+import istc.bigdawg.shims.OperatorQueryGenerator;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
@@ -27,7 +28,7 @@ public class SciDBIslandJoin extends SciDBIslandOperator implements Join {
 //	private String joinFilter = null; 
 	private List<String> aliases;
 	
-	protected Map<String, DataObjectAttribute> srcSchema;
+	protected Map<String, SciDBAttributeOrDimension> srcSchema;
 	
 	protected static final String BigDAWGSciDBJoinPrefix = "BIGDAWGSCIDBJOIN_";
 	protected static int maxJoinSerial = 0;
@@ -35,7 +36,7 @@ public class SciDBIslandJoin extends SciDBIslandOperator implements Join {
 	
 	
 	// for AFL
-	public SciDBIslandJoin(Map<String, String> parameters, SciDBArray output, Operator lhs, Operator rhs) throws Exception  {
+	public SciDBIslandJoin(Map<String, String> parameters, SciDBParsedArray output, Operator lhs, Operator rhs) {
 		super(parameters, output, lhs, rhs);
 
 		maxJoinSerial++;
@@ -46,13 +47,13 @@ public class SciDBIslandJoin extends SciDBIslandOperator implements Join {
 		joinPredicate = parameters.get("Join-Predicate"); System.out.printf("--> Join AFL Constructor, Join Predicate: %s\n", joinPredicate);
 		setAliases(Arrays.asList(parameters.get("Children-Aliases").split(" ")));
 
-		srcSchema = new LinkedHashMap<String, DataObjectAttribute>(((SciDBIslandOperator)lhs).outSchema);
+		srcSchema = new LinkedHashMap<String, SciDBAttributeOrDimension>(((SciDBIslandOperator)lhs).outSchema);
 		srcSchema.putAll(((SciDBIslandOperator)rhs).outSchema);
 		
 		// attributes
 		for (String expr : output.getAttributes().keySet()) {
 			
-			DataObjectAttribute attr = new DataObjectAttribute();
+			SciDBAttributeOrDimension attr = new SciDBAttributeOrDimension();
 			
 			attr.setName(expr);
 			attr.setTypeString(output.getAttributes().get(expr));
@@ -65,7 +66,7 @@ public class SciDBIslandJoin extends SciDBIslandOperator implements Join {
 		// dimensions
 		for (String expr : output.getDimensions().keySet()) {
 			
-			DataObjectAttribute dim = new DataObjectAttribute(); // CommonOutItemResolver out = new CommonOutItemResolver(expr, "Dimension", true, srcSchema);
+			SciDBAttributeOrDimension dim = new SciDBAttributeOrDimension(); // CommonOutItemResolver out = new CommonOutItemResolver(expr, "Dimension", true, srcSchema);
 			
 			dim.setName(expr);
 			dim.setTypeString(output.getAttributes().get(expr));
@@ -78,7 +79,7 @@ public class SciDBIslandJoin extends SciDBIslandOperator implements Join {
 		}
 	}
 	
- 	public SciDBIslandJoin (SciDBIslandOperator o, boolean addChild) throws Exception {
+ 	public SciDBIslandJoin (SciDBIslandOperator o, boolean addChild) throws IslandException, JSQLParserException {
 		super(o, addChild);
 		SciDBIslandJoin j = (SciDBIslandJoin) o;
 		
@@ -96,7 +97,7 @@ public class SciDBIslandJoin extends SciDBIslandOperator implements Join {
 		this.srcSchema = new HashMap<>();
 		for (String s : j.srcSchema.keySet()) {
 			if (j.srcSchema.get(s) != null) 
-				this.srcSchema.put(new String(s), new DataObjectAttribute(j.srcSchema.get(s)));
+				this.srcSchema.put(new String(s), new SciDBAttributeOrDimension(j.srcSchema.get(s)));
 		}
 		
 		this.setAliases(new ArrayList<>());
@@ -123,10 +124,10 @@ public class SciDBIslandJoin extends SciDBIslandOperator implements Join {
 		
 		this.isQueryRoot = true;
 		
-		this.srcSchema = new LinkedHashMap<String, DataObjectAttribute>(child0.outSchema);
+		this.srcSchema = new LinkedHashMap<String, SciDBAttributeOrDimension>(child0.outSchema);
 		srcSchema.putAll(child1.outSchema);
 		
-		this.outSchema = new LinkedHashMap<String, DataObjectAttribute>(child0.outSchema);
+		this.outSchema = new LinkedHashMap<String, SciDBAttributeOrDimension>(child0.outSchema);
 		outSchema.putAll(child1.outSchema);
 		
 		
@@ -152,8 +153,8 @@ public class SciDBIslandJoin extends SciDBIslandOperator implements Join {
 	
 
     @Override
-	public void accept(OperatorVisitor operatorVisitor) throws Exception {
-		operatorVisitor.visit(this);
+	public void accept(OperatorQueryGenerator operatorQueryGenerator) throws Exception {
+		operatorQueryGenerator.visit(this);
 	}
     
     
@@ -173,7 +174,7 @@ public class SciDBIslandJoin extends SciDBIslandOperator implements Join {
 	}
 	
 	@Override
-	public String getTreeRepresentation(boolean isRoot) throws Exception{
+	public String getTreeRepresentation(boolean isRoot) throws IslandException{
 		if (isPruned() && (!isRoot)) return "{PRUNED}";
 		else {
 			StringBuilder sb = new StringBuilder();
@@ -198,7 +199,7 @@ public class SciDBIslandJoin extends SciDBIslandOperator implements Join {
 	
 	
 	@Override
-	public Map<String, Set<String>> getObjectToExpressionMappingForSignature() throws Exception{
+	public Map<String, Set<String>> getObjectToExpressionMappingForSignature() throws IslandException {
 		
 		Operator parent = this;
 		while (!parent.isBlocking() && parent.getParent() != null ) parent = parent.getParent();
@@ -214,10 +215,14 @@ public class SciDBIslandJoin extends SciDBIslandOperator implements Join {
 				out.put(s, temp.get(s));
 		}
 		// joinPredicate
-		if (joinPredicate != null) { 
-			Expression e = CCJSqlParserUtil.parseCondExpression(joinPredicate);
-			if (!SQLExpressionUtils.containsArtificiallyConstructedTables(e))
-				addToOut(e, out, aliasMapping);
+		try {
+			if (joinPredicate != null) { 
+				Expression e = CCJSqlParserUtil.parseCondExpression(joinPredicate);
+				if (!SQLExpressionUtils.containsArtificiallyConstructedTables(e))
+					addToOut(e, out, aliasMapping);
+			}
+		} catch (JSQLParserException ex) {
+			throw new IslandException(ex.getMessage(), ex);
 		}
 		
 		return out;
@@ -245,13 +250,13 @@ public class SciDBIslandJoin extends SciDBIslandOperator implements Join {
 	}
 
 	@Override
-	public String generateJoinPredicate() throws Exception {
+	public String generateJoinPredicate() throws IslandException {
 		// TODO ensure correctness
 		return new String(joinPredicate);
 	}
 
 	@Override
-	public String generateJoinFilter() throws Exception {
+	public String generateJoinFilter() throws IslandException {
 		return null;
 	}
 

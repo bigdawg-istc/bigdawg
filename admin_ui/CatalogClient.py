@@ -21,7 +21,7 @@ class CatalogClient:
         :param port: port
         """
         self.conn = psycopg2.connect(database=database, user=user, password=password, host=host, port=port)
-        print "Opened database successfully"
+        print ("Opened database successfully")
 
     def __del__(self):
         """
@@ -29,7 +29,7 @@ class CatalogClient:
         :return: null
         """
         self.conn.close()
-        print "Connection closed"
+        print ("Connection closed")
 
     def get_objects(self):
         """
@@ -83,14 +83,14 @@ if __name__ == "__main__":
     # Read objects table
     rows = cc.get_objects()
     for row in rows:
-        print row
+        print (row)
 
     # Read databases table
     rows = cc.get_databases()
     for row in rows:
-        print row
+        print (row)
 
     # Read islands table
     rows = cc.get_islands()
     for row in rows:
-        print row
+        print (row)

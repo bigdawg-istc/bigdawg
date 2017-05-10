@@ -1,6 +1,7 @@
 package istc.bigdawg.plan;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -11,9 +12,9 @@ import org.junit.Test;
 import istc.bigdawg.catalog.CatalogInstance;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.relational.SQLPlanParser;
-import istc.bigdawg.islands.relational.SQLQueryGenerator;
 import istc.bigdawg.islands.relational.SQLQueryPlan;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
+import istc.bigdawg.shims.PostgreSQLQueryGenerator;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.select.Select;
 
@@ -95,7 +96,7 @@ public class AggregateTest {
 			SQLQueryPlan qp = SQLPlanParser.extractDirectFromPostgreSQL(psqlh, inputs.get(testname));
 			Operator root = qp.getRootNode();
 			
-			SQLQueryGenerator gen = new SQLQueryGenerator();
+			PostgreSQLQueryGenerator gen = new PostgreSQLQueryGenerator();
 			gen.configure(true, false);
 			gen.setSrcStatement(((Select)CCJSqlParserUtil.parse(inputs.get(testname))));
 			root.accept(gen);

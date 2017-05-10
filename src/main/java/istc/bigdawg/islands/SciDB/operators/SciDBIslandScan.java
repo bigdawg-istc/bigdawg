@@ -4,11 +4,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import istc.bigdawg.islands.OperatorVisitor;
-import istc.bigdawg.islands.SciDB.SciDBArray;
+import istc.bigdawg.exceptions.IslandException;
+import istc.bigdawg.islands.SciDB.SciDBParsedArray;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.operators.Scan;
 import istc.bigdawg.islands.relational.utils.SQLExpressionUtils;
+import istc.bigdawg.shims.OperatorQueryGenerator;
+import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 
@@ -20,7 +22,7 @@ public class SciDBIslandScan extends SciDBIslandOperator implements Scan {
 	private String arrayAlias;  //may be query-specific, need to derive it here
 	
 	// for AFL
-	public SciDBIslandScan(Map<String, String> parameters, SciDBArray output, Operator child) throws Exception {
+	public SciDBIslandScan(Map<String, String> parameters, SciDBParsedArray output, Operator child) throws JSQLParserException {
 		super(parameters, output, child);
 
 		isBlocking = false;
@@ -35,19 +37,23 @@ public class SciDBIslandScan extends SciDBIslandOperator implements Scan {
 		
 	}
 	
-	public SciDBIslandScan(SciDBIslandOperator o, boolean addChild) throws Exception {
+	public SciDBIslandScan(SciDBIslandOperator o, boolean addChild) throws IslandException {
 		super(o, addChild);
 		SciDBIslandScan sc = (SciDBIslandScan) o;
 		
-		if (sc.getFilterExpression() != null) 
+		if (sc.getFilterExpression() != null)
+			try {
 			this.setFilterExpression(CCJSqlParserUtil.parseCondExpression(sc.getFilterExpression().toString()));
+			} catch (JSQLParserException e) {
+				throw new IslandException(e.getMessage(), e);
+			}
 		this.setSourceTableName(new String(sc.getSourceTableName()));
 		this.setArrayAlias(new String(sc.getArrayAlias()));
 	}
 	
 
 	@Override
-	public Map<String, Set<String>> getObjectToExpressionMappingForSignature() throws Exception{
+	public Map<String, Set<String>> getObjectToExpressionMappingForSignature() throws IslandException {
 		
 		if (! children.isEmpty()) return super.getObjectToExpressionMappingForSignature();
 		
@@ -58,8 +64,12 @@ public class SciDBIslandScan extends SciDBIslandOperator implements Scan {
 		Map<String, Set<String>> out = new HashMap<>();
 		
 		// filter
-		if (getFilterExpression() != null && !SQLExpressionUtils.containsArtificiallyConstructedTables(getFilterExpression())) {
-			addToOut(CCJSqlParserUtil.parseCondExpression(getFilterExpression().toString()), out, aliasMapping);
+		try {
+			if (getFilterExpression() != null && !SQLExpressionUtils.containsArtificiallyConstructedTables(getFilterExpression())) {
+				addToOut(CCJSqlParserUtil.parseCondExpression(getFilterExpression().toString()), out, aliasMapping);
+			}
+		} catch(JSQLParserException ex) {
+			throw new IslandException(ex.getMessage(), ex);
 		}
 		
 		return out;
@@ -67,8 +77,8 @@ public class SciDBIslandScan extends SciDBIslandOperator implements Scan {
 	
 	
 	@Override
-	public void accept(OperatorVisitor operatorVisitor) throws Exception {
-		operatorVisitor.visit(this);
+	public void accept(OperatorQueryGenerator operatorQueryGenerator) throws Exception {
+		operatorQueryGenerator.visit(this);
 	}
 
 	public Expression getFilterExpression() {
@@ -114,7 +124,7 @@ public class SciDBIslandScan extends SciDBIslandOperator implements Scan {
 
 
 	@Override
-	public String generateRelevantJoinPredicate() throws Exception {
+	public String generateRelevantJoinPredicate() throws IslandException {
 		// because there will not be a joinPredicated embedded
 		return null;
 	}

@@ -5,11 +5,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import istc.bigdawg.islands.DataObjectAttribute;
-import istc.bigdawg.islands.OperatorVisitor;
-import istc.bigdawg.islands.SciDB.SciDBArray;
+import istc.bigdawg.exceptions.IslandException;
+import istc.bigdawg.islands.SciDB.SciDBAttributeOrDimension;
+import istc.bigdawg.islands.SciDB.SciDBParsedArray;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.operators.Sort;
+import istc.bigdawg.shims.OperatorQueryGenerator;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.OrderByElement;
@@ -17,16 +18,14 @@ import net.sf.jsqlparser.statement.select.OrderByElement;
 public class SciDBIslandSort extends SciDBIslandOperator implements Sort {
 
 	
-	private List<String> sortKeys;
-	
-	private SortOrder sortOrder;
+//	private Map<String, SortOrder> sortKeys;
 	
 	private List<OrderByElement> orderByElements;
 	
 	private boolean isWinAgg = false; // is it part of a windowed aggregate or an ORDER BY clause?
 	
 	// for AFL
-	public SciDBIslandSort(Map<String, String> parameters, SciDBArray output,  List<String> keys, Operator child) throws Exception  {
+	public SciDBIslandSort(Map<String, String> parameters, SciDBParsedArray output,  List<String> keys, Operator child) {
 		super(parameters, output, child);
 
 		isBlocking = true;
@@ -38,34 +37,46 @@ public class SciDBIslandSort extends SciDBIslandOperator implements Sort {
 		// 2) as an ORDER BY clause
 		// instantiate iterator to get the right one
 		// iterate from first OVER --> ORDER BY
-
-		setSortKeys(keys);
 		
-		outSchema = new LinkedHashMap<String, DataObjectAttribute>(((SciDBIslandOperator)child).outSchema);
+		createOrderByElements(keys);
+		
+		outSchema = new LinkedHashMap<String, SciDBAttributeOrDimension>(((SciDBIslandOperator)child).outSchema);
 		
 	}
 	
-	public SciDBIslandSort(SciDBIslandOperator o, boolean addChild) throws Exception {
+	public SciDBIslandSort(SciDBIslandOperator o, boolean addChild) throws IslandException {
 		super(o, addChild);
 		SciDBIslandSort s = (SciDBIslandSort) o;
 		
 		this.blockerID = s.blockerID;
 
-		this.setSortKeys(new ArrayList<>());
+		this.setOrderByElements(new ArrayList<>(s.getOrderByElements()));
 		this.setWinAgg(s.isWinAgg());
-		for (String str : s.getSortKeys()) {
-			this.getSortKeys().add(new String(str));
-		}
-		this.sortOrder = s.sortOrder; 
-		this.setOrderByElements(new ArrayList<>());
-		for (OrderByElement ob : s.getOrderByElements()) {
-			this.getOrderByElements().add(ob);
-		}
+//		this.sortOrder = s.sortOrder; 
+//		this.setOrderByElements(new ArrayList<>());
+//		for (OrderByElement ob : s.getOrderByElements()) {
+//			this.getOrderByElements().add(ob);
+//		}
 	}
 	
 	
 	public String toString() {
-		return "Sort operator on columns " + getSortKeys().toString() + " with ordering " + sortOrder;
+		return "Sort operator on columns " + getOrderByElements().toString();
+	}
+	
+	public void createOrderByElements(List<String> keys) {
+		orderByElements = new ArrayList<>();
+		for (String s : keys) {
+			String[] splits = s.split("[.]");
+			Column c; 
+			if (splits.length == 2)
+				c = new Column(new Table(splits[0]), splits[1]);
+			else 
+				c = new Column(splits[0]);
+			OrderByElement ob = new OrderByElement();
+			ob.setExpression(c);
+			orderByElements.add(ob);
+		}
 	}
 	
 	/**
@@ -113,12 +124,12 @@ public class SciDBIslandSort extends SciDBIslandOperator implements Sort {
 	}
 	
 	@Override
-	public void accept(OperatorVisitor operatorVisitor) throws Exception {
-		operatorVisitor.visit(this);
+	public void accept(OperatorQueryGenerator operatorQueryGenerator) throws Exception {
+		operatorQueryGenerator.visit(this);
 	}
 	
 	@Override
-	public String getTreeRepresentation(boolean isRoot) throws Exception{
+	public String getTreeRepresentation(boolean isRoot) throws IslandException{
 		return "{sort"+children.get(0).getTreeRepresentation(false)+"}";
 	}
 
@@ -130,13 +141,13 @@ public class SciDBIslandSort extends SciDBIslandOperator implements Sort {
 		this.isWinAgg = isWinAgg;
 	}
 
-	public List<String> getSortKeys() {
-		return sortKeys;
-	}
-
-	public void setSortKeys(List<String> sortKeys) {
-		this.sortKeys = sortKeys;
-	}
+//	public Map<String, SortOrder> getSortKeys() {
+//		return sortKeys;
+//	}
+//
+//	public void setSortKeys(Map<String, SortOrder> sortKeys) {
+//		this.sortKeys = new HashMap<>(sortKeys);
+//	}
 
 	public List<OrderByElement> getOrderByElements() {
 		return orderByElements;

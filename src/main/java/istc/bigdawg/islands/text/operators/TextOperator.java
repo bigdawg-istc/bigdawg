@@ -2,15 +2,14 @@ package istc.bigdawg.islands.text.operators;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import istc.bigdawg.exceptions.BigDawgException;
-import istc.bigdawg.islands.DataObjectAttribute;
-import istc.bigdawg.islands.OperatorVisitor;
+import istc.bigdawg.exceptions.IslandException;
+import istc.bigdawg.exceptions.ShimException;
 import istc.bigdawg.islands.operators.Operator;
+import istc.bigdawg.shims.OperatorQueryGenerator;
 
 public class TextOperator implements Operator {
 
@@ -29,11 +28,11 @@ public class TextOperator implements Operator {
 	List<Operator> children;
 	Operator parent; 
 	
-	Map<String, DataObjectAttribute> outSchema;
+//	Map<String, DataObjectAttribute> outSchema;
 	
 	public TextOperator () {
 		this.children = new ArrayList<>();
-		this.outSchema = new HashMap<>(); 
+//		this.outSchema = new HashMap<>(); 
 		this.operatorID = nextOperatorID++;
 	}
 	
@@ -88,12 +87,12 @@ public class TextOperator implements Operator {
 	}
 
 	@Override
-	public String getSubTreeToken() throws Exception {
+	public String getSubTreeToken() throws IslandException {
 		return subtreeToken + this.operatorID;
 	}
 
 	@Override
-	public String getPruneToken() throws Exception {
+	public String getPruneToken() throws IslandException {
 		return pruneToken + this.operatorID;
 	}
 
@@ -103,7 +102,7 @@ public class TextOperator implements Operator {
 	}
 
 	@Override
-	public Integer getBlockerID() throws Exception {
+	public Integer getBlockerID() throws IslandException {
 		return operatorID;
 	}
 
@@ -132,10 +131,9 @@ public class TextOperator implements Operator {
 		this.children.addAll(childs);
 	}
 
-	@Override
-	public Map<String, DataObjectAttribute> getOutSchema() {
-		return outSchema;
-	}
+//	public Map<String, DataObjectAttribute> getOutSchema() {
+//		return outSchema;
+//	}
 
 	@Override
 	public List<Operator> getAllBlockers() {
@@ -150,33 +148,33 @@ public class TextOperator implements Operator {
 	}
 
 	@Override
-	public Operator duplicate(boolean addChild) throws Exception {
-		throw new BigDawgException("TextOperator: duplicate not implemented; class: "+this.getClass());
+	public Operator duplicate(boolean addChild) throws IslandException {
+		throw new IslandException("TextOperator: duplicate not implemented; class: "+this.getClass());
 	}
 
 	@Override
-	public Map<String, String> getDataObjectAliasesOrNames() throws Exception {
-		throw new BigDawgException("TextOperator: getDataObjectAliasesOrNames not implemented; class: "+this.getClass());
+	public Map<String, String> getDataObjectAliasesOrNames() throws IslandException {
+		throw new IslandException("TextOperator: getDataObjectAliasesOrNames not implemented; class: "+this.getClass());
 	}
 
 	@Override
-	public void removeCTEEntriesFromObjectToExpressionMapping(Map<String, Set<String>> entry) throws Exception {
-		throw new BigDawgException("TextOperator: removeCTEEntriesFromObjectToExpressionMapping not implemented; class: "+this.getClass());
+	public void removeCTEEntriesFromObjectToExpressionMapping(Map<String, Set<String>> entry) throws IslandException {
+		throw new IslandException("TextOperator: removeCTEEntriesFromObjectToExpressionMapping not implemented; class: "+this.getClass());
 	}
 
 	@Override
-	public String getTreeRepresentation(boolean isRoot) throws Exception {
-		throw new BigDawgException("TextOperator: getTreeRepresentation not implemented; class: "+this.getClass());
+	public String getTreeRepresentation(boolean isRoot) throws IslandException {
+		throw new IslandException("TextOperator: getTreeRepresentation not implemented; class: "+this.getClass());
 	}
 
 	@Override
-	public Map<String, Set<String>> getObjectToExpressionMappingForSignature() throws Exception {
-		throw new BigDawgException("TextOperator: getDataObjectAliasesOrNames not implemented; class: "+this.getClass());
+	public Map<String, Set<String>> getObjectToExpressionMappingForSignature() throws IslandException {
+		throw new IslandException("TextOperator: getDataObjectAliasesOrNames not implemented; class: "+this.getClass());
 	}
 
 	@Override
-	public void accept(OperatorVisitor operatorVisitor) throws Exception {
-		throw new BigDawgException("TextOperator: accept not implemented; class: "+this.getClass());
+	public void accept(OperatorQueryGenerator operatorQueryGenerator) throws Exception {
+		throw new ShimException("TextOperator: accept not implemented; class: "+this.getClass());
 	}
 	
 }

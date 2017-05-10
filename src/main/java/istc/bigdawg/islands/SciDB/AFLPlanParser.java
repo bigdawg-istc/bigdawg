@@ -1,5 +1,6 @@
 package istc.bigdawg.islands.SciDB;
 
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -9,9 +10,11 @@ import java.util.Stack;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import istc.bigdawg.exceptions.QueryParsingException;
 import istc.bigdawg.islands.SciDB.operators.SciDBIslandOperatorFactory;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.scidb.SciDBHandler;
+import net.sf.jsqlparser.JSQLParserException;
 
 
 // takes in a psql plan from running
@@ -43,7 +46,7 @@ public class AFLPlanParser {
 	
     
 	// sqlPlan passes in supplement info
-	public AFLPlanParser(String explained, AFLQueryPlan sqlPlan, String q) throws Exception {
+	public AFLPlanParser(String explained, AFLQueryPlan sqlPlan, String q) throws QueryParsingException, JSQLParserException {
 	   //catalog = DatabaseSingleton.getInstance();
 		this.query = q;
 		queryPlan = sqlPlan;
@@ -61,9 +64,9 @@ public class AFLPlanParser {
 	 * Returns the root node of the query plan
 	 * @param query
 	 * @return
-	 * @throws Exception
+	 * @throws QueryParsingException 
 	 */
-	public AFLPlanNode parseString(String query) throws Exception {
+	public AFLPlanNode parseString(String query) throws QueryParsingException {
 		
 		System.out.printf("afl parser query: %s\n\n\n", query);
 		
@@ -88,9 +91,6 @@ public class AFLPlanParser {
 			mInstance = lInstance.matcher(line);
 			if (mInstance.find()) {
 				temp = line.substring(mInstance.end());
-//				System.out.println("Instance: "+temp);
-				
-				
 				
 				currentNode = new AFLPlanNode();
 				if (root == null) root = currentNode;
@@ -143,19 +143,6 @@ public class AFLPlanParser {
 				
 				temp = line.substring(mField.start(),mField.end());
 				currentNode.attributes.get(currentNode.attributes.size()-1).properties.add(temp);
-//				System.out.printf("^^^^^^^^^^^^^^^^^^^^^^^^^ found; [%s]\nprior attributes: %s\n\n\n", temp,  currentNode.attributes);
-				
-//				int indent = temp.indexOf(temp.trim());
-//				temp = temp.trim();
-//				temp = temp.substring(1,temp.length()-1);
-//				
-//				
-//				AFLPlanAttribute pa = new AFLPlanAttribute();
-//				pa.name = temp;
-//				pa.indent = indent;
-//				pa.properties.addAll(Arrays.asList(line.substring(mField.end()).split(" ")));
-//				
-//				addAttribute(priorAttributes, currentNode, pa);
 				
 				continue;
 			}
@@ -176,10 +163,10 @@ public class AFLPlanParser {
 				
 				
 				if (!mSchemaName.find()) {
-					throw new Exception("Error parsing mSchema: "+temp);
+					throw new QueryParsingException("Error parsing mSchema: "+temp);
 				}
 				
-				currentNode.schema = new SciDBArray(temp.substring(mSchemaName.end()));
+				currentNode.schema = new SciDBParsedArray(temp.substring(mSchemaName.end()));
 				currentNode.schema.setAlias(temp.substring(mSchemaName.start(),mSchemaName.end()));
 				currentNode.schemaAlias.add(currentNode.schema.getAlias());
 				
@@ -222,7 +209,7 @@ public class AFLPlanParser {
 	}
 	
 	
-	public static AFLQueryPlan extractDirect(SciDBHandler scidbh, String query) throws Exception {
+	public static AFLQueryPlan extractDirect(SciDBHandler scidbh, String query) throws SQLException, QueryParsingException, JSQLParserException {
 
 		String explained = scidbh.generateSciDBLogicalPlan(query);
 		
@@ -239,7 +226,7 @@ public class AFLPlanParser {
 	}
 	
 	// parse a single <Plan>
-	Operator parsePlanTail(AFLPlanNode node, int recursionLevel) throws Exception {
+	Operator parsePlanTail(AFLPlanNode node, int recursionLevel) throws QueryParsingException, JSQLParserException {
 		
 		String nodeType = null;
 		Map<String, String> parameters = new HashMap<String, String>();
@@ -252,9 +239,6 @@ public class AFLPlanParser {
 		case "project":
 		case "scan":
 			nodeType = "Seq Scan";
-//			Iterator<String> it = node.schemaAlias.iterator();
-//			String name = it.next();
-//			if (it.hasNext()) name = it.next();
 			
 			String name = node.attributes.get(0).properties.get(1);
 			
@@ -283,12 +267,6 @@ public class AFLPlanParser {
 			boolean started = false;
 			boolean left = true;
 			
-//			AFLPlanNode c = node.children.get(0);
-//			while (c.name.equals("cross_join")) {
-//				c = c.children.get(0);
-//			}
-//			node.schema.setAlias(c.schema.getAlias());
-			
 			for(int k = 0; k < joinAttributes.size(); ++k) {
 				
 				
@@ -305,11 +283,9 @@ public class AFLPlanParser {
 					AFLPlanNode c;
 					if (left) {
 						c = node.children.get(0);
-//						joinFilterSB.append(node.children.get(0).schema.getAlias()).append('.');
 					}
 					else {
 						c = node.children.get(1);
-//						joinFilterSB.append(node.children.get(1).schema.getAlias()).append('.');
 					}
 					while (c.name.equals("cross_join")) {
 						c = c.children.get(0);
@@ -343,8 +319,6 @@ public class AFLPlanParser {
 			List<AFLPlanAttribute> aggAttributes = node.attributes;
 			
 			System.out.printf("aggregate attribute: %s\n", aggAttributes);
-			
-//			System.out.printf("afl parser, agg, outExpr prop: %s\n", node);
 			
 			Stack<StringBuilder> stk = new Stack<>();
 			List<String> aggFuns = new ArrayList<>();
@@ -461,7 +435,7 @@ public class AFLPlanParser {
 			parameters.put("Apply-Attributes", String.join("@@@@", resolvedEntries));
 			break;
 		default:
-			throw new Exception("unsupported AFL function: "+node.name);
+			throw new QueryParsingException("unsupported AFL function: "+node.name);
 		}
 		
 		
@@ -483,10 +457,10 @@ public class AFLPlanParser {
 	}
 	
 	
-	public String getLogicalExpression(AFLPlanAttribute outExpr) throws Exception {
+	public String getLogicalExpression(AFLPlanAttribute outExpr) throws QueryParsingException {
 
 		if (outExpr.subAttributes.size() != 2)
-			throw new Exception("Unexpected subAttribute: "+outExpr.subAttributes);
+			throw new QueryParsingException("Unexpected subAttribute: "+outExpr.subAttributes);
 
 
 		AFLPlanAttribute a0 = outExpr.subAttributes.get(0);
@@ -520,7 +494,7 @@ public class AFLPlanParser {
 	
 	
 	// handle a <Plans> op, might return a list
-	List<Operator> parsePlansTail(AFLPlanNode node, int recursionLevel) throws Exception {
+	List<Operator> parsePlansTail(AFLPlanNode node, int recursionLevel) throws QueryParsingException, JSQLParserException {
 		List<AFLPlanNode> children = node.children;
 		List<Operator> childNodes = new ArrayList<Operator>();
 		

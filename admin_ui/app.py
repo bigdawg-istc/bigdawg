@@ -13,18 +13,18 @@ def read_catalog_credentials():
     try:
         assert(os.path.exists(catalog_config_fn))
     except:
-        print "Catalog config file does not exist."
-        print """Example: catalog_config.txt:
+        print ("Catalog config file does not exist.")
+        print ("""Example: catalog_config.txt:
         database=bigdawg_catalog
         user=pguser
         password=test
         host=192.168.99.100
         port=5400
-        """
+        """)
     catalog_cred = {}
     with open(catalog_config_fn, "rb") as f:
         for line in f:
-            key,val = line.split("=")
+            key,val = line.decode().split("=")
             catalog_cred[key.strip()] = val.strip()
     return catalog_cred
 

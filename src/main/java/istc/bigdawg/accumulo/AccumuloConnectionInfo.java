@@ -12,7 +12,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import istc.bigdawg.exceptions.BigDawgException;
 import istc.bigdawg.executor.ExecutorEngine;
 import istc.bigdawg.executor.ExecutorEngine.LocalQueryExecutionException;
-import istc.bigdawg.islands.TheObjectThatResolvesAllDifferencesAmongTheIslands;
+import istc.bigdawg.islands.IslandAndCastResolver;
 import istc.bigdawg.query.ConnectionInfo;
 
 public class AccumuloConnectionInfo implements ConnectionInfo {
@@ -71,7 +71,7 @@ public class AccumuloConnectionInfo implements ConnectionInfo {
 	public Collection<String> getCleanupQuery(Collection<String> objects) {
 		List<String> cleanupStrings = new ArrayList<>();
 		for (String s : objects) {
-			cleanupStrings.add(TheObjectThatResolvesAllDifferencesAmongTheIslands.AccumuloDeleteTableCommandPrefix + s);
+			cleanupStrings.add(AccumuloExecutionEngine.AccumuloDeleteTableCommandPrefix + s);
 		}
 		return cleanupStrings;
 	}

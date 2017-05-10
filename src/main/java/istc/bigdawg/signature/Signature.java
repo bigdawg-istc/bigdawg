@@ -4,18 +4,20 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
 
-import convenience.RTED;
+import costmodel.StringUnitCostModel;
+import distance.APTED;
 import istc.bigdawg.exceptions.BigDawgException;
-import istc.bigdawg.exceptions.UnsupportedIslandException;
-import istc.bigdawg.islands.IslandsAndCast.Scope;
+import istc.bigdawg.exceptions.IslandException;
+import istc.bigdawg.islands.IslandAndCastResolver;
+import istc.bigdawg.islands.IslandAndCastResolver.Scope;
 import istc.bigdawg.islands.QueryContainerForCommonDatabase;
-import istc.bigdawg.islands.TheObjectThatResolvesAllDifferencesAmongTheIslands;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.relational.utils.SQLExpressionUtils;
 import net.sf.jsqlparser.JSQLParserException;
@@ -23,6 +25,9 @@ import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Parenthesis;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
+import node.Node;
+import node.StringNodeData;
+import parser.BracketStringInputParser;
 
 public class Signature {
 	private static Logger logger = Logger.getLogger(Signature.class.getName());
@@ -53,7 +58,8 @@ public class Signature {
 	 */
 	public Signature(String query, Scope island, Operator root, Map<String, QueryContainerForCommonDatabase> container, Set<String> joinPredicates) throws Exception {
 
-		setSig3(TheObjectThatResolvesAllDifferencesAmongTheIslands.getLiteralsAndConstantsSignature(island, query));
+//		setSig3(TheObjectThatResolvesAllDifferencesAmongTheIslands.getLiteralsAndConstantsSignature(island, query));
+		setSig3(IslandAndCastResolver.getIsland(island).getLiteralsAndConstantsSignature(query));
 		
 		objectExpressionMapping = new ArrayList<>();
 		if (container.isEmpty() ) {
@@ -102,7 +108,19 @@ public class Signature {
 	}
 	
 	public static double getTreeEditDistance(String s1, String s2) {
-		return RTED.computeDistance(s1, s2);
+		
+	    BracketStringInputParser parser = new BracketStringInputParser();
+	    Node<StringNodeData> t1 = parser.fromString(s1);
+	    Node<StringNodeData> t2 = parser.fromString(s2);
+	    // Initialise APTED.
+	    APTED<StringUnitCostModel, StringNodeData> apted = new APTED<>(new StringUnitCostModel());
+	    // Although we don't need TED value yet, TED must be computed before the
+	    // mapping. This cast is safe due to unit cost.
+	    apted.computeEditDistance(t1, t2);
+	    // Get TED value corresponding to the computed mapping.
+	    LinkedList<int[]> mapping = apted.computeEditMapping();
+	    // This cast is safe due to unit cost.
+	    return apted.mappingCost(mapping);
 	}
 	
 	@Override
@@ -147,8 +165,8 @@ public class Signature {
 		this.sig3 = sig3;
 	}
 
-	public String getQuery() throws UnsupportedIslandException {
-		return TheObjectThatResolvesAllDifferencesAmongTheIslands.getIslandStyleQuery(this.getIsland(), query);
+	public String getQuery() throws IslandException {
+		return IslandAndCastResolver.getIsland(island).wrapQueryInIslandIdentifier(query);
 	}
 
 	public void setQuery(String query) {

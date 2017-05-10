@@ -1,5 +1,7 @@
 package istc.bigdawg.islands.text;
 
+import java.util.List;
+
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Range;
 import org.json.simple.JSONArray;
@@ -35,7 +37,7 @@ public class AccumuloJSONQueryParser {
 	};
 	
 	@SuppressWarnings("rawtypes")
-	private Object getObjectByType(Object objectHolder, Class clazz) throws ParseException {
+	public static Object getObjectByType(Object objectHolder, Class clazz) throws ParseException {
 		if (objectHolder == null)
 			return null;
 		if (! (objectHolder.getClass().equals(clazz)))
@@ -49,15 +51,20 @@ public class AccumuloJSONQueryParser {
 		return s;
 	}
 	
+	public static void addNonNullStringToList(Object input, List<String> output) throws ParseException{
+		String s = (String) getObjectByType(input, String.class);
+		if (s != null) output.add(s);
+	}
+	
 	private Operator getScan(JSONObject parsedObject) throws ParseException {
 		
 		String table = (String)getObjectByType(parsedObject.get("table"), String.class);
-		JSONObject rangeArray = (JSONObject)getObjectByType(parsedObject.get("range"), JSONObject.class);
+		JSONObject rangeObject = (JSONObject)getObjectByType(parsedObject.get("range"), JSONObject.class);
 		
 		Range range = null;
-		if (rangeArray != null) {
-			JSONArray startArray = (JSONArray)getObjectByType(rangeArray.get("start"), JSONArray.class);
-			JSONArray endArray = (JSONArray)getObjectByType(rangeArray.get("end"), JSONArray.class);
+		if (rangeObject != null) {
+			JSONArray startArray = (JSONArray)getObjectByType(rangeObject.get("start"), JSONArray.class);
+			JSONArray endArray = (JSONArray)getObjectByType(rangeObject.get("end"), JSONArray.class);
 			
 			Key start = null;
 			Key end = null;

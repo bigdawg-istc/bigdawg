@@ -11,7 +11,7 @@ help_ani()
 while getopts c:h opt
 do
   case "$opt" in
-    c) curl -X POST -d \""${OPTARG}"\" http://localhost:8080/bigdawg/query/; exit;;
+    c) curl -X POST -d \""${OPTARG}"\" http://192.168.99.100:8080/bigdawg/query/; exit;;
     \?) help_ani;;
   esac
 done
@@ -26,7 +26,7 @@ do
 		printf '> '
 		continue
 	else 
-		curl -X POST -d \""${query}"\" http://localhost:8080/bigdawg/query/
+		curl -X POST -d \""${query}"\" http://192.168.99.100:8080/bigdawg/query/
 	fi
 	printf '> '
 done

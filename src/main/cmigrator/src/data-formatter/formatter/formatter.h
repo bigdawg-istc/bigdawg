@@ -1,3 +1,8 @@
+/*
+ * It takes input (source) and output (destination).
+ * The the data is trasformed from the source binary format 
+ * to the destination binary format.
+ */
 #ifndef FORMATTER_H
 #define FORMATTER_H
 

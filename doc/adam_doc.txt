@@ -1,5 +1,0 @@
-Main registers resources, including query.QueryClient.
-QueryClient calls istc.bigdawg.planner.Planner.
-
-
-

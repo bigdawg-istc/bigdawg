@@ -4,8 +4,9 @@ package istc.bigdawg.islands.SciDB;
 import java.util.HashMap;
 import java.util.Map;
 
-import istc.bigdawg.islands.OperatorVisitor;
 import istc.bigdawg.islands.operators.Operator;
+import istc.bigdawg.shims.AFLQueryGenerator;
+import istc.bigdawg.shims.OperatorQueryGenerator;
 
 // keep track of query root node and any CTEs
 public class AFLQueryPlan {
@@ -44,7 +45,7 @@ public class AFLQueryPlan {
 	public String printPlan() throws Exception{
 		String plan = new String();
 		
-		OperatorVisitor gen = new AFLQueryGenerator();
+		OperatorQueryGenerator gen = new AFLQueryGenerator();
 		
 		// prepend plans for chronological order
 		for(String s : planRoots.keySet()) {

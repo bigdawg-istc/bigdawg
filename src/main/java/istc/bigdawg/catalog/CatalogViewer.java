@@ -10,9 +10,9 @@ import java.util.List;
 import istc.bigdawg.exceptions.BigDawgCatalogException;
 import istc.bigdawg.exceptions.BigDawgException;
 import istc.bigdawg.exceptions.UnsupportedIslandException;
-import istc.bigdawg.islands.IslandsAndCast;
-import istc.bigdawg.islands.TheObjectThatResolvesAllDifferencesAmongTheIslands;
-import istc.bigdawg.islands.TheObjectThatResolvesAllDifferencesAmongTheIslands.Engine;
+import istc.bigdawg.islands.IslandAndCastResolver;
+import istc.bigdawg.islands.IslandAndCastResolver.Engine;
+import istc.bigdawg.islands.IslandAndCastResolver.Scope;
 import istc.bigdawg.query.ConnectionInfo;
 
 public class CatalogViewer {
@@ -30,7 +30,7 @@ public class CatalogViewer {
 			if (rs1.next()) {
 				String engineString = rs1.getString("connection_properties");
 				try {
-					return TheObjectThatResolvesAllDifferencesAmongTheIslands.getEngineEnum(engineString);
+					return IslandAndCastResolver.getEngineEnum(engineString);
 				} catch (BigDawgException ex) {
 					ex.printStackTrace();
 					throw new BigDawgCatalogException("Unsupported engine: "+ engineString);
@@ -56,34 +56,11 @@ public class CatalogViewer {
 	 * @throws Exception
 	 */
 	public static ConnectionInfo getConnectionInfo(int dbid) throws BigDawgCatalogException, SQLException {
-//		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
-//		// input check
-//		CatalogUtilities.checkConnection(cc);
-//
-//		// NEW ADDITION
-//		ResultSet rs1 = cc.execRet("select connection_properties from catalog.databases db join catalog.engines e on db.engine_id = e.eid where dbid = "+dbid);
-//		
-//		Engine e = null;
-//		
-//		if (rs1.next()) {
-//			String engineString = rs1.getString("connection_properties");
-//			try {
-//				e = TheObjectThatResolvesAllDifferencesAmongTheIslands.getEngineEnum(engineString);
-//			} catch (BigDawgException ex) {
-//				ex.printStackTrace();
-//				rs1.close();
-//				throw new BigDawgCatalogException("Unsupported engine: "+ engineString);
-//			}
-//		} else {
-//			rs1.close();
-//			throw new BigDawgCatalogException(dbid);
-//		}
-//		rs1.close();
 		
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		Engine e = getEngineOfDB(dbid);
 		
-		return TheObjectThatResolvesAllDifferencesAmongTheIslands.getQConnectionInfo(cc, e, dbid);
+		return IslandAndCastResolver.getQConnectionInfo(cc, e, dbid);
 	}
 	
 	/**
@@ -133,7 +110,7 @@ public class CatalogViewer {
 	 * @throws UnsupportedIslandException 
 	 * @throws SQLException 
 	 */
-	public static HashMap<String,List<String>> getDBMappingByObj (List<String> inputs, IslandsAndCast.Scope scope) throws BigDawgCatalogException, UnsupportedIslandException, SQLException {
+	public static HashMap<String,List<String>> getDBMappingByObj (List<String> inputs, Scope scope) throws BigDawgCatalogException, UnsupportedIslandException, SQLException {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		
 		CatalogUtilities.checkConnection(cc);
@@ -148,7 +125,7 @@ public class CatalogViewer {
 		}
 		wherePred += ")";
 		
-		String islandName = TheObjectThatResolvesAllDifferencesAmongTheIslands.getCatalogIslandSelectionPredicate(scope); 
+		String islandName = IslandAndCastResolver.getCatalogIslandSelectionPredicate(scope); 
 		
 		ResultSet rs = null;
 		try {
@@ -156,7 +133,9 @@ public class CatalogViewer {
 									+ "from catalog.objects o "
 									+ "join catalog.databases d on o.physical_db = d.dbid "
 									+ "join catalog.shims s on d.engine_id = s.engine_id "
-									+ "join catalog.islands i on s.island_id = i.iid where " + wherePred + islandName + " group by o.name, island;");
+									+ "join catalog.islands i on s.island_id = i.iid where " + wherePred 
+									+ " AND scope_name = \'" + islandName + "\' "
+									+ " group by o.name, island;");
 			
 			if (rs.next()) extraction.put(rs.getString("obj"), new ArrayList<String>(Arrays.asList(rs.getString("db").split(","))));
 			while (rs.next()) {
@@ -273,8 +252,7 @@ public class CatalogViewer {
 	}
 	
 	
-	@Deprecated
-	public static List<String> getAllEngines() throws Exception {
+	private static List<String> getAllEngines() throws Exception {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
 		CatalogUtilities.checkConnection(cc);
@@ -291,8 +269,7 @@ public class CatalogViewer {
 		return extraction;
 	}
 	
-	@Deprecated
-	public static List<String> getAllDatabases() throws Exception {
+	private static List<String> getAllDatabases() throws Exception {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
 		CatalogUtilities.checkConnection(cc);
@@ -317,8 +294,7 @@ public class CatalogViewer {
 	 *         (dst), and cast access_method
 	 * @throws Exception
 	 */
-	@Deprecated
-	public static List<String> getAllCasts() throws Exception {
+	private static List<String> getAllCasts() throws Exception {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
 		CatalogUtilities.checkConnection(cc);
@@ -644,6 +620,12 @@ public class CatalogViewer {
 			
 			result = getAllObjects(false);
 			System.out.println("\noid\tname\tlogical_db\tphysical_db");	
+			for (String s : result) {
+				System.out.println(s);
+			}
+			
+			result = getAllCasts();
+			System.out.println("\nCasts:\noid\tname\tlogical_db\tphysical_db");	
 			for (String s : result) {
 				System.out.println(s);
 			}

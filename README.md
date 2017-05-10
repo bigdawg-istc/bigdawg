@@ -1,35 +1,26 @@
-# BigDawg Middleware
+# BigDAWG Polystore
 ---
+
+A polystore database from researchers of the Intel Science and Technology Center for Big Data (ISTC).
 
 Links:
 
- | | 
---- | --- | ---
-**Open issues** | https://bitbucket.org/aelmore/bigdawgmiddle/issues?status=new&status=open
-**Documentation** | http://bigdawg-documentation.readthedocs.io/en/latest/index.html
-**Website** | http://bigdawg.mit.edu/
-**Docker Hub repository** | https://hub.docker.com/u/bigdawg/dashboard/
+* [Website](http://bigdawg.mit.edu/)
+* [Documentation](http://bigdawg-documentation.readthedocs.io/en/latest/index.html)
+
+# Overview
+
+BigDAWG (Big DAta Working Group) is an open source project from researchers within the Intel Science and Technology Center for Big Data (ISTC). BigDAWG is a reference implementation of a polystore database. A polystore system is any database management system (DBMS) that is built on top of multiple, heterogeneous, integrated storage engines.
+
+The current release includes support for 3 database engines: PostgreSQL, SciDB and Accumulo. We allow users to easily download Docker containers with middleware, databases and pre-loaded data along with example queries.
 
 
-The Big Data Analytics Working Group (BigDAWG) project is exploring challenges associated with building federated databases over multiple data models, specialized storage engines, and visualizations for Big Data. We call our architecture a polystore to distinguish it from previous federation efforts that used only the relational model.
+# Installation
 
-# Usage
----
+See the [getting started](http://bigdawg-documentation.readthedocs.io/en/latest/getting-started.html) documentation to start a BigDAWG cluster using Docker containers.
 
-To get started, see the [documentation](http://bigdawg-documentation.readthedocs.io/en/latest/index.html) 
-
-### Requirements:
-
-Dependency | Version | 
---- | --- | ---
-Java | 8 | 
-Maven | 3.3 |
-PostgreSQL | 9.4.5
-SciDB | 14.12
-Accumulo | 1.7.1
-
-# Contributing
----
 
 # License
----
+
+[![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
+© 2017 (Massachusetts Institute of Technology, Northwestern University, University of Chicago)

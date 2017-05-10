@@ -1,8 +1,8 @@
 package istc.bigdawg.exceptions;
 
-import istc.bigdawg.islands.IslandsAndCast.Scope;
+import istc.bigdawg.islands.IslandAndCastResolver.Scope;
 
-public class UnsupportedIslandException extends BigDawgException {
+public class UnsupportedIslandException extends IslandException {
 
 	public UnsupportedIslandException(String token) {
 		super(String.format("Unknown island token: %s", token));

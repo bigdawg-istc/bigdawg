@@ -8,13 +8,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import istc.bigdawg.islands.DataObjectAttribute;
-import istc.bigdawg.islands.OperatorVisitor;
+import istc.bigdawg.exceptions.IslandException;
+import istc.bigdawg.exceptions.QueryParsingException;
 import istc.bigdawg.islands.operators.CommonTableExpressionScan;
 import istc.bigdawg.islands.relational.SQLOutItemResolver;
 import istc.bigdawg.islands.relational.SQLQueryPlan;
 import istc.bigdawg.islands.relational.SQLTableExpression;
 import istc.bigdawg.islands.relational.utils.SQLAttribute;
+import istc.bigdawg.shims.OperatorQueryGenerator;
+import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.select.PlainSelect;
 import net.sf.jsqlparser.statement.select.WithItem;
@@ -26,7 +28,8 @@ public class SQLIslandCommonTableExpressionScan extends SQLIslandScan implements
 	private SQLIslandOperator sourceStatement;
 	
 	
-	SQLIslandCommonTableExpressionScan(Map<String, String> parameters, List<String> output, SQLIslandOperator child, SQLQueryPlan plan, SQLTableExpression supplement) throws Exception  {
+	SQLIslandCommonTableExpressionScan(Map<String, String> parameters, List<String> output, SQLIslandOperator child, SQLQueryPlan plan, SQLTableExpression supplement) 
+			throws QueryParsingException, JSQLParserException {
 		super(parameters, output, child, supplement);
 		
 		setSourceTableName(parameters.get("CTE-Name"));
@@ -35,15 +38,15 @@ public class SQLIslandCommonTableExpressionScan extends SQLIslandScan implements
 		this.dataObjects.add(getSourceTableName());
 		
 		// match output to base relation
-		Map<String, DataObjectAttribute> cteSchema = new HashMap<String, DataObjectAttribute>();
+		Map<String, SQLAttribute> cteSchema = new HashMap<>();
 		// insert cte alias for schema resolution
 		// delete everything before the first dot and replace it with the tableAlias
 		sourceStatement = (SQLIslandOperator) plan.getPlanRoot(getSourceTableName());
 		
-		Iterator<Map.Entry<String, DataObjectAttribute>  > schemaItr = sourceStatement.outSchema.entrySet().iterator();
+		Iterator<Map.Entry<String, SQLAttribute>  > schemaItr = sourceStatement.outSchema.entrySet().iterator();
 
 		while(schemaItr.hasNext()) {
-			Map.Entry<String, DataObjectAttribute> pair = schemaItr.next();
+			Map.Entry<String, SQLAttribute> pair = schemaItr.next();
 			String name = pair.getKey();
 			String[] names = name.split("\\.");
 			
@@ -71,7 +74,7 @@ public class SQLIslandCommonTableExpressionScan extends SQLIslandScan implements
 	}
 
 	
-	public SQLIslandCommonTableExpressionScan(SQLIslandOperator o, boolean addChild) throws Exception {
+	public SQLIslandCommonTableExpressionScan(SQLIslandOperator o, boolean addChild) throws IslandException {
 		super(o, addChild);
 		SQLIslandCommonTableExpressionScan c = (SQLIslandCommonTableExpressionScan) o;
 		this.setSourceTableName(new String(c.getSourceTableName()));
@@ -91,9 +94,9 @@ public class SQLIslandCommonTableExpressionScan extends SQLIslandScan implements
 			} else if (s instanceof SQLIslandDistinct) {
 			} else if (s instanceof SQLIslandWindowAggregate) {
 			} else {
-				throw new Exception("Unknown Operator from Operator Copy: "+s.getClass().toString());
+				throw new IslandException("Unknown Operator from Operator Copy: "+s.getClass().toString());
 			}
-			throw new Exception("Unsupported Operator Copy: "+s.getClass().toString());
+			throw new IslandException("Unsupported Operator Copy: "+s.getClass().toString());
 		}
 		
 		this.setWith(new WithItem());
@@ -109,8 +112,8 @@ public class SQLIslandCommonTableExpressionScan extends SQLIslandScan implements
 
 	
 	@Override
-	public void accept(OperatorVisitor operatorVisitor) throws Exception {
-		operatorVisitor.visit(this);
+	public void accept(OperatorQueryGenerator operatorQueryGenerator) throws Exception {
+		operatorQueryGenerator.visit(this);
 	}
 	
 	public String toString() {
@@ -151,17 +154,17 @@ public class SQLIslandCommonTableExpressionScan extends SQLIslandScan implements
 	}
 	
 	@Override
-	public String getTreeRepresentation(boolean isRoot) throws Exception{
+	public String getTreeRepresentation(boolean isRoot) throws IslandException {
 		return "{with{"+this.getSourceTableName()+"}"+this.sourceStatement.getTreeRepresentation(false)+"}";
 	}
 	
 	@Override
-	public Map<String, Set<String>> getObjectToExpressionMappingForSignature() throws Exception{
+	public Map<String, Set<String>> getObjectToExpressionMappingForSignature() throws IslandException {
 		return sourceStatement.getObjectToExpressionMappingForSignature();
 	}
 	
 	@Override
-	public void removeCTEEntriesFromObjectToExpressionMapping(Map<String, Set<String>> entry) throws Exception {
+	public void removeCTEEntriesFromObjectToExpressionMapping(Map<String, Set<String>> entry) throws IslandException  {
 		
 		if (entry.containsKey(getSourceTableName()))
 			entry.remove(getSourceTableName());

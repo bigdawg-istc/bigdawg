@@ -1,8 +1,6 @@
 *.class
 
 target/
-installation/Downloads
-installation/data
 
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/
@@ -31,14 +29,15 @@ hs_err_pid*
 src/main/cmigrator/postgres2scidb
 src/main/cmigrator/scidb2postgres
 
-
 .vagrant
 .DS_Store
-*.DS_Store
 
-# Docker
+# Docker-related
 provisions/**/istc.bigdawg-1.0-SNAPSHOT-jar-with-dependencies.jar
 provisions/**/mimic2_flatfiles.tar.gz
 provisions/**/PostgresParserTerms.csv
 provisions/**/SciDBParserTerms.csv
-/bin/
+provisions/s00318.txt
+provisions/a40001_000001.hea
+provisions/a40001_000001.dat
+provisions/s00318.txt
