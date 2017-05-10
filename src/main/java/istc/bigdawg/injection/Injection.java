@@ -121,14 +121,6 @@ public class Injection {
 		migratorT.start();
 		logger.info("sstore migrator started.");
 		
-//		long lStartTime = System.currentTimeMillis();
-//		QueryClient qClient = new QueryClient();
-//		
-//		Response response1;
-//		System.out.println("Start query....");
-//		response1 = qClient.query("{\"query\":\"bdrel("+"select count(*) from mimic2v26.medevents"+")\"}");
-//		System.out.println("End query.");
-
 		// Assign the IP address for the HTTP server to listen on
 		String ipAddress = null;
 		if (args.length > 0) {

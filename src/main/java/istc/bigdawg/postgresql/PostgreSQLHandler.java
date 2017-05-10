@@ -355,7 +355,8 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 		try {
 
 			// Check if S-Store is available
-			if (SStoreMigratorTask.isSStoreAlive()) {
+			SStoreMigratorTask sstoreMigratorTask = new SStoreMigratorTask();
+			if (sstoreMigratorTask.isSStoreAlive()) {
 				ArrayList<String> tableNames;
 				try {
 					tableNames = SQLPlanParser.extractTablesFromPostgresSQL(this, query);

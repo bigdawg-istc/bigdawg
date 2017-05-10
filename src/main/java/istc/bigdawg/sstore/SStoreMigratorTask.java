@@ -179,7 +179,7 @@ public class SStoreMigratorTask implements Runnable {
 	}
 	
 	
-	public static boolean isSStoreAlive() {
+	public boolean isSStoreAlive() {
 		try {
 			SStoreSQLConnectionInfo sstoreConnInfo = 
 					(SStoreSQLConnectionInfo) CatalogViewer.getConnectionInfo(sstoreDBID);
