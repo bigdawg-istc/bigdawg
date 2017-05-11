@@ -1,6 +1,7 @@
 package istc.bigdawg.islands.relational.utils;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -337,15 +338,12 @@ public class SQLExpressionUtils {
 	    expr.accept(deparser);
 		
 	}
-
 	
 	public static List<Column> getAttributes(Expression expr) throws JSQLParserException {
 		
 		final List<Column> attributes = new ArrayList<>();
 
-
 		SQLExpressionHandler deparser = new SQLExpressionHandler() {
-	        
 		
 			@Override
 			public void visit(Column tableColumn) {
@@ -371,8 +369,6 @@ public class SQLExpressionUtils {
 			@Override
 			public void visit(Column tableColumn) {
 				attributes.add(tableColumn.getTable().getName());
-//				if (tableColumn.getTable().getAlias() != null)
-//					attributes.add(tableColumn.getTable().getAlias().getName());
 				if (tableColumn.getTable().getSchemaName() != null)
 					attributes.add(tableColumn.getTable().getSchemaName()+"."+tableColumn.getTable().getName());
 				attributes.add(tableColumn.getTable().getFullyQualifiedName());
@@ -517,97 +513,58 @@ public class SQLExpressionUtils {
 	
 		SQLExpressionHandler deparser = new SQLExpressionHandler() {
 	        
-			@Override
-			public void visitOldOracleJoinBinaryExpression(OldOracleJoinBinaryExpression expression, String operator) {
-				
-				boolean leftFound = false;
-				boolean rightFound = false;
+			private void processBinary(String original, Expression left, Expression right, String operator) {
 				
 				try {
-					List <String> llc = getAttributes(expression.getLeftExpression()).stream().filter(d -> d.getTable() != null).map(d -> d.getTable().toString()).collect(Collectors.toList());
-					List <String> rlc = getAttributes(expression.getRightExpression()).stream().filter(d -> d.getTable() != null).map(d -> d.getTable().toString()).collect(Collectors.toList());
 					
-					List <String> llcDup = new ArrayList<>(llc);
-					List <String> rlcDup = new ArrayList<>(rlc);
-					List <String> llcDup2 = new ArrayList<>(llc);
-					List <String> rlcDup2 = new ArrayList<>(rlc);
+					List <String> llc = getAttributes(left).stream().filter(d -> d.getTable() != null).map(d -> d.getTable().toString()).collect(Collectors.toList());
+					List <String> rlc = getAttributes(right).stream().filter(d -> d.getTable() != null).map(d -> d.getTable().toString()).collect(Collectors.toList());
 					
-					if (llc.removeAll(leftNames.keySet()) && llc.removeAll(rightNames.keySet())
-							|| llc.removeAll(leftNames.values()) && llc.removeAll(rightNames.values())) leftFound = true;
-					if (rlc.removeAll(leftNames.keySet()) && rlc.removeAll(rightNames.keySet())
-							|| rlc.removeAll(leftNames.values()) && rlc.removeAll(rightNames.values())) rightFound = true;
-
-					if (leftFound && rightFound) {
-						filters.add(expression.toString());
-					} else if (leftFound) {
-						filters.add(expression.getLeftExpression().toString());
-					} else if (rightFound) {
-						filters.add(expression.getRightExpression().toString());
+					Set<String> allLeftNames = new HashSet<>(leftNames.keySet());
+					Set<String> allRightNames = new HashSet<>(rightNames.keySet());
+					allLeftNames.addAll(leftNames.values());
+					allRightNames.addAll(rightNames.values());
+					
+					boolean lcl = !Collections.disjoint(llc, allLeftNames);
+					boolean rcr = !Collections.disjoint(rlc, allRightNames);
+					boolean lcr = !Collections.disjoint(llc, allRightNames);
+					boolean rcl = !Collections.disjoint(rlc, allLeftNames);
+					
+					if (lcl && rcr || lcr && rcl) {
+						filters.add(original);
 					} else {
-						leftFound = false;
-						if ((llcDup.removeAll(leftNames.keySet()) || llcDup.removeAll(leftNames.values())) 
-								&& (rlcDup.removeAll(rightNames.keySet()) || rlcDup.removeAll(rightNames.values()))) {
-							filters.add(expression.toString());
-							return;
-						}
+						if (lcl && lcr) {
+							left.accept(this);
+						} else if (rcl && rcr) {
+							right.accept(this);
+						} else {
+							if ((lcl || lcr) && rlc.isEmpty()) {
+								filters.add(original);
+							}
 							
-						if ((llcDup2.removeAll(rightNames.keySet()) || llcDup2.removeAll(rightNames.values())) 
-								&& (rlcDup2.removeAll(leftNames.keySet()) || rlcDup2.removeAll(leftNames.values()))) {
-							filters.add(expression.toString());
+							if ((rcl || rcr) && llc.isEmpty()) {
+								filters.add(original);
+							}
 						}
-						
 					}
+					
 					
 				} catch (JSQLParserException e) {
 					e.printStackTrace();
 				}
+			}
+			
+			@Override
+			public void visitOldOracleJoinBinaryExpression(OldOracleJoinBinaryExpression expression, String operator) {
+				
+				processBinary(expression.toString(), expression.getLeftExpression(), expression.getRightExpression(), operator);
+				
 				
 			}
 			
 			@Override
 			protected void visitBinaryExpression(BinaryExpression expression, String operator) {
-				boolean leftFound = false;
-				boolean rightFound = false;
-				
-				try {
-					
-					List <String> llc = getAttributes(expression.getLeftExpression()).stream().filter(d -> d.getTable() != null).map(d -> d.getTable().toString()).collect(Collectors.toList());
-					List <String> rlc = getAttributes(expression.getRightExpression()).stream().filter(d -> d.getTable() != null).map(d -> d.getTable().toString()).collect(Collectors.toList());
-					
-					List <String> llcDup = new ArrayList<>(llc);
-					List <String> rlcDup = new ArrayList<>(rlc);
-					List <String> llcDup2 = new ArrayList<>(llc);
-					List <String> rlcDup2 = new ArrayList<>(rlc);
-					
-					if (llc.removeAll(leftNames.keySet()) && llc.removeAll(rightNames.keySet())
-							|| llc.removeAll(leftNames.values()) && llc.removeAll(rightNames.values())) leftFound = true;
-					if (rlc.removeAll(leftNames.keySet()) && rlc.removeAll(rightNames.keySet())
-							|| rlc.removeAll(leftNames.values()) && rlc.removeAll(rightNames.values())) rightFound = true;
-					
-					if (leftFound && rightFound) {
-						filters.add(expression.toString());
-					} else if (leftFound) {
-						filters.add(expression.getLeftExpression().toString());
-					} else if (rightFound) {
-						filters.add(expression.getRightExpression().toString());
-					} else {
-						leftFound = false;
-						if ((llcDup.removeAll(leftNames.keySet()) || llcDup.removeAll(leftNames.values())) 
-								&& (rlcDup.removeAll(rightNames.keySet()) || rlcDup.removeAll(rightNames.values()))) {
-							filters.add(expression.toString());
-							return;
-						}
-							
-						if ((llcDup2.removeAll(rightNames.keySet()) || llcDup2.removeAll(rightNames.values())) 
-								&& (rlcDup2.removeAll(leftNames.keySet()) || rlcDup2.removeAll(leftNames.values()))) {
-							filters.add(expression.toString());
-						}
-						
-					}
-					
-				} catch (JSQLParserException e) {
-					e.printStackTrace();
-				}
+				processBinary(expression.toString(), expression.getLeftExpression(), expression.getRightExpression(), operator);
 			}
 			
 			@Override
@@ -641,8 +598,6 @@ public class SQLExpressionUtils {
 	    };
 	    
 	    expr.accept(deparser);
-	    
-//	    System.out.printf("\n----> SQLExpressionUtils expression: \n	---%s;\n	---filters: %s;\n	---left: %s;\n	---right: %s;\n", expr, filters, leftNames, rightNames);
 	    
 	    return String.join(" AND ", filters);
 	}
@@ -700,8 +655,6 @@ public class SQLExpressionUtils {
 	    
 	    expr.accept(deparser);
 	    
-//	    System.out.printf("\n----> SQLExpressionUtils expression: \n	---%s;\n	---filters: %s;\n	---left: %s;\n	---right: %s;\n", expr, filters, leftNames, rightNames);
-	    
 	    return filters;
 	}
 	
@@ -720,10 +673,6 @@ public class SQLExpressionUtils {
 					tableColumn.getTable().setName(replacement);
 				else if (tableColumn.getTable() == null || tableColumn.getTable().getName() == null)
 					tableColumn.setTable(new Table(replacement));
-//				else if (originalAliasSet == null || tableColumn.getTable() == null)
-//					tableColumn.setTable(new Table(replacement));
-				
-//				System.out.printf("---->>>>>> tableColumn in renameAttributes: %s, %s, %s, %s\n\n", expr, originalAliasSet, aliasesAndNames, replacement);
 			}
 			
 			@Override

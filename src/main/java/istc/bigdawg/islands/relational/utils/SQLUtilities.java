@@ -58,8 +58,8 @@ public class SQLUtilities {
 		dst = dst.replaceAll("(\\'.*?\\')::interval", "INTERVAL $1");
 				
 		// delete parens around column names - another psql-ism
-		dst = dst.replaceAll("\\(([a-zA-Z0-9]+)\\)", "$1");
-		dst = dst.replaceAll("\\(([a-zA-Z0-9]+\\.[a-zA-Z0-9]+)\\)", "$1");
+		dst = dst.replaceAll("^\\(([a-zA-Z0-9]+)\\)", "$1");
+		dst = dst.replaceAll("^\\(([a-zA-Z0-9]+\\.[a-zA-Z0-9]+)\\)", "$1");
 		
 		
 		
