@@ -29,6 +29,11 @@ docker rm -f bigdawg-accumulo-master
 docker rm -f bigdawg-accumulo-proxy
 docker rm -f bigdawg-accumulo-namenode
 echo
+echo "========================================================="
+echo "===== bigdawg-sstore: Stopping and removing conainer ====="
+echo "========================================================="
+docker rm -f bigdawg-sstore-data
+echo
 echo "=========================================================================="
 echo "===== Done. Final container status (both running and stopped state): ====="
 echo "=========================================================================="

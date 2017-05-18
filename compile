@@ -1,0 +1,2 @@
+mvn install -P dev -DskipTests=true -q
+mvn compile -P dev -DskipTests=true -q

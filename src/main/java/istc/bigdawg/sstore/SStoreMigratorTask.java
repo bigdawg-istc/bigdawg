@@ -38,7 +38,6 @@ import istc.bigdawg.exceptions.BigDawgCatalogException;
 import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.executor.plan.QueryExecutionPlan;
 import istc.bigdawg.injection.Injection;
-import istc.bigdawg.islands.CrossIslandCastNode;
 import istc.bigdawg.islands.CrossIslandQueryNode;
 import istc.bigdawg.islands.CrossIslandQueryPlan;
 import istc.bigdawg.migration.FileFormat;
@@ -198,7 +197,7 @@ public class SStoreMigratorTask implements Runnable {
 	
     @Override
     public void run() {
-//		cleanHistoricalData();
+		cleanHistoricalData();
 		waitForSStore();
 		Task migrateTask = new Task(tables, psqlSchema, migratedTupleCount, migrationTime, startedTime, earliestTimestamp);
 	    ScheduledFuture futureTask = 
@@ -262,6 +261,7 @@ public class SStoreMigratorTask implements Runnable {
 	private void cleanHistoricalData() {
 		// clean the historical data before any migration
 //    	int psqlDBID = BigDawgConfigProperties.INSTANCE.getSeaflowDBID();
+		logger.info("Clearing historical data...");
     	PostgreSQLConnectionInfo psqlConnInfo = null;
     	Connection psqlConn = null;
     	try {
@@ -276,7 +276,9 @@ public class SStoreMigratorTask implements Runnable {
     	assert(psqlConn != null);
     	    	
     	for (String table : tables) {
-    		String cmd = "DROP TABLE IF EXISTS " + table;
+    		String schemaTable = psqlSchema + "." + table;
+    		logger.info("dropping table " + schemaTable);
+    		String cmd = "DROP TABLE IF EXISTS " + schemaTable;
     		try {
 				PostgreSQLHandler.executeStatement(psqlConn, cmd);
 			} catch (SQLException e) {
@@ -291,7 +293,8 @@ public class SStoreMigratorTask implements Runnable {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-
+		logger.info("Historical data cleared.");
+		
 	}
 	
 }

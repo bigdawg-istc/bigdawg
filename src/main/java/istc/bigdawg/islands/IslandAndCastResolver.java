@@ -96,7 +96,7 @@ public class IslandAndCastResolver {
 			return IslandAndCastResolver.Engine.PostgreSQL;
 		else if (engineString.startsWith(IslandAndCastResolver.Engine.SciDB.name()))
 			return IslandAndCastResolver.Engine.SciDB;
-		else if (engineString.startsWith(IslandAndCastResolver.Engine.SStore.name()))
+		else if (engineString.toLowerCase().startsWith(IslandAndCastResolver.Engine.SStore.name().toLowerCase()))
 			return IslandAndCastResolver.Engine.SStore;
 		else if (engineString.startsWith(IslandAndCastResolver.Engine.Accumulo.name()))
 			return IslandAndCastResolver.Engine.Accumulo;

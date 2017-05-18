@@ -109,6 +109,7 @@ public class Injection {
 		// ZooKeeperUtils.registerNodeInZooKeeper();
 		//
 		// S-Store migration task: pushing data to Postgres
+		System.out.println("Starting S-Store migrator...");
 		BigDawgConfigProperties.INSTANCE.getBaseURI();
 		Long migrationGap = BigDawgConfigProperties.INSTANCE.getSStoreMigrationGap();
 		SStoreMigratorTask sstoreMigratorTask = new SStoreMigratorTask(
@@ -119,7 +120,8 @@ public class Injection {
 				migrationGap);
 		Thread migratorT = new Thread(sstoreMigratorTask);
 		migratorT.start();
-		logger.info("sstore migrator started.");
+		System.out.println("S-Store migrator started.");
+		logger.info("S-Store migrator started.");
 		
 		// Assign the IP address for the HTTP server to listen on
 		String ipAddress = null;

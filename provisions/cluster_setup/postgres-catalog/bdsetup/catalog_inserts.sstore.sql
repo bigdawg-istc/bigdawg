@@ -10,7 +10,7 @@ insert into catalog.islands values (3, 'STREAMING', 'PSQL');
 -- insert into catalog.engines values(2,'postgres2','bigdawg-postgres-data2',5402,'PostgreSQL 9.4.5');
 -- insert into catalog.engines values(3,'scidb_local','bigdawg-scidb-data',1239,'SciDB 14.12');
 -- insert into catalog.engines values (4, 'saw ZooKeeper', 'zookeeper.docker.local', 2181, 'Accumulo 1.6');
-insert into catalog.engines values (5, 's-store', 'bigdawg-sstore-data', 21212, 'S-Store');
+insert into catalog.engines values (5, 'sstore', 'bigdawg-sstore-data', 21212, 'SStore');
 
 -- catalog.databases: dbid, engine_id, name, userid, password
 -- insert into catalog.databases values(0,0,'bigdawg_catalog','postgres','test');
