@@ -134,6 +134,16 @@ else
        curl -o s00318.txt --create-dirs https://physionet.org/physiobank/database/mimic2cdb-ps/s00318/s00318.txt
 fi
 
+# Download mimic2 medevents for S-Store
+# http://www.cs.toronto.edu/~jdu/data/medevents.csv
+if [ -f "medevents.csv" ]
+then
+	echo "Medevents data already exists. Skipping download"
+else
+	echo "Downloading mimic2 medevents data"
+	curl -o medevents.csv --create-dirs http://www.cs.toronto.edu/~jdu/data/medevents.csv
+fi
+
 # postgres-catalog
 docker exec -u root bigdawg-postgres-catalog mkdir -p /src/main/resources
 docker cp ../src/main/resources/PostgresParserTerms.csv bigdawg-postgres-catalog:/src/main/resources
@@ -162,6 +172,11 @@ docker exec bigdawg-scidb-data /home/scidb/bdsetup/setup.sh
 docker cp cluster_setup/accumulo-data/bdsetup bigdawg-accumulo-zookeeper:/
 docker cp s00318.txt bigdawg-accumulo-zookeeper:/bdsetup/
 docker exec bigdawg-accumulo-zookeeper python /bdsetup/setup.py
+
+# s-store
+docker cp medevents.csv bigdawg-sstore-data:/root/s-store/
+docker exec -d bigdawg-sstore-data /bin/bash -c 'cd /root/s-store; java -jar stream-generator.jar -f medevents.csv -t 100 -d 600000 -p 21004'
+docker exec -d bigdawg-sstore-data /bin/bash -c 'cd /root/s-store; service ssh restart; ./tools/sstore/testsstore.sh mimic2bigdawg -1 "-Dnoshutdown=true -Dclient.input_port=21004"'
 
 echo
 echo "======================================="

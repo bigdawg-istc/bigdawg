@@ -150,6 +150,7 @@ public class SStoreMigratorTask implements Runnable {
 	    Socket s = null;
 	    try {
 	        s = new Socket(host, port);
+	        logger.info("S-Store is listening at host: " + host + " port: " + port);
 	        return true;
 	    } catch (Exception e) {
 	        return false;
