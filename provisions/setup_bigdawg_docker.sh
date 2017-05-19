@@ -183,7 +183,7 @@ echo "======================================="
 echo "===== Starting BigDAWG Middleware ====="
 echo "======================================="
 docker cp ../target/istc.bigdawg-1.0-SNAPSHOT-jar-with-dependencies.jar bigdawg-sstore-data:/
-docker exec bigdawg-postgres-catalog java -classpath "istc.bigdawg-1.0-SNAPSHOT-jar-with-dependencies.jar" istc.bigdawg.injection.Injection bigdawg-postgres-catalog
+docker exec bigdawg-sstore-data java -classpath "istc.bigdawg-1.0-SNAPSHOT-jar-with-dependencies.jar" istc.bigdawg.injection.Injection bigdawg-sstore-data
 
 docker cp ../target/istc.bigdawg-1.0-SNAPSHOT-jar-with-dependencies.jar bigdawg-scidb-data:/
 docker exec -d bigdawg-scidb-data java -classpath "istc.bigdawg-1.0-SNAPSHOT-jar-with-dependencies.jar" istc.bigdawg.injection.Injection bigdawg-scidb-data
