@@ -1,6 +1,7 @@
 package istc.bigdawg.sstore;
 
 import java.io.InputStream;
+import java.io.Serializable;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
@@ -35,7 +36,7 @@ import istc.bigdawg.utils.LogUtils;
 import istc.bigdawg.utils.StackTrace;
 import jline.internal.Log;
 
-public class SStoreSQLHandler implements DBHandler {
+public class SStoreSQLHandler implements DBHandler, Serializable {
 
     private static Logger log = Logger.getLogger(SStoreSQLHandler.class.getName());
     // private static int defaultSchemaServerDBID =
