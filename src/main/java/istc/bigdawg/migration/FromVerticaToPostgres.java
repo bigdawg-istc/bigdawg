@@ -136,7 +136,7 @@ public class FromVerticaToPostgres extends FromDatabaseToDatabase {
 
     public MigrationResult executeMigration() throws MigrationException {
         TimeStamp startTimeStamp = TimeStamp.getCurrentTime();
-        logger.debug("start migration: " + startTimeStamp.toDateString());
+        logger.debug("//////\n\nstart migration: " + startTimeStamp.toDateString());
 
         long startTimeMigration = System.currentTimeMillis();
         String copyToCommand = PostgreSQLHandler
@@ -170,6 +170,8 @@ public class FromVerticaToPostgres extends FromDatabaseToDatabase {
             Long countExtractedElements = (Long) results.get(EXPORT_INDEX)
                     .get();
             Long countLoadedElements = (Long) results.get(LOAD_INDEX).get();
+            TimeStamp endTimeStamp = TimeStamp.getCurrentTime();
+            logger.debug("\n\nend migration: " + endTimeStamp.toDateString() + "/////");
             long endTimeMigration = System.currentTimeMillis();
             long durationMsec = endTimeMigration - startTimeMigration;
             logger.debug("migration duration time msec: " + durationMsec);
