@@ -176,7 +176,8 @@ docker exec bigdawg-accumulo-zookeeper python /bdsetup/setup.py
 # s-store
 docker cp medevents.csv bigdawg-sstore-data:/root/s-store/
 docker exec -d bigdawg-sstore-data /bin/bash -c 'cd /root/s-store; java -jar stream-generator.jar -f medevents.csv -t 100 -d 600000 -p 21004'
-docker exec -d bigdawg-sstore-data /bin/bash -c 'cd /root/s-store; service ssh restart; ./tools/sstore/testsstore.sh mimic2bigdawg -1 "-Dnoshutdown=true -Dclient.input_port=21004"'
+#docker exec -d bigdawg-sstore-data /bin/bash -c 'cd /root/s-store; service ssh restart; ./tools/sstore/testsstore.sh mimic2bigdawg -1 "-Dnoshutdown=true -Dclient.input_port=21004"'
+docker exec -d bigdawg-sstore-data /bin/bash -c 'cd /root/s-store; service ssh restart; ant hstore-benchmark -Dproject=mimic2bigdawg -Dclient.threads_per_host=1 -Dglobal.sstore=true -Dglobal.sstore_scheduler=true -Dclient.blocking=false -Dclient.warmup=10000 -Dclient.duration=600000 -Dclient.txnrate=-1 -Dnoshutdown=true -Dclient.input_port=21004'
 
 echo
 echo "======================================="
