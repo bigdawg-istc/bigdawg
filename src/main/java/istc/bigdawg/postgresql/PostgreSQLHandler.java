@@ -365,7 +365,7 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 				}
 				if (tableNames != null) {
 					for (String tableName : tableNames) {
-						if (existsTableInSStore(new PostgreSQLSchemaTableName(tableName))) {
+						if (existsTableInSStore(tableName)) {
 							// Pull from S-Store
 							log.info("Pulling table: " + tableName + " S-Store.");
 							pullFromSStore(tableName, 
@@ -1130,12 +1130,12 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 	 * Check if a table exists in S-Store.
 	 * 
 	 * @param conInfo
-	 * @param schemaTable
+	 * @param tableName
 	 *            names of a schema and a table
 	 * @return true if the table exists in S-Store, false if there is no such table in S-Store
 	 * @throws SQLException
 	 */
-	public boolean existsTableInSStore(PostgreSQLSchemaTableName schemaTable) throws SQLException {
+	public boolean existsTableInSStore(String tableName) throws SQLException {
 		PostgreSQLHandler catalogHandler = null;
 		try {
 			catalogHandler = new PostgreSQLHandler();
@@ -1149,12 +1149,12 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 		try {
 			if (catalogHandler != null) {
 				catalogHandler.getConnection();
-				preparedSt = catalogHandler.con.prepareStatement(
-					"select exists (select 1 from catalog.objects o, catalog.databases d "
-					+ "where o.name ilike ? and "
-					+ "o.logical_db = d.dbid and "
-					+ "d.name ilike 's-store')");
-				preparedSt.setString(1, schemaTable.getTableName());
+				String cmd = "select exists (select 1 from catalog.objects o, catalog.databases d "
+						+ "where o.name ilike ? and "
+						+ "o.logical_db = d.dbid and "
+						+ "d.name ilike 'sstore')";
+				preparedSt = catalogHandler.con.prepareStatement(cmd);
+				preparedSt.setString(1, tableName);
 				ResultSet rs = preparedSt.executeQuery();
 				rs.next();
 				return rs.getBoolean(1);
