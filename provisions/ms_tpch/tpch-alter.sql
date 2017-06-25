@@ -2,7 +2,8 @@
 -- Modified by Petr Haloun 18.11.2011
 -- Sccsid:     @(#)dss.ri 2.1.8.1
 -- TPCD Benchmark Version 8.0
-
+SET autocommit = 1;
+SET FOREIGN_KEY_CHECKS=0;
 -- For table REGION
 ALTER TABLE REGION
 ADD PRIMARY KEY (R_REGIONKEY);
