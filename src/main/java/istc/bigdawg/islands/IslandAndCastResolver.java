@@ -19,18 +19,16 @@ import istc.bigdawg.islands.SciDB.ArrayIsland;
 import istc.bigdawg.islands.relational.RelationalIsland;
 import istc.bigdawg.islands.text.TextIsland;
 import istc.bigdawg.myria.MyriaHandler;
+import istc.bigdawg.mysql.MySQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.islands.relational.*;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
-import istc.bigdawg.shims.ArrayToSciDBShim;
-import istc.bigdawg.shims.RelationalToPostgresShim;
-import istc.bigdawg.shims.RelationalToSciDBShim;
-import istc.bigdawg.shims.Shim;
-import istc.bigdawg.shims.TextToAccumuloShim;
+import istc.bigdawg.shims.*;
 import istc.bigdawg.sstore.SStoreSQLConnectionInfo;
 import istc.bigdawg.sstore.SStoreSQLHandler;
+import istc.bigdawg.vertica.VerticaConnectionInfo;
 
 /**
  * @author Jack
@@ -135,6 +133,22 @@ public class IslandAndCastResolver {
 				if (rs2.next())
 					extraction = new PostgreSQLConnectionInfo(rs2.getString("host"), rs2.getString("port"),rs2.getString("dbname"), rs2.getString("userid"), rs2.getString("password"));
 				break;
+			case Vertica:
+				rs2 = cc.execRet("select dbid, eid, host, port, db.name as dbname, userid, password "
+						+ "from catalog.databases db "
+						+ "join catalog.engines e on db.engine_id = e.eid "
+						+ "where dbid = "+dbid);
+				if (rs2.next())
+					extraction = new VerticaConnectionInfo(rs2.getString("host"), rs2.getString("port"),rs2.getString("dbname"), rs2.getString("userid"), rs2.getString("password"));
+				break;
+			case MySQL:
+				rs2 = cc.execRet("select dbid, eid, host, port, db.name as dbname, userid, password "
+						+ "from catalog.databases db "
+						+ "join catalog.engines e on db.engine_id = e.eid "
+						+ "where dbid = "+dbid);
+				if (rs2.next())
+					extraction = new MySQLConnectionInfo(rs2.getString("host"), rs2.getString("port"),rs2.getString("dbname"), rs2.getString("userid"), rs2.getString("password"));
+				break;
 			case SciDB:
 				rs2 = cc.execRet("select dbid, db.engine_id, host, port, bin_path, userid, password "
 						+ "from catalog.databases db "
@@ -213,8 +227,12 @@ public class IslandAndCastResolver {
 			switch (e) {
 			case PostgreSQL:
 				return new RelationalToPostgresShim();
+			case MySQL:
+				return new RelationalToMySQLShim();
 			case SciDB:
 				return new RelationalToSciDBShim();
+			case Vertica:
+				return new RelationalToVerticaShim();
 			default:
 				break;
 			}

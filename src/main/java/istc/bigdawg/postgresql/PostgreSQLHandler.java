@@ -249,7 +249,7 @@ public class PostgreSQLHandler implements RelationalHandler {
 	}
 
 	public String computeDateArithmetic(String s) throws SQLException {
-		JdbcQueryResult qr = executeQueryPostgreSQL("select date(" + s + ");");
+		JdbcQueryResult qr = executeQueryOnEngine("select date(" + s + ");");
 		return qr.getRows().get(0).get(0);
 	}
 

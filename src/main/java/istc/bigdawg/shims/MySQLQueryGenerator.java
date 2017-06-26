@@ -1,4 +1,4 @@
-package istc.bigdawg.islands.relational;
+package istc.bigdawg.shims;
 
 import istc.bigdawg.islands.relational.operators.SQLIslandOperator;
 import net.sf.jsqlparser.JSQLParserException;
@@ -14,7 +14,7 @@ import java.util.*;
 /**
  * Created by kateyu on 2/8/17.
  */
-public class MySQLQueryGenerator extends SQLQueryGenerator {
+public class MySQLQueryGenerator extends PostgreSQLQueryGenerator {
     /** log */
     private static Logger log = Logger.getLogger(MySQLQueryGenerator.class);
 
