@@ -215,7 +215,7 @@ public class FromPostgresToSStore extends FromDatabaseToDatabase {
 		    				migrationInfo.getConnectionFrom());
 		    		if (!caching) {
 		    			postgresH.dropTableIfExists(migrationInfo.getObjectFrom());
-		    			PostgreSQLHandler.getConnection(getConnectionTo()).commit();
+//		    			PostgreSQLHandler.getConnection(getConnectionTo()).commit();
 		    		}
 		    	} catch (SQLException sqle) {
 		    		try {
