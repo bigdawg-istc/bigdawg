@@ -85,6 +85,7 @@ public class FromPostgresToSStore extends FromDatabaseToDatabase {
 	
 	private AtomicLong globalCounter = new AtomicLong(0);
 	private SStoreSQLHandler sstorehandler = null;
+	private PostgreSQLHandler psqlhandler = null;
 	private Boolean caching = false;
 
 	public FromPostgresToSStore(PostgreSQLConnectionInfo connectionFrom,
@@ -92,7 +93,8 @@ public class FromPostgresToSStore extends FromDatabaseToDatabase {
 			String toTable, Boolean caching) {
 		this.migrationInfo = new MigrationInfo(connectionFrom, fromTable,
 				connectionTo, toTable, null);
-		this.sstorehandler = new SStoreSQLHandler(connectionFrom);
+		this.sstorehandler = new SStoreSQLHandler(connectionTo);
+		this.psqlhandler = new PostgreSQLHandler(connectionFrom);
 		this.caching = caching;
 	}
 
@@ -170,7 +172,7 @@ public class FromPostgresToSStore extends FromDatabaseToDatabase {
 		    LoadSStore loadSStore = new LoadSStore();
 			loadSStore.setMigrationInfo(migrationInfo);
 			loadSStore.setAdditionalParams("psql", false);
-			loadSStore.setHandlerFrom(new PostgreSQLHandler());
+			loadSStore.setHandlerFrom(psqlhandler);
 			loadSStore.setFileFormat(FileFormat.CSV);
 			loadSStore.setLoadFrom(postgresPipe);
 			FutureTask loadTask = new FutureTask(loadSStore);
