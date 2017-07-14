@@ -88,6 +88,7 @@ public class FromSStoreToPostgres extends FromDatabaseToDatabase {
 	private SStoreSQLHandler sstorehandler = null;
 	
 	private FileFormat fileFormat;
+	private Boolean caching;
 
 	public FromSStoreToPostgres(SStoreSQLConnectionInfo connectionFrom,
 			String fromTable, PostgreSQLConnectionInfo connectionTo,
@@ -97,6 +98,19 @@ public class FromSStoreToPostgres extends FromDatabaseToDatabase {
 				connectionTo, toTable, null);
 		this.sstorehandler = new SStoreSQLHandler(connectionFrom);
 		this.fileFormat = fileFormat;
+		this.caching = false;
+	}
+
+	public FromSStoreToPostgres(SStoreSQLConnectionInfo connectionFrom,
+			String fromTable, PostgreSQLConnectionInfo connectionTo,
+			String toTable,
+			FileFormat fileFormat,
+			Boolean caching) {
+		this.migrationInfo = new MigrationInfo(connectionFrom, fromTable,
+				connectionTo, toTable, null);
+		this.sstorehandler = new SStoreSQLHandler(connectionFrom);
+		this.fileFormat = fileFormat;
+		this.caching = caching;
 	}
 
 	/**
@@ -223,7 +237,7 @@ public class FromSStoreToPostgres extends FromDatabaseToDatabase {
 			} else {
 				trim = "csv";
 			}
-			exportSStore.setAdditionalParams(trim, false);
+			exportSStore.setAdditionalParams(trim, caching);
 			exportSStore.setHandlerTo(new PostgreSQLHandler());
 			exportSStore.setFileFormat(fileFormat);
 			// We cannot set an OutputStream for S-Store, 
@@ -361,13 +375,22 @@ public class FromSStoreToPostgres extends FromDatabaseToDatabase {
 	public static void main(String[] args) throws Exception {
 		LoggerSetup.setLogging();
 		logger.debug("Migrating data from S-Store to PostgreSQL");
+//		ConnectionInfo conInfoFrom = new SStoreSQLConnectionInfo("localhost",
+//				"21212", "", "user", "password");
+//		ConnectionInfo conInfoTo = new PostgreSQLConnectionInfo(
+//				"localhost", "5431", "test", "pguser", "");
+//		FromDatabaseToDatabase migrator = new FromSStoreToPostgres(
+//				(SStoreSQLConnectionInfo)conInfoFrom, "medevents", 
+//				(PostgreSQLConnectionInfo)conInfoTo, "medevents",
+////				FileFormat.BIN_POSTGRES,
+//				FileFormat.CSV);
 		ConnectionInfo conInfoFrom = new SStoreSQLConnectionInfo("localhost",
 				"21212", "", "user", "password");
 		ConnectionInfo conInfoTo = new PostgreSQLConnectionInfo(
 				"localhost", "5431", "test", "pguser", "");
 		FromDatabaseToDatabase migrator = new FromSStoreToPostgres(
-				(SStoreSQLConnectionInfo)conInfoFrom, "medevents", 
-				(PostgreSQLConnectionInfo)conInfoTo, "medevents",
+				(SStoreSQLConnectionInfo)conInfoFrom, "orders", 
+				(PostgreSQLConnectionInfo)conInfoTo, "orders",
 //				FileFormat.BIN_POSTGRES,
 				FileFormat.CSV);
 		MigrationResult result;

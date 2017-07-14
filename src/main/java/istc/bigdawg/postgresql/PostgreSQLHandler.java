@@ -98,7 +98,7 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 			throw new IllegalArgumentException(
 					"Physical connection to PostgreSQL has to be not null.");
 		}
-		this.con = connection;
+		this.setCon(connection);
 	}
 
 	public PostgreSQLHandler(ConnectionInfo conInfo) {
@@ -139,10 +139,10 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 	 *             if could not establish a connection
 	 */
 	public Connection getConnection() throws SQLException {
-		if (con == null) {
+		if (getCon() == null) {
 			if (conInfo != null) {
 				try {
-					con = getConnection(conInfo);
+					setCon(getConnection(conInfo));
 				} catch (SQLException e) {
 					e.printStackTrace();
 					log.error(e.getMessage()
@@ -151,10 +151,10 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 					throw e;
 				}
 			} else {
-				con = PostgreSQLInstance.getConnection();
+				setCon(PostgreSQLInstance.getConnection());
 			}
 		}
-		return con;
+		return getCon();
 	}
 
 	/**
@@ -278,9 +278,9 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 			preparedSt.close();
 			preparedSt = null;
 		}
-		if (con != null) {
-			con.close();
-			con = null;
+		if (getCon() != null) {
+			getCon().close();
+			setCon(null);
 		}
 	}
 
@@ -329,7 +329,7 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 			throws SQLException {
 		getConnection();
 		try {
-			executeStatement(con, statement);
+			executeStatement(getCon(), statement);
 		} finally {
 			try {
 				this.cleanPostgreSQLResources();
@@ -381,7 +381,7 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 			log.debug("ConnectionInfo:\n" + this.conInfo.toString());
 
 			this.getConnection();
-			st = con.createStatement();
+			st = getCon().createStatement();
 			if (st.execute(query)) {
 				rs = st.getResultSet();
 				return Optional.of(new JdbcQueryResult(rs, this.conInfo));
@@ -466,7 +466,7 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 				log.debug("ConnectionInfo: " + this.conInfo.toString() + "\n");
 			}
 
-			st = con.createStatement();
+			st = getCon().createStatement();
 			rs = st.executeQuery(query);
 
 			return new JdbcQueryResult(rs, this.conInfo);
@@ -505,9 +505,9 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 			throws BigDawgCatalogException, SQLException {
 		try {
 			// this.getConnection();
-			con = getConnection((PostgreSQLConnectionInfo) CatalogViewer
-					.getConnectionInfo(defaultSchemaServerDBID));
-			st = con.createStatement();
+			setCon(getConnection((PostgreSQLConnectionInfo) CatalogViewer
+					.getConnectionInfo(defaultSchemaServerDBID)));
+			st = getCon().createStatement();
 			// st.executeUpdate("set search_path to schemas; ");
 			ResultSet rs = st.executeQuery(query);
 			if (rs.next()) {
@@ -549,7 +549,7 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 			throws SQLException {
 		try {
 			this.getConnection();
-			st = con.createStatement();
+			st = getCon().createStatement();
 			if (drop) {
 				st.executeUpdate("drop schema schemas cascade; ");
 				st.executeUpdate("create schema schemas; ");
@@ -590,7 +590,7 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 					+ "pg_attribute.attnum = any(pg_index.indkey) AND indisprimary";
 			// System.out.println(query);
 			getConnection();
-			preparedSt = con.prepareStatement(query);
+			preparedSt = getCon().prepareStatement(query);
 			preparedSt.setString(1, table);
 			rs = preparedSt.executeQuery();
 			while (rs.next()) {
@@ -707,7 +707,7 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 			throws SQLException {
 		try {
 			getConnection();
-			return getCreateTable(con, schemaAndTableName, schemaAndTableName);
+			return getCreateTable(getCon(), schemaAndTableName, schemaAndTableName);
 		} finally {
 			try {
 				this.cleanPostgreSQLResources();
@@ -764,7 +764,7 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 			PostgreSQLSchemaTableName schemaTable = new PostgreSQLSchemaTableName(
 					tableNameInitial);
 			try {
-				preparedSt = con.prepareStatement(
+				preparedSt = getCon().prepareStatement(
 						"SELECT column_name, ordinal_position, is_nullable, "
 								+ "data_type, character_maximum_length, "
 								+ "numeric_precision, numeric_scale "
@@ -854,7 +854,7 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 		try {
 			this.getConnection();
 			try {
-				preparedSt = con.prepareStatement(
+				preparedSt = getCon().prepareStatement(
 						"select exists (select 1 from information_schema.schemata where schema_name=?)");
 				preparedSt.setString(1, schemaName);
 			} catch (SQLException e) {
@@ -1105,7 +1105,7 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 		/* Get the connection if it has not been established. */
 		this.getConnection();
 		try {
-			preparedSt = con.prepareStatement(
+			preparedSt = getCon().prepareStatement(
 					"select exists (select 1 from information_schema.tables where table_schema=? and table_name=?)");
 			preparedSt.setString(1, schemaTable.getSchemaName());
 			preparedSt.setString(2, schemaTable.getTableName());
@@ -1153,7 +1153,7 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 						+ "where o.name ilike ? and "
 						+ "o.logical_db = d.dbid and "
 						+ "d.name ilike 'sstore')";
-				preparedSt = catalogHandler.con.prepareStatement(cmd);
+				preparedSt = catalogHandler.getCon().prepareStatement(cmd);
 				preparedSt.setString(1, tableName);
 				ResultSet rs = preparedSt.executeQuery();
 				rs.next();
@@ -1197,6 +1197,14 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 	@Override
 	public void close() throws Exception {
 		cleanPostgreSQLResources();
+	}
+
+	public Connection getCon() {
+		return con;
+	}
+
+	public void setCon(Connection con) {
+		this.con = con;
 	}
 
 }

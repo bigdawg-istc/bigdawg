@@ -55,3 +55,10 @@ CREATE TABLE IF NOT EXISTS catalog.objects (
        logical_db serial REFERENCES catalog.databases(dbid), -- how was the object created                                                                                               
        physical_db serial REFERENCES catalog.databases(dbid) -- where is it located now?                                                                                                 
 );
+
+-- An object can exist in more than one databases
+CREATE TABLE IF NOT EXISTS catalog.objectplaces (
+       oid serial REFERENCES catalog.objects(oid),
+       dbid serial REFERENCES catalog.databases(dbid),
+       PRIMARY KEY (oid, dbid)
+);

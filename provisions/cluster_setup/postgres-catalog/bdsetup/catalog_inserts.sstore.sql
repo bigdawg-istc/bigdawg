@@ -22,6 +22,7 @@ insert into catalog.engines values (5, 'sstore', 'bigdawg-sstore-data', 21212, '
 -- insert into catalog.databases values(6,3,'scidb_local','scidb','scidb123');
 -- insert into catalog.databases values (7, 4, 'accumulo', 'bigdawg', 'bigdawg');
 insert into catalog.databases values (8, 5, 'sstore', '', '');
+insert into catalog.databases values (9, 1, 'tpcdi', 'postgres', 'test');
 
 -- catalog.shims: shim_id	island_id	engine_id	access_method
 -- insert into catalog.shims values (0, 0, 0, 'N/A');
@@ -105,3 +106,26 @@ insert into catalog.databases values (8, 5, 'sstore', '', '');
 -- S-Store
 insert into catalog.objects values(51, 'medevents', 'subject_id,icustay_id,itemid,charttime,elemid,realtime,cgid,cuid,volume,dose,doseuom,solutionid,solvolume,solunits,route,stopped', 8, 8);
 
+-- S-Store data placement
+insert into catalog.objects values (100, 'DimAccount', 'column names', 9, 9);
+insert into catalog.objects values (101, 'DimAccount01', 'column names', 9, 9);
+insert into catalog.objects values (102, 'DimAccount02', 'column names', 9, 9);
+insert into catalog.objects values (103, 'DimAccount03', 'column names', 9, 9);
+insert into catalog.objects values (104, 'DimAccount04', 'column names', 9, 9);
+insert into catalog.objects values (105, 'DimAccount05', 'column names', 9, 9);
+insert into catalog.objects values (106, 'DimAccount06', 'column names', 9, 9);
+insert into catalog.objects values (107, 'DimAccount07', 'column names', 9, 9);
+insert into catalog.objects values (108, 'DimAccount08', 'column names', 9, 9);
+insert into catalog.objects values (109, 'DimAccount09', 'column names', 9, 9);
+insert into catalog.objects values (110, 'DimAccount10', 'column names', 9, 9);
+
+insert into catalog.objectplaces values (101, 9);
+insert into catalog.objectplaces values (102, 9);
+insert into catalog.objectplaces values (103, 9);
+insert into catalog.objectplaces values (104, 9);
+insert into catalog.objectplaces values (105, 9);
+insert into catalog.objectplaces values (106, 9);
+insert into catalog.objectplaces values (107, 9);
+insert into catalog.objectplaces values (108, 9);
+insert into catalog.objectplaces values (109, 9);
+insert into catalog.objectplaces values (110, 9);
