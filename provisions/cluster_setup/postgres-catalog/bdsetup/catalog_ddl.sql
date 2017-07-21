@@ -62,3 +62,11 @@ CREATE TABLE IF NOT EXISTS catalog.objectplaces (
        dbid serial REFERENCES catalog.databases(dbid),
        PRIMARY KEY (oid, dbid)
 );
+
+-- Timestamps for object access
+CREATE TABLE IF NOT EXISTS catalog.objectaccess (
+	oid serial REFERENCES catalog.objects(oid),
+        ts timestamp,
+	PRIMARY KEY (oid, ts)
+);
+

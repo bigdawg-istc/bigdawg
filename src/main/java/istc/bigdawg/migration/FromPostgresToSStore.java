@@ -168,7 +168,7 @@ public class FromPostgresToSStore extends FromDatabaseToDatabase {
 	    	FutureTask exportTask = new FutureTask(exportPostgres);
 	    	executor.submit(exportTask);
 	    	countExtractedElements = (Long) exportTask.get();
-	    	logger.info("countExtracted: " + countExtractedElements);
+	    	logger.debug("countExtracted: " + countExtractedElements);
 		    
 		    LoadSStore loadSStore = new LoadSStore();
 			loadSStore.setMigrationInfo(migrationInfo);
@@ -179,7 +179,7 @@ public class FromPostgresToSStore extends FromDatabaseToDatabase {
 			FutureTask loadTask = new FutureTask(loadSStore);
 			executor.submit(loadTask);
 			countLoadedElements = (Long) loadTask.get();
-			logger.info("countLoaded: " + countLoadedElements);
+			logger.debug("countLoaded: " + countLoadedElements);
 
     		long endTimeMigration = System.currentTimeMillis();
 			long durationMsec = endTimeMigration - startTimeMigration;

@@ -114,12 +114,11 @@ public class SStoreSQLHandler implements DBHandler, Serializable {
 	String url = conInfo.getUrl();
 	String user = conInfo.getUser();
 	String password = conInfo.getPassword();
-	log.info("url: " + url);
 	try {
             Class.forName("org.voltdb.jdbc.Driver");
 	} catch (ClassNotFoundException ex) {
 		ex.printStackTrace();
-		log.info("SStore jdbc driver is not in the CLASSPATH -> "
+		log.error("SStore jdbc driver is not in the CLASSPATH -> "
 				+ ex.getMessage() + " " + StackTrace.getFullStackTrace(ex),
 				ex);
 	}

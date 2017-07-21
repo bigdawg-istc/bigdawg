@@ -108,16 +108,16 @@ insert into catalog.objects values(51, 'medevents', 'subject_id,icustay_id,itemi
 
 -- S-Store data placement
 insert into catalog.objects values (100, 'DimAccount', 'column names', 9, 9);
-insert into catalog.objects values (101, 'DimAccount01', 'column names', 9, 9);
-insert into catalog.objects values (102, 'DimAccount02', 'column names', 9, 9);
-insert into catalog.objects values (103, 'DimAccount03', 'column names', 9, 9);
-insert into catalog.objects values (104, 'DimAccount04', 'column names', 9, 9);
-insert into catalog.objects values (105, 'DimAccount05', 'column names', 9, 9);
-insert into catalog.objects values (106, 'DimAccount06', 'column names', 9, 9);
-insert into catalog.objects values (107, 'DimAccount07', 'column names', 9, 9);
-insert into catalog.objects values (108, 'DimAccount08', 'column names', 9, 9);
-insert into catalog.objects values (109, 'DimAccount09', 'column names', 9, 9);
-insert into catalog.objects values (110, 'DimAccount10', 'column names', 9, 9);
+insert into catalog.objects values (101, 'DimAccount00', 'column names', 9, 9);
+insert into catalog.objects values (102, 'DimAccount01', 'column names', 9, 9);
+insert into catalog.objects values (103, 'DimAccount02', 'column names', 9, 9);
+insert into catalog.objects values (104, 'DimAccount03', 'column names', 9, 9);
+insert into catalog.objects values (105, 'DimAccount04', 'column names', 9, 9);
+insert into catalog.objects values (106, 'DimAccount05', 'column names', 9, 9);
+insert into catalog.objects values (107, 'DimAccount06', 'column names', 9, 9);
+insert into catalog.objects values (108, 'DimAccount07', 'column names', 9, 9);
+insert into catalog.objects values (109, 'DimAccount08', 'column names', 9, 9);
+insert into catalog.objects values (110, 'DimAccount09', 'column names', 9, 9);
 
 insert into catalog.objectplaces values (101, 9);
 insert into catalog.objectplaces values (102, 9);

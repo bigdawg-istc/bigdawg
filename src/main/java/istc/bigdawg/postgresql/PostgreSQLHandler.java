@@ -129,7 +129,7 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 	public PostgreSQLHandler() {
 		String msg = "Default handler. PostgreSQL parameters are "
 				+ "taken from the BigDAWG configuration file.";
-		log.info(msg);
+		log.debug(msg);
 	}
 
 	/**
