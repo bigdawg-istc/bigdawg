@@ -701,4 +701,8 @@ public class SStoreSQLHandler implements DBHandler, Serializable {
 	   return null;
    }
    
+   public Connection getCon() {
+	   return con;
+   }
+   
 }
