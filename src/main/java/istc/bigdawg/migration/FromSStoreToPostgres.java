@@ -153,7 +153,7 @@ public class FromSStoreToPostgres extends FromDatabaseToDatabase {
 	 *            to which table we want to load the data
 	 * @throws SQLException
 	 */
-	private PostgreSQLSchemaTableName createTargetTableSchema(Connection connectionTo)
+	public PostgreSQLSchemaTableName createTargetTableSchema(Connection connectionTo)
 					throws SQLException {
 		/* separate schema name from the table name */
 		PostgreSQLSchemaTableName schemaTable = new PostgreSQLSchemaTableName(migrationInfo.getObjectTo());
