@@ -2,9 +2,10 @@
 # export FLASK_APP=app.py
 # flask run --host=0.0.0.0
 
-from flask import Flask, redirect, render_template, request, url_for
+from flask import Flask, redirect, render_template, render_template_string, request, url_for
 from DockerClient import DockerClient
 from CatalogClient import CatalogClient
+from QueryClient import QueryClient
 import os
 app = Flask(__name__)
 
@@ -69,6 +70,15 @@ def catalog():
         port=catalog_cred['port']).get_engines()
     return render_template('catalog.html', objects=objects, engines=engines)
 
+@app.route('/query')
+def query():
+    return render_template('query.html')
+
+@app.route('/run_query', methods=["POST"])
+def runQuery():
+    query = request.data
+    result = QueryClient().run_query(query)
+    return render_template_string(result)
 
 # Important Links
 @app.route('/links')
@@ -88,6 +98,7 @@ def links():
         },
     ]
     return render_template('links.html', links=links)
+
 
 
 # Start container

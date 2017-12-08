@@ -1,5 +1,5 @@
 database=bigdawg_catalog
-user=postgres
+user=pguser
 password=test
-host=bigdawg-postgres-catalog
+host=localhost
 port=5400

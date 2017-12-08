@@ -16,6 +16,8 @@
       <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
       <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
     <![endif]-->
+      {% block head_extra %}
+      {% endblock %}
   </head>
   <body>
       <div class="container">
@@ -37,6 +39,7 @@
           {% set navigation_bar = [
               ('status', 'Cluster Status'),
               ('catalog', 'Data Catalog'),
+              ('query', 'Query'),
               ('links', 'Important Links')
           ] -%}
 
