@@ -2,3 +2,4 @@ Flask==0.12
 docker==2.0.2
 psycopg2
 httplib2
+python-dotenv

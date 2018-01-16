@@ -1,5 +1,0 @@
-database=bigdawg_catalog
-user=pguser
-password=test
-host=localhost
-port=5400

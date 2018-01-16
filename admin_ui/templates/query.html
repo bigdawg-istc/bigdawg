@@ -18,11 +18,11 @@
         .result {
             display: none;
         }
-        label {
+        .query label {
             font-weight: normal;
             font-size: 20px;
         }
-        button {
+        .query button {
             margin-top: 10px;
             float: right;
         }
@@ -33,6 +33,21 @@
             font-weight: normal;
             font-size: 20px;
             color: black;
+        }
+
+        .export-csv {
+            text-decoration: underline;
+            color: blue;
+            cursor: pointer;
+        }
+
+        .export-csv:hover {
+            color: darkblue;
+        }
+
+        .export-csv-filename {
+            display: none;
+            clear: both;
         }
 
         .loading {
@@ -99,6 +114,14 @@
       </div>
       <div class="table"></div>
   </div>
+  <div class="export-csv-filename">
+      <form class="form-inline">
+          <div class="form-group">
+              <label for="csv-filename">CSV Filename:</label> <input type="text" class="form-control" id="csv-filename" name="csv-filename" placeholder="bigdawg_export.csv" />
+          </div>
+          <button type="submit" class="btn btn-default">Download</button>
+      </form>
+  </div>
 </div>
 <script>
     /**
@@ -111,6 +134,11 @@
     const resultTableDiv = document.querySelector('.result .table');
     const resultTextareaDiv = document.querySelector('.result .textarea');
     const loadingDiv = document.querySelector('.loading');
+    const exportCSVFilenameDiv = document.querySelector('.export-csv-filename');
+    const exportForm = exportCSVFilenameDiv.querySelector('.form-inline');
+    exportForm.addEventListener('submit', exportCsvFilenameSubmit);
+
+    let curTable = [];
 
     // Set the event listener for the button's click
     button.addEventListener('click', query);
@@ -137,6 +165,7 @@
         resultTableDiv.style.display='none';
         resultTextarea.value = '';
         resultTableDiv.innerHTML='';
+        exportCSVFilenameDiv.style.display='none';
     }
 
     /**
@@ -146,6 +175,60 @@
         resultTableDiv.innerHTML = html;
         resultTableDiv.style.display='block';
         resultDiv.style.display='block';
+        const exportCSVspan = document.querySelector('.export-csv');
+        exportCSVspan.addEventListener('click', showDownloadCsv)
+    }
+
+    function showDownloadCsv() {
+        exportCSVFilenameDiv.style.display ='block';
+        const exportCSVspan = document.querySelector('.export-csv');
+        exportCSVspan.style.display = 'none';
+    }
+
+    function exportCsvFilenameSubmit(e) {
+        e.preventDefault();
+
+        const filename = this.querySelector('#csv-filename').value;
+        if (!filename) {
+            alert("Please input a filename.");
+            return;
+        }
+
+        const csvContents = createCSV();
+        const link = document.createElement('a');
+        link.setAttribute('href', encodeURI(csvContents));
+        link.setAttribute('download', filename);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        this.querySelector('#csv-filename').value = '';
+        exportCSVFilenameDiv.style.display='none';
+        document.querySelector('.export-csv').style.display='inline';
+        return false;
+    }
+
+    function createCSV() {
+        let csv = 'data:text/csv;charset=utf-8,';
+        curTable.forEach(columns => {
+            const finalColumns = columns.map(function(item) {
+                let doubleQuotes = false;
+                if (item.match(/"/)) {
+                    item = item.replace(/"/, '""');
+                    doubleQuotes = true;
+                }
+                if (item.match(/,/)) {
+                    doubleQuotes = true;
+                }
+                if (doubleQuotes) {
+                    return '"' + item + '"';
+                }
+                return item;
+            });
+
+            csv += finalColumns.join(',');
+            csv += "\r\n";
+        });
+        return csv;
     }
 
     /**
@@ -208,6 +291,7 @@
                 maxLength = columns.length;
             }
         });
+        curTable = lineColumns;
         lineColumns.forEach(columns => {
             table += '<tr>';
             columns.forEach(column => {
@@ -222,6 +306,7 @@
             table += '</tr>';
         });
         table += '</table>';
+        table += '<span class="export-csv">Export CSV</span>';
         return table;
     }
 

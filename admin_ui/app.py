@@ -1,32 +1,31 @@
 # To run:
-# export FLASK_APP=app.py
-# flask run --host=0.0.0.0
+#    First:
+#       cp env.sample .env
+#       # Make any necessary adjustments to .env
+#
+#    Then:
+#       export FLASK_APP=app.py
+#       flask run --host=0.0.0.0
 
 from flask import Flask, redirect, render_template, render_template_string, request, url_for
+from dotenv import load_dotenv
+from os.path import join, dirname
 from DockerClient import DockerClient
 from CatalogClient import CatalogClient
 from QueryClient import QueryClient
 import os
-app = Flask(__name__)
+import sys
+dotenv_path = join(dirname(__file__), '.env')
+load_dotenv(dotenv_path)
 
+app = Flask(__name__)
 def read_catalog_credentials():
-    catalog_config_fn = "catalog_config.txt"
-    try:
-        assert(os.path.exists(catalog_config_fn))
-    except:
-        print ("Catalog config file does not exist.")
-        print ("""Example: catalog_config.txt:
-        database=bigdawg_catalog
-        user=pguser
-        password=test
-        host=192.168.99.100
-        port=5400
-        """)
-    catalog_cred = {}
-    with open(catalog_config_fn, "rb") as f:
-        for line in f:
-            key,val = line.decode().split("=")
-            catalog_cred[key.strip()] = val.strip()
+    catalog_cred = { "database": os.environ.get('CATALOG_DATABASE'),
+                     "user": os.environ.get('CATALOG_USER'),
+                     "password": os.environ.get('CATALOG_PASSWORD'),
+                     "host": os.environ.get('CATALOG_HOST'),
+                     "port": os.environ.get('CATALOG_PORT')
+                     }
     return catalog_cred
 
 # Get catalog credentials for the CatalogClient
@@ -77,8 +76,11 @@ def query():
 @app.route('/run_query', methods=["POST"])
 def runQuery():
     query = request.data
-    result = QueryClient().run_query(query)
-    return render_template_string(result)
+    result = QueryClient(os.environ.get('QUERY_SCHEME'),os.environ.get('QUERY_HOST'),int(os.environ.get('QUERY_PORT'))).run_query(query)
+    if sys.version_info >= (3, 0):
+        return render_template_string(result.decode("utf-8"))
+    else:
+        return render_template_string(result)
 
 # Important Links
 @app.route('/links')
