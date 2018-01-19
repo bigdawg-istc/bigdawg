@@ -14,7 +14,6 @@ from DockerClient import DockerClient
 from CatalogClient import CatalogClient
 from QueryClient import QueryClient
 import os
-import sys
 dotenv_path = join(dirname(__file__), '.env')
 load_dotenv(dotenv_path)
 
@@ -77,10 +76,7 @@ def query():
 def runQuery():
     query = request.data
     result = QueryClient(os.environ.get('QUERY_SCHEME'),os.environ.get('QUERY_HOST'),int(os.environ.get('QUERY_PORT'))).run_query(query)
-    if sys.version_info >= (3, 0):
-        return render_template_string(result.decode("utf-8"))
-    else:
-        return render_template_string(result)
+    return render_template_string(result)
 
 # Important Links
 @app.route('/links')

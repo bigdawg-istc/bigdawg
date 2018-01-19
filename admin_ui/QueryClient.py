@@ -1,4 +1,5 @@
 import httplib2
+import sys
 
 class QueryClient:
     version = 'auto'
@@ -12,6 +13,10 @@ class QueryClient:
         h = httplib2.Http()
         resp, content = h.request(self.scheme + "://" + self.host + ":" + str(self.port) + "/bigdawg/query",
                                   "POST", body=query, headers={'content-type':'application/json'})
+
+        if sys.version_info >= (3, 0):
+            content = content.decode("utf-8")
+
         if resp.status != 200:
             response = "Error:\n   Status: %d\n" %resp.status
             if content != '':
