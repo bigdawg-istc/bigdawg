@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 from os.path import join, dirname
 from DockerClient import DockerClient
 from CatalogClient import CatalogClient
+from SchemaClient import SchemaClient
 from QueryClient import QueryClient
 import os
 dotenv_path = join(dirname(__file__), '.env')
@@ -27,8 +28,42 @@ def read_catalog_credentials():
                      }
     return catalog_cred
 
+def read_schema_credentials():
+    schema_cred = { "database": os.environ.get('SCHEMA_DATABASE'),
+                     "user": os.environ.get('SCHEMA_USER') or os.environ.get('CATALOG_USER'),
+                     "password": os.environ.get('SCHEMA_PASSWORD') or os.environ.get('CATALOG_PASSWORD'),
+                     "host": os.environ.get('SCHEMA_HOST') or os.environ.get('CATALOG_HOST'),
+                     "port": os.environ.get('SCHEMA_PORT') or os.environ.get('CATALOG_PORT')
+                     }
+    return schema_cred
+
 # Get catalog credentials for the CatalogClient
 catalog_cred = read_catalog_credentials()
+schema_cred = read_schema_credentials()
+
+def getCatalogData():
+    catalog_client = CatalogClient(
+        database=catalog_cred['database'],
+        user=catalog_cred['user'],
+        password=catalog_cred['password'],
+        host=catalog_cred['host'],
+        port=catalog_cred['port'])
+
+    objects = catalog_client.get_objects()
+    engines = catalog_client.get_engines()
+    databases = catalog_client.get_databases()
+    return {'objects': objects, 'engines': engines, 'databases': databases}
+
+def getSchemaData():
+    schema_client = SchemaClient(
+        database=schema_cred['database'],
+        user=schema_cred['user'],
+        password=schema_cred['password'],
+        host=schema_cred['host'],
+        port=schema_cred['port'])
+
+    datatypes = schema_client.get_datatypes()
+    return {'datatypes': datatypes}
 
 # Cluster Status
 @app.route('/')
@@ -40,12 +75,9 @@ def status():
 # Data Catalog
 @app.route('/catalog')
 def catalog():
-    objects = CatalogClient(
-        database=catalog_cred['database'],
-        user=catalog_cred['user'],
-        password=catalog_cred['password'],
-        host=catalog_cred['host'],
-        port=catalog_cred['port']).get_objects()
+    catalog_data = getCatalogData()
+    objects = catalog_data['objects']
+    engines = catalog_data['engines']
     # Template expects results like:
     # objects = [
     #     (0, 'mimic2v26.a_chartdurations', 'subject_id,icustay_id,itemid,elemid,starttime,startrealtime,endtime,cuid,duration', 2, 3), 
@@ -60,13 +92,14 @@ def catalog():
     #     (9, 'mimic2v26.d_careunits', 'cuid,label', 2, 2), 
     #     (10, 'mimic2v26.d_chartitems', 'itemid,label,category,description', 2, 2), 
     # ]
-    engines = CatalogClient(
-        database=catalog_cred['database'],
-        user=catalog_cred['user'],
-        password=catalog_cred['password'],
-        host=catalog_cred['host'],
-        port=catalog_cred['port']).get_engines()
     return render_template('catalog.html', objects=objects, engines=engines)
+
+@app.route('/import')
+def import_page():
+    catalog_data = getCatalogData()
+    schema_data = getSchemaData()
+    return render_template('import.html', objects=catalog_data['objects'], databases=catalog_data['databases'], datatypes=schema_data['datatypes'])
+
 
 @app.route('/query')
 def query():

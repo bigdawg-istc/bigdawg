@@ -63,7 +63,7 @@
          * Simple animation written from scratch for the loading spinner
          *  -- probably can be fine tuned some
          */
-        @keyframes spin-loader {
+        @keyframes spin-loader {`
             0% { transform: rotate(0deg) translateX(-2px) translateY(-2px); }
             12.5% { transform: rotate(-45deg) translateX(-12.5px) translateY(5px)}
             25% { transform: rotate(-90deg) translateX(-25px) translateY(0px); }
@@ -97,6 +97,7 @@
             border-radius: 20px;
         }
     </style>
+    <script src="static/js/util.js"></script>
 {% endblock %}
 
 {% block content %}
@@ -314,16 +315,6 @@
         table += '</table>';
         table += '<span class="export-csv">Export CSV</span>';
         return table;
-    }
-
-    /**
-     * need to add characters if necessary for valid html
-     */
-    function escapeSpecial(text) {
-        text = text.replace(/&/,'&amp;');
-        text = text.replace(/</,'&lt;');
-        text = text.replace(/>/,'&gt;');
-        return text;
     }
 </script>
 {% endblock %}
