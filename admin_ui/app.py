@@ -100,6 +100,11 @@ def import_page():
     schema_data = getSchemaData()
     return render_template('import.html', objects=catalog_data['objects'], databases=catalog_data['databases'], datatypes=schema_data['datatypes'])
 
+@app.route('/import_csv')
+def import_csv():
+    data = request.data
+    result = "{ success: true }"
+    return render_template_string(result)
 
 @app.route('/query')
 def query():
