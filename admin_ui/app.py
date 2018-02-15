@@ -14,7 +14,7 @@ from DockerClient import DockerClient
 from CatalogClient import CatalogClient
 from SchemaClient import SchemaClient
 from QueryClient import QueryClient
-import os
+import os, json
 dotenv_path = join(dirname(__file__), '.env')
 load_dotenv(dotenv_path)
 
@@ -41,29 +41,44 @@ def read_schema_credentials():
 catalog_cred = read_catalog_credentials()
 schema_cred = read_schema_credentials()
 
-def getCatalogData():
-    catalog_client = CatalogClient(
+def getCatalogClient():
+    return CatalogClient(
         database=catalog_cred['database'],
         user=catalog_cred['user'],
         password=catalog_cred['password'],
         host=catalog_cred['host'],
         port=catalog_cred['port'])
 
+def getCatalogData():
+    catalog_client = getCatalogClient()
     objects = catalog_client.get_objects()
     engines = catalog_client.get_engines()
     databases = catalog_client.get_databases()
     return {'objects': objects, 'engines': engines, 'databases': databases}
 
-def getSchemaData():
-    schema_client = SchemaClient(
+def getSchemaClient():
+    return SchemaClient(
         database=schema_cred['database'],
         user=schema_cred['user'],
         password=schema_cred['password'],
         host=schema_cred['host'],
         port=schema_cred['port'])
 
+
+def getSchemaData():
+    schema_client = getSchemaClient()
     datatypes = schema_client.get_datatypes()
     return {'datatypes': datatypes}
+
+def getFieldsData(oid):
+    catalog_client = getCatalogClient()
+    object = catalog_client.get_object(oid)
+    physical_db = object[4]
+    database = catalog_client.get_database(physical_db)
+    engine_id = database[0]
+    engine = catalog_client.get_engine(engine_id)
+    host = engine[1]
+
 
 # Cluster Status
 @app.route('/')
@@ -103,6 +118,9 @@ def import_page():
 @app.route('/import_csv')
 def import_csv():
     data = request.data
+    dataImport = json.loads(data)
+    oid = dataImport['oid']
+
     result = "{ success: true }"
     return render_template_string(result)
 

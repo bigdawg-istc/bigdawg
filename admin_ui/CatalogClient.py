@@ -42,6 +42,31 @@ class CatalogClient:
         cur.close()
         return rows
 
+    def get_object(self, oid):
+        """
+        Reads objects table and returns all rows.
+        :return: rows: an iterable of tuples, where each element is a value of the row
+        """
+        cur = self.conn.cursor()
+        cur.execute("SELECT name, fields, logical_db, physical_db from catalog.objects where oid=" + str(oid))
+        rows = cur.fetchall()
+        cur.close()
+        return rows[0]
+
+    def get_database(self, dbid):
+        cur = self.conn.cursor()
+        cur.execute("SELECT engine_id, name, userid, password from catalog.databases where dbid=" + str(dbid))
+        rows = cur.fetchall()
+        cur.close()
+        return rows[0]
+
+    def get_engine(self, eid):
+        cur = self.conn.cursor()
+        cur.execute("SELECT name, host, port from catalog.engines where eid=" + str(eid))
+        rows = cur.fetchall()
+        cur.close()
+        return rows[0]
+
     def get_databases(self):
         """
         Reads databases table and returns all rows.
