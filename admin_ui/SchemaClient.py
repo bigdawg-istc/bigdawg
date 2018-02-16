@@ -1,5 +1,5 @@
 """
-Utilities for viewing Catalog contents for the BigDAWG Administrative Interface
+Utilities for viewing Schema contents for the BigDAWG Administrative Interface
 
 See example usage at the bottom.
 """
@@ -38,6 +38,17 @@ class SchemaClient:
         """
         cur = self.conn.cursor()
         cur.execute("SELECT table_schema, table_name, column_name, data_type from information_schema.columns where table_schema not in ('information_schema', 'pg_catalog')")
+        rows = cur.fetchall()
+        cur.close()
+        return rows
+
+    def get_datatypes_for_table(self, table_schema, table_name):
+        """
+        Reads objects table and returns all rows.
+        :return: rows: an iterable of tuples, where each element is a value of the row
+        """
+        cur = self.conn.cursor()
+        cur.execute("SELECT table_schema, table_name, column_name, data_type from information_schema.columns where table_schema = '" + table_schema + "' and table_name = '" + table_name + "'")
         rows = cur.fetchall()
         cur.close()
         return rows

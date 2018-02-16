@@ -73,8 +73,14 @@ def getSchemaData():
 def getFieldsData(oid):
     catalog_client = getCatalogClient()
     object = catalog_client.get_object(oid)
+    if not object:
+        return null
+
     physical_db = object[4]
     database = catalog_client.get_database(physical_db)
+    if not database:
+        return null
+
     engine_id = database[0]
     engine = catalog_client.get_engine(engine_id)
     host = engine[1]
@@ -117,10 +123,6 @@ def import_page():
 
 @app.route('/import_csv')
 def import_csv():
-    data = request.data
-    dataImport = json.loads(data)
-    oid = dataImport['oid']
-
     result = "{ success: true }"
     return render_template_string(result)
 

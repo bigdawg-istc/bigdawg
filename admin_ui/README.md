@@ -18,9 +18,16 @@ You can check which version of python you have installed by doing:
 
    * python --version
 
+If there's no python you may need to install it
+
+   * Ubuntu / Debian-based
+      - sudo apt-get install -y python python-pip
+
 You may want to install virtualenv to manage environments first:
 
-   * pip install virtualenv
+   * sudo pip install virtualenv
+      - If there's no pip, see above about installing python-pip
+
    * virtualenv -p /usr/bin/python venv
 
 Then each time you want to use the program, do this first:

@@ -5,7 +5,6 @@ See example usage at the bottom.
 """
 import psycopg2
 
-
 class CatalogClient:
     """
     Handles interaction with the Catalog database
@@ -51,6 +50,9 @@ class CatalogClient:
         cur.execute("SELECT name, fields, logical_db, physical_db from catalog.objects where oid=" + str(oid))
         rows = cur.fetchall()
         cur.close()
+        if not row:
+            return null
+
         return rows[0]
 
     def get_database(self, dbid):
@@ -58,6 +60,9 @@ class CatalogClient:
         cur.execute("SELECT engine_id, name, userid, password from catalog.databases where dbid=" + str(dbid))
         rows = cur.fetchall()
         cur.close()
+        if not rows:
+            return null
+
         return rows[0]
 
     def get_engine(self, eid):
@@ -65,6 +70,8 @@ class CatalogClient:
         cur.execute("SELECT name, host, port from catalog.engines where eid=" + str(eid))
         rows = cur.fetchall()
         cur.close()
+        if not rows:
+            return null
         return rows[0]
 
     def get_databases(self):
