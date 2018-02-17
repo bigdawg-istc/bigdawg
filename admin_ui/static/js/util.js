@@ -7,3 +7,14 @@ function escapeSpecial(text) {
     text = text.replace(/>/,'&gt;');
     return text;
 }
+
+function showMsg(ele, msg) {
+    ele.style.display = 'block';
+    ele.innerText = msg;
+}
+
+function hide(ele) {
+    ele.style.display = 'none';
+    ele.innerText = '';
+}
+

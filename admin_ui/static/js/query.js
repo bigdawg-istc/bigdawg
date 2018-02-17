@@ -10,6 +10,7 @@ const resultTextareaDiv = document.querySelector('.result .textarea');
 const loadingDiv = document.querySelector('.loading');
 const exportCSVFilenameDiv = document.querySelector('.export-csv-filename');
 const exportForm = exportCSVFilenameDiv.querySelector('.form-inline');
+const queryErrorEle = document.getElementById('query-error')
 exportForm.addEventListener('submit', exportCsvFilenameSubmit);
 
 let curTable = [];
@@ -30,16 +31,23 @@ function stopLoading() {
     loadingDiv.style.display = 'none';
 }
 
+function showError(msg) {
+    showMsg(queryErrorEle, msg);
+}
+
+function hideError() {
+    hide(queryErrorEle)
+}
+
 /**
  * Clears our error and success results
  */
 function clearResults() {
     resultDiv.style.display='none';
-    resultTextareaDiv.style.display='none';
     resultTableDiv.style.display='none';
-    resultTextarea.value = '';
     resultTableDiv.innerHTML='';
     exportCSVFilenameDiv.style.display='none';
+    hideError();
 }
 
 /**
@@ -142,15 +150,15 @@ function query() {
                 displayResultTable(html);
                 return;
             }
-            displayTextarea(result);
+            showError(result);
         }, response => {
             stopLoading();
-            displayTextarea("Unknown error - see Javascript console for more details");
+            showError("Unknown error - see Javascript console for more details");
             console.log('error - could not parse response to text', response);
         });
     }, response => {
         stopLoading();
-        displayTextarea("Unknown response - are we offline? - see Javascript console for more details");
+        showError("Unknown response - are we offline? - see Javascript console for more details");
         console.log(response);
     });
 }

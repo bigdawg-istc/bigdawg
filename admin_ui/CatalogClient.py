@@ -20,6 +20,7 @@ class CatalogClient:
         :param port: port
         """
         self.conn = psycopg2.connect(database=database, user=user, password=password, host=host, port=port)
+        self.host = host
         print ("Opened database successfully")
 
     def __del__(self):
@@ -29,6 +30,14 @@ class CatalogClient:
         """
         self.conn.close()
         print ("Connection closed")
+
+    @property
+    def host(self):
+        return self._host
+
+    @host.setter
+    def host(self, value):
+        self._host = value
 
     def get_objects(self):
         """
@@ -50,7 +59,7 @@ class CatalogClient:
         cur.execute("SELECT name, fields, logical_db, physical_db from catalog.objects where oid=" + str(oid))
         rows = cur.fetchall()
         cur.close()
-        if not row:
+        if not rows:
             return null
 
         return rows[0]
@@ -67,7 +76,7 @@ class CatalogClient:
 
     def get_engine(self, eid):
         cur = self.conn.cursor()
-        cur.execute("SELECT name, host, port from catalog.engines where eid=" + str(eid))
+        cur.execute("SELECT name, host, port, connection_properties from catalog.engines where eid=" + str(eid))
         rows = cur.fetchall()
         cur.close()
         if not rows:

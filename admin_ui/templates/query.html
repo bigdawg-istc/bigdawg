@@ -8,50 +8,73 @@
          * some simple stylings
          */
         textarea {
-            width: 100%;
-            height: 100px;
+          width: 100%;
+          height: 100px;
         }
         .query, .result {
-            margin: 20px 0;
-            clear: both;
+          margin: 20px 0;
+          clear: both;
         }
         .result {
-            display: none;
+          display: none;
         }
         .query label {
-            font-weight: normal;
-            font-size: 20px;
+          font-weight: normal;
+          font-size: 20px;
         }
         .query button {
-            margin-top: 10px;
-            float: right;
+          margin-top: 10px;
+          float: right;
         }
         table {
-            border: 1px solid #ccc;
+          border: 1px solid #ccc;
         }
         table caption {
-            font-weight: normal;
-            font-size: 20px;
-            color: black;
+          font-weight: normal;
+          font-size: 20px;
+          color: black;
+        }
+
+        div.example {
+          clear: both;
+        }
+
+        #show-example {
+          clear: both;
+          display: none;
+          text-decoration: underline;
+          color: blue;
+          cursor: pointer;
+        }
+
+        #hide-example {
+          float: right;
+          text-decoration: underline;
+          color: blue;
+          cursor: pointer;
         }
 
         .export-csv {
-            text-decoration: underline;
-            color: blue;
-            cursor: pointer;
+          text-decoration: underline;
+          color: blue;
+          cursor: pointer;
         }
 
         .export-csv:hover {
-            color: darkblue;
+          color: darkblue;
         }
 
         .export-csv-filename {
-            display: none;
-            clear: both;
+          display: none;
+          clear: both;
+        }
+        #query-error {
+          display: none;
+          margin: 20px 0;
         }
     </style>
-    <link rel="stylesheet" href="static/css/general.css" />
-    <script src="static/js/util.js"></script>
+    <link rel="stylesheet" href="static/css/general.css?v={{ versions['general.css'] }}" />
+    <script src="static/js/util.js?v={{ versions['util.js'] }}"></script>
 {% endblock %}
 
 {% block content %}
@@ -60,15 +83,20 @@
     <label for="query">Query:</label>
     <textarea id="query" name="query" rows="4"></textarea>
     <button class="btn btn-primary">Run</button>
+    <div class="example">
+      <h4>Example:</h4>
+      <pre id="example">bdrel(select * from mimic2v26.d_patients limit 4;)</pre>
+      <div id="hide-example">
+        hide
+      </div>
+    </div>
+    <div id="show-example">Show example</div>
   </div>
   <div class="loading"></div>
-  <div class="result" rows="10">
-      <div class="textarea">
-          <label for="result">Result:</label>
-          <textarea id="result" name="result" readonly="readonly"></textarea>
-      </div>
+  <div class="result">
       <div class="table"></div>
   </div>
+  <div id="query-error" class="alert alert-danger" role="alert"></div>
   <div class="export-csv-filename">
       <form class="form-inline">
           <div class="form-group">
@@ -78,5 +106,5 @@
       </form>
   </div>
 </div>
-<script src="static/js/query.js"></script>
+<script src="static/js/query.js?v={{ versions['query.js'] }}"></script>
 {% endblock %}

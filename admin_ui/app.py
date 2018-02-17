@@ -14,6 +14,7 @@ from DockerClient import DockerClient
 from CatalogClient import CatalogClient
 from SchemaClient import SchemaClient
 from QueryClient import QueryClient
+from Importer import Importer
 import os, json
 dotenv_path = join(dirname(__file__), '.env')
 load_dotenv(dotenv_path)
@@ -40,7 +41,12 @@ def read_schema_credentials():
 # Get catalog credentials for the CatalogClient
 catalog_cred = read_catalog_credentials()
 schema_cred = read_schema_credentials()
-
+versions = {
+    "util.js": os.stat('static/js/util.js').st_mtime,
+    "query.js": os.stat('static/js/query.js').st_mtime,
+    "import.js": os.stat('static/js/import.js').st_mtime,
+    "general.css": os.stat('static/css/general.css').st_mtime
+}
 def getCatalogClient():
     return CatalogClient(
         database=catalog_cred['database'],
@@ -69,22 +75,6 @@ def getSchemaData():
     schema_client = getSchemaClient()
     datatypes = schema_client.get_datatypes()
     return {'datatypes': datatypes}
-
-def getFieldsData(oid):
-    catalog_client = getCatalogClient()
-    object = catalog_client.get_object(oid)
-    if not object:
-        return null
-
-    physical_db = object[4]
-    database = catalog_client.get_database(physical_db)
-    if not database:
-        return null
-
-    engine_id = database[0]
-    engine = catalog_client.get_engine(engine_id)
-    host = engine[1]
-
 
 # Cluster Status
 @app.route('/')
@@ -119,16 +109,17 @@ def catalog():
 def import_page():
     catalog_data = getCatalogData()
     schema_data = getSchemaData()
-    return render_template('import.html', objects=catalog_data['objects'], databases=catalog_data['databases'], datatypes=schema_data['datatypes'])
+    return render_template('import.html', versions=versions, objects=catalog_data['objects'], databases=catalog_data['databases'], datatypes=schema_data['datatypes'])
 
-@app.route('/import_csv')
+@app.route('/import_csv', methods=["POST"])
 def import_csv():
-    result = "{ success: true }"
+    importer = Importer(getCatalogClient(), getSchemaClient())
+    result = importer.import_data(request.data)
     return render_template_string(result)
 
 @app.route('/query')
 def query():
-    return render_template('query.html')
+    return render_template('query.html', versions=versions)
 
 @app.route('/run_query', methods=["POST"])
 def runQuery():
@@ -155,8 +146,6 @@ def links():
     ]
     return render_template('links.html', links=links)
 
-
-
 # Start container
 @app.route('/startContainer', methods=["POST"])
 def startContainer():
@@ -164,7 +153,6 @@ def startContainer():
     container_name = request.form['container']
     DockerClient().start_container(container_name)
     return redirect(url_for('status'))
-
 
 # Stop container
 @app.route('/stopContainer', methods=["POST"])
@@ -177,4 +165,4 @@ def stopContainer():
 if __name__ == '__main__':
     # Use this line to run the server visible to external connections.
     # app.run(host='0.0.0.0')
-    app.run
+    app.run(threaded=true)

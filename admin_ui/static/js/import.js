@@ -5,7 +5,11 @@ const desiredFormatWrapEle = document.getElementById('desired-format-wrap');
 const fileEle = document.querySelector('input[type=file]');
 const headerEle = document.querySelector('input[type=checkbox]');
 const buttonEle = document.querySelector('button.btn-primary');
-const formEle = document.querySelector('form');
+const formEle = document.querySelector('form.upload-form');
+const loadingEle = document.querySelector('div.loading');
+const uploadErrorEle = document.getElementById('upload-error');
+const uploadSuccessEle = document.getElementById('upload-success');
+const filenameEle = document.getElementById('filename');
 
 formEle.addEventListener('submit', (e) => { e.preventDefault(); return false; });
 
@@ -16,20 +20,27 @@ fileEle.addEventListener('change', checkFile);
 buttonEle.addEventListener('click', uploadCsv);
 headerEle.addEventListener('change', verifyHeader);
 
+let firstFetch = false;
+
 function uploadCsv() {
+    hideError();
+    hideSuccess();
+    startLoading();
     const csv = currentCsv;
-    const oid = getSelected(objectEle);
+    const oid = parseInt(getSelected(objectEle));
     if (null === oid) {
-        alert("No object selected.");
+        stopLoading();
+        showError("No object selected.");
         return;
     }
 
     if (currentCsv === null) {
+        stopLoading();
         let msg = "CSV not yet uploaded";
         if (fileEle.files && fileEle.files[0]) {
             msg = "CSV not in proper format, please fix first";
         }
-        alert(msg);
+        showError(msg);
         return;
     }
 
@@ -39,7 +50,83 @@ function uploadCsv() {
     const uploadData = { csv: csv,
                          oid: oid };
     const upload = JSON.stringify(uploadData);
-    console.log(upload);
+    doUpload(upload);
+}
+
+function startLoading() {
+    buttonEle.disabled = true;
+    loadingEle.style.visibility = 'visible';
+}
+
+function stopLoading() {
+    buttonEle.disabled = false;
+    loadingEle.style.visibility = 'hidden';
+}
+
+function showError(msg) {
+    showMsg(uploadErrorEle, msg);
+}
+
+function hideError() {
+    hide(uploadErrorEle)
+}
+
+function hideSuccess() {
+    hide(uploadSuccessEle);
+}
+
+function doUpload(val) {
+    fetch('/import_csv', {
+        method: 'post',
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: val
+    }).then(response => {
+        response.text().then(result => {
+            stopLoading();
+
+            try {
+                result = JSON.parse(result);
+            }
+            catch (e) {
+                showError("Error parsing response, please see console for details.");
+                console.log('response', response, result, e);
+                return;
+            }
+            if (!result) {
+                showError("Could not parse response, please see console for details.");
+                console.log('response', response, result);
+                return;
+            }
+
+            if (result.success) {
+                showMsg(uploadSuccessEle, 'Success');
+                return;
+            }
+
+            showError('Error: ' + result.error);
+        }, result => {
+            showError("Could not parse response - see console for more details");
+            console.log('error - could not parse response to text', result, response);
+            stopLoading();
+        });
+    }, response => {
+        console.log(response);
+        showError("Bad response - see console for more details");
+        stopLoading();
+    });
+
+}
+
+function setFilename(name) {
+    filenameEle.innerText = name;
+    filenameEle.style.display = 'inline-block';
+}
+
+function resetFilename() {
+    filenameEle.innerText = '';
+    filenameEle.style.display = 'none';
 }
 
 function checkFile() {
@@ -48,6 +135,10 @@ function checkFile() {
     }
 
     const file = fileEle.files[0];
+    if (file.name) {
+        setFilename(file.name);
+    }
+    console.log(file, file.name);
     readFile(file);
 }
 
@@ -67,7 +158,7 @@ function verifyHeader() {
     }
 
     if (currentCsv.length === 0) {
-        alert("CSV is empty");
+        showError("CSV is empty");
         return;
     }
 
@@ -86,7 +177,7 @@ function verifyHeader() {
     });
 
     if (!header) {
-        alert("CSV headings don't match with the list of fields above");
+        showError("CSV headings don't match with the list of fields above");
         headerEle.checked = false;
         return false;
     }
@@ -94,17 +185,15 @@ function verifyHeader() {
     return true;
 }
 
-
-
 function getObjectInfo() {
-    const objectSelected = getSelected(objectEle);
+    const objectSelected = parseInt(getSelected(objectEle));
     if (null === objectSelected) {
-        alert("Error: no selected object");
+        showError("Error: no selected object");
         return;
     }
     const object = objectsById[objectSelected];
     if (!object) {
-        alert("No object found for oid: " + objectSelected);
+        showError("No object found for oid: " + objectSelected);
         return;
     }
     const fields = object.fields;
@@ -114,20 +203,22 @@ function getObjectInfo() {
 }
 
 function processCsv(e) {
+    hideError();
+    hideSuccess();
     currentCsv = null;
     buttonEle.style.visibility = 'hidden';
 
     const data = this.result;
-    const objectSelected = getSelected(objectEle);
+    const objectSelected = parseInt(getSelected(objectEle));
 
     if (null === objectSelected) {
-        alert("Error: no selected object");
+        showError("Error: no selected object");
         fileEle.value = null;
         return;
     }
     const object = objectsById[objectSelected];
     if (!object) {
-        alert("No object found for oid: " + objectSelected);
+        showError("No object found for oid: " + objectSelected);
         fileEle.value = null;
         return;
     }
@@ -147,7 +238,7 @@ function processCsv(e) {
         }
         const parsedLine = parseCsvLine(line);
         if (parsedLine.length !== fieldsCount) {
-            errors.push("Line " + (idx + 1) + " has wrong # of fields: " + parsedLine.length + " while expecting " + fieldsCount);
+            errors.push("Line " + (idx + 1) + " has wrong number of fields: " + parsedLine.length + " while expecting " + fieldsCount);
             return;
         }
         if (idx === 0) {
@@ -184,7 +275,11 @@ function processCsv(e) {
         csvFinal.push(parsedLine);
     });
     if (errors.length) {
-        alert(errors.join("\n"));
+        if (errors.length > 10) {
+            errors.splice(10);
+            errors.push("...");
+        }
+        showError(errors.join("\n"));
         return;
     }
     currentCsv = csvFinal;
@@ -232,6 +327,9 @@ function resetDesiredFormat() {
     buttonEle.style.visibility = 'hidden';
     fileEle.value = null;
     headerEle.checked = false;
+    resetFilename();
+    hideError();
+    hideSuccess();
 }
 
 function setDesiredFormat() {
@@ -261,7 +359,7 @@ function getSelected(ele) {
 
 function populateObjects() {
     const defaultHtml = '<option>Select Database First</option>';
-    const selectedDatabase = getSelected(databaseEle);
+    const selectedDatabase = parseInt(getSelected(databaseEle));
     if (null === selectedDatabase) {
         objectEle.innerHTML = defaultHtml;
         resetDesiredFormat();
