@@ -124,7 +124,7 @@ public class Utils {
 			String table) throws SQLException {
 		PostgreSQLHandler handler = new PostgreSQLHandler(con);
 		JdbcQueryResult qr = handler
-				.executeQueryPostgreSQL("select count(*) from " + table);
+				.executeQueryOnEngine("select count(*) from " + table);
 		return Long.valueOf(qr.getRows().get(0).get(0));
 	}
 

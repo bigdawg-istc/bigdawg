@@ -506,11 +506,11 @@ public class SQLExpressionUtils {
 	    expr.accept(deparser);
 	    return new ArrayList<>(attributes);
 	}
-	
+
 	public static String getRelevantFilterSections(Expression expr, Map<String, String> leftNames, Map<String, String> rightNames) throws JSQLParserException {
-		
+
 		final Set<String> filters = new HashSet<>();
-	
+
 		SQLExpressionHandler deparser = new SQLExpressionHandler() {
 	        
 			private void processBinary(String original, Expression left, Expression right, String operator) {
@@ -519,17 +519,17 @@ public class SQLExpressionUtils {
 					
 					List <String> llc = getAttributes(left).stream().filter(d -> d.getTable() != null).map(d -> d.getTable().toString()).collect(Collectors.toList());
 					List <String> rlc = getAttributes(right).stream().filter(d -> d.getTable() != null).map(d -> d.getTable().toString()).collect(Collectors.toList());
-					
+
 					Set<String> allLeftNames = new HashSet<>(leftNames.keySet());
 					Set<String> allRightNames = new HashSet<>(rightNames.keySet());
 					allLeftNames.addAll(leftNames.values());
 					allRightNames.addAll(rightNames.values());
-					
+
 					boolean lcl = !Collections.disjoint(llc, allLeftNames);
 					boolean rcr = !Collections.disjoint(rlc, allRightNames);
 					boolean lcr = !Collections.disjoint(llc, allRightNames);
 					boolean rcl = !Collections.disjoint(rlc, allLeftNames);
-					
+
 					if (lcl && rcr || lcr && rcl) {
 						filters.add(original);
 					} else {
@@ -541,49 +541,46 @@ public class SQLExpressionUtils {
 							if ((lcl || lcr) && rlc.isEmpty()) {
 								filters.add(original);
 							}
-							
 							if ((rcl || rcr) && llc.isEmpty()) {
 								filters.add(original);
 							}
 						}
 					}
-					
-					
 				} catch (JSQLParserException e) {
 					e.printStackTrace();
 				}
 			}
-			
+
 			@Override
 			public void visitOldOracleJoinBinaryExpression(OldOracleJoinBinaryExpression expression, String operator) {
-				
+
 				processBinary(expression.toString(), expression.getLeftExpression(), expression.getRightExpression(), operator);
-				
-				
+
+
 			}
-			
+
 			@Override
 			protected void visitBinaryExpression(BinaryExpression expression, String operator) {
 				processBinary(expression.toString(), expression.getLeftExpression(), expression.getRightExpression(), operator);
 			}
-			
+
 			@Override
-		    public void visit(CaseExpression caseExpression) {
+			public void visit(CaseExpression caseExpression) {
 				if (caseExpression.getSwitchExpression() != null) caseExpression.getSwitchExpression().accept(this);
-		        for (int i = 0; i < caseExpression.getWhenClauses().size(); i++) {
-		        	((WhenClause)caseExpression.getWhenClauses().get(i)).getWhenExpression().accept(this);
-		        	((WhenClause)caseExpression.getWhenClauses().get(i)).getThenExpression().accept(this);;
-		        }
-		        if (caseExpression.getElseExpression() != null) caseExpression.getElseExpression().accept(this);
-		    }
-			
+				for (int i = 0; i < caseExpression.getWhenClauses().size(); i++) {
+					((WhenClause)caseExpression.getWhenClauses().get(i)).getWhenExpression().accept(this);
+					((WhenClause)caseExpression.getWhenClauses().get(i)).getThenExpression().accept(this);;
+				}
+				if (caseExpression.getElseExpression() != null) caseExpression.getElseExpression().accept(this);
+			}
+
 			@Override
 			public void visit(InExpression inExpression) {
 				inExpression.getLeftExpression().accept(this);
 				if (inExpression.getLeftItemsList() != null) inExpression.getLeftItemsList().accept(this);
 				if (inExpression.getRightItemsList() != null) inExpression.getRightItemsList().accept(this);
 			}
-			
+
 			@Override public void visit(ExpressionList expressionList) {for (Iterator<Expression> iter = expressionList.getExpressions().iterator(); iter.hasNext();) iter.next().accept(this);}
 			@Override public void visit(Parenthesis parenthesis) {parenthesis.getExpression().accept(this);}
 			@Override public void visit(Function function) {function.getParameters().accept(this);}

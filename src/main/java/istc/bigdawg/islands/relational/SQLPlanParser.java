@@ -137,8 +137,8 @@ public class SQLPlanParser {
 		SQLParseLogical parser = new SQLParseLogical(query);
 		SQLQueryPlan queryPlan = parser.getSQLQueryPlan();
 
-		logger.info(String.format("SQLQueryPlan received query: "+query));
-		logger.info(String.format("SQLQueryPlan generated XMLString: \n\n"+xmlString+"\n"));
+		logger.info("SQLQueryPlan received query: " + query);
+		logger.info("SQLQueryPlan generated XMLString: \n\n" + xmlString + "\n");
 		
 		// run parser
 		@SuppressWarnings("unused")

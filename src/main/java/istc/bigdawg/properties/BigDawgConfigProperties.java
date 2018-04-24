@@ -24,6 +24,12 @@ public enum BigDawgConfigProperties {
 	private String postgreSQLTestUser;
 	private String postgreSQLTestPassword;
 
+	private String mySQLTestHost;
+	private String mySQLTestPort;
+	private String mySQLTestDatabase;
+	private String mySQLTestUser;
+	private String mySQLTestPassword;
+
 	private int accumuloSchemaServerDBID;
 	private String accumuloIstanceType;
 	private String accumuloIstanceName;
@@ -100,6 +106,14 @@ public enum BigDawgConfigProperties {
 		this.postgreSQLTestUser = prop.getProperty("main.postgresql.test.user");
 		this.postgreSQLTestPassword = prop
 				.getProperty("main.postgresql.test.password");
+
+		this.mySQLTestHost = prop.getProperty("main.mysql.test.host");
+		this.mySQLTestPort = prop.getProperty("main.mysql.test.port");
+		this.mySQLTestDatabase = prop
+				.getProperty("main.mysql.test.database");
+		this.mySQLTestUser = prop.getProperty("main.mysql.test.user");
+		this.mySQLTestPassword = prop
+				.getProperty("main.mysql.test.password");
 
 		this.accumuloSchemaServerDBID = Integer
 				.parseInt(prop.getProperty("main.accumulo.dbid.schema"));
@@ -349,6 +363,39 @@ public enum BigDawgConfigProperties {
 	 */
 	public String getPostgreSQLTestPassword() {
 		return postgreSQLTestPassword;
+	}
+
+	/**
+	 * @return the mySQLTestHost
+	 */
+	public String getMySQLTestHost() { return mySQLTestHost; }
+
+	/**
+	 * @return the mySQLTestPort
+	 */
+	public String getMySQLTestPort() {
+		return mySQLTestPort;
+	}
+
+	/**
+	 * @return the mySQLTestDatabase
+	 */
+	public String getMySQLTestDatabase() {
+		return mySQLTestDatabase;
+	}
+
+	/**
+	 * @return the mySQLTestUser
+	 */
+	public String getMySQLTestUser() {
+		return mySQLTestUser;
+	}
+
+	/**
+	 * @return the mySQLTestPassword
+	 */
+	public String getMySQLTestPassword() {
+		return mySQLTestPassword;
 	}
 
 	/**

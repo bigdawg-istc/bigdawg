@@ -17,6 +17,9 @@ import java.util.Optional;
 
 import javax.ws.rs.core.Response;
 
+import istc.bigdawg.relational.RelationalHandler;
+import istc.bigdawg.relational.RelationalSchemaTableName;
+import istc.bigdawg.relational.RelationalTableMetaData;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
@@ -26,13 +29,11 @@ import istc.bigdawg.database.AttributeMetaData;
 import istc.bigdawg.exceptions.BigDawgCatalogException;
 import istc.bigdawg.exceptions.NoTargetArrayException;
 import istc.bigdawg.exceptions.UnsupportedTypeException;
-import istc.bigdawg.executor.ExecutorEngine;
 import istc.bigdawg.executor.IslandQueryResult;
 import istc.bigdawg.executor.JdbcQueryResult;
 import istc.bigdawg.executor.QueryResult;
 import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.query.ConnectionInfo;
-import istc.bigdawg.query.DBHandler;
 import istc.bigdawg.query.QueryClient;
 import istc.bigdawg.utils.LogUtils;
 import istc.bigdawg.utils.StackTrace;
@@ -41,7 +42,7 @@ import istc.bigdawg.utils.StackTrace;
  * @author Adam Dziedzic
  * 
  */
-public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
+public class PostgreSQLHandler implements RelationalHandler {
 
 	/**
 	 * log
@@ -197,7 +198,7 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 		long lStartTime = System.nanoTime();
 		JdbcQueryResult queryResult = null;
 		try {
-			queryResult = executeQueryPostgreSQL(queryString);
+			queryResult = executeQueryOnEngine(queryString);
 		} catch (SQLException e) {
 			return Response.status(500)
 					.entity("Problem with query execution in Postgresql: "
@@ -248,7 +249,7 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 	}
 
 	public String computeDateArithmetic(String s) throws SQLException {
-		JdbcQueryResult qr = executeQueryPostgreSQL("select date(" + s + ");");
+		JdbcQueryResult qr = executeQueryOnEngine("select date(" + s + ");");
 		return qr.getRows().get(0).get(0);
 	}
 
@@ -334,6 +335,11 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 		}
 	}
 
+	public void executeStatementOnConnection(String statement)
+			throws SQLException {
+		executeStatementPostgreSQL(statement);
+	}
+
 	/**
 	 * It executes the SQL command and releases the resources at the end,
 	 * returning a QueryResult if present
@@ -386,7 +392,7 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 	 * @return #JdbcQueryResult
 	 * @throws SQLException
 	 */
-	public JdbcQueryResult executeQueryPostgreSQL(final String query)
+	public JdbcQueryResult executeQueryOnEngine(final String query)
 			throws SQLException {
 		try {
 			this.getConnection();
@@ -567,8 +573,7 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 	}
 
 	/**
-	 * Get SQL create table statement. {@link getCtreateTable(String
-	 * schemaAntTableName)}
+	 * Get SQL create table statement.
 	 * 
 	 * @param con
 	 *            Connection to the database where the table is stored.
@@ -671,7 +676,7 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 	 * @return
 	 * @throws SQLException
 	 */
-	public PostgreSQLTableMetaData getTableMetaData(String tableNameInitial)
+	public RelationalTableMetaData getTableMetaData(String tableNameInitial)
 			throws SQLException {
 		return getObjectMetaData(tableNameInitial);
 	}
@@ -680,13 +685,12 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 	 * Get metadata about columns (column name, position, data type, etc) for a
 	 * table in PostgreSQL.
 	 * 
-	 * @param tableName
+	 * @param tableNameInitial
 	 *            the name of the table
 	 * @return map column name to column meta data
 	 * @throws SQLException
 	 *             if the data extraction from PostgreSQL failed
 	 */
-	@Override
 	public PostgreSQLTableMetaData getObjectMetaData(String tableNameInitial)
 			throws SQLException {
 		try {
@@ -773,8 +777,7 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 
 	/**
 	 * Check if a schema exists.
-	 * 
-	 * @param conInfo
+	 *
 	 * @param schemaName
 	 *            the name of the schema to be checked if exists
 	 * @return
@@ -817,31 +820,29 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 
 	/**
 	 * Create schema if not exists.
-	 * 
-	 * @param conInfo
-	 *            connection to PostgreSQL
+	 *
 	 * @param schemaName
 	 *            the name of a schema to be created (if not already exists).
 	 * @return true if schema was created (false is schema already existed)
 	 * @throws SQLException
 	 */
 	public void createSchemaIfNotExists(String schemaName) throws SQLException {
-		executeStatementPostgreSQL("create schema if not exists " + schemaName);
+		executeStatementOnConnection("create schema if not exists " + schemaName);
 	}
 
 	/**
 	 * Create a table if it not exists.
 	 * 
-	 * @param schemaTable
+	 * @param createTableStatement
 	 *            give the name of the table and the schema where it resides
 	 * @throws SQLException
 	 */
 	public void createTable(String createTableStatement) throws SQLException {
-		executeStatementPostgreSQL(createTableStatement);
+		executeStatementOnConnection(createTableStatement);
 	}
 
 	public void dropSchemaIfExists(String schemaName) throws SQLException {
-		executeStatementPostgreSQL("drop schema if exists " + schemaName);
+		executeStatementOnConnection("drop schema if exists " + schemaName);
 	}
 
 	/**
@@ -852,7 +853,7 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 	 * @throws SQLException
 	 */
 	public void dropDataSetIfExists(String tableName) throws SQLException {
-		executeStatementPostgreSQL("drop table if exists " + tableName);
+		executeStatementOnConnection("drop table if exists " + tableName);
 	}
 
 	/**
@@ -926,6 +927,20 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 		return getCopyBinCommand(table, DIRECTION.FROM, STDIO.STDIN);
 	}
 
+//	public static String getMySQLExportCsvCommand(String table, String delimiter,
+//			String quote, boolean isHeader, String fileName) {
+//		StringBuilder copyFromStringBuf = new StringBuilder();
+//		copyFromStringBuf.append("SELECT * INTO OUTFILE '");
+//		copyFromStringBuf.append(fileName);
+//		copyFromStringBuf.append("' FIELDS TERMINATED BY '" + delimiter + "'");
+//		//copyFromStringBuf.append(" OPTIONALLY ENCLOSED BY '" + quote + "'");
+//		copyFromStringBuf.append(" LINES TERMINATED BY '\n'");
+//		copyFromStringBuf.append(" FROM " + table + ";");
+//		String copyCsvCommand = copyFromStringBuf.toString();
+//		log.debug("mysql copy csv command: " + copyCsvCommand);
+//		return copyCsvCommand;
+//	}
+
 	/**
 	 * Command to copy data from a table in PostgreSQL.
 	 * 
@@ -944,7 +959,7 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 		copyFromStringBuf.append(direction.toString() + " ");
 		copyFromStringBuf.append(stdio.toString());
 		copyFromStringBuf.append(" with (format csv, delimiter '" + delimiter
-				+ "', quote \"" + quote + "\", header "
+				+ "', quote \"" + quote + "\", NULL 'null', header "
 				+ (isHeader ? "true" : "false") + ")");
 		String copyCsvCommand = copyFromStringBuf.toString();
 		log.debug("copy csv command: " + copyCsvCommand);
@@ -998,7 +1013,7 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 	}
 
 	/**
-	 * @see #existsTable(PostgreSQLSchemaTableName)
+	 * @see #existsTable(RelationalSchemaTableName)
 	 * 
 	 * @param table
 	 *            The name of the table.
@@ -1011,15 +1026,14 @@ public class PostgreSQLHandler implements DBHandler, ExecutorEngine {
 
 	/**
 	 * Check if a table exists.
-	 * 
-	 * @param conInfo
+	 *
 	 * @param schemaTable
 	 *            names of a schema and a table
 	 * @return true if the table exists, false if there is no such table in the
 	 *         given schema
 	 * @throws SQLException
 	 */
-	public boolean existsTable(PostgreSQLSchemaTableName schemaTable)
+	public boolean existsTable(RelationalSchemaTableName schemaTable)
 			throws SQLException {
 		/* Get the connection if it has not been established. */
 		this.getConnection();
