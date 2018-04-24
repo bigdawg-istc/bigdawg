@@ -1,5 +1,0 @@
-database=bigdawg_catalog
-user=postgres
-password=test
-host=bigdawg-postgres-catalog
-port=5400
