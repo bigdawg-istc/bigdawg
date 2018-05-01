@@ -140,8 +140,9 @@ public class Planner {
 		}
 		return nextNodes;
 	}
-	
+
 	public static Response processQuery(String userinput, boolean isTrainingMode) throws Exception {
+		long startTime = System.currentTimeMillis();
 		
 		String input = userinput.replaceAll("[\n]", "").replaceAll("[ \t]+", " ");
 		
@@ -202,6 +203,9 @@ public class Planner {
 	
 				// Execute the plan
 				logger.debug("Executing terminal node...");
+				long endPlanTime = System.currentTimeMillis();
+				long planDuration = endPlanTime - startTime;
+				logger.debug(String.format("Time taken for planning: %d", planDuration));
 				queryResult = Executor.executePlan(qep, ciqn.getSignature(), choice);
 	
 			} else if (cipn instanceof CrossIslandNonOperatorNode) {

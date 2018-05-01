@@ -7,14 +7,14 @@ import java.util.List;
 import java.util.Map;
 
 import istc.bigdawg.database.AttributeMetaData;
-import istc.bigdawg.database.ObjectMetaData;
+import istc.bigdawg.relational.RelationalTableMetaData;
 
 /**
  * Meta data about a table in PostgreSQL.
  * 
  * @author Adam Dziedzic
  */
-public class PostgreSQLTableMetaData implements ObjectMetaData {
+public class PostgreSQLTableMetaData implements RelationalTableMetaData {
 
 	/**
 	 * 

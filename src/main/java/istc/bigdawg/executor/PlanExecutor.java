@@ -161,11 +161,14 @@ class PlanExecutor {
         colocateDependencies(node, Collections.emptySet());
 
         Logger.debug(this, "Executing query node %s...", node);
+        long startTimeMigration = System.currentTimeMillis();
         try {
         return node.getQueryString().flatMap((query) -> {
             try {
                 final Optional<QueryResult> result = node.getEngine().getLocalQueryExecutor().execute(query);
-                Logger.info(this, "Successfully executed node %s", node);
+                long endTimeMigration = System.currentTimeMillis();
+                long durationMsec = endTimeMigration - startTimeMigration;
+                Logger.info(this, String.format("Successfully executed node %s \n\n>>> with duration time msec %d <<<", node, durationMsec));
                 return result;
             } catch (ConnectionInfo.LocalQueryExecutorLookupException e) {
                 Logger.error(this, "Error looking up ExecutorEngine for node %s: %[exception]s", node, e);

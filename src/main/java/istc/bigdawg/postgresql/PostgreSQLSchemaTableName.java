@@ -3,7 +3,7 @@
  */
 package istc.bigdawg.postgresql;
 
-import java.io.Serializable;
+import istc.bigdawg.relational.RelationalSchemaTableName;
 
 /**
  * @author Adam Dziedzic
@@ -12,7 +12,7 @@ import java.io.Serializable;
  * 
  *         Deal with the name of a table and schema.
  */
-public class PostgreSQLSchemaTableName implements Serializable {
+public class PostgreSQLSchemaTableName implements RelationalSchemaTableName {
 
 	/**
 	 * 

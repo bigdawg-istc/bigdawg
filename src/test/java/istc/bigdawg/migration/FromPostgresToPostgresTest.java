@@ -9,11 +9,6 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.Logger;
 import org.junit.Before;
@@ -24,7 +19,6 @@ import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.executor.JdbcQueryResult;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
-import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.utils.StackTrace;
 
 /**
@@ -102,10 +96,10 @@ public class FromPostgresToPostgresTest {
 		PostgreSQLHandler postgres2 = new PostgreSQLHandler(conInfoTo);
 
 		try {
-			postgres1.executeStatementPostgreSQL(
+			postgres1.executeStatementOnConnection(
 					getCreateTableTest(tableNameFrom));
 
-			postgres1.executeStatementPostgreSQL(getInsertInto(tableNameFrom));
+			postgres1.executeStatementOnConnection(getInsertInto(tableNameFrom));
 
 			MigrationResult result = migrator
 					.migrate(new MigrationInfo(conInfoFrom, tableNameFrom,
@@ -115,7 +109,7 @@ public class FromPostgresToPostgresTest {
 			assertEquals(Long.valueOf(1L), result.getCountLoadedElements());
 
 			JdbcQueryResult qresult = postgres2
-					.executeQueryPostgreSQL("select * from " + tableNameTo);
+					.executeQueryOnEngine("select * from " + tableNameTo);
 			List<List<String>> rows = qresult.getRows();
 			List<String> row = rows.get(0);
 			int currentInt = Integer.parseInt(row.get(0));
@@ -136,9 +130,9 @@ public class FromPostgresToPostgresTest {
 					+ StackTrace.getFullStackTrace(e), e);
 			throw e;
 		} finally {
-			postgres1.executeStatementPostgreSQL(
+			postgres1.executeStatementOnConnection(
 					"drop table if exists " + tableNameFrom);
-			postgres2.executeStatementPostgreSQL(
+			postgres2.executeStatementOnConnection(
 					"drop table if exists " + tableNameTo);
 		}
 	}

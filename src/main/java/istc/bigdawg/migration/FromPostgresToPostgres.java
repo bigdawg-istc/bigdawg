@@ -173,6 +173,7 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 			conFrom.setReadOnly(true);
 			conFrom.setAutoCommit(false);
 			conTo.setAutoCommit(false);
+
 			createTargetTableSchema(conFrom, conTo);
 
 			final PipedOutputStream output = new PipedOutputStream();
