@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 import istc.bigdawg.accumulo.AccumuloConnectionInfo;
+import istc.bigdawg.api.ApiHandler;
 import istc.bigdawg.catalog.Catalog;
 import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.exceptions.BigDawgCatalogException;
@@ -16,6 +17,7 @@ import istc.bigdawg.executor.QueryResult;
 import istc.bigdawg.islands.Myria.MyriaQueryParser;
 import istc.bigdawg.islands.SStore.SStoreQueryParser;
 import istc.bigdawg.islands.SciDB.ArrayIsland;
+import istc.bigdawg.islands.api.ApiQueryParser;
 import istc.bigdawg.islands.relational.RelationalIsland;
 import istc.bigdawg.islands.text.TextIsland;
 import istc.bigdawg.myria.MyriaHandler;
@@ -45,23 +47,22 @@ import istc.bigdawg.sstore.SStoreSQLHandler;
 public class IslandAndCastResolver {
 	
 	public static enum Engine {
-		PostgreSQL, SciDB, SStore, Accumulo, Myria
+		PostgreSQL, SciDB, SStore, Accumulo, Myria, Api
 	};
 	
 	public enum Scope {
-		RELATIONAL, ARRAY, KEYVALUE, TEXT, GRAPH, DOCUMENT, STREAM, CAST, MYRIA 
+		RELATIONAL, ARRAY, KEYVALUE, TEXT, GRAPH, DOCUMENT, STREAM, CAST, MYRIA, API
 	}
 
 	public static final int  sstoreDBID = BigDawgConfigProperties.INSTANCE.getSStoreDBID();
 	
-	public static Pattern QueryParsingPattern	= Pattern.compile("(?i)(bdrel\\(|bdarray\\(|bdkv\\(|bdtext\\(|bdgraph\\(|bddoc\\(|bdstream\\(|bdmyria\\(|bdcast\\(|\\(|\\))");
-	public static Pattern ScopeStartPattern		= Pattern.compile("^((bdrel\\()|(bdarray\\()|(bdkv\\()|(bdtext\\()|(bdgraph\\()|(bddoc\\()|(bdstream\\()|(bdmyria\\()|(bdcast\\())");
+	public static Pattern QueryParsingPattern	= Pattern.compile("(?i)(bdrel\\(|bdarray\\(|bdkv\\(|bdtext\\(|bdgraph\\(|bddoc\\(|bdstream\\(|bdmyria\\(|bdapi\\(|bdcast\\(|\\(|\\))");
+	public static Pattern ScopeStartPattern		= Pattern.compile("^((bdrel\\()|(bdarray\\()|(bdkv\\()|(bdtext\\()|(bdgraph\\()|(bddoc\\()|(bdstream\\()|(bdmyria\\()|(bdapi\\()|(bdcast\\())");
 	public static Pattern ScopeEndPattern		= Pattern.compile("\\) *;? *$");
-	public static Pattern CastScopePattern		= Pattern.compile("(?i)(relational|array|keyvalue|text|graph|document|stream|myria)\\) *;? *$");
-	public static Pattern CastSchemaPattern		= Pattern.compile("(?<=([_a-z0-9, ]+')).*(?=(' *, *(relational|array|keyvalue|text|graph|document|stream|myria)))");
+	public static Pattern CastScopePattern		= Pattern.compile("(?i)(relational|array|keyvalue|text|graph|document|stream|myria|api)\\) *;? *$");
+	public static Pattern CastSchemaPattern		= Pattern.compile("(?<=([_a-z0-9, ]+')).*(?=(' *, *(relational|array|keyvalue|text|graph|document|stream|myria|api)))");
 	public static Pattern CastNamePattern		= Pattern.compile("(?<=(, ))([_@0-9a-zA-Z]+)(?=, *')");
-	
-	
+
 	/**
 	 * For CrossIslandQueryPlan
 	 * Determines whether an island is implemented
@@ -78,6 +79,7 @@ public class IslandAndCastResolver {
 		case GRAPH:
 		case KEYVALUE:
 		case STREAM:
+		case API:
 		case MYRIA:
 			return false;
 		default:
@@ -219,6 +221,8 @@ public class IslandAndCastResolver {
 			return new TextToAccumuloShim();
 		case MYRIA:
 			throw new BigDawgException("MYRIA island does not support the concept of generator; getQueryGenerator");
+		case API:
+			throw new BigDawgException("API island does not support the concept of generator; getQueryGenerator");
 		default:
 			break;
 		}
@@ -251,6 +255,8 @@ public class IslandAndCastResolver {
 			return "TEXT";
 		case MYRIA:
 			return "MYRIA";
+		case API:
+			return "API";
 		default:
 			break;
 		}
@@ -278,6 +284,8 @@ public class IslandAndCastResolver {
 			return TextIsland.INSTANCE; 
 		case MYRIA:
 			break;	
+		case API:
+			break;
 		default:
 			break;
 		}
@@ -299,6 +307,9 @@ public class IslandAndCastResolver {
 		case STREAM:
 			List<String> ssparsed = (new SStoreQueryParser()).parse(node.getQueryString());
 			return (new SStoreSQLHandler(sstoreDBID)).executePreparedStatement((new SStoreSQLHandler(sstoreDBID)).getConnection(), ssparsed);
+		case API:
+			List<String> apiparsed = (new ApiQueryParser()).parse(node.getQueryString());
+			return ApiHandler.executeApiQuery(apiparsed);
 		case MYRIA:
 			String input = node.getQueryString();
 			List<String> mparsed = (new MyriaQueryParser()).parse(input);
@@ -314,7 +325,7 @@ public class IslandAndCastResolver {
 		}
 		
 	}
-	
+
 	
 	public static Scope convertFunctionScope (String prefix) throws UnsupportedIslandException {
 		switch (prefix) {
@@ -345,6 +356,9 @@ public class IslandAndCastResolver {
 		case "bdmyria(":
 		case "bdmyria":
 			return Scope.MYRIA;
+		case "bdapi(":
+		case "bdapi":
+			return Scope.API;
 		default:
 			throw new UnsupportedIslandException(prefix);
 		}
@@ -371,6 +385,8 @@ public class IslandAndCastResolver {
 			return Scope.CAST;
 		case "myria":
 			return Scope.MYRIA;
+		case "api":
+			return Scope.API;
 		default:
 			throw new UnsupportedIslandException(prefix);
 		}

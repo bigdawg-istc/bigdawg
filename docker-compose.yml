@@ -1,0 +1,93 @@
+version: '3.5'
+
+services:
+  bigdawg-postgres-catalog:
+    image: bigdawg/postgres
+    environment:
+      - PGPORT=5400
+      - BDHOST=bigdawg-postgres-catalog
+    networks:
+      - bigdawg
+  bigdawg-postgres-data1:
+    image: bigdawg/postgres
+    environment:
+      - PGPORT=5401
+      - BDHOST=bigdawg-postgres-data1
+    ports:
+      - 5401:5401
+    networks:
+      - bigdawg
+  bigdawg-postgres-data2:
+    image: bigdawg/postgres
+    environment:
+      - PGPORT=5402
+      - BDHOST=bigdawg-postgres-data2
+    ports:
+      - 5402:5402
+    networks:
+      - bigdawg
+  bigdawg-scidb-data:
+    image: bigdawg/scidb
+    ports:
+      - 1239:1239
+    links:
+      - bigdawg-postgres-catalog
+    networks:
+      - bigdawg
+  bigdawg-accumulo-namenode:
+    image: bigdawg/accumulo
+    networks:
+      bigdawg:
+        aliases:
+          - namenode.docker.local
+    environment:
+      - "SVCLIST=namenode,datanode"
+    command: /bin/bash -c "/usr/bin/supervisord -n&" && sleep 10 && /usr/lib/accumulo/bin/init_accumulo.sh && /bin/bash -c "sleep infinity"
+  bigdawg-accumulo-zookeeper:
+    image: bigdawg/accumulo
+    networks:
+      bigdawg:
+        aliases:
+          - zookeeper.docker.local
+    ports:
+      - 2181:2181
+    environment:
+      - "SVCLIST=zookeeper"
+    command: /usr/bin/supervisord -n
+  bigdawg-accumulo-tserver0:
+    image: bigdawg/accumulo
+    networks:
+      bigdawg:
+        aliases:
+          - tserver0.docker.local
+    ports:
+      - 9997:9997
+    environment:
+      - "SVCLIST=datanode,accumulo-tserver"
+    command: /usr/bin/supervisord -n
+  bigdawg-accumulo-master:
+    image: bigdawg/accumulo
+    networks:
+      bigdawg:
+        aliases:
+          - master.docker.local
+    ports:
+      - 9999:9999
+      - 50095:50095
+    environment:
+      - "SVCLIST=accumulo-master,accumulo-monitor"
+    command: /usr/bin/supervisord -n
+  bigdawg-accumulo-proxy:
+    image: bigdawg/accumulo
+    networks:
+      bigdawg:
+        aliases:
+          - master.docker.local
+    ports:
+      - 42424:42424
+    environment:
+      - "SVCLIST=accumulo-tracer,accumulo-gc,accumulo-proxy"
+    command: /usr/bin/supervisord -n
+networks:
+    bigdawg:
+        driver: bridge
