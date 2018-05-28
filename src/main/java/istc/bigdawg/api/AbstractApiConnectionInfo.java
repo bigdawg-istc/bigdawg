@@ -47,7 +47,7 @@ abstract public class AbstractApiConnectionInfo implements ConnectionInfo {
         this.username = username;
     }
 
-    protected static Map<String, String> parseConnectionParameters(String connectionParametersStr) throws BigDawgCatalogException {
+    static Map<String, String> parseConnectionParameters(String connectionParametersStr) throws BigDawgCatalogException {
         Map<String, String> connectionParameters = new HashMap<String,String>();
         if (connectionParametersStr == null || connectionParametersStr.length() == 0) {
             return connectionParameters;
@@ -84,7 +84,7 @@ abstract public class AbstractApiConnectionInfo implements ConnectionInfo {
         return this.getUrlPrefix();
     }
 
-    protected String getUrlPrefix() {
+    private String getUrlPrefix() {
         try {
             Tuple.Tuple2<String, String> schemeAndPort = this.getSchemeAndPort();
             return schemeAndPort.getT1() + "://" + this.host + schemeAndPort.getT2();

@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 import istc.bigdawg.accumulo.AccumuloConnectionInfo;
+import istc.bigdawg.api.ApiConnectionFactory;
 import istc.bigdawg.api.ApiConnectionInfo;
 import istc.bigdawg.api.ApiHandler;
 import istc.bigdawg.catalog.Catalog;
@@ -179,7 +180,7 @@ public class IslandAndCastResolver {
 						+ "join catalog.engines e on db.engine_id = e.eid "
 						+ "where dbid = "+dbid);
 				if (rs2.next()) {
-					extraction = new ApiConnectionInfo(rs2.getString("host"), rs2.getString("port"),rs2.getString("dbname"), rs2.getString("userid"), rs2.getString("password"), rs2.getString("connection_properties"));
+					extraction = ApiConnectionFactory.get(rs2.getString("host"), rs2.getString("port"),rs2.getString("dbname"), rs2.getString("userid"), rs2.getString("password"), rs2.getString("connection_properties"));
 				}
 				break;
 			default:

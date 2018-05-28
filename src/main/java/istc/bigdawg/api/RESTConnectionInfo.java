@@ -24,14 +24,18 @@ public class RESTConnectionInfo extends AbstractApiConnectionInfo {
     private Map<String, String> extraQueryParameters;
     private String bearerToken;
 
-    public RESTConnectionInfo(String host, String port,
-                             String endpoint, String username, String password, String connectionParametersStr) throws BigDawgCatalogException {
-        super(host, port, endpoint, username, password);
-        this.connectionParameters = AbstractApiConnectionInfo.parseConnectionParameters(connectionParametersStr);
+    RESTConnectionInfo(String host, String port,
+                             String endpoint, String user, String password, Map<String, String> connectionParameters) throws BigDawgCatalogException {
+        super(host, port, endpoint, user, password);
+        this.connectionParameters = connectionParameters;
         this.parseExtraQueryParameters(); // This should happen before authentication type
         this.parseAuthenticationType();
         this.parsePrefix();
         this.parseMethod();
+    }
+    public RESTConnectionInfo(String host, String port,
+                             String endpoint, String user, String password, String connectionParametersStr) throws BigDawgCatalogException {
+        this(host, port, endpoint, user, password, AbstractApiConnectionInfo.parseConnectionParameters(connectionParametersStr));
     }
 
     private void parseExtraQueryParameters() throws BigDawgCatalogException {
@@ -136,10 +140,6 @@ public class RESTConnectionInfo extends AbstractApiConnectionInfo {
         return this.method;
     }
 
-    /**
-     * Need parameters in order to calculate the
-     * @return
-     */
     public Map<String, String> getHeaders() throws ApiException {
         Map<String, String> headers = new HashMap<>();
         switch (this.authenticationType) {
@@ -150,13 +150,13 @@ public class RESTConnectionInfo extends AbstractApiConnectionInfo {
                 headers.put("Authorization", "Bearer " + this.connectionParameters.get("token"));
                 break;
             case OAUTH2:
-                this.setOAuth2Headers(headers);
+                OAuth2.setOAuth2Headers(headers, connectionParameters, getUser(), getPassword());
                 break;
         }
         return headers;
     }
 
-    public String getEndpointUrl() {
+    private String getEndpointUrl() {
         String baseUrl = super.getUrl();
         String prefixUrl = baseUrl + this.prefix;
         return prefixUrl.endsWith("/") ? prefixUrl + this.getEndpoint() : prefixUrl + "/" + this.getEndpoint();

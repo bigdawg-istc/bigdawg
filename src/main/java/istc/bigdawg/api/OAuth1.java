@@ -50,7 +50,7 @@ class OAuth1 {
         }
     }
 
-    private String getOAuth1Header(HttpMethod method, String endpointUrl, Map<String, String> connectionParameters) throws ApiException {
+    static String getOAuth1Header(HttpMethod method, String endpointUrl, Map<String, String> connectionParameters) throws ApiException {
         String timestamp = String.valueOf(Instant.now().getEpochSecond());
         StringBuilder nonceSB = new StringBuilder();
         try {
