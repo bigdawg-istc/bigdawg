@@ -6,13 +6,11 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 import istc.bigdawg.accumulo.AccumuloConnectionInfo;
+import istc.bigdawg.api.ApiConnectionInfo;
 import istc.bigdawg.api.ApiHandler;
 import istc.bigdawg.catalog.Catalog;
 import istc.bigdawg.catalog.CatalogViewer;
-import istc.bigdawg.exceptions.BigDawgCatalogException;
-import istc.bigdawg.exceptions.BigDawgException;
-import istc.bigdawg.exceptions.IslandException;
-import istc.bigdawg.exceptions.UnsupportedIslandException;
+import istc.bigdawg.exceptions.*;
 import istc.bigdawg.executor.QueryResult;
 import istc.bigdawg.islands.Myria.MyriaQueryParser;
 import istc.bigdawg.islands.SStore.SStoreQueryParser;
@@ -174,6 +172,15 @@ public class IslandAndCastResolver {
 						+ "where dbid = "+dbid);
 				if (rs2.next())
 					extraction = new AccumuloConnectionInfo(rs2.getString("host"), rs2.getString("port"),rs2.getString("dbname"), rs2.getString("userid"), rs2.getString("password"));
+				break;
+			case Api:
+				rs2 = cc.execRet("select dbid, eid, host, port, db.name as dbname, userid, password, connection_properties "
+						+ "from catalog.databases db "
+						+ "join catalog.engines e on db.engine_id = e.eid "
+						+ "where dbid = "+dbid);
+				if (rs2.next()) {
+					extraction = new ApiConnectionInfo(rs2.getString("host"), rs2.getString("port"),rs2.getString("dbname"), rs2.getString("userid"), rs2.getString("password"), rs2.getString("connection_properties"));
+				}
 				break;
 			default:
 				throw new BigDawgCatalogException("This is not supposed to happen");

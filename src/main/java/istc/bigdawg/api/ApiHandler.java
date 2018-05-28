@@ -37,7 +37,8 @@ import istc.bigdawg.utils.Constants;
 import istc.bigdawg.utils.RunShell;
 
 /**
- * @author Adam Dziedzic
+ * @author Matthew J Mucklo
+ * @author Adam Dziedzic (original code)
  *
  */
 public class ApiHandler implements DBHandler {

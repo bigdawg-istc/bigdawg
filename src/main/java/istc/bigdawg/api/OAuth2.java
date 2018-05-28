@@ -1,0 +1,150 @@
+package istc.bigdawg.api;
+
+import istc.bigdawg.exceptions.BigDawgCatalogException;
+import istc.bigdawg.interfaces.Response;
+import org.apache.tools.ant.taskdefs.condition.Http;
+
+import java.net.URL;
+import java.net.URLDecoder;
+import java.text.Bidi;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.Map;
+
+class OAuth2 {
+    static enum AuthenticationType {
+        BASIC_BEARER
+    }
+
+    static enum ResponseType {
+        JSON
+    }
+
+    static AuthenticationType getAuthenticationTypeFromString(String authenticationTypeStr) throws BigDawgCatalogException {
+        if (authenticationTypeStr == null) {
+            return AuthenticationType.BASIC_BEARER;
+        }
+
+        switch (authenticationTypeStr) {
+            case "basic_bearer":
+            case "Basic_Bearer":
+            case "BASIC_BEARER":
+                return AuthenticationType.BASIC_BEARER;
+            default:
+                throw new BigDawgCatalogException("Unknown / Unsupported OAuth2 authentication type: " + authenticationTypeStr);
+        }
+    }
+
+    static void setOAuth2Headers(Map<String, String> headers, Map<String, String> connectionParameters, String user, String password) {
+        try {
+            AuthenticationType oauth2AuthType = getAuthenticationTypeFromString(connectionParameters.get("oauth2_auth_type"));
+            if (oauth2AuthType == null) {
+                oauth2AuthType = AuthenticationType.BASIC_BEARER;
+            }
+            switch(oauth2AuthType) {
+                case BASIC_BEARER:
+                    String url = connectionParameters.get("auth_url");
+                    String credentials = user + ":" + password;
+                    String credentialsBase64 = new String(Base64.getEncoder().encode(credentials.getBytes()));
+                    HttpMethod method = HttpMethod.GET;
+                    if (connectionParameters.containsKey("auth_method")) {
+                        method = HttpMethod.parseMethod(connectionParameters.get("auth_method"));;
+                    }
+                    String postData = null;
+                    if (method == HttpMethod.POST) {
+                        // See if there's POST data
+                        if (connectionParameters.containsKey("auth_post_data")) {
+                            postData = connectionParameters.get("auth_post_data");
+                            postData = URLDecoder.decode(postData, "UTF-8");
+                        }
+                    }
+                    ResponseType responseType = ResponseType.JSON;
+                    String responseKey = "access_token";
+                    if (connectionParameters.containsKey("auth_response_key")) {
+                        responseKey = connectionParameters.get("auth_response_key");
+                    }
+                    Map<String, String> validationPairs = parseAuthResponseValidate(connectionParameters.getOrDefault("auth_response_validate", null));
+                    String token = getBearerTokenFromURL(url, method, responseType, credentialsBase64, postData, responseKey, validationPairs);
+                    break;
+            }
+        }
+        catch (Exception e) {
+
+        }
+    }
+
+    static private String getBearerTokenFromURL(String urlStr, HttpMethod method, ResponseType responseType, String credentials, String postData, String responseKey, Map<String, String> validationPairs) {
+        URL url = new URL(urlStr);
+
+    }
+
+
+    static void verifyConnectionParameters(Map<String, String> connectionParameters, String user, String password) throws BigDawgCatalogException {
+        if (!connectionParameters.containsKey("auth_url")) {
+            throw new BigDawgCatalogException("For oauth2, need an auth_url");
+        }
+        AuthenticationType oauth2AuthType = getAuthenticationTypeFromString(connectionParameters.get("oauth2_auth_type"));
+        if (oauth2AuthType == null) {
+            oauth2AuthType = AuthenticationType.BASIC_BEARER;
+        }
+
+        switch(oauth2AuthType) {
+            case BASIC_BEARER:
+                if (user == null || user.length() == 0) {
+                    throw new BigDawgCatalogException("For oauth2, need a user in the database");
+                }
+                if (password == null || password.length() == 0) {
+                    throw new BigDawgCatalogException("For oauth2, need a user in the database");
+                }
+                break;
+            default:
+                throw new BigDawgCatalogException("Unknown / Unsupported OAuth2 authentication type: " + oauth2AuthType.name());
+        }
+        if (connectionParameters.containsKey("auth_method")) {
+            String authMethodStr = connectionParameters.get("auth_method");
+            HttpMethod authMethod = HttpMethod.parseMethod(authMethodStr);
+            if (authMethod == null) {
+                throw new BigDawgCatalogException("Unknown / Unsupported auth_method: " + authMethodStr);
+            }
+        }
+
+        if (connectionParameters.containsKey("auth_response_type")) {
+            if (!connectionParameters.get("auth_response_type").toUpperCase().equals("JSON")) {
+                throw new BigDawgCatalogException("Unknown / Unsupported response type: " + connectionParameters.get("auth_response_type"));
+            }
+        }
+        if (connectionParameters.containsKey("auth_response_validate")) {
+            String responseValidationPairs = connectionParameters.get("auth_response_validate");
+            parseAuthResponseValidate(responseValidationPairs);
+        }
+    }
+
+    static Map<String, String> parseAuthResponseValidate(String responseValidationPairs) throws BigDawgCatalogException {
+        Map<String, String> resultPairs = new HashMap<String, String>();
+        if (responseValidationPairs == null) {
+            return resultPairs;
+        }
+
+        try {
+            responseValidationPairs = URLDecoder.decode(responseValidationPairs, "UTF-8");
+            String [] pairs = responseValidationPairs.split("&");
+            for(String pair: pairs) {
+                String [] keyValue = pair.split("=");
+                if (keyValue.length != 2) {
+                    throw new BigDawgCatalogException("Expected a key=value pair from auth_response_validate: " + pair);
+                }
+                String key = URLDecoder.decode(keyValue[0], "UTF-8");
+                String value = URLDecoder.decode(keyValue[1], "UTF-8");
+                if (resultPairs.containsKey(key)) {
+                    throw new BigDawgCatalogException("Duplicate key found: " + key);
+                }
+                resultPairs.put(key, value);
+            }
+        }
+        catch (Exception e) {
+            throw new BigDawgCatalogException("Exception while decoding responseValidationPairs '" + responseValidationPairs + "': " + e.getMessage());
+        }
+        return resultPairs;
+    }
+
+}

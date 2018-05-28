@@ -98,7 +98,7 @@ public class RelationalIsland implements Island {
 
 	@Override
 	public String getCreateStatementForTransitionTable(String tableName, String attributes) {
-		return String.format("CREATE TABLE %s %s", tableName, attributes);
+		return String.format("CREATE ARRAY %s %s", tableName, attributes);
 	}
 	
 	@Override
