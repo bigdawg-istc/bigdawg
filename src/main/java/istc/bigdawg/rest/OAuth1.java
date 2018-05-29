@@ -1,7 +1,8 @@
-package istc.bigdawg.api;
+package istc.bigdawg.rest;
 
 import istc.bigdawg.exceptions.ApiException;
 import istc.bigdawg.exceptions.BigDawgCatalogException;
+import org.apache.log4j.Logger;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -10,6 +11,9 @@ import java.time.Instant;
 import java.util.*;
 
 class OAuth1 {
+    private static Logger log = Logger
+            .getLogger(OAuth1.class.getName());
+
     static String createSignature(String method, String url, Map<String, String> parameters, String consumerSecret, String tokenSecret) throws ApiException {
         SortedSet<String> keys = new TreeSet<String>(parameters.keySet());
 
@@ -70,7 +74,8 @@ class OAuth1 {
             }
         }
         catch (Exception e) {
-            // @Todo - how to die gracefully here?
+            OAuth1.log.error("Exception trying to create nonce", e);
+            return null;
         }
         String nonce = nonceSB.toString();
         String consumerKey = connectionParameters.get("oauth_consumer_key");

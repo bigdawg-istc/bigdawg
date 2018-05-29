@@ -1,7 +1,14 @@
-package istc.bigdawg.api;
+package istc.bigdawg.rest;
+
+import java.io.*;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.Map;
+import java.util.StringJoiner;
 
 public final class URLUtil {
-    private static String[] percentTable = {
+    private final static String UserAgent = "bigdawg/1";
+    private final static String[] percentTable = {
             "%00",
             "%01",
             "%02",
@@ -260,11 +267,75 @@ public final class URLUtil {
             "%FF"
     };
 
-    public static String percentEncode(String str) {
+    static String percentEncode(String str) {
         StringBuilder sb = new StringBuilder();
         for (int $i = 0, len = str.length(); $i < len; $i++) {
             sb.append(URLUtil.percentTable[(int)str.charAt($i)]);
         }
+        return sb.toString();
+    }
+
+    static String fetch(String urlStr, HttpMethod method, Map<String, String> headers, String postData, int connectTimeout, int readTimeout) throws IOException {
+        URL url = new URL(urlStr);
+        HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
+        urlConnection.setConnectTimeout(connectTimeout);
+        urlConnection.setReadTimeout(readTimeout);
+        urlConnection.setUseCaches(false);
+        urlConnection.setRequestMethod(method.name());
+        urlConnection.setRequestProperty("User-Agent", UserAgent);
+        for(String header: headers.keySet()) {
+            urlConnection.setRequestProperty(header, headers.get(header));
+        }
+        urlConnection.setDoInput(true);
+        InputStream inputStream = urlConnection.getInputStream();
+        if (postData != null && method == HttpMethod.POST) {
+            urlConnection.setDoOutput(true);
+            urlConnection.setRequestProperty("Content-Length", String.valueOf(postData.length()));
+            OutputStream os = urlConnection.getOutputStream();
+            DataOutputStream dataOutputStream= new DataOutputStream(new BufferedOutputStream(os));
+            dataOutputStream.writeBytes(postData);
+            dataOutputStream.close();
+        }
+        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
+        StringBuilder responseBuilder = new StringBuilder();
+        char[] buffer = new char[4096];
+        while (bufferedReader.read(buffer, 0,4096) == 4096) {
+            responseBuilder.append(buffer);
+        }
+        responseBuilder.append(buffer);
+        return responseBuilder.toString();
+    }
+
+    public static String encodeParameters(Map<String, String> parameters) {
+        StringJoiner joiner = new StringJoiner("&");
+        parameters.forEach((k, v) -> {
+            joiner.add(URLUtil.percentEncode(k) + "=" + URLUtil.percentEncode(v));
+        });
+        return parameters.toString();
+    }
+
+    static String appendQueryParameters(String url, Map<String, String> parameters) {
+        if (parameters == null || parameters.isEmpty()) {
+            return url;
+        }
+
+        return appendQueryParameters(url, encodeParameters(parameters));
+    }
+
+    static String appendQueryParameters(String url, String queryParams) {
+        if (queryParams == null) {
+            return url;
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append(url);
+        if (!url.contains("?")) {
+            sb.append("?");
+        }
+        else {
+            sb.append("&");
+        }
+        sb.append(queryParams);
         return sb.toString();
     }
 

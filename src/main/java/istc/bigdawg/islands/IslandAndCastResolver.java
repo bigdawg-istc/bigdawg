@@ -6,9 +6,8 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 import istc.bigdawg.accumulo.AccumuloConnectionInfo;
-import istc.bigdawg.api.ApiConnectionFactory;
-import istc.bigdawg.api.ApiConnectionInfo;
 import istc.bigdawg.api.ApiHandler;
+import istc.bigdawg.rest.RESTConnectionInfo;
 import istc.bigdawg.catalog.Catalog;
 import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.exceptions.*;
@@ -24,7 +23,6 @@ import istc.bigdawg.mysql.MySQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.query.ConnectionInfo;
-import istc.bigdawg.islands.relational.*;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
 import istc.bigdawg.shims.*;
 import istc.bigdawg.sstore.SStoreSQLConnectionInfo;
@@ -45,7 +43,7 @@ import istc.bigdawg.vertica.VerticaConnectionInfo;
 public class IslandAndCastResolver {
 	
 	public static enum Engine {
-		PostgreSQL, SciDB, SStore, Accumulo, Myria, MySQL, Vertica, Api
+		PostgreSQL, SciDB, SStore, Accumulo, Myria, MySQL, Vertica, REST
 	};
 	
 	public enum Scope {
@@ -105,6 +103,8 @@ public class IslandAndCastResolver {
 			return IslandAndCastResolver.Engine.MySQL;
 		else if (engineString.startsWith(IslandAndCastResolver.Engine.Vertica.name()))
 			return IslandAndCastResolver.Engine.Vertica;
+		else if (engineString.startsWith(IslandAndCastResolver.Engine.REST.name()))
+			return IslandAndCastResolver.Engine.REST;
 		else {
 			throw new BigDawgException("Unsupported engine: "+ engineString);
 		}
@@ -174,13 +174,13 @@ public class IslandAndCastResolver {
 				if (rs2.next())
 					extraction = new AccumuloConnectionInfo(rs2.getString("host"), rs2.getString("port"),rs2.getString("dbname"), rs2.getString("userid"), rs2.getString("password"));
 				break;
-			case Api:
+			case REST:
 				rs2 = cc.execRet("select dbid, eid, host, port, db.name as dbname, userid, password, connection_properties "
 						+ "from catalog.databases db "
 						+ "join catalog.engines e on db.engine_id = e.eid "
 						+ "where dbid = "+dbid);
 				if (rs2.next()) {
-					extraction = ApiConnectionFactory.get(rs2.getString("host"), rs2.getString("port"),rs2.getString("dbname"), rs2.getString("userid"), rs2.getString("password"), rs2.getString("connection_properties"));
+					extraction = new RESTConnectionInfo(rs2.getString("host"), rs2.getString("port"),rs2.getString("dbname"), rs2.getString("userid"), rs2.getString("password"), rs2.getString("connection_properties"));
 				}
 				break;
 			default:
@@ -207,7 +207,6 @@ public class IslandAndCastResolver {
 	/**
 	 * For Executor.
 	 * @param scope
-	 * @param remainderDBID 
 	 * @return Instance of a query generator
 	 * @throws BigDawgException 
 	 * @throws SQLException 
@@ -254,7 +253,10 @@ public class IslandAndCastResolver {
 		case MYRIA:
 			throw new BigDawgException("MYRIA island does not support the concept of generator; getQueryGenerator");
 		case API:
-			throw new BigDawgException("API island does not support the concept of generator; getQueryGenerator");
+			switch (e) {
+				case REST:
+					return new ApiToRESTShim();
+			}
 		default:
 			break;
 		}

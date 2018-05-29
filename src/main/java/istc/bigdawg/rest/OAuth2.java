@@ -1,20 +1,15 @@
-package istc.bigdawg.api;
+package istc.bigdawg.rest;
 
-import istc.bigdawg.exceptions.ApiException;
 import istc.bigdawg.exceptions.BigDawgCatalogException;
-import istc.bigdawg.interfaces.Response;
-import org.apache.commons.httpclient.HttpURL;
-import org.apache.tools.ant.taskdefs.condition.Http;
+import istc.bigdawg.utils.Tuple;
+import org.apache.log4j.Logger;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
 import java.io.*;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.net.URLConnection;
 import java.net.URLDecoder;
-import java.text.Bidi;
+import java.time.Instant;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
@@ -22,13 +17,17 @@ import java.util.Map;
 class OAuth2 {
     private final static int ConnectTimeout = 20000; // ms
     private final static int ReadTimeout = 20000; // ms
-    private final static String UserAgent = "bigdawg/1";
+    private final static int DefaultAuthTimeout = 3600; // seconds
+    private static Logger log = Logger
+            .getLogger(OAuth2.class.getName());
 
-    static enum AuthenticationType {
+    private final static Map<String, Tuple.Tuple2<Long, String>> tokenStorage = new HashMap<>();
+
+    enum AuthenticationType {
         BASIC_BEARER
     }
 
-    static enum ResponseType {
+    enum ResponseType {
         JSON
     }
 
@@ -72,50 +71,68 @@ class OAuth2 {
                         }
                     }
                     ResponseType responseType = ResponseType.JSON;
-                    String responseKey = "access_token";
-                    if (connectionParameters.containsKey("auth_response_key")) {
-                        responseKey = connectionParameters.get("auth_response_key");
-                    }
+                    String responseKey = connectionParameters.getOrDefault("auth_response_key","access_token");
                     Map<String, String> validationPairs = parseAuthResponseValidate(connectionParameters.getOrDefault("auth_response_validate", null));
-                    String token = getBearerTokenFromURL(url, method, responseType, credentialsBase64, postData, responseKey, validationPairs);
+                    String postMimeType = connectionParameters.getOrDefault("auth_post_mime_type", "application/x-www-form-urlencoded");
+
+                    long timestamp = Instant.now().getEpochSecond();
+                    String cacheKey = getBearerTokenCacheKey(url, method, responseType, credentialsBase64, postData, postMimeType);
+
+                    // Check to see if token is cached
+                    String token = null;
+                    if (OAuth2.tokenStorage.containsKey(cacheKey)) {
+                        Tuple.Tuple2<Long, String> tokenTuple = OAuth2.tokenStorage.get(cacheKey);
+                        if (timestamp < tokenTuple.getT1()) {
+                            token = tokenTuple.getT2();
+                        }
+                    }
+
+                    if (token == null) { // need to refresh token
+                        token = getBearerTokenFromURL(url, method, responseType, credentialsBase64, postData, postMimeType, responseKey, validationPairs);
+
+                        // Be a good citizen and cache the token
+                        int timestampOffset = Integer.parseInt(connectionParameters.getOrDefault("auth_timeout", String.valueOf(DefaultAuthTimeout)));
+                        Tuple.Tuple2<Long, String> tokenTuple = new Tuple.Tuple2<>(timestamp + timestampOffset, token);
+                        OAuth2.tokenStorage.put(cacheKey, tokenTuple);
+                    }
+
                     headers.put("Authorization", "Bearer " + token);
                     break;
             }
         }
         catch (Exception e) {
-            // @TODO log errors
+            OAuth2.log.error("Exception trying to obtain bearer token", e);
         }
     }
 
-    private static String getBearerTokenFromURL(String urlStr, HttpMethod method, ResponseType responseType, String credentials, String postData, String responseKey, Map<String, String> validationPairs) throws IOException, ParseException {
-        URL url = new URL(urlStr);
-        HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
-        urlConnection.setConnectTimeout(ConnectTimeout);
-        urlConnection.setReadTimeout(ReadTimeout);
-        urlConnection.setUseCaches(false);
-        urlConnection.setRequestMethod(method.name());
-        urlConnection.setRequestProperty("User-Agent", UserAgent);
-        urlConnection.setRequestProperty("Authorization", "Basic " + credentials);
-        urlConnection.setDoInput(true);
-        InputStream inputStream = urlConnection.getInputStream();
-        if (postData != null && method == HttpMethod.POST) {
-            urlConnection.setDoOutput(true);
-            urlConnection.setRequestProperty("Content-Length", String.valueOf(postData.length()));
-            urlConnection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded"); // @TODO - abstract this to a key
-            OutputStream os = urlConnection.getOutputStream();
-            DataOutputStream dataOutputStream= new DataOutputStream(new BufferedOutputStream(os));
-            dataOutputStream.writeBytes(postData);
-            dataOutputStream.close();
+    private static String getBearerTokenCacheKey(String urlStr, HttpMethod method, ResponseType responseType, String credentials, String postData, String postMimeType) {
+        return urlStr +
+            "####" +
+            method.name() +
+            "####" +
+            responseType.name() +
+            "####" +
+            credentials +
+            "####" +
+            (postData == null ? "" : postData) +
+            "####" +
+            postMimeType;
+    }
+
+    private static String getBearerTokenFromURL(String urlStr, HttpMethod method, ResponseType responseType, String credentials, String postData, String postMimeType, String responseKey, Map<String, String> validationPairs) throws IOException, ParseException {
+
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Authorization", "Basic " + credentials);
+        if (postData != null) {
+            assert(method == HttpMethod.POST);
+            headers.put("Content-Type", postMimeType);
         }
-        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
-        StringBuilder responseBuilder = new StringBuilder();
-        char[] buffer = new char[4096];
-        while (bufferedReader.read(buffer, 0,4096) == 4096) {
-            responseBuilder.append(buffer);
-        }
-        responseBuilder.append(buffer);
+
+        assert(responseType == ResponseType.JSON); // We don't support any other right now.
+
+        String response = URLUtil.fetch(urlStr, method, headers, postData, ConnectTimeout, ReadTimeout);
         JSONParser jsonParser = new JSONParser();
-        JSONObject jsonObject = (JSONObject) jsonParser.parse(responseBuilder.toString());
+        JSONObject jsonObject = (JSONObject) jsonParser.parse(response);
         for(String key: validationPairs.keySet()) {
             String result = (String) jsonObject.get(key);
             String expectedResult = validationPairs.get(key);
@@ -123,14 +140,13 @@ class OAuth2 {
                 throw new ParseException(-1 , "Result not as expected - expected '" + key + "=" + expectedResult + "' instead got result: '" + (result == null ? "(null)" : result));
             }
         }
+
         String value = (String) jsonObject.get(responseKey);
         if (value == null) {
-            throw new ParseException(-1, "Could not find '" + responseKey + "' in result: " + responseBuilder.toString());
+            throw new ParseException(-1, "Could not find '" + responseKey + "' in result: " + response);
         }
-
         return value;
     }
-
 
     static void verifyConnectionParameters(Map<String, String> connectionParameters, String user, String password) throws BigDawgCatalogException {
         if (!connectionParameters.containsKey("auth_url")) {
@@ -173,7 +189,7 @@ class OAuth2 {
     }
 
     private static Map<String, String> parseAuthResponseValidate(String responseValidationPairs) throws BigDawgCatalogException {
-        Map<String, String> resultPairs = new HashMap<String, String>();
+        Map<String, String> resultPairs = new HashMap<>();
         if (responseValidationPairs == null) {
             return resultPairs;
         }

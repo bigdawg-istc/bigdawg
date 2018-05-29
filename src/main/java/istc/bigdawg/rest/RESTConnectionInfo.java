@@ -1,32 +1,26 @@
-package istc.bigdawg.api;
+package istc.bigdawg.rest;
 
+import istc.bigdawg.api.*;
 import istc.bigdawg.exceptions.ApiException;
 import istc.bigdawg.exceptions.BigDawgCatalogException;
-import istc.bigdawg.exceptions.BigDawgException;
-import org.apache.tools.ant.taskdefs.condition.Http;
+import org.apache.log4j.Logger;
 
-import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
-import java.net.URLEncoder;
-import java.security.SecureRandom;
-import java.time.Instant;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.StringJoiner;
 
 public class RESTConnectionInfo extends AbstractApiConnectionInfo {
-
     private String prefix;
     private HttpMethod method;
     private AuthenticationType authenticationType;
     private Map<String, String> connectionParameters;
     private Map<String, String> extraQueryParameters;
-    private String bearerToken;
+    private static Logger log = Logger
+            .getLogger(RESTConnectionInfo.class.getName());
 
-    RESTConnectionInfo(String host, String port,
+    private RESTConnectionInfo(String host, String port,
                              String endpoint, String user, String password, Map<String, String> connectionParameters) throws BigDawgCatalogException {
-        super(host, port, endpoint, user, password);
+        super(host, port, endpoint, user, password, connectionParameters.getOrDefault("scheme", null));
         this.connectionParameters = connectionParameters;
         this.parseExtraQueryParameters(); // This should happen before authentication type
         this.parseAuthenticationType();
@@ -35,7 +29,7 @@ public class RESTConnectionInfo extends AbstractApiConnectionInfo {
     }
     public RESTConnectionInfo(String host, String port,
                              String endpoint, String user, String password, String connectionParametersStr) throws BigDawgCatalogException {
-        this(host, port, endpoint, user, password, AbstractApiConnectionInfo.parseConnectionParameters(connectionParametersStr));
+        this(host, port, endpoint, user, password, AbstractApiConnectionInfo.parseConnectionParameters(connectionParametersStr, "REST"));
     }
 
     private void parseExtraQueryParameters() throws BigDawgCatalogException {
@@ -166,34 +160,12 @@ public class RESTConnectionInfo extends AbstractApiConnectionInfo {
     public String getUrl() {
         String endpointUrl = this.getEndpointUrl();
         try {
-            return this.appendExtraQueryParameters(endpointUrl);
+            return URLUtil.appendQueryParameters(endpointUrl, this.extraQueryParameters);
         }
         catch (Exception e) {
-            // @TODO handle exception in some graceful manner
+            RESTConnectionInfo.log.error("Error trying to get url", e);
             return null;
         }
-    }
-
-    private String appendExtraQueryParameters(String url) throws UnsupportedEncodingException {
-        if (this.extraQueryParameters.isEmpty()) {
-            return url;
-        }
-
-        StringBuilder sb = new StringBuilder();
-        sb.append(url);
-        if (!url.contains("?")) {
-            sb.append("?");
-        }
-        else {
-            sb.append("&");
-        }
-
-        StringJoiner joiner = new StringJoiner("&");
-        this.extraQueryParameters.forEach((k, v) -> {
-            joiner.add(URLUtil.percentEncode(k) + "=" + URLUtil.percentEncode(v));
-        });
-        sb.append(joiner.toString());
-        return sb.toString();
     }
 
     public AuthenticationType getAuthenticationType() {

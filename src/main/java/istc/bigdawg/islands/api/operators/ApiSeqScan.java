@@ -14,12 +14,12 @@ import org.json.JSONObject;
 
 public class ApiSeqScan extends ApiOperator implements SeqScan {
 
+    private Map<String, String> queryParameters;
     private String apiName;
     private String endpoint;
-    private HashMap<String, String> queryParameters;
     private String queryRaw;
 
-    public ApiSeqScan(String apiName, String endpoint, HashMap<String, String> queryParameters) {
+    public ApiSeqScan(String apiName, String endpoint, Map<String, String> queryParameters) {
         super();
         this.apiName = apiName;
         this.endpoint = endpoint;
@@ -46,9 +46,19 @@ public class ApiSeqScan extends ApiOperator implements SeqScan {
         this.endpoint = endpoint;
     }
 
+    public Map<String, String> getQueryParameters() {
+        return this.queryParameters;
+    }
+
+    public String getQueryRaw() {
+        return this.queryRaw;
+    }
+
     @Override
     public Operator duplicate(boolean addChild) throws IslandException {
-        return new ApiSeqScan(apiName, endpoint, queryParameters);
+        ApiSeqScan apiSeqScan = new ApiSeqScan(apiName, endpoint, queryParameters);
+        apiSeqScan.setQueryRaw(this.queryRaw);
+        return apiSeqScan;
     }
 
     @Override
@@ -86,12 +96,16 @@ public class ApiSeqScan extends ApiOperator implements SeqScan {
 
     @Override
     public String getSourceTableName() {
-        return this.getFullyQualifiedName();
+        return apiName + "/" + endpoint;
     }
 
     @Override
     public void setSourceTableName(String srcTableName) {
-        this.endpoint = srcTableName;
+        String[] parts = srcTableName.split("/");
+        assert(parts.length == 2);
+
+        this.apiName = parts[0];
+        this.endpoint = parts[1];
     }
 
     @Override
@@ -101,7 +115,7 @@ public class ApiSeqScan extends ApiOperator implements SeqScan {
 
     @Override
     public String getFullyQualifiedName() {
-        return apiName + "#" + endpoint;
+        return this.getSourceTableName();
     }
 
 }

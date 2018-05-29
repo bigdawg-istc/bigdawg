@@ -1,6 +1,4 @@
-package istc.bigdawg.api;
-
-import istc.bigdawg.exceptions.BigDawgCatalogException;
+package istc.bigdawg.rest;
 
 public enum HttpMethod {
     GET, POST;

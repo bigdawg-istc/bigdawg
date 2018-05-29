@@ -30,28 +30,37 @@ abstract public class AbstractApiConnectionInfo implements ConnectionInfo {
     protected String host;
     protected int port;
     protected String scheme;
-    protected String username;
+    protected String user;
     protected String password;
     protected String database;
 
-    public AbstractApiConnectionInfo(String host, String port, String database, String username, String password) throws BigDawgCatalogException {
-        this(host, port, database, username, password,null);
-    }
-
-    public AbstractApiConnectionInfo(String host, String port, String database, String username, String password, String scheme) throws BigDawgCatalogException {
+    private AbstractApiConnectionInfo(String host, String port, String database, String user, String password) throws BigDawgCatalogException {
         this.host = host;
         this.port = Integer.parseInt(port);
-        this.scheme = scheme;
         this.database = database;
         this.password = password;
-        this.username = username;
+        this.user = user;
     }
 
-    static Map<String, String> parseConnectionParameters(String connectionParametersStr) throws BigDawgCatalogException {
+    public AbstractApiConnectionInfo(String host, String port, String database, String user, String password, String scheme) throws BigDawgCatalogException {
+        this(host, port, database, user, password);
+        this.scheme = scheme;
+    }
+
+    public static Map<String, String> parseConnectionParameters(String connectionParametersStr, String type) throws BigDawgCatalogException {
+        assert(connectionParametersStr != null);
+
         Map<String, String> connectionParameters = new HashMap<String,String>();
-        if (connectionParametersStr == null || connectionParametersStr.length() == 0) {
+        final String expectedPrefix = type + ":";
+        if (!connectionParametersStr.startsWith(expectedPrefix)) {
+            throw new BigDawgCatalogException("Expected connection parameters string to start with " + expectedPrefix);
+        }
+
+        final String connectionParametersStrPared = connectionParametersStr.substring(expectedPrefix.length());
+        if (connectionParametersStrPared.length() == 0) {
             return connectionParameters;
         }
+
         String[] parametersList = connectionParametersStr.split(",");
         for(String parameter: parametersList) {
             String[] pair = parameter.split("=");
@@ -131,7 +140,7 @@ abstract public class AbstractApiConnectionInfo implements ConnectionInfo {
 
     @Override
     public String getUser() {
-        return username;
+        return user;
     }
 
     @Override
@@ -178,7 +187,7 @@ abstract public class AbstractApiConnectionInfo implements ConnectionInfo {
     public String toString() {
         return "ApiConnectionInfo [host=" + host
                 + ", port=" + String.valueOf(port) + ", scheme="
-                + scheme + ", username=" + username
+                + scheme + ", user=" + user
                 + ", password=" + "Sorry, I cannot show it" + "]";
     }
 
