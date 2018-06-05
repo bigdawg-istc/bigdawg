@@ -46,9 +46,7 @@ public class ApiIsland implements Island {
     public void setupForQueryPlanning(Set<String> outputChildren, Map<String, String> outputTransitionSchemas)
             throws IslandException {
 
-        ApiHandler handler = null;
         Set<String> createdTables = new HashSet<>();
-            handler = new ApiHandler();
 //        } catch (AccumuloException | BigDawgException | AccumuloSecurityException e0) {
 //            throw new IslandException(e0.getMessage(), e0);
 //        }

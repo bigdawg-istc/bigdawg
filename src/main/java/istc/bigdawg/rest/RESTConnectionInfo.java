@@ -13,31 +13,31 @@ public class RESTConnectionInfo extends AbstractApiConnectionInfo {
     private String prefix;
     private HttpMethod method;
     private AuthenticationType authenticationType;
-    private Map<String, String> connectionParameters;
+    private Map<String, String> connectionProperties;
     private Map<String, String> extraQueryParameters;
     private static Logger log = Logger
             .getLogger(RESTConnectionInfo.class.getName());
 
     private RESTConnectionInfo(String host, String port,
-                             String endpoint, String user, String password, Map<String, String> connectionParameters) throws BigDawgCatalogException {
-        super(host, port, endpoint, user, password, connectionParameters.getOrDefault("scheme", null));
-        this.connectionParameters = connectionParameters;
+                             String endpoint, String user, String password, Map<String, String> connectionProperties) throws BigDawgCatalogException {
+        super(host, port, endpoint, user, password, connectionProperties.getOrDefault("scheme", null));
+        this.connectionProperties = connectionProperties;
         this.parseExtraQueryParameters(); // This should happen before authentication type
         this.parseAuthenticationType();
         this.parsePrefix();
         this.parseMethod();
     }
     public RESTConnectionInfo(String host, String port,
-                             String endpoint, String user, String password, String connectionParametersStr) throws BigDawgCatalogException {
-        this(host, port, endpoint, user, password, AbstractApiConnectionInfo.parseConnectionParameters(connectionParametersStr, "REST"));
+                             String endpoint, String user, String password, String connectionPropertiesStr) throws BigDawgCatalogException {
+        this(host, port, endpoint, user, password, AbstractApiConnectionInfo.parseConnectionProperties(connectionPropertiesStr, "REST"));
     }
 
     private void parseExtraQueryParameters() throws BigDawgCatalogException {
-        this.extraQueryParameters = new HashMap<String, String>();
-        if (!this.connectionParameters.containsKey("query_params")) {
+        this.extraQueryParameters = new HashMap<>();
+        if (!this.connectionProperties.containsKey("query_params")) {
             return;
         }
-        String extraQueryParameters = this.connectionParameters.get("query_params");
+        String extraQueryParameters = this.connectionProperties.get("query_params");
         String[] pairs = extraQueryParameters.split("&");
         try {
             for (String pair : pairs) {
@@ -62,8 +62,8 @@ public class RESTConnectionInfo extends AbstractApiConnectionInfo {
     }
 
     private void parseMethod() throws BigDawgCatalogException {
-        if (this.connectionParameters.containsKey("method")) {
-            String methodStr = this.connectionParameters.get("method");
+        if (this.connectionProperties.containsKey("method")) {
+            String methodStr = this.connectionProperties.get("method");
             this.method = HttpMethod.parseMethod(methodStr);
             if (this.method == null) {
                 throw new BigDawgCatalogException("Unsupported / unknown method: " + methodStr);
@@ -73,8 +73,20 @@ public class RESTConnectionInfo extends AbstractApiConnectionInfo {
     }
 
     private void parsePrefix() {
-        if (this.connectionParameters.containsKey("prefix")) {
-            this.prefix = this.connectionParameters.get("prefix");
+        if (this.connectionProperties.containsKey("prefix")) {
+            this.prefix = this.connectionProperties.get("prefix");
+            if (!this.prefix.startsWith("/")) {
+                this.prefix = "/" + this.prefix;
+            }
+        }
+        else {
+            this.prefix = "/";
+        }
+    }
+
+    private void parseSuffix() {
+        if (this.connectionProperties.containsKey("prefix")) {
+            this.prefix = this.connectionProperties.get("prefix");
             if (!this.prefix.startsWith("/")) {
                 this.prefix = "/" + this.prefix;
             }
@@ -85,11 +97,11 @@ public class RESTConnectionInfo extends AbstractApiConnectionInfo {
     }
 
     private void parseAuthenticationType() throws BigDawgCatalogException {
-        if (!this.connectionParameters.containsKey("auth_type")) {
+        if (!this.connectionProperties.containsKey("auth_type")) {
             this.authenticationType = AuthenticationType.NONE;
             return;
         }
-        String authenticationType = this.connectionParameters.get("auth_type");
+        String authenticationType = this.connectionProperties.get("auth_type");
 
         switch(authenticationType) {
             case "basic":
@@ -98,32 +110,32 @@ public class RESTConnectionInfo extends AbstractApiConnectionInfo {
             case "token":
                 // @TODO do we need to differentiate between tokens that are in the URL and tokens that are in the headers
                 this.authenticationType = AuthenticationType.TOKEN;
-                if (!this.connectionParameters.containsKey("token")) {
+                if (!this.connectionProperties.containsKey("token")) {
                     throw new BigDawgCatalogException("Expecting token to be set in connection parameters");
                 }
                 String key = "token";
-                if (this.connectionParameters.containsKey("token_key")) {
-                    key = this.connectionParameters.get("token_key");
+                if (this.connectionProperties.containsKey("token_key")) {
+                    key = this.connectionProperties.get("token_key");
                 }
                 if (this.extraQueryParameters.containsKey("key")) {
                     throw new BigDawgCatalogException("Token key " + key + " is already in query_params");
                 }
                 // @TODO what happens if this is supposed to be in POST params instead of query params?
-                this.extraQueryParameters.put(key, this.connectionParameters.get("token"));
+                this.extraQueryParameters.put(key, this.connectionProperties.get("token"));
                 break;
             case "bearer":
                 this.authenticationType = AuthenticationType.BEARER;
-                if (!this.connectionParameters.containsKey("token")) {
+                if (!this.connectionProperties.containsKey("token")) {
                     throw new BigDawgCatalogException("Expecting token to be set in connection parameters");
                 }
                 break;
             case "oauth1":
                 this.authenticationType = AuthenticationType.OAUTH1;
-                OAuth1.verifyConnectionParameters(this.connectionParameters);
+                OAuth1.verifyConnectionProperties(this.connectionProperties);
                 break;
             case "oauth2":
                 this.authenticationType = AuthenticationType.OAUTH2;
-                OAuth2.verifyConnectionParameters(this.connectionParameters, this.getUser(), this.getPassword());
+                OAuth2.verifyConnectionProperties(this.connectionProperties, this.getUser(), this.getPassword());
                 break;
             default:
                 throw new BigDawgCatalogException("Unknown authentication type: " + authenticationType);
@@ -138,13 +150,13 @@ public class RESTConnectionInfo extends AbstractApiConnectionInfo {
         Map<String, String> headers = new HashMap<>();
         switch (this.authenticationType) {
             case OAUTH1:
-                headers.put("OAuth", OAuth1.getOAuth1Header(this.method, this.getEndpointUrl(), this.connectionParameters));
+                headers.put("OAuth", OAuth1.getOAuth1Header(this.method, this.getEndpointUrl(), this.connectionProperties));
                 break;
             case BEARER:
-                headers.put("Authorization", "Bearer " + this.connectionParameters.get("token"));
+                headers.put("Authorization", "Bearer " + this.connectionProperties.get("token"));
                 break;
             case OAUTH2:
-                OAuth2.setOAuth2Headers(headers, connectionParameters, getUser(), getPassword());
+                OAuth2.setOAuth2Headers(headers, connectionProperties, getUser(), getPassword());
                 break;
         }
         return headers;
@@ -166,10 +178,6 @@ public class RESTConnectionInfo extends AbstractApiConnectionInfo {
             RESTConnectionInfo.log.error("Error trying to get url", e);
             return null;
         }
-    }
-
-    public AuthenticationType getAuthenticationType() {
-        return this.authenticationType;
     }
 
     public String getEndpoint() {

@@ -122,20 +122,20 @@ class OAuth1 {
 
 
 
-    static void verifyConnectionParameters(Map<String, String> connectionParameters) throws BigDawgCatalogException {
-        if (!connectionParameters.containsKey("oauth_consumer_key")) {
+    static void verifyConnectionProperties(Map<String, String> connectionProperties) throws BigDawgCatalogException {
+        if (!connectionProperties.containsKey("oauth_consumer_key")) {
             throw new BigDawgCatalogException("Expecting oauth_consumer_key to be set in connection parameters");
         }
-        if (!connectionParameters.containsKey("oauth_signature_method")) {
+        if (!connectionProperties.containsKey("oauth_signature_method")) {
             throw new BigDawgCatalogException("Expecting oauth_signature_method to be set in connection parameters");
         }
-        if (!connectionParameters.containsKey("oauth_token")) {
+        if (!connectionProperties.containsKey("oauth_token")) {
             throw new BigDawgCatalogException("Expecting oauth_token to be set in connection parameters");
         }
-        if (!connectionParameters.containsKey("oauth_token_secret")) {
+        if (!connectionProperties.containsKey("oauth_token_secret")) {
             throw new BigDawgCatalogException("Expecting oauth_token_secret to be set in connection parameters");
         }
-        if (!connectionParameters.containsKey("oauth_consumer_secret")) {
+        if (!connectionProperties.containsKey("oauth_consumer_secret")) {
             throw new BigDawgCatalogException("Expecting oauth_consumer_secret to be set in connection parameters");
         }
     }

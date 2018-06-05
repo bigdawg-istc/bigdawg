@@ -12,20 +12,11 @@ import istc.bigdawg.exceptions.BigDawgCatalogException;
 import istc.bigdawg.utils.Tuple;
 import org.apache.commons.lang3.tuple.Pair;
 
-import istc.bigdawg.exceptions.BigDawgException;
 import istc.bigdawg.executor.ExecutorEngine;
 import istc.bigdawg.executor.ExecutorEngine.LocalQueryExecutionException;
-import istc.bigdawg.islands.IslandAndCastResolver;
 import istc.bigdawg.query.ConnectionInfo;
-import org.apache.hadoop.yarn.webapp.hamlet.HamletSpec;
-import org.apache.http.NameValuePair;
-import org.apache.http.client.utils.URLEncodedUtils;
 
 abstract public class AbstractApiConnectionInfo implements ConnectionInfo {
-
-    /**
-     *
-     */
     private static final long serialVersionUID = 1L;
     protected String host;
     protected int port;
@@ -47,45 +38,45 @@ abstract public class AbstractApiConnectionInfo implements ConnectionInfo {
         this.scheme = scheme;
     }
 
-    public static Map<String, String> parseConnectionParameters(String connectionParametersStr, String type) throws BigDawgCatalogException {
-        assert(connectionParametersStr != null);
+    public static Map<String, String> parseConnectionProperties(String connectionPropertiesStr, String type) throws BigDawgCatalogException {
+        assert(connectionPropertiesStr != null);
 
-        Map<String, String> connectionParameters = new HashMap<String,String>();
+        Map<String, String> connectionProperties = new HashMap<String,String>();
         final String expectedPrefix = type + ":";
-        if (!connectionParametersStr.startsWith(expectedPrefix)) {
+        if (!connectionPropertiesStr.startsWith(expectedPrefix)) {
             throw new BigDawgCatalogException("Expected connection parameters string to start with " + expectedPrefix);
         }
 
-        final String connectionParametersStrPared = connectionParametersStr.substring(expectedPrefix.length());
-        if (connectionParametersStrPared.length() == 0) {
-            return connectionParameters;
+        final String connectionPropertiesStrPared = connectionPropertiesStr.substring(expectedPrefix.length());
+        if (connectionPropertiesStrPared.length() == 0) {
+            return connectionProperties;
         }
 
-        String[] parametersList = connectionParametersStr.split(",");
+        String[] parametersList = connectionPropertiesStrPared.split(",");
         for(String parameter: parametersList) {
             String[] pair = parameter.split("=");
             if (pair.length != 2) {
-                throw new BigDawgCatalogException("ApiConnectionParameters should be in the form of 'key=urlencoded(value)', instead found a pair of length " + pair.length + " with parameter \"" + parameter + "\" - which came from connection string: " + connectionParametersStr);
+                throw new BigDawgCatalogException("ApiconnectionProperties should be in the form of 'key=urlencoded(value)', instead found a pair of length " + pair.length + " with parameter \"" + parameter + "\" - which came from connection string: " + connectionPropertiesStr);
             }
             try {
                 String value = URLDecoder.decode(pair[1], "UTF-8");
                 String key = pair[0];
                 if (key.length() == 0) {
-                    throw new BigDawgCatalogException("key has no length - could not decode value \"" + pair[1] + "\" from pair: \"" + parameter + "\" in connection string: " + connectionParametersStr);
+                    throw new BigDawgCatalogException("key has no length - could not decode value \"" + pair[1] + "\" from pair: \"" + parameter + "\" in connection string: " + connectionPropertiesStr);
                 }
                 else if (value.length() == 0) {
-                    throw new BigDawgCatalogException("Value has no length - could not decode value \"" + pair[1] + "\" from pair: \"" + parameter + "\" in connection string: " + connectionParametersStr);
+                    throw new BigDawgCatalogException("Value has no length - could not decode value \"" + pair[1] + "\" from pair: \"" + parameter + "\" in connection string: " + connectionPropertiesStr);
                 }
-                if (connectionParameters.containsKey(key)) {
-                    throw new BigDawgCatalogException("Duplicate key - could not decode value \"" + pair[1] + "\" from pair: \"" + parameter + "\" in connection string: " + connectionParametersStr);
+                if (connectionProperties.containsKey(key)) {
+                    throw new BigDawgCatalogException("Duplicate key - could not decode value \"" + pair[1] + "\" from pair: \"" + parameter + "\" in connection string: " + connectionPropertiesStr);
                 }
-                connectionParameters.put(key, value);
+                connectionProperties.put(key, value);
             }
             catch (UnsupportedEncodingException e) {
-                throw new BigDawgCatalogException("UnsupportedEncoding - " + e.getMessage() + " - Could not decode value \"" + pair[1] + "\" from pair: \"" + parameter + "\" in connection string: " + connectionParametersStr);
+                throw new BigDawgCatalogException("UnsupportedEncoding - " + e.getMessage() + " - Could not decode value \"" + pair[1] + "\" from pair: \"" + parameter + "\" in connection string: " + connectionPropertiesStr);
             }
         }
-        return connectionParameters;
+        return connectionProperties;
     }
 
     @Override

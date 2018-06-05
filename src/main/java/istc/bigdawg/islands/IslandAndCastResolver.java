@@ -7,6 +7,7 @@ import java.util.regex.Pattern;
 
 import istc.bigdawg.accumulo.AccumuloConnectionInfo;
 import istc.bigdawg.api.ApiHandler;
+import istc.bigdawg.islands.api.ApiIsland;
 import istc.bigdawg.rest.RESTConnectionInfo;
 import istc.bigdawg.catalog.Catalog;
 import istc.bigdawg.catalog.CatalogViewer;
@@ -71,12 +72,12 @@ public class IslandAndCastResolver {
 		case ARRAY:
 		case RELATIONAL:
 		case TEXT:
+		case API:
 			return true;
 		case DOCUMENT:
 		case GRAPH:
 		case KEYVALUE:
 		case STREAM:
-		case API:
 		case MYRIA:
 			return false;
 		default:
@@ -175,9 +176,10 @@ public class IslandAndCastResolver {
 					extraction = new AccumuloConnectionInfo(rs2.getString("host"), rs2.getString("port"),rs2.getString("dbname"), rs2.getString("userid"), rs2.getString("password"));
 				break;
 			case REST:
-				rs2 = cc.execRet("select dbid, eid, host, port, db.name as dbname, userid, password, connection_properties "
+				rs2 = cc.execRet("select dbid, eid, host, port, db.name as dbname, userid, password, connection_properties, o.name "
 						+ "from catalog.databases db "
 						+ "join catalog.engines e on db.engine_id = e.eid "
+                        + "join catalog.objects o on db.dbid = o.physical_db "
 						+ "where dbid = "+dbid);
 				if (rs2.next()) {
 					extraction = new RESTConnectionInfo(rs2.getString("host"), rs2.getString("port"),rs2.getString("dbname"), rs2.getString("userid"), rs2.getString("password"), rs2.getString("connection_properties"));
@@ -319,7 +321,7 @@ public class IslandAndCastResolver {
 		case MYRIA:
 			break;	
 		case API:
-			break;
+			return ApiIsland.INSTANCE;
 		default:
 			break;
 		}
@@ -341,9 +343,10 @@ public class IslandAndCastResolver {
 		case STREAM:
 			List<String> ssparsed = (new SStoreQueryParser()).parse(node.getQueryString());
 			return (new SStoreSQLHandler(sstoreDBID)).executePreparedStatement((new SStoreSQLHandler(sstoreDBID)).getConnection(), ssparsed);
-		case API:
-			List<String> apiparsed = (new ApiQueryParser()).parse(node.getQueryString());
-			return ApiHandler.executeApiQuery(apiparsed);
+// For test purposes:
+//		case API:
+//			List<String> apiparsed = (new ApiQueryParser()).parse(node.getQueryString());
+//			return ApiHandler.executeApiQuery(apiparsed);
 		case MYRIA:
 			String input = node.getQueryString();
 			List<String> mparsed = (new MyriaQueryParser()).parse(input);
@@ -351,6 +354,7 @@ public class IslandAndCastResolver {
 			System.out.printf("MYRIA Island query: -->%s<--; parsed form: -->%s<--\n", input, mparsed);
 			
 			return MyriaHandler.executeMyriaQuery(mparsed);
+		case API:
 		case RELATIONAL:
 		case ARRAY:
 		case TEXT:

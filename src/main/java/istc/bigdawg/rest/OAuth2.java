@@ -46,34 +46,34 @@ class OAuth2 {
         }
     }
 
-    static void setOAuth2Headers(Map<String, String> headers, Map<String, String> connectionParameters, String user, String password) {
+    static void setOAuth2Headers(Map<String, String> headers, Map<String, String> connectionProperties, String user, String password) {
         try {
-            AuthenticationType oauth2AuthType = getAuthenticationTypeFromString(connectionParameters.get("oauth2_auth_type"));
+            AuthenticationType oauth2AuthType = getAuthenticationTypeFromString(connectionProperties.get("oauth2_auth_type"));
             if (oauth2AuthType == null) {
                 oauth2AuthType = AuthenticationType.BASIC_BEARER;
             }
             switch(oauth2AuthType) {
                 case BASIC_BEARER:
-                    String url = connectionParameters.get("auth_url");
+                    String url = connectionProperties.get("auth_url");
                     String credentials = user + ":" + password;
                     String credentialsBase64 = new String(Base64.getEncoder().encode(credentials.getBytes()));
                     HttpMethod method = HttpMethod.GET;
-                    if (connectionParameters.containsKey("auth_method")) {
-                        method = HttpMethod.parseMethod(connectionParameters.get("auth_method"));
+                    if (connectionProperties.containsKey("auth_method")) {
+                        method = HttpMethod.parseMethod(connectionProperties.get("auth_method"));
                         assert(method != null);
                     }
                     String postData = null;
                     if (method == HttpMethod.POST) {
                         // See if there's POST data
-                        if (connectionParameters.containsKey("auth_post_data")) {
-                            postData = connectionParameters.get("auth_post_data");
+                        if (connectionProperties.containsKey("auth_post_data")) {
+                            postData = connectionProperties.get("auth_post_data");
                             postData = URLDecoder.decode(postData, "UTF-8");
                         }
                     }
                     ResponseType responseType = ResponseType.JSON;
-                    String responseKey = connectionParameters.getOrDefault("auth_response_key","access_token");
-                    Map<String, String> validationPairs = parseAuthResponseValidate(connectionParameters.getOrDefault("auth_response_validate", null));
-                    String postMimeType = connectionParameters.getOrDefault("auth_post_mime_type", "application/x-www-form-urlencoded");
+                    String responseKey = connectionProperties.getOrDefault("auth_response_key","access_token");
+                    Map<String, String> validationPairs = parseAuthResponseValidate(connectionProperties.getOrDefault("auth_response_validate", null));
+                    String postMimeType = connectionProperties.getOrDefault("auth_post_mime_type", "application/x-www-form-urlencoded");
 
                     long timestamp = Instant.now().getEpochSecond();
                     String cacheKey = getBearerTokenCacheKey(url, method, responseType, credentialsBase64, postData, postMimeType);
@@ -91,7 +91,7 @@ class OAuth2 {
                         token = getBearerTokenFromURL(url, method, responseType, credentialsBase64, postData, postMimeType, responseKey, validationPairs);
 
                         // Be a good citizen and cache the token
-                        int timestampOffset = Integer.parseInt(connectionParameters.getOrDefault("auth_timeout", String.valueOf(DefaultAuthTimeout)));
+                        int timestampOffset = Integer.parseInt(connectionProperties.getOrDefault("auth_timeout", String.valueOf(DefaultAuthTimeout)));
                         Tuple.Tuple2<Long, String> tokenTuple = new Tuple.Tuple2<>(timestamp + timestampOffset, token);
                         OAuth2.tokenStorage.put(cacheKey, tokenTuple);
                     }
@@ -148,11 +148,11 @@ class OAuth2 {
         return value;
     }
 
-    static void verifyConnectionParameters(Map<String, String> connectionParameters, String user, String password) throws BigDawgCatalogException {
-        if (!connectionParameters.containsKey("auth_url")) {
+    static void verifyConnectionProperties(Map<String, String> connectionProperties, String user, String password) throws BigDawgCatalogException {
+        if (!connectionProperties.containsKey("auth_url")) {
             throw new BigDawgCatalogException("For oauth2, need an auth_url");
         }
-        AuthenticationType oauth2AuthType = getAuthenticationTypeFromString(connectionParameters.get("oauth2_auth_type"));
+        AuthenticationType oauth2AuthType = getAuthenticationTypeFromString(connectionProperties.get("oauth2_auth_type"));
         if (oauth2AuthType == null) {
             oauth2AuthType = AuthenticationType.BASIC_BEARER;
         }
@@ -169,21 +169,21 @@ class OAuth2 {
             default:
                 throw new BigDawgCatalogException("Unknown / Unsupported OAuth2 authentication type: " + oauth2AuthType.name());
         }
-        if (connectionParameters.containsKey("auth_method")) {
-            String authMethodStr = connectionParameters.get("auth_method");
+        if (connectionProperties.containsKey("auth_method")) {
+            String authMethodStr = connectionProperties.get("auth_method");
             HttpMethod authMethod = HttpMethod.parseMethod(authMethodStr);
             if (authMethod == null) {
                 throw new BigDawgCatalogException("Unknown / Unsupported auth_method: " + authMethodStr);
             }
         }
 
-        if (connectionParameters.containsKey("auth_response_type")) {
-            if (!connectionParameters.get("auth_response_type").toUpperCase().equals("JSON")) {
-                throw new BigDawgCatalogException("Unknown / Unsupported response type: " + connectionParameters.get("auth_response_type"));
+        if (connectionProperties.containsKey("auth_response_type")) {
+            if (!connectionProperties.get("auth_response_type").toUpperCase().equals("JSON")) {
+                throw new BigDawgCatalogException("Unknown / Unsupported response type: " + connectionProperties.get("auth_response_type"));
             }
         }
-        if (connectionParameters.containsKey("auth_response_validate")) {
-            String responseValidationPairs = connectionParameters.get("auth_response_validate");
+        if (connectionProperties.containsKey("auth_response_validate")) {
+            String responseValidationPairs = connectionProperties.get("auth_response_validate");
             parseAuthResponseValidate(responseValidationPairs);
         }
     }
