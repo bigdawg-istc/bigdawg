@@ -3,6 +3,7 @@ package istc.bigdawg.rest;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.List;
 import java.util.Map;
 import java.util.StringJoiner;
 
@@ -275,7 +276,13 @@ public final class URLUtil {
         return sb.toString();
     }
 
-    static String fetch(String urlStr, HttpMethod method, Map<String, String> headers, String postData, int connectTimeout, int readTimeout) throws IOException {
+    public static class FetchResult {
+        public String response;
+        public int responseCode;
+        public Map<String, List<String>> responseHeaders;
+    }
+
+    static FetchResult fetch(String urlStr, HttpMethod method, Map<String, String> headers, String postData, int connectTimeout, int readTimeout) throws IOException {
         URL url = new URL(urlStr);
         HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
         urlConnection.setConnectTimeout(connectTimeout);
@@ -287,7 +294,6 @@ public final class URLUtil {
             urlConnection.setRequestProperty(header, headers.get(header));
         }
         urlConnection.setDoInput(true);
-        InputStream inputStream = urlConnection.getInputStream();
         if (postData != null && method == HttpMethod.POST) {
             urlConnection.setDoOutput(true);
             urlConnection.setRequestProperty("Content-Length", String.valueOf(postData.length()));
@@ -296,14 +302,52 @@ public final class URLUtil {
             dataOutputStream.writeBytes(postData);
             dataOutputStream.close();
         }
+
+        FetchResult fetchResult = new FetchResult();
+        fetchResult.responseCode = urlConnection.getResponseCode();
+        InputStream inputStream = urlConnection.getInputStream();
         BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
         StringBuilder responseBuilder = new StringBuilder();
         char[] buffer = new char[4096];
-        while (bufferedReader.read(buffer, 0,4096) == 4096) {
-            responseBuilder.append(buffer);
+        int amount = 0;
+        while ((amount = bufferedReader.read(buffer, 0,4096)) > 0) {
+            responseBuilder.append(String.valueOf(buffer, 0, amount));
         }
-        responseBuilder.append(buffer);
-        return responseBuilder.toString();
+        if (urlConnection.getResponseCode() != HttpURLConnection.HTTP_OK) {
+            throw new IOException("Response code " + urlConnection.getResponseCode() + " from " + urlStr);
+        }
+
+        // The alternative is to return multiple
+        fetchResult.response = responseBuilder.toString();
+        int length = fetchResult.response.length();
+        fetchResult.responseHeaders = urlConnection.getHeaderFields();
+        return fetchResult;
+    }
+
+    public static boolean headersContain(Map<String, List<String>> headers, String key, String value, String delimiter) {
+        List<String> contentTypes = headers.get("content-type");
+        // @TODO throw exception if not application/json
+        boolean match = false;
+        for (String contentType: contentTypes) {
+            String [] contentTypeStrs;
+            if (delimiter != null && delimiter.length() > 0) {
+                contentTypeStrs = contentType.split(delimiter);
+            }
+            else {
+                contentTypeStrs = new String[1];
+                contentTypeStrs[0] = contentType;
+            }
+            for (String contentTypeStr: contentTypeStrs) {
+                if (contentTypeStr.trim().equals("application/json")) {
+                    match = true;
+                    break;
+                }
+            }
+            if (match) {
+                break;
+            }
+        }
+        return match;
     }
 
     public static String encodeParameters(Map<String, String> parameters) {
@@ -311,7 +355,7 @@ public final class URLUtil {
         parameters.forEach((k, v) -> {
             joiner.add(URLUtil.percentEncode(k) + "=" + URLUtil.percentEncode(v));
         });
-        return parameters.toString();
+        return joiner.toString();
     }
 
     static String appendQueryParameters(String url, Map<String, String> parameters) {

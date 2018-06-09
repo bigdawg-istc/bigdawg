@@ -9,12 +9,15 @@ import java.util.*;
 
 import istc.bigdawg.exceptions.ApiException;
 import istc.bigdawg.exceptions.BigDawgCatalogException;
+import istc.bigdawg.rest.RESTConnectionInfo;
+import istc.bigdawg.rest.RESTHandler;
 import istc.bigdawg.utils.Tuple;
 import org.apache.commons.lang3.tuple.Pair;
 
 import istc.bigdawg.executor.ExecutorEngine;
 import istc.bigdawg.executor.ExecutorEngine.LocalQueryExecutionException;
 import istc.bigdawg.query.ConnectionInfo;
+import org.apache.log4j.Logger;
 
 abstract public class AbstractApiConnectionInfo implements ConnectionInfo {
     private static final long serialVersionUID = 1L;
@@ -24,6 +27,9 @@ abstract public class AbstractApiConnectionInfo implements ConnectionInfo {
     protected String user;
     protected String password;
     protected String database;
+
+    private static Logger log = Logger
+            .getLogger(RESTConnectionInfo.class.getName());
 
     private AbstractApiConnectionInfo(String host, String port, String database, String user, String password) throws BigDawgCatalogException {
         this.host = host;
@@ -84,13 +90,13 @@ abstract public class AbstractApiConnectionInfo implements ConnectionInfo {
         return this.getUrlPrefix();
     }
 
-    private String getUrlPrefix() {
+    protected String getUrlPrefix() {
         try {
             Tuple.Tuple2<String, String> schemeAndPort = this.getSchemeAndPort();
             return schemeAndPort.getT1() + "://" + this.host + schemeAndPort.getT2();
         }
         catch(ApiException e) {
-            // @TODO - log this exception, make sure null return value is handled
+            log.error(e);
             return null;
         }
     }
@@ -107,10 +113,10 @@ abstract public class AbstractApiConnectionInfo implements ConnectionInfo {
         }
 
         String portStr;
-        if (this.port == 80 && this.scheme.equals("http")) {
+        if ((this.port == 80 || this.port == -1) && this.scheme.equals("http")) {
             portStr = "";
         }
-        else if (this.port == 443 && this.scheme.equals("https")) {
+        else if ((this.port == 443 || this.port == -1) && this.scheme.equals("https")) {
             portStr = "";
         }
         else {
@@ -163,11 +169,8 @@ abstract public class AbstractApiConnectionInfo implements ConnectionInfo {
     }
 
     @Override
-    public ExecutorEngine getLocalQueryExecutor()
-            throws LocalQueryExecutorLookupException {
-        // @TODO Need to return this.
-        return null;
-    }
+    abstract public ExecutorEngine getLocalQueryExecutor()
+            throws LocalQueryExecutorLookupException;
 
     /*
      * (non-Javadoc)

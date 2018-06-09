@@ -1,7 +1,9 @@
 package istc.bigdawg.catalog;
 
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -14,9 +16,10 @@ import istc.bigdawg.islands.IslandAndCastResolver;
 import istc.bigdawg.islands.IslandAndCastResolver.Engine;
 import istc.bigdawg.islands.IslandAndCastResolver.Scope;
 import istc.bigdawg.query.ConnectionInfo;
+import org.apache.avro.generic.GenericData;
 
 public class CatalogViewer {
-	
+
 	public static Engine getEngineOfDB(int dbid) throws BigDawgCatalogException, SQLException {
 		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
 		// input check
@@ -593,7 +596,36 @@ public class CatalogViewer {
 		return extraction;
 	}
 
-	
+	/**
+	 * Returns the object names that have the specified engine and database
+	 * @param engine
+	 * @param database
+	 * @return
+	 * @throws BigDawgCatalogException
+	 * @throws SQLException
+	 */
+	public static List<String> getObjectNames(String engine, String database) throws BigDawgCatalogException, SQLException {
+		Catalog cc = CatalogInstance.INSTANCE.getCatalog();
+		// input check
+		CatalogUtilities.checkConnection(cc);
+
+		List<String> result = new ArrayList<String>();
+
+		PreparedStatement stmt = cc.connection.prepareStatement("select o.name obj "
+						+ "from catalog.objects o " + "join catalog.databases d1 on o.physical_db = d1.dbid "
+						+ "join catalog.engines e1 		on d1.engine_id = e1.eid "
+						+ "where e1.name = ? and d1.name = ?");
+
+		stmt.setString(1, engine);
+		stmt.setString(2, database);
+		stmt.execute();
+		ResultSet rs = stmt.getResultSet();
+		while (rs.next()) {
+			result.add(rs.getString("obj"));
+		}
+		return result;
+	}
+
 	/**
 	 * Used for updating catalog entries.
 	 * 

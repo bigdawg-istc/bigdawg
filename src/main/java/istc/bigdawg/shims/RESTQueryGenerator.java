@@ -43,6 +43,7 @@ public class RESTQueryGenerator implements OperatorQueryGenerator {
         ApiSeqScan apiSeqScan = (ApiSeqScan) this.root;
         Map<String, String> queryParameters = apiSeqScan.getQueryParameters();
         if (queryParameters != null && !queryParameters.isEmpty()) {
+            // @TODO Maybe have an alternative way of encoding queryParameters - e.g. JSON
             return URLUtil.encodeParameters(queryParameters);
         }
         String queryRaw = apiSeqScan.getQueryRaw();

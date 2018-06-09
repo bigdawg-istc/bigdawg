@@ -3,14 +3,26 @@ package istc.bigdawg.rest;
 import istc.bigdawg.api.*;
 import istc.bigdawg.exceptions.ApiException;
 import istc.bigdawg.exceptions.BigDawgCatalogException;
+import istc.bigdawg.executor.ExecutorEngine;
+import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.log4j.Logger;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.net.URLDecoder;
 import java.util.HashMap;
 import java.util.Map;
 
 public class RESTConnectionInfo extends AbstractApiConnectionInfo {
-    private String prefix;
+    private final static int ReadTimeout = 120000; // ms
+    private final static int ConnectTimeout = 60000; // ms
+
+    private int authReadTimeout;
+    private int authConnectTimeout;
+    private int readTimeout;
+    private int connectTimeout;
+    private String resultKey; // Should be set to null if not existing
+    private URL url;
     private HttpMethod method;
     private AuthenticationType authenticationType;
     private Map<String, String> connectionProperties;
@@ -19,17 +31,46 @@ public class RESTConnectionInfo extends AbstractApiConnectionInfo {
             .getLogger(RESTConnectionInfo.class.getName());
 
     private RESTConnectionInfo(String host, String port,
-                             String endpoint, String user, String password, Map<String, String> connectionProperties) throws BigDawgCatalogException {
-        super(host, port, endpoint, user, password, connectionProperties.getOrDefault("scheme", null));
+                             String endpoint, String user, String password, Map<String, String> connectionProperties, URL url, String fields) throws BigDawgCatalogException {
+        super(host, port, endpoint, user, password, connectionProperties.getOrDefault("scheme", url.getProtocol()));
         this.connectionProperties = connectionProperties;
+        this.url = url;
         this.parseExtraQueryParameters(); // This should happen before authentication type
         this.parseAuthenticationType();
-        this.parsePrefix();
         this.parseMethod();
+        this.parseTimeouts();
+        this.parseFields(fields);
     }
-    public RESTConnectionInfo(String host, String port,
-                             String endpoint, String user, String password, String connectionPropertiesStr) throws BigDawgCatalogException {
-        this(host, port, endpoint, user, password, AbstractApiConnectionInfo.parseConnectionProperties(connectionPropertiesStr, "REST"));
+
+    private RESTConnectionInfo(String endpoint, Map<String, String> connectionProperties, URL url, String user, String password, String fields) throws BigDawgCatalogException {
+        this(url.getHost(),
+                String.valueOf(url.getPort()),
+                endpoint,
+                user.length() > 0 ? user : connectionProperties.getOrDefault("userid", connectionProperties.getOrDefault("consumer_key", null)),
+                password.length() > 0 ? password : connectionProperties.getOrDefault("password", connectionProperties.getOrDefault("consumer_secret", null)),
+                connectionProperties,
+                url,
+                fields);
+    }
+
+    public RESTConnectionInfo(String endpoint, String connectionPropertiesStr, String urlStr, String user, String password, String fields) throws BigDawgCatalogException, MalformedURLException {
+        this(endpoint, AbstractApiConnectionInfo.parseConnectionProperties(connectionPropertiesStr, "REST"), new URL(urlStr), user, password, fields);
+    }
+
+    private void parseFields(String fields) throws BigDawgCatalogException {
+        if (fields == null || fields.length() == 0) {
+            return;
+        }
+        String[] fieldList = fields.split(",");
+        if (fieldList.length > 1) {
+            throw new BigDawgCatalogException("Fields should only contain one key - if the key contains a comma, it must be URLEncoded");
+        }
+        try {
+            resultKey = URLDecoder.decode(fields, "UTF-8");
+        }
+        catch (Exception e) {
+            throw new BigDawgCatalogException("Could not decode fields: " + e.toString());
+        }
     }
 
     private void parseExtraQueryParameters() throws BigDawgCatalogException {
@@ -61,6 +102,19 @@ public class RESTConnectionInfo extends AbstractApiConnectionInfo {
         }
     }
 
+    private void parseTimeouts() {
+        String connectTimeoutStr = this.connectionProperties.getOrDefault("connect_timeout", null);
+        connectTimeout = connectTimeoutStr != null ? Integer.valueOf(connectTimeoutStr) : ConnectTimeout;
+        String readTimeoutStr = this.connectionProperties.getOrDefault("read_timeout", null);
+        readTimeout = readTimeoutStr != null ? Integer.valueOf(readTimeoutStr) : ReadTimeout;
+
+        String authConnectTimeoutStr = this.connectionProperties.getOrDefault("connect_timeout", connectTimeoutStr);
+        authConnectTimeout = authConnectTimeoutStr != null ? Integer.valueOf(authConnectTimeoutStr) : ConnectTimeout;
+
+        String authReadTimeoutStr = this.connectionProperties.getOrDefault("read_timeout", null);
+        authReadTimeout = authReadTimeoutStr != null ? Integer.valueOf(authReadTimeoutStr) : ReadTimeout;
+    }
+
     private void parseMethod() throws BigDawgCatalogException {
         if (this.connectionProperties.containsKey("method")) {
             String methodStr = this.connectionProperties.get("method");
@@ -70,30 +124,6 @@ public class RESTConnectionInfo extends AbstractApiConnectionInfo {
             }
         }
         this.method = HttpMethod.GET;
-    }
-
-    private void parsePrefix() {
-        if (this.connectionProperties.containsKey("prefix")) {
-            this.prefix = this.connectionProperties.get("prefix");
-            if (!this.prefix.startsWith("/")) {
-                this.prefix = "/" + this.prefix;
-            }
-        }
-        else {
-            this.prefix = "/";
-        }
-    }
-
-    private void parseSuffix() {
-        if (this.connectionProperties.containsKey("prefix")) {
-            this.prefix = this.connectionProperties.get("prefix");
-            if (!this.prefix.startsWith("/")) {
-                this.prefix = "/" + this.prefix;
-            }
-        }
-        else {
-            this.prefix = "/";
-        }
     }
 
     private void parseAuthenticationType() throws BigDawgCatalogException {
@@ -150,37 +180,68 @@ public class RESTConnectionInfo extends AbstractApiConnectionInfo {
         Map<String, String> headers = new HashMap<>();
         switch (this.authenticationType) {
             case OAUTH1:
-                headers.put("OAuth", OAuth1.getOAuth1Header(this.method, this.getEndpointUrl(), this.connectionProperties));
+                headers.put("OAuth", OAuth1.getOAuth1Header(this.method, this.getUrl(), this.connectionProperties));
                 break;
             case BEARER:
                 headers.put("Authorization", "Bearer " + this.connectionProperties.get("token"));
                 break;
             case OAUTH2:
-                OAuth2.setOAuth2Headers(headers, connectionProperties, getUser(), getPassword());
+                String authUrl = connectionProperties.getOrDefault("auth_url", "/");
+                if (!authUrl.startsWith("http")) {
+                    if (authUrl.startsWith("/")) {
+                        authUrl = this.getUrlPrefix() + authUrl;
+                    }
+                    else {
+                        authUrl = this.getUrlPrefix() + "/" + authUrl;
+                    }
+                }
+                OAuth2.setOAuth2Headers(headers, connectionProperties, getUser(), getPassword(), authUrl, authConnectTimeout, authReadTimeout);
+
                 break;
         }
         return headers;
     }
 
-    private String getEndpointUrl() {
-        String baseUrl = super.getUrl();
-        String prefixUrl = baseUrl + this.prefix;
-        return prefixUrl.endsWith("/") ? prefixUrl + this.getEndpoint() : prefixUrl + "/" + this.getEndpoint();
+    /**
+     * Returns the actual URL
+     * @return URL
+     */
+    public URL getURL() {
+        // Note: it's a bit hacky to name it the same as the other method except having a different
+        // case, but Java doesn't support method overloading unless the parameters are different.
+        return this.url;
     }
 
     @Override
     public String getUrl() {
-        String endpointUrl = this.getEndpointUrl();
-        try {
-            return URLUtil.appendQueryParameters(endpointUrl, this.extraQueryParameters);
-        }
-        catch (Exception e) {
-            RESTConnectionInfo.log.error("Error trying to get url", e);
-            return null;
-        }
+        return this.url.toString();
     }
 
-    public String getEndpoint() {
-        return this.getDatabase();
+    int getConnectTimeout() {
+        return connectTimeout;
+    }
+
+    int getReadTimeout() {
+        return readTimeout;
+    }
+
+    /**
+     * Should return null if the key is blank (empty string)
+     * @return null|String
+     */
+    String getResultKey() {
+        return resultKey;
+    }
+
+    @Override
+    public ExecutorEngine getLocalQueryExecutor()
+            throws LocalQueryExecutorLookupException {
+        try {
+            return new RESTHandler(this);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new LocalQueryExecutorLookupException("Cannot construct "
+                    + RESTHandler.class.getName());
+        }
     }
 }

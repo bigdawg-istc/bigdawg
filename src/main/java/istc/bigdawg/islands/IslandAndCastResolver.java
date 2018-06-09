@@ -58,6 +58,8 @@ public class IslandAndCastResolver {
 	public static Pattern ScopeStartPattern		= Pattern.compile("^((bdrel\\()|(bdarray\\()|(bdkv\\()|(bdtext\\()|(bdgraph\\()|(bddoc\\()|(bdstream\\()|(bdmyria\\()|(bdapi\\()|(bdcast\\())");
 	public static Pattern ScopeEndPattern		= Pattern.compile("\\) *;? *$");
 	public static Pattern CastScopePattern		= Pattern.compile("(?i)(relational|array|keyvalue|text|graph|document|stream|myria|api)\\) *;? *$");
+
+																	// @MattM - JetBrains IntelliJ complains that this "+" below is not allowed as you can't do infinite negative lookbehind in Java Regexes.
 	public static Pattern CastSchemaPattern		= Pattern.compile("(?<=([_a-z0-9, ]+')).*(?=(' *, *(relational|array|keyvalue|text|graph|document|stream|myria|api)))");
 	public static Pattern CastNamePattern		= Pattern.compile("(?<=(, ))([_@0-9a-zA-Z]+)(?=, *')");
 
@@ -176,13 +178,20 @@ public class IslandAndCastResolver {
 					extraction = new AccumuloConnectionInfo(rs2.getString("host"), rs2.getString("port"),rs2.getString("dbname"), rs2.getString("userid"), rs2.getString("password"));
 				break;
 			case REST:
-				rs2 = cc.execRet("select dbid, eid, host, port, db.name as dbname, userid, password, connection_properties, o.name "
+				rs2 = cc.execRet("select dbid, eid, host, port, db.name as dbname, userid, password, connection_properties, o.name as obj, fields "
 						+ "from catalog.databases db "
 						+ "join catalog.engines e on db.engine_id = e.eid "
                         + "join catalog.objects o on db.dbid = o.physical_db "
 						+ "where dbid = "+dbid);
 				if (rs2.next()) {
-					extraction = new RESTConnectionInfo(rs2.getString("host"), rs2.getString("port"),rs2.getString("dbname"), rs2.getString("userid"), rs2.getString("password"), rs2.getString("connection_properties"));
+					try {
+						String userid = rs2.getString("userid");
+						String password = rs2.getString("password");
+						extraction = new RESTConnectionInfo(rs2.getString("dbname"), rs2.getString("connection_properties"), rs2.getString("obj"), userid, password, rs2.getString("fields"));
+					}
+					catch (Exception ex) {
+						throw new BigDawgCatalogException("Problem creating RESTConnectionInfo: " + ex.toString());
+					}
 				}
 				break;
 			default:

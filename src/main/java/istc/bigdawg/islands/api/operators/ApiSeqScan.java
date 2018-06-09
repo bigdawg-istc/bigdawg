@@ -15,35 +15,17 @@ import org.json.JSONObject;
 public class ApiSeqScan extends ApiOperator implements SeqScan {
 
     private Map<String, String> queryParameters;
-    private String apiName;
-    private String endpoint;
+    private String urlStr;
     private String queryRaw;
 
-    public ApiSeqScan(String apiName, String endpoint, Map<String, String> queryParameters) {
+    public ApiSeqScan(String urlStr, Map<String, String> queryParameters) {
         super();
-        this.apiName = apiName;
-        this.endpoint = endpoint;
+        this.urlStr = urlStr;
         this.queryParameters = queryParameters;
     }
 
     public void setQueryRaw(String queryRaw) {
         this.queryRaw = queryRaw;
-    }
-
-    public String getApiName() {
-        return apiName;
-    }
-
-    public void setApiName(String apiName) {
-        this.apiName = apiName;
-    }
-
-    public String getEndpoint() {
-        return endpoint;
-    }
-
-    public void setEndpoint(String endpoint) {
-        this.endpoint = endpoint;
     }
 
     public Map<String, String> getQueryParameters() {
@@ -56,7 +38,7 @@ public class ApiSeqScan extends ApiOperator implements SeqScan {
 
     @Override
     public Operator duplicate(boolean addChild) throws IslandException {
-        ApiSeqScan apiSeqScan = new ApiSeqScan(apiName, endpoint, queryParameters);
+        ApiSeqScan apiSeqScan = new ApiSeqScan(urlStr, queryParameters);
         apiSeqScan.setQueryRaw(this.queryRaw);
         return apiSeqScan;
     }
@@ -64,7 +46,7 @@ public class ApiSeqScan extends ApiOperator implements SeqScan {
     @Override
     public Map<String, String> getDataObjectAliasesOrNames() throws IslandException {
         Map<String, String> result = new HashMap<>();
-        result.put(endpoint, endpoint);
+        result.put(urlStr, urlStr);
         return result;
     }
 
@@ -76,12 +58,12 @@ public class ApiSeqScan extends ApiOperator implements SeqScan {
     @Override
     public String getTreeRepresentation(boolean isRoot) throws IslandException {
         if (queryParameters != null) {
-            return String.format("ApiSeqScan, %s, %s, %s)", apiName, endpoint, (new JSONObject(queryParameters)).toString());
+            return String.format("ApiSeqScan, %s, %s)", urlStr, (new JSONObject(queryParameters)).toString());
         }
         if (queryRaw != null) {
-            return String.format("ApiSeqScan, %s, %s, %s)", apiName, endpoint, queryRaw);
+            return String.format("ApiSeqScan, %s, %s)", urlStr, queryRaw);
         }
-        return String.format("ApiSeqScan, %s, %s)", apiName, endpoint);
+        return String.format("ApiSeqScan, %s)", urlStr);
     }
 
     @Override
@@ -96,16 +78,12 @@ public class ApiSeqScan extends ApiOperator implements SeqScan {
 
     @Override
     public String getSourceTableName() {
-        return apiName + "/" + endpoint;
+        return this.urlStr;
     }
 
     @Override
     public void setSourceTableName(String srcTableName) {
-        String[] parts = srcTableName.split("/");
-        assert(parts.length == 2);
-
-        this.apiName = parts[0];
-        this.endpoint = parts[1];
+        this.urlStr = srcTableName;
     }
 
     @Override

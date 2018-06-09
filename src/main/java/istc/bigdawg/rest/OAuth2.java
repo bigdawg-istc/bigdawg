@@ -12,11 +12,10 @@ import java.net.URLDecoder;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 class OAuth2 {
-    private final static int ConnectTimeout = 20000; // ms
-    private final static int ReadTimeout = 20000; // ms
     private final static int DefaultAuthTimeout = 3600; // seconds
     private static Logger log = Logger
             .getLogger(OAuth2.class.getName());
@@ -46,7 +45,7 @@ class OAuth2 {
         }
     }
 
-    static void setOAuth2Headers(Map<String, String> headers, Map<String, String> connectionProperties, String user, String password) {
+    static void setOAuth2Headers(Map<String, String> headers, Map<String, String> connectionProperties, String user, String password, String authUrl, int authConnectTimeout, int authReadTimeout) {
         try {
             AuthenticationType oauth2AuthType = getAuthenticationTypeFromString(connectionProperties.get("oauth2_auth_type"));
             if (oauth2AuthType == null) {
@@ -54,7 +53,6 @@ class OAuth2 {
             }
             switch(oauth2AuthType) {
                 case BASIC_BEARER:
-                    String url = connectionProperties.get("auth_url");
                     String credentials = user + ":" + password;
                     String credentialsBase64 = new String(Base64.getEncoder().encode(credentials.getBytes()));
                     HttpMethod method = HttpMethod.GET;
@@ -76,7 +74,7 @@ class OAuth2 {
                     String postMimeType = connectionProperties.getOrDefault("auth_post_mime_type", "application/x-www-form-urlencoded");
 
                     long timestamp = Instant.now().getEpochSecond();
-                    String cacheKey = getBearerTokenCacheKey(url, method, responseType, credentialsBase64, postData, postMimeType);
+                    String cacheKey = getBearerTokenCacheKey(authUrl, method, responseType, credentialsBase64, postData, postMimeType);
 
                     // Check to see if token is cached
                     String token = null;
@@ -88,7 +86,7 @@ class OAuth2 {
                     }
 
                     if (token == null) { // need to refresh token
-                        token = getBearerTokenFromURL(url, method, responseType, credentialsBase64, postData, postMimeType, responseKey, validationPairs);
+                        token = getBearerTokenFromURL(authUrl, method, responseType, credentialsBase64, postData, postMimeType, responseKey, validationPairs, authConnectTimeout, authReadTimeout);
 
                         // Be a good citizen and cache the token
                         int timestampOffset = Integer.parseInt(connectionProperties.getOrDefault("auth_timeout", String.valueOf(DefaultAuthTimeout)));
@@ -119,7 +117,16 @@ class OAuth2 {
             postMimeType;
     }
 
-    private static String getBearerTokenFromURL(String urlStr, HttpMethod method, ResponseType responseType, String credentials, String postData, String postMimeType, String responseKey, Map<String, String> validationPairs) throws IOException, ParseException {
+    private static String getBearerTokenFromURL(String urlStr,
+                                                HttpMethod method,
+                                                ResponseType responseType,
+                                                String credentials,
+                                                String postData,
+                                                String postMimeType,
+                                                String responseKey,
+                                                Map<String, String> validationPairs,
+                                                int authConnectTimeout,
+                                                int authReadTimeout) throws IOException, ParseException {
 
         Map<String, String> headers = new HashMap<>();
         headers.put("Authorization", "Basic " + credentials);
@@ -130,9 +137,22 @@ class OAuth2 {
 
         assert(responseType == ResponseType.JSON); // We don't support any other right now.
 
-        String response = URLUtil.fetch(urlStr, method, headers, postData, ConnectTimeout, ReadTimeout);
+        URLUtil.FetchResult fetchResult = URLUtil.fetch(urlStr, method, headers, postData, authConnectTimeout, authReadTimeout);
+        boolean match = URLUtil.headersContain(fetchResult.responseHeaders, "content-type", "application/json", ";");
+        if (!match) {
+            List<String> contentTypes = fetchResult.responseHeaders.get("content-type");
+            StringBuilder contentTypeBuilder = new StringBuilder();
+            for (String contentType: contentTypes) {
+                if (contentTypeBuilder.length() > 0) {
+                    contentTypeBuilder.append(" ");
+                }
+                contentTypeBuilder.append(contentType);
+            }
+            throw new ParseException(-1, "Unknown content type: " + contentTypeBuilder.toString());
+        }
+
         JSONParser jsonParser = new JSONParser();
-        JSONObject jsonObject = (JSONObject) jsonParser.parse(response);
+        JSONObject jsonObject = (JSONObject) jsonParser.parse(fetchResult.response);
         for(String key: validationPairs.keySet()) {
             String result = (String) jsonObject.get(key);
             String expectedResult = validationPairs.get(key);
@@ -143,7 +163,7 @@ class OAuth2 {
 
         String value = (String) jsonObject.get(responseKey);
         if (value == null) {
-            throw new ParseException(-1, "Could not find '" + responseKey + "' in result: " + response);
+            throw new ParseException(-1, "Could not find '" + responseKey + "' in result: " + fetchResult.response);
         }
         return value;
     }

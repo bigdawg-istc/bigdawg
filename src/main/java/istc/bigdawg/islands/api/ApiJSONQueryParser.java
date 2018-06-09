@@ -2,10 +2,8 @@ package istc.bigdawg.islands.api;
 
 import java.util.*;
 
+import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.islands.api.operators.ApiSeqScan;
-import org.apache.accumulo.core.data.Key;
-import org.apache.accumulo.core.data.Range;
-import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -68,8 +66,17 @@ public class ApiJSONQueryParser {
             }
 
         }
-
-        ApiSeqScan apiSeqScan = new ApiSeqScan(apiName, endpoint, query);
+        List<String> objs;
+        try {
+            objs = CatalogViewer.getObjectNames(apiName, endpoint);
+            if (objs.size() != 1) {
+                throw new Exception("Expected exactly one result from querying catalog on " + apiName + ", " + endpoint + " - instead got: " + String.valueOf(objs.size()));
+            }
+        }
+        catch (Exception e) {
+            throw new ParseException(ParseException.ERROR_UNEXPECTED_EXCEPTION, e);
+        }
+        ApiSeqScan apiSeqScan = new ApiSeqScan(objs.get(0), query);
         if (parsedObject.containsKey("query-raw")) {
             if (queryObject != null) {
                 throw new ParseException(ParseException.ERROR_UNEXPECTED_TOKEN, "ApiJSONQueryParser - unexpected 'query-raw' when 'query' present");

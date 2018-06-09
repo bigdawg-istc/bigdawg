@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS catalog.engines (
        name varchar(15),
        host varchar(40),
        port integer,
-       connection_properties varchar(100) -- currently hold scidb bin path
+       connection_properties text -- currently hold scidb bin path
 );
 
 CREATE UNIQUE INDEX hostPort on catalog.engines (host,port);
@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS catalog.scidbbinpaths (
 -- e.g., if we created an array with dimensions X,Y and then we migrate it over to psql, we don't want to lose its initial dimensions                                               
 CREATE TABLE IF NOT EXISTS catalog.objects (
        oid serial PRIMARY KEY,
-       name varchar(50), -- name of the object
+       name varchar(512), -- name of the object
        fields varchar(800), -- csv of the field names, e.g. "dbid,\"engine id\",name,userid,password"
        logical_db serial REFERENCES catalog.databases(dbid), -- how was the object created                                                                                               
        physical_db serial REFERENCES catalog.databases(dbid) -- where is it located now?                                                                                                 
