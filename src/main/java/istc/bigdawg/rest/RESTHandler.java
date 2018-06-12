@@ -1,21 +1,29 @@
 package istc.bigdawg.rest;
 
+import istc.bigdawg.BDConstants;
+import istc.bigdawg.database.AttributeMetaData;
+import istc.bigdawg.database.ObjectMetaData;
 import istc.bigdawg.exceptions.ApiException;
 import istc.bigdawg.executor.ConstructedQueryResult;
 import istc.bigdawg.executor.ExecutorEngine;
 import istc.bigdawg.executor.QueryResult;
+import istc.bigdawg.query.DBHandler;
 import org.apache.log4j.Logger;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
+import javax.swing.text.html.Option;
+import javax.ws.rs.core.Response;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-public class RESTHandler implements ExecutorEngine {
+public class RESTHandler implements ExecutorEngine, DBHandler {
     private RESTConnectionInfo restConnectionInfo;
     private static Logger log = Logger
             .getLogger(RESTHandler.class.getName());
@@ -152,4 +160,90 @@ public class RESTHandler implements ExecutorEngine {
         // Not implemented
         assert(false);
     }
+
+
+
+    /**
+     *
+     * @param queryString
+     *            the query to be executed
+     * @return result of the query
+     */
+    @Override
+    public Response executeQuery(String queryString) {
+        Optional<QueryResult> result = this.execute(queryString);
+        return null;
+    }
+
+    /**
+     *
+     * @return The name of the shim in which the handler operates.
+     */
+    @Override
+    public BDConstants.Shim getShim() {
+        return null;
+    }
+
+    /**
+     *
+     * @param name
+     *            name of the object (table, array, etc.)
+     * @return the meta data about the object (e.g. names of the attributes)
+     * @throws Exception
+     *             (probably a connection to the database failed).
+     */
+    @Override
+    public ObjectMetaData getObjectMetaData(String name) throws Exception {
+        return new ObjectMetaData() {
+            @Override
+            public String getName() {
+                return null;
+            }
+
+            @Override
+            public List<AttributeMetaData> getAttributesOrdered() {
+                AttributeMetaData attribute = new AttributeMetaData("result", "text", false, false);
+                List <AttributeMetaData> resultList = new ArrayList<>();
+                resultList.add(attribute);
+                return resultList;
+            }
+        };
+    }
+
+    /**
+     * Get a JDBC connection to a database.
+     *
+     * @return connection to a database
+     */
+    @Override
+    public Connection getConnection() throws SQLException {
+        return null;
+    }
+
+    /**
+     *
+     * @param name
+     *            Name of the object (table/array etc.)
+     * @return true if the object with the specified name exists, false
+     *         otherwise.
+     */
+    @Override
+    public boolean existsObject(String name) throws Exception {
+        return false;
+    }
+
+
+    /**
+     * Release all the resources hold by the handler.
+     */
+    @Override
+    public void close() throws Exception {
+
+    }
+
+    @Override
+    public String getCsvExportDelimiter() {
+        return ",";
+    }
+
 }

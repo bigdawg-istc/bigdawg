@@ -3,6 +3,8 @@
  */
 package istc.bigdawg.migration;
 
+import istc.bigdawg.islands.IntraIslandQuery;
+
 import java.io.Serializable;
 import java.util.Optional;
 
@@ -22,6 +24,9 @@ public class MigrationParams implements Serializable {
 	/** see: {@link #getCreateStatement()} */
 	private String createStatement;
 
+	private IntraIslandQuery source;
+	private IntraIslandQuery target;
+
 	/**
 	 * 
 	 * @param createStatement
@@ -29,6 +34,12 @@ public class MigrationParams implements Serializable {
 	 */
 	public MigrationParams(String createStatement) {
 		this.createStatement = createStatement;
+	}
+
+	public MigrationParams(String createStatement, IntraIslandQuery source, IntraIslandQuery target) {
+		this(createStatement);
+		this.source = source;
+		this.target = target;
 	}
 
 	/**
@@ -76,7 +87,19 @@ public class MigrationParams implements Serializable {
 				return false;
 		} else if (!createStatement.equals(other.createStatement))
 			return false;
-		return true;
+
+		if (source != other.source) {
+			return false;
+		}
+
+		return (target != other.target);
 	}
 
+	public IntraIslandQuery getSource() {
+		return source;
+	}
+
+	public IntraIslandQuery getTarget() {
+		return target;
+	}
 }

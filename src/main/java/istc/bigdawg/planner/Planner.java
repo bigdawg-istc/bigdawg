@@ -128,7 +128,9 @@ public class Planner {
 
 				// EXECUTE THE RESULT SUB RESULT
 				logger.debug("Executing query cross-island subquery " + node + "...");
-				connectionInfoMap.put(node, Executor.executePlan(qep, ciqn.getSignature(), choice).getConnectionInfo());
+				QueryResult queryResult = Executor.executePlan(qep, ciqn.getSignature(), choice);
+				((IntraIslandQuery)node).setQueryResult(queryResult);
+				connectionInfoMap.put(node, queryResult.getConnectionInfo());
 
 			} else if (node instanceof CrossIslandNonOperatorNode) {
 				connectionInfoMap.put(node, IslandAndCastResolver.runOperatorFreeIslandQuery((CrossIslandNonOperatorNode) node).getConnectionInfo());

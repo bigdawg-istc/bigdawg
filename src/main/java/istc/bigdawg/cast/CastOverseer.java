@@ -108,7 +108,7 @@ public class CastOverseer {
 			}
 			tempTableInfo.get(connectionInfoMap.get(source)).add(source.getName());
 			try {
-				Migrator.migrate(connectionInfoMap.get(source), source.getName(), targetConnInfo, remoteName, new MigrationParams(cast.getQueryString()));
+				Migrator.migrate(connectionInfoMap.get(source), source.getName(), targetConnInfo, remoteName, new MigrationParams(cast.getQueryString(), source, target));
 			} catch (MigrationException e) {
 				throw new CastException(e.getMessage(), e);
 			}
