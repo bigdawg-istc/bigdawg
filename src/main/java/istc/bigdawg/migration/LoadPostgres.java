@@ -245,6 +245,7 @@ public class LoadPostgres implements Load {
 			log.debug("copy to string: " + copyToString);
 			Long countLoadedRows = cpTo.copyIn(copyToString, input);
 			input.close();
+			input = null;
 			connection.commit();
 			return countLoadedRows;
 		} catch (IOException | SQLException e) {

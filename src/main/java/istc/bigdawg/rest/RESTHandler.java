@@ -202,7 +202,7 @@ public class RESTHandler implements ExecutorEngine, DBHandler {
 
             @Override
             public List<AttributeMetaData> getAttributesOrdered() {
-                AttributeMetaData attribute = new AttributeMetaData("result", "text", false, false);
+                AttributeMetaData attribute = new AttributeMetaData("result", "json", false, false);
                 List <AttributeMetaData> resultList = new ArrayList<>();
                 resultList.add(attribute);
                 return resultList;

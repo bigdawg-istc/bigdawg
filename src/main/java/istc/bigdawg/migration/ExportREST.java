@@ -40,8 +40,9 @@ public class ExportREST implements Export {
     public Object call() throws MigrationException {
         log.debug("Starting export.");
         try {
+            OutputStream outputStream = output;
             if (output == null) {
-                output = new FileOutputStream(outputFile);
+                outputStream = new FileOutputStream(outputFile);
             }
 
             log.debug("Exporting data.");
@@ -62,11 +63,14 @@ public class ExportREST implements Export {
                 }
             }
 
-            BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(output);
-            Writer out = new OutputStreamWriter(bufferedOutputStream, "UTF8");
+//            BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(output);
+            Writer out = new OutputStreamWriter(outputStream, "UTF8");
+
             out.write(resultBuffer.toString());
             out.flush();
-            out.close();
+            if (this.output == null) { // this stream was created just for this time
+                out.close();
+            }
 //            DataOutputStream dataOutputStream = new DataOutputStream(bufferedOutputStream);
 //            dataOutputStream.writeBytes(resultStr);
 //            dataOutputStream.flush();
@@ -74,7 +78,7 @@ public class ExportREST implements Export {
 //            log.debug(numRows + " rows exported.");
         } catch (IOException e) {
             String message = e.getMessage()
-                    + "Something went wrong when writing table results to file.";
+                    + "Something went wrong when writing REST results.";
             log.error(message + StackTrace.getFullStackTrace(e), e);
             throw new MigrationException(message, e);
         }
