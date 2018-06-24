@@ -155,7 +155,7 @@ public class SQLJSONPlaceholderParser {
         return sql.contains("->"); // will also match '->' but it's okay
     }
 
-    static boolean containsOperator(String sql) {
+    public static boolean possiblyContainsOperator(String sql) {
         for (String operator: operators) {
             if (sql.contains(operator)) {
                 return true;
@@ -206,7 +206,7 @@ public class SQLJSONPlaceholderParser {
         return stringJoiner.toString();
     }
 
-    static String transformJSONQuery(String sql) throws QueryParsingException {
+    public static String transformJSONQuery(String sql) throws QueryParsingException {
         Tokenizer tokenizer = new Tokenizer(sql);
 
         Vector<String> finalTokens = new Vector<>();

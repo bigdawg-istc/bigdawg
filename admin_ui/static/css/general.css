@@ -7,6 +7,10 @@
     border-radius: 25px;
 }
 
+.hidden {
+    display: none;
+}
+
 /**
  * Simple animation written from scratch for the loading spinner
  *  -- probably can be fine tuned some

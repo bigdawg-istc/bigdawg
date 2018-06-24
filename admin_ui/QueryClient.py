@@ -11,7 +11,9 @@ class QueryClient:
 
     def run_query(self, query):
         h = httplib2.Http()
-        resp, content = h.request(self.scheme + "://" + self.host + ":" + str(self.port) + "/bigdawg/query",
+        url = self.scheme + "://" + self.host + ":" + str(self.port) + "/bigdawg/query"
+        print url
+        resp, content = h.request(url,
                                   "POST", body=query, headers={'content-type':'application/json'})
 
         if sys.version_info >= (3, 0):

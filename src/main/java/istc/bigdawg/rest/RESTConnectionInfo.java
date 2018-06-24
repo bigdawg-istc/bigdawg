@@ -3,6 +3,7 @@ package istc.bigdawg.rest;
 import istc.bigdawg.api.*;
 import istc.bigdawg.exceptions.ApiException;
 import istc.bigdawg.exceptions.BigDawgCatalogException;
+import istc.bigdawg.exceptions.QueryParsingException;
 import istc.bigdawg.executor.ExecutorEngine;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.log4j.Logger;
@@ -74,28 +75,12 @@ public class RESTConnectionInfo extends AbstractApiConnectionInfo {
     }
 
     private void parseExtraQueryParameters() throws BigDawgCatalogException {
-        this.extraQueryParameters = new HashMap<>();
         if (!this.connectionProperties.containsKey("query_params")) {
             return;
         }
         String extraQueryParameters = this.connectionProperties.get("query_params");
-        String[] pairs = extraQueryParameters.split("&");
         try {
-            for (String pair : pairs) {
-                int idx = pair.indexOf('=');
-                if (idx < 0) {
-                    throw new BigDawgCatalogException("Could not find '=' in extra query param pair: " + pair);
-                }
-                String key = URLDecoder.decode(pair.substring(0, idx), "UTF-8");
-                String value = "";
-                if (idx < pair.length() - 1) {
-                    value = URLDecoder.decode(pair.substring(idx + 1), "UTF-8");
-                }
-                if (this.extraQueryParameters.containsKey(key)) {
-                    throw new BigDawgCatalogException("Redundant extra query parameter '" + key + "'");
-                }
-                this.extraQueryParameters.put(key, value);
-            }
+            this.extraQueryParameters = URLUtil.parseQueryString(extraQueryParameters);
         }
         catch (Exception e) {
             throw new BigDawgCatalogException(e.getMessage());
@@ -108,10 +93,10 @@ public class RESTConnectionInfo extends AbstractApiConnectionInfo {
         String readTimeoutStr = this.connectionProperties.getOrDefault("read_timeout", null);
         readTimeout = readTimeoutStr != null ? Integer.valueOf(readTimeoutStr) : ReadTimeout;
 
-        String authConnectTimeoutStr = this.connectionProperties.getOrDefault("connect_timeout", connectTimeoutStr);
+        String authConnectTimeoutStr = this.connectionProperties.getOrDefault("auth_connect_timeout", connectTimeoutStr);
         authConnectTimeout = authConnectTimeoutStr != null ? Integer.valueOf(authConnectTimeoutStr) : ConnectTimeout;
 
-        String authReadTimeoutStr = this.connectionProperties.getOrDefault("read_timeout", null);
+        String authReadTimeoutStr = this.connectionProperties.getOrDefault("auth_read_timeout", readTimeoutStr);
         authReadTimeout = authReadTimeoutStr != null ? Integer.valueOf(authReadTimeoutStr) : ReadTimeout;
     }
 
@@ -176,11 +161,24 @@ public class RESTConnectionInfo extends AbstractApiConnectionInfo {
         return this.method;
     }
 
-    public Map<String, String> getHeaders() throws ApiException {
+    Map<String, String> getHeaders(String queryString) throws ApiException {
         Map<String, String> headers = new HashMap<>();
         switch (this.authenticationType) {
             case OAUTH1:
-                headers.put("OAuth", OAuth1.getOAuth1Header(this.method, this.getUrl(), this.connectionProperties));
+                try {
+                    Map<String, String> queryParameters = URLUtil.parseQueryString(queryString);
+                    if (this.extraQueryParameters != null) {
+                        for (String key: this.extraQueryParameters.keySet()) {
+                            if (!queryParameters.containsKey(key)) {
+                                queryParameters.put(key, this.extraQueryParameters.get(key));
+                            }
+                        }
+                    }
+                    headers.put("Authorization", OAuth1.getOAuth1Header(this.method, this.getUrl(), this.connectionProperties, queryParameters));
+                }
+                catch (Exception e) {
+                    throw new ApiException(e.toString());
+                }
                 break;
             case BEARER:
                 headers.put("Authorization", "Bearer " + this.connectionProperties.get("token"));
@@ -200,6 +198,23 @@ public class RESTConnectionInfo extends AbstractApiConnectionInfo {
                 break;
         }
         return headers;
+    }
+
+    String getFinalQueryParameters(String queryString) throws QueryParsingException {
+        if (this.extraQueryParameters == null) {
+            return queryString;
+        }
+        if (queryString == null) {
+            return URLUtil.encodeParameters(this.extraQueryParameters);
+        }
+
+        Map<String, String> queryParameters = URLUtil.parseQueryString(queryString);
+        for (String key: this.extraQueryParameters.keySet()) {
+            if (!queryParameters.containsKey(key)) {
+                queryParameters.put(key, this.extraQueryParameters.get(key));
+            }
+        }
+        return URLUtil.encodeParameters(queryParameters);
     }
 
     /**

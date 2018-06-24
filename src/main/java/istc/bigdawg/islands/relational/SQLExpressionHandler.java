@@ -46,6 +46,7 @@ public class SQLExpressionHandler implements ExpressionVisitor, ItemsListVisitor
 
     
     public SQLExpressionHandler() {
+        this.buffer = new StringBuilder();
     }
 
     /**

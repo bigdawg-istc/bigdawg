@@ -209,31 +209,17 @@ class OAuth2 {
     }
 
     private static Map<String, String> parseAuthResponseValidate(String responseValidationPairs) throws BigDawgCatalogException {
-        Map<String, String> resultPairs = new HashMap<>();
         if (responseValidationPairs == null) {
-            return resultPairs;
+            return new HashMap<>();
         }
 
         try {
             responseValidationPairs = URLDecoder.decode(responseValidationPairs, "UTF-8");
-            String [] pairs = responseValidationPairs.split("&");
-            for(String pair: pairs) {
-                String [] keyValue = pair.split("=");
-                if (keyValue.length != 2) {
-                    throw new BigDawgCatalogException("Expected a key=value pair from auth_response_validate: " + pair);
-                }
-                String key = URLDecoder.decode(keyValue[0], "UTF-8");
-                String value = URLDecoder.decode(keyValue[1], "UTF-8");
-                if (resultPairs.containsKey(key)) {
-                    throw new BigDawgCatalogException("Duplicate key found: " + key);
-                }
-                resultPairs.put(key, value);
-            }
+            return URLUtil.parseQueryString(responseValidationPairs);
         }
         catch (Exception e) {
             throw new BigDawgCatalogException("Exception while decoding responseValidationPairs '" + responseValidationPairs + "': " + e.getMessage());
         }
-        return resultPairs;
     }
 
 }

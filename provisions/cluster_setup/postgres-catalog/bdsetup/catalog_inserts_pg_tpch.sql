@@ -2,6 +2,7 @@
 insert into catalog.islands values (0, 'RELATIONAL', 'PSQL');
 insert into catalog.islands values (1, 'ARRAY', 'AFL');
 insert into catalog.islands values (2, 'TEXT', 'JSON');
+select setval('catalog.catalog.islands_iid_seq'::regclass, 2);
 
 -- catalog.engines: engine_id, name, host, port, connection_properties
 insert into catalog.engines values(0,'postgres0','bigdawg-postgres-catalog',5400,'PostgreSQL 9.4.5');
@@ -9,6 +10,7 @@ insert into catalog.engines values(1,'postgres1','bigdawg-postgres-tpch',5401,'P
 -- insert into catalog.engines values(2,'mysql','bigdawg-mysql-data',3306,'MySQL 5.7');
 -- insert into catalog.engines values(3,'scidb_local','bigdawg-scidb-data',1239,'SciDB 14.12');
 -- insert into catalog.engines values (4, 'saw ZooKeeper', 'zookeeper.docker.local', 2181, 'Accumulo 1.6');
+select setval('catalog.engines_eid_seq'::regclass, 1);
 
 -- catalog.databases: dbid, engine_id, name, userid, password
 insert into catalog.databases values(0,0,'bigdawg_catalog','pguser','test');
@@ -20,6 +22,7 @@ insert into catalog.databases values(2,1,'tpch','pguser','test');
 -- insert into catalog.databases values(5,1,'tpch','pguser','test');
 -- insert into catalog.databases values(6,3,'scidb_local','scidb','scidb123');
 -- insert into catalog.databases values (7, 4, 'accumulo', 'bigdawg', 'bigdawg');
+select setval('catalog.databases_dbid_seq'::regclass, 2);
 
 -- catalog.shims: shim_id island_id engine_id access_method
 insert into catalog.shims values (0, 0, 0, 'N/A');
@@ -27,6 +30,7 @@ insert into catalog.shims values (1, 0, 1, 'N/A');
 -- insert into catalog.shims values (2, 0, 2, 'N/A');
 -- insert into catalog.shims values (3, 1, 3, 'N/A');
 -- insert into catalog.shims values (4, 2, 4, 'N/A');
+select setval('catalog.catalog.shims_shim_id_seq'::regclass, 1);
 
 -- catalog.scidbbinapath:
 -- binary path to scidb utilities: csv2scidb, iquery, etc.
@@ -43,3 +47,4 @@ insert into catalog.objects values(4, 'part', 'p_partkey,p_name,p_mfgr,p_brand,p
 insert into catalog.objects values(5, 'partsupp', 'ps_partkey,ps_suppkey,ps_availqty,ps_supplycost,ps_comment', 2, 2);
 insert into catalog.objects values(6, 'region', 'r_regionkey,r_name,r_comment', 2, 2);
 insert into catalog.objects values(7, 'supplier', 's_suppkey,s_name,s_address,s_nationkey,s_phone,s_acctbal,s_comment', 2, 2);
+select setval('catalog.objects_oid_seq'::regclass, 7);

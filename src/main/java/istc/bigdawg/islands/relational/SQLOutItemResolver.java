@@ -113,7 +113,7 @@ public class SQLOutItemResolver {
 		if(supplement != null) {
 			alias = supplement.getAlias(expr);
 			if (alias == null) {
-				if (SQLJSONPlaceholderParser.containsOperator(expr)) {
+				if (SQLJSONPlaceholderParser.possiblyContainsOperator(expr)) {
 					expr = SQLJSONPlaceholderParser.transformJSONQuery(expr);
 				}
 				Expression expres = CCJSqlParserUtil.parseExpression(expr);

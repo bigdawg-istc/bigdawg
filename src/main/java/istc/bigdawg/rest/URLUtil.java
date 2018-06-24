@@ -1,8 +1,13 @@
 package istc.bigdawg.rest;
 
+import istc.bigdawg.exceptions.BigDawgCatalogException;
+import istc.bigdawg.exceptions.QueryParsingException;
+
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLDecoder;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.StringJoiner;
@@ -348,6 +353,32 @@ public final class URLUtil {
             }
         }
         return match;
+    }
+
+    static Map<String, String> parseQueryString(String queryString) throws QueryParsingException {
+        String[] pairs = queryString.split("&");
+        Map<String, String> parameters = new HashMap<>();
+        try {
+            for (String pair : pairs) {
+                int idx = pair.indexOf('=');
+                if (idx < 0) {
+                    throw new BigDawgCatalogException("Could not find '=' in param pair: " + pair);
+                }
+                String key = URLDecoder.decode(pair.substring(0, idx), "UTF-8");
+                String value = "";
+                if (idx < pair.length() - 1) {
+                    value = URLDecoder.decode(pair.substring(idx + 1), "UTF-8");
+                }
+                if (parameters.containsKey(key)) {
+                    throw new BigDawgCatalogException("Redundant parameter '" + key + "'");
+                }
+                parameters.put(key, value);
+            }
+        }
+        catch (Exception e) {
+            throw new QueryParsingException(e.getMessage());
+        }
+        return parameters;
     }
 
     public static String encodeParameters(Map<String, String> parameters) {

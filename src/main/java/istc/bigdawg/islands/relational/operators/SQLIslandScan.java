@@ -10,6 +10,7 @@ import istc.bigdawg.exceptions.IslandException;
 import istc.bigdawg.exceptions.QueryParsingException;
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.operators.Scan;
+import istc.bigdawg.islands.relational.SQLJSONPlaceholderParser;
 import istc.bigdawg.islands.relational.SQLTableExpression;
 import istc.bigdawg.islands.relational.utils.SQLExpressionUtils;
 import istc.bigdawg.shims.OperatorQueryGenerator;
@@ -47,7 +48,10 @@ public class SQLIslandScan extends SQLIslandOperator implements Scan {
 		if (parameters.get("Filter") != null) {
 			
 			String s = SQLExpressionUtils.removeExpressionDataTypeArtifactAndConvertLike(parameters.get("Filter"));
-			
+
+			if (SQLJSONPlaceholderParser.possiblyContainsOperator(s)) {
+				s = SQLJSONPlaceholderParser.transformJSONQuery(s);
+			}
 			setFilterExpression(CCJSqlParserUtil.parseCondExpression(s));
 			SQLExpressionUtils.removeExcessiveParentheses(filterExpression);
 			setHasFunctionInFilterExpression(SQLExpressionUtils.isFunctionPresentInCondExpression(filterExpression));

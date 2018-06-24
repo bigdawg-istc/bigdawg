@@ -37,17 +37,22 @@ public class RESTHandler implements ExecutorEngine, DBHandler {
         try {
             String url = restConnectionInfo.getUrl();
             HttpMethod method = restConnectionInfo.getMethod();
-            Map<String, String> headers = restConnectionInfo.getHeaders();
+            Map<String, String> headers = restConnectionInfo.getHeaders(query);
             String postData = null;
+            String queryParameters = null;
             switch(method) {
                 case POST:
                     postData = query;
+                    queryParameters = restConnectionInfo.getFinalQueryParameters(null);
                     break;
                 case GET:
-                    url = URLUtil.appendQueryParameters(url, query);
+                    queryParameters = restConnectionInfo.getFinalQueryParameters(query);
                     break;
                 default:
                     throw new ApiException("Unknown/Unsupported HttpMethod: " + method);
+            }
+            if (queryParameters != null) {
+                url = URLUtil.appendQueryParameters(url, queryParameters);
             }
 
             // @TODO Connect / read timeout could be parameterized either in query or in connection parameters, or both
@@ -153,6 +158,8 @@ public class RESTHandler implements ExecutorEngine, DBHandler {
                 }
             }
         }
+        log.debug("REST Array result:");
+        log.debug(resultLists);
     }
 
     @Override

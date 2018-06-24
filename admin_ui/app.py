@@ -15,6 +15,7 @@ from CatalogClient import CatalogClient
 from SchemaClient import SchemaClient
 from QueryClient import QueryClient
 from Importer import Importer
+from ApiForm import ApiForm
 import os, json
 dotenv_path = join(dirname(__file__), '.env')
 load_dotenv(dotenv_path)
@@ -44,6 +45,7 @@ schema_cred = read_schema_credentials()
 versions = {
     "util.js": os.stat('static/js/util.js').st_mtime,
     "query.js": os.stat('static/js/query.js').st_mtime,
+    "api_form.js": os.stat('static/js/api_form.js').st_mtime,
     "import.js": os.stat('static/js/import.js').st_mtime,
     "general.css": os.stat('static/css/general.css').st_mtime
 }
@@ -121,9 +123,22 @@ def import_csv():
 def query():
     return render_template('query.html', versions=versions)
 
+@app.route('/api_form', methods=["GET"])
+def api_form():
+    catalog_data = getCatalogData()
+    engines = catalog_data['engines']
+    return render_template('api_form.html', versions=versions, engines=engines)
+
+@app.route('/api_form', methods=["POST"])
+def api_form_post():
+    api_form = ApiForm(getCatalogClient())
+    result = api_form.processApiForm(request.data)
+    return render_template_string(result)
+
 @app.route('/run_query', methods=["POST"])
 def runQuery():
     query = request.data
+    print os.environ.get('QUERY_SCHEME'),os.environ.get('QUERY_HOST'),int(os.environ.get('QUERY_PORT'))
     result = QueryClient(os.environ.get('QUERY_SCHEME'),os.environ.get('QUERY_HOST'),int(os.environ.get('QUERY_PORT'))).run_query(query)
     return render_template_string(result)
 

@@ -116,7 +116,6 @@ function doUpload(val) {
         showError("Bad response - see console for more details");
         stopLoading();
     });
-
 }
 
 function setFilename(name) {

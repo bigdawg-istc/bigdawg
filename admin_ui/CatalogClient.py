@@ -60,7 +60,7 @@ class CatalogClient:
         rows = cur.fetchall()
         cur.close()
         if not rows:
-            return null
+            return None
 
         return rows[0]
 
@@ -70,7 +70,7 @@ class CatalogClient:
         rows = cur.fetchall()
         cur.close()
         if not rows:
-            return null
+            return None
 
         return rows[0]
 
@@ -80,8 +80,21 @@ class CatalogClient:
         rows = cur.fetchall()
         cur.close()
         if not rows:
-            return null
+            return None
         return rows[0]
+
+    def insert_engine(self, name, host, port, connection_properties):
+        cur = self.conn.cursor()
+        insertStatement = 'INSERT into catalog.engines (name, host, port, connection_properties) values (%s, %s, %s, %s)'
+        values = [name, host, port, connection_properties]
+        try:
+            result = cur.execute(insertStatement, values)
+        except psycopg2.Error as e:
+            return str(e)
+        self.conn.commit()
+        rows = cur.fetchall()
+        cur.close()
+        return rows
 
     def get_databases(self):
         """
