@@ -83,18 +83,99 @@ class CatalogClient:
             return None
         return rows[0]
 
-    def insert_engine(self, name, host, port, connection_properties):
+    def get_engine_by_name(self, name):
+        return self.execute_single_row_select("SELECT eid, name, host, port, connection_properties from catalog.engines where name=%s", [name])
+
+    def get_endpoint_by_engine_id_name(self, engine_id, name):
+        return self.execute_single_row_select("SELECT dbid, engine_id, name, userid, password from catalog.databases where engine_id=%s and name=%s", [engine_id, name])
+
+    def get_object_by_name_island_name(self, name, island_name):
+        # This is adapted from CatalogViewer.java
+        wherePred = "(o.name ilike PERCENT_REPLACE_ME%sPERCENT_REPLACE_ME and i.scope_name ilike PERCENT_REPLACE_ME%sPERCENT_REPLACE_ME) "
+        selectStatement = "select o.name obj, d1.name src_db, d2.name dst_db, i.scope_name island, c.access_method "\
+                          + "from catalog.objects o " + "join catalog.databases d1 	on o.physical_db = d1.dbid "\
+                          + "join catalog.engines e1 		on d1.engine_id = e1.eid "\
+                          + "join catalog.casts c 		on e1.eid = c.src_eid "\
+                          + "join catalog.engines e2 		on c.dst_eid = e2.eid "\
+                          + "join catalog.databases d2 	on d2.engine_id = e2.eid "\
+                          + "join catalog.shims sh 		on e2.eid = sh.engine_id "\
+                          + "join catalog.islands i 		on sh.island_id = i.iid " + "where " + wherePred\
+                          + "order by o.name, d1.name, d2.name, i.scope_name;"
         cur = self.conn.cursor()
-        insertStatement = 'INSERT into catalog.engines (name, host, port, connection_properties) values (%s, %s, %s, %s)'
-        values = [name, host, port, connection_properties]
-        try:
-            result = cur.execute(insertStatement, values)
-        except psycopg2.Error as e:
-            return str(e)
-        self.conn.commit()
+
+
+        return self.execute_single_row_select(selectStatement, [name.replace("%", "\\%"), island_name])
+
+    def execute_single_row_select(self, statement, values):
+        cur = self.conn.cursor()
+        statement = cur.mogrify(statement, values)
+        statement = statement.replace('PERCENT_REPLACE_ME\'', '\'%')
+        statement = statement.replace('\'PERCENT_REPLACE_ME', '%\'')
+        print statement
+        cur.execute(statement)
         rows = cur.fetchall()
         cur.close()
-        return rows
+        if not rows:
+            return None
+        return rows[0]
+
+    def insert_engine(self, name, host, port, connection_properties):
+        values = [name, host, port, connection_properties]
+        return self.execute_insert_with_max('catalog.engines', 'eid', ['name', 'host', 'port', 'connection_properties'], values)
+
+    def insert_database(self, engine_id, name, userid, password):
+        values = [engine_id, name, userid, password]
+        return self.execute_insert_with_max('catalog.databases', 'dbid', ['engine_id', 'name', 'userid', 'password'], values)
+
+    def insert_object(self, name, fields, logical_db, physical_db):
+        values = [name, fields, logical_db, physical_db]
+        return self.execute_insert_with_max('catalog.objects', 'oid', ['name','fields','logical_db','physical_db'], values)
+
+    def getMaxId(self, table, column):
+        cur = self.conn.cursor()
+        maxStatement = 'SELECT max(' + column + ') m from ' + table
+        cur.execute(maxStatement)
+        rows = cur.fetchall()
+        cur.close()
+        if not rows:
+            return 0
+        return rows[0][0]
+
+    def execute_seq_update(self, seq, value):
+        seqStatement = "SELECT setval('" + seq + "'::regclass, " + str(value) + ")"
+        cur = self.conn.cursor()
+        cur.execute(seqStatement)
+        cur.close()
+
+    def execute_insert_with_max(self, table, idColumn, fields, values):
+        assert(len(fields) == len(values))
+        id = self.getMaxId(table, idColumn)
+        id += 1
+        insertStatement = "INSERT into " + table + "(" + idColumn
+        valuesStatement = "%s"
+        finalValues = [id]
+        for i in range(len(fields)):
+            insertStatement += ', '
+            valuesStatement += ', %s'
+            insertStatement += fields[i]
+            finalValues.append(values[i])
+
+        insertStatement += ') values (' + valuesStatement + ')'
+        result = self.execute_insert(insertStatement, finalValues)
+        if result is True:
+            self.execute_seq_update(table + '_' + idColumn + '_seq', id)
+            return id
+        return result
+
+    def execute_insert(self, insertStatement, values):
+        cur = self.conn.cursor()
+        try:
+            cur.execute(insertStatement, values)
+            self.conn.commit()
+            cur.close()
+            return True
+        except psycopg2.Error as e:
+            return str(e)
 
     def get_databases(self):
         """

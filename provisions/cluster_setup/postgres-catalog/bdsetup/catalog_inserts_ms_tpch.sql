@@ -2,6 +2,7 @@
 insert into catalog.islands values (0, 'RELATIONAL', 'PSQL');
 insert into catalog.islands values (1, 'ARRAY', 'AFL');
 insert into catalog.islands values (2, 'TEXT', 'JSON');
+insert into catalog.islands values (3, 'API', 'JSON');
 select setval('catalog.catalog.islands_iid_seq'::regclass, 2);
 
 -- catalog.engines: engine_id, name, host, port, connection_properties

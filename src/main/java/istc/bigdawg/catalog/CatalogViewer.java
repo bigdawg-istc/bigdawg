@@ -571,7 +571,7 @@ public class CatalogViewer {
 		List<String> isldup = new ArrayList<String>();
 		isldup.addAll(islands.subList(1, islands.size()));
 		String wherePred = new String(
-				"(o.name ilike \'%" + objs.get(0) + "%\' and i.scope_name ilike \'%" + islands.get(0) + "%\') ");
+				"(o.name ilike \'%" + objs.get(0).replaceAll("%", "\\%") + "%\' and i.scope_name ilike \'%" + islands.get(0) + "%\') ");
 		for (String objName : objdup) {
 			wherePred = wherePred + "or (o.name ilike \'%" + objName + "%\' and i.scope_name ilike \'%"
 					+ isldup.get(objdup.indexOf(objName)) + "%\') ";

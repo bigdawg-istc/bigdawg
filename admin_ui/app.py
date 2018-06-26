@@ -16,6 +16,7 @@ from SchemaClient import SchemaClient
 from QueryClient import QueryClient
 from Importer import Importer
 from ApiForm import ApiForm
+from Util import Util
 import os, json
 dotenv_path = join(dirname(__file__), '.env')
 load_dotenv(dotenv_path)
@@ -71,7 +72,6 @@ def getSchemaClient():
         password=schema_cred['password'],
         host=schema_cred['host'],
         port=schema_cred['port'])
-
 
 def getSchemaData():
     schema_client = getSchemaClient()
@@ -134,6 +134,15 @@ def api_form_post():
     api_form = ApiForm(getCatalogClient())
     result = api_form.processApiForm(request.data)
     return render_template_string(result)
+
+@app.route('/get_engine_by_name', methods=["POST"])
+def get_engine_by_name():
+    requestObj = json.loads(request.data)
+    catalogClient = getCatalogClient()
+    engine = catalogClient.get_engine_by_name(requestObj['name'])
+    if engine is None:
+        return render_template_string(Util.error_msg("not found"))
+    return render_template_string(json.JSONEncoder().encode({"success": True, "engine": engine}))
 
 @app.route('/run_query', methods=["POST"])
 def runQuery():

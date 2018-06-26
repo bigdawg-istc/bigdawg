@@ -8,6 +8,10 @@ class Main {
         this.toggle();
         this.errorElement = document.getElementById('error');
         this.successElement = document.getElementById('success');
+        this.api.reset();
+        this.advanced.reset();
+        this.endpoint.reset();
+        this.auth.reset();
     }
 
     addEventListeners() {
@@ -17,6 +21,7 @@ class Main {
             });
 
         document.querySelector('form').addEventListener('submit', this.submit.bind(this));
+        document.getElementById('name').addEventListener('keyup', this.checkApiName.bind(this));
     }
 
     toggle() {
@@ -24,6 +29,7 @@ class Main {
             (element) => {
                 if (element.checked) {
                     document.querySelector('form').classList.remove("hidden");
+                    this.hideSuccess();
                     switch(element.value) {
                         case "api":
                             this.showApi();
@@ -57,7 +63,7 @@ class Main {
         this.api.show();
         this.auth.toggleAuth();
         this.endpoint.hide();
-        this.advanced.hideAdvanced();
+        this.advanced.hide();
     }
 
     showApiEndpoint() {
@@ -148,6 +154,7 @@ class Main {
     showSuccess(msg) {
         this.successElement.innerText = msg;
         this.successElement.classList.remove('hidden');
+        document.querySelector('form').classList.add("hidden");
     }
 
     hideSuccess() {
@@ -195,6 +202,64 @@ class Main {
         });
     }
 
+    showApiNameDuplication() {
+        const span = document.getElementById('name').parentNode.parentNode.querySelector('span.error');
+        span.style.display="inline";
+        span.innerText = "Error: duplicate name";
+    }
+
+    hideApiNameDuplication() {
+        const span = document.getElementById('name').parentNode.parentNode.querySelector('span.error');
+        span.style.display="none";
+        span.innerText = "";
+    }
+
+    checkApiName() {
+        const name = document.getElementById('name').value;
+        this.currentNameCheck = name;
+        const checkNameFunc = (name) => {
+            fetch('/get_engine_by_name', {
+                method: 'post',
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({name: name})
+            }).then(response => {
+                response.text().then(result => {
+                    try {
+                        result = JSON.parse(result);
+                    }
+                    catch (e) {
+                        console.log('response', response, result, e);
+                        return;
+                    }
+                    if (!result) {
+                        console.log('response', response, result);
+                        return;
+                    }
+
+                    if (result.success) {
+                        if (this.currentNameCheck === name) {
+                            this.showApiNameDuplication();
+                        }
+                    }
+                }, result => {
+                    console.log('error - could not parse response to text', result, response);
+                });
+            }, response => {
+                console.log(response);
+            });
+        };
+
+        this.hideApiNameDuplication();
+
+        setTimeout(() => {
+            if (this.currentNameCheck === name) {
+                checkNameFunc(this.currentNameCheck);
+            }
+        }, 500);
+    }
+
     submit(e) {
         e.preventDefault();
         e.stopPropagation();
@@ -231,9 +296,14 @@ class Main {
                     this.api.hide();
                     this.auth.hide();
                     this.endpoint.hide();
+                    this.advanced.hide();
                     Main.hideButton();
                     Main.uncheckType();
                     this.showSuccess('Success');
+                    this.api.reset();
+                    this.auth.reset();
+                    this.endpoint.reset();
+                    this.advanced.reset();
                     return;
                 }
 
@@ -281,6 +351,22 @@ class Main {
         });
         return pairs;
     }
+
+    static resetSubElements(element) {
+        element.querySelectorAll('input[type=text]').forEach(item => {
+            item.value = "";
+        });
+        element.querySelectorAll('select').forEach(item => {
+            item.selectedIndex = -1;
+        });
+        const radio = element.querySelector('input[type=radio]');
+        if (radio) {
+            radio.checked = true;
+        }
+        element.querySelectorAll('input[type=checkbox]').forEach(item => {
+            item.checked = false;
+        });
+    }
 }
 
 
@@ -291,11 +377,18 @@ class Advanced {
         this.addEventListeners();
     }
 
+    reset() {
+        document.querySelectorAll('.advanced').forEach((item) => {
+            Main.resetSubElements(item);
+        });
+        this.queryParams.reset();
+    }
+
     addEventListeners() {
         document.getElementById('advanced-link').addEventListener('click', this.toggleAdvanced.bind(this));
     }
 
-    showAdvanced() {
+    show() {
         document.querySelectorAll('.advanced').forEach((item) => {
             item.classList.remove("hidden");
         });
@@ -303,7 +396,7 @@ class Advanced {
         this.queryParams.toggleParameters();
     }
 
-    hideAdvanced() {
+    hide() {
         document.querySelectorAll('.advanced').forEach((item) => {
             item.classList.add("hidden");
         });
@@ -313,10 +406,10 @@ class Advanced {
 
     toggleAdvanced() {
         if (document.getElementById('advanced-link').innerText === "Advanced >>") {
-            this.showAdvanced();
+            this.show();
             return;
         }
-        this.hideAdvanced();
+        this.hide();
     }
 
     getFormData(pairs = new Map()) {
@@ -349,6 +442,12 @@ class FormType {
             element.classList.add('hidden');
         });
 
+    }
+
+    reset() {
+        document.querySelectorAll(`.${this.className}`).forEach((element) => {
+            Main.resetSubElements(element);
+        });
     }
 
     getVisibleFormData(pairs = new Map()) {
@@ -384,7 +483,6 @@ class FormType {
 }
 
 class KeyValueParameters {
-
     constructor(checkboxName, className, text) {
         this.checkboxName = checkboxName;
         this.className = className;
@@ -503,11 +601,22 @@ class KeyValueParameters {
         divElement.querySelector('.glyphicon-plus-sign').addEventListener('click', this.addPair.bind(this));
     }
 
+    reset() {
+        let minus = null;
+        while (minus = document.querySelector(`.${this.className} .glyphicon-minus-sign`)) {
+            this.removePairByElement(minus);
+        }
+        Main.resetSubElements(document.querySelector(`.${this.className}`));
+    }
+
     removePair(e) {
         e.stopPropagation();
         e.preventDefault();
         const element = e.target;
+        this.removePairByElement(element);
+    }
 
+    removePairByElement(element) {
         const parentElement = element.parentNode;
         parentElement.parentElement.removeChild(parentElement);
         const parameterElements = document.querySelectorAll(`.${this.className}`);
@@ -539,8 +648,16 @@ class Auth {
         Auth.toggleOAuth2Method();
     }
 
+    reset() {
+        document.querySelector('input[name=auth_type]').checked = true;
+        document.querySelectorAll('.auth').forEach(element => {
+            Main.resetSubElements(element);
+        });
+        this.oauth2AuthResponseValidate.reset();
+    }
+
     addEventListeners() {
-        document.querySelectorAll('input[name=auth]').forEach((item) => {
+        document.querySelectorAll('input[name=auth_type]').forEach((item) => {
            item.addEventListener('change', this.toggleAuth.bind(this));
         });
         document.getElementById('oauth2_auth_response_validate').addEventListener('change', Auth.toggleOAuth2ResponseValidation);
@@ -551,7 +668,7 @@ class Auth {
 
     toggleAuth() {
         this.hide();
-        document.querySelectorAll('input[name=auth]').forEach((item) => {
+        document.querySelectorAll('input[name=auth_type]').forEach((item) => {
             if (!item.checked) {
                 return;
             }
