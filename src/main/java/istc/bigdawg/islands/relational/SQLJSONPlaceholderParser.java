@@ -52,7 +52,7 @@ public class SQLJSONPlaceholderParser {
                 idx += 1;
                 if (!inQuote) {
                     boolean end = false;
-                    switch(curChar) {
+                    switch (curChar) {
                         case ' ':
                         case '\t':
                         case '\n':
@@ -69,7 +69,7 @@ public class SQLJSONPlaceholderParser {
                                 lookaheadChar1 = sql.charAt(idx);
                             }
                             Character lookaheadChar2 = null;
-                            if (idx+ 1 < len) {
+                            if (idx + 1 < len) {
                                 lookaheadChar2 = sql.charAt(idx + 1);
                             }
 
@@ -93,15 +93,14 @@ public class SQLJSONPlaceholderParser {
                                 token.token = "->";
                                 token.tokenType = TokenType.OPERATOR_JSON_OBJ;
                                 return token;
-                           }
+                            }
                             break;
                     }
                     if (end) {
                         break;
                     }
                     stringBuilder.append(curChar);
-                }
-                else {
+                } else {
                     Character lookaheadChar = null;
                     if (idx < len) {
                         lookaheadChar = sql.charAt(idx);
@@ -117,6 +116,7 @@ public class SQLJSONPlaceholderParser {
                     }
                 }
             }
+
             Token token = new Token();
             token.token = stringBuilder.toString();
             token.tokenType = inQuote ? TokenType.QUOTED_STRING : TokenType.STRING;

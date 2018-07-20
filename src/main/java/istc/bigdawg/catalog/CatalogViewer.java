@@ -107,7 +107,6 @@ public class CatalogViewer {
 	
 	/**
 	 * For each named object, provide a list of String of dbid of databases that holds its copy.
-	 * @param cc
 	 * @param inputs
 	 * @return HashMap<String,ArrayList<String>>
 	 * @throws UnsupportedIslandException 
