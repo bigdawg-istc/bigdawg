@@ -6,6 +6,7 @@ See example usage at the bottom.
 import json, numbers
 import os
 import psycopg2
+import mysql.connector
 from Util import Util
 
 class Importer:
@@ -16,15 +17,126 @@ class Importer:
         self.catalog_client = catalog_client
         self.schema_client = schema_client
 
+    def get_schemas(self, data):
+        data_import = json.loads(data)
+        if not data_import:
+            return Util.error_msg("could not parse json")
+
+        if not data_import.has_key('dbid'):
+            return Util.error_msg("No dbid passed in")
+
+        dbid = data_import['dbid']
+        if not isinstance(dbid, numbers.Number):
+            return Util.error_msg("dbid is not a number")
+
+        conn = self.get_connection(dbid)
+        if isinstance(conn, str): # should be an error message then
+            return conn
+        try:
+            if isinstance(conn, basestring):
+                return conn
+        except NameError:
+            pass
+
+        cur = conn.cursor()
+        cur.execute("SELECT schema_name from information_schema.schemata where schema_name not like 'pg_%'");
+        rows = cur.fetchall()
+        cur.close()
+
+        schemas = []
+        for row in rows:
+            schemas.append(row[0])
+
+        return json.JSONEncoder().encode({ "success": True, "schemas": schemas })
+
+
+
+    def create_table(self, data):
+        if not data.has_key('dbid'):
+            return Util.error_msg("No dbid in request")
+
+        dbid = data['dbid']
+        if not isinstance(dbid, numbers.Number):
+            return Util.error_msg("dbid is not a number")
+
+        if not data.has_key('fields_name'):
+            return Util.error_msg("fields_name needs to be provided")
+
+        fieldsName = data['fields_name']
+
+        if not data.has_key('fields'):
+            return Util.error_msg("expecting fields to be passed in")
+
+        fields = data['fields']
+
+        database_row = self.catalog_client.get_database(dbid)
+        if not database_row:
+            return Util.error_msg("Could not find database for dbid: " + str(dbid))
+
+        oid = self.catalog_client.insert_object(fieldsName, ','.join(fields), dbid, dbid)
+        if not isinstance(oid, int):
+            return Util.error_msg(oid)
+
+        if data.has_key('schema'):
+            schema = data['schema']
+            result = self.schema_client.execute_statement(schema, None)
+            if result != True:
+                return Util.error_msg("Problem creating schema: " + str(result))
+
+        # Postgres create table
+        create = data['create']
+        (connection_properties, host, port, database_name, user, password) = self.get_connection_info(dbid)
+
+        if (connection_properties.startswith("PostgreSQL")):
+            conn = self.get_connection_postgres(host, port, database_name, user, password)
+        elif (connection_properties.startswith("MySQL")):
+            conn = self.get_connection_mysql(host, port, database_name, user, password)
+        else:
+            return Util.error_msg("Unsupported engine")
+
+        if self.check_result_str(conn):
+            return conn
+
+        cur = conn.cursor()
+        try:
+            cur.execute(create)
+            conn.commit()
+            cur.close()
+            conn.close()
+
+        except psycopg2.Error as e:
+            return Util.error_msg(str(e))
+        except mysql.connector.Error as e:
+            return Util.error_msg(str(e))
+
+        return oid
+
+    def check_result_str(self, result):
+        if isinstance(result, str):  # should be an error message then
+            return True
+        try:
+            if isinstance(result, basestring):
+                return True
+        except NameError:
+            pass
+
+        return False
+
     def import_data(self, data):
         data_import = json.loads(data)
         if not data_import:
             return Util.error_msg("could not parse json")
+
         if not data_import.has_key('oid'):
-            return Util.error_msg("no oid in json")
-        oid = data_import['oid']
+            oid = self.create_table(data_import)
+            if not isinstance(oid, int):
+                return oid
+        else:
+            oid = data_import['oid']
+
         if not isinstance(oid, numbers.Number):
             return Util.error_msg("oid is not a number")
+
         object_row = self.catalog_client.get_object(oid)
         if not object_row:
             return Util.error_msg("could not find oid in database")
@@ -51,10 +163,11 @@ class Importer:
 
         name_parts = name.split('.')
         if not len(name_parts) == 2:
-            return Util.error_msg("object name is expected to be something.something, instead it's: " + name)
-
-        table_schema = name_parts[0]
-        table_name = name_parts[1]
+            table_name = name_parts[0]
+            table_schema = 'public'
+        else:
+            table_schema = name_parts[0]
+            table_name = name_parts[1]
 
         schema = self.schema_client.get_datatypes_for_table(table_schema, table_name)
         if not schema:
@@ -86,7 +199,7 @@ class Importer:
             if len(row) != fields_len:
                 return Util.error_msg("csv data at row " + str(row_num) + " not right length (inital row length " + str(fields_len) + " but this row is length " + str(len(row)))
 
-            insert_statement = "insert into " + table_schema + "." + table_name + "("
+            insert_statement = "insert into " + name + "("
             values_statement = ""
             values = []
             for i in range(0, fields_len):
@@ -115,7 +228,7 @@ class Importer:
             row_num += 1
         return self.insert_data(object_row[3], inserts)
 
-    def insert_data(self, dbid, inserts):
+    def get_connection_info(self, dbid):
         database_row = self.catalog_client.get_database(dbid)
         if not database_row:
             return Util.error_msg("Can't find database from dbid " + str(dbid))
@@ -155,9 +268,6 @@ class Importer:
         if not connection_properties:
             return Util.error_msg("unknown connection properties for engine: " + str(engine_id))
 
-        if not connection_properties.startswith("PostgreSQL"):
-            return Util.error_msg("unknown engine type: " + str(connection_properties))
-
         if not port:
             return Util.error_msg("unknown port for engine: " + str(engine_id))
 
@@ -170,18 +280,50 @@ class Importer:
         local_hostname = os.environ.get(env_hostname_key) or self.catalog_client.host
         local_port = os.environ.get(env_hostname_key) or port
 
+        return (connection_properties, local_hostname, local_port, database_name, user, password)
+
+    def get_connection_postgres(self, host, port, database_name, user, password):
+        print "Importer: connecting to: " + database_name + ", " + user + ", " + host + ", " + str(port)
         try:
-            conn = psycopg2.connect(database=database_name, user=user, password=password, host=local_hostname, port=local_port)
+            conn = psycopg2.connect(database=database_name, user=user, password=password, host=host, port=port)
         except psycopg2.OperationalError as e:
             return Util.error_msg("Unable to connect: " + str(e))
+
+        return conn
+
+    def get_connection_mysql(self, host, port, database_name, user, password):
+        try:
+            conn = mysql.connector.connect(user=user, password=password, host=host, port=port, database=database_name)
+        except mysql.connector.Error as e:
+            return Util.error_msg("Could not connect: " + str(e))
+
+        return conn
+
+    def insert_data(self, dbid, inserts):
+        (connection_properties, host, port, database_name, user, password) = self.get_connection_info(dbid)
+        print "Importer: connecting to: " + database_name + ", " + user + ", " + host + ", " + str(port)
+
+        if connection_properties.startswith("PostgreSQL"):
+            conn = self.get_connection_postgres(host, port, database_name, user, password)
+        elif connection_properties.startswith("MySQL"):
+            conn = self.get_connection_mysql(host, port, database_name, user, password)
+        else:
+            return Util.error_msg("Unsupported engine.")
+
+        if self.check_result_str(conn):
+            return conn
 
         cur = conn.cursor()
         for insert in inserts:
             try:
+                print insert['statement']
+                print insert['values']
                 cur.execute(insert['statement'], insert['values'])
+                conn.commit()
             except psycopg2.Error as e:
                 return Util.error_msg(str(e))
-            conn.commit()
+            except mysql.connector.Error as e:
+                return Util.error_msg(str(e))
 
         cur.close()
         conn.close()

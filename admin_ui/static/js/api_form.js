@@ -1,4 +1,4 @@
-class Main {
+class ApiForm {
     constructor() {
         this.api = new FormType('api');
         this.endpoint = new FormType('endpoint');
@@ -45,7 +45,7 @@ class Main {
                         default:
                             throw "Unknown element";
                     }
-                    Main.showButton();
+                    ApiForm.showButton();
                 }
             }
         );
@@ -102,7 +102,7 @@ class Main {
         });
 
         if (api.has('connection_properties')) {
-            data['api']['connection_properties'] = 'REST:' + Main.convertConnectionProperties(api.get('connection_properties'));
+            data['api']['connection_properties'] = 'REST:' + ApiForm.convertConnectionProperties(api.get('connection_properties'));
         }
 
         endpoint.forEach((value, key) => {
@@ -264,8 +264,8 @@ class Main {
         e.preventDefault();
         e.stopPropagation();
 
-        Main.showLoading();
-        Main.disableForm();
+        ApiForm.showLoading();
+        ApiForm.disableForm();
         this.hideError();
         const formData = this.getFormData();
         fetch('/api_form', {
@@ -276,8 +276,8 @@ class Main {
             body: JSON.stringify(formData)
         }).then(response => {
             response.text().then(result => {
-                Main.hideLoading();
-                Main.enableForm();
+                ApiForm.hideLoading();
+                ApiForm.enableForm();
                 try {
                     result = JSON.parse(result);
                 }
@@ -297,8 +297,8 @@ class Main {
                     this.auth.hide();
                     this.endpoint.hide();
                     this.advanced.hide();
-                    Main.hideButton();
-                    Main.uncheckType();
+                    ApiForm.hideButton();
+                    ApiForm.uncheckType();
                     this.showSuccess('Success');
                     this.api.reset();
                     this.auth.reset();
@@ -309,14 +309,14 @@ class Main {
 
                 this.showError('Error: ' + result.error);
             }, result => {
-                Main.hideLoading();
-                Main.enableForm();
+                ApiForm.hideLoading();
+                ApiForm.enableForm();
                 this.showError("Could not parse response - see console for more details");
                 console.log('error - could not parse response to text', result, response);
             });
         }, response => {
-            Main.hideLoading();
-            Main.enableForm();
+            ApiForm.hideLoading();
+            ApiForm.enableForm();
             console.log(response);
             this.showError("Bad response - see console for more details");
         });
@@ -345,7 +345,7 @@ class Main {
                     if (input.dataset && input.dataset.name) {
                         name = input.dataset.name;
                     }
-                    Main.setInputPair(pairs, input, name, input.value);
+                    ApiForm.setInputPair(pairs, input, name, input.value);
                 }
             }
         });
@@ -356,8 +356,11 @@ class Main {
         element.querySelectorAll('input[type=text]').forEach(item => {
             item.value = "";
         });
+        element.querySelectorAll('input[type=url]').forEach(item => {
+            item.value = "";
+        });
         element.querySelectorAll('select').forEach(item => {
-            item.selectedIndex = -1;
+            item.selectedIndex = 0;
         });
         const radio = element.querySelector('input[type=radio]');
         if (radio) {
@@ -369,8 +372,6 @@ class Main {
     }
 }
 
-
-
 class Advanced {
     constructor() {
         this.queryParams = new KeyValueParameters('query_params', 'extra-query', 'Extra Query Parameters');
@@ -379,7 +380,7 @@ class Advanced {
 
     reset() {
         document.querySelectorAll('.advanced').forEach((item) => {
-            Main.resetSubElements(item);
+            ApiForm.resetSubElements(item);
         });
         this.queryParams.reset();
     }
@@ -417,7 +418,7 @@ class Advanced {
             if (element.querySelector('.extra-query')) {
                 return;
             }
-            Main.collectFormData(element, pairs);
+            ApiForm.collectFormData(element, pairs);
         });
 
         const queryParams = this.queryParams.getFormData();
@@ -446,7 +447,7 @@ class FormType {
 
     reset() {
         document.querySelectorAll(`.${this.className}`).forEach((element) => {
-            Main.resetSubElements(element);
+            ApiForm.resetSubElements(element);
         });
     }
 
@@ -456,10 +457,10 @@ class FormType {
                 return;
             }
 
-            Main.collectFormData(element, pairs);
+            ApiForm.collectFormData(element, pairs);
             element.querySelectorAll('select').forEach((select) => {
                 if (select.selectedIndex > -1) {
-                    const selectedValue = select.selectedOptions[select.selectedIndex].value;
+                    const selectedValue = select.selectedOptions[0].value;
                     if (selectedValue !== "" && selectedValue !== null) {
                         pairs.set(select.name, selectedValue);
                     }
@@ -606,7 +607,7 @@ class KeyValueParameters {
         while (minus = document.querySelector(`.${this.className} .glyphicon-minus-sign`)) {
             this.removePairByElement(minus);
         }
-        Main.resetSubElements(document.querySelector(`.${this.className}`));
+        ApiForm.resetSubElements(document.querySelector(`.${this.className}`));
     }
 
     removePair(e) {
@@ -651,7 +652,7 @@ class Auth {
     reset() {
         document.querySelector('input[name=auth_type]').checked = true;
         document.querySelectorAll('.auth').forEach(element => {
-            Main.resetSubElements(element);
+            ApiForm.resetSubElements(element);
         });
         this.oauth2AuthResponseValidate.reset();
     }
@@ -705,7 +706,7 @@ class Auth {
                     return;
                 }
 
-                Main.collectFormData(element, pairs);
+                ApiForm.collectFormData(element, pairs);
             });
         });
     }
@@ -766,6 +767,6 @@ class Auth {
 }
 
 window.addEventListener('load', () => {
-   const main = new Main();
+   const main = new ApiForm();
 });
 

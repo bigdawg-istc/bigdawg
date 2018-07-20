@@ -111,12 +111,27 @@ def catalog():
 def import_page():
     catalog_data = getCatalogData()
     schema_data = getSchemaData()
-    return render_template('import.html', versions=versions, objects=catalog_data['objects'], databases=catalog_data['databases'], datatypes=schema_data['datatypes'])
+    enginesByEngineId = {}
+    for engine in catalog_data['engines']:
+        enginesByEngineId[engine[0]] = engine
+
+    return render_template('import.html',
+                           versions=versions,
+                           enginesByEngineId=enginesByEngineId,
+                           objects=catalog_data['objects'],
+                           databases=catalog_data['databases'],
+                           datatypes=schema_data['datatypes'])
 
 @app.route('/import_csv', methods=["POST"])
 def import_csv():
     importer = Importer(getCatalogClient(), getSchemaClient())
     result = importer.import_data(request.data)
+    return render_template_string(result)
+
+@app.route('/get_schemas', methods=["POST"])
+def get_schemas():
+    importer = Importer(getCatalogClient(), getSchemaClient())
+    result = importer.get_schemas(request.data)
     return render_template_string(result)
 
 @app.route('/query')

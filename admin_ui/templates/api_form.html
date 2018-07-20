@@ -8,6 +8,12 @@
             display: inline-block;
             margin-bottom: 5px;
         }
+        #auth-method-label, #method-label {
+            margin-left: 10px;
+        }
+        .error {
+            color: red;
+        }
     </style>
 
 <script src="static/js/util.js?v={{ versions['util.js'] }}"></script>
@@ -62,7 +68,7 @@
         <div class="form-group endpoint not-api hidden">
             <label for="engine_id" class="control-label">API:</label>
             <select name="engine_id" id="engine_id" class="form-control required" style="width: 200px">
-                <option value="">Select:</option>
+                <option value="" selected="selected">Select:</option>
                 {% for engine in engines %}
                     {% if engine[4].startswith("REST:") %}
                         <option value="{{ engine[0] }}">{{ engine[1] }} <em>(engine_id: {{ engine[0] }})</em></option>
@@ -85,8 +91,8 @@
             <div class="checkbox-inline">
                 <label>
                     <input type="radio" name="method" data-type="connection_properties" class="required" value="GET"> GET
-                </label>&nbsp; &nbsp; &nbsp;
-                <label>
+                </label>
+                <label id="method-label">
                     <input type="radio" name="method" data-type="connection_properties" class="required" value="POST"> POST
                 </label>
             </div>
@@ -217,7 +223,7 @@
                     <label>
                         <input class="required" type="radio" name="auth_method" data-type="connection_properties" value="GET"> GET
                     </label>
-                    <label>
+                    <label id="auth-method-label">
                         <input class="required" type="radio" name="auth_method" data-type="connection_properties" value="POST"> POST
                     </label>
                 </div>

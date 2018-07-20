@@ -20,6 +20,12 @@ class ApiForm:
 
         eid = None
         if data_api.has_key('api'):
+            if data_api.has_key('endpoint'):
+                # Check for duplicate url first, otherwise we'll create the endpoint first and then hit the error
+                url = data_api['endpoint']['url']
+                if self.catalog_client.get_object_by_name_island_name(url, "API") is not None:
+                    return Util.error_msg("Duplicate url for API Island: " + url)
+
             result = self.processApi(data_api['api'])
             if isinstance(result, int):
                 eid = result
@@ -39,6 +45,12 @@ class ApiForm:
         if self.catalog_client.get_engine_by_name(name) is not None:
             return "Duplicate engine: " + name
 
+        island = self.catalog_client.get_island_by_scope_name('API')
+        if island is None:
+            return "Could not find API Island in catalog"
+
+        islandId = island[0]
+
         host = None
         if (api_data.has_key('host')):
             host = api_data['host']
@@ -52,6 +64,13 @@ class ApiForm:
             connection_properties = api_data['connection_properties']
 
         result = self.catalog_client.insert_engine(name, host, port, connection_properties)
+        if not isinstance(result, int):
+            return result
+
+        shim_result = self.catalog_client.insert_shim(islandId, result)
+        if not isinstance(shim_result, int):
+            return shim_result
+
         return result
 
     def processEndpoint(self, endpoint_data, engine_id):

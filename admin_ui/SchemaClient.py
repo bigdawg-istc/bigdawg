@@ -53,6 +53,16 @@ class SchemaClient:
         cur.close()
         return rows
 
+    def execute_statement(self, statement, values):
+        cur = self.conn.cursor()
+        try:
+            cur.execute(statement, values)
+            self.conn.commit()
+            cur.close()
+            return True
+        except psycopg2.Error as e:
+            return str(e)
+
 if __name__ == "__main__":
 
     # Examples:

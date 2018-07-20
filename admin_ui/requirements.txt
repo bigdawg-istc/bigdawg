@@ -3,3 +3,5 @@ docker==2.0.2
 psycopg2
 httplib2
 python-dotenv
+mysql-connector
+vertica-python

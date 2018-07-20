@@ -89,30 +89,24 @@ class CatalogClient:
     def get_endpoint_by_engine_id_name(self, engine_id, name):
         return self.execute_single_row_select("SELECT dbid, engine_id, name, userid, password from catalog.databases where engine_id=%s and name=%s", [engine_id, name])
 
+    def get_island_by_scope_name(self, scope_name):
+        return self.execute_single_row_select("SELECT iid, scope_name, access_method from catalog.islands where scope_name=%s", [scope_name])
+
     def get_object_by_name_island_name(self, name, island_name):
         # This is adapted from CatalogViewer.java
-        wherePred = "(o.name ilike PERCENT_REPLACE_ME%sPERCENT_REPLACE_ME and i.scope_name ilike PERCENT_REPLACE_ME%sPERCENT_REPLACE_ME) "
-        selectStatement = "select o.name obj, d1.name src_db, d2.name dst_db, i.scope_name island, c.access_method "\
-                          + "from catalog.objects o " + "join catalog.databases d1 	on o.physical_db = d1.dbid "\
-                          + "join catalog.engines e1 		on d1.engine_id = e1.eid "\
-                          + "join catalog.casts c 		on e1.eid = c.src_eid "\
-                          + "join catalog.engines e2 		on c.dst_eid = e2.eid "\
-                          + "join catalog.databases d2 	on d2.engine_id = e2.eid "\
-                          + "join catalog.shims sh 		on e2.eid = sh.engine_id "\
-                          + "join catalog.islands i 		on sh.island_id = i.iid " + "where " + wherePred\
-                          + "order by o.name, d1.name, d2.name, i.scope_name;"
-        cur = self.conn.cursor()
-
-
-        return self.execute_single_row_select(selectStatement, [name.replace("%", "\\%"), island_name])
+        wherePred = "lower(o.name) = lower(%s)"
+        selectStatement = "select o.name obj, string_agg(cast(physical_db as varchar), ',') db, count(o.name) c, scope_name island "\
+                          + "from catalog.objects o "\
+                          + "join catalog.databases d on o.physical_db = d.dbid "\
+                          + "join catalog.shims s on d.engine_id = s.engine_id "\
+                          + "join catalog.islands i on s.island_id = i.iid where " + wherePred \
+                          + " AND scope_name = %s "\
+                          + " group by o.name, island;"
+        return self.execute_single_row_select(selectStatement, [name, island_name])
 
     def execute_single_row_select(self, statement, values):
         cur = self.conn.cursor()
-        statement = cur.mogrify(statement, values)
-        statement = statement.replace('PERCENT_REPLACE_ME\'', '\'%')
-        statement = statement.replace('\'PERCENT_REPLACE_ME', '%\'')
-        print statement
-        cur.execute(statement)
+        cur.execute(statement, values)
         rows = cur.fetchall()
         cur.close()
         if not rows:
@@ -122,6 +116,10 @@ class CatalogClient:
     def insert_engine(self, name, host, port, connection_properties):
         values = [name, host, port, connection_properties]
         return self.execute_insert_with_max('catalog.engines', 'eid', ['name', 'host', 'port', 'connection_properties'], values)
+
+    def insert_shim(self, island_id, engine_id):
+        values = [island_id, engine_id]
+        return self.execute_insert_with_max('catalog.shims', 'shim_id', ['island_id', 'engine_id'], values)
 
     def insert_database(self, engine_id, name, userid, password):
         values = [engine_id, name, userid, password]
