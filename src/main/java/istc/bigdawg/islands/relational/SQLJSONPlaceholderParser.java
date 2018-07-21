@@ -1,6 +1,8 @@
 package istc.bigdawg.islands.relational;
 
 import istc.bigdawg.exceptions.QueryParsingException;
+import istc.bigdawg.utils.Tuple;
+
 import java.util.*;
 
 public class SQLJSONPlaceholderParser {
@@ -9,22 +11,29 @@ public class SQLJSONPlaceholderParser {
     private static int placeholderIndex = 0;
 
     private final static String[] operators = {
+        "->",
         "->>", // The ordering of these matter to the parser (as -> will match ->>)
-//        "#>>",
-//        "#>",
+        "#>>",
+        "#>",
     };
+
+    public static void resetIndex() {
+        placeholderIndex = 0;
+    }
 
     private static enum TokenType {
         STRING,
         QUOTED_STRING,
-        OPERATOR_JSON_OBJ,
-        OPERATOR_JSON_OBJ_TEXT,
+        OPERATOR_JSON,
+        PAREN_OPEN,
+        PAREN_CLOSE,
         PLACEHOLDER
     }
 
     private static class Placeholder {
+        Vector<Token> lhs;
         String operator;
-        String rightToken;
+        Vector<Token> rhs;
     }
 
     private static class Token {
@@ -37,10 +46,25 @@ public class SQLJSONPlaceholderParser {
         private final String sql;
         private final int len;
         private int idx = 0;
+        private Token prevToken = null;
+        private Token curToken = null;
 
         private Tokenizer(String sql) {
             this.sql = sql;
             this.len = sql.length();
+        }
+
+        public Token lookAhead() {
+            final int curIdx = idx;
+            final Token prevToken = this.prevToken;
+            final Token token = next();
+
+            // reset index
+            idx = curIdx;
+            curToken = this.prevToken;
+            this.prevToken = prevToken;
+
+            return token;
         }
 
         @Override
@@ -50,6 +74,9 @@ public class SQLJSONPlaceholderParser {
             while(idx < len) {
                 char curChar = sql.charAt(idx);
                 idx += 1;
+                Character lookaheadChar1 = null;
+                Character lookaheadChar2 = null;
+                Token token;
                 if (!inQuote) {
                     boolean end = false;
                     switch (curChar) {
@@ -63,12 +90,26 @@ public class SQLJSONPlaceholderParser {
                             continue;
                         case '\'':
                             inQuote = true;
+                            break;
+                        case '(':
+                            token = new Token();
+                            token.token = "(";
+                            token.tokenType = TokenType.PAREN_OPEN;
+                            prevToken = curToken;
+                            curToken = token;
+                            return token;
+                        case ')':
+                            token = new Token();
+                            token.token = ")";
+                            token.tokenType = TokenType.PAREN_CLOSE;
+                            prevToken = curToken;
+                            curToken = token;
+                            return token;
                         case '-':
-                            Character lookaheadChar1 = null;
+                        case '#':
                             if (idx < len) {
                                 lookaheadChar1 = sql.charAt(idx);
                             }
-                            Character lookaheadChar2 = null;
                             if (idx + 1 < len) {
                                 lookaheadChar2 = sql.charAt(idx + 1);
                             }
@@ -81,17 +122,21 @@ public class SQLJSONPlaceholderParser {
                                 }
 
                                 if (lookaheadChar2 != null && lookaheadChar2 == '>') {
-                                    Token token = new Token();
+                                    token = new Token();
                                     idx += 2;
-                                    token.token = "->>";
-                                    token.tokenType = TokenType.OPERATOR_JSON_OBJ_TEXT;
+                                    token.token = curChar + ">>";
+                                    token.tokenType = TokenType.OPERATOR_JSON;
+                                    prevToken = curToken;
+                                    curToken = token;
                                     return token;
                                 }
 
-                                Token token = new Token();
+                                token = new Token();
                                 idx += 1;
-                                token.token = "->";
-                                token.tokenType = TokenType.OPERATOR_JSON_OBJ;
+                                token.token = curChar + ">";
+                                token.tokenType = TokenType.OPERATOR_JSON;
+                                prevToken = curToken;
+                                curToken = token;
                                 return token;
                             }
                             break;
@@ -125,6 +170,8 @@ public class SQLJSONPlaceholderParser {
                     token.tokenType = TokenType.PLACEHOLDER;
                 }
             }
+            prevToken = curToken;
+            curToken = token;
             return token;
         }
 
@@ -149,10 +196,10 @@ public class SQLJSONPlaceholderParser {
             }
             return false;
         }
-    }
 
-    private static boolean possiblyContainsJSONOperator(String sql) {
-        return sql.contains("->"); // will also match '->' but it's okay
+        public Token getPrevToken() {
+            return prevToken;
+        }
     }
 
     public static boolean possiblyContainsOperator(String sql) {
@@ -168,31 +215,45 @@ public class SQLJSONPlaceholderParser {
         return sql.contains(placeholderPrefix);
     }
 
+    private static void addPlaceholderTokens(StringJoiner stringJoiner, Placeholder placeholder) {
+        for (Token token: placeholder.lhs) {
+            if (placeholders.containsKey(token.token)) {
+                addPlaceholderTokens(stringJoiner, placeholders.get(token.token));
+            }
+            else {
+                stringJoiner.add(token.token);
+            }
+        }
+
+        stringJoiner.add(placeholder.operator);
+
+        for (Token token: placeholder.rhs) {
+            if (placeholders.containsKey(token.token)) {
+                addPlaceholderTokens(stringJoiner, placeholders.get(token.token));
+            }
+            else {
+                stringJoiner.add(token.token);
+            }
+        }
+    }
+
     public static String substitutePlaceholders(String sql) throws QueryParsingException {
         Tokenizer tokenizer = new Tokenizer(sql);
         StringJoiner stringJoiner = new StringJoiner(" ");
         boolean placeholderSubstitution = false;
         while (tokenizer.hasNext()) {
             Token token = tokenizer.next();
-            if (token.tokenType == TokenType.OPERATOR_JSON_OBJ) {
-                if (!tokenizer.hasNext()) {
-                    throw new QueryParsingException("Expecting next token after -> in sql: " + sql);
-                }
-
-                Token nextToken = tokenizer.next();
-
-                if (placeholders.containsKey(nextToken.token)) {
+            if (token.tokenType == TokenType.QUOTED_STRING) {
+                if (placeholders.containsKey(token.token)) {
                     // placeholder
-                    Placeholder placeholder = placeholders.get(nextToken.token);
-                    stringJoiner.add(placeholder.operator);
-                    stringJoiner.add(placeholder.rightToken);
+                    Placeholder placeholder = placeholders.get(token.token);
+                    addPlaceholderTokens(stringJoiner, placeholder);
                     if (!placeholderSubstitution) {
                         placeholderSubstitution = true;
                     }
                 }
                 else {
                     stringJoiner.add(token.token);
-                    stringJoiner.add(nextToken.token);
                 }
             }
             else {
@@ -206,41 +267,101 @@ public class SQLJSONPlaceholderParser {
         return stringJoiner.toString();
     }
 
+    private static Vector<Token> popLHS(Vector<Token> tokens) {
+        int length = tokens.size();
+        final Vector<Token> lhsTokens = new Vector<>();
+
+        Token token = tokens.get(length - 1);
+        tokens.remove(length - 1);
+        lhsTokens.add(token);
+        if (token.tokenType == TokenType.PAREN_CLOSE) {
+            int count = 1;
+            for (int i = length - 2; i >= 0 ; i--) {
+                token = tokens.get(i);
+                tokens.remove(i);
+
+                if (token.tokenType == TokenType.PAREN_OPEN) {
+                    count--;
+                }
+                else if (token.tokenType == TokenType.PAREN_CLOSE) {
+                    count--;
+                }
+                lhsTokens.add(0, token);
+                if (count == 0) {
+                    break;
+                }
+            }
+        }
+
+        return lhsTokens;
+    }
+
+    private static Vector<Token> getRHS(Tokenizer tokenizer) {
+        Vector<Token> tokens = new Vector<>();
+
+        if(tokenizer.hasNext()) {
+            Token token = tokenizer.next();
+            tokens.add(token);
+            if (token.tokenType == TokenType.PAREN_OPEN) {
+                int count = 1;
+                while (count > 0 && tokenizer.hasNext()) {
+                    token = tokenizer.next();
+                    tokens.add(token);
+                    if (token.tokenType == TokenType.PAREN_OPEN) {
+                        count--;
+                    }
+                    else if (token.tokenType == TokenType.PAREN_CLOSE) {
+                        count--;
+                    }
+                }
+            }
+        }
+        return tokens;
+    }
+
     public static String transformJSONQuery(String sql) throws QueryParsingException {
         Tokenizer tokenizer = new Tokenizer(sql);
 
-        Vector<String> finalTokens = new Vector<>();
+        Vector<Token> finalTokens = new Vector<>();
         while (tokenizer.hasNext()) {
             Token token = tokenizer.next();
             if (token.tokenType == TokenType.QUOTED_STRING) {
-                finalTokens.add(token.token);
+                finalTokens.add(token);
                 continue;
             }
 
-            String finalToken = token.token;
-
-            if (token.tokenType == TokenType.OPERATOR_JSON_OBJ_TEXT) {
+            if (token.tokenType == TokenType.OPERATOR_JSON) {
                 if (!tokenizer.hasNext()) {
-                    throw new QueryParsingException("There should be a next token after " + finalToken);
+                    throw new QueryParsingException("There should be a next token after " + token.token);
                 }
-                Token nextToken = tokenizer.next();
-                if (nextToken.tokenType != TokenType.QUOTED_STRING) {
-                    throw new QueryParsingException("Having a non quoted string after a JSON ->> operator is not supported: " + nextToken.token);
+
+                if (finalTokens.size() == 0) {
+                    throw new QueryParsingException("There should be a previous token before " + token.token);
                 }
+
+                // Now need to collapse LHS and RHS into a single thing.
+                Vector<Token> lhs = popLHS(finalTokens);
+                Vector<Token> rhs = getRHS(tokenizer);
 
                 placeholderIndex += 1;
                 String placeholderStr = "'" + placeholderPrefix + placeholderIndex + "'";
                 Placeholder placeholder = new Placeholder();
-                placeholder.operator = "->>";
-                placeholder.rightToken = nextToken.token;
-                finalToken = "-> " + placeholderStr;
+                placeholder.lhs = lhs;
+                placeholder.rhs = rhs;
+                placeholder.operator = token.token;
                 placeholders.put(placeholderStr, placeholder);
+                Token placeholderToken = new Token();
+                placeholderToken.token = placeholderStr;
+                placeholderToken.tokenType = TokenType.QUOTED_STRING;
+                finalTokens.add(placeholderToken);
             }
-            finalTokens.add(finalToken);
+            else {
+                finalTokens.add(token);
+            }
         }
         StringJoiner stringJoiner = new StringJoiner(" ");
-        for(String strToken: finalTokens) {
-            stringJoiner.add(strToken);
+        for(Token token: finalTokens) {
+            stringJoiner.add(token.token);
         }
         return stringJoiner.toString();
     }

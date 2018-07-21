@@ -29,7 +29,8 @@ class Importer:
         if not isinstance(dbid, numbers.Number):
             return Util.error_msg("dbid is not a number")
 
-        conn = self.get_connection(dbid)
+        (connection_properties, host, port, database_name, user, password) = self.get_connection_info(dbid)
+        conn = self.get_connection_postgres(host, port, database_name, user, password)
         if isinstance(conn, str): # should be an error message then
             return conn
         try:

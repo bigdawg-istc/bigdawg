@@ -24,7 +24,8 @@ public class SQLParseLogical {
     private SQLQueryPlan queryPlan;
 
     static Select tryJSONPlaceholderParse(JSQLParserException e, String q) throws QueryParsingException {
-        if (e.getCause().getMessage() != null && e.getCause().getMessage().contains("->")) {
+        if ((e.getCause().getMessage() != null && e.getCause().getMessage().contains(">")) ||
+				(e.getMessage() != null && e.getMessage().contains(">"))) {
             try {
                 String newq = SQLJSONPlaceholderParser.transformJSONQuery(q);
                 return (Select) CCJSqlParserUtil.parse(newq);
