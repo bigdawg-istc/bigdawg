@@ -2,14 +2,22 @@ package istc.bigdawg.migration;
 
 import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.executor.QueryResult;
+import istc.bigdawg.executor.RESTQueryResult;
 import istc.bigdawg.islands.IntraIslandQuery;
 import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.query.DBHandler;
 import istc.bigdawg.rest.RESTConnectionInfo;
 import istc.bigdawg.rest.RESTHandler;
 import istc.bigdawg.utils.StackTrace;
+import istc.bigdawg.utils.Tuple;
 import org.apache.log4j.Logger;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+
 import java.io.*;
+import java.util.List;
+import java.util.Map;
+import java.util.StringJoiner;
 
 public class ExportREST implements Export {
 
@@ -47,18 +55,46 @@ public class ExportREST implements Export {
 
             log.debug("Exporting data.");
 
-            StringBuffer resultBuffer = new StringBuffer(""); // @TODO - explore what to do if no migration params passed in
+            StringBuilder resultBuffer = new StringBuilder(""); // @TODO - explore what to do if no migration params passed in
             if (migrationInfo.getMigrationParams().isPresent()) {
                 MigrationParams migrationParams = migrationInfo.getMigrationParams().get();
                 IntraIslandQuery source = migrationParams.getSource();
                 if (source != null) {
-                    QueryResult result = source.getQueryResult();
-                    // there should be a better way to do this
-                    String[] resultArr = result.toPrettyString().split("\n"); // @TODO - explore making this more efficient by not having to use result.toPrettyString()
-                    for (String line: resultArr) {
-                        resultBuffer.append("'");
-                        resultBuffer.append(line.replaceAll("'", "''"));
-                        resultBuffer.append("'\n");
+                    RESTQueryResult restQueryResult = (RESTQueryResult) source.getQueryResult();
+                    List<Map<String, Object>> rows = restQueryResult.getRowsWithHeadings();
+                    List<Tuple.Tuple3<String, String, Boolean>> columns = restQueryResult.getColumns();
+                    if (rows != null) {
+                        for(Map<String, Object> row: rows) {
+                            StringJoiner stringJoiner = new StringJoiner(",");
+                            for (Tuple.Tuple3<String, String, Boolean> column : columns) {
+                                final String name = column.getT1();
+                                final String type = column.getT2();
+                                final Object value = row.getOrDefault(name, null);
+                                if (value == null) {
+                                    stringJoiner.add("null");
+                                } else {
+                                    Class objectClass = value.getClass();
+                                    if (objectClass == JSONObject.class ||
+                                            objectClass == JSONArray.class) {
+                                        stringJoiner.add("'" + value.toString().replaceAll("'", "''") + "'");
+                                    } else if (objectClass == String.class) {
+                                        if (type.equals("json")) {
+                                            stringJoiner.add("'\"" + value.toString().replaceAll("'", "''") + "\"'");
+                                        }
+                                        else {
+                                            stringJoiner.add("'" + value.toString().replaceAll("'", "''") + "'");
+                                        }
+                                    } else if (type.equals("json")) {
+                                        stringJoiner.add("'" + value.toString().replaceAll("'", "''") + "'");
+                                    }
+                                    else {
+                                        stringJoiner.add(value.toString());
+                                    }
+                                }
+                            }
+                            resultBuffer.append(stringJoiner.toString());
+                            resultBuffer.append("\n");
+                        }
                     }
                 }
             }

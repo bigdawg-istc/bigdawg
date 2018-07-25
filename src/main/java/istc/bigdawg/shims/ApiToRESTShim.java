@@ -20,6 +20,8 @@ import istc.bigdawg.query.ConnectionInfo;
 
 public class ApiToRESTShim implements Shim {
 
+    public final static String INTO_SPECIFIER = "BIGDAWG_API_REST_INTO";
+    public final static String INTO_DELIMITER = "::::";
     private RESTConnectionInfo connectionInfo;
     private RESTHandler handler = null;
 
@@ -56,7 +58,7 @@ public class ApiToRESTShim implements Shim {
     public String getSelectIntoQuery(Operator root, String dest, boolean stopsAtJoin) throws ShimException {
         // Have to hack this for intra island cast, as it seems it wants to create a
         //  temp table every time even if it's not needed
-        return this.getSelectQuery(root);
+        return INTO_SPECIFIER + INTO_DELIMITER + dest + INTO_DELIMITER + this.getSelectQuery(root);
     }
 
     @Override

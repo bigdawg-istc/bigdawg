@@ -138,7 +138,7 @@ class OAuth2 {
         assert(responseType == ResponseType.JSON); // We don't support any other right now.
 
         URLUtil.FetchResult fetchResult = URLUtil.fetch(urlStr, method, headers, postData, authConnectTimeout, authReadTimeout);
-        boolean match = URLUtil.headersContain(fetchResult.responseHeaders, "content-type", "application/json", ";");
+        boolean match = URLUtil.headersContain(fetchResult.responseHeaders, "content-type", URLUtil.HeaderMatch.jsonHeaderMatchTypes, ";");
         if (!match) {
             List<String> contentTypes = fetchResult.responseHeaders.get("content-type");
             StringBuilder contentTypeBuilder = new StringBuilder();

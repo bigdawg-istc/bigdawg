@@ -4,24 +4,24 @@ import istc.bigdawg.BDConstants;
 import istc.bigdawg.database.AttributeMetaData;
 import istc.bigdawg.database.ObjectMetaData;
 import istc.bigdawg.exceptions.ApiException;
-import istc.bigdawg.executor.ConstructedQueryResult;
+import istc.bigdawg.executor.RESTQueryResult;
+import istc.bigdawg.shims.ApiToRESTShim;
 import istc.bigdawg.executor.ExecutorEngine;
 import istc.bigdawg.executor.QueryResult;
 import istc.bigdawg.query.DBHandler;
+import istc.bigdawg.utils.Tuple;
+import org.apache.avro.generic.GenericData;
 import org.apache.log4j.Logger;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
-import javax.swing.text.html.Option;
+import javax.annotation.Nullable;
 import javax.ws.rs.core.Response;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 public class RESTHandler implements ExecutorEngine, DBHandler {
     private RESTConnectionInfo restConnectionInfo;
@@ -32,8 +32,24 @@ public class RESTHandler implements ExecutorEngine, DBHandler {
         this.restConnectionInfo = restConnectionInfo;
     }
 
+    private static Map<String, RESTQueryResult> restQueryResults = new HashMap<>();
+
     @Override
     public Optional<QueryResult> execute(String query) {
+        String bigdawgResultKey = "";
+        if (query.startsWith(ApiToRESTShim.INTO_SPECIFIER)) {
+            String[] parts = query.split(ApiToRESTShim.INTO_DELIMITER);
+            StringBuilder rest = new StringBuilder(parts[2]);
+            if (parts.length > 3) {
+                for (int i = 3 ; i < parts.length; i++) {
+                    rest.append(ApiToRESTShim.INTO_DELIMITER);
+                    rest.append(parts[i]);
+                }
+            }
+            query = rest.toString();
+            bigdawgResultKey = parts[1];
+        }
+        Optional<QueryResult> queryResult;
         try {
             String url = restConnectionInfo.getUrl();
             HttpMethod method = restConnectionInfo.getMethod();
@@ -58,20 +74,20 @@ public class RESTHandler implements ExecutorEngine, DBHandler {
             // @TODO Connect / read timeout could be parameterized either in query or in connection parameters, or both
             URLUtil.FetchResult fetchResult = URLUtil.fetch(url, method, headers, postData, restConnectionInfo.getConnectTimeout(), restConnectionInfo.getReadTimeout());
 
-            List<List<String>> resultLists = this.parseResult(fetchResult);
-            if (resultLists == null) {
-                return Optional.empty();
+            RESTQueryResult restQueryResult = this.parseResult(fetchResult);
+            RESTHandler.restQueryResults.put(bigdawgResultKey, restQueryResult);
+            if (restQueryResult == null) {
+                queryResult = Optional.empty();
             }
-            if (resultLists.isEmpty()) {
-                return Optional.empty();
+            else {
+                queryResult = Optional.of(restQueryResult);
             }
-
-            return Optional.of(new ConstructedQueryResult(resultLists, restConnectionInfo));
         }
         catch (Exception e) {
             RESTHandler.log.error("Error executing REST query", e);
+            queryResult = Optional.empty();
         }
-        return Optional.empty();
+        return queryResult;
     }
 
     /**
@@ -80,41 +96,248 @@ public class RESTHandler implements ExecutorEngine, DBHandler {
      * @return List of results as parsed
      * @throws ApiException when there's a problem parsing
      */
-    private List<List<String>> parseResult(URLUtil.FetchResult fetchResult) throws ApiException {
-        List<List<String>> resultLists = new ArrayList<>();
+    private RESTQueryResult parseResult(URLUtil.FetchResult fetchResult) throws ApiException {
         String resultKey = restConnectionInfo.getResultKey();
-        if (resultKey != null) {
-            try {
-                // @TODO support other content types e.g. text/csv or tsv or even maybe xml?
-                JSONParser jsonParser = new JSONParser();
-                if (!URLUtil.headersContain(fetchResult.responseHeaders, "content-type", "application/json", ";")) {
-                    throw new ApiException("Unsupported content type: " + fetchResult.responseHeaders.get("content-type").get(0));
+        try {
+            // @TODO support other content types e.g. text/csv or tsv or even maybe xml?
+            JSONParser jsonParser = new JSONParser();
+            if (!URLUtil.headersContain(fetchResult.responseHeaders, "content-type", URLUtil.HeaderMatch.jsonHeaderMatchTypes, ";")) {
+                throw new ApiException("Unsupported content type: " + fetchResult.responseHeaders.get("content-type").get(0));
+            }
+
+            Object object = jsonParser.parse(fetchResult.response);
+            return this.parseJSONResult(resultKey, object);
+        } catch (ParseException e) {
+            throw new ApiException("Exception encountered trying to parse the result: " + e.toString());
+        }
+    }
+
+    private RESTQueryResult parseJSONArray(JSONArray jsonArray) {
+        // Tuple3 (colname, type, nullable)
+        List<Tuple.Tuple3<String, String, Boolean>> headers = new ArrayList<>();
+        Map<String, Integer> headerNames = new HashMap<>();
+        List<String> rows = new ArrayList<>();
+        List<Map<String, Object>> rowsWithHeadings = new ArrayList<>();
+        for (Object o : jsonArray) {
+            String row = "";
+            Map<String, Object> rowWithHeadings = new HashMap<>();
+            if (o == null) {
+                int idx = 0;
+                if (headerNames.containsKey("col1")) {
+                    idx = headerNames.get("col1");
+                    Tuple.Tuple3<String, String, Boolean> tuple3 = headers.get(idx);
+                    if (!tuple3.getT3()) {
+                        headers.set(idx, new Tuple.Tuple3<String, String, Boolean>(tuple3.getT1(), tuple3.getT2(), true));
+                    }
+                }
+                else {
+                    headers.add(new Tuple.Tuple3<>("col1", "text", true));
                 }
 
-                JSONObject jsonObject = (JSONObject) jsonParser.parse(fetchResult.response);
-                this.parseJSONResult(resultLists, resultKey, jsonObject);
-            } catch (ParseException e) {
-                throw new ApiException("Exception encountered trying to parse the result: " + e.toString());
+                rowWithHeadings.put("col1", null);
+                row = "";
+            } else if (o.getClass() == JSONArray.class) {
+                row = getFromJSONArray(headers, headerNames, rowWithHeadings, (JSONArray) o);
+            } else if (o.getClass() == JSONObject.class) {
+                row = getFromJSONObject(headers, headerNames, rowWithHeadings, (JSONObject) o);
+            }
+            else {
+                final Tuple.Tuple2<String, Boolean> headerInfo = determineHeaderTypeNullable(o);
+                final String headerType = headerInfo.getT1();
+                final boolean nullable = headerInfo.getT2();
+
+                if (!headerNames.containsKey("col1")){
+                    headerNames.put("col1", headers.size());
+                    headers.add(new Tuple.Tuple3<String, String, Boolean>("col1", headerType, nullable));
+                }
+                final int headersSize = headers.size();
+                for (int i = 0; i < headersSize; i++) {
+                    Tuple.Tuple3<String, String, Boolean> header = headers.get(i);
+                    if (header.getT1().equals("col1")) {
+                        if (nullable && !header.getT3()) {
+                            headers.set(i, new Tuple.Tuple3<String, String, Boolean>("col1", header.getT2(), true));
+                        }
+                        rowWithHeadings.put("col1", o);
+                    }
+                    else {
+                        if (!header.getT3()) {
+                            headers.set(i, new Tuple.Tuple3<String, String, Boolean>("col1", header.getT2(), true));
+                        }
+                    }
+                }
+            }
+            rows.add(row);
+            rowsWithHeadings.add(rowWithHeadings);
+        }
+        RESTQueryResult restQueryResult = new RESTQueryResult(headers, rows, rowsWithHeadings, restConnectionInfo);
+        return restQueryResult;
+    }
+
+    private String getFromJSONObject(List<Tuple.Tuple3<String, String, Boolean>> headers,
+                                     Map<String, Integer> headerNames,
+                                     Map<String, Object> rowWithHeaders,
+                                     JSONObject jsonObject) {
+        List<Object> row = new ArrayList<>();
+
+        for (Object key : jsonObject.keySet()) {
+            String keyStr = String.valueOf(key);
+
+            Object obj = jsonObject.get(key);
+            final Tuple.Tuple2<String, Boolean> headerInfo = determineHeaderTypeNullable(obj);
+            final String headerType = headerInfo.getT1();
+            final boolean nullable = headerInfo.getT2();
+
+            if (headerNames.containsKey(keyStr)) {
+                final int idx = headerNames.get(keyStr);
+                final Tuple.Tuple3<String, String, Boolean> tuple3 = headers.get(idx);
+                if (nullable) {
+                    if (!tuple3.getT3()) {
+                        headers.set(idx, new Tuple.Tuple3<String, String, Boolean>(tuple3.getT1(), tuple3.getT2(), true));
+                    }
+                } else {
+                    final String t2 = tuple3.getT2();
+                    if (!t2.equals("json") && !t2.equals(headerType)) {
+                        headers.set(idx, new Tuple.Tuple3<String, String, Boolean>(tuple3.getT1(), "json", true));
+                    }
+                }
+            } else {
+                headerNames.put(keyStr, headers.size());
+                headers.add(new Tuple.Tuple3<String, String, Boolean>(keyStr, headerType, nullable));
             }
         }
-        else {
-            List<String> row = new ArrayList<>();
-            row.add(fetchResult.response);
-            resultLists.add(row);
+
+        final int headersSize = headers.size();
+        for (int i = 0; i < headersSize; i++) {
+            Tuple.Tuple3<String, String, Boolean> tuple3 = headers.get(i);
+            final String headerName = tuple3.getT1();
+            if (jsonObject.containsKey(headerName)) {
+                final Object obj = jsonObject.get(headerName);
+                rowWithHeaders.put(headerName, obj);
+            }
+            else {
+                if (!tuple3.getT3()) {
+                    headers.set(i, new Tuple.Tuple3<String, String, Boolean>(headerName, tuple3.getT2(), true));
+                }
+            }
         }
-        return resultLists;
+
+        return jsonObject.toString();
+    }
+
+    private String getFromJSONArray(List<Tuple.Tuple3<String, String, Boolean>> headers, Map<String, Integer> headerNames, Map<String, Object> rowWithHeadings, JSONArray jsonArray) {
+        final int jsonSize = jsonArray.size();
+        List<Object> row = new ArrayList<>();
+        for (int i = 0 ; i < jsonSize; i++) {
+            final String colName = "col" + String.valueOf(i);
+            final Object obj = jsonArray.get(i);
+            if (!headerNames.containsKey(colName)) {
+                final Tuple.Tuple2<String, Boolean> headerInfo = determineHeaderTypeNullable(obj);
+                final String headerType = headerInfo.getT1();
+                final boolean nullable = headerInfo.getT2();
+                headers.add(new Tuple.Tuple3<String, String, Boolean>(colName, headerType, nullable));
+                headerNames.put(colName, headers.size() - 1);
+            }
+        }
+
+        int j = 0;
+        final int headersSize = headers.size();
+        for (int i = 0; i < headersSize; i++) {
+            final Tuple.Tuple3<String, String, Boolean> header = headers.get(i);
+            if (j < jsonSize) {
+                final String colName = "col" + String.valueOf(j);
+                if (header.getT1().equals(colName)) {
+                    final Object obj = jsonArray.get(j);
+                    j++;
+                    final Tuple.Tuple2<String, Boolean> headerInfo = determineHeaderTypeNullable(obj);
+                    final String headerType = headerInfo.getT1();
+                    final boolean nullable = headerInfo.getT2();
+                    final String t2 = header.getT2();
+                    if (nullable) {
+                        if (!header.getT3()) {
+                            headers.set(i, new Tuple.Tuple3<>(header.getT1(), header.getT2(), true));
+                        }
+                    }
+                    else if (!t2.equals("json") && !t2.equals(headerType)) {
+                        headers.set(i, new Tuple.Tuple3<>(header.getT1(), "json", header.getT3()));
+                    }
+                    rowWithHeadings.put(colName, obj);
+                }
+            }
+            else {
+                if (!header.getT3()) {
+                    headers.set(i, new Tuple.Tuple3<>(header.getT1(), header.getT2(), true));
+                }
+            }
+        }
+        return jsonArray.toString();
     }
 
     /**
+     * Determines what the header type should be given the object passed in, and whether it should be nullable or not
+     * @param obj object to examine
+     * @return Tuple.Tuple2 of the header type (String), and whether it should be nullable (Boolean)
+     */
+    private Tuple.Tuple2<String, Boolean> determineHeaderTypeNullable(Object obj) {
+        if (obj == null){
+            return new Tuple.Tuple2<String, Boolean>("json", true);
+        }
+        else if (obj.getClass() == JSONObject.class || obj.getClass() == JSONArray.class) {
+            return new Tuple.Tuple2<String, Boolean>("json", false);
+        }
+        else if (obj.getClass() == Integer.class) {
+            return new Tuple.Tuple2<String, Boolean>("integer", false);
+        }
+        else if (obj.getClass() == Long.class) {
+            return new Tuple.Tuple2<String, Boolean>("bigint", false);
+        }
+        else if (obj.getClass() == Double.class) {
+            return new Tuple.Tuple2<String, Boolean>("double precision", false);
+        }
+        else if (obj.getClass() == Boolean.class) {
+            return new Tuple.Tuple2<String, Boolean>("boolean", false);
+        }
+        return new Tuple.Tuple2<String, Boolean>("text", false);
+    }
+
+
+    /**
      * Parses a json result
-     * @param resultLists result list to fill with rows
      * @param resultKey Index into the json object
-     * @param jsonObject JSONObject to search via the resultKey
+     * @param object Object to search
      * @throws ApiException when something goes wrong
      */
-    private void parseJSONResult(List<List<String>> resultLists, String resultKey, JSONObject jsonObject) throws ApiException {
-        if (jsonObject == null) {
-            return;
+    private RESTQueryResult parseJSONResult(String resultKey, Object object) throws ApiException {
+        if (object == null) {
+            return null;
+        }
+
+        if (object.getClass() == JSONArray.class) {
+            if (resultKey != null && resultKey.length() > 0) {
+                throw new ApiException("Response is a list, but expected an object due to resultKey of '" + resultKey + "'");
+            }
+            return parseJSONArray((JSONArray) object);
+        }
+
+
+        if (object.getClass() != JSONObject.class) {
+            if (resultKey != null && resultKey.length() > 0) {
+                throw new ApiException("Response is a JSONValue: " + object.toString() + ", but expected an object due to resultKey of '" + resultKey + "'");
+            }
+
+            return this.getBasicRESTQueryResult(object);
+        }
+
+        JSONObject jsonObject = (JSONObject) object;
+        if (resultKey == null || resultKey.length() == 0) {
+            List<Tuple.Tuple3<String, String, Boolean>> headers = new ArrayList<>();
+            Map<String, Integer> headerNames = new HashMap<>();
+            List<Map<String, Object>> rowsWithHeaders = new ArrayList<>();
+            Map<String, Object> rowWithHeaders = new HashMap<>();
+            String row = getFromJSONObject(headers, headerNames, rowWithHeaders, jsonObject);
+            List<String> rows = new ArrayList<>();
+            rows.add(row);
+            rowsWithHeaders.add(rowWithHeaders);
+            return new RESTQueryResult(headers, rows, rowsWithHeaders, restConnectionInfo);
         }
 
         if (!jsonObject.containsKey(resultKey)) { // nested key? e.g. something.something_else
@@ -123,43 +346,39 @@ public class RESTHandler implements ExecutorEngine, DBHandler {
                 String key = resultKey.substring(0, pos);
                 String rest = resultKey.substring(pos + 1);
                 if (jsonObject.containsKey(key)) {
-                    this.parseJSONResult(resultLists, rest, (JSONObject) jsonObject.get(key));
-                    return;
+                    return this.parseJSONResult(rest, jsonObject.get(key));
                 }
             }
-            return;
+            return null;
         }
 
         Object result = jsonObject.get(resultKey);
-        if (result == null) {
-            // This is a bit strange, but possible I guess
-            return;
+        if (result == null || result.getClass() != JSONArray.class) {
+            return this.getBasicRESTQueryResult(result);
         }
-        if (result.getClass() != JSONArray.class) {
-            // this is worse - we should have an array here...
-            throw new ApiException("Result is not a JSONArray, intead it's: " + result.getClass());
-        } else {
-            JSONArray jsonArray = (JSONArray) result;
-            for (Object o : jsonArray) {
-                if (o == null) {
-                    ArrayList<String> arrayList = new ArrayList<>();
-                    arrayList.add("null");
-                    resultLists.add(arrayList);
-                } else if (o.getClass() == JSONArray.class) {
-                    ArrayList<String> row = new ArrayList<>();
-                    for (Object innerO : (JSONArray) o) {
-                        row.add(innerO == null ? "null" : innerO.toString()); // Do I need to "null" ??
-                    }
-                    resultLists.add(row);
-                } else {
-                    ArrayList<String> arrayList = new ArrayList<>();
-                    arrayList.add(o.toString());
-                    resultLists.add(arrayList);
-                }
-            }
-        }
-        log.debug("REST Array result:");
-        log.debug(resultLists);
+
+        final JSONArray jsonArray = (JSONArray) result;
+        return parseJSONArray(jsonArray);
+    }
+
+    /**
+     * Handles a basic result
+     * @param object
+     * @return
+     */
+    private RESTQueryResult getBasicRESTQueryResult(@Nullable Object object) {
+        List<String> rows = new ArrayList<>();
+        String row = object.toString();
+        rows.add(row);
+        List<Map<String, Object>> rowsWithHeaders = new ArrayList<>();
+        Map<String, Object> rowWithHeaders = new HashMap<>();
+        rowWithHeaders.put("col1", object);
+        rowsWithHeaders.add(rowWithHeaders);
+        Tuple.Tuple2<String, Boolean> tuple2 = determineHeaderTypeNullable(object);
+        Tuple.Tuple3<String, String, Boolean> header = new Tuple.Tuple3<>("col1", tuple2.getT1(), tuple2.getT2());
+        List<Tuple.Tuple3<String, String, Boolean>> headers = new ArrayList<>();
+        headers.add(header);
+        return new RESTQueryResult(headers, rows, rowsWithHeaders, restConnectionInfo);
     }
 
     @Override
@@ -201,6 +420,8 @@ public class RESTHandler implements ExecutorEngine, DBHandler {
      */
     @Override
     public ObjectMetaData getObjectMetaData(String name) throws Exception {
+        final RESTQueryResult restQueryResult = RESTHandler.restQueryResults.getOrDefault(name, null);
+
         return new ObjectMetaData() {
             @Override
             public String getName() {
@@ -209,9 +430,18 @@ public class RESTHandler implements ExecutorEngine, DBHandler {
 
             @Override
             public List<AttributeMetaData> getAttributesOrdered() {
-                AttributeMetaData attribute = new AttributeMetaData("result", "json", false, false);
                 List <AttributeMetaData> resultList = new ArrayList<>();
-                resultList.add(attribute);
+                if (restQueryResult == null) {
+                    AttributeMetaData attribute = new AttributeMetaData("col1", "json", true, false);
+                    resultList.add(attribute);
+                    return resultList;
+                }
+
+                List<Tuple.Tuple3<String, String, Boolean>> headers = restQueryResult.getColumns();
+                for(Tuple.Tuple3<String, String, Boolean> header: headers) {
+                    AttributeMetaData attribute = new AttributeMetaData(header.getT1(), header.getT2(), header.getT3(), false);
+                    resultList.add(attribute);
+                }
                 return resultList;
             }
         };

@@ -2,15 +2,13 @@ package istc.bigdawg.rest;
 
 import istc.bigdawg.exceptions.BigDawgCatalogException;
 import istc.bigdawg.exceptions.QueryParsingException;
+import weka.associations.tertius.Head;
 
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLDecoder;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.StringJoiner;
+import java.util.*;
 
 public final class URLUtil {
     private final static String UserAgent = "bigdawg/1";
@@ -324,14 +322,42 @@ public final class URLUtil {
 
         // The alternative is to return multiple
         fetchResult.response = responseBuilder.toString();
-        int length = fetchResult.response.length();
-        fetchResult.responseHeaders = urlConnection.getHeaderFields();
+
+        // Capture normalized headers
+        Map<String, List<String>> responseHeaders = urlConnection.getHeaderFields();
+        fetchResult.responseHeaders = new HashMap<>();
+        for (String key: responseHeaders.keySet()) {
+            fetchResult.responseHeaders.put(key != null ? key.toUpperCase() : key, responseHeaders.get(key));
+        }
         return fetchResult;
     }
 
-    public static boolean headersContain(Map<String, List<String>> headers, String key, String value, String delimiter) {
-        List<String> contentTypes = headers.get("content-type");
-        // @TODO throw exception if not application/json
+    static enum HeaderMatchType { EQUALS, STARTSWITH, ENDSWITH };
+    static class HeaderMatch {
+        HeaderMatchType type;
+        String value;
+
+        static List<HeaderMatch> jsonHeaderMatchTypes;
+
+        static {
+            jsonHeaderMatchTypes = new ArrayList<>();
+            jsonHeaderMatchTypes.add(new URLUtil.HeaderMatch(URLUtil.HeaderMatchType.EQUALS, "application/json"));
+            jsonHeaderMatchTypes.add(new URLUtil.HeaderMatch(URLUtil.HeaderMatchType.ENDSWITH, "+json"));
+        }
+
+        HeaderMatch(HeaderMatchType type, String value) {
+            this.type = type;
+            this.value = value;
+        }
+
+    }
+
+    static boolean headersContain(Map<String, List<String>> headers, String key, List<HeaderMatch> headerMatches, String delimiter) {
+        List<String> contentTypes = headers.get(key.toUpperCase());
+        if (contentTypes == null) {
+            return false;
+        }
+
         boolean match = false;
         for (String contentType: contentTypes) {
             String [] contentTypeStrs;
@@ -343,9 +369,27 @@ public final class URLUtil {
                 contentTypeStrs[0] = contentType;
             }
             for (String contentTypeStr: contentTypeStrs) {
-                if (contentTypeStr.trim().equals("application/json")) {
-                    match = true;
-                    break;
+                for (HeaderMatch headerMatch: headerMatches) {
+                    switch(headerMatch.type) {
+                        case EQUALS:
+                            if (contentTypeStr.trim().equals(headerMatch.value)) {
+                                match = true;
+                            }
+                            break;
+                        case STARTSWITH:
+                            if (contentTypeStr.startsWith(headerMatch.value)) {
+                                match = true;
+                            }
+                            break;
+                        case ENDSWITH:
+                            if (contentTypeStr.endsWith(headerMatch.value)) {
+                                match = true;
+                            }
+                            break;
+                    }
+                    if (match) {
+                        break;
+                    }
                 }
             }
             if (match) {

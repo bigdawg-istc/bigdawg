@@ -43,7 +43,6 @@ import istc.bigdawg.utils.StackTrace;
  * 
  */
 public class PostgreSQLHandler implements RelationalHandler {
-
 	/**
 	 * log
 	 */
@@ -1071,7 +1070,20 @@ public class PostgreSQLHandler implements RelationalHandler {
 		for (AttributeMetaData attribute : attributes) {
 			String attrName = attribute.getName();
 			String sqlType = attribute.getSqlDataType();
-			createTableStringBuf.append(attrName + " " + sqlType + ",");
+
+			// Escape name if necessary
+			if (attrName.contains(" ") || PostgresSQLReserved.reservedWords.containsKey(attrName.toUpperCase())) {
+				createTableStringBuf.append("\"");
+				createTableStringBuf.append(attrName);
+				createTableStringBuf.append("\"");
+			}
+			else {
+				createTableStringBuf.append(attrName);
+			}
+
+			createTableStringBuf.append(" ");
+			createTableStringBuf.append(sqlType);
+			createTableStringBuf.append(",");
 		}
 		createTableStringBuf.deleteCharAt(createTableStringBuf.length() - 1);
 		createTableStringBuf.append(")");

@@ -47,8 +47,8 @@ public class RESTConnectionInfo extends AbstractApiConnectionInfo {
         this(url.getHost(),
                 String.valueOf(url.getPort()),
                 endpoint,
-                user.length() > 0 ? user : connectionProperties.getOrDefault("userid", connectionProperties.getOrDefault("consumer_key", null)),
-                password.length() > 0 ? password : connectionProperties.getOrDefault("password", connectionProperties.getOrDefault("consumer_secret", null)),
+                user != null && user.length() > 0 ? user : connectionProperties.getOrDefault("userid", connectionProperties.getOrDefault("consumer_key", null)),
+                password != null && password.length() > 0 ? password : connectionProperties.getOrDefault("password", connectionProperties.getOrDefault("consumer_secret", null)),
                 connectionProperties,
                 url,
                 fields);
@@ -76,6 +76,7 @@ public class RESTConnectionInfo extends AbstractApiConnectionInfo {
 
     private void parseExtraQueryParameters() throws BigDawgCatalogException {
         if (!this.connectionProperties.containsKey("query_params")) {
+            this.extraQueryParameters = new HashMap<>();
             return;
         }
         String extraQueryParameters = this.connectionProperties.get("query_params");

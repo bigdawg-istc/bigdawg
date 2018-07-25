@@ -118,8 +118,8 @@ class CatalogClient:
         return self.execute_insert_with_max('catalog.engines', 'eid', ['name', 'host', 'port', 'connection_properties'], values)
 
     def insert_shim(self, island_id, engine_id):
-        values = [island_id, engine_id]
-        return self.execute_insert_with_max('catalog.shims', 'shim_id', ['island_id', 'engine_id'], values)
+        values = [island_id, engine_id, 'N/A']
+        return self.execute_insert_with_max('catalog.shims', 'shim_id', ['island_id', 'engine_id', 'access_method'], values)
 
     def insert_database(self, engine_id, name, userid, password):
         values = [engine_id, name, userid, password]
