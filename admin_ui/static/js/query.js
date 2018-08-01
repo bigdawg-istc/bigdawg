@@ -5,12 +5,12 @@ const button = document.querySelector('#query ~ button');
 const queryTextarea = document.querySelector('#query');
 const resultTextarea = document.querySelector('#result');
 const resultDiv = document.querySelector('.result');
-const resultTableDiv = document.querySelector('.result .table');
+const resultTableDiv = document.querySelector('.result .table-div');
 const resultTextareaDiv = document.querySelector('.result .textarea');
 const loadingDiv = document.querySelector('.loading');
 const exportCSVFilenameDiv = document.querySelector('.export-csv-filename');
 const exportForm = exportCSVFilenameDiv.querySelector('.form-inline');
-const queryErrorEle = document.getElementById('query-error')
+const queryErrorEle = document.getElementById('query-error');
 exportForm.addEventListener('submit', exportCsvFilenameSubmit);
 
 let curTable = [];
@@ -168,7 +168,7 @@ function query() {
  */
 function resultTable(result) {
     const lines = result.split(/\r?\n/);
-    let table = '<table class="table table-striped"><caption>Results</caption>';
+    let table = '<table class="table table-striped">';
     const lineColumns = [];
     let maxLength = 0;
     /** find the longest column */

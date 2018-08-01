@@ -46,7 +46,7 @@ schema_cred = read_schema_credentials()
 versions = {
     "util.js": os.stat('static/js/util.js').st_mtime,
     "query.js": os.stat('static/js/query.js').st_mtime,
-    "api_form.js": os.stat('static/js/api_form.js').st_mtime,
+    "api.js": os.stat('static/js/api.js').st_mtime,
     "import.js": os.stat('static/js/import.js').st_mtime,
     "general.css": os.stat('static/css/general.css').st_mtime
 }
@@ -63,7 +63,11 @@ def getCatalogData():
     objects = catalog_client.get_objects()
     engines = catalog_client.get_engines()
     databases = catalog_client.get_databases()
-    return {'objects': objects, 'engines': engines, 'databases': databases}
+    enginesByEngineId = {}
+    for engine in engines:
+        enginesByEngineId[engine[0]] = engine
+
+    return {'objects': objects, 'engines': engines, 'databases': databases, 'engines_by_engine_id': enginesByEngineId}
 
 def getSchemaClient():
     return SchemaClient(
@@ -109,17 +113,20 @@ def catalog():
 
 @app.route('/import')
 def import_page():
-    catalog_data = getCatalogData()
-    schema_data = getSchemaData()
+    catalog_client = getCatalogClient()
+    engines = catalog_client.get_engines_excluding_island('API')
+    databases = catalog_client.get_databases_excluding_island('API')
+    objects = catalog_client.get_objects()
     enginesByEngineId = {}
-    for engine in catalog_data['engines']:
+    for engine in engines:
         enginesByEngineId[engine[0]] = engine
 
+    schema_data = getSchemaData()
     return render_template('import.html',
                            versions=versions,
                            enginesByEngineId=enginesByEngineId,
-                           objects=catalog_data['objects'],
-                           databases=catalog_data['databases'],
+                           objects=objects,
+                           databases=databases,
                            datatypes=schema_data['datatypes'])
 
 @app.route('/import_csv', methods=["POST"])
@@ -138,16 +145,47 @@ def get_schemas():
 def query():
     return render_template('query.html', versions=versions)
 
-@app.route('/api_form', methods=["GET"])
-def api_form():
-    catalog_data = getCatalogData()
-    engines = catalog_data['engines']
-    return render_template('api_form.html', versions=versions, engines=engines)
+@app.route('/api', methods=["GET"])
+def api():
+    catalog_client = getCatalogClient()
+    engines = catalog_client.get_engines_by_island('API')
+    databases = catalog_client.get_databases_by_island('API')
+    enginesByEngineId = {}
+    for engine in engines:
+        enginesByEngineId[engine[0]] = engine
+
+    return render_template('api.html',
+                           versions=versions,
+                           engines=engines,
+                           databases=databases,
+                           enginesByEngineID=enginesByEngineId)
+
+@app.route('/api_list', methods=["GET"])
+def api_list():
+    catalog_client = getCatalogClient()
+    engines = catalog_client.get_engines_by_island('API')
+    databases = catalog_client.get_databases_by_island('API')
+    return render_template_string(json.JSONEncoder().encode({"success": True, "engines": engines, "databases": databases}))
+
+@app.route('/api/<int:dbid>', methods=["DELETE"])
+def api_delete(dbid):
+    api_form = ApiForm(getCatalogClient())
+    result = api_form.delete_api_by_dbid(dbid)
+    return render_template_string(result)
+
+@app.route('/api/<int:dbid>', methods=["GET"])
+def api_show(dbid):
+    catalog_client = getCatalogClient()
+    database = catalog_client.get_database(dbid)
+    engine = catalog_client.get_engine(database[1])
+    objects = catalog_client.get_objects_by_phsyical_db(dbid)
+    object = objects[0]
+    return render_template_string(json.JSONEncoder().encode({"success": True, "engine": engine, "database": database, "object": object}))
 
 @app.route('/api_form', methods=["POST"])
 def api_form_post():
     api_form = ApiForm(getCatalogClient())
-    result = api_form.processApiForm(request.data)
+    result = api_form.process_api_form(request.data)
     return render_template_string(result)
 
 @app.route('/get_engine_by_name', methods=["POST"])
@@ -204,4 +242,4 @@ def stopContainer():
 if __name__ == '__main__':
     # Use this line to run the server visible to external connections.
     # app.run(host='0.0.0.0')
-    app.run(threaded=true)
+    app.run(threaded=True)

@@ -10,7 +10,6 @@ import istc.bigdawg.executor.ExecutorEngine;
 import istc.bigdawg.executor.QueryResult;
 import istc.bigdawg.query.DBHandler;
 import istc.bigdawg.utils.Tuple;
-import org.apache.avro.generic.GenericData;
 import org.apache.log4j.Logger;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;

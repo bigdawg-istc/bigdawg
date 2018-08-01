@@ -27,6 +27,10 @@
             margin-left: 10px;
         }
 
+        figure.highlight {
+            background-color: #eee;
+            padding: 10px;
+        }
         .loading {
             visibility: hidden;
             display: inline-block !important;
@@ -129,15 +133,13 @@
 
         const enginesById = {
         {% for key, engine in enginesByEngineId.items() %}
-            {% if not engine[4].startswith("REST:") %}
-                "{{ key }}": {
-                        eid: '{{ engine[0] }}',
-                        name:'{{ engine[1] }}',
-                        host: '{{ engine[2] }}',
-                        port: '{{ engine[3] }}',
-                        connection_properties: '{{ engine[4] }}'
-                },
-            {% endif %}
+            "{{ key }}": {
+                    eid: '{{ engine[0] }}',
+                    name:'{{ engine[1] }}',
+                    host: '{{ engine[2] }}',
+                    port: '{{ engine[3] }}',
+                    connection_properties: '{{ engine[4] }}'
+            },
         {% endfor %}
         };
 
@@ -176,7 +178,8 @@
 {% endblock %}
 
 {% block content %}
-<div class="row col-xs-10 col-xs-offset-1">
+<div class="row">
+  <div class="col-10 offset-1">
     <div id="part-1">
         <h1>Import</h1>
         <h4>Choose a Database and Object:</h4>
@@ -186,7 +189,7 @@
                 <select name="database" id="database" class="form-control">
                     <option value="">Select:</option>
                     {% for database in databases %}
-                        {% if not database[2].startswith("bigdawg") and not enginesByEngineId[database[1]][4].startswith("REST:") %}
+                        {% if not database[2].startswith("bigdawg") %}
                         <option value="{{ database[0] }}">{{ database[0] }}: {{ database[2] }} (engine: {{ enginesByEngineId[database[1]][1] }})</option>
                         {% endif %}
                     {% endfor %}
@@ -215,7 +218,7 @@
                     <input id="new" name="new" type="text" size="40" />
                     <div id="schema-loading" class="loading-small"></div>
                     <label for="schema-name" class="control-label">Schema Name:</label>
-                    <select id="schema-name">
+                    <select id="schema-name" class="form-control">
                     </select>
                 </div>
             </div>
@@ -223,17 +226,16 @@
     </div>
     <div id="desired-format-wrap" class="hidden">
         <h5>Desired Format:</h5>
-        <pre id="desired-format">
-        </pre>
+        <figure class="highlight">
+            <pre id="desired-format">
+            </pre>
+        </figure>
     </div>
     <div class="upload">
-        <form class="form-inline upload-form hidden">
-            <div class="form-group">
-                <label class="btn btn-default btn-file">Browse
-                    <input type="file" name="csv" accept=".csv,text/csv" />
-                </label>
-                <label id="filename">
-                </label>
+        <form class="form upload-form hidden">
+            <div class="form-group custom-file">
+                <input id="file-input" type="file" class="custom-file-input" name="csv" accept=".csv,text/csv" />
+                <label for="file-input" class="custom-file-label text-truncate">Browse</label>
             </div>
             <div class="checkbox">
                 <label>
@@ -267,12 +269,13 @@
                 <div id="csv-fields">
                     <span class="heading"></span>
                     <span class="heading">Field Name</span>
-                    <span class="heading">Data Type</span>
-                    <span class="heading">Schema Data Type (Postgres syntax)</span>
+                    <span class="heading type-heading">Data Type</span>
+                    <span class="heading schema-type-heading">Schema Data Type (Postgres syntax)</span>
                 </div>
                 <div id="csv-create-schema-wrap">
                     <div id="create-table">
                         <h4>Create TABLE</h4>
+                        <em>While this is editable, please be careful as the field names above are used in the catalog, and if they don't match it could be an issue.</em>
                         <textarea id="create-syntax" name="create-syntax" rows="10">
                         </textarea>
                         <button type="button" class="btn hidden" title="Regenerate from fields">Regenerate</button>
@@ -293,6 +296,7 @@
     </div>
     <div id="success" class="alert alert-success hidden" role="alert"></div>
     <button id="upload-another" class="hidden btn btn-primary">Upload Another</button>
+  </div>
 </div>
 
 <script src="static/js/import.js?v={{ versions['import.js'] }}"></script>

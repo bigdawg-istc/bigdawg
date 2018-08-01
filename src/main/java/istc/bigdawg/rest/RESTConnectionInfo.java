@@ -8,10 +8,13 @@ import istc.bigdawg.executor.ExecutorEngine;
 import org.apache.hadoop.yarn.webapp.hamlet.Hamlet;
 import org.apache.log4j.Logger;
 
+import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLDecoder;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class RESTConnectionInfo extends AbstractApiConnectionInfo {
@@ -27,7 +30,6 @@ public class RESTConnectionInfo extends AbstractApiConnectionInfo {
     private HttpMethod method;
     private AuthenticationType authenticationType;
     private Map<String, String> connectionProperties;
-    private Map<String, String> extraQueryParameters;
     private static Logger log = Logger
             .getLogger(RESTConnectionInfo.class.getName());
 
@@ -36,7 +38,6 @@ public class RESTConnectionInfo extends AbstractApiConnectionInfo {
         super(host, port, endpoint, user, password, connectionProperties.getOrDefault("scheme", url.getProtocol()));
         this.connectionProperties = connectionProperties;
         this.url = url;
-        this.parseExtraQueryParameters(); // This should happen before authentication type
         this.parseAuthenticationType();
         this.parseMethod();
         this.parseTimeouts();
@@ -48,7 +49,7 @@ public class RESTConnectionInfo extends AbstractApiConnectionInfo {
                 String.valueOf(url.getPort()),
                 endpoint,
                 user != null && user.length() > 0 ? user : connectionProperties.getOrDefault("userid", connectionProperties.getOrDefault("consumer_key", null)),
-                password != null && password.length() > 0 ? password : connectionProperties.getOrDefault("password", connectionProperties.getOrDefault("consumer_secret", null)),
+                password != null && password.length() > 0 ? password : connectionProperties.getOrDefault("password", null),
                 connectionProperties,
                 url,
                 fields);
@@ -57,6 +58,7 @@ public class RESTConnectionInfo extends AbstractApiConnectionInfo {
     public RESTConnectionInfo(String endpoint, String connectionPropertiesStr, String urlStr, String user, String password, String fields) throws BigDawgCatalogException, MalformedURLException {
         this(endpoint, AbstractApiConnectionInfo.parseConnectionProperties(connectionPropertiesStr, "REST"), new URL(urlStr), user, password, fields);
     }
+
 
     private void parseFields(String fields) throws BigDawgCatalogException {
         if (fields == null || fields.length() == 0) {
@@ -71,20 +73,6 @@ public class RESTConnectionInfo extends AbstractApiConnectionInfo {
         }
         catch (Exception e) {
             throw new BigDawgCatalogException("Could not decode fields: " + e.toString());
-        }
-    }
-
-    private void parseExtraQueryParameters() throws BigDawgCatalogException {
-        if (!this.connectionProperties.containsKey("query_params")) {
-            this.extraQueryParameters = new HashMap<>();
-            return;
-        }
-        String extraQueryParameters = this.connectionProperties.get("query_params");
-        try {
-            this.extraQueryParameters = URLUtil.parseQueryString(extraQueryParameters);
-        }
-        catch (Exception e) {
-            throw new BigDawgCatalogException(e.getMessage());
         }
     }
 
@@ -151,7 +139,7 @@ public class RESTConnectionInfo extends AbstractApiConnectionInfo {
                 break;
             case "oauth2":
                 this.authenticationType = AuthenticationType.OAUTH2;
-                OAuth2.verifyConnectionProperties(this.connectionProperties, this.getUser(), this.getPassword());
+                OAuth2.verifyConnectionProperties(this.connectionProperties, this.getUser(), this.connectionProperties.getOrDefault("consumer_secret", null));
                 break;
             default:
                 throw new BigDawgCatalogException("Unknown authentication type: " + authenticationType);
@@ -160,6 +148,10 @@ public class RESTConnectionInfo extends AbstractApiConnectionInfo {
 
     public HttpMethod getMethod() {
         return this.method;
+    }
+
+    public String getPostEncoding() {
+        return this.connectionProperties.getOrDefault("post_encoding", "application/x-www-form-urlencoded");
     }
 
     Map<String, String> getHeaders(String queryString) throws ApiException {
@@ -194,7 +186,11 @@ public class RESTConnectionInfo extends AbstractApiConnectionInfo {
                         authUrl = this.getUrlPrefix() + "/" + authUrl;
                     }
                 }
-                OAuth2.setOAuth2Headers(headers, connectionProperties, getUser(), getPassword(), authUrl, authConnectTimeout, authReadTimeout);
+                String password = this.connectionProperties.getOrDefault("consumer_secret", null);
+                if (password == null) {
+                    password = getPassword();
+                }
+                OAuth2.setOAuth2Headers(headers, connectionProperties, getUser(), password, authUrl, authConnectTimeout, authReadTimeout);
 
                 break;
         }

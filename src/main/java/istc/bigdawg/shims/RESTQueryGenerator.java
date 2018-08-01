@@ -2,17 +2,25 @@ package istc.bigdawg.shims;
 
 import istc.bigdawg.islands.api.operators.ApiSeqScan;
 import istc.bigdawg.islands.operators.*;
+import istc.bigdawg.rest.HttpMethod;
 import istc.bigdawg.rest.RESTConnectionInfo;
 import istc.bigdawg.rest.URLUtil;
 import org.apache.commons.lang3.tuple.Pair;
+import org.json.simple.JSONObject;
 
 import java.util.List;
 import java.util.Map;
+import java.util.StringJoiner;
 
 public class RESTQueryGenerator implements OperatorQueryGenerator {
     private boolean stopAtJoin = false;
     private boolean isRoot = true;
+    private RESTConnectionInfo restConnectionInfo;
     Operator root = null;
+
+    RESTQueryGenerator(RESTConnectionInfo restConnectionInfo) {
+        this.restConnectionInfo = restConnectionInfo;
+    }
 
     @Override
     public void configure(boolean isRoot, boolean stopAtJoin) {
@@ -43,7 +51,7 @@ public class RESTQueryGenerator implements OperatorQueryGenerator {
         ApiSeqScan apiSeqScan = (ApiSeqScan) this.root;
         Map<String, String> queryParameters = apiSeqScan.getQueryParameters();
         if (queryParameters != null && !queryParameters.isEmpty()) {
-            // @TODO Maybe have an alternative way of encoding queryParameters - e.g. JSON
+            // @TODO - Support JSON encoding
             return URLUtil.encodeParameters(queryParameters);
         }
         String queryRaw = apiSeqScan.getQueryRaw();

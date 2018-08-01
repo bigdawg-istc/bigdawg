@@ -399,7 +399,7 @@ public final class URLUtil {
         return match;
     }
 
-    static Map<String, String> parseQueryString(String queryString) throws QueryParsingException {
+    public static Map<String, String> parseQueryString(String queryString) throws QueryParsingException {
         String[] pairs = queryString.split("&");
         Map<String, String> parameters = new HashMap<>();
         try {

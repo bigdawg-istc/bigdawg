@@ -180,7 +180,7 @@ class OAuth2 {
         switch(oauth2AuthType) {
             case BASIC_BEARER:
                 if (user == null || user.length() == 0) {
-                    throw new BigDawgCatalogException("For oauth2, need a user in the database");
+                    throw new BigDawgCatalogException("For oauth2, need a user (consumer_key) in the database");
                 }
                 if (password == null || password.length() == 0) {
                     throw new BigDawgCatalogException("For oauth2, need a user in the database");

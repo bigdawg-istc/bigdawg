@@ -7,8 +7,12 @@
     border-radius: 25px;
 }
 
+nav {
+    margin-bottom: 20px;
+}
+
 .hidden {
-    display: none;
+    display: none !important;
 }
 
 /**

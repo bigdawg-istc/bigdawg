@@ -13,36 +13,107 @@ class ApiForm:
     def __init__(self, catalog_client):
         self.catalog_client = catalog_client
 
-    def processApiForm(self, data):
-        data_api = json.loads(data)
-        if not data_api:
+    def delete_api_by_dbid(self, dbid):
+        database = self.catalog_client.get_database(dbid)
+        if database is None:
+            return Util.error_msg("database is None for dbid: " + str(dbid))
+
+        engine = self.catalog_client.get_engine(database[1])
+
+        if engine is None:
+            return Util.error_msg("engine is None for engine_id: " + str(database[1]))
+
+        objects = self.catalog_client.get_objects_by_phsyical_db(dbid)
+
+        if objects is None:
+            return Util.error_msg("objects is None for phsyical_db: " + str(dbid))
+        elif len(objects) == 0:
+            return Util.error_msg("len(objects) is 0 for phsyical_db: " + str(dbid))
+
+        island = self.catalog_client.get_island_by_scope_name('API')
+        if island is None:
+            return Util.error_msg("island is none for scope_name API")
+
+        deleteEngine = False
+        databases = self.catalog_client.get_databases_by_engine_id(engine[0])
+        if databases is None or len(databases) == 0:
+            return Util.error_msg("databases not found for engine: " + str(engine[0]))
+
+        if len(databases) == 1:
+            deleteEngine = True
+
+        object = objects[0]
+        response = self.catalog_client.delete_object(object[0])
+        if response != True:
+            return Util.error_msg(response)
+
+        response = self.catalog_client.delete_database(dbid)
+        if response != True:
+            return Util.error_msg(response)
+
+        if deleteEngine:
+            response = self.catalog_client.delete_shim(island[0], engine[0])
+            if response != True:
+                return Util.error_msg(response)
+
+            response = self.catalog_client.delete_engine(engine[0])
+            if response != True:
+                return Util.error_msg(response)
+
+        return Util.success_msg()
+
+    def process_api_form(self, data):
+        dataApi = json.loads(data)
+        if not dataApi:
             return Util.error_msg("could not parse json")
 
         eid = None
-        if data_api.has_key('api'):
-            if data_api.has_key('endpoint'):
-                # Check for duplicate url first, otherwise we'll create the endpoint first and then hit the error
-                url = data_api['endpoint']['url']
-                if self.catalog_client.get_object_by_name_island_name(url, "API") is not None:
+        if dataApi.has_key('api'):
+            if dataApi.has_key('endpoint'):
+                endpoint_data = dataApi['endpoint']
+                # Check for duplicate url first, otherwise we'll create the API first and then hit the error
+                url = endpoint_data['url']
+                oid = None
+                if endpoint_data.has_key('oid'):
+                    oid = endpoint_data['oid']
+
+                testObject = self.catalog_client.get_object_by_name_island_name(url, "API")
+                if oid is not None:
+                    if testObject is None:
+                        return Util.error_msg("Unknown object id: " + oid)
+                    if int(testObject[0]) != int(oid):
+                        return Util.error_msg("Duplicate url for API Island: " + url)
+                elif testObject is not None:
                     return Util.error_msg("Duplicate url for API Island: " + url)
 
-            result = self.processApi(data_api['api'])
+            result = self.process_api(dataApi['api'])
             if isinstance(result, int):
                 eid = result
             else:
                 return Util.error_msg(result)
 
-        if data_api.has_key('endpoint'):
-            result = self.processEndpoint(data_api['endpoint'], eid)
+        if dataApi.has_key('endpoint'):
+            result = self.process_endpoint(dataApi['endpoint'], eid)
 
             if result != True:
                 return Util.error_msg(result)
 
         return Util.success_msg()
 
-    def processApi(self, api_data):
-        name = api_data['name']
-        if self.catalog_client.get_engine_by_name(name) is not None:
+    def process_api(self, apiData):
+        name = apiData['name']
+        eid = None
+        if apiData.has_key('eid'):
+            eid = apiData['eid']
+
+        testEngine = self.catalog_client.get_engine_by_name(name)
+
+        if eid is not None:
+            if testEngine is None:
+                return "Unknown engine: " + eid
+            if int(eid) != int(testEngine[0]):
+                return "Duplicate engine: " + name
+        elif testEngine is not None:
             return "Duplicate engine: " + name
 
         island = self.catalog_client.get_island_by_scope_name('API')
@@ -52,17 +123,26 @@ class ApiForm:
         islandId = island[0]
 
         host = None
-        if (api_data.has_key('host')):
-            host = api_data['host']
+        if (apiData.has_key('host')):
+            host = apiData['host']
 
         port = None
-        if (api_data.has_key('port')):
-            port = api_data['port']
+        if (apiData.has_key('port')):
+            port = apiData['port']
 
         connection_properties = None
-        if (api_data.has_key('connection_properties')):
-            connection_properties = api_data['connection_properties']
+        if (apiData.has_key('connection_properties')):
+            connection_properties = apiData['connection_properties']
 
+        # update case
+        if eid is not None:
+            result = self.catalog_client.update_engine(eid, name, host, port, connection_properties)
+            if result != True:
+                return result
+
+            return int(eid)
+
+        # insert case
         result = self.catalog_client.insert_engine(name, host, port, connection_properties)
         if not isinstance(result, int):
             return result
@@ -73,33 +153,66 @@ class ApiForm:
 
         return result
 
-    def processEndpoint(self, endpoint_data, engine_id):
-        name = endpoint_data['name']
-        if engine_id is None:
-            engine_id = endpoint_data['engine_id']
+    def process_endpoint(self, endpointData, engineId):
+        name = endpointData['name']
+        if engineId is None:
+            engineId = endpointData['engine_id']
 
-        if self.catalog_client.get_engine(engine_id) is None:
-            return "Can't find engine: " + engine_id
+        if self.catalog_client.get_engine(engineId) is None:
+            return "Can't find engine: " + engineId
 
-        if self.catalog_client.get_endpoint_by_engine_id_name(engine_id, name) is not None:
+        dbid = None
+        if endpointData.has_key('dbid'):
+            dbid = endpointData['dbid']
+
+        testDatabase = self.catalog_client.get_database_by_engine_id_name(engineId, name)
+        if dbid is not None:
+            if testDatabase is None:
+                return "Unknown database: " + dbid
+            if int(dbid) != int(testDatabase[0]):
+                return "Duplicate endpoint for engine: " + name
+        elif testDatabase is not None:
             return "Duplicate endpoint for engine: " + name
 
-        url = endpoint_data['url']
-        if self.catalog_client.get_object_by_name_island_name(url, "API") is not None:
-            return "Duplicate url for API Island: " + url
+        url = endpointData['url']
+        oid = None
+        if endpointData.has_key('oid'):
+            oid = endpointData['oid']
 
-        result = self.catalog_client.insert_database(engine_id, name, None, None)
-        if isinstance(result, str):
-            return result
+        testObject = self.catalog_client.get_object_by_name_island_name(url, "API")
+        if oid is not None:
+            if testObject is None:
+                return "Unknown object id: " + oid
+            if int(testObject[0]) != int(oid):
+                return "Duplicate url for API Island: " + url
+        elif testObject is not None:
+            return Util.error_msg("Duplicate url for API Island: " + url)
 
-        dbid = result
+        password_field = None
+        if endpointData.has_key("password_field"):
+            password_field = endpointData['password_field']
+
+        if dbid is not None:
+            result = self.catalog_client.update_database(dbid, engineId, name, None, password_field)
+            if result != True:
+                return result
+        else:
+            result = self.catalog_client.insert_database(engineId, name, None, password_field)
+            if isinstance(result, str):
+                return result
+            dbid = result
+
         fields = None
+        if endpointData.has_key('result_key'):
+            fields = endpointData['result_key']
 
-        if endpoint_data.has_key('result_key'):
-            fields = endpoint_data['result_key']
-
-        result = self.catalog_client.insert_object(url, fields, dbid, dbid)
-        if isinstance(result, str):
-            return result
+        if oid is not None:
+            result = self.catalog_client.update_object(oid, url, fields, dbid, dbid)
+            if result != True:
+                return result
+        else:
+            result = self.catalog_client.insert_object(url, fields, dbid, dbid)
+            if isinstance(result, str):
+                return result
 
         return True

@@ -44,7 +44,7 @@ public class ApiToRESTShim implements Shim {
         assert(root instanceof ApiOperator);
         assert(root instanceof ApiSeqScan);
 
-        OperatorQueryGenerator gen = new RESTQueryGenerator();
+        OperatorQueryGenerator gen = new RESTQueryGenerator(this.connectionInfo);
         gen.configure(true, false);
         try {
             root.accept(gen);

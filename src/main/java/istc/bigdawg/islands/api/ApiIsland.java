@@ -47,9 +47,6 @@ public class ApiIsland implements Island {
             throws IslandException {
 
         Set<String> createdTables = new HashSet<>();
-//        } catch (AccumuloException | BigDawgException | AccumuloSecurityException e0) {
-//            throw new IslandException(e0.getMessage(), e0);
-//        }
         for (String key : outputTransitionSchemas.keySet())
             if (outputChildren.contains(key)) {
                 try {
@@ -58,11 +55,6 @@ public class ApiIsland implements Island {
                     //                    handler.createTable(key);
                 } catch (Exception e) {
                     for (String s : createdTables) {
-//                        try {
-// //                           handler.dropDataSetIfExists(s);
-//                        } catch (AccumuloException | AccumuloSecurityException | TableNotFoundException e1) {
-//                            throw new IslandException(e1.getMessage(), e1);
-//                        }
                     }
                     throw new IslandException(e.getMessage(), e);
                 }
@@ -118,7 +110,7 @@ public class ApiIsland implements Island {
     @Override
     public List<String> getLiteralsAndConstantsSignature(String query) throws IslandException {
 
-        // bdtext({ 'op' : 'scan', 'table' : 'note_events_TedgeT', 'range' : { 'start' : ['word|yesr','',''], 'end' : ['word|yet','','']} })
+        // bdapi({ 'name' : 'twitter', 'endpoint' : 'tweets', 'query' : { 'q': '#mit' } })
         List<String> output = new ArrayList<>();
         try {
             JSONObject parsedObject = (JSONObject) (new JSONParser()).parse(query.replaceAll("[']", "\""));

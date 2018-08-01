@@ -1,24 +1,3 @@
-class Evented {
-    fireEvent(name) {
-        if (this.events && this.events[name]) {
-            this.events[name].forEach((callback) => {
-               callback();
-            });
-        }
-    }
-
-    addEventListener(event, callbackFn) {
-        if (!this.events) {
-            this.events = {};
-        }
-        if (!this.events[event]) {
-            this.events[event] = [];
-        }
-
-        this.events[event].push(callbackFn);
-    }
-}
-
 class ImportCSV extends Evented {
     constructor() {
         super();
@@ -30,7 +9,7 @@ class ImportCSV extends Evented {
         this.formEle = document.querySelector('form.upload-form');
         this.loadingEle = document.getElementById('upload-loading');
         this.uploadErrorEle = document.getElementById('upload-error');
-        this.filenameEle = document.getElementById('filename');
+        this.filenameEle = document.querySelector('label[for=file-input]');
         this.headerEle = document.querySelector('input[type=checkbox]');
         this.csvShow = document.getElementById('csv-show');
         this.csvText = document.getElementById('csv-text');
@@ -210,12 +189,10 @@ class ImportCSV extends Evented {
 
     setFilename(name) {
         this.filenameEle.innerText = name;
-        this.filenameEle.style.display = 'inline-block';
     }
 
     resetFilename() {
-        this.filenameEle.innerText = '';
-        this.filenameEle.style.display = 'none';
+        this.filenameEle.innerText = 'Choose file';
     }
 
     checkFile() {
@@ -745,10 +722,10 @@ class Schema extends Evented {
         this.csvCreateSchemaWrapEle = document.getElementById('csv-create-schema-wrap');
         this.createSyntax = document.getElementById('create-syntax');
         this.schemaSyntax = document.getElementById('schema-syntax');
+        this.createSchemaDiv = document.getElementById('create-schema');
         this.regenerateButtonCreate = document.querySelector('#create-table button');
         this.regenerateButtonSchema = document.querySelector('#create-schema button');
         this.setDefaultTypes();
-        this.schemaCreateShowing = false;
         this.addEventListeners();
         this.hide();
         this.reset();
@@ -807,9 +784,6 @@ class Schema extends Evented {
 
     createSyntaxChange() {
         if (this.generatedCreateTable !== this.createSyntax.value) {
-            if (this.generatedSchema !== this.schemaSyntax.value) {
-                // hide / disable types
-            }
             this.regenerateButtonCreate.classList.remove('hidden');
         }
         else {
@@ -818,6 +792,10 @@ class Schema extends Evented {
         }
         if (this.savedCreateTable !== this.createSyntax.value) {
             this.fireEvent('create-syntax-change');
+            if (this.getEngineType() === 'postgres') {
+                this.savedSchema = this.createSyntax.value;
+                this.schemaSyntax.value = this.createSyntax.value;
+            }
         }
         this.savedCreateTable = this.createSyntax.value;
     }
@@ -969,10 +947,23 @@ class Schema extends Evented {
 
         this.generatedCreateTable = this.generateCreateTable();
         this.createSyntax.value = this.generatedCreateTable;
-        this.generatedSchema = this.generateCreateTable('schema');
-        this.schemaSyntax.value = this.generatedSchema;
+        const engineType = this.getEngineType();
+        if (engineType === 'postgres') {
+            this.generatedSchema = this.generatedCreateTable;
+            this.schemaSyntax.value = this.generatedCreateTable;
+        }
+        else {
+            this.generatedSchema = this.generateCreateTable('schema');
+            this.schemaSyntax.value = this.generatedSchema;
+        }
         if (this.showSchema) {
             this.csvCreateSchemaWrapEle.classList.remove('hidden');
+            if (engineType === 'postgres') {
+                this.createSchemaDiv.classList.add('hidden');
+            }
+            else {
+                this.createSchemaDiv.classList.remove('hidden');
+            }
         }
         else {
             this.csvCreateSchemaWrapEle.classList.add('hidden');
@@ -992,7 +983,7 @@ class Schema extends Evented {
         const schemaColumnTypes = this.fieldsDiv.querySelectorAll('input.column-schema-type');
         const spanTypes = this.fieldsDiv.querySelectorAll('span.type');
         const spanSchemaTypes = this.fieldsDiv.querySelectorAll('span.schema-type');
-
+        const engineType = this.getEngineType();
         for (let i = 0, len = columnTypes.length; i < len ; i++) {
             const value = typeList[i];
             const schemaValue = schemaTypeList[i];
@@ -1003,19 +994,35 @@ class Schema extends Evented {
             const schemaColumnTypeSpan = spanSchemaTypes[i];
 
             if (!this.showTypes) {
-                columnTypeSpan.classList.add('hidden');
-                schemaColumnTypeSpan.classList.add('hidden');
+                columnTypeSpan.style.visibility = 'hidden';
+                schemaColumnTypeSpan.style.visibility = 'hidden';
                 columnTypeEle.value = null;
                 schemaColumnTypeEle.value = null;
                 return;
             }
+            else if (engineType === 'postgres') {
+                schemaColumnTypeSpan.style.visibility = 'hidden';
+            }
+            else {
+                schemaColumnTypeSpan.style.visibility = 'visible';
+                columnTypeSpan.style.visibility = 'visible';
+            }
 
             columnTypeEle.value = value;
             schemaColumnTypeEle.value = schemaValue;
-            columnTypeSpan.classList.remove('hidden');
-            schemaColumnTypeSpan.classList.remove('hidden');
             this.colorElement(columnTypeEle);
             this.colorElement(schemaColumnTypeEle);
+        }
+        if (!this.showTypes) {
+            document.querySelector('.heading.schema-type-heading').style.visibility = 'hidden';
+            document.querySelector('.heading.type-heading').style.visibility = 'hidden';
+        }
+        else if (engineType === 'postgres') {
+            document.querySelector('.heading.schema-type-heading').style.visibility = 'hidden';
+        }
+        else {
+            document.querySelector('.heading.schema-type-heading').style.visibility = 'hidden';
+            document.querySelector('.heading.type-heading').style.visibility = 'hidden';
         }
     }
 
@@ -1035,7 +1042,8 @@ class Schema extends Evented {
             prefixSchemaName = true;
             typesList = this.getSchemaTypesList();
         }
-        if (connectionProperties.match(/^postgres/i) || connectionProperties.match(/^vertica/i)) {
+        const engineType = this.getEngineType();
+        if (engineType === 'postgres' || connectionProperties.match(/^vertica/i)) {
             prefixSchemaName = true;
         }
         if (prefixSchemaName && this.schemaName !== "" && this.schemaName !== undefined && this.schemaName !== null) {
@@ -1196,14 +1204,22 @@ class Schema extends Evented {
         this.colorElement(element);
         this.generatedCreateTable = this.generateCreateTable();
         this.createSyntax.value = this.generatedCreateTable;
-        this.generatedSchema = this.generateCreateTable('schema');
-        this.schemaSyntax.value = this.generatedSchema;
+
+        if (this.getEngineType() === 'postgres') {
+            this.generatedSchema = this.generatedCreateTable;
+            this.schemaSyntax.value = this.generatedCreateTable;
+        }
+        else {
+            this.generatedSchema = this.generateCreateTable('schema');
+            this.schemaSyntax.value = this.generatedSchema;
+        }
         this.fireEvent('input-change');
     }
 
     setHeaders(headers) {
         let currentIndex = 0;
         const inputNames = this.fieldsDiv.querySelectorAll('input.column-name');
+        const spanColumnNums = this.fieldsDiv.querySelectorAll('span.column-num');
         const columnTypes = this.fieldsDiv.querySelectorAll('input.column-type');
         const spanTypes = this.fieldsDiv.querySelectorAll('span.type');
         const spanSchemaTypes = this.fieldsDiv.querySelectorAll('span.schema-type');
@@ -1222,10 +1238,17 @@ class Schema extends Evented {
                 const columnTypeSpan = spanTypes[prevIndex];
 
                 if (!this.showTypes) {
-                    columnTypeSpan.classList.add('hidden');
+                    columnTypeSpan.style.visibility = 'hidden';
                     columnTypeEle.value = null;
-                    spanSchemaTypes[prevIndex].add('hidden');
+                    spanSchemaTypes[prevIndex].style.visibility = 'hidden';
                     schemaTypeEle.value = null;
+                }
+                else if (this.getEngineType() === "postgres") {
+                    spanSchemaTypes[prevIndex].style.visibility = 'hidden';
+                }
+                else {
+                    spanSchemaTypes[prevIndex].style.visibility = 'visibile';
+                    columnTypeSpan.style.visibility = 'visible';
                 }
 
                 this.colorElement(columnNameEle);
@@ -1255,10 +1278,13 @@ class Schema extends Evented {
             label.for = columnNameEle.id;
             columnTypeEle.id = columnTypeEle.name = 'column-type-' + currentIndex;
             if (!this.showTypes) {
-                columnTypeSpan.classList.add('hidden');
-                schemaColumnTypeSpan.classList.add('hidden');
+                columnTypeSpan.style.visibility = 'hidden';
+                schemaColumnTypeSpan.style.visibility = 'hidden';
                 columnTypeEle.value = null;
                 schemaColumnTypeEle.value = null;
+            }
+            else if (this.getEngineType() === "postgres") {
+                schemaColumnTypeSpan.style.visibility = 'hidden';
             }
 
             const childNodes = column.childNodes;
@@ -1272,6 +1298,7 @@ class Schema extends Evented {
                 this.fieldsDiv.removeChild(inputNames[i].parentNode);
                 this.fieldsDiv.removeChild(spanTypes[i]);
                 this.fieldsDiv.removeChild(spanSchemaTypes[i]);
+                this.fieldsDiv.removeChild(spanColumnNums[i]);
             }
         }
 

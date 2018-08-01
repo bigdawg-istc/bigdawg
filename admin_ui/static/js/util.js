@@ -18,15 +18,18 @@ function hide(ele) {
     ele.innerText = '';
 }
 
-function fetchJson(url, body) {
+function fetchJson(url, body, method = "post") {
     return new Promise((resolve, reject) => {
-        fetch(url, {
-            method: 'post',
+        const options = {
+            method: method,
             headers: {
                 "Content-Type": "application/json"
-            },
-            body: body
-        }).then(response => {
+            }
+        };
+        if (method.toUpperCase() === "POST") {
+            options.body = body;
+        }
+        fetch(url, options).then(response => {
             response.text().then(result => {
                 try {
                     result = JSON.parse(result);
@@ -57,4 +60,25 @@ function fetchJson(url, body) {
             reject('Bad response - see console for more details');
         });
     });
+}
+
+class Evented {
+    fireEvent(name, info) {
+        if (this.events && this.events[name]) {
+            this.events[name].forEach((callback) => {
+                callback(info);
+            });
+        }
+    }
+
+    addEventListener(event, callbackFn) {
+        if (!this.events) {
+            this.events = {};
+        }
+        if (!this.events[event]) {
+            this.events[event] = [];
+        }
+
+        this.events[event].push(callbackFn);
+    }
 }

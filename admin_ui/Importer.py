@@ -40,7 +40,7 @@ class Importer:
             pass
 
         cur = conn.cursor()
-        cur.execute("SELECT schema_name from information_schema.schemata where schema_name not like 'pg_%'");
+        cur.execute("SELECT schema_name from information_schema.schemata where schema_name not like 'pg_%' and schema_name != 'information_schema'");
         rows = cur.fetchall()
         cur.close()
 
@@ -142,7 +142,7 @@ class Importer:
         if not object_row:
             return Util.error_msg("could not find oid in database")
 
-        fields = object_row[1]
+        fields = object_row[2]
         if not fields:
             return Util.error_msg("no fields for object in database")
 
@@ -155,7 +155,7 @@ class Importer:
 
         fields_len = len(fields_split)
 
-        name = object_row[0]
+        name = object_row[1]
         if not name:
             return Util.error_msg("unable to find name for this object: " + str(oid))
 
@@ -227,17 +227,17 @@ class Importer:
                 "values": values
             })
             row_num += 1
-        return self.insert_data(object_row[3], inserts)
+        return self.insert_data(object_row[4], inserts)
 
     def get_connection_info(self, dbid):
         database_row = self.catalog_client.get_database(dbid)
         if not database_row:
             return Util.error_msg("Can't find database from dbid " + str(dbid))
 
-        engine_id = database_row[0]
-        database_name = database_row[1]
-        user = database_row[2]
-        password = database_row[3]
+        engine_id = database_row[1]
+        database_name = database_row[2]
+        user = database_row[3]
+        password = database_row[4]
 
         if not engine_id:
             return Util.error_msg("Unknown engine ID for dbid " + str(dbid))
@@ -259,9 +259,9 @@ class Importer:
         if not engine_row:
             return Util.error_msg("Could not lookup engine " + str(engine_id))
 
-        host = engine_row[1]
-        port = engine_row[2]
-        connection_properties = engine_row[3]
+        host = engine_row[2]
+        port = engine_row[3]
+        connection_properties = engine_row[4]
 
         if not isinstance(connection_properties, str):
             return Util.error_msg("connection properties must be a string")

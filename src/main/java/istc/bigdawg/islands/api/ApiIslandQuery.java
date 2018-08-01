@@ -1,10 +1,12 @@
 package istc.bigdawg.islands.api;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
+import istc.bigdawg.api.AbstractApiConnectionInfo;
+import istc.bigdawg.exceptions.ApiException;
+import istc.bigdawg.islands.api.operators.ApiSeqScan;
+import istc.bigdawg.query.ConnectionInfo;
+import istc.bigdawg.rest.RESTConnectionInfo;
 import org.apache.log4j.Logger;
 
 import istc.bigdawg.catalog.CatalogViewer;
@@ -147,9 +149,26 @@ public class ApiIslandQuery extends IntraIslandQuery {
             QueryExecutionPlan qep = new QueryExecutionPlan(getSourceScope());
             ExecutionNodeFactory.addNodesAndEdgesNew(qep, remainderPermutations.get(i), remainderLoc, queryContainer, isSelect, name);
             qepl.add(qep);
+            ConnectionInfo connectionInfo = qep.getTerminalTableNode().getEngine();
+            ApiSeqScan apiSeqScan = (ApiSeqScan) remainderPermutations.get(0);
+            this.verifyQueryParameters((AbstractApiConnectionInfo) connectionInfo, apiSeqScan.getQueryParameters());
         }
 
         return qepl;
     }
 
+    private void verifyQueryParameters(AbstractApiConnectionInfo abstractApiConnectionInfo, Map<String, String> queryParameters) throws ApiException  {
+        List<String> requiredParams = abstractApiConnectionInfo.getRequiredParams();
+        if (requiredParams != null && !requiredParams.isEmpty()) {
+            StringJoiner missing = new StringJoiner(", ");
+            for (String requiredParam: requiredParams) {
+                if (!queryParameters.containsKey(requiredParam)) {
+                    missing.add(requiredParam);
+                }
+            }
+            if (missing.length() > 0) {
+                throw new ApiException("Missing required query parameter(s): " + missing.toString());
+            }
+        }
+    }
 }

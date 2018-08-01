@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS catalog.databases (
        engine_id serial REFERENCES catalog.engines(eid),
        name varchar(15), 
        userid varchar(15),
-       password varchar(15) -- may be hash of pwd
+       password text -- may be hash of pwd
 );
 
 CREATE TABLE IF NOT EXISTS catalog.scidbbinpaths (
