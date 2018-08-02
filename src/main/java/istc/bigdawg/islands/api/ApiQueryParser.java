@@ -5,6 +5,10 @@ import istc.bigdawg.exceptions.BigDawgException;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Not used any more - from initial Proof of Concept
+ */
+
 public class ApiQueryParser {
 
     private StringBuilder inputSB;

@@ -17,6 +17,10 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 
+/**
+ * Not used anymore, from initial Proof of Concept
+ */
+
 public class ApiClient {
 
     public static final String HOST;

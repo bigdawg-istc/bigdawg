@@ -37,6 +37,10 @@ import istc.bigdawg.utils.Constants;
 import istc.bigdawg.utils.RunShell;
 
 /**
+ * Not used anymore - from initial Proof of Concept
+ */
+
+/**
  * @author Matthew J Mucklo
  * @author Adam Dziedzic (original code)
  *

@@ -3,6 +3,10 @@ package istc.bigdawg.islands.api;
 import istc.bigdawg.executor.QueryResult;
 import istc.bigdawg.query.ConnectionInfo;
 
+/**
+ * Not used any more, from Initial Proof of Concept
+ */
+
 public class ApiQueryResult implements QueryResult {
     private String result;
 

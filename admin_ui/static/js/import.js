@@ -4,7 +4,7 @@ class ImportCSV extends Evented {
         this.fileEle = document.querySelector('input[type=file]');
         this.uploadCSVEle = document.getElementById('upload-csv');
         this.csvErrorEle = document.getElementById('csv-error');
-        this.updateCSVEle = document.getElementById('update-csv');
+        this.validateCSVEle = document.getElementById('validate-csv');
         this.resetCSVEle = document.getElementById('reset-csv');
         this.formEle = document.querySelector('form.upload-form');
         this.loadingEle = document.getElementById('upload-loading');
@@ -73,7 +73,7 @@ class ImportCSV extends Evented {
         this.uploadCSVEle.addEventListener('click', this.uploadCsv.bind(this));
         this.headerEle.addEventListener('change', this.verifyHeader.bind(this));
         this.resetCSVEle.addEventListener('click', this.partialReset.bind(this));
-        this.updateCSVEle.addEventListener('click', this.updateCSV.bind(this));
+        this.validateCSVEle.addEventListener('click', this.updateCSV.bind(this));
         this.csvText.addEventListener('keyup', this.editCSV.bind(this));
         this.csvText.addEventListener('change', this.editCSV.bind(this));
         this.schema.addEventListener('input-change', this.checkSchema.bind(this));

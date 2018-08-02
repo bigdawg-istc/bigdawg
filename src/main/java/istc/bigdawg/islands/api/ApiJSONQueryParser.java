@@ -4,53 +4,24 @@ import java.util.*;
 
 import istc.bigdawg.catalog.CatalogViewer;
 import istc.bigdawg.islands.api.operators.ApiSeqScan;
+import istc.bigdawg.query.AbstractJSONQueryParser;
 import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
 import istc.bigdawg.islands.operators.Operator;
-import istc.bigdawg.islands.text.operators.TextScan;
 
-public class ApiJSONQueryParser {
+public class ApiJSONQueryParser extends AbstractJSONQueryParser {
 
-    private JSONParser parser;
-
-    public ApiJSONQueryParser() {
-        parser = new JSONParser();
-    }
-
-    public Operator parse(String input) throws ParseException {
-        JSONObject parsedObject = (JSONObject) parser.parse(input.replaceAll("[']", "\""));
-
+    public OperatorTypes getOperatorType(JSONObject parsedObject, String input) throws ParseException {
         if (parsedObject.get("name") == null || !(parsedObject.get("name") instanceof String))
             throw new ParseException(ParseException.ERROR_UNEXPECTED_TOKEN, "ApiJSONQueryParser parsing error: cannot identify api name. query: "+input);
         if (parsedObject.get("endpoint") == null || !(parsedObject.get("endpoint") instanceof String))
             throw new ParseException(ParseException.ERROR_UNEXPECTED_TOKEN, "ApiJSONQueryParser parsing error: cannot identify api endpoint. query: "+input);
 
-        return getSeqScan(parsedObject);
+        return OperatorTypes.SCAN;
     };
 
-    @SuppressWarnings("rawtypes")
-    public static Object getObjectByType(Object objectHolder, Class clazz) throws ParseException {
-        if (objectHolder == null)
-            return null;
-        if (! (objectHolder.getClass().equals(clazz)))
-            throw new ParseException(ParseException.ERROR_UNEXPECTED_TOKEN, "ApiJSONQueryParser parsing error: data type mismatch: expecting "+clazz.getName()+"; received: "+objectHolder.getClass().getName());
-        return objectHolder;
-    }
-
-    private String getNonNullString(Object input) throws ParseException {
-        String s = (String) getObjectByType(input, String.class);
-        if (s == null) return "";
-        return s;
-    }
-
-    public static void addNonNullStringToList(Object input, List<String> output) throws ParseException{
-        String s = (String) getObjectByType(input, String.class);
-        if (s != null) output.add(s);
-    }
-
-    private Operator getSeqScan(JSONObject parsedObject) throws ParseException {
+    protected Operator getScan(JSONObject parsedObject) throws ParseException {
 
         String apiName = (String)getObjectByType(parsedObject.get("name"), String.class);
         String endpoint = (String)getObjectByType(parsedObject.get("endpoint"), String.class);
