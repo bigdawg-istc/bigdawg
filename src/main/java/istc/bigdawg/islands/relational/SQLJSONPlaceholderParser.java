@@ -17,11 +17,11 @@ public class SQLJSONPlaceholderParser {
         "#>",
     };
 
-    public static void resetIndex() {
+    static void resetIndex() {
         placeholderIndex = 0;
     }
 
-    private static enum TokenType {
+    private enum TokenType {
         STRING,
         QUOTED_STRING,
         OPERATOR_JSON,

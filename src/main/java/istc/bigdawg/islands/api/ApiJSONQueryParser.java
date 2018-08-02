@@ -29,7 +29,7 @@ public class ApiJSONQueryParser extends AbstractJSONQueryParser {
         HashMap<String, String> query = null;
 
         if (queryObject != null) {
-            query = new HashMap<String, String>();
+            query = new HashMap<>();
             for (Object key: queryObject.keySet()) {
                 String keyStr = (String)getObjectByType(key, String.class);
                 String value = (String)getObjectByType(queryObject.get(keyStr), String.class);
