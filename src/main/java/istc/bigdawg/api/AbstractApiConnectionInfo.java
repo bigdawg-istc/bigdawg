@@ -7,6 +7,7 @@ import java.util.*;
 
 import istc.bigdawg.exceptions.ApiException;
 import istc.bigdawg.exceptions.BigDawgCatalogException;
+import istc.bigdawg.islands.api.operators.ApiSeqScan;
 import istc.bigdawg.rest.RESTConnectionInfo;
 import istc.bigdawg.rest.URLUtil;
 import istc.bigdawg.utils.Tuple;
@@ -25,9 +26,10 @@ abstract public class AbstractApiConnectionInfo implements ConnectionInfo {
     protected String user;
     protected String password;
     protected String database;
+    protected String contentType = "application/x-www-form-urlencoded";
     private Map<String, String> passwordProperties = new HashMap<>();
-    protected List<String> requiredParams = new ArrayList<>();
-    protected List<String> optionalParams = new ArrayList<>();
+    private List<String> requiredParams = new ArrayList<>();
+    private List<String> optionalParams = new ArrayList<>();
     protected Map<String, String> extraQueryParameters;
 
     private static Logger log = Logger
@@ -58,6 +60,10 @@ abstract public class AbstractApiConnectionInfo implements ConnectionInfo {
 
     public List<String> getRequiredParams() {
         return this.requiredParams;
+    }
+
+    public String getContentType() {
+        return this.contentType;
     }
 
     public List<String> getOptionalParams() {

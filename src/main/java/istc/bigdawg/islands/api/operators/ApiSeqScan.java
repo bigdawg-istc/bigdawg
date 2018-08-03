@@ -14,6 +14,8 @@ import org.json.JSONObject;
 
 public class ApiSeqScan extends ApiOperator implements SeqScan {
 
+    public static enum EncodingMode { URL, JSON };
+
     private Map<String, String> queryParameters;
     private String urlStr;
     private String queryRaw;

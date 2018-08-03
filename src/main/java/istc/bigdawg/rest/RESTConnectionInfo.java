@@ -42,6 +42,7 @@ public class RESTConnectionInfo extends AbstractApiConnectionInfo {
         this.parseMethod();
         this.parseTimeouts();
         this.parseFields(fields);
+        this.populateEncodingMode();
     }
 
     private RESTConnectionInfo(String endpoint, Map<String, String> connectionProperties, URL url, String user, String password, String fields) throws BigDawgCatalogException {
@@ -59,6 +60,11 @@ public class RESTConnectionInfo extends AbstractApiConnectionInfo {
         this(endpoint, AbstractApiConnectionInfo.parseConnectionProperties(connectionPropertiesStr, "REST"), new URL(urlStr), user, password, fields);
     }
 
+    private void populateEncodingMode() {
+        if (this.connectionProperties.containsKey("post_encoding")) {
+            this.contentType = this.connectionProperties.get("post_encoding");
+        }
+    }
 
     private void parseFields(String fields) throws BigDawgCatalogException {
         if (fields == null || fields.length() == 0) {

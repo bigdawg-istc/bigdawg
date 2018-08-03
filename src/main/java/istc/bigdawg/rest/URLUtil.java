@@ -8,6 +8,7 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLDecoder;
+import java.text.ParseException;
 import java.util.*;
 
 public final class URLUtil {
@@ -431,6 +432,29 @@ public final class URLUtil {
             joiner.add(URLUtil.percentEncode(k) + "=" + URLUtil.percentEncode(v));
         });
         return joiner.toString();
+    }
+
+    public static Map<String, String> decodeParameters(String parameters) throws ParseException {
+        Map<String, String> parametersMap = new HashMap<>();
+        if (parameters == null) {
+            return parametersMap;
+        }
+        String[] pairs = parameters.split("&");
+        try {
+            for (String pair : pairs) {
+                String[] parts = pair.split("=");
+                if (parts.length < 2) {
+                    throw new ParseException("Could not parse parameters, one pair does not have key=value format: " + pair, -1);
+                } else if (parts.length > 2) {
+                    throw new ParseException("Could not parse parameters, one pair of key=value has more than one '=': " + pair, -1);
+                }
+                parametersMap.put(URLDecoder.decode(parts[0], "UTF-8"), URLDecoder.decode(parts[1], "UTF-8"));
+            }
+        }
+        catch (UnsupportedEncodingException e) {
+            throw new ParseException(e.toString(), -1);
+        }
+        return parametersMap;
     }
 
     static String appendQueryParameters(String url, Map<String, String> parameters) {

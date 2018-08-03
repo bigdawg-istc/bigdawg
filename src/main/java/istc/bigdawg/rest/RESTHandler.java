@@ -18,6 +18,7 @@ import org.json.simple.parser.ParseException;
 
 import javax.annotation.Nullable;
 import javax.ws.rs.core.Response;
+import java.net.UnknownHostException;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.*;
@@ -57,7 +58,23 @@ public class RESTHandler implements ExecutorEngine, DBHandler {
             String queryParameters = null;
             switch(method) {
                 case POST:
-                    postData = query;
+                    String contentType = restConnectionInfo.getContentType();
+                    if (contentType == null) {
+                        throw new ApiException("Null Content-Type");
+                    }
+
+                    switch(contentType) {
+                        case "application/x-www-form-urlencoded":
+                            postData = query;
+                            break;
+                        case "application/json":
+                            Map<String, String> postParameters = URLUtil.decodeParameters(query);
+                            postData = JSONObject.toJSONString(postParameters);
+                            break;
+                        default:
+                            throw new ApiException("Unknown Content-Type: " + contentType);
+                    }
+
                     queryParameters = restConnectionInfo.getFinalQueryParameters(null);
                     break;
                 case GET:
@@ -83,7 +100,7 @@ public class RESTHandler implements ExecutorEngine, DBHandler {
             }
         }
         catch (Exception e) {
-            RESTHandler.log.error("Error executing REST query", e);
+            RESTHandler.log.error("Error executing REST query", e); // how to bubble this up?
             queryResult = Optional.empty();
         }
         return queryResult;

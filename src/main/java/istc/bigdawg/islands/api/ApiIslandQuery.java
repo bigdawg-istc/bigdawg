@@ -40,9 +40,11 @@ public class ApiIslandQuery extends AbstractNonRelationalIslandQuery {
             QueryExecutionPlan qep = new QueryExecutionPlan(getSourceScope());
             ExecutionNodeFactory.addNodesAndEdgesNew(qep, remainderPermutations.get(i), remainderLoc, queryContainer, isSelect, name);
             qepl.add(qep);
-            ConnectionInfo connectionInfo = qep.getTerminalTableNode().getEngine();
+
+            // Some minor verification and tweaking first
+            AbstractApiConnectionInfo connectionInfo = (AbstractApiConnectionInfo) qep.getTerminalTableNode().getEngine();
             ApiSeqScan apiSeqScan = (ApiSeqScan) remainderPermutations.get(0);
-            this.verifyQueryParameters((AbstractApiConnectionInfo) connectionInfo, apiSeqScan.getQueryParameters());
+            this.verifyQueryParameters(connectionInfo, apiSeqScan.getQueryParameters());
         }
 
         return qepl;

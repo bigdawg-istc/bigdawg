@@ -1,5 +1,6 @@
 package istc.bigdawg.shims;
 
+import istc.bigdawg.exceptions.ApiException;
 import istc.bigdawg.islands.api.operators.ApiSeqScan;
 import istc.bigdawg.islands.operators.*;
 import istc.bigdawg.rest.HttpMethod;
@@ -51,7 +52,6 @@ public class RESTQueryGenerator implements OperatorQueryGenerator {
         ApiSeqScan apiSeqScan = (ApiSeqScan) this.root;
         Map<String, String> queryParameters = apiSeqScan.getQueryParameters();
         if (queryParameters != null && !queryParameters.isEmpty()) {
-            // @TODO - Support JSON encoding
             return URLUtil.encodeParameters(queryParameters);
         }
         String queryRaw = apiSeqScan.getQueryRaw();
