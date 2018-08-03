@@ -267,6 +267,8 @@ public class IslandAndCastResolver {
 			switch (e) {
 				case REST:
 					return new ApiToRESTShim();
+				default:
+					throw new BigDawgException("No other Api shims have been implemented yet");
 			}
 		default:
 			break;
