@@ -2,15 +2,12 @@ package istc.bigdawg.api;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
-import java.net.URLEncoder;
-import java.nio.charset.Charset;
 import java.text.ParseException;
 import java.util.*;
 
 import istc.bigdawg.exceptions.ApiException;
 import istc.bigdawg.exceptions.BigDawgCatalogException;
 import istc.bigdawg.rest.RESTConnectionInfo;
-import istc.bigdawg.rest.RESTHandler;
 import istc.bigdawg.rest.URLUtil;
 import istc.bigdawg.utils.Tuple;
 import org.apache.commons.lang3.tuple.Pair;
@@ -111,7 +108,7 @@ abstract public class AbstractApiConnectionInfo implements ConnectionInfo {
     public static Map<String, String> parseConnectionProperties(String connectionPropertiesStr, String type) throws BigDawgCatalogException {
         assert (connectionPropertiesStr != null);
 
-        Map<String, String> connectionProperties = new HashMap<String, String>();
+        Map<String, String> connectionProperties = new HashMap<>();
         final String expectedPrefix = type + ":";
         if (!connectionPropertiesStr.startsWith(expectedPrefix)) {
             throw new BigDawgCatalogException("Expected connection parameters string to start with " + expectedPrefix);

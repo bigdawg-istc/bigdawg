@@ -167,7 +167,8 @@ public class RESTConnectionInfo extends AbstractApiConnectionInfo {
                             }
                         }
                     }
-                    headers.put("Authorization", OAuth1.getOAuth1Header(this.method, this.getUrl(), this.connectionProperties, queryParameters));
+                    headers.put("Authorization", OAuth1.getOAuth1Header(this.method, this.getUrl(), this.connectionProperties, queryParameters, null, null));
+                    headers.put("Accept", "*/*");
                 }
                 catch (Exception e) {
                     throw new ApiException(e.toString());

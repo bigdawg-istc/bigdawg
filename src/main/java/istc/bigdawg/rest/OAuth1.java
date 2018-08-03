@@ -6,6 +6,9 @@ import org.apache.log4j.Logger;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.*;
@@ -22,14 +25,12 @@ class OAuth1 {
             joiner.add(URLUtil.percentEncode(key) + "=" + URLUtil.percentEncode(parameters.get(key)));
         }
         String finalParameters = joiner.toString();
-
         StringJoiner finalJoin = new StringJoiner("&");
         finalJoin.add(method.toUpperCase());
         finalJoin.add(URLUtil.percentEncode(url));
         finalJoin.add(URLUtil.percentEncode(finalParameters));
 
         final String signatureBaseString = finalJoin.toString();
-
         final String signatureMethod = parameters.get("oauth_signature_method");
         switch(signatureMethod) {
             case "HMAC-SHA1":
@@ -38,12 +39,12 @@ class OAuth1 {
                     signingKeyJoiner.add(URLUtil.percentEncode(consumerSecret));
                     signingKeyJoiner.add(URLUtil.percentEncode(tokenSecret));
                     final String signingKeyStr = signingKeyJoiner.toString();
-                    SecretKeySpec key = new SecretKeySpec(signingKeyStr.getBytes(), "HmacSHA1");
+                    SecretKeySpec key = new SecretKeySpec(signingKeyStr.getBytes(StandardCharsets.UTF_8), "HmacSHA1");
 
                     Mac mac = Mac.getInstance("HmacSHA1");
                     mac.init(key);
 
-                    byte[] result = mac.doFinal(signatureBaseString.getBytes());
+                    byte[] result = mac.doFinal(signatureBaseString.getBytes(StandardCharsets.UTF_8));
                     return new String(Base64.getEncoder().encode(result));
                 }
                 catch (Exception e) {
@@ -54,7 +55,7 @@ class OAuth1 {
         }
     }
 
-    static String getOAuth1Header(HttpMethod method, String endpointUrl, Map<String, String> connectionParameters, Map<String, String> queryParameters) throws ApiException {
+    static String getOAuth1Header(HttpMethod method, String endpointUrl, Map<String, String> connectionParameters, Map<String, String> queryParameters, String nonceTmp, String timestampTmp) throws ApiException {
         String timestamp = String.valueOf(Instant.now().getEpochSecond());
         StringBuilder nonceSB = new StringBuilder();
         try {
@@ -77,7 +78,7 @@ class OAuth1 {
             OAuth1.log.error("Exception trying to create nonce", e);
             return null;
         }
-        String nonce = nonceSB.toString();
+        String nonce = nonceTmp != null? nonceTmp: nonceSB.toString();
         String consumerKey = connectionParameters.getOrDefault("oauth_consumer_key", connectionParameters.get("consumer_key"));
         String oauthVersion = connectionParameters.get("oauth_version");
         String oauthToken = connectionParameters.getOrDefault("oauth_token", connectionParameters.get("access_token"));
@@ -86,7 +87,7 @@ class OAuth1 {
         for (String key: queryParameters.keySet()) {
             oauthParameters.put(key, queryParameters.get(key));
         }
-        oauthParameters.put("oauth_timestamp", timestamp);
+        oauthParameters.put("oauth_timestamp", timestampTmp != null ? timestampTmp : timestamp);
         oauthParameters.put("oauth_signature_method", oauthSignatureMethod);
         oauthParameters.put("oauth_nonce", nonce);
         oauthParameters.put("oauth_consumer_key", consumerKey);
@@ -95,40 +96,47 @@ class OAuth1 {
             oauthParameters.put("oauth_version", oauthVersion);
         }
         oauthParameters.put("oauth_signature_method", oauthSignatureMethod);
-        String oauthSignature = OAuth1.createSignature(method.name(), endpointUrl, oauthParameters, connectionParameters.getOrDefault("oauth_consumer_secret", connectionParameters.get("consumer_secret")), connectionParameters.getOrDefault("oauth_token_secret", connectionParameters.get("access_token_secret")));
+        String consumerSecret = connectionParameters.getOrDefault("oauth_consumer_secret", connectionParameters.get("consumer_secret"));
+        String tokenSecret = connectionParameters.getOrDefault("oauth_token_secret", connectionParameters.get("access_token_secret"));
+        String oauthSignature = OAuth1.createSignature(method.name(), endpointUrl, oauthParameters, consumerSecret, tokenSecret);
         StringBuilder sb = new StringBuilder();
         sb.append("OAuth ");
         sb.append("oauth_consumer_key=");
         sb.append('"');
         sb.append(consumerKey);
         sb.append('"');
-        sb.append(",");
+        sb.append(", ");
         sb.append("oauth_nonce=");
         sb.append('"');
         sb.append(nonce);
         sb.append('"');
-        sb.append(",");
+        sb.append(", ");
         sb.append("oauth_signature=");
         sb.append('"');
-        sb.append(oauthSignature);
+        try {
+            sb.append(URLEncoder.encode(oauthSignature, "UTF-8"));
+        }
+        catch (UnsupportedEncodingException e) {
+            throw new ApiException(e.toString());
+        }
         sb.append('"');
-        sb.append(",");
+        sb.append(", ");
         sb.append("oauth_signature_method=");
         sb.append('"');
         sb.append(oauthSignatureMethod);
         sb.append('"');
-        sb.append(",");
+        sb.append(", ");
         sb.append("oauth_timestamp=");
         sb.append('"');
-        sb.append(timestamp);
+        sb.append(timestampTmp == null ? timestamp : timestampTmp);
         sb.append('"');
-        sb.append(",");
+        sb.append(", ");
         sb.append("oauth_token=");
         sb.append('"');
         sb.append(oauthToken);
         sb.append('"');
         if (oauthVersion != null && oauthVersion.length() > 0) {
-            sb.append(",");
+            sb.append(", ");
             sb.append("oauth_version=");
             sb.append('"');
             sb.append(oauthVersion);
@@ -146,12 +154,13 @@ class OAuth1 {
         String token = "370773112-GmHxMAgYyLbNEtIKZeRNFsMKPR9EyMZeS9weJAEb";
         String version = "1.0";
         String method = "POST";
+        String status = "Hello Ladies + Gentlemen, a signed OAuth request!";
         Map<String, String> parameters = new HashMap<>();
         parameters.put("oauth_consumer_key", consumerKey);
         parameters.put("oauth_nonce", nonce);
         parameters.put("oauth_signature_method", signatureMethod);
         parameters.put("include_entities", "true");
-        parameters.put("status", "Hello Ladies + Gentlemen, a signed OAuth request!");
+        parameters.put("status", status);
         parameters.put("oauth_timestamp", timestamp);
         parameters.put("oauth_version", version);
         parameters.put("oauth_token", token);
@@ -163,10 +172,24 @@ class OAuth1 {
         try {
             String signature = createSignature(method, url, parameters, consumerSecret, tokenSecret);
             System.out.println(signature);
+
+            Map<String, String> connectionParameters = new HashMap<>();
+            connectionParameters.put("oauth_version", "1.0");
+            connectionParameters.put("access_token", token);
+            connectionParameters.put("consumer_key", consumerKey);
+            connectionParameters.put("signature_method", signatureMethod);
+            connectionParameters.put("consumer_secret", consumerSecret);
+            connectionParameters.put("access_token_secret", tokenSecret);
+            Map<String, String> queryParameters = new HashMap<>();
+            queryParameters.put("include_entities", "true");
+            queryParameters.put("status", status);
+            String result = getOAuth1Header(HttpMethod.POST, url, connectionParameters, queryParameters, nonce, timestamp);
+            System.out.println(result);
         }
         catch (Exception e) {
             System.out.println(e.toString());
         }
+
     }
 
     static void verifyConnectionProperties(Map<String, String> connectionProperties) throws BigDawgCatalogException {
