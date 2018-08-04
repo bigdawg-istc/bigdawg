@@ -44,6 +44,10 @@ public class SQLJSONPlaceholderParserTest {
             SQLJSONPlaceholderParser.resetIndex();
             result = SQLJSONPlaceholderParser.transformJSONQuery("select (result -> 'asdf') ->> 'asdf' from something");
             assertEquals("not equal", "select 'BIGDAWG_PLACEHOLDER2' from something", result);
+
+            SQLJSONPlaceholderParser.resetIndex();
+            result = SQLJSONPlaceholderParser.transformJSONQuery("select count(visibility), coord ->> 'lon' from tab4 group by coord ->> 'lon'");
+            assertEquals("not equal", "select count( visibility ) , 'BIGDAWG_PLACEHOLDER1' from tab4 group by 'BIGDAWG_PLACEHOLDER2'", result);
         }
         catch (QueryParsingException e) {
             fail(e.getMessage());

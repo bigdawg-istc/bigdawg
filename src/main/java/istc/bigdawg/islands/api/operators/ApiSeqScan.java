@@ -19,11 +19,29 @@ public class ApiSeqScan extends ApiOperator implements SeqScan {
     private Map<String, String> queryParameters;
     private String urlStr;
     private String queryRaw;
+    private String resultKey;
+    private String tag;
 
     public ApiSeqScan(String urlStr, Map<String, String> queryParameters) {
         super();
         this.urlStr = urlStr;
         this.queryParameters = queryParameters;
+    }
+
+    public void setResultKey(String resultKey) {
+        this.resultKey = resultKey;
+    }
+
+    public void setTag(String tag) {
+        this.tag = tag;
+    }
+
+    public String getTag() {
+        return this.tag;
+    }
+
+    public String getResultKey() {
+        return this.resultKey;
     }
 
     public void setQueryRaw(String queryRaw) {

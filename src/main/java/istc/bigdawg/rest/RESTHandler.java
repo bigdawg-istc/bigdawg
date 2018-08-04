@@ -5,6 +5,7 @@ import istc.bigdawg.database.AttributeMetaData;
 import istc.bigdawg.database.ObjectMetaData;
 import istc.bigdawg.exceptions.ApiException;
 import istc.bigdawg.executor.RESTQueryResult;
+import istc.bigdawg.query.AbstractJSONQueryParser;
 import istc.bigdawg.shims.ApiToRESTShim;
 import istc.bigdawg.executor.ExecutorEngine;
 import istc.bigdawg.executor.QueryResult;
@@ -18,6 +19,8 @@ import org.json.simple.parser.ParseException;
 
 import javax.annotation.Nullable;
 import javax.ws.rs.core.Response;
+import java.io.ByteArrayInputStream;
+import java.io.ObjectInputStream;
 import java.net.UnknownHostException;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -36,21 +39,15 @@ public class RESTHandler implements ExecutorEngine, DBHandler {
 
     @Override
     public Optional<QueryResult> execute(String query) {
-        String bigdawgResultKey = "";
-        if (query.startsWith(ApiToRESTShim.INTO_SPECIFIER)) {
-            String[] parts = query.split(ApiToRESTShim.INTO_DELIMITER);
-            StringBuilder rest = new StringBuilder(parts[2]);
-            if (parts.length > 3) {
-                for (int i = 3 ; i < parts.length; i++) {
-                    rest.append(ApiToRESTShim.INTO_DELIMITER);
-                    rest.append(parts[i]);
-                }
-            }
-            query = rest.toString();
-            bigdawgResultKey = parts[1];
-        }
+        String bigdawgResultTag = "";
         Optional<QueryResult> queryResult;
         try {
+            JSONParser jsonParser = new JSONParser();
+            JSONObject jsonObject = (JSONObject) jsonParser.parse(query);
+            if (jsonObject.containsKey("tag")) {
+                bigdawgResultTag = (String) jsonObject.get("tag");
+            }
+
             String url = restConnectionInfo.getUrl();
             HttpMethod method = restConnectionInfo.getMethod();
             Map<String, String> headers = restConnectionInfo.getHeaders(query);
@@ -63,22 +60,34 @@ public class RESTHandler implements ExecutorEngine, DBHandler {
                         throw new ApiException("Null Content-Type");
                     }
 
-                    switch(contentType) {
-                        case "application/x-www-form-urlencoded":
-                            postData = query;
-                            break;
-                        case "application/json":
-                            Map<String, String> postParameters = URLUtil.decodeParameters(query);
-                            postData = JSONObject.toJSONString(postParameters);
-                            break;
-                        default:
-                            throw new ApiException("Unknown Content-Type: " + contentType);
+                    if (jsonObject.containsKey("query-raw")) {
+                        postData = (String) jsonObject.get("query-raw");
                     }
-
+                    else if (jsonObject.containsKey("query")) {
+                        Map<String, String> queryParametersMap = AbstractJSONQueryParser.jsonObjectToKeyValueString((JSONObject) jsonObject.get("query"));
+                        switch (contentType) {
+                            case "application/x-www-form-urlencoded":
+                                postData = URLUtil.encodeParameters(queryParametersMap);
+                                break;
+                            case "application/json":
+                                postData = JSONObject.toJSONString(queryParametersMap);
+                                break;
+                            default:
+                                throw new ApiException("Unknown Content-Type: " + contentType);
+                        }
+                    }
                     queryParameters = restConnectionInfo.getFinalQueryParameters(null);
                     break;
                 case GET:
-                    queryParameters = restConnectionInfo.getFinalQueryParameters(query);
+                    String queryString = null;
+                    if (jsonObject.containsKey("query-raw")) {
+                        queryString = (String) jsonObject.get("query-raw");
+                    }
+                    else if (jsonObject.containsKey("query")) {
+                        Map<String, String> queryParametersMap = AbstractJSONQueryParser.jsonObjectToKeyValueString((JSONObject) jsonObject.get("query"));
+                        queryString = URLUtil.encodeParameters(queryParametersMap);
+                    }
+                    queryParameters = restConnectionInfo.getFinalQueryParameters(queryString);
                     break;
                 default:
                     throw new ApiException("Unknown/Unsupported HttpMethod: " + method);
@@ -89,9 +98,12 @@ public class RESTHandler implements ExecutorEngine, DBHandler {
 
             // @TODO Connect / read timeout could be parameterized either in query or in connection parameters, or both
             URLUtil.FetchResult fetchResult = URLUtil.fetch(url, method, headers, postData, restConnectionInfo.getConnectTimeout(), restConnectionInfo.getReadTimeout());
-
-            RESTQueryResult restQueryResult = this.parseResult(fetchResult);
-            RESTHandler.restQueryResults.put(bigdawgResultKey, restQueryResult);
+            String resultKey = null;
+            if (jsonObject.containsKey("result-key")) {
+                resultKey = (String) jsonObject.get("result-key");
+            }
+            RESTQueryResult restQueryResult = this.parseResult(fetchResult, resultKey);
+            RESTHandler.restQueryResults.put(bigdawgResultTag, restQueryResult);
             if (restQueryResult == null) {
                 queryResult = Optional.empty();
             }
@@ -112,8 +124,10 @@ public class RESTHandler implements ExecutorEngine, DBHandler {
      * @return List of results as parsed
      * @throws ApiException when there's a problem parsing
      */
-    private RESTQueryResult parseResult(URLUtil.FetchResult fetchResult) throws ApiException {
-        String resultKey = restConnectionInfo.getResultKey();
+    private RESTQueryResult parseResult(URLUtil.FetchResult fetchResult, String resultKey) throws ApiException {
+        if (resultKey == null) {
+            resultKey = restConnectionInfo.getResultKey();
+        }
         try {
             // @TODO support other content types e.g. text/csv or tsv or even maybe xml?
             JSONParser jsonParser = new JSONParser();

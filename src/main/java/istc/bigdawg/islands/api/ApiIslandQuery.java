@@ -44,7 +44,9 @@ public class ApiIslandQuery extends AbstractNonRelationalIslandQuery {
             // Some minor verification and tweaking first
             AbstractApiConnectionInfo connectionInfo = (AbstractApiConnectionInfo) qep.getTerminalTableNode().getEngine();
             ApiSeqScan apiSeqScan = (ApiSeqScan) remainderPermutations.get(0);
-            this.verifyQueryParameters(connectionInfo, apiSeqScan.getQueryParameters());
+            if (apiSeqScan.getQueryRaw() == null) {
+                this.verifyQueryParameters(connectionInfo, apiSeqScan.getQueryParameters());
+            }
         }
 
         return qepl;
@@ -55,11 +57,14 @@ public class ApiIslandQuery extends AbstractNonRelationalIslandQuery {
         if (requiredParams != null && !requiredParams.isEmpty()) {
             StringJoiner missing = new StringJoiner(", ");
             for (String requiredParam: requiredParams) {
-                if (!queryParameters.containsKey(requiredParam)) {
+                if (queryParameters == null || !queryParameters.containsKey(requiredParam)) {
                     missing.add(requiredParam);
                 }
             }
             if (missing.length() > 0) {
+                if (queryParameters == null) {
+                    throw new ApiException("Query is missing 'query' parameter with required parameter(s): " + missing.toString());
+                }
                 throw new ApiException("Missing required query parameter(s): " + missing.toString());
             }
         }

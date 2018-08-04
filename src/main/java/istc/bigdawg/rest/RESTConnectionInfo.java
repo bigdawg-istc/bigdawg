@@ -12,6 +12,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLDecoder;
+import java.security.PublicKey;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -135,7 +136,7 @@ public class RESTConnectionInfo extends AbstractApiConnectionInfo {
                 break;
             case "bearer":
                 this.authenticationType = AuthenticationType.BEARER;
-                if (!this.connectionProperties.containsKey("token")) {
+                if (!this.connectionProperties.containsKey("token") && !this.connectionProperties.containsKey("bearer_token")) {
                     throw new BigDawgCatalogException("Expecting token to be set in connection parameters");
                 }
                 break;
@@ -181,7 +182,7 @@ public class RESTConnectionInfo extends AbstractApiConnectionInfo {
                 }
                 break;
             case BEARER:
-                headers.put("Authorization", "Bearer " + this.connectionProperties.get("token"));
+                headers.put("Authorization", "Bearer " + this.connectionProperties.getOrDefault("bearer_token", this.connectionProperties.get("token")));
                 break;
             case OAUTH2:
                 String authUrl = connectionProperties.getOrDefault("auth_url", "/");
@@ -250,6 +251,10 @@ public class RESTConnectionInfo extends AbstractApiConnectionInfo {
      */
     String getResultKey() {
         return resultKey;
+    }
+
+    public void setResultKey(String resultKey) {
+        this.resultKey = resultKey;
     }
 
     @Override

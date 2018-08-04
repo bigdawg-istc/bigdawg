@@ -92,6 +92,11 @@ public class SQLJSONPlaceholderParser {
                             inQuote = true;
                             break;
                         case '(':
+                            if (stringBuilder.length() > 0) {
+                                end = true;
+                                stringBuilder.append('(');
+                                break;
+                            }
                             token = new Token();
                             token.token = "(";
                             token.tokenType = TokenType.PAREN_OPEN;
@@ -99,6 +104,11 @@ public class SQLJSONPlaceholderParser {
                             curToken = token;
                             return token;
                         case ')':
+                            if (stringBuilder.length() > 0) {
+                                end = true;
+                                idx--;
+                                break;
+                            }
                             token = new Token();
                             token.token = ")";
                             token.tokenType = TokenType.PAREN_CLOSE;

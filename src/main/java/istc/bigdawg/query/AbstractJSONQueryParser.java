@@ -5,7 +5,9 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 abstract public class AbstractJSONQueryParser {
 
@@ -51,6 +53,16 @@ abstract public class AbstractJSONQueryParser {
     public static void addNonNullStringToList(Object input, List<String> output) throws ParseException{
         String s = (String) getObjectByType(input, String.class);
         if (s != null) output.add(s);
+    }
+
+    public static Map<String, String> jsonObjectToKeyValueString(JSONObject jsonObject) throws ParseException {
+        Map<String, String> result = new HashMap<>();
+        for (Object key: jsonObject.keySet()) {
+            String keyStr = (String)getObjectByType(key, String.class);
+            String value = (String)getObjectByType(jsonObject.get(keyStr), String.class);
+            result.put(keyStr, value);
+        }
+        return result;
     }
 
 

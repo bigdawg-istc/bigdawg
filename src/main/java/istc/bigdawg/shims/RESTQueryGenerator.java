@@ -9,6 +9,10 @@ import istc.bigdawg.rest.URLUtil;
 import org.apache.commons.lang3.tuple.Pair;
 import org.json.simple.JSONObject;
 
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectOutputStream;
+import java.nio.charset.Charset;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.StringJoiner;
@@ -51,14 +55,23 @@ public class RESTQueryGenerator implements OperatorQueryGenerator {
         assert(this.root instanceof ApiSeqScan);
         ApiSeqScan apiSeqScan = (ApiSeqScan) this.root;
         Map<String, String> queryParameters = apiSeqScan.getQueryParameters();
-        if (queryParameters != null && !queryParameters.isEmpty()) {
-            return URLUtil.encodeParameters(queryParameters);
+        Map<String, Object> statement = new HashMap<>();
+        if (queryParameters != null) {
+            statement.put("query", queryParameters);
         }
         String queryRaw = apiSeqScan.getQueryRaw();
         if (queryRaw != null) {
-            return queryRaw;
+            statement.put("query-raw", apiSeqScan.getQueryRaw());
         }
-        return "";
+        String resultKey = apiSeqScan.getResultKey();
+        if (resultKey != null) {
+            statement.put("result-key", resultKey);
+        }
+        String tag = apiSeqScan.getTag();
+        if (tag != null) {
+            statement.put("tag", apiSeqScan.getTag());
+        }
+        return (JSONObject.toJSONString(statement));
     }
 
     @Override

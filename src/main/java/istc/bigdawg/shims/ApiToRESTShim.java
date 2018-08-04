@@ -56,9 +56,11 @@ public class ApiToRESTShim implements Shim {
 
     @Override
     public String getSelectIntoQuery(Operator root, String dest, boolean stopsAtJoin) throws ShimException {
-        // Have to hack this for intra island cast, as it seems it wants to create a
-        //  temp table every time even if it's not needed
-        return INTO_SPECIFIER + INTO_DELIMITER + dest + INTO_DELIMITER + this.getSelectQuery(root);
+        assert(root instanceof ApiOperator);
+        assert(root instanceof ApiSeqScan);
+        ((ApiSeqScan)root).setTag(dest);
+
+        return this.getSelectQuery(root);
     }
 
     @Override
