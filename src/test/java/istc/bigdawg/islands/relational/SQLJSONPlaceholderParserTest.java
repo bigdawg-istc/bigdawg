@@ -83,8 +83,4 @@ public class SQLJSONPlaceholderParserTest {
             fail(e.getMessage());
         }
     }
-
-
-
-
 }
