@@ -50,7 +50,6 @@ public class RESTHandler implements ExecutorEngine, DBHandler {
 
             String url = restConnectionInfo.getUrl();
             HttpMethod method = restConnectionInfo.getMethod();
-            Map<String, String> headers = restConnectionInfo.getHeaders(query);
             String postData = null;
             String queryParameters = null;
             switch(method) {
@@ -95,6 +94,7 @@ public class RESTHandler implements ExecutorEngine, DBHandler {
             if (queryParameters != null) {
                 url = URLUtil.appendQueryParameters(url, queryParameters);
             }
+            Map<String, String> headers = restConnectionInfo.getHeaders(queryParameters);
 
             // @TODO Connect / read timeout could be parameterized either in query or in connection parameters, or both
             URLUtil.FetchResult fetchResult = URLUtil.fetch(url, method, headers, postData, restConnectionInfo.getConnectTimeout(), restConnectionInfo.getReadTimeout());

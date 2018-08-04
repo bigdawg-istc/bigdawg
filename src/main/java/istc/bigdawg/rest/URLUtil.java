@@ -401,8 +401,12 @@ public final class URLUtil {
     }
 
     public static Map<String, String> parseQueryString(String queryString) throws QueryParsingException {
-        String[] pairs = queryString.split("&");
         Map<String, String> parameters = new HashMap<>();
+        if (queryString == null) {
+            return parameters;
+        }
+
+        String[] pairs = queryString.split("&");
         try {
             for (String pair : pairs) {
                 int idx = pair.indexOf('=');
