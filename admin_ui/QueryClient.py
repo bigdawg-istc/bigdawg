@@ -1,5 +1,5 @@
 import httplib2
-import sys
+import json
 
 class QueryClient:
     version = 'auto'
@@ -16,13 +16,13 @@ class QueryClient:
         resp, content = h.request(url,
                                   "POST", body=query, headers={'content-type':'application/json'})
 
-        if sys.version_info >= (3, 0):
-            content = content.decode("utf-8")
+        content = content.decode("utf-8")
 
         if resp.status != 200:
             response = "Error:\n   Status: %d\n" %resp.status
             if content != '':
                 response += "   Message: " + content + ""
 
-            return response
-        return content
+            return json.JSONEncoder().encode({ "success": False, "error": response})
+
+        return json.JSONEncoder().encode({ "success": True, "content": content })

@@ -55,8 +55,9 @@ public class TransformBinExecutor implements Callable<Long> {
 		 * the type is the name of the c++ program which executes a given
 		 * migration type
 		 */
-		FromPostgresToSciDB("postgres2scidb"), FromSciDBToPostgres(
-				"scidb2postgres");
+		FromPostgresToSciDB("postgres2scidb"),
+		FromRESTToSciDB("rest2scidb"),
+		FromSciDBToPostgres("scidb2postgres");
 
 		/** this represents the full path to the c++ migrator */
 		private final String type;

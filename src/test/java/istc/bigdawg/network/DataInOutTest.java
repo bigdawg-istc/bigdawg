@@ -1,5 +1,5 @@
 /**
- * 
+ *
  */
 package istc.bigdawg.network;
 
@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -37,7 +38,7 @@ import istc.bigdawg.utils.TaskExecutor;
 
 /**
  * @author Adam Dziedzic
- * 
+ *
  *         run form maven: mvn -Dtest=DataInOutTest#testBigDataTransfer test -P
  *         dev
  */
@@ -70,6 +71,7 @@ public class DataInOutTest {
 	public void setUp() {
 		LoggerSetup.setLogging();
 		systemTempDir = SystemUtilities.getSystemTempDir();
+		logger.debug("init DataInOutTest benchmark");
 	}
 
 	/* The separate thread to receive the data. */
@@ -108,12 +110,12 @@ public class DataInOutTest {
 
 	/**
 	 * Write bytes to the file.
-	 * 
+	 *
 	 * @param filePath
 	 *            - path to the file or pipe
 	 * @param bytesWritten
 	 *            - number of bytes written to the file/pipe
-	 * 
+	 *
 	 * @throws IOException
 	 */
 	public static Callable<Object> getWriteBytesCallable(String filePath,
@@ -143,7 +145,7 @@ public class DataInOutTest {
 
 	/**
 	 * Read bytes from the file.
-	 * 
+	 *
 	 * @param filePath
 	 *            path to a file/pipe.
 	 * @return number of bytes read
@@ -177,7 +179,7 @@ public class DataInOutTest {
 
 	/**
 	 * Test if the basic data transfer via network works.
-	 * 
+	 *
 	 * @throws IOException
 	 * @throws ExecutionException
 	 * @throws InterruptedException

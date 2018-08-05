@@ -46,13 +46,16 @@ public class AccumuloConnectorTest {
 	public void setUp() throws Exception {
 		
 		LoggerSetupForTests.setTestLogging();
-		
-		cc = ClientConfiguration.loadDefault().withInstance("classdb55").withZkHosts("localhost:2333");//.withInstance("accumulo").withZkHosts("192.168.99.100:2181");//.withZkHosts("zookeeper.docker.local:2181"); // .withZkTimeout(timeout)
+
+
+		cc = ClientConfiguration.loadDefault().withInstance("accumulo").withZkHosts("localhost:2181");//.withInstance("classdb55").withZkHosts("localhost:2333"); //.withInstance("accumulo").withZkHosts("192.168.99.100:2181");//.withZkHosts("zookeeper.docker.local:2181"); // .withZkTimeout(timeout)
 //        this.username = "bigdawg";
 //        this.auth = new PasswordToken("bigdawg");
 		this.username = "AccumuloUser";
+		this.username = "bigdawg";
         this.auth = new PasswordToken("bJsTTwyiMjbK%1PMEh2hioMK@");
-		
+        this.auth = new PasswordToken("bigdawg");
+
         //scan -t bk0802_oTsampleDegree -e S0100
         
 		instance = new ZooKeeperInstance(cc);
@@ -105,8 +108,9 @@ public class AccumuloConnectorTest {
 	@Test
 	public void test2() throws TableNotFoundException, MutationsRejectedException {
 //		String tR = "testtable";
-		String tR = "bk0802_oTsampleDegree";
-		
+//		String tR = "bk0802_oTsampleDegree";
+		String tR = "mimic_logs";
+
 	    Map<Key,Value> actual = new TreeMap<>(TestUtil.COMPARE_KEY_TO_COLQ);
 	    {
 

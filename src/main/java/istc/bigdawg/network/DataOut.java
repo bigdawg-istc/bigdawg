@@ -95,7 +95,7 @@ public class DataOut implements Callable<Object> {
 			final String filePath) throws IOException, InterruptedException {
 		/* Connect with timeout. */
 		Socket socket = null;
-		logger.debug(
+		logger.info(
 				"Connection to socket with host: " + host + " port: " + port);
 		for (int trialNumber = 0; trialNumber <= RETRY_CONNECTION; ++trialNumber) {
 			try {
@@ -106,6 +106,7 @@ public class DataOut implements Callable<Object> {
 				break;
 			} catch (Exception ex) {
 				logger.info(ex.getMessage(), ex);
+				logger.info("host: " + host + "port: " + port);
 				TimeUnit.MILLISECONDS.sleep(TIMEOUT);
 				try {
 					socket.close();

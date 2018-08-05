@@ -9,6 +9,11 @@ import org.apache.log4j.Logger;
 
 import java.sql.SQLException;
 
+/**
+ * Migration from REST into Postgres
+ *
+ * @author Matthew J. Mucklo
+ */
 public class FromRESTToPostgres extends FromDatabaseToDatabase {
     private static Logger logger = Logger
             .getLogger(FromRESTToPostgres.class);

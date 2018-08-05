@@ -181,6 +181,14 @@
                                 <pre>bdrel(select text, metadata ->> 'iso_language_code' from bdcast( bdapi({ 'name' : 'twitter', 'endpoint' : 'tweets', 'query' : { 'q': '#mit' } }), tab3, '(metadata json, text text)', relational) where metadata ->> 'iso_language_code' = 'en')</pre>
                             </td>
                         </tr>
+                        <tr>
+                            <td>
+                                API to Accumulo<sup><a href="#api-note">*</a></sup>
+                            </td>
+                            <td>
+                                <pre>bdtext({ 'op' : 'scan', 'table' : 'bdcast(bdapi({ 'name': 'twitter', 'endpoint': 'tweets', 'query': { 'q': '#mit', 'count': '100'} }), res3, '', text)'})</pre>
+                            </td>
+                        </tr>
                     </tbody>
                 </table>
                 <br>

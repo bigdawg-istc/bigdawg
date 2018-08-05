@@ -40,6 +40,12 @@ public class Main {
 		} else {
 			BASE_URI = BigDawgConfigProperties.INSTANCE.getBaseURI();
 		}
+		if (logger == null) {
+			// Logger
+			LoggerSetup.setLogging();
+			logger = Logger.getLogger(Main.class);
+		}
+
 		logger.info("base uri: " + BASE_URI);
 
         // create a resource config that scans for JAX-RS resources and

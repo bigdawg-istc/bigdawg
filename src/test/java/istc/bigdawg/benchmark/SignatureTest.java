@@ -8,10 +8,7 @@ import org.apache.log4j.Logger;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Created by ankush on 3/13/16.
@@ -20,20 +17,20 @@ public class SignatureTest {
     private static Logger log = Logger.getLogger(SignatureTest.class);
 
     // TODO(jack) or someone with knowledge of the planner/signatures
-    private static final Collection<String> trainingQueries = Arrays.asList();
+    private static final Collection<String> trainingQueries = new ArrayList<>();
 
     // TODO(jack) or someone with knowledge of the planner/signatures
-    private static final Collection<String> testQueries = Arrays.asList();
+    private static final Collection<String> testQueries = new ArrayList<>();
 
     private final Map<String, Pair<Long, Long>> results = new HashMap<>();
 
     @Before
     public void setup(){
     	trainingQueries.add("bdrel(SELECT count(*) FROM mimic2v26.d_patients);");
-    	trainingQueries.add("bdrel(SELECT sex, count(subject_id) FROM mimic2v26.d_patients);");
+    	trainingQueries.add("bdrel(SELECT sex, count(subject_id) FROM mimic2v26.d_patients group by subject_id);");
     	
     	testQueries.add("bdrel(SELECT count(*) FROM mimic2v26.icd9);");
-    	testQueries.add("bdrel(SELECT subject_id, count(hadm_id) FROM mimic2v26.icd9);");    	
+    	testQueries.add("bdrel(SELECT subject_id, count(hadm_id) FROM mimic2v26.icd9 group by subject_id);");
     }
     
     

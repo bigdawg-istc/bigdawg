@@ -1,199 +1,175 @@
-/**
- * A few elements we may need to later manipulate
- */
-const button = document.querySelector('#query ~ button');
-const queryTextarea = document.querySelector('#query');
-const resultTextarea = document.querySelector('#result');
-const resultDiv = document.querySelector('.result');
-const resultTableDiv = document.querySelector('.result .table-div');
-const resultTextareaDiv = document.querySelector('.result .textarea');
-const loadingDiv = document.querySelector('.loading');
-const exportCSVFilenameDiv = document.querySelector('.export-csv-filename');
-const exportForm = exportCSVFilenameDiv.querySelector('.form-inline');
-const queryErrorEle = document.getElementById('query-error');
-exportForm.addEventListener('submit', exportCsvFilenameSubmit);
-
-let curTable = [];
-
-// Set the event listener for the button's click
-button.addEventListener('click', query);
-
-/**
- * The following functions show/hide the loading spinner
- */
-function startLoading() {
-    button.disabled = true;
-    loadingDiv.style.display = 'block';
-}
-
-function stopLoading() {
-    button.disabled = false;
-    loadingDiv.style.display = 'none';
-}
-
-function showError(msg) {
-    showMsg(queryErrorEle, msg);
-}
-
-function hideError() {
-    hide(queryErrorEle)
-}
-
-/**
- * Clears our error and success results
- */
-function clearResults() {
-    resultDiv.style.display='none';
-    resultTableDiv.style.display='none';
-    resultTableDiv.innerHTML='';
-    exportCSVFilenameDiv.style.display='none';
-    hideError();
-}
-
-/**
- * Shows the success response
- */
-function displayResultTable(html) {
-    resultTableDiv.innerHTML = html;
-    resultTableDiv.style.display='block';
-    resultDiv.style.display='block';
-    const exportCSVspan = document.querySelector('.export-csv');
-    exportCSVspan.addEventListener('click', showDownloadCsv)
-}
-
-function showDownloadCsv() {
-    exportCSVFilenameDiv.style.display ='block';
-    const exportCSVspan = document.querySelector('.export-csv');
-    exportCSVspan.style.display = 'none';
-}
-
-function exportCsvFilenameSubmit(e) {
-    e.preventDefault();
-
-    const filename = this.querySelector('#csv-filename').value;
-    if (!filename) {
-        alert("Please input a filename.");
-        return;
+class Query {
+    constructor() {
+        this.button = document.querySelector('#query ~ button');
+        this.queryTextarea = document.querySelector('#query');
+        this.resultTextarea = document.querySelector('#result');
+        this.resultDiv = document.querySelector('.result');
+        this.resultTableDiv = document.querySelector('.result .table-div');
+        this.resultTextareaDiv = document.querySelector('.result .textarea');
+        this.loadingDiv = document.querySelector('.loading');
+        this.exportCSVFilenameDiv = document.querySelector('.export-csv-filename');
+        this.exportForm = this.exportCSVFilenameDiv.querySelector('.form-inline');
+        this.queryErrorEle = document.getElementById('query-error');
+        this.addEventListeners();
+        this.curTable = [];
     }
 
-    const csvContents = createCSV();
-    const link = document.createElement('a');
-    link.setAttribute('href', encodeURI(csvContents));
-    link.setAttribute('download', filename);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    this.querySelector('#csv-filename').value = '';
-    exportCSVFilenameDiv.style.display='none';
-    document.querySelector('.export-csv').style.display='inline';
-    return false;
-}
+    addEventListeners() {
+        this.exportForm.addEventListener('submit', this.exportCsvFilenameSubmit.bind(this));
+        this.button.addEventListener('click', this.query.bind(this));
+    }
 
-function createCSV() {
-    let csv = 'data:text/csv;charset=utf-8,';
-    curTable.forEach(columns => {
-        const finalColumns = columns.map(function(item) {
-            let doubleQuotes = false;
-            if (item.match(/"/)) {
-                item = item.replace(/"/, '""');
-                doubleQuotes = true;
-            }
-            if (item.match(/,/)) {
-                doubleQuotes = true;
-            }
-            if (doubleQuotes) {
-                return '"' + item + '"';
-            }
-            return item;
+    exportCsvFilenameSubmit(e) {
+        e.preventDefault();
+
+        const filename = document.querySelector('#csv-filename').value;
+        if (!filename) {
+            alert("Please input a filename.");
+            return;
+        }
+
+        const csvContents = this.createCSV();
+        const link = document.createElement('a');
+        link.setAttribute('href', encodeURI(csvContents));
+        link.setAttribute('download', filename);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        document.querySelector('#csv-filename').value = '';
+        this.exportCSVFilenameDiv.style.display='none';
+        document.querySelector('.export-csv').style.display='inline';
+        return false;
+    }
+
+    createCSV() {
+        let csv = 'data:text/csv;charset=utf-8,';
+        this.curTable.forEach(columns => {
+            const finalColumns = columns.map(function(item) {
+                let doubleQuotes = false;
+                if (item.match(/"/)) {
+                    item = item.replace(/"/, '""');
+                    doubleQuotes = true;
+                }
+                if (item.match(/,/)) {
+                    doubleQuotes = true;
+                }
+                if (doubleQuotes) {
+                    return '"' + item + '"';
+                }
+                return item;
+            });
+
+            csv += finalColumns.join(',');
+            csv += "\r\n";
         });
-
-        csv += finalColumns.join(',');
-        csv += "\r\n";
-    });
-    return csv;
-}
-
-/**
- * Shows an error response in a readonly textarea
- */
-function displayTextarea(text) {
-    resultTextareaDiv.style.display='block';
-    resultTextarea.value = text;
-    resultDiv.style.display='block';
-}
-
-/**
- * Runs the query in the background, showing a loading spinner
- *
- * Should prevent multiple queries from being run by disabling the run button
- */
-function query() {
-    clearResults();
-    startLoading();
-    const val = queryTextarea.value;
-    if (!val) {
-      alert("No query passed in");
-      return;
+        return csv;
     }
 
-    fetch('/run_query', {
-        method: 'post',
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: val
-    }).then(response => {
-        response.text().then(result => {
-            stopLoading();
-            if (result.match(/\t/)) {
-                const html = resultTable(result);
-                displayResultTable(html);
+    /**
+     * The following functions show/hide the loading spinner
+     */
+    startLoading() {
+        this.button.disabled = true;
+        this.loadingDiv.style.display = 'block';
+    }
+
+    stopLoading() {
+        this.button.disabled = false;
+        this.loadingDiv.style.display = 'none';
+    }
+
+    showError(msg) {
+        showMsg(this.queryErrorEle, msg);
+    }
+
+    hideError() {
+        hide(this.queryErrorEle)
+    }
+    /**
+     * Clears our error and success results
+     */
+    clearResults() {
+        this.resultDiv.style.display='none';
+        this.resultTableDiv.style.display='none';
+        this.resultTableDiv.innerHTML='';
+        this.exportCSVFilenameDiv.style.display='none';
+        this.hideError();
+    }
+    displayResultTable(html) {
+        this.resultTableDiv.innerHTML = html;
+        this.resultTableDiv.style.display='block';
+        this.resultDiv.style.display='block';
+        const exportCSVspan = document.querySelector('.export-csv');
+        exportCSVspan.addEventListener('click', this.showDownloadCsv.bind(this))
+    }
+    showDownloadCsv() {
+        this.exportCSVFilenameDiv.style.display ='block';
+        const exportCSVspan = document.querySelector('.export-csv');
+        exportCSVspan.style.display = 'none';
+    }
+
+    displayTextarea(text) {
+        this.resultTextareaDiv.style.display='block';
+        this.resultTextarea.value = text;
+        this.resultDiv.style.display='block';
+    }
+    query() {
+        this.clearResults();
+        this.startLoading();
+        const val = this.queryTextarea.value;
+        if (!val) {
+          alert("No query passed in");
+          this.stopLoading();
+          return;
+        }
+
+        fetchJson('/run_query', val, 'post').then(result => {
+            this.stopLoading();
+            const html = this.resultTable(result.content);
+            this.displayResultTable(html);
+        }, reject => {
+            this.stopLoading();
+            if (reject.match(/^Error: /)) {
+                this.showError(reject.replace(/^Error: /, ''));
                 return;
             }
-            showError(result);
-        }, response => {
-            stopLoading();
-            showError("Unknown error - see Javascript console for more details");
-            console.log('error - could not parse response to text', response);
+            this.showError("Unknown error - see Javascript console for more details");
         });
-    }, response => {
-        stopLoading();
-        showError("Unknown response - are we offline? - see Javascript console for more details");
-        console.log(response);
-    });
+    }
+
+    resultTable(result) {
+        const lines = result.replace(/\r?\n$/,'').split(/\r?\n/);
+        let table = '<table class="table table-striped">';
+        const lineColumns = [];
+        let maxLength = 0;
+        /** find the longest column */
+        lines.forEach(line => {
+            const columns = line.split(/\t/);
+            lineColumns.push(columns);
+            if (columns.length > maxLength) {
+                maxLength = columns.length;
+            }
+        });
+        this.curTable = lineColumns;
+        lineColumns.forEach(columns => {
+            table += '<tr>';
+            columns.forEach(column => {
+                table += '<td>' + escapeSpecial(column) + '</td>';
+            });
+            /** if column too short, extend so that things look "right" */
+            if (columns.length < maxLength) {
+                for (let i = columns.length; i < maxLength; i++) {
+                    table += '<td></td>';
+                }
+            }
+            table += '</tr>';
+        });
+        table += '</table>';
+        table += '<span class="export-csv">Export CSV</span>';
+        return table;
+    }
 }
 
-/**
- * Creates an html table of the results
- */
-function resultTable(result) {
-    const lines = result.split(/\r?\n/);
-    let table = '<table class="table table-striped">';
-    const lineColumns = [];
-    let maxLength = 0;
-    /** find the longest column */
-    lines.forEach(line => {
-        const columns = line.split(/\t/);
-        lineColumns.push(columns);
-        if (columns.length > maxLength) {
-            maxLength = columns.length;
-        }
-    });
-    curTable = lineColumns;
-    lineColumns.forEach(columns => {
-        table += '<tr>';
-        columns.forEach(column => {
-            table += '<td>' + escapeSpecial(column) + '</td>';
-        });
-        /** if column too short, extend so that things look "right" */
-        if (columns.length < maxLength) {
-            for(let i = columns.length; i < maxLength; i++) {
-                table += '<td></td>';
-            }
-        }
-        table += '</tr>';
-    });
-    table += '</table>';
-    table += '<span class="export-csv">Export CSV</span>';
-    return table;
-}
+window.addEventListener('load', () => {
+    const query = new Query();
+});
