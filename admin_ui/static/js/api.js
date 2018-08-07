@@ -403,6 +403,9 @@ class ApiForm extends Evented {
         element.querySelectorAll('input[type=text]').forEach(item => {
             item.value = "";
         });
+        element.querySelectorAll('input[type=hidden]').forEach(item => {
+            item.value = "";
+        });
         element.querySelectorAll('input[type=url]').forEach(item => {
             item.value = "";
         });
@@ -411,7 +414,7 @@ class ApiForm extends Evented {
         });
         const radio = element.querySelector('input[type=radio]');
         if (radio) {
-            radio.checked = true;
+            radio.checked = false;
         }
         element.querySelectorAll('input[type=checkbox]').forEach(item => {
             item.checked = false;
@@ -560,7 +563,7 @@ class Advanced {
 
     setParameters(parameters) {
         document.querySelectorAll(`.advanced`).forEach((element) => {
-            if (element.querySelector('.extra-query')) {
+            if (element.querySelector('.query_params')) {
                 return;
             }
             ApiForm.setFormData(element, parameters);
@@ -732,7 +735,7 @@ class Endpoint extends FormType {
         super(className);
         this.requiredParams = new AddElement('required_param');
         this.optionalParams = new AddElement('optional_param');
-        this.queryParams = new KeyValueParameters('query_params', 'extra-query', 'Extra Query Parameters');
+        this.queryParams = new KeyValueParameters('query_params', 'query_params', 'Extra Query Parameters');
         this.enginesSelect = document.getElementById('engine_id');
         this.engineLoading = document.getElementById('engine-loading');
         this.showLoading();
@@ -1049,8 +1052,8 @@ class KeyValueParameters {
             if (!keyElement) {
                 this.addPair();
                 keyElement = document.getElementById(keyId);
-                if (!element) {
-                    throw "Can't find element " + id;
+                if (!keyElement) {
+                    throw "Can't find element " + keyId;
                 }
             }
             const valueElement = document.getElementById(valueId);
@@ -1303,6 +1306,14 @@ class Master {
         this.apiList.addEventListener('delete', this.delete.bind(this));
         this.apiList.addEventListener('api_list', this.processApiList.bind(this));
         this.apiForm.addEventListener('reset', this.normalMode.bind(this));
+        document.getElementById('add2-tab').addEventListener('click', this.add2.bind(this));
+
+    }
+
+    add2() {
+        this.apiForm.reset();
+        this.normalMode();
+        this.showAddTab();
     }
 
     processApiList(result) {
@@ -1313,12 +1324,14 @@ class Master {
         document.getElementById('add-edit-title').innerText = "Edit API + Endpoint";
         document.getElementById('fill-in').innerText = "Update any of the following parameters:";
         document.getElementById('add-tab').innerText="Edit";
+        document.getElementById('add2-tab').classList.remove("hidden");
     }
 
     normalMode() {
         document.getElementById('add-edit-title').innerText = "Add API";
         document.getElementById('fill-in').innerText = "Please fill in the following parameters:";
         document.getElementById('add-tab').innerText="Add";
+        document.getElementById('add2-tab').classList.add("hidden");
         const switcher = document.querySelector('div.switch');
         const radio = document.getElementById('switch-api-endpoint');
         radio.checked = false;
@@ -1336,6 +1349,15 @@ class Master {
                 alert(msg);
             }
         );
+    }
+
+    showAddTab() {
+        document.getElementById('list').classList.remove('active');
+        document.getElementById('list').classList.remove('show');
+        document.getElementById('list-tab').classList.remove('active');
+        document.getElementById('add').classList.add('active');
+        document.getElementById('add').classList.add('show');
+        document.getElementById('add-tab').classList.add('active');
     }
 
     edit(dbid) {
@@ -1369,12 +1391,7 @@ class Master {
                 this.apiForm.showApiEndpoint();
                 this.apiForm.showForm();
                 Master.editMode();
-                document.getElementById('list').classList.remove('active');
-                document.getElementById('list').classList.remove('show');
-                document.getElementById('list-tab').classList.remove('active');
-                document.getElementById('add').classList.add('active');
-                document.getElementById('add').classList.add('show');
-                document.getElementById('add-tab').classList.add('active');
+                this.showAddTab();
             },
             msg => {
                 alert(msg);

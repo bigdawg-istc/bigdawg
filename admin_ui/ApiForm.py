@@ -80,7 +80,9 @@ class ApiForm:
                 testObject = self.catalog_client.get_object_by_name_island_name(url, "API")
                 if oid is not None:
                     if testObject is None:
-                        return Util.error_msg("Unknown object id: " + oid)
+                        testObject = self.catalog_client.get_object(oid)
+                        if testObject is None:
+                            return Util.error_msg("Unknown object id: " + oid)
                     if int(testObject[0]) != int(oid):
                         return Util.error_msg("Duplicate url for API Island: " + url)
                 elif testObject is not None:
@@ -110,7 +112,9 @@ class ApiForm:
 
         if eid is not None:
             if testEngine is None:
-                return "Unknown engine: " + eid
+                testEngine = self.catalog_client.get_engine(eid)
+                if testEngine is None:
+                    return "Unknown engine: " + eid
             if int(eid) != int(testEngine[0]):
                 return "Duplicate engine: " + name
         elif testEngine is not None:
@@ -168,7 +172,9 @@ class ApiForm:
         testDatabase = self.catalog_client.get_database_by_engine_id_name(engineId, name)
         if dbid is not None:
             if testDatabase is None:
-                return "Unknown database: " + dbid
+                testDatabase = self.catalog_client.get_database(dbid)
+                if testDatabase is None:
+                    return "Unknown database: " + dbid
             if int(dbid) != int(testDatabase[0]):
                 return "Duplicate endpoint for engine: " + name
         elif testDatabase is not None:
@@ -182,7 +188,9 @@ class ApiForm:
         testObject = self.catalog_client.get_object_by_name_island_name(url, "API")
         if oid is not None:
             if testObject is None:
-                return "Unknown object id: " + oid
+                testObject = self.catalog_client.get_object(oid)
+                if testObject is None:
+                    return "Unknown object id: " + oid
             if int(testObject[0]) != int(oid):
                 return "Duplicate url for API Island: " + url
         elif testObject is not None:

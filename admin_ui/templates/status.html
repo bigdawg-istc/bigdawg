@@ -3,9 +3,10 @@
 {% set active_page = "status" %}
 
 {% block content %}
-<div class="row col-xs-10 col-xs-offset-1">
-  <h1>Container Status</h1>
-  <table class="table table-hover">
+<div class="row">
+  <div class="col-10 offset-1">
+    <h1>Container Status</h1>
+    <table class="table table-hover">
     <thead>
       <tr>
         <th>Name</th>
@@ -36,7 +37,8 @@
       </tr>
       {% endfor %}
     </tbody>
-  </table>
+    </table>
+  </div>
 </div>
 {% endblock %}
   
