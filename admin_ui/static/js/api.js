@@ -96,6 +96,13 @@ class ApiForm extends Evented {
         this.endpoint.show('not-api');
     }
 
+    showAdvancedIfNecessary() {
+        const testMap = this.advanced.getFormData();
+        if (testMap.size > 0) {
+            this.advanced.show();
+        }
+    }
+
     static convertConnectionProperties(connectionProperties) {
         let connectionPropertiesStr = "";
         connectionProperties.forEach((value, key) => {
@@ -145,15 +152,17 @@ class ApiForm extends Evented {
         }
 
         endpoint.forEach((value, key) => {
+            if (key === "password_field") {
+                if (value.size === 0) {
+                    return;
+                }
+                value = ApiForm.convertConnectionProperties(value);
+            }
             if (!data['endpoint']) {
                 data['endpoint'] = {};
             }
             data['endpoint'][key] = value;
         });
-
-        if (endpoint.has('password_field')) {
-            data['endpoint']['password_field'] = ApiForm.convertConnectionProperties(endpoint.get('password_field'));
-        }
 
         if (endpoint.has(url) && api.size) {
             const aElement = document.createElement('a');
@@ -474,6 +483,7 @@ class ApiList extends Evented {
                 deleteButton.dataset.dbid = database[0];
                 deleteButton.addEventListener('click', this.delete.bind(this));
                 deleteButton.classList.add("btn");
+                deleteButton.classList.add("btn-secondary");
                 deleteButton.classList.add("btn-sm");
                 deleteButton.appendChild(document.createTextNode("Delete"));
                 td1.appendChild(deleteButton);
@@ -561,22 +571,23 @@ class Advanced {
         this.addEventListeners();
     }
 
+    getFormData(pairs = new Map()) {
+        const values = [];
+        document.querySelectorAll(`.advanced`).forEach((element) => {
+            ApiForm.collectFormData(element, pairs);
+        });
+        return pairs;
+    }
+
     setParameters(parameters) {
         document.querySelectorAll(`.advanced`).forEach((element) => {
-            if (element.querySelector('.query_params')) {
-                return;
-            }
             ApiForm.setFormData(element, parameters);
         });
 
         if (parameters.has('connection_properties') && parameters.get('connection_properties').has('query_params')) {
 
         }
-        const queryParams = this.queryParams.getFormData();
-        if (queryParams) {
-            pairs.set('query_params', queryParams);
-        }
-        return pairs;
+        return parameters;
 
     }
 
@@ -1389,6 +1400,7 @@ class Master {
                 endpointParameters.set('result_key', obj[2]);
                 this.apiForm.setParameters(apiParameters, endpointParameters);
                 this.apiForm.showApiEndpoint();
+                this.apiForm.showAdvancedIfNecessary();
                 this.apiForm.showForm();
                 Master.editMode();
                 this.showAddTab();

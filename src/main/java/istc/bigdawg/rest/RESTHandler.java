@@ -35,7 +35,11 @@ public class RESTHandler implements ExecutorEngine, DBHandler {
         this.restConnectionInfo = restConnectionInfo;
     }
 
-    private static Map<String, RESTQueryResult> restQueryResults = new HashMap<>();
+    // Use Hashtable for reentrancy concerns
+    // @TODO - how to clean this out periodically?
+    // @TODO - how to prevent multiple entries of the same tag name?
+    private static Map<String, RESTQueryResult> restQueryResults = new Hashtable<>();
+
 
     @Override
     public Optional<QueryResult> execute(String query) {
@@ -103,11 +107,11 @@ public class RESTHandler implements ExecutorEngine, DBHandler {
                 resultKey = (String) jsonObject.get("result-key");
             }
             RESTQueryResult restQueryResult = this.parseResult(fetchResult, resultKey);
-            RESTHandler.restQueryResults.put(bigdawgResultTag, restQueryResult);
             if (restQueryResult == null) {
                 queryResult = Optional.empty();
             }
             else {
+                RESTHandler.restQueryResults.put(bigdawgResultTag, restQueryResult);
                 queryResult = Optional.of(restQueryResult);
             }
         }

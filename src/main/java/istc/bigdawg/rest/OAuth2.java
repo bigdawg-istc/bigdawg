@@ -10,17 +10,15 @@ import org.json.simple.parser.ParseException;
 import java.io.*;
 import java.net.URLDecoder;
 import java.time.Instant;
-import java.util.Base64;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 class OAuth2 {
     private final static int DefaultAuthTimeout = 3600; // seconds
     private static Logger log = Logger
             .getLogger(OAuth2.class.getName());
 
-    private final static Map<String, Tuple.Tuple2<Long, String>> tokenStorage = new HashMap<>();
+    // Use Hashtable for reentrancy concerns
+    private final static Map<String, Tuple.Tuple2<Long, String>> tokenStorage = new Hashtable<>();
 
     enum AuthenticationType {
         BASIC_BEARER

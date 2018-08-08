@@ -18,6 +18,7 @@ class ImportCSV extends Evented {
         this.oid = null;
         this.csvTextOrigRows = parseInt(this.csvText.rows);
         this.schema = new Schema();
+        this.schemaName = null;
         this.database = null;
         this.engine = null;
         this.hide();
@@ -84,7 +85,7 @@ class ImportCSV extends Evented {
     }
 
     checkSchema() {
-        if (!this.schema.isHidden() && this.schema.isReady()) {
+        if (!this.schema.isHidden() && this.schema.isReady() && this.csvErrorEle.classList.contains('hidden')) {
             this.uploadCSVEle.classList.remove('hidden');
             return;
         }
@@ -148,9 +149,9 @@ class ImportCSV extends Evented {
             return;
         }
 
-        const csvData = csv.get();
+        let csvData = csv.get();
         if (this.headerEle.checked) {
-            csvData.shift();
+            csvData = csvData.slice(1);
         }
 
         const uploadData = { csv: csvData };
@@ -161,6 +162,9 @@ class ImportCSV extends Evented {
         }
         else {
             uploadData.dbid = this.database.dbid;
+            if (this.schemaName !== null) {
+                uploadData.schema_name = this.schemaName;
+            }
             uploadData.create = this.schema.getCreateTable();
             uploadData.schema = this.schema.getCreateSchema();
             uploadData.fields = this.schema.getFieldsList();
@@ -216,6 +220,7 @@ class ImportCSV extends Evented {
         this.csvText.classList.remove('csv-ok');
         this.fileEle.value = null;
         this.headerEle.checked = false;
+        this.schemaName = null;
         this.resetFilename();
         this.schema.reset();
         this.schema.hide();
@@ -253,9 +258,6 @@ class ImportCSV extends Evented {
         if (this.csvButtons.classList.contains('hidden')) {
             this.csvButtons.classList.remove('hidden');
         }
-        if (!this.uploadSuccessEle.classList.contains('hidden')) {
-            this.uploadSuccessEle.classList.add('hidden');
-        }
         this.csvTextLastValue = this.csvText.value;
     }
 
@@ -268,6 +270,22 @@ class ImportCSV extends Evented {
         this.processCSVData(data);
     }
 
+    checkColumnCountDifferences(csv) {
+        const columnCountErrors = csv.getColumnCountDifferences(this.headerEle.checked);
+        if (columnCountErrors.length) {
+            this.csvButtons.classList.remove('hidden');
+            this.csvText.classList.add('csv-error');
+            this.csvText.classList.remove('csv-ok');
+            this.csvErrorEle.classList.remove('hidden');
+            this.csvErrorEle.innerText = columnCountErrors.join("\n");
+        }
+        else {
+            this.csvErrorEle.classList.add('hidden');
+            this.csvText.classList.remove('csv-error');
+            this.csvText.classList.add('csv-ok');
+        }
+    }
+
     processCSVData(data) {
         this.hideError();
         this.currentCSV = null;
@@ -277,13 +295,14 @@ class ImportCSV extends Evented {
         if (this.oid === null) {
             const csv = new CSV();
             csv.parse(data);
+            this.checkColumnCountDifferences(csv);
             this.displayCSV(csv);
             this.currentCSV = csv;
             this.schema.setEngine(this.engine);
             this.schema.setDatabase(this.database);
             this.schema.setName(this.name);
             this.schema.setSchemaName(this.schemaName);
-            this.schema.setCSV(this.currentCSV.get(), this.headerEle.checked);
+            this.schema.setCSVData(this.currentCSV.get(), this.headerEle.checked);
             if (this.schema.isHidden()) {
                 this.schema.show();
             }
@@ -295,12 +314,14 @@ class ImportCSV extends Evented {
 
         if (null === objectSelected) {
             this.showError('Error: no selected object');
+            this.uploadCSVEle.classList.add('hidden');
             this.fileEle.value = null;
             return;
         }
         const object = objectsById[objectSelected];
         if (!object) {
             this.showError('No object found for oid: ' + objectSelected);
+            this.uploadCSVEle.classList.add('hidden');
             this.fileEle.value = null;
             return;
         }
@@ -352,15 +373,21 @@ class ImportCSV extends Evented {
 
             csvFinal.push(line);
         });
+
         if (errors.length) {
             this.csvButtons.classList.remove('hidden');
             this.csvText.classList.add('csv-error');
+            this.csvText.classList.remove('csv-ok');
             this.csvErrorEle.classList.remove('hidden');
             this.csvErrorEle.innerText = errors.join("\n");
             return;
         }
         this.currentCSV = new CSV();
         this.currentCSV.set(csvFinal);
+        if (this.headerEle.checked && !this.verifyHeader()) {
+            return;
+        }
+        this.csvText.classList.remove('csv-error');
         this.csvErrorEle.classList.add('hidden');
         this.csvText.classList.add('csv-ok');
         this.hideError();
@@ -370,12 +397,14 @@ class ImportCSV extends Evented {
     getObjectInfo() {
         if (this.oid === null) {
             this.showError('Error: no selected object');
+            this.uploadCSVEle.classList.add('hidden');
             return;
         }
 
         const object = objectsById[this.oid];
         if (!object) {
             this.showError('No object found for oid: ' + this.oid);
+            this.uploadCSVEle.classList.add('hidden');
             return;
         }
         const fields = object.fields;
@@ -386,6 +415,7 @@ class ImportCSV extends Evented {
 
     verifyHeader() {
         if (!this.headerEle.checked) {
+            this.checkSchema();
             return;
         }
 
@@ -395,10 +425,13 @@ class ImportCSV extends Evented {
 
         if (this.currentCSV.get().length === 0) {
             this.showError('CSV is empty');
+            this.uploadCSVEle.classList.add('hidden');
             return;
         }
         if (!this.oid) {
-            this.schema.setCSV(this.currentCSV.get(), true);
+            this.schema.setCSVData(this.currentCSV.get(), true);
+            this.checkColumnCountDifferences(this.currentCSV);
+            this.checkSchema();
             return;
         }
 
@@ -416,9 +449,11 @@ class ImportCSV extends Evented {
         if (!header) {
             this.headerEle.checked = false;
             this.showError("CSV headings don't match with the list of fields above");
+            this.uploadCSVEle.classList.add('hidden');
             return;
         }
 
+        this.checkSchema();
         return true;
     }
 }
@@ -524,6 +559,8 @@ class Chooser {
         this.schemaNameLabel.classList.add('hidden');
         fetchJson('/get_schemas', JSON.stringify({'dbid': dbid})).then((result) => {
             if (!result.schemas) {
+                this.schemaLoadingEle.style.display='none';
+                this.schemaLoading = false;
                 console.log("No schemas in /get_schemas result for " + dbid, result);
                 return;
             }
@@ -551,6 +588,10 @@ class Chooser {
             this.schemaNameEle.classList.remove('hidden');
             this.schemaNameLabel.classList.remove('hidden');
             this.schemaLoading = false;
+        }, reject => {
+            this.schemaLoadingEle.style.display='none';
+            this.schemaLoading = false;
+            alert("Can't load list of schemas for database (may not be able to connect): " + reject)
         });
     }
 
@@ -917,6 +958,7 @@ class Schema extends Evented {
             this.engineType = 'vertica';
             return;
         }
+        this.engineType = null;
         this.setShowTypes(false);
         this.setShowSchema(false);
     }
@@ -931,7 +973,7 @@ class Schema extends Evented {
         this.regenerateSchema();
     }
 
-    setCSV(csv, headerRow) {
+    setCSVData(csv, headerRow) {
         if (headerRow) {
             this.setHeaders(csv[0]);
             this.setTypes(Array.prototype.slice.call(csv, 1));
@@ -998,10 +1040,10 @@ class Schema extends Evented {
                 schemaColumnTypeSpan.style.visibility = 'hidden';
                 columnTypeEle.value = null;
                 schemaColumnTypeEle.value = null;
-                return;
             }
             else if (engineType === 'postgres') {
                 schemaColumnTypeSpan.style.visibility = 'hidden';
+                columnTypeSpan.style.visibility = 'visible';
             }
             else {
                 schemaColumnTypeSpan.style.visibility = 'visible';
@@ -1019,10 +1061,11 @@ class Schema extends Evented {
         }
         else if (engineType === 'postgres') {
             document.querySelector('.heading.schema-type-heading').style.visibility = 'hidden';
+            document.querySelector('.heading.type-heading').style.visibility = 'visible';
         }
         else {
-            document.querySelector('.heading.schema-type-heading').style.visibility = 'hidden';
-            document.querySelector('.heading.type-heading').style.visibility = 'hidden';
+            document.querySelector('.heading.schema-type-heading').style.visibility = 'visible';
+            document.querySelector('.heading.type-heading').style.visibility = 'visible';
         }
     }
 
@@ -1312,6 +1355,44 @@ class Schema extends Evented {
 class CSV {
     constructor() {
         this.csv = [];
+    }
+
+    getColumnCountDifferences(header) {
+        const colCounts = [];
+        const colCountHash = new Map();
+        let match = true;
+        this.csv.forEach(line => {
+            colCounts.push(line.length);
+            if (colCountHash.has(line.length)) {
+                colCountHash.set(line.length, colCountHash.get(line.length) + 1);
+            }
+            else {
+                colCountHash.set(line.length, 1);
+            }
+        });
+
+        if (colCountHash.size > 1) {
+            let topCount = -1;
+            if (header) {
+                topCount = this.csv[0].length;
+            }
+            else {
+                const colCounts1 = [];
+                colCountHash.forEach((value, len) => {
+                    colCounts1.push([value, len]);
+                });
+                colCounts1.sort((a, b) => a[0] < b[0]);
+                topCount = colCounts1[0][1];
+            }
+            const errors = [];
+            colCounts.forEach((colCount, idx) => {
+                if (colCount !== topCount) {
+                    errors.push("Line " + (idx + 1) + ": expected " + topCount + " fields, found " + colCount);
+                }
+            });
+            return errors;
+        }
+        return [];
     }
 
     parse(str) {

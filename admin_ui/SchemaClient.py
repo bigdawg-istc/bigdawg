@@ -61,6 +61,8 @@ class SchemaClient:
             cur.close()
             return True
         except psycopg2.Error as e:
+            self.conn.commit()
+            cur.close()
             return str(e)
 
 if __name__ == "__main__":

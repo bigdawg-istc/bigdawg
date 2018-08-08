@@ -107,6 +107,12 @@
             width: 75%;
             margin-bottom: 20px;
         }
+
+        .schema-note {
+            font-size: 10px;
+            font-style: italic;
+            font-weight: normal;
+        }
     </style>
     <script src="static/js/util.js?v={{ versions['util.js'] }}"></script>
     <script>
@@ -210,7 +216,7 @@
                 <div class="form-group existing">
                     <label for="object" class="control-label">Name:</label>
                     <select name="object" id="object" class="form-control">
-                        <option>Select Database First</option>
+                        <option>No objects found.</option>
                     </select>
                 </div>
                 <div id="new-div" class="form-group new hidden">
@@ -218,7 +224,7 @@
                     <input id="new" name="new" type="text" size="40" />
                     <div id="schema-loading" class="loading-small"></div>
                     <label for="schema-name" class="control-label">Schema Name:</label>
-                    <select id="schema-name" class="form-control">
+                    <select id="schema-name" name="schema_name" class="form-control">
                     </select>
                 </div>
             </div>
@@ -275,23 +281,24 @@
                 <div id="csv-create-schema-wrap">
                     <div id="create-table">
                         <h4>Create TABLE</h4>
-                        <em>While this is editable, please be careful as the field names above are used in the catalog, and if they don't match it could be an issue.</em>
                         <textarea id="create-syntax" name="create-syntax" rows="10">
-                        </textarea>
-                        <button type="button" class="btn hidden" title="Regenerate from fields">Regenerate</button>
+                        </textarea><br>
+                        <em>While the above is editable, please be careful as the field names above are used in the catalog, and if they don't match it could be an issue.</em>
+                        <br><button type="button" class="btn btn-outline-secondary hidden" title="Regenerate from fields">Regenerate</button>
                     </div>
                     <div id="create-schema">
-                        <h4>Schema (Postgres syntax -- for BigDAWG catalog)</h4>
+                        <h4>Schema <span class="schema-note">(PostgreSQL syntax -- for BigDAWG catalog)</span></h4>
                         <textarea id="schema-syntax" name="schema-syntax" rows="10">
-                        </textarea>
-                        <button type="button" class="btn hidden" title="Regenerate from fields">Regenerate</button>
+                        </textarea><br>
+                        <em>While the above is editable, please be careful as the field names above are used in the catalog, and if they don't match it could be an issue.</em>
+                        <br><button type="button" class="btn btn-outline-secondary hidden" title="Regenerate from fields">Regenerate</button>
                     </div>
                 </div>
             </div>
-            <button class="btn btn-primary hidden" id="upload-csv">Upload CSV</button>
-            <button class="btn btn-default hidden" id="reset">Reset</button>
-            <div id="upload-loading" class="loading"></div>
             <div id="upload-error" class="alert alert-danger hidden" role="alert"></div>
+            <button class="btn btn-primary hidden" id="upload-csv">Upload CSV</button>
+            <button class="btn btn-outline-secondary hidden" id="reset">Reset</button>
+            <div id="upload-loading" class="loading"></div>
         </form>
     </div>
     <div id="success" class="alert alert-success hidden" role="alert"></div>

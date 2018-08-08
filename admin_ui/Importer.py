@@ -7,7 +7,22 @@ import json, numbers
 import os
 import psycopg2
 import mysql.connector
+import re
+
+
+try:
+    import vertica_python
+except:
+    pass
+
+try:
+    import pyaccumulo
+except:
+    pass
+
 from Util import Util
+
+supportedTypes = ['PostgreSQL', 'MySQL', 'Vertica']
 
 class Importer:
     """
@@ -29,8 +44,22 @@ class Importer:
         if not isinstance(dbid, numbers.Number):
             return Util.error_msg("dbid is not a number")
 
-        (connection_properties, host, port, database_name, user, password) = self.get_connection_info(dbid)
-        conn = self.get_connection_postgres(host, port, database_name, user, password)
+        result = self.get_connection_info(dbid)
+        if isinstance(result, str): # should be an error message then
+            return result
+        try:
+            if isinstance(result, basestring):
+                return result
+        except NameError:
+            pass
+
+        (connection_properties, host, port, databaseName, user, password) = result
+        if connection_properties.startswith("Vertica"):
+            conn = self.get_connection_vertica(host, port, databaseName, user, password)
+            statement = "SELECT schema_name from v_catalog.schemata where schema_name not like 'v_%' and schema_name != 'TxtIndex'"
+        else:
+            conn = self.get_connection_postgres(host, port, databaseName, user, password)
+            statement = "SELECT schema_name from information_schema.schemata where schema_name not like 'pg_%' and schema_name != 'information_schema'"
         if isinstance(conn, str): # should be an error message then
             return conn
         try:
@@ -40,7 +69,7 @@ class Importer:
             pass
 
         cur = conn.cursor()
-        cur.execute("SELECT schema_name from information_schema.schemata where schema_name not like 'pg_%' and schema_name != 'information_schema'");
+        cur.execute(statement)
         rows = cur.fetchall()
         cur.close()
 
@@ -49,8 +78,6 @@ class Importer:
             schemas.append(row[0])
 
         return json.JSONEncoder().encode({ "success": True, "schemas": schemas })
-
-
 
     def create_table(self, data):
         if not data.has_key('dbid'):
@@ -70,28 +97,57 @@ class Importer:
 
         fields = data['fields']
 
-        database_row = self.catalog_client.get_database(dbid)
-        if not database_row:
+        databaseRow = self.catalog_client.get_database(dbid)
+        if not databaseRow:
             return Util.error_msg("Could not find database for dbid: " + str(dbid))
 
         oid = self.catalog_client.insert_object(fieldsName, ','.join(fields), dbid, dbid)
         if not isinstance(oid, int):
             return Util.error_msg(oid)
 
+        (connection_properties, host, port, databaseName, user, password) = self.get_connection_info(dbid)
+        supported = False
+        for supportedType in supportedTypes:
+            if (connection_properties.startswith(supportedType)):
+                supported = True
+
+        if not supported:
+            return Util.error_msg("Engine not supported: " + connection_properties)
+
+        # @TODO - fix accumulo driver issue so this will work, also find a python3 equivalent
+        if connection_properties.startswith("Accumulo"):
+            conn = self.get_connection_accumulo(host, port, user, password)
+            tableName = data['fields_name']
+            conn.create_table(tableName)
+            return oid
+
         if data.has_key('schema'):
             schema = data['schema']
             result = self.schema_client.execute_statement(schema, None)
             if result != True:
-                return Util.error_msg("Problem creating schema: " + str(result))
+                if (data.has_key('schema_name')):
+                    createSchemaContainer = "create schema " + data['schema_name']
+                    result = self.schema_client.execute_statement(createSchemaContainer, None)
+                    if result != True:
+                        return Util.error_msg("Problem creating schema (1): " + str(result))
+                    else:
+                        result = self.schema_client.execute_statement(schema, None)
+                        if result != True:
+                            return Util.error_msg("Problem creating schema (2): " + str(result))
+                else:
+                    return Util.error_msg("Problem creating schema (2): " + str(result))
+
+
 
         # Postgres create table
         create = data['create']
-        (connection_properties, host, port, database_name, user, password) = self.get_connection_info(dbid)
 
         if (connection_properties.startswith("PostgreSQL")):
-            conn = self.get_connection_postgres(host, port, database_name, user, password)
+            conn = self.get_connection_postgres(host, port, databaseName, user, password)
         elif (connection_properties.startswith("MySQL")):
-            conn = self.get_connection_mysql(host, port, database_name, user, password)
+            conn = self.get_connection_mysql(host, port, databaseName, user, password)
+        elif (connection_properties.startswith("Vertica")):
+            conn = self.get_connection_vertica(host, port, databaseName, user, password)
         else:
             return Util.error_msg("Unsupported engine")
 
@@ -124,16 +180,16 @@ class Importer:
         return False
 
     def import_data(self, data):
-        data_import = json.loads(data)
-        if not data_import:
+        dataImport = json.loads(data)
+        if not dataImport:
             return Util.error_msg("could not parse json")
 
-        if not data_import.has_key('oid'):
-            oid = self.create_table(data_import)
+        if not dataImport.has_key('oid'):
+            oid = self.create_table(dataImport)
             if not isinstance(oid, int):
                 return oid
         else:
-            oid = data_import['oid']
+            oid = dataImport['oid']
 
         if not isinstance(oid, numbers.Number):
             return Util.error_msg("oid is not a number")
@@ -142,6 +198,14 @@ class Importer:
         if not object_row:
             return Util.error_msg("could not find oid in database")
 
+        dbid = object_row[4]
+        if dataImport.has_key('dbid'):
+            dbid = dataImport['dbid']
+
+        (connection_properties, host, port, databaseName, user, password) = self.get_connection_info(dbid)
+        if (connection_properties.startswith("Accumulo")):
+            return Util.error_msg("Accumulo not yet supported")
+
         fields = object_row[2]
         if not fields:
             return Util.error_msg("no fields for object in database")
@@ -149,11 +213,11 @@ class Importer:
         if not isinstance(fields, str):
             return Util.error_msg("fields is not a string")
 
-        fields_split = fields.split(",")
-        if not fields_split:
+        fieldsSplit = fields.split(",")
+        if not fieldsSplit:
             return Util.error_msg("unable to split fields: " + fields)
 
-        fields_len = len(fields_split)
+        fieldsLen = len(fieldsSplit)
 
         name = object_row[1]
         if not name:
@@ -162,90 +226,114 @@ class Importer:
         if not isinstance(name, str):
             return Util.error_msg("object name is not a string, oid: " + str(oid))
 
-        name_parts = name.split('.')
-        if not len(name_parts) == 2:
-            table_name = name_parts[0]
+        nameParts = name.split('.')
+        if not len(nameParts) == 2:
+            table_name = nameParts[0]
             table_schema = 'public'
         else:
-            table_schema = name_parts[0]
-            table_name = name_parts[1]
+            table_schema = nameParts[0]
+            table_name = nameParts[1]
 
         schema = self.schema_client.get_datatypes_for_table(table_schema, table_name)
         if not schema:
             return Util.error_msg("could not lookup schema for table_schema: " + table_schema + ", table_name: " + table_name)
 
-        data_types = {}
+        dataTypes = {}
         for row in schema:
             if len(row) < 4:
                 return Util.error_msg("schema row length unexpected: " + str(len(row)))
             column_name = row[2]
-            data_type = row[3]
-            data_types[column_name] = data_type
+            dataType = row[3]
+            dataTypes[column_name] = dataType
 
-        if not data_import.has_key('csv'):
+        if not dataImport.has_key('csv'):
             return Util.error_msg("no csv in json")
 
-        csv_data = data_import['csv']
-        if not csv_data:
+        csvData = dataImport['csv']
+        if not csvData:
             return Util.error_msg("csv data blank")
 
-        if not isinstance(csv_data, list):
+        if not isinstance(csvData, list):
             return Util.error_msg("csv data is not a list")
 
-        row_num = 1
+        if (connection_properties.startswith("Accumulo")):
+            return self.insert_data_accumulo(csvData, fieldsSplit, name, host, port, user, password)
+
+        rowNum = 1
         inserts = []
-        for row in csv_data:
+        for row in csvData:
             if not isinstance(row, list):
-                return Util.error_msg("csv data at row " + str(row_num) + " not a list")
-            if len(row) != fields_len:
-                return Util.error_msg("csv data at row " + str(row_num) + " not right length (inital row length " + str(fields_len) + " but this row is length " + str(len(row)))
+                return Util.error_msg("csv data at row " + str(rowNum) + " not a list")
+            if len(row) != fieldsLen:
+                return Util.error_msg("csv data at row " + str(rowNum) + " not right length (inital row length " + str(fieldsLen) + " but this row is length " + str(len(row)))
 
-            insert_statement = "insert into " + name + "("
-            values_statement = ""
+            insertStatement = "insert into " + name + "("
+            valuesStatement = ""
             values = []
-            for i in range(0, fields_len):
-                cur_field = fields_split[i]
-                if not data_types.has_key(cur_field):
-                    return Util.error_msg("not able to find data type for " + cur_field)
+            for i in range(0, fieldsLen):
+                curField = fieldsSplit[i]
+                if not dataTypes.has_key(curField):
+                    return Util.error_msg("not able to find data type for " + curField)
                 if i != 0:
-                    insert_statement += ","
-                    values_statement += ","
-                insert_statement += cur_field
-                data_type = data_types[cur_field]
-                if data_type == 'integer' and not isinstance(row[i], numbers.Number):
-                    return Util.error_msg("row " + str(row_num) + " value " + str(i) + " expected to be instance of number, instead: " + str(row[i]))
-                if data_type == 'double precision' and not isinstance(row[i], numbers.Number):
-                    return Util.error_msg("row " + str(row_num) + " value " + str(i) + " expected to be instance of number, instead: " + str(row[i]))
-                if data_type == 'string' and not isinstance(row[i], str):
-                    return Util.error_msg("row " + str(row_num) + " value " + str(i) + " expected to be instance of string, instead: " + str(row[i]))
+                    insertStatement += ","
+                    valuesStatement += ","
+                insertStatement += curField
+                dataType = dataTypes[curField]
+                numberRe = re.compile('^-?[0-9]+$')
+                doubleRe = re.compile('^-?[0-9]+\.?[0-9]*$')
+                if dataType == 'integer' and not numberRe.match(str(row[i])):
+                    return Util.error_msg("row " + str(rowNum) + " value " + str(i) + " expected to be instance of number, instead: " + str(row[i]))
+                if dataType == 'double precision' and not doubleRe.match(str(row[i])):
+                    return Util.error_msg("row " + str(rowNum) + " value " + str(i) + " expected to be instance of number, instead: " + str(row[i]))
+                if dataType == 'string' and not isinstance(row[i], str):
+                    return Util.error_msg("row " + str(rowNum) + " value " + str(i) + " expected to be instance of string, instead: " + str(row[i]))
 
-                values_statement += "%s"
+                valuesStatement += "%s"
                 values.append(row[i])
 
             inserts.append({
-                "statement": insert_statement + ") values (" + values_statement + ")",
+                "statement": insertStatement + ") values (" + valuesStatement + ")",
                 "values": values
             })
-            row_num += 1
+            rowNum += 1
         return self.insert_data(object_row[4], inserts)
 
+    def insert_data_accumulo(self, csvData, fields, name, host, port, user, password):
+        conn = self.get_connection_accumulo(host, port, user, password)
+        if not conn.table_exists(name):
+            return Util.error_msg("Accumulo table " + name + " does not exist")
+
+        wr = conn.create_batch_writer(name)
+        fieldsLen = len(fields)
+        rowNum = 1
+        for row in csvData:
+            m = pyaccumulo.Mutation(str(rowNum))
+            for i in range(0, fieldsLen):
+                field = fields[i]
+                m.put(str(i + 1), field, str(row[i]))
+            wr.add_mutation(m)
+            rowNum += 1
+
+        wr.close()
+        return Util.success_msg()
+
     def get_connection_info(self, dbid):
-        database_row = self.catalog_client.get_database(dbid)
-        if not database_row:
+        databaseRow = self.catalog_client.get_database(dbid)
+        if not databaseRow:
             return Util.error_msg("Can't find database from dbid " + str(dbid))
 
-        engine_id = database_row[1]
-        database_name = database_row[2]
-        user = database_row[3]
-        password = database_row[4]
+        engineId = databaseRow[1]
+        databaseName = databaseRow[2]
+        user = databaseRow[3]
+        password = databaseRow[4]
 
-        if not engine_id:
+        if not engineId:
             return Util.error_msg("Unknown engine ID for dbid " + str(dbid))
 
-        if not database_name:
+        if not databaseName:
             return Util.error_msg("Can't lookup database name")
 
-        if not isinstance(database_name, str):
+        if not isinstance(databaseName, str):
             return Util.error_msg("database name not a string")
 
         if not isinstance(user, str):
@@ -254,60 +342,76 @@ class Importer:
         if not isinstance(password, str):
             return Util.error_msg("password not a string")
 
-        engine_row = self.catalog_client.get_engine(engine_id)
+        engineRow = self.catalog_client.get_engine(engineId)
 
-        if not engine_row:
-            return Util.error_msg("Could not lookup engine " + str(engine_id))
+        if not engineRow:
+            return Util.error_msg("Could not lookup engine " + str(engineId))
 
-        host = engine_row[2]
-        port = engine_row[3]
-        connection_properties = engine_row[4]
+        host = engineRow[2]
+        port = engineRow[3]
+        connection_properties = engineRow[4]
 
         if not isinstance(connection_properties, str):
             return Util.error_msg("connection properties must be a string")
 
         if not connection_properties:
-            return Util.error_msg("unknown connection properties for engine: " + str(engine_id))
+            return Util.error_msg("unknown connection properties for engine: " + str(engineId))
 
         if not port:
-            return Util.error_msg("unknown port for engine: " + str(engine_id))
+            return Util.error_msg("unknown port for engine: " + str(engineId))
 
         if not isinstance(host, str):
             return Util.error_msg("host is not a string")
 
         # Hosts can be specified in the environment (or .env file) as "NAME_OF_SYSTEM" where [.-] becomes "_"
         #  (dot or dash becomes underscore)
-        env_hostname_key = host.upper().replace(".","_").replace("-","_")
-        local_hostname = os.environ.get(env_hostname_key) or self.catalog_client.host
-        local_port = os.environ.get(env_hostname_key) or port
+        envHostnameKey = host.upper().replace(".","_").replace("-","_")
+        localHostname = os.environ.get(envHostnameKey) or self.catalog_client.host
+        localPort = os.environ.get(envHostnameKey) or port
 
-        return (connection_properties, local_hostname, local_port, database_name, user, password)
+        return (connection_properties, localHostname, localPort, databaseName, user, password)
 
-    def get_connection_postgres(self, host, port, database_name, user, password):
-        print "Importer: connecting to: " + database_name + ", " + user + ", " + host + ", " + str(port)
+    def get_connection_postgres(self, host, port, databaseName, user, password):
+        print "Importer: connecting to: " + databaseName + ", " + user + ", " + host + ", " + str(port)
         try:
-            conn = psycopg2.connect(database=database_name, user=user, password=password, host=host, port=port)
+            conn = psycopg2.connect(database=databaseName, user=user, password=password, host=host, port=port)
         except psycopg2.OperationalError as e:
             return Util.error_msg("Unable to connect: " + str(e))
 
         return conn
 
-    def get_connection_mysql(self, host, port, database_name, user, password):
+    def get_connection_vertica(self, host, port, databaseName, user, password):
+        print "Importer: connecting to: " + databaseName + ", " + user + ", " + host + ", " + str(port)
         try:
-            conn = mysql.connector.connect(user=user, password=password, host=host, port=port, database=database_name)
+            conn = vertica_python.connect(database=databaseName, user=user, password=password, host=host, port=port)
+        except vertica_python.OperationalError as e:
+            return Util.error_msg("Unable to connect: " + str(e))
+
+        return conn
+
+    def get_connection_mysql(self, host, port, databaseName, user, password):
+        try:
+            conn = mysql.connector.connect(user=user, password=password, host=host, port=port, database=databaseName)
         except mysql.connector.Error as e:
             return Util.error_msg("Could not connect: " + str(e))
 
         return conn
 
+    def get_connection_accumulo(self, host, port, user, password):
+        conn = pyaccumulo.Accumulo(host=host, port=port, user=user, password=password)
+        return conn
+
+
     def insert_data(self, dbid, inserts):
-        (connection_properties, host, port, database_name, user, password) = self.get_connection_info(dbid)
-        print "Importer: connecting to: " + database_name + ", " + user + ", " + host + ", " + str(port)
+        (connection_properties, host, port, databaseName, user, password) = self.get_connection_info(dbid)
+        print "Importer: connecting to: " + databaseName + ", " + user + ", " + host + ", " + str(port)
 
         if connection_properties.startswith("PostgreSQL"):
-            conn = self.get_connection_postgres(host, port, database_name, user, password)
+            conn = self.get_connection_postgres(host, port, databaseName, user, password)
         elif connection_properties.startswith("MySQL"):
-            conn = self.get_connection_mysql(host, port, database_name, user, password)
+            conn = self.get_connection_mysql(host, port, databaseName, user, password)
+        elif connection_properties.startswith("Vertica"):
+            conn = self.get_connection_vertica(host, port, databaseName, user, password)
         else:
             return Util.error_msg("Unsupported engine.")
 
