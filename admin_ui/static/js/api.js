@@ -1311,14 +1311,14 @@ class Master {
     addEventListeners() {
         this.apiForm.addEventListener('add', () => {
            this.apiList.load();
+           this.showListTab();
         });
 
         this.apiList.addEventListener('edit', this.edit.bind(this));
         this.apiList.addEventListener('delete', this.delete.bind(this));
         this.apiList.addEventListener('api_list', this.processApiList.bind(this));
         this.apiForm.addEventListener('reset', this.normalMode.bind(this));
-        document.getElementById('add2-tab').addEventListener('click', this.add2.bind(this));
-
+        document.getElementById('add2-tab').addEventListener('click', this.add2.bind(this));\
     }
 
     add2() {
@@ -1369,6 +1369,15 @@ class Master {
         document.getElementById('add').classList.add('active');
         document.getElementById('add').classList.add('show');
         document.getElementById('add-tab').classList.add('active');
+    }
+
+    showListTab() {
+        document.getElementById('list').classList.add('active');
+        document.getElementById('list').classList.add('show');
+        document.getElementById('list-tab').classList.add('active');
+        document.getElementById('add').classList.remove('active');
+        document.getElementById('add').classList.remove('show');
+        document.getElementById('add-tab').classList.remove('active');
     }
 
     edit(dbid) {
