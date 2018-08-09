@@ -33,11 +33,11 @@ class Importer:
         self.schema_client = schema_client
 
     def get_schemas(self, data):
-        data_import = json.loads(data)
+        data_import = json.loads(data.decode("utf-8"))
         if not data_import:
             return Util.error_msg("could not parse json")
 
-        if not data_import.has_key('dbid'):
+        if 'dbid' not in data_import:
             return Util.error_msg("No dbid passed in")
 
         dbid = data_import['dbid']
@@ -80,19 +80,19 @@ class Importer:
         return json.JSONEncoder().encode({ "success": True, "schemas": schemas })
 
     def create_table(self, data):
-        if not data.has_key('dbid'):
+        if 'dbid' not in data:
             return Util.error_msg("No dbid in request")
 
         dbid = data['dbid']
         if not isinstance(dbid, numbers.Number):
             return Util.error_msg("dbid is not a number")
 
-        if not data.has_key('fields_name'):
+        if 'fields_name' not in data:
             return Util.error_msg("fields_name needs to be provided")
 
         fieldsName = data['fields_name']
 
-        if not data.has_key('fields'):
+        if 'fields' not in data:
             return Util.error_msg("expecting fields to be passed in")
 
         fields = data['fields']
@@ -121,11 +121,11 @@ class Importer:
             conn.create_table(tableName)
             return oid
 
-        if data.has_key('schema'):
+        if 'schema' in data:
             schema = data['schema']
             result = self.schema_client.execute_statement(schema, None)
             if result != True:
-                if (data.has_key('schema_name')):
+                if 'schema_name' in data:
                     createSchemaContainer = "create schema " + data['schema_name']
                     result = self.schema_client.execute_statement(createSchemaContainer, None)
                     if result != True:
@@ -180,11 +180,11 @@ class Importer:
         return False
 
     def import_data(self, data):
-        dataImport = json.loads(data)
+        dataImport = json.loads(data.decode("utf-8"))
         if not dataImport:
             return Util.error_msg("could not parse json")
 
-        if not dataImport.has_key('oid'):
+        if 'oid' not in dataImport:
             oid = self.create_table(dataImport)
             if not isinstance(oid, int):
                 return oid
@@ -194,19 +194,19 @@ class Importer:
         if not isinstance(oid, numbers.Number):
             return Util.error_msg("oid is not a number")
 
-        object_row = self.catalog_client.get_object(oid)
-        if not object_row:
+        objectRow = self.catalog_client.get_object(oid)
+        if not objectRow:
             return Util.error_msg("could not find oid in database")
 
-        dbid = object_row[4]
-        if dataImport.has_key('dbid'):
+        dbid = objectRow[4]
+        if 'dbid' in dataImport:
             dbid = dataImport['dbid']
 
         (connection_properties, host, port, databaseName, user, password) = self.get_connection_info(dbid)
         if (connection_properties.startswith("Accumulo")):
             return Util.error_msg("Accumulo not yet supported")
 
-        fields = object_row[2]
+        fields = objectRow[2]
         if not fields:
             return Util.error_msg("no fields for object in database")
 
@@ -219,7 +219,7 @@ class Importer:
 
         fieldsLen = len(fieldsSplit)
 
-        name = object_row[1]
+        name = objectRow[1]
         if not name:
             return Util.error_msg("unable to find name for this object: " + str(oid))
 
@@ -242,11 +242,11 @@ class Importer:
         for row in schema:
             if len(row) < 4:
                 return Util.error_msg("schema row length unexpected: " + str(len(row)))
-            column_name = row[2]
+            columnName = row[2]
             dataType = row[3]
-            dataTypes[column_name] = dataType
+            dataTypes[columnName] = dataType
 
-        if not dataImport.has_key('csv'):
+        if 'csv' not in dataImport:
             return Util.error_msg("no csv in json")
 
         csvData = dataImport['csv']
@@ -272,7 +272,7 @@ class Importer:
             values = []
             for i in range(0, fieldsLen):
                 curField = fieldsSplit[i]
-                if not dataTypes.has_key(curField):
+                if curField not in dataTypes:
                     return Util.error_msg("not able to find data type for " + curField)
                 if i != 0:
                     insertStatement += ","
@@ -296,7 +296,7 @@ class Importer:
                 "values": values
             })
             rowNum += 1
-        return self.insert_data(object_row[4], inserts)
+        return self.insert_data(objectRow[4], inserts)
 
     def insert_data_accumulo(self, csvData, fields, name, host, port, user, password):
         conn = self.get_connection_accumulo(host, port, user, password)
@@ -372,7 +372,7 @@ class Importer:
         return (connection_properties, localHostname, localPort, databaseName, user, password)
 
     def get_connection_postgres(self, host, port, databaseName, user, password):
-        print "Importer: connecting to: " + databaseName + ", " + user + ", " + host + ", " + str(port)
+        print("Importer: connecting to: " + databaseName + ", " + user + ", " + host + ", " + str(port))
         try:
             conn = psycopg2.connect(database=databaseName, user=user, password=password, host=host, port=port)
         except psycopg2.OperationalError as e:
@@ -381,7 +381,7 @@ class Importer:
         return conn
 
     def get_connection_vertica(self, host, port, databaseName, user, password):
-        print "Importer: connecting to: " + databaseName + ", " + user + ", " + host + ", " + str(port)
+        print("Importer: connecting to: " + databaseName + ", " + user + ", " + host + ", " + str(port))
         try:
             conn = vertica_python.connect(database=databaseName, user=user, password=password, host=host, port=port)
         except vertica_python.OperationalError as e:
@@ -404,7 +404,7 @@ class Importer:
 
     def insert_data(self, dbid, inserts):
         (connection_properties, host, port, databaseName, user, password) = self.get_connection_info(dbid)
-        print "Importer: connecting to: " + databaseName + ", " + user + ", " + host + ", " + str(port)
+        print("Importer: connecting to: " + databaseName + ", " + user + ", " + host + ", " + str(port))
 
         if connection_properties.startswith("PostgreSQL"):
             conn = self.get_connection_postgres(host, port, databaseName, user, password)
@@ -421,8 +421,8 @@ class Importer:
         cur = conn.cursor()
         for insert in inserts:
             try:
-                print insert['statement']
-                print insert['values']
+                print(insert['statement'])
+                print(insert['values'])
                 cur.execute(insert['statement'], insert['values'])
                 conn.commit()
             except psycopg2.Error as e:

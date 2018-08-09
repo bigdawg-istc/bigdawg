@@ -190,7 +190,7 @@ def api_form_post():
 
 @app.route('/get_engine_by_name', methods=["POST"])
 def get_engine_by_name():
-    requestObj = json.loads(request.data)
+    requestObj = json.loads(request.data.decode("utf-8"))
     catalogClient = getCatalogClient()
     engine = catalogClient.get_engine_by_name(requestObj['name'])
     if engine is None:
@@ -200,7 +200,7 @@ def get_engine_by_name():
 @app.route('/run_query', methods=["POST"])
 def runQuery():
     query = request.data
-    print os.environ.get('QUERY_SCHEME'),os.environ.get('QUERY_HOST'),int(os.environ.get('QUERY_PORT'))
+    print(os.environ.get('QUERY_SCHEME'),os.environ.get('QUERY_HOST'),int(os.environ.get('QUERY_PORT')))
     result = QueryClient(os.environ.get('QUERY_SCHEME'),os.environ.get('QUERY_HOST'),int(os.environ.get('QUERY_PORT'))).run_query(query)
     return render_template_string(result)
 

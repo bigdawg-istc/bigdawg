@@ -63,19 +63,19 @@ class ApiForm:
         return Util.success_msg()
 
     def process_api_form(self, data):
-        dataApi = json.loads(data)
+        dataApi = json.loads(data.decode("utf-8"))
         if not dataApi:
             return Util.error_msg("could not parse json")
 
         eid = None
-        if dataApi.has_key('api'):
-            if dataApi.has_key('endpoint'):
-                endpoint_data = dataApi['endpoint']
+        if 'api' in dataApi:
+            if 'endpoint' in dataApi:
+                endpointData = dataApi['endpoint']
                 # Check for duplicate url first, otherwise we'll create the API first and then hit the error
-                url = endpoint_data['url']
+                url = endpointData['url']
                 oid = None
-                if endpoint_data.has_key('oid'):
-                    oid = endpoint_data['oid']
+                if 'oid' in endpointData:
+                    oid = endpointData['oid']
 
                 testObject = self.catalog_client.get_object_by_name_island_name(url, "API")
                 if oid is not None:
@@ -94,7 +94,7 @@ class ApiForm:
             else:
                 return Util.error_msg(result)
 
-        if dataApi.has_key('endpoint'):
+        if 'endpoint' in dataApi:
             result = self.process_endpoint(dataApi['endpoint'], eid)
 
             if result != True:
@@ -105,7 +105,7 @@ class ApiForm:
     def process_api(self, apiData):
         name = apiData['name']
         eid = None
-        if apiData.has_key('eid'):
+        if 'eid' in apiData:
             eid = apiData['eid']
 
         testEngine = self.catalog_client.get_engine_by_name(name)
@@ -127,15 +127,15 @@ class ApiForm:
         islandId = island[0]
 
         host = None
-        if (apiData.has_key('host')):
+        if 'host' in apiData:
             host = apiData['host']
 
         port = None
-        if (apiData.has_key('port')):
+        if 'port' in apiData:
             port = apiData['port']
 
         connection_properties = None
-        if (apiData.has_key('connection_properties')):
+        if 'connection_properties' in apiData:
             connection_properties = apiData['connection_properties']
 
         # update case
@@ -166,7 +166,7 @@ class ApiForm:
             return "Can't find engine: " + engineId
 
         dbid = None
-        if endpointData.has_key('dbid'):
+        if 'dbid' in endpointData:
             dbid = endpointData['dbid']
 
         testDatabase = self.catalog_client.get_database_by_engine_id_name(engineId, name)
@@ -182,7 +182,7 @@ class ApiForm:
 
         url = endpointData['url']
         oid = None
-        if endpointData.has_key('oid'):
+        if 'oid' in endpointData:
             oid = endpointData['oid']
 
         testObject = self.catalog_client.get_object_by_name_island_name(url, "API")
@@ -197,7 +197,7 @@ class ApiForm:
             return Util.error_msg("Duplicate url for API Island: " + url)
 
         password_field = None
-        if endpointData.has_key("password_field"):
+        if 'password_field' in endpointData:
             password_field = endpointData['password_field']
 
         if dbid is not None:
@@ -211,7 +211,7 @@ class ApiForm:
             dbid = result
 
         fields = None
-        if endpointData.has_key('result_key'):
+        if 'result_key' in endpointData:
             fields = endpointData['result_key']
 
         if oid is not None:

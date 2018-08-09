@@ -11,7 +11,7 @@ class Util:
     @staticmethod
     def error_msg(msg):
         msg = str(msg)
-        print "error: " + msg
+        print("error: " + msg)
         return json.JSONEncoder().encode({ "success": False, "error": msg });
 
     @staticmethod
