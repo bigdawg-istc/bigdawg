@@ -106,6 +106,7 @@ public class RESTHandler implements ExecutorEngine, DBHandler {
             if (jsonObject.containsKey("result-key")) {
                 resultKey = (String) jsonObject.get("result-key");
             }
+
             RESTQueryResult restQueryResult = this.parseResult(fetchResult, resultKey);
             if (restQueryResult == null) {
                 queryResult = Optional.empty();
@@ -132,14 +133,17 @@ public class RESTHandler implements ExecutorEngine, DBHandler {
         if (resultKey == null) {
             resultKey = restConnectionInfo.getResultKey();
         }
+        RESTHandler.log.info("RESTHandler - result_key" + String.valueOf(resultKey == null ? resultKey : "<null>"));
+
         try {
             // @TODO support other content types e.g. text/csv or tsv or even maybe xml?
             JSONParser jsonParser = new JSONParser();
             if (!URLUtil.headersContain(fetchResult.responseHeaders, "content-type", URLUtil.HeaderMatch.jsonHeaderMatchTypes, ";")) {
                 throw new ApiException("Unsupported content type: " + fetchResult.responseHeaders.get("content-type").get(0));
             }
-
             Object object = jsonParser.parse(fetchResult.response);
+            RESTHandler.log.info("RESTHandler - parsing result: " + String.valueOf(fetchResult.response));
+
             return this.parseJSONResult(resultKey, object);
         } catch (ParseException e) {
             throw new ApiException("Exception encountered trying to parse the result: " + e.toString());
@@ -203,8 +207,7 @@ public class RESTHandler implements ExecutorEngine, DBHandler {
             rows.add(row);
             rowsWithHeadings.add(rowWithHeadings);
         }
-        RESTQueryResult restQueryResult = new RESTQueryResult(headers, rows, rowsWithHeadings, restConnectionInfo);
-        return restQueryResult;
+        return new RESTQueryResult(headers, rows, rowsWithHeadings, restConnectionInfo);
     }
 
     private String getFromJSONObject(List<Tuple.Tuple3<String, String, Boolean>> headers,
@@ -374,6 +377,7 @@ public class RESTHandler implements ExecutorEngine, DBHandler {
             return new RESTQueryResult(headers, rows, rowsWithHeaders, restConnectionInfo);
         }
 
+        // Determine if the index key is nested
         if (!jsonObject.containsKey(resultKey)) { // nested key? e.g. something.something_else
             int pos;
             if ((pos = resultKey.indexOf('.')) > 0 && pos < resultKey.length() - 1) {
@@ -401,6 +405,10 @@ public class RESTHandler implements ExecutorEngine, DBHandler {
      * @return
      */
     private RESTQueryResult getBasicRESTQueryResult(@Nullable Object object) {
+        if (object == null) {
+            return null;
+        }
+
         List<String> rows = new ArrayList<>();
         String row = object.toString();
         rows.add(row);
