@@ -353,6 +353,14 @@ public final class URLUtil {
 
     }
 
+    /**
+     * Tries to find see if a particular
+     * @param headers
+     * @param key header to match against
+     * @param headerMatches header match expressions to test against
+     * @param delimiter
+     * @return
+     */
     static boolean headersContain(Map<String, List<String>> headers, String key, List<HeaderMatch> headerMatches, String delimiter) {
         List<String> contentTypes = headers.get(key.toUpperCase());
         if (contentTypes == null) {
