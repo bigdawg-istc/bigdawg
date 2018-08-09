@@ -147,8 +147,8 @@ class ApiForm extends Evented {
             data['api'][key] = value;
         });
 
-        if (api.has('connection_properties')) {
-            data['api']['connection_properties'] = 'REST:' + ApiForm.convertConnectionProperties(api.get('connection_properties'));
+        if (api.size > 0) {
+            data['api']['connection_properties'] = 'REST:' + (api.has('connection_properties') ? ApiForm.convertConnectionProperties(api.get('connection_properties')) : "");
         }
 
         endpoint.forEach((value, key) => {
@@ -703,8 +703,20 @@ class FormType {
 class Api extends FormType {
     constructor(className) {
         super(className);
+    }
+}
+
+class Endpoint extends FormType {
+    constructor(className) {
+        super(className);
+        this.requiredParams = new AddElement('required_param');
+        this.optionalParams = new AddElement('optional_param');
+        this.queryParams = new KeyValueParameters('query_params', 'query_params', 'Extra Query Parameters');
+        this.enginesSelect = document.getElementById('engine_id');
+        this.engineLoading = document.getElementById('engine-loading');
         this.postEncodingDiv = document.querySelector('.post-encoding');
         this.postInput = document.querySelector('.method').querySelector('input[value=POST]');
+        this.showLoading();
         this.addEventListeners();
     }
 
@@ -712,11 +724,6 @@ class Api extends FormType {
         document.querySelectorAll('input[name=method]').forEach(input => {
             input.addEventListener('change', this.togglePostEncoding.bind(this));
         });
-    }
-
-    reset() {
-        super.reset();
-        this.togglePostEncoding();
     }
 
     togglePostEncoding() {
@@ -734,23 +741,6 @@ class Api extends FormType {
         });
     }
 
-    show(skipClass) {
-        super.show(skipClass);
-        const checked = this.postInput.checked;
-        this.togglePostEncoding();
-    }
-}
-
-class Endpoint extends FormType {
-    constructor(className) {
-        super(className);
-        this.requiredParams = new AddElement('required_param');
-        this.optionalParams = new AddElement('optional_param');
-        this.queryParams = new KeyValueParameters('query_params', 'query_params', 'Extra Query Parameters');
-        this.enginesSelect = document.getElementById('engine_id');
-        this.engineLoading = document.getElementById('engine-loading');
-        this.showLoading();
-    }
 
     hideLoading() {
         this.engineLoading.style.display='none';
@@ -798,6 +788,7 @@ class Endpoint extends FormType {
         this.queryParams.reset();
         this.requiredParams.reset();
         this.optionalParams.reset();
+        this.togglePostEncoding();
     }
 
     hide() {
@@ -808,13 +799,17 @@ class Endpoint extends FormType {
     show(skip) {
         super.show(skip);
         this.queryParams.toggleParameters();
+        const checked = this.postInput.checked;
+        this.togglePostEncoding();
     }
 
     getVisibleFormData(pairs = new Map()) {
         pairs = super.getVisibleFormData(pairs);
         const requiredParamsData = this.requiredParams.getFormData();
         const optionalParamsData = this.optionalParams.getFormData();
-        pairs.set('password_field', new Map());
+        if (!pairs.has('password_field')) {
+            pairs.set('password_field', new Map());
+        }
         const passwordFieldMap = pairs.get('password_field');
         if (requiredParamsData && requiredParamsData.length) {
             passwordFieldMap.set('required_params', requiredParamsData);
@@ -1318,7 +1313,7 @@ class Master {
         this.apiList.addEventListener('delete', this.delete.bind(this));
         this.apiList.addEventListener('api_list', this.processApiList.bind(this));
         this.apiForm.addEventListener('reset', this.normalMode.bind(this));
-        document.getElementById('add2-tab').addEventListener('click', this.add2.bind(this));\
+        document.getElementById('add2-tab').addEventListener('click', this.add2.bind(this));
     }
 
     add2() {
@@ -1398,7 +1393,7 @@ class Master {
 
                 const endpointParameters = new Map();
                 const apiParameters = new Map();
-                let connectionPropertiesStr = engine[4];
+                let connectionPropertiesStr = engine[4] || "";
                 connectionPropertiesStr = connectionPropertiesStr.replace(/^[a-zA-Z0-9]+:/, "");
                 const connectionProperties = ApiForm.parseConnectionProperties(connectionPropertiesStr);
                 apiParameters.set('connection_properties', connectionProperties);

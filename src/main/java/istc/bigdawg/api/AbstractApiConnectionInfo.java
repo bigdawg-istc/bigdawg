@@ -27,7 +27,7 @@ abstract public class AbstractApiConnectionInfo implements ConnectionInfo {
     protected String password;
     protected String database;
     protected String contentType = "application/x-www-form-urlencoded";
-    private Map<String, String> passwordProperties = new HashMap<>();
+    protected Map<String, String> passwordProperties = new HashMap<>();
     private List<String> requiredParams = new ArrayList<>();
     private List<String> optionalParams = new ArrayList<>();
     protected Map<String, String> extraQueryParameters;
@@ -35,19 +35,19 @@ abstract public class AbstractApiConnectionInfo implements ConnectionInfo {
     private static Logger log = Logger
             .getLogger(RESTConnectionInfo.class.getName());
 
-    private AbstractApiConnectionInfo(String host, String port, String database, String user, String password) throws BigDawgCatalogException {
+    private AbstractApiConnectionInfo(String host, String port, String database, String user, String password, String passwordField) throws BigDawgCatalogException {
         this.host = host;
         this.port = Integer.parseInt(port);
         this.database = database;
         this.password = password;
-        this.parsePasswordProperties(password);
+        this.parsePasswordProperties(passwordField);
         this.parseExtraQueryParameters();
         this.parseRequiredOptionalParams();
         this.user = user;
     }
 
-    public AbstractApiConnectionInfo(String host, String port, String database, String user, String password, String scheme) throws BigDawgCatalogException {
-        this(host, port, database, user, password);
+    public AbstractApiConnectionInfo(String host, String port, String database, String user, String password, String passwordField, String scheme) throws BigDawgCatalogException {
+        this(host, port, database, user, password, passwordField);
         this.scheme = scheme;
     }
 

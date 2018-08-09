@@ -91,7 +91,7 @@ public class ApiIsland implements Island {
 
 //            @TODO add execution tree?
         } catch (Exception e) {
-            throw new QueryParsingException(e.getMessage(), e);
+            throw new QueryParsingException(e.toString(), e);
         }
         tables.add(((ApiSeqScan)root).getSourceTableName());
         return root;

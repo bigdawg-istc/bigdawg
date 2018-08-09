@@ -24,8 +24,8 @@ public class MigrationParams implements Serializable {
 	/** see: {@link #getCreateStatement()} */
 	private String createStatement;
 
-	private IntraIslandQuery source;
-	private IntraIslandQuery target;
+	transient private IntraIslandQuery source;
+	transient private IntraIslandQuery target;
 
 	/**
 	 * 

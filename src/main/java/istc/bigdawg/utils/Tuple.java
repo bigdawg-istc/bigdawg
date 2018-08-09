@@ -3,6 +3,8 @@
  */
 package istc.bigdawg.utils;
 
+import java.io.Serializable;
+
 /**
  * Implement tuples.
  * 
@@ -30,7 +32,7 @@ public class Tuple {
 	 * @param <T1>
 	 * @param <T2>
 	 */
-	public static class Tuple2<T1, T2> {
+	public static class Tuple2<T1, T2> implements Serializable {
 		protected T1 t1;
 		protected T2 t2;
 
@@ -58,7 +60,7 @@ public class Tuple {
 	 * @param <T2>
 	 * @param <T3>
 	 */
-	public static class Tuple3<T1, T2, T3> extends Tuple2<T1, T2> {
+	public static class Tuple3<T1, T2, T3> extends Tuple2<T1, T2> implements Serializable {
 		protected T3 t3;
 
 		public Tuple3(T1 f1, T2 f2, T3 f3) {

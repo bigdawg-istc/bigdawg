@@ -56,7 +56,7 @@ public class CatalogModifier {
         				+ "VALUES ("+ newpos 		+ 	", "
     					+ "\'"  + newIsland 		+ "\', "
 						+ "\'"  + newAccessMethod 	+ "\');");
-			cc.execNoRet("SELECT setval('catalog.islands_iid_seq'::regclass, " + String.valueOf(newpos) + ")");
+			cc.execRet("SELECT setval('catalog.islands_iid_seq'::regclass, " + String.valueOf(newpos) + ")");
 		}
 		rs.close();
 		
@@ -103,7 +103,7 @@ public class CatalogModifier {
 							+ "\'"	+ newHost 		+ "\', "
 	    							+ newPort 		+ 	", "
 							+ "\'"	+ newProperty 	+ "\');");
-			cc.execNoRet("SELECT setval('catalog.engines_eid_seq'::regclass, " + String.valueOf(newpos) + ")");
+			cc.execRet("SELECT setval('catalog.engines_eid_seq'::regclass, " + String.valueOf(newpos) + ")");
         }
         rs.close();
 
@@ -135,7 +135,7 @@ public class CatalogModifier {
 	    							+ newIslandId 		+ ", "
 	    							+ newEngineId 		+ ", "
 							+ "\'"	+ newAccessMethod	+ "\');");
-			cc.execNoRet("SELECT setval('catalog.shims_shim_id_seq'::regclass, " + String.valueOf(newpos) + ")");
+			cc.execRet("SELECT setval('catalog.shims_shim_id_seq'::regclass, " + String.valueOf(newpos) + ")");
         }
         rs.close();
 
@@ -198,7 +198,7 @@ public class CatalogModifier {
 	    					+ "\'"	+ newName 		+ "\', "
 							+ "\'"	+ newUserid 	+ "\', "
 							+ "\'"	+ newPassword 	+ "\');");
-			cc.execNoRet("SELECT setval('catalog.databases_dbid_seq'::regclass, " + String.valueOf(newpos) + ")");
+			cc.execRet("SELECT setval('catalog.databases_dbid_seq'::regclass, " + String.valueOf(newpos) + ")");
         }
         rs.close();
 
@@ -233,7 +233,7 @@ public class CatalogModifier {
 	    							+ newLogDB 					+ ", "
 	    							+ newPhyDB 					+ ");");
 
-			cc.execNoRet("SELECT setval('catalog.objects_oid_seq'::regclass, " + String.valueOf(newpos) + ")");
+			cc.execRet("SELECT setval('catalog.objects_oid_seq'::regclass, " + String.valueOf(newpos) + ")");
 		}
         rs.close();
 

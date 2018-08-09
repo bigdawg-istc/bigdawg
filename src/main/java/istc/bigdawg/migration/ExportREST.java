@@ -25,7 +25,7 @@ public class ExportREST implements Export {
 
     private String outputFile;
     private MigrationInfo migrationInfo;
-    private DBHandler handlerTo;
+    private transient DBHandler handlerTo;
     private transient OutputStream output;
 
     public ExportREST() {

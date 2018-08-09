@@ -113,8 +113,8 @@ class FromRESTToSciDB extends FromDatabaseToDatabase
      */
     private void setRESTMetaData() throws MigrationException {
         try {
-            this.fromObjectMetaData = new RESTHandler(
-                    (RESTConnectionInfo) migrationInfo.getConnectionFrom())
+            this.fromObjectMetaData = (new RESTHandler(
+                    (RESTConnectionInfo) migrationInfo.getConnectionFrom()))
                     .getObjectMetaData(migrationInfo.getObjectFrom());
         } catch (Exception e) {
             MigrationException migrateException = handleException(

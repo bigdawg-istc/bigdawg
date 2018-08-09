@@ -35,12 +35,6 @@ public class RESTHandler implements ExecutorEngine, DBHandler {
         this.restConnectionInfo = restConnectionInfo;
     }
 
-    // Use Hashtable for reentrancy concerns
-    // @TODO - how to clean this out periodically?
-    // @TODO - how to prevent multiple entries of the same tag name?
-    private static Map<String, RESTQueryResult> restQueryResults = new Hashtable<>();
-
-
     @Override
     public Optional<QueryResult> execute(String query) {
         String bigdawgResultTag = "";
@@ -51,14 +45,13 @@ public class RESTHandler implements ExecutorEngine, DBHandler {
             if (jsonObject.containsKey("tag")) {
                 bigdawgResultTag = (String) jsonObject.get("tag");
             }
-
             String url = restConnectionInfo.getUrl();
             HttpMethod method = restConnectionInfo.getMethod();
             String postData = null;
             String queryParameters = null;
+            String contentType = restConnectionInfo.getContentType();
             switch(method) {
                 case POST:
-                    String contentType = restConnectionInfo.getContentType();
                     if (contentType == null) {
                         throw new ApiException("Null Content-Type");
                     }
@@ -99,6 +92,9 @@ public class RESTHandler implements ExecutorEngine, DBHandler {
                 url = URLUtil.appendQueryParameters(url, queryParameters);
             }
             Map<String, String> headers = restConnectionInfo.getHeaders(queryParameters);
+            if (contentType != null) {
+                headers.put("Content-Type", contentType);
+            }
 
             // @TODO Connect / read timeout could be parameterized either in query or in connection parameters, or both
             URLUtil.FetchResult fetchResult = URLUtil.fetch(url, method, headers, postData, restConnectionInfo.getConnectTimeout(), restConnectionInfo.getReadTimeout());
@@ -112,7 +108,7 @@ public class RESTHandler implements ExecutorEngine, DBHandler {
                 queryResult = Optional.empty();
             }
             else {
-                RESTHandler.restQueryResults.put(bigdawgResultTag, restQueryResult);
+                this.restConnectionInfo.putRESTQueryResult(bigdawgResultTag, restQueryResult);
                 queryResult = Optional.of(restQueryResult);
             }
         }
@@ -139,7 +135,7 @@ public class RESTHandler implements ExecutorEngine, DBHandler {
             // @TODO support other content types e.g. text/csv or tsv or even maybe xml?
             JSONParser jsonParser = new JSONParser();
             if (!URLUtil.headersContain(fetchResult.responseHeaders, "content-type", URLUtil.HeaderMatch.jsonHeaderMatchTypes, ";")) {
-                throw new ApiException("Unsupported content type: " + fetchResult.responseHeaders.get("content-type").get(0));
+                throw new ApiException("Unsupported content type: " + fetchResult.responseHeaders.getOrDefault("CONTENT-TYPE", new ArrayList<>()).toString());
             }
             Object object = jsonParser.parse(fetchResult.response);
             RESTHandler.log.info("RESTHandler - parsing result: " + String.valueOf(fetchResult.response));
@@ -156,7 +152,9 @@ public class RESTHandler implements ExecutorEngine, DBHandler {
         Map<String, Integer> headerNames = new HashMap<>();
         List<String> rows = new ArrayList<>();
         List<Map<String, Object>> rowsWithHeadings = new ArrayList<>();
+        int count = 0;
         for (Object o : jsonArray) {
+            count += 1;
             String row = "";
             Map<String, Object> rowWithHeadings = new HashMap<>();
             if (o == null) {
@@ -175,9 +173,9 @@ public class RESTHandler implements ExecutorEngine, DBHandler {
                 rowWithHeadings.put("col1", null);
                 row = "";
             } else if (o.getClass() == JSONArray.class) {
-                row = getFromJSONArray(headers, headerNames, rowWithHeadings, (JSONArray) o);
+                row = getFromJSONArray(headers, headerNames, rowWithHeadings, (JSONArray) o, count == 1);
             } else if (o.getClass() == JSONObject.class) {
-                row = getFromJSONObject(headers, headerNames, rowWithHeadings, (JSONObject) o);
+                row = getFromJSONObject(headers, headerNames, rowWithHeadings, (JSONObject) o, count == 1);
             }
             else {
                 final Tuple.Tuple2<String, Boolean> headerInfo = determineHeaderTypeNullable(o);
@@ -210,12 +208,20 @@ public class RESTHandler implements ExecutorEngine, DBHandler {
         return new RESTQueryResult(headers, rows, rowsWithHeadings, restConnectionInfo);
     }
 
+    /**
+     * Extracts the row and columns from a JSON Object
+     * @param headers
+     * @param headerNames
+     * @param rowWithHeaders
+     * @param jsonObject
+     * @param firstRow
+     * @return
+     */
     private String getFromJSONObject(List<Tuple.Tuple3<String, String, Boolean>> headers,
                                      Map<String, Integer> headerNames,
                                      Map<String, Object> rowWithHeaders,
-                                     JSONObject jsonObject) {
-        List<Object> row = new ArrayList<>();
-
+                                     JSONObject jsonObject,
+                                     Boolean firstRow) {
         for (Object key : jsonObject.keySet()) {
             String keyStr = String.valueOf(key);
 
@@ -239,7 +245,7 @@ public class RESTHandler implements ExecutorEngine, DBHandler {
                 }
             } else {
                 headerNames.put(keyStr, headers.size());
-                headers.add(new Tuple.Tuple3<String, String, Boolean>(keyStr, headerType, nullable));
+                headers.add(new Tuple.Tuple3<String, String, Boolean>(keyStr, headerType, nullable || !firstRow));
             }
         }
 
@@ -261,7 +267,16 @@ public class RESTHandler implements ExecutorEngine, DBHandler {
         return jsonObject.toString();
     }
 
-    private String getFromJSONArray(List<Tuple.Tuple3<String, String, Boolean>> headers, Map<String, Integer> headerNames, Map<String, Object> rowWithHeadings, JSONArray jsonArray) {
+    /**
+     * Extracts the row and columns from a JSON array.
+     * @param headers
+     * @param headerNames
+     * @param rowWithHeadings
+     * @param jsonArray
+     * @param firstRow
+     * @return
+     */
+    private String getFromJSONArray(List<Tuple.Tuple3<String, String, Boolean>> headers, Map<String, Integer> headerNames, Map<String, Object> rowWithHeadings, JSONArray jsonArray, Boolean firstRow) {
         final int jsonSize = jsonArray.size();
         List<Object> row = new ArrayList<>();
         for (int i = 0 ; i < jsonSize; i++) {
@@ -271,7 +286,7 @@ public class RESTHandler implements ExecutorEngine, DBHandler {
                 final Tuple.Tuple2<String, Boolean> headerInfo = determineHeaderTypeNullable(obj);
                 final String headerType = headerInfo.getT1();
                 final boolean nullable = headerInfo.getT2();
-                headers.add(new Tuple.Tuple3<String, String, Boolean>(colName, headerType, nullable));
+                headers.add(new Tuple.Tuple3<String, String, Boolean>(colName, headerType, nullable || !firstRow));
                 headerNames.put(colName, headers.size() - 1);
             }
         }
@@ -370,7 +385,7 @@ public class RESTHandler implements ExecutorEngine, DBHandler {
             Map<String, Integer> headerNames = new HashMap<>();
             List<Map<String, Object>> rowsWithHeaders = new ArrayList<>();
             Map<String, Object> rowWithHeaders = new HashMap<>();
-            String row = getFromJSONObject(headers, headerNames, rowWithHeaders, jsonObject);
+            String row = getFromJSONObject(headers, headerNames, rowWithHeaders, jsonObject, true);
             List<String> rows = new ArrayList<>();
             rows.add(row);
             rowsWithHeaders.add(rowWithHeaders);
@@ -462,31 +477,8 @@ public class RESTHandler implements ExecutorEngine, DBHandler {
      */
     @Override
     public ObjectMetaData getObjectMetaData(String name) throws Exception {
-        final RESTQueryResult restQueryResult = RESTHandler.restQueryResults.getOrDefault(name, null);
-
-        return new ObjectMetaData() {
-            @Override
-            public String getName() {
-                return null;
-            }
-
-            @Override
-            public List<AttributeMetaData> getAttributesOrdered() {
-                List <AttributeMetaData> resultList = new ArrayList<>();
-                if (restQueryResult == null) {
-                    AttributeMetaData attribute = new AttributeMetaData("col1", "json", true, false);
-                    resultList.add(attribute);
-                    return resultList;
-                }
-
-                List<Tuple.Tuple3<String, String, Boolean>> headers = restQueryResult.getColumns();
-                for(Tuple.Tuple3<String, String, Boolean> header: headers) {
-                    AttributeMetaData attribute = new AttributeMetaData(header.getT1(), header.getT2(), header.getT3(), false);
-                    resultList.add(attribute);
-                }
-                return resultList;
-            }
-        };
+        final RESTQueryResult restQueryResult = this.restConnectionInfo.getRESTQueryResult(name);
+        return new RESTObjectMetaData(restQueryResult == null ? null : restQueryResult.getColumns());
     }
 
     /**

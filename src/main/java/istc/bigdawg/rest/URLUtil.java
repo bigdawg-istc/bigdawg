@@ -300,11 +300,13 @@ public final class URLUtil {
         urlConnection.setDoInput(true);
         if (postData != null && method == HttpMethod.POST) {
             urlConnection.setDoOutput(true);
+            urlConnection.setRequestMethod("POST");
             urlConnection.setRequestProperty("Content-Length", String.valueOf(postData.length()));
             OutputStream os = urlConnection.getOutputStream();
             DataOutputStream dataOutputStream= new DataOutputStream(new BufferedOutputStream(os));
             dataOutputStream.writeBytes(postData);
             dataOutputStream.close();
+
         }
 
         FetchResult fetchResult = new FetchResult();
