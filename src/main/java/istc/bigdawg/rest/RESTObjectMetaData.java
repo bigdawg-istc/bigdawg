@@ -28,9 +28,11 @@ public class RESTObjectMetaData implements ObjectMetaData {
             return resultList;
         }
 
+        int pos = 0;
         for(Tuple.Tuple3<String, String, Boolean> header: headers) {
-            AttributeMetaData attribute = new AttributeMetaData(header.getT1(), header.getT2(), header.getT3(), false);
+            AttributeMetaData attribute = new AttributeMetaData(header.getT1(), pos, header.getT2(), header.getT3(), false);
             resultList.add(attribute);
+            pos++;
         }
         return resultList;
     }

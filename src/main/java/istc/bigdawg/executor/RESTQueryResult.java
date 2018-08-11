@@ -5,16 +5,17 @@ import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.rest.RESTConnectionInfo;
 import istc.bigdawg.utils.Tuple;
 
+import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 import java.util.StringJoiner;
 
-public class RESTQueryResult implements QueryResult {
+public class RESTQueryResult implements QueryResult, Serializable {
 
     private List<Tuple.Tuple3<String, String, Boolean>> columns;
     private List<String> rows;
     private List<Map<String, Object>> rowsWithHeadings;
-    private RESTConnectionInfo connectionInfo;
+    transient private RESTConnectionInfo connectionInfo;
 
     /**
      *

@@ -30,7 +30,7 @@ public class RESTConnectionInfo extends AbstractApiConnectionInfo {
             .getLogger(RESTConnectionInfo.class.getName());
 
     // Need this to hold results as RESTHandler can get reinstantiated during the lifecycle of a request.
-    transient private Map<String, RESTQueryResult> restQueryResults = new HashMap<>();
+    private Map<String, RESTQueryResult> restQueryResults = new HashMap<>();
 
     private RESTConnectionInfo(String host, String port,
                              String endpoint, String user, String password, Map<String, String> connectionProperties, URL url, String fields) throws BigDawgCatalogException {

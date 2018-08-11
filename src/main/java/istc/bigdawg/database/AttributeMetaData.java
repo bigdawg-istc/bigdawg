@@ -86,6 +86,15 @@ public class AttributeMetaData implements Serializable {
 		this.isDimension = isDimension;
 	}
 
+	public AttributeMetaData(String name, int position, String sqlDataType,
+			boolean isNullable, boolean isDimension) {
+		this.name = name;
+		this.position = position;
+		this.sqlDataType = sqlDataType;
+		this.isNullable = isNullable;
+		this.isDimension = isDimension;
+	}
+
 	public AttributeMetaData(String name, String sqlDataType,
 			String scidbDataType, boolean isNullable, boolean isDimension) {
 		this.name = name;
