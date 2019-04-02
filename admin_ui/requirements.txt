@@ -1,3 +1,8 @@
 Flask==0.12
 docker==2.0.2
 psycopg2
+httplib2
+python-dotenv
+mysql-connector
+six>=1.10.0
+vertica-python

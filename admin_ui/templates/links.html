@@ -3,12 +3,14 @@
 {% set active_page = "links" %}
 
 {% block content %}
-<div class="row col-xs-10 col-xs-offset-1">
-  <h1 align="center">Important Links</h1>
-  <ul>
-  {% for link in links %}
-    <li><a href="{{ link.href }}">{{ link.name }}</a></li>
-  {% endfor %}
-  </ul>
+<div class="row">
+    <div class="col-10 offset-1">
+        <h1 align="center">Important Links</h1>
+        <ul>
+        {% for link in links %}
+        <li><a href="{{ link.href }}">{{ link.name }}</a></li>
+        {% endfor %}
+        </ul>
+    </div>
 </div>
 {% endblock %}

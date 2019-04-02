@@ -23,7 +23,6 @@ public class CatalogModifier {
 	 * addIsland determines locally if there are duplicates. 
 	 * It's not really related to performance, just to save the code for comparison.
 	 * 
-	 * @param cc
 	 * @param newIsland
 	 * @param newAccessMethod
 	 * @throws Exception
@@ -57,6 +56,7 @@ public class CatalogModifier {
         				+ "VALUES ("+ newpos 		+ 	", "
     					+ "\'"  + newIsland 		+ "\', "
 						+ "\'"  + newAccessMethod 	+ "\');");
+			cc.execRet("SELECT setval('catalog.islands_iid_seq'::regclass, " + String.valueOf(newpos) + ")");
 		}
 		rs.close();
 		
@@ -69,7 +69,6 @@ public class CatalogModifier {
 	 * addEngine determines remotely if there are duplicates. 
 	 * It's not really related to performance, just to save the code for comparison.
 	 * 
-	 * @param cc
 	 * @param newEngine
 	 * @param newHost
 	 * @param newPort
@@ -104,6 +103,7 @@ public class CatalogModifier {
 							+ "\'"	+ newHost 		+ "\', "
 	    							+ newPort 		+ 	", "
 							+ "\'"	+ newProperty 	+ "\');");
+			cc.execRet("SELECT setval('catalog.engines_eid_seq'::regclass, " + String.valueOf(newpos) + ")");
         }
         rs.close();
 
@@ -135,6 +135,7 @@ public class CatalogModifier {
 	    							+ newIslandId 		+ ", "
 	    							+ newEngineId 		+ ", "
 							+ "\'"	+ newAccessMethod	+ "\');");
+			cc.execRet("SELECT setval('catalog.shims_shim_id_seq'::regclass, " + String.valueOf(newpos) + ")");
         }
         rs.close();
 
@@ -197,6 +198,7 @@ public class CatalogModifier {
 	    					+ "\'"	+ newName 		+ "\', "
 							+ "\'"	+ newUserid 	+ "\', "
 							+ "\'"	+ newPassword 	+ "\');");
+			cc.execRet("SELECT setval('catalog.databases_dbid_seq'::regclass, " + String.valueOf(newpos) + ")");
         }
         rs.close();
 
@@ -230,7 +232,9 @@ public class CatalogModifier {
 	    					+ "\'"	+ newFields.toLowerCase() 	+ "\', "
 	    							+ newLogDB 					+ ", "
 	    							+ newPhyDB 					+ ");");
-        }
+
+			cc.execRet("SELECT setval('catalog.objects_oid_seq'::regclass, " + String.valueOf(newpos) + ")");
+		}
         rs.close();
 
         // commit

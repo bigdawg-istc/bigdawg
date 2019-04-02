@@ -38,6 +38,7 @@ public class FromSQLTypesToSciDB {
 		map.put("smallserial", "int16");
 		map.put("serial", "int32");
 		map.put("bigserial", "int64");
+		map.put("json", "string");
 		// float
 		map.put("real", "float");
 		map.put("double precision", "double");

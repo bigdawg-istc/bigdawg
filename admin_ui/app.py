@@ -1,35 +1,86 @@
 # To run:
-# export FLASK_APP=app.py
-# flask run --host=0.0.0.0
+#    First:
+#       cp env.sample .env
+#       # Make any necessary adjustments to .env
+#
+#    Then:
+#       export FLASK_APP=app.py
+#       flask run --host=0.0.0.0
 
-from flask import Flask, redirect, render_template, request, url_for
+from flask import Flask, redirect, render_template, render_template_string, request, url_for
+from dotenv import load_dotenv
+from os.path import join, dirname
 from DockerClient import DockerClient
 from CatalogClient import CatalogClient
-import os
-app = Flask(__name__)
+from SchemaClient import SchemaClient
+from QueryClient import QueryClient
+from Importer import Importer
+from ApiForm import ApiForm
+from Util import Util
+import os, json
+dotenv_path = join(dirname(__file__), '.env')
+load_dotenv(dotenv_path)
 
+app = Flask(__name__)
 def read_catalog_credentials():
-    catalog_config_fn = "catalog_config.txt"
-    try:
-        assert(os.path.exists(catalog_config_fn))
-    except:
-        print ("Catalog config file does not exist.")
-        print ("""Example: catalog_config.txt:
-        database=bigdawg_catalog
-        user=pguser
-        password=test
-        host=192.168.99.100
-        port=5400
-        """)
-    catalog_cred = {}
-    with open(catalog_config_fn, "rb") as f:
-        for line in f:
-            key,val = line.decode().split("=")
-            catalog_cred[key.strip()] = val.strip()
+    catalog_cred = { "database": os.environ.get('CATALOG_DATABASE'),
+                     "user": os.environ.get('CATALOG_USER'),
+                     "password": os.environ.get('CATALOG_PASSWORD'),
+                     "host": os.environ.get('CATALOG_HOST'),
+                     "port": os.environ.get('CATALOG_PORT')
+                     }
     return catalog_cred
+
+def read_schema_credentials():
+    schema_cred = { "database": os.environ.get('SCHEMA_DATABASE'),
+                     "user": os.environ.get('SCHEMA_USER') or os.environ.get('CATALOG_USER'),
+                     "password": os.environ.get('SCHEMA_PASSWORD') or os.environ.get('CATALOG_PASSWORD'),
+                     "host": os.environ.get('SCHEMA_HOST') or os.environ.get('CATALOG_HOST'),
+                     "port": os.environ.get('SCHEMA_PORT') or os.environ.get('CATALOG_PORT')
+                     }
+    return schema_cred
 
 # Get catalog credentials for the CatalogClient
 catalog_cred = read_catalog_credentials()
+schema_cred = read_schema_credentials()
+versions = {
+    "util.js": os.stat('static/js/util.js').st_mtime,
+    "query.js": os.stat('static/js/query.js').st_mtime,
+    "api.js": os.stat('static/js/api.js').st_mtime,
+    "import.js": os.stat('static/js/import.js').st_mtime,
+    "general.css": os.stat('static/css/general.css').st_mtime
+}
+def getCatalogClient():
+    return CatalogClient(
+        database=catalog_cred['database'],
+        user=catalog_cred['user'],
+        password=catalog_cred['password'],
+        host=catalog_cred['host'],
+        port=catalog_cred['port'])
+
+def getCatalogData():
+    catalog_client = getCatalogClient()
+    objects = catalog_client.get_objects()
+    engines = catalog_client.get_engines()
+    databases = catalog_client.get_databases()
+    enginesByEngineId = {}
+    for engine in engines:
+        enginesByEngineId[engine[0]] = engine
+
+    return {'objects': objects, 'engines': engines, 'databases': databases, 'engines_by_engine_id': enginesByEngineId}
+
+def getSchemaClient():
+    return SchemaClient(
+        database=schema_cred['database'],
+        user=schema_cred['user'],
+        password=schema_cred['password'],
+        host=schema_cred['host'],
+        port=schema_cred['port'])
+
+def getSchemaData():
+    schema_client = getSchemaClient()
+    datatypes = schema_client.get_datatypes()
+    return {'datatypes': datatypes}
 
 # Cluster Status
 @app.route('/')
@@ -41,12 +92,9 @@ def status():
 # Data Catalog
 @app.route('/catalog')
 def catalog():
-    objects = CatalogClient(
-        database=catalog_cred['database'],
-        user=catalog_cred['user'],
-        password=catalog_cred['password'],
-        host=catalog_cred['host'],
-        port=catalog_cred['port']).get_objects()
+    catalog_data = getCatalogData()
+    objects = catalog_data['objects']
+    engines = catalog_data['engines']
     # Template expects results like:
     # objects = [
     #     (0, 'mimic2v26.a_chartdurations', 'subject_id,icustay_id,itemid,elemid,starttime,startrealtime,endtime,cuid,duration', 2, 3), 
@@ -61,14 +109,100 @@ def catalog():
     #     (9, 'mimic2v26.d_careunits', 'cuid,label', 2, 2), 
     #     (10, 'mimic2v26.d_chartitems', 'itemid,label,category,description', 2, 2), 
     # ]
-    engines = CatalogClient(
-        database=catalog_cred['database'],
-        user=catalog_cred['user'],
-        password=catalog_cred['password'],
-        host=catalog_cred['host'],
-        port=catalog_cred['port']).get_engines()
     return render_template('catalog.html', objects=objects, engines=engines)
 
+@app.route('/import')
+def import_page():
+    catalog_client = getCatalogClient()
+    engines = catalog_client.get_engines_excluding_island('API')
+    databases = catalog_client.get_databases_excluding_island('API')
+    objects = catalog_client.get_objects()
+    enginesByEngineId = {}
+    for engine in engines:
+        enginesByEngineId[engine[0]] = engine
+
+    schema_data = getSchemaData()
+    return render_template('import.html',
+                           versions=versions,
+                           enginesByEngineId=enginesByEngineId,
+                           objects=objects,
+                           databases=databases,
+                           datatypes=schema_data['datatypes'])
+
+@app.route('/import_csv', methods=["POST"])
+def import_csv():
+    importer = Importer(getCatalogClient(), getSchemaClient())
+    result = importer.import_data(request.data)
+    return render_template_string(result)
+
+@app.route('/get_schemas', methods=["POST"])
+def get_schemas():
+    importer = Importer(getCatalogClient(), getSchemaClient())
+    result = importer.get_schemas(request.data)
+    return render_template_string(result)
+
+@app.route('/query')
+def query():
+    return render_template('query.html', versions=versions)
+
+@app.route('/api', methods=["GET"])
+def api():
+    catalog_client = getCatalogClient()
+    engines = catalog_client.get_engines_by_island('API')
+    databases = catalog_client.get_databases_by_island('API')
+    enginesByEngineId = {}
+    for engine in engines:
+        enginesByEngineId[engine[0]] = engine
+
+    return render_template('api.html',
+                           versions=versions,
+                           engines=engines,
+                           databases=databases,
+                           enginesByEngineID=enginesByEngineId)
+
+@app.route('/api_list', methods=["GET"])
+def api_list():
+    catalog_client = getCatalogClient()
+    engines = catalog_client.get_engines_by_island('API')
+    databases = catalog_client.get_databases_by_island('API')
+    return render_template_string(json.JSONEncoder().encode({"success": True, "engines": engines, "databases": databases}))
+
+@app.route('/api/<int:dbid>', methods=["DELETE"])
+def api_delete(dbid):
+    api_form = ApiForm(getCatalogClient())
+    result = api_form.delete_api_by_dbid(dbid)
+    return render_template_string(result)
+
+@app.route('/api/<int:dbid>', methods=["GET"])
+def api_show(dbid):
+    catalog_client = getCatalogClient()
+    database = catalog_client.get_database(dbid)
+    engine = catalog_client.get_engine(database[1])
+    objects = catalog_client.get_objects_by_phsyical_db(dbid)
+    object = objects[0]
+    return render_template_string(json.JSONEncoder().encode({"success": True, "engine": engine, "database": database, "object": object}))
+
+@app.route('/api_form', methods=["POST"])
+def api_form_post():
+    api_form = ApiForm(getCatalogClient())
+    result = api_form.process_api_form(request.data)
+    return render_template_string(result)
+
+@app.route('/get_engine_by_name', methods=["POST"])
+def get_engine_by_name():
+    requestObj = json.loads(request.data.decode("utf-8"))
+    catalogClient = getCatalogClient()
+    engine = catalogClient.get_engine_by_name(requestObj['name'])
+    if engine is None:
+        return render_template_string(Util.error_msg("not found"))
+    return render_template_string(json.JSONEncoder().encode({"success": True, "engine": engine}))
+
+@app.route('/run_query', methods=["POST"])
+def runQuery():
+    query = request.data
+    print(os.environ.get('QUERY_SCHEME'),os.environ.get('QUERY_HOST'),int(os.environ.get('QUERY_PORT')))
+    result = QueryClient(os.environ.get('QUERY_SCHEME'),os.environ.get('QUERY_HOST'),int(os.environ.get('QUERY_PORT'))).run_query(query)
+    return render_template_string(result)
 
 # Important Links
 @app.route('/links')
@@ -89,7 +223,6 @@ def links():
     ]
     return render_template('links.html', links=links)
 
-
 # Start container
 @app.route('/startContainer', methods=["POST"])
 def startContainer():
@@ -97,7 +230,6 @@ def startContainer():
     container_name = request.form['container']
     DockerClient().start_container(container_name)
     return redirect(url_for('status'))
-
 
 # Stop container
 @app.route('/stopContainer', methods=["POST"])
@@ -110,4 +242,4 @@ def stopContainer():
 if __name__ == '__main__':
     # Use this line to run the server visible to external connections.
     # app.run(host='0.0.0.0')
-    app.run
+    app.run(threaded=True)

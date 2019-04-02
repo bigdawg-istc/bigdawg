@@ -48,6 +48,10 @@ public class MonitoringTask implements Runnable {
      */
     public MonitoringTask () {
         this.executor = Executors.newScheduledThreadPool(1);
+        this.cores = this.getCores();
+    }
+
+    private int getCores() {
         int cores = 1;
         try {
             String command = "";
@@ -55,7 +59,10 @@ public class MonitoringTask implements Runnable {
                 command = "nproc";
             } else if (SystemUtils.IS_OS_MAC) {
                 command = "sysctl -n hw.physicalcpu";
-            } else {
+            } else if (SystemUtils.IS_OS_WINDOWS) {
+                return Integer.parseInt(System.getenv("NUMBER_OF_PROCESSORS"));
+            }
+            else {
                 throw new RuntimeException("The current OS is not supported.");
             }
             Process p = Runtime.getRuntime().exec(command);
@@ -71,8 +78,7 @@ public class MonitoringTask implements Runnable {
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
-
-        this.cores = cores;
+        return cores;
     }
 
     /**
@@ -130,6 +136,10 @@ class Task implements Runnable {
      * @return true if it is currently under the threshold. false otherwise.
      */
     private boolean can_add() {
+        if (SystemUtils.IS_OS_WINDOWS) {
+            return this.can_add_windows();
+        }
+
         try {
             Process p = Runtime.getRuntime().exec("uptime");
             p.waitFor();
@@ -147,6 +157,33 @@ class Task implements Runnable {
             }
             double load = Double.parseDouble(result);
             if (load/this.cores > MAX_LOAD) {
+                return false;
+            }
+        } catch (IOException|InterruptedException e) {
+            e.printStackTrace();
+            return false;
+        }
+        return true;
+    }
+
+    private boolean can_add_windows() {
+        try {
+            Process p = Runtime.getRuntime().exec("wmic cpu get loadpercentage");
+            p.waitFor();
+            BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream()));
+            StringBuffer sb = new StringBuffer();
+            String line = "";
+            while ((line = reader.readLine()) != null) {
+                sb.append(line).append("\n");
+            }
+            Pattern currentLoad = Pattern.compile("([.0-9]+)");
+            Matcher m = currentLoad.matcher(sb);
+            String result = "";
+            if (m.find()) {
+                result = m.group();
+            }
+            double load = Double.parseDouble(result);
+            if ((load/100) > MAX_LOAD) {
                 return false;
             }
         } catch (IOException|InterruptedException e) {

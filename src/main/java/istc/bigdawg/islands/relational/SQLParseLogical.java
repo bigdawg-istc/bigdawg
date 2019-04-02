@@ -22,7 +22,22 @@ public class SQLParseLogical {
 
     
     private SQLQueryPlan queryPlan;
-    
+
+    static Select tryJSONPlaceholderParse(JSQLParserException e, String q) throws QueryParsingException {
+        if ((e.getCause().getMessage() != null && e.getCause().getMessage().contains(">")) ||
+				(e.getMessage() != null && e.getMessage().contains(">"))) {
+            try {
+                String newq = SQLJSONPlaceholderParser.transformJSONQuery(q);
+                return (Select) CCJSqlParserUtil.parse(newq);
+            }
+            catch (Exception ex) {
+                throw new QueryParsingException(e.getCause().getMessage(), e);
+            }
+        }
+        else {
+            throw new QueryParsingException(e.getMessage() == null ? e.getCause().getMessage() : e.getMessage(), e);
+        }
+    }
 
 	public SQLParseLogical(String query) throws SQLException, BigDawgCatalogException, QueryParsingException {
 		
@@ -32,7 +47,7 @@ public class SQLParseLogical {
 		try {
 			select = (Select) CCJSqlParserUtil.parse(q);
 		} catch (JSQLParserException e) {
-			throw new QueryParsingException(e.getMessage(), e); 
+		    select = tryJSONPlaceholderParse(e, q);
 		}
 		queryPlan = new SQLQueryPlan();
 		queryPlan.setLogicalStatement(select);

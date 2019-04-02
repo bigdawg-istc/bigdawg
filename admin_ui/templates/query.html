@@ -1,0 +1,204 @@
+{% extends "layout.html" %}
+
+{% set active_page = "query" %}
+
+{% block head_extra %}
+    <style type="text/css">
+        /**
+         * some simple stylings
+         */
+        textarea {
+          width: 100%;
+          height: 100px;
+        }
+        .query, .result {
+          margin: 20px 0;
+          clear: both;
+        }
+        .result {
+          display: none;
+        }
+        .query label {
+          font-weight: normal;
+          font-size: 20px;
+        }
+        .query button {
+          margin-top: 10px;
+          float: right;
+        }
+        div.table-div {
+          margin-top: 70px;
+        }
+        table {
+          border: 1px solid #ccc;
+        }
+
+        .export-csv {
+          text-decoration: underline;
+          color: blue;
+          cursor: pointer;
+        }
+
+        .export-csv:hover {
+          color: darkblue;
+        }
+
+        .export-csv-filename {
+          display: none;
+          clear: both;
+        }
+        #query-error {
+          display: none;
+          margin: 70px 0;
+        }
+        #examples {
+            margin-top: 15px;
+        }
+    </style>
+    <link rel="stylesheet" href="static/css/general.css?v={{ versions['general.css'] }}" />
+    <script src="static/js/util.js?v={{ versions['util.js'] }}"></script>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-10 offset-1">
+        <ul class="nav nav-tabs" id="tabs" roles="tablist">
+            <li class="nav-item">
+                <a class="nav-link active" id="query-tab" data-toggle="tab" href="#query-pane" role="tab" aria-controls="query-pane" area-selected="true">Query</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="examples-tab" data-toggle="tab" href="#examples" role="tab" aria-controls="examples" area-selected="false">Examples</a>
+            </li>
+        </ul>
+        <div class="tab-content" id="tabs-tab-content">
+            <div class="tab-pane fade show active" id="query-pane" role="tabpanel" area-labelledby="query-tab">
+              <div class="query">
+                <label for="query">Query:</label>
+                <textarea id="query" name="query" rows="4"></textarea>
+                <button class="btn btn-primary">Run</button>
+              </div>
+              <div class="loading"></div>
+              <div class="result">
+                  <div class="table-div"></div>
+              </div>
+              <div id="query-error" class="alert alert-danger" role="alert"></div>
+              <div class="export-csv-filename">
+                  <form class="form-inline">
+                      <div class="form-group">
+                          <label for="csv-filename">CSV Filename:</label> <input type="text" class="form-control" id="csv-filename" name="csv-filename" placeholder="bigdawg_export.csv" />
+                      </div>
+                      <button type="submit" class="btn btn-outline-primary">Download</button>
+                  </form>
+              </div>
+            </div>
+            <div class="tab-pane fade show" id="examples" role="tabpanel" area-labelledby="examples-tab">
+                <h3>Example Queries</h3>
+                <table class="table table-striped table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Short Description</th>
+                            <th>Query</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>
+                                Postgres only
+                            </td>
+                            <td>
+                                <pre>bdrel(select * from mimic2v26.d_patients limit 4;)</pre>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                SciDB only
+                            </td>
+                            <td>
+                                <pre>bdarray(filter(myarray,dim1&gt;150))</pre>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                Accumulo only
+                            </td>
+                            <td>
+                                <pre>bdtext({ 'op' : 'scan', 'table' : 'mimic_logs', 'range' : { 'start' : ['r_0001','',''], 'end' : ['r_0015','','']} })</pre>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                API only<sup><a href="#api-note">*</a></sup>
+                            </td>
+                            <td>
+                                <pre>bdapi({ 'name' : 'twitter', 'endpoint' : 'tweets', 'query' : { 'q': '#mit' } })</pre>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                Postgres to Postgres
+                            </td>
+                            <td>
+                                <pre>bdrel(select * from mimic2v26.additives,mimic2v26.admissions where mimic2v26.additives.subject_id=mimic2v26.admissions.subject_id limit 10)</pre>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                SciDB to Postgres
+                            </td>
+                            <td>
+                                <pre>bdrel(select * from bdcast( bdarray(filter(myarray,dim1>150)), tab6, '(i bigint, dim1 real, dim2 real)', relational))</pre>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                Postgres to SciDB
+                            </td>
+                            <td>
+                                <pre>bdarray(scan(bdcast(bdrel(SELECT poe_id, subject_id FROM mimic2v26.poe_order LIMIT 5), poe_order_copy, '&lt;subject_id:int32&gt;[poe_id=0:*,10000000,0]', array)))</pre>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                Accumulo to Postgres
+                            </td>
+                            <td>
+                                <pre>bdrel(select * from bdcast(bdtext({ 'op' : 'scan', 'table' : 'mimic_logs', 'range' : { 'start' : ['r_0001','',''], 'end' : ['r_0020','','']} }), tab1, '(cq1 text, mimic_text text)', relational))</pre>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                Postgres to Accumulo
+                            </td>
+                            <td>
+                                <pre>bdtext({ 'op' : 'scan', 'table' : 'bdcast(bdrel(select * from mimic2v26.icd9 limit 4), res, '', text)'})</pre>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                API to Postgres<sup><a href="#api-note">*</a></sup>
+                            </td>
+                            <td>
+                                <pre>bdrel(select text, metadata ->> 'iso_language_code' from bdcast( bdapi({ 'name' : 'twitter', 'endpoint' : 'tweets', 'query' : { 'q': '#mit' } }), tab3, '(metadata json, text text)', relational) where metadata ->> 'iso_language_code' = 'en')</pre>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                API to Accumulo<sup><a href="#api-note">*</a></sup>
+                            </td>
+                            <td>
+                                <pre>bdtext({ 'op' : 'scan', 'table' : 'bdcast(bdapi({ 'name': 'twitter', 'endpoint': 'tweets', 'query': { 'q': '#mit', 'count': '100'} }), res3, '', text)'})</pre>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <br>
+                <a name="api-note"><em>Note on API examples:</em></a><br>
+                <p>
+                    An API data source must be configured first.  This can be done from the <a href="api">API</a> page.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="static/js/query.js?v={{ versions['query.js'] }}"></script>
+{% endblock %}

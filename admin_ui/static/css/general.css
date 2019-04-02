@@ -1,0 +1,102 @@
+.loading {
+    margin: 25px auto 0;
+    display: none;
+    width: 50px;
+    height: 50px;
+    background-color: #c0c0c0;
+    border-radius: 25px;
+}
+
+nav {
+    margin-bottom: 20px;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/**
+ * Simple animation written from scratch for the loading spinner
+ *  -- probably can be fine tuned some
+ */
+@keyframes spin-loader {
+    0% { transform: rotate(0deg) translateX(-2px) translateY(-2px); }
+    12.5% { transform: rotate(-45deg) translateX(-12.5px) translateY(5px)}
+    25% { transform: rotate(-90deg) translateX(-25px) translateY(0px); }
+    37.5% { transform: rotate(-135deg) translateX(-30px) translateY(-12.5px) }
+    50% { transform: rotate(-180deg) translateX(-25px) translateY(-25px); }
+    62.5% { transform: rotate(-225deg) translateX(-12.5px) translateY(-30px) }
+    75% { transform: rotate(-270deg) translateX(0px) translateY(-25px); }
+    87.5% { transform: rotate(-315deg) translateX(5px) translateY(-12.5px); }
+    100% { transform: rotate(-360deg) translateX(0px) translateY(0px); }
+}
+.loading:before {
+    content:'';
+    width: 27px;
+    border: 1px solid white;
+    height: 27px;
+    border-top-left-radius: 20px;
+    background-color: white;
+    position: absolute;
+    animation-name: spin-loader;
+    animation-duration: 1s;
+    animation-iteration-count: infinite;
+    animation-timing-function: linear;
+}
+.loading:after {
+    content: '';
+    width: 40px;
+    margin: 5px 0 0 5px;
+    height: 40px;
+    position: absolute;
+    background-color: white;
+    border-radius: 20px;
+}
+
+
+.loading-small {
+    margin: 5px auto 0;
+    display: none;
+    width: 10px;
+    height: 10px;
+    background-color: #c0c0c0;
+    border-radius: 5px;
+}
+
+/**
+ * Simple animation written from scratch for the loading spinner
+ *  -- probably can be fine tuned some
+ */
+@keyframes spin-loader-small {
+    0% { transform: rotate(0deg) translateX(-0.4px) translateY(-0.4px); }
+    12.5% { transform: rotate(-45deg) translateX(-2.5px) translateY(1px)}
+    25% { transform: rotate(-90deg) translateX(-5px) translateY(0px); }
+    37.5% { transform: rotate(-135deg) translateX(-6px) translateY(-2.5px) }
+    50% { transform: rotate(-180deg) translateX(-5px) translateY(-5px); }
+    62.5% { transform: rotate(-225deg) translateX(-2.5px) translateY(-6px) }
+    75% { transform: rotate(-270deg) translateX(0px) translateY(-5px); }
+    87.5% { transform: rotate(-315deg) translateX(1px) translateY(-2.5px); }
+    100% { transform: rotate(-360deg) translateX(0px) translateY(0px); }
+}
+.loading-small:before {
+    content:'';
+    width: 5.4px;
+    border: 1px solid white;
+    height: 5.4px;
+    border-top-left-radius: 4px;
+    background-color: white;
+    position: absolute;
+    animation-name: spin-loader;
+    animation-duration: 1s;
+    animation-iteration-count: infinite;
+    animation-timing-function: linear;
+}
+.loading-small:after {
+    content: '';
+    width: 8px;
+    margin: 1px 0 0 1px;
+    height: 8px;
+    position: absolute;
+    background-color: white;
+    border-radius: 4px;
+}

@@ -2,6 +2,8 @@
 insert into catalog.islands values (0, 'RELATIONAL', 'PSQL');
 insert into catalog.islands values (1, 'ARRAY', 'AFL');
 insert into catalog.islands values (2, 'TEXT', 'JSON');
+insert into catalog.islands values (3, 'API', 'JSON');
+select setval('catalog.catalog.islands_iid_seq'::regclass, 2);
 
 -- catalog.engines: engine_id, name, host, port, connection_properties
 insert into catalog.engines values(0,'postgres0','bigdawg-postgres-catalog',5400,'PostgreSQL 9.4.5');
@@ -9,6 +11,7 @@ insert into catalog.engines values(1,'postgres1','bigdawg-postgres-data1',5401,'
 insert into catalog.engines values(2,'vertica','bigdawg-vertica-data',5433,'Vertica');
 insert into catalog.engines values(3,'scidb_local','bigdawg-scidb-data',1239,'SciDB 14.12');
 insert into catalog.engines values (4, 'saw ZooKeeper', 'zookeeper.docker.local', 2181, 'Accumulo 1.6');
+select setval('catalog.engines_eid_seq'::regclass, 4);
 
 -- catalog.databases: dbid, engine_id, name, userid, password
 insert into catalog.databases values(0,0,'bigdawg_catalog','pguser','test');
@@ -20,6 +23,7 @@ insert into catalog.databases values(4,0,'tpch','pguser','test');
 insert into catalog.databases values(5,1,'tpch','pguser','test');
 insert into catalog.databases values(6,3,'scidb_local','scidb','scidb123');
 insert into catalog.databases values (7, 4, 'accumulo', 'bigdawg', 'bigdawg');
+select setval('catalog.databases_dbid_seq'::regclass, 7);
 
 -- catalog.shims: shim_id	island_id	engine_id	access_method
 insert into catalog.shims values (0, 0, 0, 'N/A');
@@ -27,6 +31,7 @@ insert into catalog.shims values (1, 0, 1, 'N/A');
 insert into catalog.shims values (2, 0, 2, 'N/A');
 insert into catalog.shims values (3, 1, 3, 'N/A');
 insert into catalog.shims values (4, 2, 4, 'N/A');
+select setval('catalog.catalog.shims_shim_id_seq'::regclass, 4);
 
 -- catalog.scidbbinapath:
 -- binary path to scidb utilities: csv2scidb, iquery, etc.
@@ -90,6 +95,7 @@ insert into catalog.objects values (47, 'note_events_Tedge', '', 7, 7);
 insert into catalog.objects values (48, 'note_events_TedgeT','', 7, 7);
 insert into catalog.objects values (49, 'note_events_TedgeDeg','', 7, 7);
 insert into catalog.objects values (50, 'note_events_TedgeTxt', '', 7, 7);
+select setval('catalog.objects_oid_seq'::regclass, 50);
 
 -- insert into catalog.objects values(46,'go_matrix','geneid,goid,belongs',7,7);
 -- insert into catalog.objects values(47,'genes','id,target,pos,len,func',7,7);

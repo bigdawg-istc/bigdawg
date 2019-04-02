@@ -6,6 +6,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
 
+import istc.bigdawg.utils.StackTrace;
 import org.apache.log4j.Logger;
 
 import istc.bigdawg.accumulo.AccumuloConnectionInfo;
@@ -108,8 +109,9 @@ public class CastOverseer {
 			}
 			tempTableInfo.get(connectionInfoMap.get(source)).add(source.getName());
 			try {
-				Migrator.migrate(connectionInfoMap.get(source), source.getName(), targetConnInfo, remoteName, new MigrationParams(cast.getQueryString()));
+				Migrator.migrate(connectionInfoMap.get(source), source.getName(), targetConnInfo, remoteName, new MigrationParams(cast.getQueryString(), source, target));
 			} catch (MigrationException e) {
+				logger.error(StackTrace.getFullStackTrace(e));
 				throw new CastException(e.getMessage(), e);
 			}
 		}

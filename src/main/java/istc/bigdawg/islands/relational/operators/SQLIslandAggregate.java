@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import istc.bigdawg.islands.relational.SQLJSONPlaceholderParser;
 import org.apache.jcp.xml.dsig.internal.dom.Utils;
 
 import istc.bigdawg.exceptions.IslandException;
@@ -91,6 +92,9 @@ public class SQLIslandAggregate extends SQLIslandOperator implements Aggregate {
 			for (String s : groupBysFromXML) {
 				s = s.trim();
 				if (s.isEmpty()) continue;
+				if (SQLJSONPlaceholderParser.possiblyContainsOperator(s)) {
+					s = SQLJSONPlaceholderParser.transformJSONQuery(s);
+				}
 				Expression e = CCJSqlParserUtil.parseExpression(s);
 				SQLExpressionUtils.removeExcessiveParentheses(e);
 				
@@ -193,7 +197,12 @@ public class SQLIslandAggregate extends SQLIslandOperator implements Aggregate {
 		}
 		if (ret.isEmpty()) {
 			for (Expression gb : parsedGroupBys) {
-				ret.add(CCJSqlParserUtil.parseExpression(gb.toString()));
+				String gbStr = gb.toString();
+				if (SQLJSONPlaceholderParser.possiblyContainsOperator(gbStr)) {
+					gbStr = SQLJSONPlaceholderParser.transformJSONQuery(gbStr);
+				}
+
+				ret.add(CCJSqlParserUtil.parseExpression(gbStr));
 			}
 		}
 		return ret;

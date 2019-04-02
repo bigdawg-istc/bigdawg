@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import istc.bigdawg.islands.relational.SQLJSONPlaceholderParser;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -110,7 +111,13 @@ public class PostgreSQLQueryGenerator implements OperatorQueryGenerator {
 	@Override
 	public String generateStatementString() throws Exception {
 		postprocessSQLStatement((SQLIslandOperator) root);
-		return dstStatement.toString();
+		String result = dstStatement.toString();
+
+		// This is necessary as the internal parser does not support ->> (although it does support ->)
+		if (SQLJSONPlaceholderParser.containsPlaceholder(result)) {
+			result = SQLJSONPlaceholderParser.substitutePlaceholders(result);
+		}
+		return result;
 	}
 
 	@Override

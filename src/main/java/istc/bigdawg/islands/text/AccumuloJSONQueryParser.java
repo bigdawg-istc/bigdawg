@@ -1,62 +1,28 @@
 package istc.bigdawg.islands.text;
 
-import java.util.List;
 
+import istc.bigdawg.query.AbstractJSONQueryParser;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Range;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
 import istc.bigdawg.islands.operators.Operator;
 import istc.bigdawg.islands.text.operators.TextScan;
 
-public class AccumuloJSONQueryParser {
+public class AccumuloJSONQueryParser extends AbstractJSONQueryParser {
 
-	JSONParser parser;
-	
-	public AccumuloJSONQueryParser() {
-		parser = new JSONParser();
-	}
-	
-	public Operator parse(String input) throws ParseException {
-		JSONObject parsedObject = (JSONObject) parser.parse(input.replaceAll("[']", "\""));
-		
-		if (parsedObject.get("op") == null || !(parsedObject.get("op") instanceof String)) 
-			throw new ParseException(ParseException.ERROR_UNEXPECTED_TOKEN, "AccumuloJSONQueryParser parsing error: cannot identify operator. query: "+input);
-		
-		String operatorName = (String) parsedObject.get("op");
-		
-		switch (operatorName) {
-		case "scan":
-			return getScan(parsedObject);
-		default:
-			throw new ParseException(ParseException.ERROR_UNEXPECTED_TOKEN, "AccumuloJSONQueryParser parsing error: unsupported operator: "+operatorName);
+	public OperatorTypes getOperatorType(JSONObject parsedObject, String input) throws ParseException {
+		if (parsedObject.get("op") == null || !(parsedObject.get("op") instanceof String))
+			throw new ParseException(ParseException.ERROR_UNEXPECTED_TOKEN, "AccumuloJSONQueryParser parsing error: cannot identify operator. query: " + input);
+		if (!parsedObject.get("op").equals("scan")) {
+			throw new ParseException(ParseException.ERROR_UNEXPECTED_TOKEN, this.getClass() + " parsing error: unsupported operator: " + parsedObject.get("op"));
 		}
-	};
-	
-	@SuppressWarnings("rawtypes")
-	public static Object getObjectByType(Object objectHolder, Class clazz) throws ParseException {
-		if (objectHolder == null)
-			return null;
-		if (! (objectHolder.getClass().equals(clazz)))
-			throw new ParseException(ParseException.ERROR_UNEXPECTED_TOKEN, "AccumuloJSONQueryParser parsing error: data type mismatch: expecting "+clazz.getName()+"; received: "+objectHolder.getClass().getName());
-		return objectHolder;
+		return OperatorTypes.SCAN;
 	}
-	
-	private String getNonNullString(Object input) throws ParseException {
-		String s = (String) getObjectByType(input, String.class);
-		if (s == null) return "";
-		return s;
-	}
-	
-	public static void addNonNullStringToList(Object input, List<String> output) throws ParseException{
-		String s = (String) getObjectByType(input, String.class);
-		if (s != null) output.add(s);
-	}
-	
-	private Operator getScan(JSONObject parsedObject) throws ParseException {
+
+	protected Operator getScan(JSONObject parsedObject) throws ParseException {
 		
 		String table = (String)getObjectByType(parsedObject.get("table"), String.class);
 		JSONObject rangeObject = (JSONObject)getObjectByType(parsedObject.get("range"), JSONObject.class);

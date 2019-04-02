@@ -19,6 +19,7 @@ import java.util.Optional;
 
 import javax.ws.rs.core.Response;
 
+import istc.bigdawg.database.ObjectMetaData;
 import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Logger;
 import org.scidb.jdbc.IStatementWrapper;
@@ -903,9 +904,9 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 	 * @return a string of characters from the set: NnSsCc
 	 * 
 	 */
-	public static String getTypePatternFromPostgresTypes(
-			final PostgreSQLTableMetaData postgresTableMetaData) {
-		final List<AttributeMetaData> columnsMetaData = postgresTableMetaData
+	public static String getTypePatternFromObjectMetaData(
+			final ObjectMetaData objectMetaData) {
+		final List<AttributeMetaData> columnsMetaData = objectMetaData
 				.getAttributesOrdered();
 		char[] scidbTypesPattern = new char[columnsMetaData.size()];
 		for (AttributeMetaData columnMetaData : columnsMetaData) {
@@ -917,6 +918,7 @@ public class SciDBHandler implements DBHandler, ExecutorEngine {
 				newType = 'C';
 			} else if (columnMetaData.getSqlDataType().contains("varchar")
 					|| columnMetaData.getSqlDataType().contains("character")
+					|| columnMetaData.getSqlDataType().contains("json")
 					|| columnMetaData.getSqlDataType()
 							.contains("character varying")
 					|| columnMetaData.getSqlDataType().equals("text")) {

@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import istc.bigdawg.executor.QueryResult;
 import istc.bigdawg.executor.plan.ExecutionNodeFactory;
 import istc.bigdawg.executor.plan.QueryExecutionPlan;
 import istc.bigdawg.islands.IslandAndCastResolver.Scope;
@@ -25,6 +26,8 @@ public abstract class IntraIslandQuery extends CrossIslandQueryNode {
 	protected Set<String> children;
 	
 	protected Operator initialRoot;
+
+	protected QueryResult queryResult;
 	
 	public IntraIslandQuery (Scope scope, String islandQuery, String name, Map<String, String> transitionSchemas) throws Exception {
 		super(scope, islandQuery, name);
@@ -127,6 +130,14 @@ public abstract class IntraIslandQuery extends CrossIslandQueryNode {
 	@Override
 	public String toString() {
 		return String.format("(CIQN %s (children %s))", name, children);
+	}
+
+	public void setQueryResult(QueryResult queryResult) {
+		this.queryResult = queryResult;
+	}
+
+	public QueryResult getQueryResult() {
+		return this.queryResult;
 	}
 	
 }

@@ -138,19 +138,6 @@ class FromPostgresToSciDB extends FromDatabaseToDatabase
 
 	/**
 	 * This is migration from PostgreSQL to SciDB.
-	 * 
-	 * @param connectionFrom the connection to PostgreSQL
-	 * 
-	 * @param fromTable the name of the table in PostgreSQL to be migrated
-	 * 
-	 * @param connectionTo the connection to SciDB database
-	 * 
-	 * @param arrayTo the name of the array in SciDB
-	 * 
-	 * @see
-	 * istc.bigdawg.migration.FromDatabaseToDatabase#migrate(istc.bigdawg.query.
-	 * ConnectionInfo, java.lang.String, istc.bigdawg.query.ConnectionInfo,
-	 * java.lang.String
 	 */
 	@Override
 	public MigrationResult migrate(MigrationInfo migrationInfo)
@@ -294,7 +281,7 @@ class FromPostgresToSciDB extends FromDatabaseToDatabase
 					this.getClass().getName() + "_toSciDB_" + getObjectTo());
 
 			String typesPattern = SciDBHandler
-					.getTypePatternFromPostgresTypes(fromObjectMetaData);
+					.getTypePatternFromObjectMetaData(fromObjectMetaData);
 
 			List<Callable<Object>> tasks = new ArrayList<>();
 			tasks.add(new ExportPostgres(getConnectionFrom(),

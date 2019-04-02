@@ -6,16 +6,17 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 import istc.bigdawg.accumulo.AccumuloConnectionInfo;
+import istc.bigdawg.api.ApiHandler;
+import istc.bigdawg.islands.api.ApiIsland;
+import istc.bigdawg.rest.RESTConnectionInfo;
 import istc.bigdawg.catalog.Catalog;
 import istc.bigdawg.catalog.CatalogViewer;
-import istc.bigdawg.exceptions.BigDawgCatalogException;
-import istc.bigdawg.exceptions.BigDawgException;
-import istc.bigdawg.exceptions.IslandException;
-import istc.bigdawg.exceptions.UnsupportedIslandException;
+import istc.bigdawg.exceptions.*;
 import istc.bigdawg.executor.QueryResult;
 import istc.bigdawg.islands.Myria.MyriaQueryParser;
 import istc.bigdawg.islands.SStore.SStoreQueryParser;
 import istc.bigdawg.islands.SciDB.ArrayIsland;
+import istc.bigdawg.islands.api.ApiQueryParser;
 import istc.bigdawg.islands.relational.RelationalIsland;
 import istc.bigdawg.islands.text.TextIsland;
 import istc.bigdawg.myria.MyriaHandler;
@@ -23,7 +24,6 @@ import istc.bigdawg.mysql.MySQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.query.ConnectionInfo;
-import istc.bigdawg.islands.relational.*;
 import istc.bigdawg.scidb.SciDBConnectionInfo;
 import istc.bigdawg.shims.*;
 import istc.bigdawg.sstore.SStoreSQLConnectionInfo;
@@ -44,24 +44,25 @@ import istc.bigdawg.vertica.VerticaConnectionInfo;
 public class IslandAndCastResolver {
 	
 	public static enum Engine {
-		PostgreSQL, SciDB, SStore, Accumulo, Myria, MySQL, Vertica
+		PostgreSQL, SciDB, SStore, Accumulo, Myria, MySQL, Vertica, REST
 	};
 	
 	public enum Scope {
-		RELATIONAL, ARRAY, KEYVALUE, TEXT, GRAPH, DOCUMENT, STREAM, CAST, MYRIA 
+		RELATIONAL, ARRAY, KEYVALUE, TEXT, GRAPH, DOCUMENT, STREAM, CAST, MYRIA, API
 	}
 
 
 	public static final int  sstoreDBID = BigDawgConfigProperties.INSTANCE.getSStoreDBID();
 	
-	public static Pattern QueryParsingPattern	= Pattern.compile("(?i)(bdrel\\(|bdarray\\(|bdkv\\(|bdtext\\(|bdgraph\\(|bddoc\\(|bdstream\\(|bdmyria\\(|bdcast\\(|\\(|\\))");
-	public static Pattern ScopeStartPattern		= Pattern.compile("^((bdrel\\()|(bdarray\\()|(bdkv\\()|(bdtext\\()|(bdgraph\\()|(bddoc\\()|(bdstream\\()|(bdmyria\\()|(bdcast\\())");
+	public static Pattern QueryParsingPattern	= Pattern.compile("(?i)(bdrel\\(|bdarray\\(|bdkv\\(|bdtext\\(|bdgraph\\(|bddoc\\(|bdstream\\(|bdmyria\\(|bdapi\\(|bdcast\\(|\\(|\\))");
+	public static Pattern ScopeStartPattern		= Pattern.compile("^((bdrel\\()|(bdarray\\()|(bdkv\\()|(bdtext\\()|(bdgraph\\()|(bddoc\\()|(bdstream\\()|(bdmyria\\()|(bdapi\\()|(bdcast\\())");
 	public static Pattern ScopeEndPattern		= Pattern.compile("\\) *;? *$");
-	public static Pattern CastScopePattern		= Pattern.compile("(?i)(relational|array|keyvalue|text|graph|document|stream|myria)\\) *;? *$");
-	public static Pattern CastSchemaPattern		= Pattern.compile("(?<=([_a-z0-9, ]+')).*(?=(' *, *(relational|array|keyvalue|text|graph|document|stream|myria)))");
+	public static Pattern CastScopePattern		= Pattern.compile("(?i)(relational|array|keyvalue|text|graph|document|stream|myria|api)\\) *;? *$");
+
+																	// @MattM - JetBrains IntelliJ complains that this "+" below is not allowed as you can't do infinite negative lookbehind in Java Regexes.
+	public static Pattern CastSchemaPattern		= Pattern.compile("(?<=([_a-z0-9, ]+')).*(?=(' *, *(relational|array|keyvalue|text|graph|document|stream|myria|api)))");
 	public static Pattern CastNamePattern		= Pattern.compile("(?<=(, ))([_@0-9a-zA-Z]+)(?=, *')");
-	
-	
+
 	/**
 	 * For CrossIslandQueryPlan
 	 * Determines whether an island is implemented
@@ -73,6 +74,7 @@ public class IslandAndCastResolver {
 		case ARRAY:
 		case RELATIONAL:
 		case TEXT:
+		case API:
 			return true;
 		case DOCUMENT:
 		case GRAPH:
@@ -104,6 +106,8 @@ public class IslandAndCastResolver {
 			return IslandAndCastResolver.Engine.MySQL;
 		else if (engineString.startsWith(IslandAndCastResolver.Engine.Vertica.name()))
 			return IslandAndCastResolver.Engine.Vertica;
+		else if (engineString.startsWith(IslandAndCastResolver.Engine.REST.name()))
+			return IslandAndCastResolver.Engine.REST;
 		else {
 			throw new BigDawgException("Unsupported engine: "+ engineString);
 		}
@@ -173,6 +177,23 @@ public class IslandAndCastResolver {
 				if (rs2.next())
 					extraction = new AccumuloConnectionInfo(rs2.getString("host"), rs2.getString("port"),rs2.getString("dbname"), rs2.getString("userid"), rs2.getString("password"));
 				break;
+			case REST:
+				rs2 = cc.execRet("select dbid, eid, host, port, db.name as dbname, userid, password, connection_properties, o.name as obj, fields "
+						+ "from catalog.databases db "
+						+ "join catalog.engines e on db.engine_id = e.eid "
+                        + "join catalog.objects o on db.dbid = o.physical_db "
+						+ "where dbid = "+dbid);
+				if (rs2.next()) {
+					try {
+						String userid = rs2.getString("userid");
+						String password = rs2.getString("password");
+						extraction = new RESTConnectionInfo(rs2.getString("dbname"), rs2.getString("connection_properties"), rs2.getString("obj"), userid, password, rs2.getString("fields"));
+					}
+					catch (Exception ex) {
+						throw new BigDawgCatalogException("Problem creating RESTConnectionInfo: " + ex.toString());
+					}
+				}
+				break;
 			default:
 				throw new BigDawgCatalogException("This is not supposed to happen");
 			}
@@ -197,7 +218,6 @@ public class IslandAndCastResolver {
 	/**
 	 * For Executor.
 	 * @param scope
-	 * @param remainderDBID 
 	 * @return Instance of a query generator
 	 * @throws BigDawgException 
 	 * @throws SQLException 
@@ -243,6 +263,13 @@ public class IslandAndCastResolver {
 			return new TextToAccumuloShim();
 		case MYRIA:
 			throw new BigDawgException("MYRIA island does not support the concept of generator; getQueryGenerator");
+		case API:
+			switch (e) {
+				case REST:
+					return new ApiToRESTShim();
+				default:
+					throw new BigDawgException("No other Api shims have been implemented yet");
+			}
 		default:
 			break;
 		}
@@ -275,6 +302,8 @@ public class IslandAndCastResolver {
 			return "TEXT";
 		case MYRIA:
 			return "MYRIA";
+		case API:
+			return "API";
 		default:
 			break;
 		}
@@ -302,6 +331,8 @@ public class IslandAndCastResolver {
 			return TextIsland.INSTANCE; 
 		case MYRIA:
 			break;	
+		case API:
+			return ApiIsland.INSTANCE;
 		default:
 			break;
 		}
@@ -323,6 +354,10 @@ public class IslandAndCastResolver {
 		case STREAM:
 			List<String> ssparsed = (new SStoreQueryParser()).parse(node.getQueryString());
 			return (new SStoreSQLHandler(sstoreDBID)).executePreparedStatement((new SStoreSQLHandler(sstoreDBID)).getConnection(), ssparsed);
+// For test purposes:
+//		case API:
+//			List<String> apiparsed = (new ApiQueryParser()).parse(node.getQueryString());
+//			return ApiHandler.executeApiQuery(apiparsed);
 		case MYRIA:
 			String input = node.getQueryString();
 			List<String> mparsed = (new MyriaQueryParser()).parse(input);
@@ -330,6 +365,7 @@ public class IslandAndCastResolver {
 			System.out.printf("MYRIA Island query: -->%s<--; parsed form: -->%s<--\n", input, mparsed);
 			
 			return MyriaHandler.executeMyriaQuery(mparsed);
+		case API:
 		case RELATIONAL:
 		case ARRAY:
 		case TEXT:
@@ -338,7 +374,7 @@ public class IslandAndCastResolver {
 		}
 		
 	}
-	
+
 	
 	public static Scope convertFunctionScope (String prefix) throws UnsupportedIslandException {
 		switch (prefix) {
@@ -369,6 +405,9 @@ public class IslandAndCastResolver {
 		case "bdmyria(":
 		case "bdmyria":
 			return Scope.MYRIA;
+		case "bdapi(":
+		case "bdapi":
+			return Scope.API;
 		default:
 			throw new UnsupportedIslandException(prefix);
 		}
@@ -395,6 +434,8 @@ public class IslandAndCastResolver {
 			return Scope.CAST;
 		case "myria":
 			return Scope.MYRIA;
+		case "api":
+			return Scope.API;
 		default:
 			throw new UnsupportedIslandException(prefix);
 		}

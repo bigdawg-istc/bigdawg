@@ -33,7 +33,9 @@ public class Neo4jParserTest {
 		Properties info = new Properties();
 		info.put("user", "neo4j");
 		info.put("password", "123");
-		Neo4jConnection con = (Neo4jConnection)DriverManager.getConnection("jdbc:neo4j://192.168.1.22:7474/", info);
+//		final String connectionStr = "jdbc:neo4j://192.168.1.22:7474/";
+		final String connectionStr = "jdbc:neo4j://localhost:7474/";
+		Neo4jConnection con = (Neo4jConnection)DriverManager.getConnection(connectionStr, info);
 
 		// Querying
 		stmt = con.createStatement();

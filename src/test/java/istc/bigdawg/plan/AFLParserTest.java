@@ -131,7 +131,7 @@ public class AFLParserTest extends TestCase {
 	
 	public void testParse(String testname) throws Exception {
 		
-		AFLQueryPlan queryPlan = AFLPlanParser.extractDirect(new SciDBHandler((SciDBConnectionInfo)CatalogViewer.getConnectionInfo(8)), expectedOutputs.get(testname));
+		AFLQueryPlan queryPlan = AFLPlanParser.extractDirect(new SciDBHandler((SciDBConnectionInfo)CatalogViewer.getConnectionInfo(6)), expectedOutputs.get(testname));
 		Operator root = queryPlan.getRootNode();
 		
 		OperatorQueryGenerator gen = new AFLQueryGenerator();

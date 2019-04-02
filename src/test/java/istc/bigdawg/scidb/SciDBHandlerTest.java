@@ -1,5 +1,5 @@
 /**
- * 
+ *
  */
 package istc.bigdawg.scidb;
 
@@ -24,7 +24,7 @@ import istc.bigdawg.utils.StackTrace;
 
 /**
  * Test the operations executed in SciDB.
- * 
+ *
  * @author Adam Dziedzic
  */
 public class SciDBHandlerTest {
@@ -35,13 +35,13 @@ public class SciDBHandlerTest {
 
 	@Before
 	public void init() {
-		LoggerSetup.setLogging();	
+		LoggerSetup.setLogging();
 	}
-	
+
 	@Test
 	/**
 	 * Test execute statement based on create/delete an array in SciDB.
-	 * 
+	 *
 	 * @throws SQLException
 	 * @throws ClassNotFoundException
 	 */
@@ -87,7 +87,7 @@ public class SciDBHandlerTest {
 	@Test
 	/**
 	 * Check if the command in SciDB can be executed in the AFL language.
-	 * 
+	 *
 	 * @throws SQLException
 	 */
 	public void testExecuteStatementAFL() throws SQLException {
@@ -145,7 +145,7 @@ public class SciDBHandlerTest {
 	 * Check if we can correctly extract meta data about arrays in SciDB, for
 	 * example: attributes of the arrays, dimensions of the arrays, types of
 	 * attributes, names of attributes, etc.
-	 * 
+	 *
 	 * @throws SQLException
 	 * @throws NoTargetArrayException
 	 */
@@ -154,6 +154,8 @@ public class SciDBHandlerTest {
 		String arrayName2 = "adam_test_scidb_011_2";
 		SciDBHandler handler = new SciDBHandler();
 		// create array
+		handler.executeStatementAQL("drop array " + arrayName2
+				+ "");
 		handler.executeStatementAQL("create array " + arrayName2
 				+ "<v:string,d:double> [i=0:10,1,0,j=0:100,1,0]");
 //		handler.close();
@@ -173,44 +175,44 @@ public class SciDBHandlerTest {
 
 		AttributeMetaData firstDimension = dimensionsOrdered.get(0);
 		assertEquals("i", firstDimension.getName());
-		assertEquals("int64", firstDimension.getSqlDataType());
+		assertEquals("bigint", firstDimension.getSqlDataType());
 
 		AttributeMetaData secondDimension = dimensionsOrdered.get(1);
 		assertEquals("j", secondDimension.getName());
-		assertEquals("int64", secondDimension.getSqlDataType());
+		assertEquals("bigint", secondDimension.getSqlDataType());
 
 		Map<String, AttributeMetaData> dimensionsMap = meta.getDimensionsMap();
 		assertEquals(2, dimensionsMap.size());
 
 		AttributeMetaData firstDimensionMap = dimensionsMap.get("i");
 		assertEquals("i", firstDimensionMap.getName());
-		assertEquals("int64", firstDimensionMap.getSqlDataType());
+		assertEquals("bigint", firstDimensionMap.getSqlDataType());
 
 		AttributeMetaData secondDimensionMap = dimensionsMap.get("j");
 		assertEquals("j", secondDimensionMap.getName());
-		assertEquals("int64", secondDimensionMap.getSqlDataType());
+		assertEquals("bigint", secondDimensionMap.getSqlDataType());
 
 		List<AttributeMetaData> attributesOrdered = meta.getAttributesOrdered();
 		assertEquals(2, attributesOrdered.size());
 
 		AttributeMetaData firstAttribute = attributesOrdered.get(0);
 		assertEquals("v", firstAttribute.getName());
-		assertEquals("string", firstAttribute.getSqlDataType());
+		assertEquals("text", firstAttribute.getSqlDataType());
 
 		AttributeMetaData secondAttribute = attributesOrdered.get(1);
 		assertEquals("d", secondAttribute.getName());
-		assertEquals("double", secondAttribute.getSqlDataType());
+		assertEquals("double precision", secondAttribute.getSqlDataType());
 
 		Map<String, AttributeMetaData> attributesMap = meta.getAttributesMap();
 		assertEquals(2, attributesMap.size());
 
 		AttributeMetaData firstAttributeMap = attributesMap.get("v");
 		assertEquals("v", firstAttributeMap.getName());
-		assertEquals("string", firstAttributeMap.getSqlDataType());
+		assertEquals("text", firstAttributeMap.getSqlDataType());
 
 		AttributeMetaData secondAttributeMap = attributesMap.get("d");
 		assertEquals("d", secondAttributeMap.getName());
-		assertEquals("double", secondAttributeMap.getSqlDataType());
+		assertEquals("double precision", secondAttributeMap.getSqlDataType());
 
 //		handler.close();
 

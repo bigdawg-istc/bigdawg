@@ -71,6 +71,9 @@ public class Migrator {
 		registeredMigrators.add(new FromPostgresToMySQL());
 		registeredMigrators.add(new FromVerticaToPostgres());
 		registeredMigrators.add(new FromPostgresToVertica());
+		registeredMigrators.add(new FromRESTToPostgres());
+		registeredMigrators.add(new FromRESTToAccumulo());
+		registeredMigrators.add(new FromRESTToSciDB());
 	}
 
 	/**

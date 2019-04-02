@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import istc.bigdawg.islands.relational.SQLJSONPlaceholderParser;
 import org.apache.log4j.Logger;
 
 import istc.bigdawg.exceptions.IslandException;
@@ -90,6 +91,9 @@ public class SQLIslandSort extends SQLIslandOperator implements Sort {
 //		for (String s : getSortKeys()) {
 			
 			String s = getSortKeys().get(i);
+			if (SQLJSONPlaceholderParser.possiblyContainsOperator(s)) {
+				s = SQLJSONPlaceholderParser.transformJSONQuery(s);
+			}
 			Expression e = CCJSqlParserUtil.parseExpression(SQLExpressionUtils.removeExpressionDataTypeArtifactAndConvertLike(s));
 			SQLExpressionUtils.removeExcessiveParentheses(e);
 			while (e instanceof Parenthesis) e = ((Parenthesis) e).getExpression();

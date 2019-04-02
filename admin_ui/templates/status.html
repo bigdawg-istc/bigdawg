@@ -3,9 +3,10 @@
 {% set active_page = "status" %}
 
 {% block content %}
-<div class="row col-xs-10 col-xs-offset-1">
-  <h1 align="center">Container Status</h1>
-  <table class="table table-hover">
+<div class="row">
+  <div class="col-10 offset-1">
+    <h1>Container Status</h1>
+    <table class="table table-hover">
     <thead>
       <tr>
         <th>Name</th>
@@ -23,20 +24,21 @@
           <form method="POST" action="startContainer">
             <input type="hidden" name="container" value="{{ container.name }}">
             <input type="hidden" name="action" value="start">
-            <button class="button btn-success">Start</button>
+            <button class="btn btn-success">Start</button>
           </form>
         </td>
         <td>
           <form method="POST" action="stopContainer">
             <input type="hidden" name="container" value="{{ container.name }}">
             <input type="hidden" name="action" value="stop">
-            <button class="button btn-danger">Stop</button>
+            <button class="btn btn-danger">Stop</button>
           </form>
         </td>
       </tr>
       {% endfor %}
     </tbody>
-  </table>
+    </table>
+  </div>
 </div>
 {% endblock %}
   

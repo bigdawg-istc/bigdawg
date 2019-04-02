@@ -468,7 +468,40 @@
 				</resources>
 			</build>
 		</profile>
-
+		<profile>
+			<id>localhost</id>
+			<activation>
+				<property>
+					<name>environment.type</name>
+					<value>localhost</value>
+				</property>
+			</activation>
+			<properties>
+				<!-- Specifies the build.profile.id property that must be equal than
+					the name of the directory that contains the profile specific configuration
+					file. Because the name of the directory that contains the configuration file
+					of the testing profile is test, we must set the value of the build.profile.id
+					property to test. -->
+				<build.profile.id>localhost</build.profile.id>
+			</properties>
+			<build>
+				<resources>
+					<resource>
+						<directory>src/main/resources</directory>
+						<!-- ${project.build.directory} refers to the output directory of the
+							project -->
+						<!-- <targetPath>${project.build.directory}/bigdawg-conf/</targetPath> -->
+						<!-- filtering - replaces variables, denoted by the ${...} with values -->
+						<filtering>true</filtering>
+						<includes>
+							<include>**/*.properties</include>
+						</includes>
+						<!-- <targetPath>${project.build.directory}</targetPath> -->
+						<!-- <includes> <include>log4j.properties</include> </includes> -->
+					</resource>
+				</resources>
+			</build>
+		</profile>
 	</profiles>
 
 	<build>

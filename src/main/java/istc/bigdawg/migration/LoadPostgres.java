@@ -159,7 +159,8 @@ public class LoadPostgres implements Load {
 	private void lazyInitialization() throws MigrationException {
 		if (input == null) {
 			try {
-				input = new BufferedInputStream(new FileInputStream(inputFile));
+				FileInputStream fileInputStream = new FileInputStream(inputFile);
+				input = new BufferedInputStream(fileInputStream);
 			} catch (FileNotFoundException e) {
 				String msg = e.getMessage()
 						+ " Problem with thread for PostgreSQL copy manager "
@@ -245,6 +246,7 @@ public class LoadPostgres implements Load {
 			log.debug("copy to string: " + copyToString);
 			Long countLoadedRows = cpTo.copyIn(copyToString, input);
 			input.close();
+			input = null;
 			connection.commit();
 			return countLoadedRows;
 		} catch (IOException | SQLException e) {

@@ -107,6 +107,7 @@ public class AccumuloHandler implements DBHandler {
 	 */
 	@Override
 	public Shim getShim() {
+
 		return BDConstants.Shim.ACCUMULOTEXT;
 	}
 

@@ -79,6 +79,23 @@ public class RunShell {
 		return runShellReturnExitValue(new ProcessBuilder("mkfifo", name));
 	}
 
+	public static InputStream runApiCommand(String curlParameters)
+			throws IOException, InterruptedException, BigDawgException
+	{
+		InputStream scriptResultInStream;
+		try {
+			System.out.printf("\nbeginning commands: %s;\n\n", Arrays.asList(curlParameters.split("@@@")));
+			scriptResultInStream = runShell(new ProcessBuilder(curlParameters.split("@@@")));
+		} catch (RunShellException e) {
+			e.printStackTrace();
+			String msg = "Problem with the new shell script runner: curl " + curlParameters;
+			log.error(msg);
+			throw new BigDawgException(msg);
+		}
+
+		return scriptResultInStream;
+	}
+
 	public static InputStream runAccumuloScript(String filePath, String database, String table, String query)
 			throws IOException, InterruptedException, AccumuloShellScriptException {
 		try {
@@ -109,7 +126,7 @@ public class RunShell {
 			throw new AccumuloShellScriptException(msg);
 		}
 	}
-	
+
 //	public static InputStream runMyriaCommand(List<String> databaseTableAndQuery)
 	public static InputStream runMyriaCommand(String curlParameters, String name, boolean isQuery, boolean isDownload)
 			throws IOException, InterruptedException, JSONException, BigDawgException {

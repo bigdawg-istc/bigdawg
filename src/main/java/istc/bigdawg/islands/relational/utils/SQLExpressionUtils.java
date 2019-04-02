@@ -87,7 +87,6 @@ public class SQLExpressionUtils {
 	public static void removeExcessiveParentheses(Expression expr) {
 		
 		SQLExpressionHandler deparser = new SQLExpressionHandler() {
-	        
 			@Override
 		    public void visit(Parenthesis parenthesis) {
 				while (parenthesis.getExpression() instanceof Parenthesis)
@@ -243,7 +242,7 @@ public class SQLExpressionUtils {
 			@Override public void visit(TimeValue lv) {};
 			@Override public void visit(StringValue sv) {};
 	    };
-	    
+	    deparser.setBuffer(new StringBuilder());
 	    expr.accept(deparser);
 		
 	}

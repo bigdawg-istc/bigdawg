@@ -1,0 +1,310 @@
+{% extends "layout.html" %}
+
+{% set active_page = "import_page" %}
+
+{% block head_extra %}
+    <style type="text/css">
+        h1 {
+            margin-bottom: 30px;
+        }
+        h4 {
+            margin-bottom: 20px;
+        }
+        #desired-format-wrap {
+            margin-top: 40px;
+        }
+        #upload-error, #upload-success {
+            margin-top: 10px;
+        }
+
+        #csv-error {
+            margin-top: 10px;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+
+        #upload-csv {
+            margin-left: 10px;
+        }
+
+        figure.highlight {
+            background-color: #eee;
+            padding: 10px;
+        }
+        .loading {
+            visibility: hidden;
+            display: inline-block !important;
+            margin: 0 0 -20px 10px !important;
+        }
+        #filename {
+            font-weight: normal;
+            font-style: italic;
+            margin: 0 5px 0 0;
+            display: none;
+        }
+
+        label.btn-file {
+            margin-right: 5px;
+        }
+
+        input[type=file] {
+            display: none;
+        }
+        select.form-control {
+            width: 300px;
+        }
+
+        #new-label {
+            margin-left: 10px;
+        }
+
+        .csv-error {
+            border: 1px solid red;
+        }
+
+        .csv-ok {
+            border: 1px solid green;
+        }
+
+        #csv-show {
+            margin-top: 15px;
+        }
+
+        textarea {
+            width: 100%;
+        }
+
+        #csv-buttons {
+            text-align: right;
+        }
+
+        #csv-schema-wrap ul.nav {
+            margin-bottom: 10px;
+        }
+
+        #csv-create-schema-wrap {
+            display: flex;
+            flex-direction: row;
+            width: 100%;
+        }
+
+        #csv-create-schema-wrap > div {
+            flex-basis: 50%;
+            margin: 0 10px 0 0;
+        }
+
+        div.new {
+            width: 75%;
+            grid-row-gap: 25px;
+            display: grid;
+            grid-template-columns: auto auto;
+        }
+
+        #csv-fields {
+            display: grid;
+            grid-template-columns: auto auto auto auto;
+            grid-row-gap: 5px;
+            width: 75%;
+            margin-bottom: 20px;
+        }
+
+        .schema-note {
+            font-size: 10px;
+            font-style: italic;
+            font-weight: normal;
+        }
+    </style>
+    <script src="static/js/util.js?v={{ versions['util.js'] }}"></script>
+    <script>
+        const datatypes = [
+        {% for datatype in datatypes %}
+            {
+                table_schema: '{{ datatype[0] }}',
+                table_name: '{{ datatype[1] }}',
+                column_name: '{{ datatype[2] }}',
+                data_type: '{{ datatype[3] }}'
+            },
+        {% endfor %}
+        ];
+
+        const databases = [
+        {% for database in databases %}
+            {
+                dbid: {{ database[0] }},
+                engine_id: {{ database[1] }},
+                name: '{{ database[2] }}',
+            },
+        {% endfor %}
+        ];
+
+        const enginesById = {
+        {% for key, engine in enginesByEngineId.items() %}
+            "{{ key }}": {
+                    eid: '{{ engine[0] }}',
+                    name:'{{ engine[1] }}',
+                    host: '{{ engine[2] }}',
+                    port: '{{ engine[3] }}',
+                    connection_properties: '{{ engine[4] }}'
+            },
+        {% endfor %}
+        };
+
+        const objects = [
+            {% for object in objects %}
+                {
+                    oid: {{ object[0] }},
+                    name: '{{ object[1] }}',
+                    fields: '{{ object[2] }}',
+                    logical_db: {{ object[3] }},
+                    physical_db: {{ object[4] }}
+                },
+            {% endfor %}
+        ];
+
+        const objectsById = [];
+        objects.forEach((item) => {
+            objectsById[item.oid] = item;
+        });
+
+        const databasesById = [];
+        databases.forEach((item) => {
+            databasesById[item.dbid] = item;
+        });
+
+        const datatypesByTable = {};
+        datatypes.forEach((item) => {
+            const name = item.table_schema + '.' + item.table_name;
+            if (!datatypesByTable[name]) {
+                datatypesByTable[name] = {};
+            }
+            datatypesByTable[name][item.column_name] = item.data_type;
+        });
+    </script>
+    <link rel="stylesheet" href="static/css/general.css?v={{ versions['general.css'] }}" />
+{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-10 offset-1">
+    <div id="part-1">
+        <h1>Import</h1>
+        <h4>Choose a Database and Object:</h4>
+        <form class="selector form">
+            <div class="form-group">
+                <label for="database" class="control-label">Database:</label>
+                <select name="database" id="database" class="form-control">
+                    <option value="">Select:</option>
+                    {% for database in databases %}
+                        {% if not database[2].startswith("bigdawg") %}
+                        <option value="{{ database[0] }}">{{ database[0] }}: {{ database[2] }} (engine: {{ enginesByEngineId[database[1]][1] }})</option>
+                        {% endif %}
+                    {% endfor %}
+               </select>
+            </div>
+            <div class="object-selection hidden">
+                <h3>
+                    Object:
+                </h3>
+                <div class="form-group">
+                    <label>
+                        <input type="radio" name="type" value="existing" checked="checked"> Existing
+                    </label>
+                    <label id="new-label">
+                        <input type="radio" name="type" value="new"> New
+                    </label>
+                </div>
+                <div class="form-group existing">
+                    <label for="object" class="control-label">Name:</label>
+                    <select name="object" id="object" class="form-control">
+                        <option>No objects found.</option>
+                    </select>
+                </div>
+                <div id="new-div" class="form-group new hidden">
+                    <label for="new" class="control-label">Name:</label>
+                    <input id="new" name="new" type="text" size="40" />
+                    <div id="schema-loading" class="loading-small"></div>
+                    <label for="schema-name" class="control-label">Schema Name:</label>
+                    <select id="schema-name" name="schema_name" class="form-control">
+                    </select>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div id="desired-format-wrap" class="hidden">
+        <h5>Desired Format:</h5>
+        <figure class="highlight">
+            <pre id="desired-format">
+            </pre>
+        </figure>
+    </div>
+    <div class="upload">
+        <form class="form upload-form hidden">
+            <div class="form-group custom-file">
+                <input id="file-input" type="file" class="custom-file-input" name="csv" accept=".csv,text/csv" />
+                <label for="file-input" class="custom-file-label text-truncate">Browse</label>
+            </div>
+            <div class="checkbox">
+                <label>
+                    <input type="checkbox" name="header" id="contains-header" /> Contains Header Row
+                </label>
+            </div>
+            <div id="csv-error" class="alert alert-danger hidden" role="alert"></div>
+            <div id="csv-show" class="hidden">
+                <label for="csv-text">CSV Contents</label><br>
+                <textarea id="csv-text" rows="10"></textarea>
+                <div id="csv-buttons" class="hidden">
+                    <button class="btn" type="reset" id="reset-csv">Reset</button> <button class="btn btn-primary" id="validate-csv">Validate</button>
+                </div>
+            </div>
+            <div id="csv-schema-wrap">
+                <h4>Fields:</h4>
+                <template>
+                    <div class="column-row">
+                        <span class="column-num"></span>
+                        <label class="column-name">
+                            <input class="column-name" type="text" name="" value="">
+                        </label>
+                        <span class="type">
+                            <input class="column-type" type="text" name="" value="">
+                        </span>
+                        <span class="schema-type">
+                            <input class="column-schema-type" type="text" name="" value="">
+                        </span>
+                    </div>
+                </template>
+                <div id="csv-fields">
+                    <span class="heading"></span>
+                    <span class="heading">Field Name</span>
+                    <span class="heading type-heading">Data Type</span>
+                    <span class="heading schema-type-heading">Schema Data Type (Postgres syntax)</span>
+                </div>
+                <div id="csv-create-schema-wrap">
+                    <div id="create-table">
+                        <h4>Create TABLE</h4>
+                        <textarea id="create-syntax" name="create-syntax" rows="10">
+                        </textarea><br>
+                        <em>While the above is editable, please be careful as the field names above are used in the catalog, and if they don't match it could be an issue.</em>
+                        <br><button type="button" class="btn btn-outline-secondary hidden" title="Regenerate from fields">Regenerate</button>
+                    </div>
+                    <div id="create-schema">
+                        <h4>Schema <span class="schema-note">(PostgreSQL syntax -- for BigDAWG catalog)</span></h4>
+                        <textarea id="schema-syntax" name="schema-syntax" rows="10">
+                        </textarea><br>
+                        <em>While the above is editable, please be careful as the field names above are used in the catalog, and if they don't match it could be an issue.</em>
+                        <br><button type="button" class="btn btn-outline-secondary hidden" title="Regenerate from fields">Regenerate</button>
+                    </div>
+                </div>
+            </div>
+            <div id="upload-error" class="alert alert-danger hidden" role="alert"></div>
+            <button class="btn btn-primary hidden" id="upload-csv">Upload CSV</button>
+            <button class="btn btn-outline-secondary hidden" id="reset">Reset</button>
+            <div id="upload-loading" class="loading"></div>
+        </form>
+    </div>
+    <div id="success" class="alert alert-success hidden" role="alert"></div>
+    <button id="upload-another" class="hidden btn btn-primary">Upload Another</button>
+  </div>
+</div>
+
+<script src="static/js/import.js?v={{ versions['import.js'] }}"></script>
+{% endblock %}

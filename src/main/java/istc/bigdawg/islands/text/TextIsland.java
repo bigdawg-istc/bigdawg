@@ -129,7 +129,7 @@ public class TextIsland implements Island {
 			
 			AccumuloExecutionEngine.addExecutionTree(root.getSubTreeToken(), root);
 		} catch (Exception e) {
-			throw new QueryParsingException(e.getMessage(), e);
+			throw new QueryParsingException(e.toString(), e);
 		}
 		tables.add(((TextScan)root).getSourceTableName());
 		return root;

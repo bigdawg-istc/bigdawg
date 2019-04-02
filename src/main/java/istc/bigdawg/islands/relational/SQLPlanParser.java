@@ -64,7 +64,7 @@ public class SQLPlanParser {
 		try {
 			this.query = (Select) CCJSqlParserUtil.parse(qprocessed);
 		} catch (JSQLParserException e) {
-			throw new QueryParsingException(e.getMessage(), e);
+			this.query = SQLParseLogical.tryJSONPlaceholderParse(e, qprocessed);
 		}
 		queryPlan = sqlPlan;
 		

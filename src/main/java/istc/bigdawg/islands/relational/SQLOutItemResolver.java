@@ -1,5 +1,6 @@
 package istc.bigdawg.islands.relational;
 
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -112,11 +113,14 @@ public class SQLOutItemResolver {
 		if(supplement != null) {
 			alias = supplement.getAlias(expr);
 			if (alias == null) {
+				if (SQLJSONPlaceholderParser.possiblyContainsOperator(expr)) {
+					expr = SQLJSONPlaceholderParser.transformJSONQuery(expr);
+				}
 				Expression expres = CCJSqlParserUtil.parseExpression(expr);
-//				System.out.println("expr: "+expr+"\nsupplement: ");
-//				for (String s : supplement.getAliases().keySet()){
-//					System.out.println("-- "+s+"; "+supplement.getAlias(s));
-//				}
+				//				System.out.println("expr: "+expr+"\nsupplement: ");
+				//				for (String s : supplement.getAliases().keySet()){
+				//					System.out.println("-- "+s+"; "+supplement.getAlias(s));
+				//				}
 				SQLExpressionUtils.removeExcessiveParentheses(expres);
 				expr = expres.toString();
 				alias = supplement.getAlias(expr);
@@ -270,16 +274,13 @@ public class SQLOutItemResolver {
 		
 		
 		}; // end expression parser
-		
+
 		Expression parseExpression = CCJSqlParserUtil.parseExpression(expr);
 		((SQLAttribute)outAttribute).setExpression(parseExpression);
-		
-		
+
 		StringBuilder b = new StringBuilder();
 		deparser.setBuffer(b);
 		parseExpression.accept(deparser); // adjusts outAttribute for winagg case
-		  
-		
 	}
 	
 	// takes in alias src, determines if it has a match in src schema
