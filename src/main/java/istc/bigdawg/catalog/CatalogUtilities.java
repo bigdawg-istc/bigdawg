@@ -152,9 +152,14 @@ public class CatalogUtilities {
 			parenlevel++;
 			if (phase == CatalogParsingPhases.unstarted) 
 				phase = CatalogParsingPhases.command;
+			else
+				temp.append(token); // seem to need something like this to support INSERT ... VALUES (...)
 			break;
 		case ')':
 			parenlevel--;
+			if (parenlevel > 0) {
+				temp.append(token); // seem to need something like this to support INSERT ... VALUES (...)
+			}
 			break;
 		case '\'':
 			quotedEh = !quotedEh;			
