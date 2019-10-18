@@ -23,20 +23,24 @@ If there's no python you may need to install it
    * Ubuntu / Debian-based
       - sudo apt-get install -y python python-pip
 
-You may want to install virtualenv to manage environments first:
+OPTIONAL: You may want to install virtualenv to manage environments in a separate directory, first:
 
    * sudo pip install virtualenv
       - If there's no pip, see above about installing python-pip
 
    * virtualenv -p /usr/bin/python venv
 
-Then each time you want to use the program, do this first:
+   Then each time you want to use the program, do this first:
 
-   * source venv/bin/activate
+      * source venv/bin/activate
 
 Now install the requirements:
 
    * pip install -r requirements.txt
+
+   NOTE: if the requirements don't install (specifically psycopg2), you may need to install the postgres libraries locally (example below on Ubuntu/Debian type systems):
+
+       * apt install libpq-dev 
 
 Now test that flask is installed:
 
