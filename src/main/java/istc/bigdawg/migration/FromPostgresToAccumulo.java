@@ -15,6 +15,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
+import istc.bigdawg.properties.BigDawgConfigProperties;
 import org.apache.accumulo.core.client.AccumuloException;
 import org.apache.accumulo.core.client.AccumuloSecurityException;
 import org.apache.accumulo.core.client.BatchWriter;
@@ -162,6 +163,9 @@ public class FromPostgresToAccumulo extends FromDatabaseToDatabase {
 
 		try {
 			this.accInst = AccumuloInstance.getFullInstance(conTo);
+			if (BigDawgConfigProperties.INSTANCE.isAccumuloDropDataSet()) {
+				accInst.dropDataSetIfExists(migrationInfo.getObjectTo());
+			}
 			accInst.createTableIfNotExists(migrationInfo.getObjectTo());
 		} catch (Exception e) {
 			throw new MigrationException("Problem with Accumulo", e);
@@ -377,7 +381,7 @@ public class FromPostgresToAccumulo extends FromDatabaseToDatabase {
 
 		AccumuloInstance accInst = tpch.getAccumuloInstance();
 		for (String tableName : tables) {
-			accInst.deleteTable(tableName);
+			accInst.dropDataSetIfExists(tableName);
 			accInst.createTable(tableName);
 		}
 

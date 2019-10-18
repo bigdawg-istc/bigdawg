@@ -39,7 +39,6 @@ public class CastOverseer {
 	 * @param cast
 	 * @param source
 	 * @param target
-	 * @param targetDBID
 	 * @param connectionInfoMap
 	 * @param tempTableInfo
 	 * @return the object identity, oid, of intermediate result table on remote database
@@ -109,7 +108,7 @@ public class CastOverseer {
 			}
 			tempTableInfo.get(connectionInfoMap.get(source)).add(source.getName());
 			try {
-				Migrator.migrate(connectionInfoMap.get(source), source.getName(), targetConnInfo, remoteName, new MigrationParams(cast.getQueryString(), source, target));
+				Migrator.migrate(connectionInfoMap.get(source), source.getName(), targetConnInfo, remoteName, new MigrationParams(cast.getName(), cast.getQueryString(), source, target));
 			} catch (MigrationException e) {
 				logger.error(StackTrace.getFullStackTrace(e));
 				throw new CastException(e.getMessage(), e);

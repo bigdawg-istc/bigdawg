@@ -9,11 +9,14 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import istc.bigdawg.properties.BigDawgConfigProperties;
+import istc.bigdawg.relational.RelationalHandler;
 import org.apache.commons.net.ntp.TimeStamp;
 import org.apache.log4j.Logger;
 
@@ -122,6 +125,8 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 
 		String createTableStatement = MigrationUtils
 				.getUserCreateStatement(migrationInfo);
+		Optional<String> name = migrationInfo.getMigrationParams().flatMap(MigrationParams::getName);
+
 		/*
 		 * get the create table statement for the source table from the source
 		 * database
@@ -132,6 +137,10 @@ public class FromPostgresToPostgres extends FromDatabaseToDatabase {
 			createTableStatement = PostgreSQLHandler.getCreateTable(
 					connectionFrom, migrationInfo.getObjectFrom(),
 					migrationInfo.getObjectTo());
+			name = Optional.of(migrationInfo.getObjectTo());
+		}
+		if (name.isPresent() && BigDawgConfigProperties.INSTANCE.isPostgreSQLDropDataSet()) {
+			PostgreSQLHandler.executeStatement(connectionTo, RelationalHandler.getDropTableStatement(name.get()));
 		}
 		PostgreSQLHandler.executeStatement(connectionTo, createTableStatement);
 		return schemaTable;

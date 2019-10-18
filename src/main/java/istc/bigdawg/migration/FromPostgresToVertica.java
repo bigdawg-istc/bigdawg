@@ -5,7 +5,9 @@ import istc.bigdawg.exceptions.MigrationException;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.postgresql.PostgreSQLSchemaTableName;
+import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.query.ConnectionInfo;
+import istc.bigdawg.relational.RelationalHandler;
 import istc.bigdawg.utils.Pipe;
 import istc.bigdawg.utils.StackTrace;
 import istc.bigdawg.utils.TaskExecutor;
@@ -20,6 +22,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -113,6 +116,7 @@ public class FromPostgresToVertica extends FromDatabaseToDatabase {
 
         String createTableStatement = MigrationUtils
                 .getUserCreateStatement(migrationInfo);
+        Optional<String> name = migrationInfo.getMigrationParams().flatMap(MigrationParams::getName);
         /*
          * get the create table statement for the source table from the source
          * database
@@ -125,6 +129,10 @@ public class FromPostgresToVertica extends FromDatabaseToDatabase {
                     migrationInfo.getObjectTo());
             logger.debug("postgresCreateTable statement: " + postgresCreateTable);
             createTableStatement = postgresCreateTable;
+            name = Optional.of(migrationInfo.getObjectTo());
+        }
+        if (name.isPresent() && BigDawgConfigProperties.INSTANCE.isVerticaDropDataSet()) {
+            VerticaHandler.executeStatement(connectionTo, RelationalHandler.getDropTableStatement(name.get()));
         }
         VerticaHandler.executeStatement(connectionTo, createTableStatement);
         return schemaTable;

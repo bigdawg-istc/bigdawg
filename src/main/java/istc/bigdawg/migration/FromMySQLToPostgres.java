@@ -8,7 +8,9 @@ import istc.bigdawg.mysql.MySQLHandler;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.postgresql.PostgreSQLSchemaTableName;
+import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.query.ConnectionInfo;
+import istc.bigdawg.relational.RelationalHandler;
 import istc.bigdawg.utils.Pipe;
 import istc.bigdawg.utils.StackTrace;
 import istc.bigdawg.utils.TaskExecutor;
@@ -21,6 +23,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -107,6 +110,7 @@ public class FromMySQLToPostgres extends FromDatabaseToDatabase {
 		/* create the target schema if it is not already there */
         PostgreSQLHandler.executeStatement(connectionTo,
                 "create schema if not exists " + schemaTable.getSchemaName());
+        Optional<String> name = migrationInfo.getMigrationParams().flatMap(MigrationParams::getName);
 
         String createTableStatement = MigrationUtils
                 .getUserCreateStatement(migrationInfo);
@@ -123,6 +127,10 @@ public class FromMySQLToPostgres extends FromDatabaseToDatabase {
             logger.debug("mysqlCreateTable statement: " + mysqlCreateTable);
             createTableStatement = MySQLPostgresTranslation.convertToPostgres(mysqlCreateTable);
             logger.debug("mysqlCreateTable statement converted to PostgreSQL: " + createTableStatement);
+            name = Optional.of(migrationInfo.getObjectTo());
+        }
+        if (name.isPresent() && BigDawgConfigProperties.INSTANCE.isPostgreSQLDropDataSet()) {
+            PostgreSQLHandler.executeStatement(connectionTo, RelationalHandler.getDropTableStatement(name.get()));
         }
         PostgreSQLHandler.executeStatement(connectionTo, createTableStatement);
         return schemaTable;

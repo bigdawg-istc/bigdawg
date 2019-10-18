@@ -521,7 +521,7 @@ public class VerticaHandler implements RelationalHandler {
     }
 
     public void dropTableIfExists(String tableName) throws SQLException {
-        executeStatementOnConnection("drop table if exists " + tableName);
+        executeStatementOnConnection(RelationalHandler.getDropTableStatement(tableName));
     }
 
     @Override

@@ -155,7 +155,7 @@ public class FromPostgresToPostgresTest {
 				"localhost", "5431", "test", "pguser", localPassword);
 		PostgreSQLConnectionInfo conInfoTo = new PostgreSQLConnectionInfo(
 				"localhost", "5430", "test", "pguser", localPassword);
-		migrationParams = new MigrationParams(getCreateTableTest(tableNameTo));
+		migrationParams = new MigrationParams(tableNameTo, getCreateTableTest(tableNameTo));
 		migrateTest(conInfoFrom, conInfoTo);
 	}
 

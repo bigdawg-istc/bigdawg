@@ -223,7 +223,7 @@ public class LoadPostgres implements Load {
 							.getCreatePostgreSQLTableStatement(
 									migrationInfo.getObjectTo(), attributes);
 					PostgreSQLHandler.createTargetTableSchema(connection,
-							migrationInfo.getObjectTo(), createTableStatement);
+							migrationInfo.getObjectTo(), migrationInfo.getObjectTo(), createTableStatement);
 				}
 			}
 		} catch (SQLException e) {

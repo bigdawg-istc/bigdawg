@@ -78,9 +78,7 @@ public class FromAccumuloToPostgresTest {
 				return;
 			}
 			try {
-				PostgreSQLHandler.executeStatement(con,
-						"drop table if exists " + TABLE);
-				PostgreSQLHandler.createTargetTableSchema(con, TABLE,
+				PostgreSQLHandler.createTargetTableSchema(con, TABLE, TABLE,
 						CREATE_TABLE);
 			} catch (SQLException e1) {
 				logger.error("Could not create table in PostgreSQL.");
@@ -155,9 +153,7 @@ public class FromAccumuloToPostgresTest {
 			return;
 		}
 		try {
-			PostgreSQLHandler.executeStatement(con,
-					"drop table if exists " + TABLE);
-			PostgreSQLHandler.createTargetTableSchema(con, TABLE, CREATE_TABLE);
+			PostgreSQLHandler.createTargetTableSchema(con, TABLE, TABLE, CREATE_TABLE);
 			con.commit();
 			con.close();
 		} catch (SQLException e1) {
@@ -192,7 +188,7 @@ public class FromAccumuloToPostgresTest {
 		PostgreSQLHandler postgresHandler = new PostgreSQLHandler(connectionTo);
 		postgresHandler
 				.executeStatementPostgreSQL("drop table if exists " + tableTo);
-		MigrationParams params = new MigrationParams("create table " + tableTo
+		MigrationParams params = new MigrationParams(tableTo, "create table " + tableTo
 				+ " (" + AccumuloTest.COL_QUAL + " varchar)");
 		Migrator.migrate(connectionFrom, tableFrom, connectionTo, tableTo,
 				params);

@@ -4,12 +4,9 @@
 package istc.bigdawg.migration;
 
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
+import istc.bigdawg.properties.BigDawgConfigProperties;
 import org.apache.log4j.Logger;
 
 import istc.bigdawg.database.AttributeMetaData;
@@ -43,6 +40,12 @@ public class MigrationUtils {
 	 * this is a temporal variable for consumer from a lambda function
 	 */
 	private static String createStatement = null;
+
+	/*
+	 * The statement to be used in a database to create an object (table/array,
+	 * this is a temporal variable for consumer from a lambda function
+	 */
+	private static String name = null;
 
 	/**
 	 * Check if this is a flat array in SciDB.
@@ -343,6 +346,10 @@ public class MigrationUtils {
 			}
 			SciDBHandler localHandler = new SciDBHandler(
 					migrationInfo.getConnectionTo());
+			Optional<String> name = migrationInfo.getMigrationParams().flatMap(MigrationParams::getName);
+			if (name.isPresent() && BigDawgConfigProperties.INSTANCE.isScidbDropDataSet()) {
+				localHandler.dropDataSetIfExists(name.get());
+			}
 			localHandler.execute(createArrayStatement);
 //			localHandler.commit();
 //			localHandler.close();
