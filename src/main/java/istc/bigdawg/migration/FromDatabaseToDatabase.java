@@ -14,6 +14,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import istc.bigdawg.api.AbstractApiConnectionInfo;
+import istc.bigdawg.rest.RESTConnectionInfo;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.KeeperException;
 
@@ -512,7 +514,8 @@ public class FromDatabaseToDatabase implements MigrationNetworkRequest {
 			String localHostName = InetAddress.getLocalHost().getHostName();
 			log.debug("local hostname: " + localHostName);
 
-			if (!localHostName.equals(hostnameFrom)) {
+			if (!localHostName.equals(hostnameFrom) &&
+					!(this.getConnectionFrom() instanceof AbstractApiConnectionInfo)) {
 				log.debug("Source and target hosts are on different IPs. "
 						+ "Migration will be executed remotely (this node: "
 						+ BigDawgConfigProperties.INSTANCE.getGrizzlyIpAddress()
