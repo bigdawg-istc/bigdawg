@@ -65,8 +65,8 @@
 		<!-- Vertica JDBC -->
 		<dependency>
 			<groupId>com.vertica</groupId>
-			<artifactId>vertica-jdbc</artifactId>
-			<version>8.0.1-0</version>
+			<artifactId>vjdbc8</artifactId>
+			<version>8.0.1</version>
 		</dependency>
 
 		<!-- SQL parsing library -->
