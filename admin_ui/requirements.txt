@@ -1,4 +1,4 @@
-Flask==0.12
+Flask==1.0
 docker==2.0.2
 psycopg2
 httplib2
