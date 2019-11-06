@@ -18,7 +18,7 @@ Check the version!
 
 The version 1.54.0 is too old. We have to install the latest one.
 
-wget https://sourceforge.net/projects/boost/files/boost/1.60.0/boost_1_60_0.tar.gz/download
+wget https://sourceforge.net/projects/boost/files/boost/1.60.0/boost_1_60_0.tar.gz/download -O boost_1_60_0.tar.gz
 
 tar xzvf boost_1_60_0.tar.gz
 
@@ -26,7 +26,7 @@ cd boost_1_60_0/
 
 sudo apt-get update
 
-sudo apt-get install build-essential g++ python-dev autotools-dev libicu-dev build-essential libbz2-dev libboost-all-dev
+sudo apt-get install build-essential g++ python-dev autotools-dev libicu-dev build-essential libbz2-dev
 
 ./bootstrap.sh --prefix=/usr/local
 
