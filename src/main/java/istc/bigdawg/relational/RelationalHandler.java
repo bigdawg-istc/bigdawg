@@ -110,6 +110,10 @@ public interface RelationalHandler extends DBHandler, ExecutorEngine {
 		}
 	}
 
+	public static String getDropTableStatement(String tableName) {
+		return "drop table if exists " + tableName;
+	}
+
 	/**
 	 * Executes a statement (not a query). It cleans the resources
 	 * at the end.

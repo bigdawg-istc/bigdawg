@@ -23,6 +23,7 @@ public class MigrationParams implements Serializable {
 	private static final long serialVersionUID = -7869941786159490966L;
 	/** see: {@link #getCreateStatement()} */
 	private String createStatement;
+	private String name;
 
 	transient private IntraIslandQuery source;
 	transient private IntraIslandQuery target;
@@ -36,11 +37,22 @@ public class MigrationParams implements Serializable {
 		this.createStatement = createStatement;
 	}
 
+	public MigrationParams(String createStatement, String name) {
+		this(createStatement);
+		this.name = name;
+	}
+
 	public MigrationParams(String createStatement, IntraIslandQuery source, IntraIslandQuery target) {
 		this(createStatement);
 		this.source = source;
 		this.target = target;
 	}
+
+	public MigrationParams(String name, String createStatement, IntraIslandQuery source, IntraIslandQuery target) {
+		this(createStatement, source, target);
+		this.name = name;
+	}
+
 
 	/**
 	 * The create statement (for array/table/object) which was passed directly
@@ -53,6 +65,16 @@ public class MigrationParams implements Serializable {
 	public Optional<String> getCreateStatement() {
 		return Optional.ofNullable(createStatement);
 	}
+
+	/**
+	 * The name (for array/table/object) used in the corresponding create statement (if any).
+	 *
+	 * @return the array/table/object name.
+	 */
+	public Optional<String> getName() {
+		return Optional.ofNullable(name);
+	}
+
 
 	/*
 	 * (non-Javadoc)
@@ -86,6 +108,12 @@ public class MigrationParams implements Serializable {
 			if (other.createStatement != null)
 				return false;
 		} else if (!createStatement.equals(other.createStatement))
+			return false;
+
+		if (name == null) {
+			if (other.name != null)
+				return false;
+		} else if (!name.equals(other.name))
 			return false;
 
 		if (source != other.source) {

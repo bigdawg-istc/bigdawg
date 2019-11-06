@@ -17,6 +17,7 @@ public enum BigDawgConfigProperties {
 	private String postgreSQLURL;
 	private String postgreSQLUser;
 	private String postgreSQLPassword;
+	private boolean postgreSQLDropDataSet;
 
 	private String postgreSQLTestHost;
 	private String postgreSQLTestPort;
@@ -29,12 +30,15 @@ public enum BigDawgConfigProperties {
 	private String mySQLTestDatabase;
 	private String mySQLTestUser;
 	private String mySQLTestPassword;
+	private boolean mySQLDropDataSet;
+	private boolean verticaDropDataSet;
 
 	private int accumuloSchemaServerDBID;
 	private String accumuloIstanceType;
 	private String accumuloIstanceName;
 	private String accumuloUser;
 	private String accumuloPasswordToken;
+	private boolean accumuloDropDataSet;
 
 	private int scidbSchemaServerDBID;
 	private String scidbHostname;
@@ -42,6 +46,7 @@ public enum BigDawgConfigProperties {
 	private String scidbUser;
 	private String scidbPassword;
 	private String scidbBinPath;
+	private boolean scidbDropDataSet;
 
 	private String scidbTestHostname;
 	private String scidbTestPort;
@@ -98,6 +103,7 @@ public enum BigDawgConfigProperties {
 		this.postgreSQLURL = prop.getProperty("main.postgresql.url");
 		this.postgreSQLUser = prop.getProperty("main.postgresql.user");
 		this.postgreSQLPassword = prop.getProperty("main.postgresql.password");
+		this.postgreSQLDropDataSet = Boolean.valueOf(prop.getProperty("main.postgresql.dropdataset"));
 
 		this.postgreSQLTestHost = prop.getProperty("main.postgresql.test.host");
 		this.postgreSQLTestPort = prop.getProperty("main.postgresql.test.port");
@@ -114,6 +120,8 @@ public enum BigDawgConfigProperties {
 		this.mySQLTestUser = prop.getProperty("main.mysql.test.user");
 		this.mySQLTestPassword = prop
 				.getProperty("main.mysql.test.password");
+		this.mySQLDropDataSet = Boolean.valueOf(prop.getProperty("main.mysql.dropdataset"));
+		this.verticaDropDataSet = Boolean.valueOf(prop.getProperty("main.vertica.dropdataset"));
 
 		this.accumuloSchemaServerDBID = Integer
 				.parseInt(prop.getProperty("main.accumulo.dbid.schema"));
@@ -126,6 +134,7 @@ public enum BigDawgConfigProperties {
 				.getProperty("main.accumulo.passwordToken");
 		this.accumuloShellScript = prop
 				.getProperty("main.accumulo.shell.script");
+		this.accumuloDropDataSet = Boolean.valueOf(prop.getProperty("main.accumulo.dropdataset"));
 
 		this.sstoreDBID =Integer.parseInt(prop.getProperty("main.sstore.dbid"));
 		this.sStoreURL = prop.getProperty("main.sstore.alerturl");
@@ -150,6 +159,7 @@ public enum BigDawgConfigProperties {
 		this.scidbPassword = prop.getProperty("main.scidb.password");
 		this.scidbUser = prop.getProperty("main.scidb.user");
 		this.scidbBinPath = prop.getProperty("main.scidb.bin_path");
+		this.scidbDropDataSet = Boolean.valueOf(prop.getProperty("main.scidb.dropdataset"));
 
 		this.scidbTestHostname = prop.getProperty("main.scidb.test.hostname");
 		this.scidbTestPort = prop.getProperty("main.scidb.test.port");
@@ -495,4 +505,23 @@ public enum BigDawgConfigProperties {
 		return accumuloSchemaServerDBID;
 	}
 
+	public boolean isPostgreSQLDropDataSet() {
+		return postgreSQLDropDataSet;
+	}
+
+	public boolean isMySQLDropDataSet() {
+		return mySQLDropDataSet;
+	}
+
+	public boolean isAccumuloDropDataSet() {
+		return accumuloDropDataSet;
+	}
+
+	public boolean isScidbDropDataSet() {
+		return scidbDropDataSet;
+	}
+
+	public boolean isVerticaDropDataSet() {
+		return verticaDropDataSet;
+	}
 }

@@ -237,6 +237,14 @@ public class AccumuloInstance {
 		return conn;
 	}
 
+	public void dropDataSetIfExists(String dataSetName) throws AccumuloException, AccumuloSecurityException, TableNotFoundException {
+		if (getConnector().tableOperations().exists(dataSetName)) {
+			getConnector().tableOperations().delete(dataSetName);
+		} else {
+			logger.debug("Accumulo Table "+dataSetName+" does not exist; skip dropping.");
+		}
+	}
+
 	public boolean createTableIfNotExists(String tableName) throws Exception {
 		TableOperations tabOp = getConnector().tableOperations();
 		if (!tabOp.exists(tableName)) {

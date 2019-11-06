@@ -14,10 +14,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
 
 import org.apache.accumulo.core.client.AccumuloException;
@@ -161,11 +158,12 @@ public class FromAccumuloToPostgres extends FromDatabaseToDatabase {
 					+ "PostgreSQL, if so create it.");
 			String createStatement = MigrationUtils
 					.getUserCreateStatement(migrationInfo);
+			Optional<String> name = migrationInfo.getMigrationParams().flatMap(MigrationParams::getName);
 			if (createStatement != null) {
 				logger.debug(
 						"The create table statement to be executed in PostgreSQL: "
 								+ createStatement);
-				PostgreSQLHandler.createTargetTableSchema(con,
+				PostgreSQLHandler.createTargetTableSchema(con, name.orElse(null),
 						migrationInfo.getObjectTo(), createStatement);
 			}
 		} catch (SQLException e) {

@@ -10,11 +10,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -193,6 +189,8 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 			String format = null;
 			createTableStatement = MigrationUtils
 					.getUserCreateStatement(migrationInfo);
+			Optional<String> name = migrationInfo.getMigrationParams().flatMap(MigrationParams::getName);
+
 			List<AttributeMetaData> attributes = scidbArrayMetaData
 					.getAttributesOrdered();
 			if (migrationType == MigrationType.FLAT) {
@@ -207,6 +205,7 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 					createTableStatement = PostgreSQLHandler
 							.getCreatePostgreSQLTableStatement(toTable,
 									attributes);
+					name = Optional.of(toTable);
 				}
 			} else {
 				String newFlatIntermediateArray = fromArray
@@ -234,6 +233,7 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 					createTableStatement = PostgreSQLHandler
 							.getCreatePostgreSQLTableStatement(toTable,
 									dimensionsAttributes);
+					name = Optional.of(toTable);
 				}
 			}
 
@@ -259,7 +259,7 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 			connectionPostgres = PostgreSQLHandler
 					.getConnection(getConnectionTo());
 			connectionPostgres.setAutoCommit(false);
-			PostgreSQLHandler.createTargetTableSchema(connectionPostgres,
+			PostgreSQLHandler.createTargetTableSchema(connectionPostgres, name.orElse(null),
 					migrationInfo.getObjectTo(), createTableStatement);
 			/* The statement was used. */
 			createTableStatement = null;
@@ -396,6 +396,8 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 
 			String createStatement = MigrationUtils
 					.getUserCreateStatement(migrationInfo);
+			Optional<String> name = migrationInfo.getMigrationParams().flatMap(MigrationParams::getName);
+
 			List<AttributeMetaData> attributes = scidbArrayMetaData
 					.getAttributesOrdered();
 			if (migrationType == MigrationType.FLAT) {
@@ -405,6 +407,7 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 					createStatement = PostgreSQLHandler
 							.getCreatePostgreSQLTableStatement(toTable,
 									attributes);
+					name = Optional.of(toTable);
 				}
 			} else { /* multidimensional array - MigrationType.FULL */
 				arrays = new SciDBArrays(null,
@@ -416,6 +419,7 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 					createStatement = PostgreSQLHandler
 							.getCreatePostgreSQLTableStatement(toTable,
 									dimensionsAttributes);
+					name = Optional.of(toTable);
 				}
 			}
 			executor = Executors.newFixedThreadPool(2);
@@ -427,7 +431,7 @@ public class FromSciDBToPostgres extends FromDatabaseToDatabase
 			connectionPostgres = PostgreSQLHandler
 					.getConnection(getConnectionTo());
 			connectionPostgres.setAutoCommit(false);
-			PostgreSQLHandler.createTargetTableSchema(connectionPostgres,
+			PostgreSQLHandler.createTargetTableSchema(connectionPostgres, name.orElse(null),
 					toTable, createStatement);
 
 			List<Callable<Object>> tasks = new ArrayList<>();

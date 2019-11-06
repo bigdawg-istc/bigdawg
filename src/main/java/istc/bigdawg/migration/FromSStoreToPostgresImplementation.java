@@ -15,6 +15,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.FutureTask;
 
+import istc.bigdawg.properties.BigDawgConfigProperties;
+import istc.bigdawg.relational.RelationalHandler;
 import org.apache.log4j.Logger;
 
 import istc.bigdawg.exceptions.MigrationException;
@@ -185,7 +187,7 @@ public class FromSStoreToPostgresImplementation implements MigrationImplementati
 
 	    String createTableStatement = null;
 	    createTableStatement = getCreatePostgreSQLTableStatementFromSStoreTable();
-	    createTargetTableSchema(connectionPostgres, createTableStatement);
+	    createTargetTableSchema(connectionPostgres, toTable, createTableStatement);
 	    
 	    CopyToPostgresExecutor loadExecutor = new CopyToPostgresExecutor(connectionPostgres,
 			PostgreSQLHandler.getLoadBinCommand(toTable), sStorePipe);
@@ -289,9 +291,12 @@ public class FromSStoreToPostgresImplementation implements MigrationImplementati
 	 * 
 	 * @throws SQLException
 	 */
-	private void createTargetTableSchema(Connection postgresCon, String createTableStatement) throws SQLException {
+	private void createTargetTableSchema(Connection postgresCon, String toTable, String createTableStatement) throws SQLException {
 		PostgreSQLSchemaTableName schemaTable = new PostgreSQLSchemaTableName(toTable);
 		PostgreSQLHandler.executeStatement(postgresCon, "create schema if not exists " + schemaTable.getSchemaName());
+		if (BigDawgConfigProperties.INSTANCE.isPostgreSQLDropDataSet()) {
+			PostgreSQLHandler.executeStatement(postgresCon, RelationalHandler.getDropTableStatement(toTable));
+		}
 		PostgreSQLHandler.executeStatement(postgresCon, createTableStatement);
 	}
 

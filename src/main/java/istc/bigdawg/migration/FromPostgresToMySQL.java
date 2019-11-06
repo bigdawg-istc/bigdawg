@@ -8,7 +8,9 @@ import istc.bigdawg.mysql.MySQLHandler;
 import istc.bigdawg.postgresql.PostgreSQLConnectionInfo;
 import istc.bigdawg.postgresql.PostgreSQLHandler;
 import istc.bigdawg.postgresql.PostgreSQLSchemaTableName;
+import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.query.ConnectionInfo;
+import istc.bigdawg.relational.RelationalHandler;
 import istc.bigdawg.utils.Pipe;
 import istc.bigdawg.utils.StackTrace;
 import istc.bigdawg.utils.TaskExecutor;
@@ -21,6 +23,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.*;
 
 /**
@@ -107,6 +110,7 @@ public class FromPostgresToMySQL extends FromDatabaseToDatabase {
 
         String createTableStatement = MigrationUtils
                 .getUserCreateStatement(migrationInfo);
+        Optional<String> name = migrationInfo.getMigrationParams().flatMap(MigrationParams::getName);
         /*
          * get the create table statement for the source table from the source
          * database
@@ -120,6 +124,10 @@ public class FromPostgresToMySQL extends FromDatabaseToDatabase {
             logger.debug("postgresCreateTable statement: " + postgresCreateTable);
             createTableStatement = MySQLPostgresTranslation.convertToMySQL(postgresCreateTable);
             logger.debug("postgresCreateTable statement converted to MySQL: " + createTableStatement);
+            name = Optional.of(migrationInfo.getObjectTo());
+        }
+        if (name.isPresent() && BigDawgConfigProperties.INSTANCE.isMySQLDropDataSet()) {
+            MySQLHandler.executeStatement(connectionTo, RelationalHandler.getDropTableStatement(name.get()));
         }
         MySQLHandler.executeStatement(connectionTo, createTableStatement);
         return schemaTable;

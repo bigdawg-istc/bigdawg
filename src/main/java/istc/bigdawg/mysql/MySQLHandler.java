@@ -307,7 +307,7 @@ public class MySQLHandler implements RelationalHandler {
 
 	@Override
 	public void dropDataSetIfExists(String dataSetName) throws Exception {
-
+		executeQuery(RelationalHandler.getDropTableStatement(dataSetName));
 	}
 
 	/**
@@ -533,7 +533,7 @@ public class MySQLHandler implements RelationalHandler {
 	}
 
 	public void dropTableIfExists(String tableName) throws SQLException {
-		executeStatementOnConnection("drop table if exists " + tableName);
+		executeStatementOnConnection(RelationalHandler.getDropTableStatement(tableName));
 	}
 
 	/**

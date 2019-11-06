@@ -19,6 +19,7 @@ import java.util.StringJoiner;
 
 import istc.bigdawg.executor.RESTQueryResult;
 import istc.bigdawg.islands.IntraIslandQuery;
+import istc.bigdawg.properties.BigDawgConfigProperties;
 import istc.bigdawg.rest.RESTConnectionInfo;
 import istc.bigdawg.utils.Tuple;
 import org.apache.accumulo.core.client.AccumuloException;
@@ -107,6 +108,9 @@ public class FromRESTToAccumulo extends FromDatabaseToDatabase {
         conTo = (AccumuloConnectionInfo) migrationInfo.getConnectionTo();
         try {
             this.accInst = AccumuloInstance.getFullInstance(conTo);
+            if (BigDawgConfigProperties.INSTANCE.isAccumuloDropDataSet()) {
+                accInst.dropDataSetIfExists(migrationInfo.getObjectTo());
+            }
             accInst.createTableIfNotExists(migrationInfo.getObjectTo());
         } catch (Exception e) {
             throw new MigrationException("Problem with Accumulo", e);

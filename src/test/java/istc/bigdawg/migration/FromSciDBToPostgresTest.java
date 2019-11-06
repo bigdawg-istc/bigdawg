@@ -98,7 +98,7 @@ public class FromSciDBToPostgresTest {
 
 		PostgreSQLHandler handler = new PostgreSQLHandler(conTo);
 		handler.dropDataSetIfExists(toTable);
-		MigrationParams migrationParams = new MigrationParams(
+		MigrationParams migrationParams = new MigrationParams(toTable,
 				TestMigrationUtils.getCreateRegionTableStatement(toTable));
 		/* We migrate from the multi-dimensional array so drop to flat one. */
 		SciDBHandler.dropArrayIfExists(conFrom, flatArray);
