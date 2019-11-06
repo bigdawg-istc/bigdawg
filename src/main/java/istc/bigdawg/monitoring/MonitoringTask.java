@@ -88,6 +88,10 @@ public class MonitoringTask implements Runnable {
     public void run() {
         this.executor.scheduleAtFixedRate(new Task(this.cores), 0, CHECK_RATE_MS, TimeUnit.MILLISECONDS);
     }
+
+    public void shutdown() {
+        this.executor.shutdown();
+    }
 }
 
 class Task implements Runnable {
