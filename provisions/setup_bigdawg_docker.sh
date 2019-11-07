@@ -109,7 +109,7 @@ then
        echo "Mimic data already exists. Skipping download"
 else
        echo "Downloading the mimic2 dataset"
-       curl -o mimic2_flatfiles.tar.gz --create-dirs https://physionet.org/mimic2/demo/mimic2_flatfiles.tar.gz
+       curl -o mimic2_flatfiles.tar.gz --create-dirs https://archive.physionet.org/mimic2/demo/mimic2_flatfiles.tar.gz
 fi
 
 # Download mimic2 waveform data
