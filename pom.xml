@@ -150,34 +150,6 @@
 			<version>2.4.1</version>
 		</dependency>
 
-
-		<!-- For Neo4J graph database -->
-		<dependency>
-			<groupId>org.neo4j</groupId>
-			<artifactId>neo4j-jdbc</artifactId>
-			<version>2.3.2</version>
-		</dependency>
-
-		<!-- For file and in-memory support, add these two as well -->
-		<dependency>
-			<groupId>org.neo4j</groupId>
-			<artifactId>neo4j</artifactId>
-			<version>2.3.2</version>
-		</dependency>
-		<dependency>
-			<groupId>org.neo4j</groupId>
-			<artifactId>neo4j-kernel</artifactId>
-			<version>2.3.2</version>
-			<type>test-jar</type>
-		</dependency>
-		<dependency>
-			<groupId>org.neo4j</groupId>
-			<artifactId>neo4j-io</artifactId>
-			<version>2.3.2</version>
-			<type>test-jar</type>
-		</dependency>
-
-
 		<!-- JeroMQ Pure Java implementation of libzmq (https://github.com/zeromq/jeromq) -->
 		<dependency>
 			<groupId>org.zeromq</groupId>
