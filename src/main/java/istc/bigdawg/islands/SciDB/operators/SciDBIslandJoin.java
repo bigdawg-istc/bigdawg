@@ -260,6 +260,9 @@ public class SciDBIslandJoin extends SciDBIslandOperator implements Join {
 		return null;
 	}
 
-
+	@Override
+	public JoinType getJoinType() {
+    	return joinType;
+	}
 	
 };

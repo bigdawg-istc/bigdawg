@@ -8,6 +8,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import istc.bigdawg.islands.relational.SQLJSONPlaceholderParser;
+import istc.bigdawg.islands.relational.SQLParseLogical;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -15,6 +16,7 @@ import istc.bigdawg.islands.operators.Aggregate;
 import istc.bigdawg.islands.operators.CommonTableExpressionScan;
 import istc.bigdawg.islands.operators.Distinct;
 import istc.bigdawg.islands.operators.Join;
+import istc.bigdawg.islands.operators.Join.JoinType;
 import istc.bigdawg.islands.operators.Limit;
 import istc.bigdawg.islands.operators.Merge;
 import istc.bigdawg.islands.operators.Operator;
@@ -65,6 +67,7 @@ import net.sf.jsqlparser.statement.select.UnionOp;
 import net.sf.jsqlparser.statement.select.ValuesList;
 import net.sf.jsqlparser.statement.select.WithItem;
 import net.sf.jsqlparser.util.SelectUtils;
+import org.apache.log4j.Logger;
 
 public class PostgreSQLQueryGenerator implements OperatorQueryGenerator {
 
@@ -130,7 +133,6 @@ public class PostgreSQLQueryGenerator implements OperatorQueryGenerator {
 
 	@Override
 	public void visit(Join joinOp) throws Exception {
-
 		SQLIslandJoin join = (SQLIslandJoin) joinOp;
 
 		if (!isRoot && join.isPruned()) {
@@ -285,7 +287,7 @@ public class PostgreSQLQueryGenerator implements OperatorQueryGenerator {
 			child0.accept(this);
 		}
 		// Resolve pruning and add join
-		addJSQLParserJoin(dstStatement, t1);
+		net.sf.jsqlparser.statement.select.Join newJoin = addJSQLParserJoin(dstStatement, t1, join.getJoinType());
 
 		if (child1 instanceof Aggregate && stopAtJoin) {
 			List<SelectItem> sil = new ArrayList<>();
@@ -401,8 +403,18 @@ public class PostgreSQLQueryGenerator implements OperatorQueryGenerator {
 				treeWalker = nextGen;
 			}
 
-			((PlainSelect) dstStatement.getSelectBody()).setWhere(CCJSqlParserUtil.parseCondExpression(e.toString()));
-
+			if (newJoin.isSimple()) {
+				// As long as postgres alone is being used to generate query plans, this statement is not typically
+				// reached as the planner doesn't seem to distinguish between INNER JOIN and Simple, even though
+				// technically there is a syntactical distinction.
+				//
+				// One exception is the case of join types we presently don't handle (such as an Anti Join).
+				// Leaving this here, then, is no worse off than things originally were prior to this change.
+				// (4/24/2020)
+				((PlainSelect) dstStatement.getSelectBody()).setWhere(CCJSqlParserUtil.parseCondExpression(e.toString()));
+			} else {
+				newJoin.setOnExpression(e);
+			}
 		}
 
 	}
@@ -1915,13 +1927,37 @@ public class PostgreSQLQueryGenerator implements OperatorQueryGenerator {
 	 * @param dstStatement
 	 * @param t
 	 */
-	private void addJSQLParserJoin(Select dstStatement, Table t) {
+	private net.sf.jsqlparser.statement.select.Join addJSQLParserJoin(Select dstStatement, Table t, JoinType joinType) {
 		net.sf.jsqlparser.statement.select.Join newJ = new net.sf.jsqlparser.statement.select.Join();
 		newJ.setRightItem(t);
-		newJ.setSimple(true);
+		switch(joinType) {
+			case Simple:
+				newJ.setSimple(true);
+				break;
+			case Left:
+				newJ.setLeft(true);
+				break;
+			case Right:
+				newJ.setRight(true);
+				break;
+			case Cross:
+				newJ.setCross(true);
+				break;
+			case Full:
+				newJ.setFull(true);
+				break;
+			case Inner:
+				newJ.setInner(true);
+				break;
+			default:
+				Logger.getLogger(PostgreSQLQueryGenerator.class).warn("Unknown Join type: " + joinType.toString() + " reverting to simple.");
+				newJ.setSimple(true);
+				break;
+		}
 		if (((PlainSelect) dstStatement.getSelectBody()).getJoins() == null)
 			((PlainSelect) dstStatement.getSelectBody()).setJoins(new ArrayList<>());
 		((PlainSelect) dstStatement.getSelectBody()).getJoins().add(newJ);
+		return newJ;
 	}
 
 	/**

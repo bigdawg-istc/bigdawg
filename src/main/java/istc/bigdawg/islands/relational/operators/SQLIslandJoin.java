@@ -22,6 +22,7 @@ import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Parenthesis;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
+import org.apache.log4j.Logger;
 
 
 public class SQLIslandJoin extends SQLIslandOperator implements Join {
@@ -97,6 +98,15 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
 		for (Operator o : children) {
 			if (o instanceof SQLIslandAggregate) {
 				((SQLIslandAggregate)o).setSingledOutAggregate();
+			}
+		}
+
+		if (parameters.containsKey("Join-Type")) {
+			try {
+				joinType = JoinType.valueOf(parameters.get("Join-Type"));
+			} catch (IllegalArgumentException e) {
+				// unknown join type
+				Logger.getLogger(this.getClass().getName()).warn("Unknown Join-Type returned: '" + parameters.get("Join-Type") + "'");
 			}
 		}
 		
@@ -446,5 +456,10 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
 	@Override
 	public String generateJoinFilter() throws IslandException {
 		return joinFilter != null ? new String(joinFilter): null;
+	}
+
+	@Override
+	public JoinType getJoinType() {
+		return joinType;
 	}
 };
