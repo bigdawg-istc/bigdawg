@@ -1930,29 +1930,31 @@ public class PostgreSQLQueryGenerator implements OperatorQueryGenerator {
 	private net.sf.jsqlparser.statement.select.Join addJSQLParserJoin(Select dstStatement, Table t, JoinType joinType) {
 		net.sf.jsqlparser.statement.select.Join newJ = new net.sf.jsqlparser.statement.select.Join();
 		newJ.setRightItem(t);
-		switch(joinType) {
-			case Simple:
-				newJ.setSimple(true);
-				break;
-			case Left:
-				newJ.setLeft(true);
-				break;
-			case Right:
-				newJ.setRight(true);
-				break;
-			case Cross:
-				newJ.setCross(true);
-				break;
-			case Full:
-				newJ.setFull(true);
-				break;
-			case Inner:
-				newJ.setInner(true);
-				break;
-			default:
-				Logger.getLogger(PostgreSQLQueryGenerator.class).warn("Unknown Join type: " + joinType.toString() + " reverting to simple.");
-				newJ.setSimple(true);
-				break;
+		if (joinType != null) {
+			switch (joinType) {
+				case Simple:
+					newJ.setSimple(true);
+					break;
+				case Left:
+					newJ.setLeft(true);
+					break;
+				case Right:
+					newJ.setRight(true);
+					break;
+				case Cross:
+					newJ.setCross(true);
+					break;
+				case Full:
+					newJ.setFull(true);
+					break;
+				case Inner:
+					newJ.setInner(true);
+					break;
+				default:
+					Logger.getLogger(PostgreSQLQueryGenerator.class).warn("Unknown Join type: " + joinType.toString() + " reverting to simple.");
+					newJ.setSimple(true);
+					break;
+			}
 		}
 		if (((PlainSelect) dstStatement.getSelectBody()).getJoins() == null)
 			((PlainSelect) dstStatement.getSelectBody()).setJoins(new ArrayList<>());
