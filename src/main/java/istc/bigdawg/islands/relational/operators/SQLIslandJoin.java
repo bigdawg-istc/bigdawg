@@ -44,12 +44,14 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
 		super(parameters, output, lhs, rhs, supplement);
 
 		// mending non-canoncial ordering
+		boolean flipJoinType = false;
 		if (children.get(0) instanceof SQLIslandScan && !(children.get(1) instanceof SQLIslandScan)) {
 			SQLIslandOperator child0 = (SQLIslandOperator) children.get(1);
 			SQLIslandOperator child1 = (SQLIslandOperator) children.get(0);
 			children.clear();
 			children.add(child0);
 			children.add(child1);
+			flipJoinType = true;
 		}
 		
 		this.isBlocking = false;
@@ -104,6 +106,14 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
 		if (parameters.containsKey("Join-Type")) {
 			try {
 				joinType = JoinType.valueOf(parameters.get("Join-Type"));
+				// Have to potentially flip the join type as well.
+				if (flipJoinType) {
+					if (joinType == JoinType.Left) {
+						joinType = JoinType.Right;
+					} else if (joinType == JoinType.Right) {
+						joinType = JoinType.Left;
+					}
+				}
 			} catch (IllegalArgumentException e) {
 				// unknown join type
 				Logger.getLogger(this.getClass().getName()).warn("Unknown Join-Type returned: '" + parameters.get("Join-Type") + "'");
@@ -168,7 +178,7 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
 	
 	public SQLIslandJoin(Operator child0, Operator child1, JoinType jt, String joinPred, boolean isFilter) throws JSQLParserException {
 		this.isCTERoot = false; // TODO VERIFY
-		this.isBlocking = false; 
+		this.isBlocking = false;
 		this.isPruned = false;
 		this.isCopy = true;
 		this.setAliases(new ArrayList<>());
@@ -209,7 +219,7 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
 	
 	public SQLIslandJoin() {
 		super();
-		
+
 		this.isCTERoot = false; // TODO VERIFY
 		this.isBlocking = false;
 		this.isPruned = false;
@@ -222,7 +232,7 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
 
 	@Override
 	public Join construct(Operator child0, Operator child1, JoinType jt, String joinPred, boolean isFilter) throws Exception {
-		
+
 		this.isCopy = true; 
 		
 		if (jt != null) this.joinType = jt;
