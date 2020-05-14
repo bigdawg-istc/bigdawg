@@ -286,8 +286,12 @@ public class PostgreSQLQueryGenerator implements OperatorQueryGenerator {
 		} else {
 			child0.accept(this);
 		}
-		// Resolve pruning and add join
-		net.sf.jsqlparser.statement.select.Join newJoin = addJSQLParserJoin(dstStatement, t1, join.getJoinType());
+		// Resolve pruning and add join.
+		JoinType joinType = join.getJoinType();
+		if (joinType == JoinType.Anti) { // Anti-joins ACT like left Joins, but have a special where clause.
+			joinType = JoinType.Left;
+		}
+		net.sf.jsqlparser.statement.select.Join newJoin = addJSQLParserJoin(dstStatement, t1, joinType);
 
 		if (child1 instanceof Aggregate && stopAtJoin) {
 			List<SelectItem> sil = new ArrayList<>();
@@ -345,7 +349,7 @@ public class PostgreSQLQueryGenerator implements OperatorQueryGenerator {
 			}
 		}
 
-		if (w != null)
+		if (w != null && join.getJoinType() != JoinType.Anti)
 			addToJoinFilter(w.toString(), jf);
 		addToJoinFilter(discoveredAggregateFilter, jf);
 		if (!discoveredJoinPredicate.isEmpty())
@@ -412,9 +416,9 @@ public class PostgreSQLQueryGenerator implements OperatorQueryGenerator {
 				// Leaving this here, then, is no worse off than things originally were prior to this change.
 				// (4/24/2020)
 				((PlainSelect) dstStatement.getSelectBody()).setWhere(CCJSqlParserUtil.parseCondExpression(e.toString()));
-			} else {
-				newJoin.setOnExpression(e);
+				return;
 			}
+			newJoin.setOnExpression(e);
 		}
 
 	}
@@ -1935,6 +1939,7 @@ public class PostgreSQLQueryGenerator implements OperatorQueryGenerator {
 				case Simple:
 					newJ.setSimple(true);
 					break;
+				case Anti:
 				case Left:
 					newJ.setLeft(true);
 					break;

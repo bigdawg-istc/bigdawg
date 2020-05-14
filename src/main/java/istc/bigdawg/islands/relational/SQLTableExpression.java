@@ -76,6 +76,10 @@ public class SQLTableExpression {
     	parsedStatement = s;
     }
 
+    public PlainSelect getSelect() {
+    	return parsedStatement;
+	}
+
     public void addJoin(Join j) {
     	joins.add(j);
     }

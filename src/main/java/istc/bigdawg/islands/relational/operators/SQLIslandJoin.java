@@ -22,6 +22,7 @@ import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Parenthesis;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
+import net.sf.jsqlparser.statement.select.PlainSelect;
 import org.apache.log4j.Logger;
 
 
@@ -43,15 +44,32 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
 			throws QueryParsingException, JSQLParserException  {
 		super(parameters, output, lhs, rhs, supplement);
 
+		// Need to process the join type first.
+		processJoinType(parameters);
+
 		// mending non-canoncial ordering
-		boolean flipJoinType = false;
 		if (children.get(0) instanceof SQLIslandScan && !(children.get(1) instanceof SQLIslandScan)) {
 			SQLIslandOperator child0 = (SQLIslandOperator) children.get(1);
 			SQLIslandOperator child1 = (SQLIslandOperator) children.get(0);
 			children.clear();
 			children.add(child0);
 			children.add(child1);
-			flipJoinType = true;
+			// Have to potentially flip the join type as well.
+			if (joinType == JoinType.Left) {
+				joinType = JoinType.Right;
+			} else if (joinType == JoinType.Right) {
+				joinType = JoinType.Left;
+			}
+		} else if (joinType == JoinType.Anti) {
+			// Hack for Antijoins.
+			if (rhs instanceof SQLIslandSeqScan) {
+				if (((SQLIslandSeqScan) rhs).getFilterExpression() == null) {
+					PlainSelect select = supplement.getSelect();
+					if (select.getWhere() != null) {
+						((SQLIslandSeqScan) rhs).setFilterExpression(select.getWhere());
+					}
+				}
+			}
 		}
 		
 		this.isBlocking = false;
@@ -74,14 +92,14 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
 			outSchema.put(attrName, attr);
 				
 		}
-		
-		
+
 		// process join predicates and join filters
 		// if hash join "Hash-Cond", merge join "Merge-Cond"
 		for(String p : parameters.keySet()) 
 			if(p.endsWith("Cond")) 
 				joinPredicate = parameters.get(p);
 		joinFilter = parameters.get("Join-Filter");
+
 		if (joinFilter != null)  joinFilter = SQLExpressionUtils.removeExpressionDataTypeArtifactAndConvertLike(joinFilter);
 		if (joinPredicate != null) joinPredicate = SQLExpressionUtils.removeExpressionDataTypeArtifactAndConvertLike(joinPredicate);
 	
@@ -103,22 +121,7 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
 			}
 		}
 
-		if (parameters.containsKey("Join-Type")) {
-			try {
-				joinType = JoinType.valueOf(parameters.get("Join-Type"));
-				// Have to potentially flip the join type as well.
-				if (flipJoinType) {
-					if (joinType == JoinType.Left) {
-						joinType = JoinType.Right;
-					} else if (joinType == JoinType.Right) {
-						joinType = JoinType.Left;
-					}
-				}
-			} catch (IllegalArgumentException e) {
-				// unknown join type
-				Logger.getLogger(this.getClass().getName()).warn("Unknown Join-Type returned: '" + parameters.get("Join-Type") + "'");
-			}
-		}
+
 		
 	}
     
@@ -471,5 +474,16 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
 	@Override
 	public JoinType getJoinType() {
 		return joinType;
+	}
+
+	private void processJoinType(Map<String, String> parameters) {
+		if (parameters.containsKey("Join-Type")) {
+			try {
+				joinType = JoinType.valueOf(parameters.get("Join-Type"));
+			} catch (IllegalArgumentException e) {
+				// unknown join type
+				Logger.getLogger(this.getClass().getName()).warn("Unknown Join-Type returned: '" + parameters.get("Join-Type") + "'");
+			}
+		}
 	}
 };
