@@ -13,21 +13,7 @@ import java.util.stream.Collectors;
 
 import istc.bigdawg.islands.relational.SQLExpressionHandler;
 import net.sf.jsqlparser.JSQLParserException;
-import net.sf.jsqlparser.expression.AnalyticExpression;
-import net.sf.jsqlparser.expression.BinaryExpression;
-import net.sf.jsqlparser.expression.CaseExpression;
-import net.sf.jsqlparser.expression.DoubleValue;
-import net.sf.jsqlparser.expression.Expression;
-import net.sf.jsqlparser.expression.Function;
-import net.sf.jsqlparser.expression.HexValue;
-import net.sf.jsqlparser.expression.IntervalExpression;
-import net.sf.jsqlparser.expression.LongValue;
-import net.sf.jsqlparser.expression.NullValue;
-import net.sf.jsqlparser.expression.Parenthesis;
-import net.sf.jsqlparser.expression.SignedExpression;
-import net.sf.jsqlparser.expression.StringValue;
-import net.sf.jsqlparser.expression.TimeValue;
-import net.sf.jsqlparser.expression.WhenClause;
+import net.sf.jsqlparser.expression.*;
 import net.sf.jsqlparser.expression.operators.arithmetic.Division;
 import net.sf.jsqlparser.expression.operators.arithmetic.Multiplication;
 import net.sf.jsqlparser.expression.operators.relational.Between;
@@ -78,6 +64,7 @@ public class SQLExpressionUtils {
 	    };
 	    StringBuilder b = new StringBuilder();
 	    deparser.setBuffer(b);
+		deparser.setSelectVisitor(getBasicSelectVisitor(deparser));
 	    parseExpression.accept(deparser);
 
 		return equalities;
@@ -243,6 +230,7 @@ public class SQLExpressionUtils {
 			@Override public void visit(StringValue sv) {};
 	    };
 	    deparser.setBuffer(new StringBuilder());
+		deparser.setSelectVisitor(getBasicSelectVisitor(deparser));
 	    expr.accept(deparser);
 		
 	}
@@ -333,7 +321,8 @@ public class SQLExpressionUtils {
 			@Override public void visit(TimeValue lv) {};
 			@Override public void visit(StringValue sv) {};
 	    };
-	    
+		deparser.setSelectVisitor(getBasicSelectVisitor(deparser));
+
 	    expr.accept(deparser);
 		
 	}
@@ -351,9 +340,10 @@ public class SQLExpressionUtils {
 			}
 			
 	    };
-	    
+
 	    StringBuilder b = new StringBuilder();
 	    deparser.setBuffer(b);
+		deparser.setSelectVisitor(getBasicSelectVisitor(deparser));
 	    expr.accept(deparser);
 	    
 		return attributes;
@@ -425,7 +415,8 @@ public class SQLExpressionUtils {
 			@Override public void visit(TimeValue lv) {};
 			@Override public void visit(StringValue sv) {};
 	    };
-	    
+
+		deparser.setSelectVisitor(getBasicSelectVisitor(deparser));
 	    expr.accept(deparser);
 	    return new ArrayList<>(attributes);
 	}
@@ -501,7 +492,8 @@ public class SQLExpressionUtils {
 			@Override public void visit(TimeValue lv) {};
 			@Override public void visit(StringValue sv) {};
 	    };
-	    
+
+		deparser.setSelectVisitor(getBasicSelectVisitor(deparser));
 	    expr.accept(deparser);
 	    return new ArrayList<>(attributes);
 	}
@@ -592,7 +584,8 @@ public class SQLExpressionUtils {
 			@Override public void visit(TimeValue lv) {};
 			@Override public void visit(StringValue sv) {};
 	    };
-	    
+
+		deparser.setSelectVisitor(getBasicSelectVisitor(deparser));
 	    expr.accept(deparser);
 	    
 	    return String.join(" AND ", filters);
@@ -648,7 +641,8 @@ public class SQLExpressionUtils {
 			@Override public void visit(TimeValue lv) {};
 			@Override public void visit(StringValue sv) {};
 	    };
-	    
+
+		deparser.setSelectVisitor(getBasicSelectVisitor(deparser));
 	    expr.accept(deparser);
 	    
 	    return filters;
@@ -729,7 +723,8 @@ public class SQLExpressionUtils {
 			@Override public void visit(TimeValue lv) {};
 			@Override public void visit(StringValue sv) {};
 	    };
-	    
+
+		deparser.setSelectVisitor(getBasicSelectVisitor(deparser));
 	    expr.accept(deparser);
 	}
 	
@@ -750,6 +745,7 @@ public class SQLExpressionUtils {
 	
 	    StringBuilder b = new StringBuilder();
 	    deparser.setBuffer(b);
+		deparser.setSelectVisitor(getBasicSelectVisitor(deparser));
 	    expr.accept(deparser);
 	    return b.toString();
 	    
@@ -854,7 +850,7 @@ public class SQLExpressionUtils {
 			@Override public void visit(TimeValue lv) {};
 			@Override public void visit(StringValue sv) {};
 	    };
-	    
+	    deparser.setSelectVisitor(getBasicSelectVisitor(deparser));
 	    expr.accept(deparser);
 		
 		return ret;
@@ -945,15 +941,35 @@ public class SQLExpressionUtils {
 			@Override public void visit(TimeValue lv) {};
 			@Override public void visit(StringValue sv) {};
 	    };
-	    
+		deparser.setSelectVisitor(getBasicSelectVisitor(deparser));
+
 	    expr.accept(deparser);
 	}
-	
+
+	public static SelectVisitor getBasicSelectVisitor(ExpressionVisitor deparser) {
+		SelectVisitor sv = new SelectVisitor() {
+
+			@Override
+			public void visit(PlainSelect plainSelect) {
+				plainSelect.getWhere().accept(deparser);
+			}
+
+			@Override
+			public void visit(WithItem withItem) {
+				// process with, add to wil Addition
+				withItem.getSelectBody().accept(this);
+			}
+
+			@Override public void visit(SetOperationList setOpList) {}
+		};
+		return sv;
+	}
+
 	public static boolean containsArtificiallyConstructedTables(Expression expr) {
 		
 		List<Boolean> ret = new ArrayList<>();
 		ret.add(false);
-		
+
 		SQLExpressionHandler deparser = new SQLExpressionHandler() {
 	        
 			@Override
@@ -1010,7 +1026,7 @@ public class SQLExpressionUtils {
 			@Override public void visit(TimeValue lv) {};
 			@Override public void visit(StringValue sv) {};
 	    };
-	    
+		deparser.setSelectVisitor(getBasicSelectVisitor(deparser));
 	    expr.accept(deparser);
 	    return ret.get(0);
 	}
@@ -1156,21 +1172,7 @@ public class SQLExpressionUtils {
 			@Override public void visit(StringValue sv) {};
 	    };
 		
-		SelectVisitor sv = new SelectVisitor() {
-
-			@Override
-			public void visit(PlainSelect plainSelect) {
-				plainSelect.getWhere().accept(deparser);
-			}
-
-			@Override
-			public void visit(WithItem withItem) {
-				// process with, add to wil Addition
-				withItem.getSelectBody().accept(this);
-			}
-			
-			@Override public void visit(SetOperationList setOpList) {}
-		};
+		SelectVisitor sv = getBasicSelectVisitor(deparser);
 		
 		for (WithItem wi : wil) wi.accept(sv);
 		s.getSelectBody().accept(sv);
@@ -1293,7 +1295,7 @@ public class SQLExpressionUtils {
 			@Override public void visit(TimeValue lv) {sb.append('{').append(lv.getValue().toString()).append('}');};
 			@Override public void visit(StringValue sv) {sb.append('{').append('\'').append(sv.getValue().replaceAll(":", "")).append('\'').append('}');};
 		};
-		
+		deparser.setSelectVisitor(getBasicSelectVisitor(deparser));
 		e.accept(deparser);
 		
 		return sb.toString();
@@ -1349,7 +1351,7 @@ public class SQLExpressionUtils {
 			@Override public void visit(StringValue sv) {};
 			@Override public void visit(ExpressionList expressionList) {}
 	    };
-		
+		deparser.setSelectVisitor(getBasicSelectVisitor(deparser));
 		e.accept(deparser);
 		
 		return ret.get(0);
@@ -1458,7 +1460,7 @@ public class SQLExpressionUtils {
 			@Override public void visit(ExpressionList expressionList) {}
 			@Override public void visit(Function function) {}
 	    };
-		
+		deparser.setSelectVisitor(getBasicSelectVisitor(deparser));
 		e.accept(deparser);
 		return result;
 	}
@@ -1510,7 +1512,7 @@ public class SQLExpressionUtils {
 			@Override public void visit(ExpressionList expressionList) {}
 			@Override public void visit(Function function) {}
 	    };
-		
+		deparser.setSelectVisitor(getBasicSelectVisitor(deparser));
 		parent.accept(deparser);
 	}
 	
@@ -1533,6 +1535,7 @@ public class SQLExpressionUtils {
 				else ret.add(expression.getRightExpression());
 			}
 		};
+		deparser.setSelectVisitor(getBasicSelectVisitor(deparser));
 		parent.accept(deparser);
 		if (ret.isEmpty()) return null;
 		else {
@@ -1561,6 +1564,7 @@ public class SQLExpressionUtils {
 				else expression.setRightExpression(sub);
 			}
 		};
+		deparser.setSelectVisitor(getBasicSelectVisitor(deparser));
 		parent.accept(deparser);
 	}
 	
@@ -1674,8 +1678,9 @@ public class SQLExpressionUtils {
 			@Override public void visit(TimeValue lv) {};
 			@Override public void visit(StringValue sv) {};
 	    };
-	    
-	    expr.accept(deparser);
+		deparser.setSelectVisitor(getBasicSelectVisitor(deparser));
+
+		expr.accept(deparser);
 	    return expr;
 	}
 	

@@ -38,14 +38,13 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
 	protected static final String BigDAWGSQLJoinPrefix = "BIGDAWGSQLJOIN_";
 	protected static int maxJoinSerial = 0;
 	protected Integer joinID = null;
-	
+
 	// for SQL
-	public SQLIslandJoin (Map<String, String> parameters, List<String> output, SQLIslandOperator lhs, SQLIslandOperator rhs, SQLTableExpression supplement) 
+	public SQLIslandJoin (Map<String, String> parameters, List<String> output, SQLIslandOperator lhs, SQLIslandOperator rhs, SQLTableExpression supplement)
 			throws QueryParsingException, JSQLParserException  {
 		super(parameters, output, lhs, rhs, supplement);
 
-		// Need to process the join type first.
-		processJoinType(parameters);
+		this.joinType = getJoinType(parameters);
 
 		// mending non-canoncial ordering
 		if (children.get(0) instanceof SQLIslandScan && !(children.get(1) instanceof SQLIslandScan)) {
@@ -59,16 +58,6 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
 				joinType = JoinType.Right;
 			} else if (joinType == JoinType.Right) {
 				joinType = JoinType.Left;
-			}
-		} else if (joinType == JoinType.Anti) {
-			// Hack for Antijoins.
-			if (rhs instanceof SQLIslandSeqScan) {
-				if (((SQLIslandSeqScan) rhs).getFilterExpression() == null) {
-					PlainSelect select = supplement.getSelect();
-					if (select.getWhere() != null) {
-						((SQLIslandSeqScan) rhs).setFilterExpression(select.getWhere());
-					}
-				}
 			}
 		}
 		
@@ -476,14 +465,15 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
 		return joinType;
 	}
 
-	private void processJoinType(Map<String, String> parameters) {
+	public static JoinType getJoinType(Map<String, String> parameters) {
 		if (parameters.containsKey("Join-Type")) {
 			try {
-				joinType = JoinType.valueOf(parameters.get("Join-Type"));
+				return JoinType.valueOf(parameters.get("Join-Type"));
 			} catch (IllegalArgumentException e) {
 				// unknown join type
-				Logger.getLogger(this.getClass().getName()).warn("Unknown Join-Type returned: '" + parameters.get("Join-Type") + "'");
+				Logger.getLogger(SQLIslandJoin.class.getName()).warn("Unknown Join-Type returned: '" + parameters.get("Join-Type") + "'");
 			}
 		}
+		return null;
 	}
 };
