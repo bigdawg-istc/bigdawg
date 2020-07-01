@@ -37,7 +37,6 @@ import istc.bigdawg.query.ConnectionInfo;
 import istc.bigdawg.query.QueryClient;
 import istc.bigdawg.utils.LogUtils;
 import istc.bigdawg.utils.StackTrace;
-import org.restlet.resource.Post;
 
 /**
  * @author Adam Dziedzic

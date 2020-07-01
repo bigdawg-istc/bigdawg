@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import istc.bigdawg.LoggerSetup;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.log4j.Logger;
@@ -202,7 +203,11 @@ public class RelationalIslandPermuter {
 			 */
 			
 			// 1.
-			List<Operator> permutationsOfLeaves = getPermutatedOperators(scope, leaves, joinPredConnections, joinFilterConnections, predicateConnections);
+			JoinType joinType = null;
+			if (root instanceof Join) {
+				joinType = ((Join)root).getJoinType();
+			}
+			List<Operator> permutationsOfLeaves = getPermutatedOperators(scope, leaves, joinPredConnections, joinFilterConnections, predicateConnections, joinType);
 			
 			// 2.
 			Map<Integer, List<Operator>> blockerTrees = new HashMap<>();
@@ -287,8 +292,7 @@ public class RelationalIslandPermuter {
 	 * @return A list of Operators that are each a root of a permuted remainder Operator tree.
 	 * @throws Exception
 	 */
-	private static List<Operator> getPermutatedOperators(Scope scope, List<Operator> ops, Map<Pair<String, String>, String> joinPredConnections, Map<Pair<String, String>, String> joinFilterConnections, List<Set<String>> predicateConnections) throws Exception {
-		
+	private static List<Operator> getPermutatedOperators(Scope scope, List<Operator> ops, Map<Pair<String, String>, String> joinPredConnections, Map<Pair<String, String>, String> joinFilterConnections, List<Set<String>> predicateConnections, JoinType joinType) throws Exception {
 		List<Operator> extraction = new ArrayList<>();
 		
 		int len = ops.size();
@@ -299,7 +303,7 @@ public class RelationalIslandPermuter {
 			
 		} else if (len == 2) {
 			// the case of two
-			extraction.add(makeJoin(scope, ops.get(0), ops.get(1), null, joinPredConnections, joinFilterConnections, new HashSet<>(), predicateConnections, true)); 
+			extraction.add(makeJoin(scope, ops.get(0), ops.get(1), joinType, joinPredConnections, joinFilterConnections, new HashSet<>(), predicateConnections, true));
 			return extraction;
 		} 
 		
@@ -373,7 +377,6 @@ public class RelationalIslandPermuter {
 	 * @throws Exception
 	 */
 	private static void addNewEntry (Scope scope, Operator k0o, Operator k1o, Map<Pair<String, String>, String> joinPredConnections, Map<Pair<String, String>, String> joinFilterConnections, List<Operator> newEntry, List<Set<String>> predicateConnections) throws Exception {
-		
 		if (k1o instanceof Join) {
 			// all on-expression must precede cross-joins
 			if (k0o instanceof Join && (((Join)k0o).generateJoinPredicate() == null && ((Join)k1o).generateJoinPredicate() != null)) {
@@ -392,7 +395,7 @@ public class RelationalIslandPermuter {
 				if (jp != null) jpb = objlist1.removeAll( SQLExpressionUtils.getColumnTableNamesInAllForms(CCJSqlParserUtil.parseCondExpression(jp)) );
 				if (jf != null) jfb = objlist2.removeAll( SQLExpressionUtils.getColumnTableNamesInAllForms(CCJSqlParserUtil.parseCondExpression(jf)) );
 				
-				if (jpb || jfb) { 
+				if (jpb || jfb) {
 					newEntry.add(makeJoin(scope, k0o, k1o, null, joinPredConnections, joinFilterConnections, k0o.getDataObjectAliasesOrNames().keySet(), predicateConnections, true));
 				}
 			}
@@ -402,7 +405,7 @@ public class RelationalIslandPermuter {
 				// pruned non-left-deep branch
 				return;
 			}
-			
+
 			Operator ret = makeJoin(scope, k0o, k1o, null, joinPredConnections,  joinFilterConnections, k0o.getDataObjectAliasesOrNames().keySet(), predicateConnections, true);
 			if (ret == null) return; // the final prune done
 			newEntry.add(ret);
@@ -421,10 +424,10 @@ public class RelationalIslandPermuter {
 	 * @return The constructed Join Operator
 	 * @throws Exception
 	 */
-	private static Operator makeJoin(Scope scope, Operator o1, Operator o2, JoinType jt, 
+	private static Operator makeJoin(Scope scope, Operator o1, Operator o2, JoinType jt,
 			Map<Pair<String, String>, String> joinPredConnection, Map<Pair<String, String>, String> joinFilterConnection, 
 			Set<String> used, List<Set<String>> predicateConnections, boolean isUsedByPermutation) throws Exception {
-		
+
 		Map<String, Map<String, String>> jp = new HashMap<>();
 		Map<String, Map<String, String>> jf = new HashMap<>();
 		

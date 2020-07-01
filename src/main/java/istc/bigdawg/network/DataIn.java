@@ -16,7 +16,6 @@ import java.util.concurrent.Callable;
 import org.apache.log4j.Logger;
 
 import istc.bigdawg.utils.StackTrace;
-import scala.annotation.meta.param;
 
 /**
  * The server which receives (large amount of) data from network.

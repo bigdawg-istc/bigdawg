@@ -8,6 +8,9 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import istc.bigdawg.islands.relational.SQLJSONPlaceholderParser;
+import istc.bigdawg.islands.relational.SQLParseLogical;
+import istc.bigdawg.islands.relational.SQLTableExpression;
+import istc.bigdawg.islands.relational.operators.*;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -15,6 +18,7 @@ import istc.bigdawg.islands.operators.Aggregate;
 import istc.bigdawg.islands.operators.CommonTableExpressionScan;
 import istc.bigdawg.islands.operators.Distinct;
 import istc.bigdawg.islands.operators.Join;
+import istc.bigdawg.islands.operators.Join.JoinType;
 import istc.bigdawg.islands.operators.Limit;
 import istc.bigdawg.islands.operators.Merge;
 import istc.bigdawg.islands.operators.Operator;
@@ -23,14 +27,6 @@ import istc.bigdawg.islands.operators.SeqScan;
 import istc.bigdawg.islands.operators.Sort;
 import istc.bigdawg.islands.operators.WindowAggregate;
 import istc.bigdawg.islands.relational.SQLExpressionHandler;
-import istc.bigdawg.islands.relational.operators.SQLIslandAggregate;
-import istc.bigdawg.islands.relational.operators.SQLIslandCommonTableExpressionScan;
-import istc.bigdawg.islands.relational.operators.SQLIslandDistinct;
-import istc.bigdawg.islands.relational.operators.SQLIslandJoin;
-import istc.bigdawg.islands.relational.operators.SQLIslandLimit;
-import istc.bigdawg.islands.relational.operators.SQLIslandOperator;
-import istc.bigdawg.islands.relational.operators.SQLIslandScan;
-import istc.bigdawg.islands.relational.operators.SQLIslandSort;
 import istc.bigdawg.islands.relational.utils.SQLAttribute;
 import istc.bigdawg.islands.relational.utils.SQLExpressionUtils;
 import net.sf.jsqlparser.JSQLParserException;
@@ -65,6 +61,7 @@ import net.sf.jsqlparser.statement.select.UnionOp;
 import net.sf.jsqlparser.statement.select.ValuesList;
 import net.sf.jsqlparser.statement.select.WithItem;
 import net.sf.jsqlparser.util.SelectUtils;
+import org.apache.log4j.Logger;
 
 public class PostgreSQLQueryGenerator implements OperatorQueryGenerator {
 
@@ -130,7 +127,6 @@ public class PostgreSQLQueryGenerator implements OperatorQueryGenerator {
 
 	@Override
 	public void visit(Join joinOp) throws Exception {
-
 		SQLIslandJoin join = (SQLIslandJoin) joinOp;
 
 		if (!isRoot && join.isPruned()) {
@@ -144,8 +140,22 @@ public class PostgreSQLQueryGenerator implements OperatorQueryGenerator {
 			return;
 		}
 		saveRoot(join);
+		JoinType joinType = join.getJoinType();
 		Operator child0 = join.getChildren().get(0);
 		Operator child1 = join.getChildren().get(1);
+
+		if (joinType == JoinType.Anti) { // Anti-joins ACT like left Joins, but have a special where clause.
+			joinType = JoinType.Left;
+			// Hack for Antijoins.
+			if (child1 instanceof SQLIslandSeqScan) {
+				if (((SQLIslandSeqScan) child1).getFilterExpression() == null) {
+					PlainSelect select = join.getSupplement().getSelect();
+					if (select.getWhere() != null) {
+						((SQLIslandSeqScan) child1).setFilterExpression(select.getWhere());
+					}
+				}
+			}
+		}
 
 		// constructing the ON expression
 
@@ -247,8 +257,9 @@ public class PostgreSQLQueryGenerator implements OperatorQueryGenerator {
 			} else {
 				t0.setName(child0ObjectMap.get(s));
 				String[] temp = child0ObjectMap.get(s).split("[.]");
-				if (!s.equals(temp[temp.length - 1]))
+				if (!s.equals(temp[temp.length - 1])) {
 					t0.setAlias(new Alias(s));
+				}
 			}
 
 			if (child1.isPruned()) {
@@ -284,8 +295,8 @@ public class PostgreSQLQueryGenerator implements OperatorQueryGenerator {
 		} else {
 			child0.accept(this);
 		}
-		// Resolve pruning and add join
-		addJSQLParserJoin(dstStatement, t1);
+		// Resolve pruning and add join.
+		net.sf.jsqlparser.statement.select.Join newJoin = addJSQLParserJoin(dstStatement, t1, joinType);
 
 		if (child1 instanceof Aggregate && stopAtJoin) {
 			List<SelectItem> sil = new ArrayList<>();
@@ -343,7 +354,8 @@ public class PostgreSQLQueryGenerator implements OperatorQueryGenerator {
 			}
 		}
 
-		if (w != null)
+		final JoinType origJoinType = join.getJoinType();
+		if (w != null && origJoinType != JoinType.Anti && origJoinType != JoinType.Semi)
 			addToJoinFilter(w.toString(), jf);
 		addToJoinFilter(discoveredAggregateFilter, jf);
 		if (!discoveredJoinPredicate.isEmpty())
@@ -401,10 +413,62 @@ public class PostgreSQLQueryGenerator implements OperatorQueryGenerator {
 				treeWalker = nextGen;
 			}
 
-			((PlainSelect) dstStatement.getSelectBody()).setWhere(CCJSqlParserUtil.parseCondExpression(e.toString()));
+			// Semi-joins have special processing.
+			if (checkAndProcessSemiJoin(join, e, newJoin)) {
+				// A semi-join was found.
+				return;
+			}
 
+			// Simple Joins may need a where clause added at the end which this will add if appropriate.
+			if (checkAndProcessSimpleJoin(join, e, newJoin)) {
+				// A simple join with a where clause.
+				return;
+			}
+
+			newJoin.setOnExpression(e);
 		}
 
+	}
+
+	public boolean checkAndProcessSimpleJoin(SQLIslandJoin join,
+											 Expression e,
+											 net.sf.jsqlparser.statement.select.Join newJoin) throws JSQLParserException {
+		if (!newJoin.isSimple()) {
+			return false;
+		}
+
+		// If there's no where clause, then we can skip adding the where clause and let an "on" clause get created.
+		SQLTableExpression supplement = join.getSupplement();
+		if (supplement != null) {
+			PlainSelect select = supplement.getSelect();
+			if (select.getWhere() == null) {
+				return false;
+			}
+		}
+
+		((PlainSelect) dstStatement.getSelectBody()).setWhere(CCJSqlParserUtil.parseCondExpression(e.toString()));
+		return true;
+	}
+
+	public boolean checkAndProcessSemiJoin(SQLIslandJoin join, Expression e,
+										   net.sf.jsqlparser.statement.select.Join newJoin) {
+		if (join.getJoinType() != JoinType.Semi) {
+			return false;
+		}
+
+		// Have to try to get the original where clause from the join supplement.
+		SQLTableExpression supplement = join.getSupplement();
+		if (supplement == null) {
+			return false;
+		}
+		PlainSelect select = supplement.getSelect();
+		if (select.getWhere() == null) {
+			return false;
+		}
+
+		newJoin.setOnExpression(e);
+		((PlainSelect) dstStatement.getSelectBody()).setWhere(select.getWhere());
+		return true;
 	}
 
 	// @Override
@@ -801,16 +865,17 @@ public class PostgreSQLQueryGenerator implements OperatorQueryGenerator {
 
 			Expression fe = CCJSqlParserUtil.parseCondExpression(scanOp.getFilterExpression().toString());
 
-			List<Column> cs = SQLExpressionUtils.getAttributes(fe);
-			Set<String> ss = new HashSet<>();
-			for (Column c : cs)
-				ss.add(c.getTable().getName());
-			ss.remove(scanOp.getSrcTable());
-			if (scanOp.getTableAlias() != null)
-				ss.remove(scanOp.getTableAlias());
-			ss.removeAll(allowedScans);
-
-			if (ss.isEmpty()) {
+			// allowedScans is presently never populated, so this logic doesn't really work (mmucklo 5/19/2020)
+//			List<Column> cs = SQLExpressionUtils.getAttributes(fe);
+//			Set<String> ss = new HashSet<>();
+//			for (Column c : cs)
+//				ss.add(c.getTable().getName());
+//			ss.remove(scanOp.getSrcTable());
+//			if (scanOp.getTableAlias() != null)
+//				ss.remove(scanOp.getTableAlias());
+//			ss.removeAll(allowedScans);
+//
+//			if (ss.isEmpty()) {
 
 				PlainSelect ps = (PlainSelect) dstStatement.getSelectBody();
 
@@ -828,7 +893,7 @@ public class PostgreSQLQueryGenerator implements OperatorQueryGenerator {
 				} catch (Exception ex) {
 					System.out.println("filterSet exception: " + fe.toString());
 				}
-			}
+//			}
 		}
 
 	}
@@ -1915,13 +1980,40 @@ public class PostgreSQLQueryGenerator implements OperatorQueryGenerator {
 	 * @param dstStatement
 	 * @param t
 	 */
-	private void addJSQLParserJoin(Select dstStatement, Table t) {
+	private net.sf.jsqlparser.statement.select.Join addJSQLParserJoin(Select dstStatement, Table t, JoinType joinType) {
 		net.sf.jsqlparser.statement.select.Join newJ = new net.sf.jsqlparser.statement.select.Join();
 		newJ.setRightItem(t);
-		newJ.setSimple(true);
+		if (joinType != null) {
+			switch (joinType) {
+				case Simple:
+					newJ.setSimple(true);
+					break;
+				case Anti:
+				case Left:
+					newJ.setLeft(true);
+					break;
+				case Right:
+					newJ.setRight(true);
+					break;
+				case Cross:
+					newJ.setCross(true);
+					break;
+				case Full:
+					newJ.setFull(true);
+					break;
+				case Inner:
+					newJ.setInner(true);
+					break;
+				default:
+					Logger.getLogger(PostgreSQLQueryGenerator.class).warn("Unknown Join type: " + joinType.toString() + " reverting to simple.");
+					newJ.setSimple(true);
+					break;
+			}
+		}
 		if (((PlainSelect) dstStatement.getSelectBody()).getJoins() == null)
 			((PlainSelect) dstStatement.getSelectBody()).setJoins(new ArrayList<>());
 		((PlainSelect) dstStatement.getSelectBody()).getJoins().add(newJ);
+		return newJ;
 	}
 
 	/**

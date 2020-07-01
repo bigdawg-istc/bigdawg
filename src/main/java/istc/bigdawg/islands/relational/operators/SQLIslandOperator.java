@@ -30,7 +30,7 @@ import net.sf.jsqlparser.util.SelectUtils;
 public class SQLIslandOperator implements Operator {
 
 	
-	static final String BigDAWGSQLPrunePrefix = "BIGDAWGSQLPRUNED_"; 
+	static final String BigDAWGSQLPrunePrefix = "BIGDAWGSQLPRUNED_";
 	static final String BigDAWGSQLSubtreePrefix = "BIGDAWGSQLSUBTREE_";
 	
 	protected boolean isBlocking = false; 
@@ -58,7 +58,8 @@ public class SQLIslandOperator implements Operator {
 	
 	protected Set<String> dataObjects;
 	private Set<String> objectAliases = null;
-	
+
+	protected SQLTableExpression supplement;
 	// SQL, single non sort non union
 	public SQLIslandOperator(Map<String, String> parameters, List<String> output,  
 			SQLIslandOperator child, // this is changed to 
@@ -73,7 +74,8 @@ public class SQLIslandOperator implements Operator {
 			
 			populateComplexOutItem(true);
 		}
-		
+
+		this.supplement = supplement;
 	}
 
 	
@@ -91,7 +93,7 @@ public class SQLIslandOperator implements Operator {
 		rhs.setParent(this);
 		
 		populateComplexOutItem(true);
-		
+		this.supplement = supplement;
 	}
 	
 	// SQL, UNION
@@ -104,7 +106,7 @@ public class SQLIslandOperator implements Operator {
 		children.addAll(childs);
 		for (SQLIslandOperator c : childs) c.setParent(this);
 		populateComplexOutItem(true);
-		
+		this.supplement = supplement;
 	}
 	
 	
@@ -563,5 +565,9 @@ public class SQLIslandOperator implements Operator {
 	public Integer getPruneID() {
 		if (isPruned) return pruneID;
 		else return null;
+	}
+
+	public SQLTableExpression getSupplement() {
+		return supplement;
 	}
 }

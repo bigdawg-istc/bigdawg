@@ -22,6 +22,8 @@ import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Parenthesis;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.schema.Column;
+import net.sf.jsqlparser.statement.select.PlainSelect;
+import org.apache.log4j.Logger;
 
 
 public class SQLIslandJoin extends SQLIslandOperator implements Join {
@@ -36,11 +38,13 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
 	protected static final String BigDAWGSQLJoinPrefix = "BIGDAWGSQLJOIN_";
 	protected static int maxJoinSerial = 0;
 	protected Integer joinID = null;
-	
+
 	// for SQL
-	public SQLIslandJoin (Map<String, String> parameters, List<String> output, SQLIslandOperator lhs, SQLIslandOperator rhs, SQLTableExpression supplement) 
+	public SQLIslandJoin (Map<String, String> parameters, List<String> output, SQLIslandOperator lhs, SQLIslandOperator rhs, SQLTableExpression supplement)
 			throws QueryParsingException, JSQLParserException  {
 		super(parameters, output, lhs, rhs, supplement);
+
+		this.joinType = getJoinType(parameters);
 
 		// mending non-canoncial ordering
 		if (children.get(0) instanceof SQLIslandScan && !(children.get(1) instanceof SQLIslandScan)) {
@@ -49,6 +53,12 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
 			children.clear();
 			children.add(child0);
 			children.add(child1);
+			// Have to potentially flip the join type as well.
+			if (joinType == JoinType.Left) {
+				joinType = JoinType.Right;
+			} else if (joinType == JoinType.Right) {
+				joinType = JoinType.Left;
+			}
 		}
 		
 		this.isBlocking = false;
@@ -71,14 +81,14 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
 			outSchema.put(attrName, attr);
 				
 		}
-		
-		
+
 		// process join predicates and join filters
 		// if hash join "Hash-Cond", merge join "Merge-Cond"
 		for(String p : parameters.keySet()) 
 			if(p.endsWith("Cond")) 
 				joinPredicate = parameters.get(p);
 		joinFilter = parameters.get("Join-Filter");
+
 		if (joinFilter != null)  joinFilter = SQLExpressionUtils.removeExpressionDataTypeArtifactAndConvertLike(joinFilter);
 		if (joinPredicate != null) joinPredicate = SQLExpressionUtils.removeExpressionDataTypeArtifactAndConvertLike(joinPredicate);
 	
@@ -99,6 +109,8 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
 				((SQLIslandAggregate)o).setSingledOutAggregate();
 			}
 		}
+
+
 		
 	}
     
@@ -158,7 +170,7 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
 	
 	public SQLIslandJoin(Operator child0, Operator child1, JoinType jt, String joinPred, boolean isFilter) throws JSQLParserException {
 		this.isCTERoot = false; // TODO VERIFY
-		this.isBlocking = false; 
+		this.isBlocking = false;
 		this.isPruned = false;
 		this.isCopy = true;
 		this.setAliases(new ArrayList<>());
@@ -199,7 +211,7 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
 	
 	public SQLIslandJoin() {
 		super();
-		
+
 		this.isCTERoot = false; // TODO VERIFY
 		this.isBlocking = false;
 		this.isPruned = false;
@@ -212,7 +224,7 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
 
 	@Override
 	public Join construct(Operator child0, Operator child1, JoinType jt, String joinPred, boolean isFilter) throws Exception {
-		
+
 		this.isCopy = true; 
 		
 		if (jt != null) this.joinType = jt;
@@ -446,5 +458,22 @@ public class SQLIslandJoin extends SQLIslandOperator implements Join {
 	@Override
 	public String generateJoinFilter() throws IslandException {
 		return joinFilter != null ? new String(joinFilter): null;
+	}
+
+	@Override
+	public JoinType getJoinType() {
+		return joinType;
+	}
+
+	public static JoinType getJoinType(Map<String, String> parameters) {
+		if (parameters.containsKey("Join-Type")) {
+			try {
+				return JoinType.valueOf(parameters.get("Join-Type"));
+			} catch (IllegalArgumentException e) {
+				// unknown join type
+				Logger.getLogger(SQLIslandJoin.class.getName()).warn("Unknown Join-Type returned: '" + parameters.get("Join-Type") + "'");
+			}
+		}
+		return null;
 	}
 };

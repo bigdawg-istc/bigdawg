@@ -4,7 +4,9 @@ import istc.bigdawg.exceptions.IslandException;
 
 public interface Join extends Operator {
 
-	public enum JoinType  {Left, Natural, Right, Cross};
+	// Need to suppor the following join types
+	// https://github.com/postgres/postgres/blob/ab7646ff92c799303b9ee70ce88b89e07dae717c/src/backend/commands/explain.c#L1475
+	public enum JoinType  {Left, Natural, Right, Cross, Inner, Full, Semi, Anti, Simple};
 	
 	// creates a default and call this to create a new Join instance
 	public Join construct(Operator child0, Operator child1, JoinType jt, String joinPred, boolean isFilter) throws Exception;
@@ -26,5 +28,5 @@ public interface Join extends Operator {
 	public String getJoinToken();	
 	public Integer getJoinID();
 	public void setJoinID(Integer joinID);
-
+	public JoinType getJoinType();
 };
